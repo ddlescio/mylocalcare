@@ -1,0 +1,97 @@
+{% extends "layout_admin.html" %}
+{% block admin_content %}
+
+<h1 class="text-2xl font-bold text-slate-800 mb-6">
+🎥 Storico Videochiamate
+</h1>
+
+{% if not mesi %}
+<p class="text-slate-500">Nessuna chiamata registrata.</p>
+{% endif %}
+
+{% for mese, data in mesi.items() %}
+
+<div class="mb-10">
+
+  <!-- HEADER MESE -->
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-xl font-bold text-slate-700">
+      📅 {{ mese }}
+    </h2>
+
+    <div class="text-sm text-slate-600">
+      <div class="text-right">
+
+      <div>
+      <b>{{ data.participant_used }}</b> / 10000 participant-minutes
+      </div>
+
+      <div class="text-xs text-slate-500">
+      Restanti: {{ data.participant_remaining }}
+      </div>
+
+      <div class="mt-1 font-semibold">
+      Costo mese: € {{ '%.2f' % (data.costo / 100) }}
+      </div>
+
+      </div>      
+    </div>
+  </div>
+
+  <!-- TABELLA -->
+  <div class="overflow-x-auto bg-white border rounded-xl shadow-sm">
+    <table class="min-w-full text-sm">
+
+      <thead class="bg-slate-100 text-slate-600">
+        <tr>
+          <th class="p-3 text-left">Utente 1</th>
+          <th class="p-3 text-left">Utente 2</th>
+          <th class="p-3">Inizio</th>
+          <th class="p-3">Fine</th>
+          <th class="p-3">Durata</th>
+          <th class="p-3">Costo</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for c in data.calls %}
+        <tr class="border-t hover:bg-slate-50">
+
+          <td class="p-3 font-medium">
+            {{ c.user1_name }}
+          </td>
+
+          <td class="p-3 font-medium">
+            {{ c.user2_name }}
+          </td>
+
+          <td class="p-3 text-center">
+            {{ c.start_date }}<br>
+            <span class="text-slate-500 text-xs">{{ c.start_time }}</span>
+          </td>
+
+          <td class="p-3 text-center">
+            {{ c.end_time }}
+          </td>
+
+          <td class="p-3 text-center">
+            {{ (c.durata_secondi or 0) // 60 }} min
+          </td>
+
+          <td class="p-3 text-center font-semibold text-purple-600">
+            € {{ '%.2f' % ((c.costo_stimato_cent or 0) / 100) }}
+          </td>
+
+        </tr>
+        {% endfor %}
+
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+{% endfor %}
+
+{% endblock %}

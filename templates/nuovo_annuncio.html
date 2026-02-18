@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}
+  {{ "Modifica annuncio" if modalità == "modifica" else "Nuovo annuncio" }}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto mt-10 bg-white shadow-md rounded-2xl p-8">
+
+  <!-- 🔙 FRECCIA TORNA INDIETRO -->
+  <a href="javascript:history.back()"
+     class="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 mb-4">
+     <span class="text-xl">←</span>
+     Torna
+  </a>
+
+  <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">
+    {{ "✏️ Modifica annuncio" if modalità == "modifica" else "📝 Crea un nuovo annuncio" }}
+  </h2>
+
+  <form method="POST" enctype="multipart/form-data"
+        action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalità == 'modifica' else url_for('nuovo_annuncio') }}"
+        class="space-y-6">
+
+    {% if modalità == "modifica" %}
+      <input type="hidden" name="id_annuncio" value="{{ annuncio['id'] }}">
+    {% endif %}
+
+    <!-- Username -->
+    <div>
+      <label for="username" class="block text-sm font-medium text-gray-700">Nome utente</label>
+      <input type="text" id="username" name="username"
+             value="{{ annuncio['username'] if modalità == 'modifica' else (g.utente['username'] if g.utente else '') }}"
+             class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+             placeholder="Il tuo username (puoi modificarlo)">
+    </div>
+
+    <!-- 🔹 TIPO ANNUNCIO -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Tipo di annuncio
+      </label>
+
+      <div class="flex gap-4">
+
+        <!-- OFFRO -->
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="tipo_annuncio"
+            value="offro"
+            class="accent-green-600"
+            required
+            {% if modalità == 'modifica' and annuncio['tipo_annuncio'] == 'offro' %}checked{% endif %}
+          >
+          <span class="inline-flex items-center gap-1 text-sm font-medium
+                       bg-green-100 text-green-700 px-3 py-1 rounded-full border border-green-200">
+            🟢 Offro
+          </span>
+        </label>
+
+        <!-- CERCO -->
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="tipo_annuncio"
+            value="cerco"
+            class="accent-blue-600"
+            required
+            {% if modalità == 'modifica' and annuncio['tipo_annuncio'] == 'cerco' %}checked{% endif %}
+          >
+          <span class="inline-flex items-center gap-1 text-sm font-medium
+                       bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
+            🔵 Cerco
+          </span>
+        </label>
+
+      </div>
+
+      <p class="text-xs text-gray-500 mt-1">
+        Seleziona se stai offrendo qualcosa o se stai cercando
+      </p>
+    </div>
+
+    <!-- Categoria -->
+    <div>
+      <label for="categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
+      <select id="categoria" name="categoria" required
+              class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
+        <option value="">Seleziona una categoria</option>
+        <option value="operatori benessere"
+          {% if modalità == 'modifica' and annuncio['categoria'] == 'operatori benessere' %}selected{% endif %}>
+          Operatori benessere</option>
+          <option value="babysitter"
+            {% if modalità == 'modifica' and annuncio['categoria'] == 'babysitter' %}selected{% endif %}>
+            Babysitter</option>
+        <option value="caregiver"
+          {% if modalità == 'modifica' and annuncio['categoria'] == 'caregiver' %}selected{% endif %}>
+          Caregiver</option>
+        <option value="petsitter"
+          {% if modalità == 'modifica' and annuncio['categoria'] == 'petsitter' %}selected{% endif %}>
+          Pet-Sitter</option>
+        <option value="ripetizioni"
+          {% if modalità == 'modifica' and annuncio['categoria'] == 'ripetizioni' %}selected{% endif %}>
+          Ripetizioni</option>
+        <option value="aiuto-in-casa"
+          {% if modalità == 'modifica' and annuncio['categoria'] == 'aiuto-in-casa' %}selected{% endif %}>
+          Aiuto in casa</option>
+        <option value="escursioni & sport"
+          {% if modalità == 'modifica' and annuncio['categoria'] == 'escursioni & sport' %}selected{% endif %}>
+          Gite / Compagni di allenamento</option>
+        <option value="biglietti spettacoli"
+          {% if modalità == 'modifica' and annuncio['categoria'] == 'biglietti spettacoli' %}selected{% endif %}>
+          Biglietti spettacoli</option>
+        <option value="libri scuola"
+          {% if modalità == 'modifica' and annuncio['categoria'] == 'libri scuola' %}selected{% endif %}>
+          Libri scuola</option>
+          <option value="caffe & parole"
+            {% if modalità == 'modifica' and annuncio['categoria'] == 'caffe & parole' %}selected{% endif %}>
+            Caffè & parole</option>
+      </select>
+    </div>
+
+    <!-- 🔹 Filtri dinamici -->
+    <div id="filtri-container" class="hidden mt-2">
+      <label class="block text-sm font-semibold text-gray-700 mb-2">Filtri specifici</label>
+      <div id="filtri-checkboxes" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Zona -->
+    <div class="relative">
+      <label for="zona" class="block text-sm font-medium text-gray-700">Zona</label>
+
+      <input type="text" id="zona-autocomplete" name="zona" autocomplete="off" required
+             value="{{ annuncio['zona'] if modalità == 'modifica' else '' }}"
+             class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+             placeholder="Inserisci zona o comune">
+
+      <!-- ✅ provincia certificata -->
+      <input type="hidden" name="provincia" id="zona_provincia"
+             value="{{ annuncio['provincia'] if modalità == 'modifica' else '' }}">
+
+      <ul id="zona-suggerimenti"
+          class="absolute w-full mt-1 border border-gray-200 rounded-lg bg-white shadow-md hidden z-10 max-h-56 overflow-y-auto"></ul>
+    </div>
+
+    <!-- Titolo -->
+    <div>
+      <label for="titolo" class="block text-sm font-medium text-gray-700">Titolo annuncio</label>
+      <input type="text" id="titolo" name="titolo"
+             value="{{ annuncio['titolo'] if modalità == 'modifica' else '' }}"
+             class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+             placeholder="Inserisci un titolo breve e chiaro" required>
+    </div>
+
+    <!-- Descrizione -->
+    <div>
+      <label for="descrizione" class="block text-sm font-medium text-gray-700">Descrizione dettagliata</label>
+      <textarea id="descrizione" name="descrizione" rows="5" required
+                class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ annuncio['descrizione'] if modalità == 'modifica' else '' }}</textarea>
+    </div>
+
+    <!-- Bio utente -->
+    <div>
+      <label for="bio_utente" class="block text-sm font-medium text-gray-700">Breve descrizione di te</label>
+      <textarea id="bio_utente" name="bio_utente" rows="3"
+                class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Parla brevemente di te stesso o della tua attività.">{{ annuncio['bio_utente'] if modalità == 'modifica' else '' }}</textarea>
+    </div>
+
+    <!-- Prezzo -->
+    <div>
+      <label for="prezzo" class="block text-sm font-medium text-gray-700">Prezzo richiesto (opzionale)</label>
+      <input type="text" id="prezzo" name="prezzo"
+             value="{{ annuncio['prezzo'] if modalità == 'modifica' else '' }}"
+             class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+             placeholder="Es. 25€/ora, trattabile...">
+    </div>
+
+    <!-- Contatti -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="telefono" class="block text-sm font-medium text-gray-700">Telefono (opzionale)</label>
+        <input type="text" id="telefono" name="telefono"
+               value="{{ annuncio['telefono'] if modalità == 'modifica' else '' }}"
+               class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+               placeholder="Numero di telefono">
+      </div>
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-700">Email (opzionale)</label>
+        <input type="email" id="email" name="email"
+              value="{{ annuncio['email'] if modalità == 'modifica' else '' }}"
+               class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+               placeholder="Inserisci email per contatti diretti">
+      </div>
+    </div>
+
+    <!-- Allegati -->
+    <div>
+      <label for="media" class="block text-sm font-medium text-gray-700">Immagini o video (opzionali)</label>
+      <input type="file" id="media" name="media" multiple accept="image/*,video/*"
+             class="mt-1 block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
+      <p class="text-xs text-gray-500 mt-1">Puoi caricare più file (max 10MB ciascuno)</p>
+
+      {% if modalità == 'modifica' and annuncio['media'] %}
+        <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {% for img in annuncio['media'].split(',') if img.strip() %}
+            <div class="relative group">
+              <img src="{{ url_for('static', filename=img.strip()) }}"
+                   class="rounded-lg w-full h-32 object-cover border border-gray-200">
+              <label class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs cursor-pointer hidden group-hover:block">
+                <input type="checkbox" name="cancellate" value="{{ img.strip() }}" class="hidden">
+                ✕
+              </label>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Pulsante -->
+    <div class="text-center pt-4">
+      <button type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">
+        {{ "💾 Salva modifiche" if modalità == "modifica" else "📢 Pubblica annuncio" }}
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- ✅ Filtri selezionati per la modalità modifica -->
+{% if modalità == "modifica" and annuncio['filtri_categoria'] %}
+  <script id="filtri-selezionati" type="application/json">
+    {{ annuncio['filtri_categoria'].split(',') | tojson }}
+  </script>
+{% endif %}
+
+<!-- ✅ Script dinamici -->
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
+<script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
+{% endblock %}
+{% endblock %}

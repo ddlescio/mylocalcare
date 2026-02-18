@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+<div class="page-wrapper mt-20">
+
+<style>
+  .chat-card {
+    transition: all 0.2s ease;
+  }
+  .chat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    background-color: #fdfdfd;
+  }
+  .unread-dot {
+    width: 10px;
+    height: 10px;
+    background: #3b82f6;
+    border-radius: 50%;
+  }
+</style>
+<!-- 🔙 TORNA INDIETRO -->
+<div class="mb-5">
+  <button onclick="history.back()"
+          class="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+         stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+    Torna indietro
+  </button>
+</div>
+
+
+<div class="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 mt-6">
+  <div class="flex items-center gap-2 mb-5">
+    <span class="text-2xl">💬</span>
+    <h1 class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
+      Le tue chat
+    </h1>
+    {% if unread_chat() > 0 %}
+      <span class="ml-2 bg-blue-600 text-white rounded-full px-2 text-xs sm:text-sm font-medium">
+        {{ unread_chat() }}
+      </span>
+    {% endif %}
+  </div>
+
+  {% if threads %}
+    <div class="space-y-3">
+      {% for c in threads %}
+      <a href="{{ url_for('chat_conversazione_view', other_id=c['altro_id']) }}"
+         class="chat-card flex items-center gap-4 bg-white/90 backdrop-blur-sm rounded-3xl shadow-sm border border-gray-100 p-5 hover:border-blue-300 transition-all relative">
+
+        <!-- FOTO PROFILO -->
+        <div class="relative flex-shrink-0">
+          <img src="{{ url_for('static', filename=c['altro_foto']) if c['altro_foto'] else url_for('static', filename='images/default_user.png') }}"
+               class="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-gray-200 shadow">
+
+          {% if c['non_letti'] > 0 %}
+            <div class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full ring-2 ring-white shadow"></div>
+          {% endif %}
+        </div>
+
+        <!-- INFO -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <h2 class="text-blue-700 font-semibold text-base sm:text-lg truncate bg-blue-50 px-2 py-0.5 rounded-lg">
+              @{{ c['altro_username'] }}
+            </h2>
+            <span class="text-[11px] sm:text-xs text-gray-400 whitespace-nowrap ml-2">
+              {% if c['ultimo_invio'] %}
+                {{ c['ultimo_invio'][8:10] }}/{{ c['ultimo_invio'][5:7] }}/{{ c['ultimo_invio'][0:4] }}
+                {% set dt = c['ultimo_invio'] | replace("T", " ") | to_datetime %}
+                {% if dt %}
+                  {{ dt.astimezone(pytz.timezone("Europe/Rome")).strftime("%H:%M") }}
+                {% endif %}
+              {% endif %}
+            </span>
+          </div>
+
+          <!-- RIGA MESSAGGIO -->
+          <p class="text-sm text-gray-600 truncate leading-tight">
+            {% if c['ultimo_mittente_id'] == g.utente['id'] %}
+              <span class="font-medium text-gray-700">Tu:</span>
+            {% else %}
+              <span class="font-medium text-gray-700">@{{ c['altro_username'] }}:</span>
+            {% endif %}
+            {{ c['ultimo_testo'] }}
+          </p>
+        </div>
+
+      </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center text-gray-500 text-sm italic mt-10">
+      Nessuna chat ancora iniziata 💬
+    </div>
+  {% endif %}
+</div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    let socket;
+    for (let i = 0; i < 20; i++) {
+        if (window.socket && window.socket.connected) { socket = window.socket; break; }
+        await new Promise(r => setTimeout(r, 100));
+    }
+    if (!socket) socket = io({ transports: ['websocket'] });
+
+    socket.on("chat_threads_update", () => {
+        location.reload();
+    });
+});
+
+// 🔁 Quando rientri su /chat con il tasto indietro, forza un refresh
+window.addEventListener("pageshow", function (e) {
+    const navEntries = performance.getEntriesByType("navigation");
+    const navType = navEntries && navEntries[0] ? navEntries[0].type : null;
+
+    if (e.persisted || navType === "back_forward") {
+        location.reload();
+    }
+});
+</script>
+{% endblock %}

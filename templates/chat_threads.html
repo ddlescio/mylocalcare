@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+<style>
+  .chat-item:hover {
+    background-color: #f9fafb;
+    transform: scale(1.01);
+  }
+  .chat-item {
+    transition: all 0.15s ease;
+  }
+  .unread-dot {
+    width: 10px;
+    height: 10px;
+    background: #3b82f6;
+    border-radius: 50%;
+  }
+</style>
+
+<div class="max-w-3xl mx-auto bg-white rounded-2xl shadow p-0 sm:p-4 mt-6">
+  <h2 class="text-lg font-semibold px-4 py-3 border-b text-gray-800">Le tue chat</h2>
+
+  {% if threads %}
+    <ul class="divide-y">
+      {% for t in threads %}
+        <li>
+          <a href="{{ url_for('chat_conversazione_view', other_id=t['altro_id']) }}" class="flex items-center justify-between px-4 py-3 chat-item">
+            <div class="flex items-center gap-3">
+              <!-- foto profilo -->
+              <img src="{{ url_for('static', filename=t['altro_foto']) if t['altro_foto'] else url_for('static', filename='images/default_user.png') }}"
+                   alt="avatar"
+                   class="w-10 h-10 rounded-full object-cover shadow-sm border">
+
+              <div>
+                <div class="font-medium text-gray-900">
+                  @{{ t['altro_username'] }}
+                </div>
+                <!-- anteprima ultimo messaggio -->
+                <div class="text-sm text-gray-500 truncate max-w-[180px] sm:max-w-[250px]">
+                  {% set prefix = 'Tu: ' if t['ultimo_mittente_id'] == my_id else '@' ~ t['altro_username'] ~ ': ' %}
+                  <span class="text-gray-600 font-medium">{{ prefix }}</span>
+
+                  {% if t['ultimo_testo'] %}
+                      {{ t['ultimo_testo'][:40] }}{% if t['ultimo_testo']|length > 40 %}…{% endif %}
+                  {% else %}
+                      <span class="text-gray-400 italic">Nessun messaggio</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-col items-end gap-1">
+              <div class="text-xs text-gray-400 whitespace-nowrap">
+                {{ t['ultimo_invio'] or '' }}
+              </div>
+              {% if t['non_letti'] > 0 %}
+                <div class="unread-dot"></div>
+              {% endif %}
+            </div>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="p-6 text-center text-gray-500 text-sm">
+      Nessuna chat ancora iniziata 💬
+    </div>
+  {% endif %}
+</div>
+<script>
+  // 🔁 Forza refresh della lista chat quando si torna indietro da una conversazione
+  window.addEventListener("pageshow", (evt) => {
+    const isBFCache = evt.persisted || (performance.getEntriesByType('navigation')[0]?.type === 'back_forward');
+    if (isBFCache && typeof loadThreads === "function") {
+      console.log("♻️ Refresh lista chat (rientro da cache)");
+      loadThreads();
+    }
+  });
+</script>
+{% endblock %}

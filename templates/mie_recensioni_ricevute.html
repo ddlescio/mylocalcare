@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% set body_class = "page-recensioni-ricevute" %}
+{% block content %}
+
+<div class="max-w-5xl mx-auto mt-8 bg-white rounded-2xl shadow-sm hover:shadow-md transition p-6">
+  <!-- 🔙 Torna alla dashboard -->
+  <div class="mb-5">
+    <a href="javascript:history.back()"
+       class="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+           stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      Torna
+    </a>
+  </div>
+  <h2 class="text-2xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+    💬 <span>Recensioni ricevute</span>
+  </h2>
+  <p class="text-gray-600 mb-6">
+    Qui puoi leggere le recensioni che hai ricevuto e rispondere ai tuoi utenti.
+  </p>
+
+  {% if recensioni and recensioni|length > 0 %}
+    <div class="space-y-6">
+      {% for r in recensioni %}
+        <div class="border border-gray-200 rounded-xl p-5 bg-gray-50 hover:bg-white hover:shadow-md transition">
+
+          <div class="flex justify-between items-start gap-4">
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800">
+                Da:
+                <a href="{{ url_for('profilo_operatore', id=r['id_autore']) }}"
+                   class="text-blue-600 hover:text-blue-800 underline">
+                  @{{ r['autore_username'] }}
+                </a>
+              </p>
+
+              <!-- ⭐ Stelle -->
+              <div class="text-yellow-400 text-lg leading-none mt-1">
+                {% for i in range(r.voto) %}★{% endfor %}
+                {% for i in range(5 - r.voto) %}☆{% endfor %}
+              </div>
+
+              {% if r.testo and r.testo|trim != '' %}
+                  <p class="text-gray-700 text-sm mt-2">{{ r.testo }}</p>
+              {% else %}
+                  <p class="text-gray-400 text-sm mt-2 italic">(Nessun commento)</p>
+              {% endif %}
+
+              <p class="text-xs text-gray-400 mt-2">
+                {{ r.data|fmt_it_smart }}
+              </p>
+            </div>
+          </div>
+
+          <!-- 🔹 Se esiste una risposta già salvata -->
+          {% set risposta = get_risposta_by_recensione(r.id, solo_approvate=False) %}
+          {% if risposta %}
+            <div class="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+              <p class="font-medium text-blue-700">
+                💬 La tua risposta
+              </p>
+              <p class="text-gray-700 text-sm mt-1">{{ risposta['testo'] }}</p>
+              <p class="text-xs text-gray-400 mt-1">
+                {{ risposta['data']|fmt_it_smart }}
+              </p>
+
+              {% if risposta['stato'] == 'in_attesa' %}
+                <p class="text-xs text-yellow-600 mt-1">⏳ In approvazione</p>
+              {% elif risposta['stato'] == 'rifiutato' %}
+                <p class="text-xs text-red-600 mt-1">❌ Rifiutata dall’amministratore</p>
+              {% endif %}
+
+              {% if session.get('utente_id')|int == risposta['id_autore']|int %}
+                <div class="flex items-center gap-2 mt-3 text-xs border-t border-blue-100 pt-3 justify-end">
+                  <!-- Modifica -->
+                  <button type="button"
+                          onclick="toggleModifica('{{ r.id }}')"
+                          class="text-gray-600 hover:text-blue-600 font-medium transition">
+                    Modifica
+                  </button>
+
+                  <!-- Separatore -->
+                  <span class="text-gray-300">•</span>
+
+                  <!-- Elimina -->
+                  <form action="{{ url_for('elimina_risposta_route', id=risposta['id']) }}"
+                        method="post"
+                        onsubmit="return confirm('Vuoi davvero eliminare questa risposta?');"
+                        class="inline">
+                    <button type="submit"
+                            class="text-gray-600 hover:text-red-600 font-medium transition">
+                      Elimina
+                    </button>
+                  </form>
+                </div>
+
+                <!-- 🔧 Form di modifica nascosto -->
+                <form id="form-modifica-{{ r.id }}" method="POST"
+                      action="{{ url_for('mie_recensioni_ricevute') }}"
+                      class="hidden mt-3 border-t pt-3">
+                  <input type="hidden" name="azione" value="modifica_risposta">
+                  <input type="hidden" name="id_risposta" value="{{ risposta['id'] }}">
+                  <textarea name="testo_risposta"
+                            rows="2"
+                            class="w-full border rounded-xl p-2 text-sm focus:ring focus:ring-blue-200">{{ risposta['testo'] }}</textarea>
+                  <div class="text-right mt-2">
+                    <button type="submit"
+                            class="bg-blue-600 text-white px-4 py-1 rounded-xl text-sm hover:bg-blue-700 transition">
+                      💾 Salva
+                    </button>
+                    <button type="button"
+                            onclick="toggleModifica('{{ r.id }}')"
+                            class="ml-2 text-sm text-gray-500 hover:underline">
+                      Annulla
+                    </button>
+                  </div>
+                </form>
+              {% endif %}
+            </div>
+
+          {% else %}
+            <!-- 🔹 Form di risposta -->
+            <form method="POST"
+                  action="{{ url_for('mie_recensioni_ricevute') }}"
+                  class="mt-4 border-t pt-3">
+              <input type="hidden" name="azione" value="rispondi">
+              <input type="hidden" name="id_recensione" value="{{ r.id }}">
+              <textarea name="testo_risposta"
+                        rows="2"
+                        class="w-full border rounded-xl p-2 text-sm focus:ring focus:ring-blue-200"
+                        placeholder="Scrivi una risposta..."></textarea>
+              <div class="flex items-center justify-end gap-3 mt-2 text-xs">
+                <button type="submit"
+                        class="text-gray-600 hover:text-blue-600 font-medium transition">
+                  💬 Invia risposta
+                </button>
+                <button type="reset"
+                        class="text-gray-400 hover:text-gray-600 font-medium transition">
+                  Annulla
+                </button>
+              </div>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div class="text-center py-10 text-gray-500">
+      <p class="italic">Non hai ancora ricevuto recensioni.</p>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleModifica(id) {
+  const form = document.getElementById('form-modifica-' + id);
+  if (form) form.classList.toggle('hidden');
+}
+</script>
+
+{% endblock %}

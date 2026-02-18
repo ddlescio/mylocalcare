@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- 🔹 CONTENITORE PRINCIPALE -->
+<div class="max-w-4xl mx-auto bg-gradient-to-br from-white via-blue-50/30 to-white rounded-3xl border border-blue-100 shadow-md p-8 md:p-12 mt-10">
+
+  <!-- 🔹 TITOLO PAGINA -->
+  <h1 class="text-3xl font-bold text-blue-600 mb-10 flex items-center gap-3">
+    <span class="text-2xl">✏️</span>
+    <span>Modifica annuncio</span>
+  </h1>
+
+  <!-- 🔹 FORM PRINCIPALE -->
+  <form method="POST" enctype="multipart/form-data" class="space-y-8" id="form-modifica">
+
+    <!-- 🔹 TITOLO ANNUNCIO -->
+    <div>
+      <label class="block text-blue-900 font-semibold mb-2">Titolo</label>
+      <input type="text" name="titolo" value="{{ annuncio['titolo'] }}"
+             class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none shadow-sm placeholder-gray-400" required>
+    </div>
+
+    <!-- 🔹 DESCRIZIONE -->
+    <div>
+      <label class="block text-blue-900 font-semibold mb-2">Descrizione</label>
+      <textarea name="descrizione" rows="5"
+                class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none shadow-sm placeholder-gray-400"
+                required>{{ annuncio['descrizione'] }}</textarea>
+    </div>
+
+    <!-- 🔹 BREVE DESCRIZIONE DI TE -->
+    <div>
+      <label for="bio_utente" class="block text-blue-900 font-semibold mb-2">Breve descrizione di te</label>
+      <textarea id="bio_utente" name="bio_utente" rows="3"
+                class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none shadow-sm placeholder-gray-400"
+                placeholder="Parla brevemente di te stesso o della tua attività.">{{ annuncio['bio_utente'] or '' }}</textarea>
+    </div>
+
+    <!-- 🔹 TIPO ANNUNCIO (OFFRO / CERCO) -->
+    <div>
+      <label class="block text-blue-900 font-semibold mb-2">
+        Tipo di annuncio
+      </label>
+
+      <div class="flex gap-4">
+
+        <!-- OFFRO -->
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="tipo_annuncio"
+            value="offro"
+            class="accent-green-600"
+            required
+            {% if annuncio['tipo_annuncio'] == 'offro' %}checked{% endif %}
+          >
+          <span class="inline-flex items-center gap-1 text-sm font-semibold
+                       bg-green-100 text-green-700 px-3 py-1.5 rounded-full
+                       border border-green-200">
+            🟢 Offro
+          </span>
+        </label>
+
+        <!-- CERCO -->
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="tipo_annuncio"
+            value="cerco"
+            class="accent-blue-600"
+            required
+            {% if annuncio['tipo_annuncio'] == 'cerco' %}checked{% endif %}
+          >
+          <span class="inline-flex items-center gap-1 text-sm font-semibold
+                       bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full
+                       border border-blue-200">
+            🔵 Cerco
+          </span>
+        </label>
+
+      </div>
+
+      <p class="text-xs text-gray-500 mt-1">
+        Specifica se stai offrendo qualcosa o se stai cercando
+      </p>
+    </div>
+
+    <!-- 🔹 CATEGORIA E FILTRI -->
+    <div class="grid md:grid-cols-3 gap-6">
+      <div>
+        <label class="block text-blue-900 font-semibold mb-2">Categoria</label>
+
+        <select id="categoria" name="categoria"
+                class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5">
+
+          <option value="">Seleziona categoria</option>
+
+          <option value="operatori-benessere"
+            {% if annuncio['categoria'] == 'operatori-benessere' %}selected{% endif %}>
+            Operatori benessere
+          </option>
+
+          <option value="ripetizioni"
+            {% if annuncio['categoria'] == 'ripetizioni' %}selected{% endif %}>
+            Ripetizioni
+          </option>
+
+          <option value="aiuto-in-casa"
+            {% if annuncio['categoria'] == 'aiuto-in-casa' %}selected{% endif %}>
+            Aiuto in casa
+          </option>
+
+          <option value="babysitter"
+            {% if annuncio['categoria'] == 'babysitter' %}selected{% endif %}>
+            Babysitter
+          </option>
+
+          <option value="pet-sitter"
+            {% if annuncio['categoria'] == 'pet-sitter' %}selected{% endif %}>
+            Pet-sitter
+          </option>
+
+          <option value="caregiver"
+            {% if annuncio['categoria'] == 'caregiver' %}selected{% endif %}>
+            Caregiver
+          </option>
+
+          <option value="escursioni-sport"
+            {% if annuncio['categoria'] == 'escursioni-sport' %}selected{% endif %}>
+            Escursioni & sport
+          </option>
+
+          <option value="biglietti-spettacoli"
+            {% if annuncio['categoria'] == 'biglietti-spettacoli' %}selected{% endif %}>
+            Biglietti spettacoli
+          </option>
+
+          <option value="libri-scuola"
+            {% if annuncio['categoria'] == 'libri-scuola' %}selected{% endif %}>
+            Libri scuola
+          </option>
+
+          <option value="caffe-parole"
+            {% if annuncio['categoria'] == 'caffe-parole' %}selected{% endif %}>
+            Caffè & parole
+          </option>
+
+        </select>        
+      </div>
+
+      <div class="md:col-span-2 flex flex-col">
+        <label class="block text-blue-900 font-semibold mb-2">Filtri specifici</label>
+        <div id="filtri-container"
+             class="flex flex-wrap gap-2 w-full min-h-[50px] overflow-visible p-3
+                    bg-white/70 backdrop-blur-sm border border-blue-100 rounded-2xl shadow-inner">
+        </div>
+        <input type="hidden" name="filtri_categoria" id="filtri_categoria"
+               value="{{ annuncio['filtri_categoria'] or '' }}">
+      </div>
+    </div>
+
+    <!-- 🔹 ZONA E PREZZO -->
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="relative">
+        <label class="block text-blue-900 font-semibold mb-2">Zona</label>
+
+        <input
+          type="text"
+          id="zona-autocomplete"
+          name="zona"
+          value="{{ annuncio['zona'] }}"
+          autocomplete="off"
+          class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5
+                 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none shadow-sm"
+          placeholder="Inserisci comune (es. Fiumicino)"
+        >
+
+        <!-- ✅ provincia certificata -->
+        <input
+          type="hidden"
+          name="provincia"
+          id="zona_provincia"
+          value="{{ annuncio['provincia'] or '' }}"
+        >
+
+        <ul
+          id="zona-suggerimenti"
+          class="absolute w-full mt-1 border border-gray-200 rounded-xl
+                 bg-white shadow-lg hidden z-20 max-h-56 overflow-y-auto">
+        </ul>
+      </div>
+
+      <div>
+        <label class="block text-blue-900 font-semibold mb-2">Prezzo</label>
+        <input type="text" name="prezzo" value="{{ annuncio['prezzo'] or '' }}"
+               class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none shadow-sm">
+      </div>
+    </div>
+
+    <!-- 🔹 TELEFONO -->
+    <div>
+      <label class="block text-blue-900 font-semibold mb-2">Telefono</label>
+      <input type="text" name="telefono" value="{{ annuncio['telefono'] or '' }}"
+             class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none shadow-sm">
+    </div>
+
+    <!-- 🔹 EMAIL -->
+    <div>
+      <label class="block text-blue-900 font-semibold mb-2">Email</label>
+      <input type="email" name="email" value="{{ annuncio['email'] or '' }}"
+             class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none shadow-sm">
+    </div>
+
+    <!-- 🔹 FOTO GIÀ CARICATE -->
+    {% if annuncio['media'] %}
+    <div>
+      <label class="block text-blue-900 font-semibold mb-3">📸 Foto caricate</label>
+      <div id="foto-esistenti" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {% for foto in annuncio['media'].split(',') %}
+        <div class="relative group">
+          <img src="{{ url_for('static', filename=foto.strip()) }}"
+               class="rounded-xl shadow-md w-full h-32 object-cover border border-blue-100">
+          <input type="hidden" name="immagini_rimanenti" value="{{ foto.strip() }}">
+          <button type="button"
+                  onclick="rimuoviFoto(this, '{{ foto.strip() }}')"
+                  class="absolute top-1 right-1 bg-red-600 text-white rounded-full text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition">
+            ✕
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 🔹 NUOVE FOTO -->
+    <div>
+      <label class="block text-blue-900 font-semibold mb-2">Aggiungi nuove foto</label>
+      <input type="file" name="foto" multiple
+             class="w-full rounded-2xl border border-blue-100 bg-white/90 px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none shadow-sm">
+    </div>
+
+    <!-- 🔹 PULSANTI FINALI -->
+    <div class="flex justify-between items-center mt-10 border-t border-blue-100 pt-6">
+      <a href="{{ url_for('visualizza_annuncio_pubblico', id=annuncio['id']) }}"
+         class="text-gray-500 hover:text-blue-600 transition flex items-center gap-1 font-medium">
+         ← <span>Annulla</span>
+      </a>
+      <button type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-2xl font-semibold shadow-md transition">
+        💾 Salva modifiche
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- 🔹 SCRIPT: RIMOZIONE FOTO -->
+<script>
+function rimuoviFoto(button, fotoPath) {
+  const container = button.closest('div.group');
+  container.remove();
+
+  const inputCancellata = document.createElement('input');
+  inputCancellata.type = 'hidden';
+  inputCancellata.name = 'cancellate';
+  inputCancellata.value = fotoPath;
+  document.getElementById('form-modifica').appendChild(inputCancellata);
+}
+</script>
+
+<!-- 🔹 SCRIPT: FILTRI DINAMICI -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const categoriaSelect = document.getElementById("categoria");
+  const filtriContainer = document.getElementById("filtri-container");
+  const filtriHidden = document.getElementById("filtri_categoria");
+
+  const filtriDisponibili = {
+    "operatori-benessere": [
+      "Massaggio", "Riflessologia", "Reiki", "Kinesiologia", "Posturale",
+      "Yoga", "Fisioterapia", "Riabilitazione", "Coaching", "Altro"
+    ],
+    "ripetizioni": [
+      "Italiano", "Matematica", "Inglese", "Scienze", "Storia", "Fisica",
+      "Chimica", "Latino", "Greco", "Altro"
+    ],
+    "aiuto-in-casa": [
+      "Pulizie", "Stiro", "Spesa", "Giardinaggio", "Cucina",
+      "Babysitting occasionale", "Commissioni", "Aiuto traslochi", "Altro"
+    ],
+    "babysitter": [
+      "Neonati", "Età scolare", "Compiti", "Cucinare", "Notturno",
+      "Urgenze", "Automunito", "Lingue straniere", "Sindrome di Down",
+      "Autismo", "Disabilità", "Altro"
+    ],
+    "pet-sitter": [
+      "Cane", "Gatto", "Passeggiate", "Pensione",
+      "Somministrazione farmaci", "Altro"
+    ],
+    "caregiver": [
+      "Compagnia", "Igiene", "Somministrazione farmaci", "Disabilità",
+      "Alzheimer/Demenza", "Notturno", "Automunito", "Altro"
+    ],
+    "escursioni-sport": [
+      "Escursioni", "Trekking", "Montagna", "Corsa", "Bici",
+      "Palestra", "Calisthenics", "Sport di squadra", "Altro"
+    ],
+    "biglietti-spettacoli": [
+      "Offro", "Cerco", "Concerti", "Teatro", "Cinema", "Altro"
+    ],
+    "libri-scuola": [
+      "Elementari", "Medie", "Superiori", "Università", "Altro"
+    ],
+    "caffe-parole": [
+      "Inglese", "Francese", "Spagnolo", "Tedesco",
+      "Italiano per stranieri", "Altro"
+    ]
+  };
+
+  function aggiornaFiltri() {
+    const categoria = categoriaSelect.value;
+    const attuali = (filtriHidden.value || "").split(",").map(f => f.trim());
+    filtriContainer.innerHTML = "";
+
+    if (!categoria || !filtriDisponibili[categoria]) return;
+
+    filtriDisponibili[categoria].forEach(f => {
+      const checked = attuali.includes(f);
+      const label = document.createElement("label");
+      label.className = "cursor-pointer";
+      label.innerHTML = `
+        <input type="checkbox" value="${f}" class="hidden peer" ${checked ? "checked" : ""}>
+        <span class="peer-checked:bg-blue-600/90 peer-checked:text-white
+                     bg-white/80 text-gray-700 text-sm px-3 py-1.5 rounded-full
+                     border border-gray-200 shadow-sm transition-all
+                     hover:bg-blue-50 hover:shadow-md select-none">${f}</span>
+      `;
+      filtriContainer.appendChild(label);
+    });
+
+    aggiornaHidden();
+  }
+
+  function aggiornaHidden() {
+    const selezionati = Array.from(filtriContainer.querySelectorAll("input:checked"))
+                            .map(i => i.value);
+    filtriHidden.value = selezionati.join(", ");
+  }
+
+  categoriaSelect.addEventListener("change", aggiornaFiltri);
+  filtriContainer.addEventListener("change", aggiornaHidden);
+  aggiornaFiltri();
+  aggiornaHidden();
+});
+</script>
+
+<!-- 🔹 STILE -->
+<style>
+  #filtri-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  #filtri-container label {
+    flex: 0 0 auto;
+  }
+
+  #form-modifica label {
+    font-size: 0.95rem;
+  }
+  #form-modifica input,
+  #form-modifica textarea,
+  #form-modifica select {
+    transition: all 0.2s ease;
+  }
+  #form-modifica textarea {
+    resize: vertical;
+  }
+</style>
+<script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
+
+{% endblock %}

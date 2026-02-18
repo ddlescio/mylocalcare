@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded shadow">
+  <h2 class="text-2xl font-bold mb-4">Messaggi Ricevuti</h2>
+
+  <!-- Filtri -->
+  <form method="get" action="/admin/messaggi" class="flex flex-wrap gap-4 mb-6">
+    <input type="text" name="da" placeholder="Da (nome mittente)" value="{{ filtra_da }}" class="border px-3 py-2 rounded w-48">
+    <input type="text" name="per" placeholder="Per (nome operatore)" value="{{ filtra_per }}" class="border px-3 py-2 rounded w-48">
+    <button type="submit" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded">Filtra</button>
+  </form>
+
+  {% if messaggi %}
+    <table class="w-full table-auto border-collapse text-sm">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="border px-4 py-2 text-left">Da</th>
+          <th class="border px-4 py-2 text-left">Email</th>
+          <th class="border px-4 py-2 text-left">Per</th>
+          <th class="border px-4 py-2 text-left">Messaggio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in messaggi %}
+        <tr class="hover:bg-gray-50">
+          <td class="border px-4 py-2 font-medium">{{ m.nome }}</td>
+          <td class="border px-4 py-2 text-blue-600">{{ m.email }}</td>
+          <td class="border px-4 py-2">{{ m.nome_operatore or 'Non specificato' }}</td>
+          <td class="border px-4 py-2 whitespace-pre-line">{{ m.messaggio }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-gray-600">Nessun messaggio ricevuto.</p>
+  {% endif %}
+</div>
+{% endblock %}

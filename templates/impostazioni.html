@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% set page = "impostazioni" %}
+
+{% block content %}
+
+<div class="max-w-2xl mx-auto px-4 pt-24 pb-10">
+
+  <!-- 🔙 FRECCIA TORNA -->
+  <a onclick="history.back()"
+     class="inline-flex items-center text-blue-600 hover:text-blue-700 mb-4 text-sm font-medium cursor-pointer">
+    ← Torna indietro
+  </a>
+
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">⚙️ Impostazioni</h1>
+
+  <!-- 🔵 BLOCCO 1 – Profilo Account -->
+  <div class="bg-white rounded-2xl shadow-sm border mb-6">
+    <div class="p-5 border-b">
+      <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+        👤 Profilo account
+      </h2>
+    </div>
+
+    <div class="divide-y">
+      <a href="{{ url_for('modifica_username') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+        <span class="text-gray-700">Modifica username</span>
+        <span class="text-gray-400">›</span>
+      </a>
+
+      <a href="{{ url_for('modifica_password') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+        <span class="text-gray-700">Modifica password</span>
+        <span class="text-gray-400">›</span>
+      </a>
+
+      <!-- 🔴 ORA: link a STEP 1 -->
+      <a href="{{ url_for('elimina_account_step1') }}" class="flex items-center justify-between px-5 py-4 hover:bg-red-50">
+        <span class="text-red-600">Elimina account</span>
+        <span class="text-red-400">›</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- 🔒 BLOCCO 2 – Sicurezza -->
+  <div class="bg-white rounded-2xl shadow-sm border mb-6">
+    <div class="p-5 border-b">
+      <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+        🔒 Sicurezza
+      </h2>
+    </div>
+
+    <div class="divide-y">
+      <a href="{{ url_for('email_notifiche') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+        <span class="text-gray-700">Notifiche via email</span>
+        <span class="text-gray-400">›</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- 🖼 BLOCCO 3 – Foto profilo -->
+  <div class="bg-white rounded-2xl shadow-sm border">
+    <div class="p-5 border-b">
+      <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+        🖼 Foto profilo
+      </h2>
+    </div>
+
+    <div class="divide-y">
+      <a href="{{ url_for('cambia_foto') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+        <span class="text-gray-700">Cambia foto profilo</span>
+        <span class="text-gray-400">›</span>
+      </a>
+
+      <a href="{{ url_for('cambia_copertina') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+        <span class="text-gray-700">Cambia copertina</span>
+        <span class="text-gray-400">›</span>
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const ref = document.referrer || "";
+
+  // Se arrivo da una pagina NON interna alle impostazioni/modifiche
+  if (
+    !ref.includes("/modifica") &&
+    !ref.includes("/cambia") &&
+    !ref.includes("/impostazioni") &&
+    !ref.includes("/elimina_account") &&
+    !ref.includes("/email_notifiche")
+  ) {
+    sessionStorage.setItem("impostazioni_origin", ref);
+  }
+
+  document.querySelector("a[onclick='history.back()']")?.addEventListener("click", (e) => {
+    e.preventDefault();
+
+    const origin = sessionStorage.getItem("impostazioni_origin");
+
+    if (origin && origin !== window.location.href) {
+      window.location.href = origin;
+    } else {
+      window.location.href = "/";
+    }
+  });
+});
+</script>
+
+
+{% endblock %}

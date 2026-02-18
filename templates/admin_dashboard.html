@@ -1,0 +1,128 @@
+{% extends "layout_admin.html" %}
+
+{% block admin_content %}
+
+<!-- 📌 Dashboard Admin -->
+<h1 class="text-2xl font-bold text-slate-800 mb-6">📊 Dashboard</h1>
+
+<p class="text-slate-500 mb-6">
+  Benvenuto nel pannello di amministrazione. Qui trovi una panoramica rapida delle attività più importanti.
+</p>
+
+<!-- 🔹 GRID CARDS CLICCABILI (stile iOS) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+  <!-- 🟦 Utenti -->
+  <a href="{{ url_for('admin_utenti') }}"
+     class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex items-center gap-4 transition-all duration-200
+            hover:shadow-lg hover:-translate-y-1">
+
+    <div class="p-3 rounded-xl bg-blue-100 text-blue-700 text-xl
+                group-hover:bg-blue-200 transition">
+      👥
+    </div>
+
+    <div>
+      <p class="text-sm font-medium text-slate-500">Utenti totali</p>
+      <p id="dash-utenti" class="text-2xl font-bold text-slate-800">—</p>
+    </div>
+  </a>
+
+  <!-- 🟧 Annunci -->
+  <a href="{{ url_for('admin_annunci') }}"
+     class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex items-center gap-4 transition-all duration-200
+            hover:shadow-lg hover:-translate-y-1">
+
+    <div class="p-3 rounded-xl bg-amber-100 text-amber-700 text-xl
+                group-hover:bg-amber-200 transition">
+      📣
+    </div>
+
+    <div>
+      <p class="text-sm font-medium text-slate-500">Annunci in attesa</p>
+      <p id="dash-annunci" class="text-2xl font-bold text-slate-800">—</p>
+    </div>
+  </a>
+
+  <!-- 🟥 Recensioni -->
+  <a href="{{ url_for('admin_recensioni') }}"
+     class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex items-center gap-4 transition-all duration-200
+            hover:shadow-lg hover:-translate-y-1">
+
+    <div class="p-3 rounded-xl bg-rose-100 text-rose-700 text-xl
+                group-hover:bg-rose-200 transition">
+      ⭐
+    </div>
+
+    <div>
+      <p class="text-sm font-medium text-slate-500">Recensioni in attesa</p>
+      <p id="dash-recensioni" class="text-2xl font-bold text-slate-800">—</p>
+    </div>
+  </a>
+
+  <!-- 🟩 Messaggi -->
+  <a href="{{ url_for('admin_counters') }}"
+     class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex items-center gap-4 transition-all duration-200
+            hover:shadow-lg hover:-translate-y-1">
+
+    <div class="p-3 rounded-xl bg-green-100 text-green-700 text-xl
+                group-hover:bg-green-200 transition">
+      💬
+    </div>
+
+    <div>
+      <p class="text-sm font-medium text-slate-500">Messaggi non letti</p>
+      <p id="dash-messaggi" class="text-2xl font-bold text-slate-800">—</p>
+    </div>
+  </a>
+
+  <!-- 🎥 Videochiamate -->
+<a href="{{ url_for('admin_video_calls') }}"
+   class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+          flex items-center gap-4 transition-all duration-200
+          hover:shadow-lg hover:-translate-y-1">
+
+  <div class="p-3 rounded-xl bg-purple-100 text-purple-700 text-xl
+              group-hover:bg-purple-200 transition">
+    🎥
+  </div>
+
+  <div>
+    <p class="text-sm font-medium text-slate-500">Minuti video usati</p>
+    <p id="dash-video-minuti" class="text-2xl font-bold text-slate-800">—</p>
+  </div>
+</a>
+
+</div>
+
+<!-- 🔹 JS per caricare counters -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    fetch("/admin/counters")
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data) return;
+
+            document.getElementById("dash-utenti").textContent =
+              data.utenti ?? "0";
+
+            document.getElementById("dash-annunci").textContent =
+              data.annunci ?? "0";
+
+            document.getElementById("dash-recensioni").textContent =
+              data.recensioni ?? "0";
+
+            document.getElementById("dash-messaggi").textContent =
+              data.messaggi ?? "0";
+
+            document.getElementById("dash-video-minuti").textContent =
+              data.video_minuti ?? "0";              
+        });
+});
+</script>
+
+{% endblock %}

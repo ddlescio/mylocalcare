@@ -1,0 +1,591 @@
+{
+  "Milano": {
+    "Milano": [
+      "Brera",
+      "Cimitero Monumentale",
+      "Carrobbio",
+      "Centro Direzionale",
+      "Cinque Vie",
+      "Cordusio",
+      "Duomo",
+      "Guastalla",
+      "Missori",
+      "Montenapoleone / Quadrilatero della Moda",
+      "Moscova",
+      "Porta Nuova",
+      "Porta Romana",
+      "Porta Genova",
+      "San Babila",
+      "Sant’Ambrogio",
+      "Sant’Agostino",
+      "Sant’Eustorgio",
+      "Ticinese",
+      "Torre Velasca",
+      "Città Studi",
+      "Zona Magenta",
+      "Adriano",
+      "Bicocca",
+      "Cimiano",
+      "Crescenzago",
+      "Gorla",
+      "Greco",
+      "Lambrate",
+      "Maggiolina",
+      "NoLo (North of Loreto)",
+      "Precotto",
+      "Redecesio",
+      "Stazione Centrale",
+      "Turro",
+      "Viale Monza",
+      "Statale",
+      "Casoretto",
+      "Lambrate",
+      "Ortica",
+      "Pasteur",
+      "Piola",
+      "Porta Venezia",
+      "Rottole",
+      "Calvairate",
+      "Forlanini",
+      "Mecenate",
+      "Monluè",
+      "Morsenchio",
+      "Porta Romana",
+      "Ponte Lambro",
+      "Quartiere Omero",
+      "Rogoredo",
+      "San Donato",
+      "Santa Giulia",
+      "Taliedo",
+      "Umbria – Molise – Corvetto",
+      "Abbiategrasso",
+      "Barona",
+      "Repubblica",
+      "Basmetto",
+      "Chiesa Rossa",
+      "Conchetta",
+      "Famagosta",
+      "Garibaldi",
+      "Gratosoglio",
+      "Navigli",
+      "Porta Ticinese",
+      "Ronchetto sul Naviglio",
+      "Stadera",
+      "Tibaldi",
+      "Vigentino",
+      "Bande Nere",
+      "Barona",
+      "Bisceglie",
+      "Giambellino",
+      "Lorenteggio",
+      "Porta Genova",
+      "Porta Vercellina",
+      "Ronchetto delle Rane",
+      "San Cristoforo",
+      "Segneri",
+      "Washington",
+      "Baggio",
+      "De Angeli",
+      "Figino",
+      "Forze Armate",
+      "Inganni",
+      "Muggiano",
+      "Quarto Cagnino",
+      "Quinto Romano",
+      "San Siro",
+      "Trenno",
+      "Bovisa",
+      "Cascina Merlata",
+      "Certosa",
+      "CityLife",
+      "Gallaratese",
+      "Ghisolfa",
+      "Lampugnano",
+      "Lotto",
+      "Musocco",
+      "Portello",
+      "QT8",
+      "Villapizzone",
+      "Vialba",
+      "Affori",
+      "Bicocca (parte)",
+      "Bovisasca",
+      "Bruzzano",
+      "Comasina",
+      "Dergano",
+      "Niguarda",
+      "Prato Centenaro",
+      "Testi – Zara",
+      "Villa Litta",
+      "Isola",
+      "Chinatown",
+      "Ortomercato",
+      "Bovisa Tech"
+    ],
+      "Sesto San Giovanni": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Cinisello Balsamo": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Rho": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Legnano": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Rozzano": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Pioltello": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "San Donato Milanese": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Corsico": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Cologno Monzese": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Abbiategrasso": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Gorgonzola": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Monza e Brianza": {
+    "Monza": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Lissone": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Seregno": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Desio": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Brugherio": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Cesano Maderno": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Giussano": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Vimercate": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Varese": {
+    "Varese": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Busto Arsizio": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Gallarate": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Saronno": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Tradate": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Luino": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Como": {
+    "Como": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Cantù": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Erba": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Mariano Comense": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Olgiate Comasco": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Lecco": {
+    "Lecco": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Merate": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Calolziocorte": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Bergamo": {
+    "Bergamo": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Treviglio": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Dalmine": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Seriate": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Albino": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Romano di Lombardia": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Brescia": {
+    "Brescia": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Desenzano del Garda": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Lonato del Garda": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Montichiari": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Rovato": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Pavia": {
+    "Pavia": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Vigevano": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Stradella": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Mortara": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Lodi": {
+    "Lodi": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Codogno": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Casalpusterlengo": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Sant'Angelo Lodigiano": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Cremona": {
+    "Cremona": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Crema": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Piacenza": {
+    "Piacenza": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Fiorenzuola d'Arda": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Novara": {
+    "Novara": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Trecate": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Borgomanero": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Arona": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  },
+  "Alessandria": {
+    "Alessandria": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Tortona": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ],
+    "Novi Ligure": [
+      "Centro",
+      "Periferia",
+      "Stazione",
+      "Zona Industriale",
+      "Zona Residenziale"
+    ]
+  }
+}

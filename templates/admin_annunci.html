@@ -1,0 +1,577 @@
+{% extends "layout_admin.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block admin_content %}
+<style>
+/* --- FIX NAVBAR (IDENTICO A TUTTE LE ALTRE PAGINE) --- */
+.page-wrapper { padding-top: 10px; }
+
+/* --- CARD iOS STYLE --- */
+.admin-card {
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 22px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* --- TITOLO --- */
+.admin-title {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 20px;
+}
+
+/* --- TABELLA --- */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-wrapper table th {
+    background: #f7f7f9;
+    padding: 12px;
+    font-weight: 600;
+}
+
+.table-wrapper table td {
+    padding: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.table-wrapper tr:hover {
+    background: #f9fafb;
+}
+
+/* --- BADGE STATO --- */
+.badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* --- MOBILE --- */
+@media (max-width: 640px) {
+    .admin-card { padding: 16px; }
+    .admin-title { font-size: 1.4rem; margin-bottom: 16px; }
+}
+</style>
+
+<div class="page-wrapper">
+
+<div class="admin-card">
+
+    <h1 class="admin-title">📋 Gestione Annunci</h1>
+
+    <!-- 🔍 FILTRI ANNUNCI -->
+<form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+
+    <!-- Utente -->
+    <div>
+        <label class="text-sm font-medium text-gray-600">Utente</label>
+        <input type="text" name="utente" value="{{ request.args.get('utente','') }}"
+               placeholder="Nome o cognome"
+               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-200">
+    </div>
+
+    <!-- Categoria -->
+    <div>
+      <label class="text-sm font-medium text-gray-600">Categoria</label>
+      <select name="categoria"
+              class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+        <option value="">Tutte</option>
+        {% for cat in categorie %}
+          <option value="{{ cat }}"
+            {% if request.args.get('categoria') == cat %}selected{% endif %}>
+            {{ cat }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Tipo annuncio -->
+    <div>
+      <label class="text-sm font-medium text-gray-600">Tipo</label>
+      <select name="tipo_annuncio"
+              class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+        <option value="">Tutti</option>
+        <option value="offro"
+          {% if request.args.get('tipo_annuncio') == 'offro' %}selected{% endif %}>
+          Offro
+        </option>
+        <option value="cerco"
+          {% if request.args.get('tipo_annuncio') == 'cerco' %}selected{% endif %}>
+          Cerco
+        </option>
+      </select>
+    </div>
+
+    <!-- Zona / Comune -->
+    <div class="relative">
+      <label class="text-sm font-medium text-gray-600">Comune</label>
+      <input id="zona-autocomplete"
+             type="text"
+             placeholder="Comune"
+             class="w-full p-2 border border-gray-300 rounded-lg">
+      <input type="hidden" name="zona" id="zona">
+
+      <div id="zona-suggerimenti"
+           class="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow hidden max-h-60 overflow-auto">
+      </div>
+    </div>
+
+    <!-- Provincia (visibile) -->
+    <div class="relative">
+      <label class="text-sm font-medium text-gray-600">Provincia</label>
+      <input id="provincia-visibile"
+             type="text"
+             name="provincia"
+             value="{{ request.args.get('provincia','') }}"
+             placeholder="Es. MI, PV, RM"
+             class="w-full p-2 border border-gray-300 rounded-lg">
+
+      <div id="provincia-suggerimenti"
+           class="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow hidden max-h-60 overflow-auto">
+      </div>
+    </div>
+
+    <!-- Stato -->
+    <div>
+        <label class="text-sm font-medium text-gray-600">Stato</label>
+        <select name="stato"
+                class="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-blue-200">
+            <option value="">Tutti</option>
+            <option value="in_attesa"  {% if request.args.get('stato') == 'in_attesa' %}selected{% endif %}>In attesa</option>
+            <option value="approvato" {% if request.args.get('stato') == 'approvato' %}selected{% endif %}>Approvato</option>
+            <option value="rifiutato" {% if request.args.get('stato') == 'rifiutato' %}selected{% endif %}>Rifiutato</option>
+            <option value="disattivato" {% if request.args.get('stato') == 'disattivato' %}selected{% endif %}>Disattivato</option>
+        </select>
+    </div>
+
+    <!-- Pulsanti -->
+    <div class="sm:col-span-2 lg:col-span-4 flex gap-3 mt-1">
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">
+            Filtra
+        </button>
+        <a href="{{ url_for('admin_annunci') }}"
+           class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg shadow hover:bg-gray-300">
+            Reset
+        </a>
+    </div>
+</form>
+
+    {% if annunci %}
+
+    <div class="table-wrapper">
+        <table class="w-full text-sm min-w-max">
+            <thead>
+                <tr class="bg-gray-100 text-left">
+                    <th class="p-2">Titolo</th>
+                    <th class="p-2">Utente</th>
+                    <th class="p-2">Categoria</th>
+                    <th class="p-2 text-center">Tipo</th>
+                    <th class="p-2">Zona</th>
+                    <th class="p-2">Provincia</th>
+                    <th class="p-2 text-center">Stato</th>
+                    <th class="p-2 text-center">Azioni</th>
+                    <th class="p-2 text-center">Servizi</th>
+                    <th class="p-2 text-center">Servizi multipli</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in annunci %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-2">{{ a.titolo }}</td>
+                    <td class="p-2">
+
+                        {{ a.nome }} {{ a.cognome }}
+
+                        <div class="mt-1 flex gap-1">
+                            <!-- CHAT -->
+                            <a href="{{ url_for('chat_conversazione_view', other_id=a.utente_id) }}"
+                               class="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs hover:bg-blue-100">
+                               💬
+                            </a>
+
+                            <!-- MAIL -->
+                            <a href="mailto:{{ a.email }}"
+                               class="inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700 border border-gray-200 text-xs hover:bg-gray-100">
+                               ✉️
+                            </a>
+                        </div>
+
+                    </td>
+                    <td class="p-2">{{ a.categoria }}</td>
+                    <td class="p-2 text-center">
+                    {% if a.tipo_annuncio == 'offro' %}
+                      <span class="badge bg-blue-100 text-blue-700">Offro</span>
+                    {% elif a.tipo_annuncio == 'cerco' %}
+                      <span class="badge bg-purple-100 text-purple-700">Cerco</span>
+                    {% else %}
+                      <span class="badge bg-gray-100 text-gray-500">—</span>
+                    {% endif %}
+                  </td>
+                    <td class="p-2">{{ a.zona }}</td>
+                    <td class="p-2 font-semibold text-gray-600">{{ a.provincia }}</td>
+
+                    <td class="p-2 text-center">
+                        <span class="badge
+                            {% if a.stato == 'approvato' %} bg-green-100 text-green-700
+                            {% elif a.stato == 'rifiutato' %} bg-red-100 text-red-700
+                            {% else %} bg-yellow-100 text-yellow-700
+                            {% endif %}">
+                            {{ a.stato }}
+                        </span>
+                    </td>
+
+                    <td class="p-2 text-center">
+                      <a href="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}" class="text-blue-600 hover:underline">Apri</a>
+                      |
+                      {% if a.stato == 'in_attesa' %}
+                        <a href="{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}" class="text-green-600 hover:underline">Approva</a> |
+                        <a href="{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}" class="text-red-600 hover:underline">Rifiuta</a>
+                      {% else %}
+                        {% if a.stato == 'approvato' %}
+                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}" class="text-yellow-600 hover:underline">Disattiva</a>
+                        {% else %}
+                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}" class="text-green-600 hover:underline">Attiva</a>
+                        {% endif %}
+                      {% endif %}
+                    </td>
+                    <td class="p-2 text-center">
+                      <div class="flex flex-wrap justify-center gap-1">
+
+                        <!-- VETRINA -->
+                        <button
+                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                            {% if a.has_vetrina %}bg-purple-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                          data-servizio="vetrina_annuncio"
+                          data-annuncio="{{ a.id }}"
+                          data-utente="{{ a.utente_id }}">
+                          Vetrina
+                        </button>
+
+                        <!-- BOOST LISTA -->
+                        <button
+                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                            {% if a.has_boost_lista %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                          data-servizio="boost_lista"
+                          data-annuncio="{{ a.id }}"
+                          data-utente="{{ a.utente_id }}">
+                          Lista
+                        </button>
+
+                        <!-- BADGE EVIDENZA -->
+                        <button
+                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                            {% if a.has_badge_evidenza %}bg-amber-500 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                          data-servizio="badge_evidenza"
+                          data-annuncio="{{ a.id }}"
+                          data-utente="{{ a.utente_id }}">
+                          Evidenza
+                        </button>
+
+                        <!-- AFFIDABILITÀ -->
+                        <button
+                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                            {% if a.has_affidabilita %}bg-green-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                          data-servizio="badge_affidabilita"
+                          data-utente="{{ a.utente_id }}">
+                          Affidabilità
+                        </button>
+
+                        <!-- URGENTE -->
+                        <button
+                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                            {% if a.has_urgente %}bg-red-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                          data-servizio="annuncio_urgente"
+                          data-annuncio="{{ a.id }}"
+                          data-utente="{{ a.utente_id }}">
+                          🚨 Urgente
+                        </button>
+
+                      </div>
+                    </td>
+                    <td class="p-2 text-center">
+                      <div class="flex flex-wrap justify-center gap-1">
+
+                        <!-- 📦 PACCHETTO VISIBILITÀ -->
+                        <button
+                          class="toggle-pacchetto px-2 py-1 rounded text-xs font-semibold
+                            {% if a.has_pacchetto_visibilita %}bg-blue-700 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                          data-pacchetto="pacchetto_visibilita"
+                          data-annuncio="{{ a.id }}"
+                          data-utente="{{ a.utente_id }}">
+                          📦 Visibilità
+                        </button>
+
+                        <!-- 🌟 PREMIUM -->
+                        <button
+                          class="toggle-pacchetto px-2 py-1 rounded text-xs font-semibold
+                            {% if a.has_pacchetto_premium %}bg-amber-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                          data-pacchetto="pacchetto_premium"
+                          data-annuncio="{{ a.id }}"
+                          data-utente="{{ a.utente_id }}">
+                          🌟 Premium
+                        </button>
+
+                      </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+        <p class="text-gray-500 text-center mt-6">Nessun annuncio trovato.</p>
+    {% endif %}
+
+</div>
+
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // --- COMUNE ---
+  const inputComune = document.getElementById("zona-autocomplete");
+  const hiddenZona = document.getElementById("zona");
+  const listComune = document.getElementById("zona-suggerimenti");
+
+  // --- PROVINCIA ---
+  const inputProvincia = document.getElementById("provincia-visibile");
+  const listProvincia = document.getElementById("provincia-suggerimenti");
+
+  // Se manca qualcosa, esci (evita errori JS)
+  if (!inputComune || !hiddenZona || !listComune || !inputProvincia || !listProvincia) return;
+
+  let comuni = [];
+  let comuneSelected = false;
+  let provinciaSelected = false;
+
+  const norm = s =>
+    (s || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/['’]/g, "")
+      .trim();
+
+  const score = (text, q) => {
+    if (text === q) return 0;
+    if (text.startsWith(q)) return 1;
+    if (text.includes(q)) return 2;
+    return 99;
+  };
+
+  // Carico comuni.json (una volta sola)
+  fetch("/static/data/comuni.json")
+    .then(r => r.json())
+    .then(d => {
+      comuni = Array.isArray(d) ? d : [];
+    })
+    .catch(() => {
+      comuni = [];
+    });
+
+  // -------------------------
+  // AUTOCOMPLETE COMUNE
+  // -------------------------
+  inputComune.setAttribute("autocomplete", "off");
+
+  inputComune.addEventListener("input", () => {
+    const qRaw = inputComune.value.trim();
+    const q = norm(qRaw);
+
+    comuneSelected = false;
+    hiddenZona.value = "";
+    listComune.innerHTML = "";
+
+    if (q.length < 2) {
+      listComune.classList.add("hidden");
+      return;
+    }
+
+    const risultati = comuni
+      .map(c => {
+        const nome = norm(c.comune);
+        return { ...c, _s: score(nome, q) };
+      })
+      .filter(c => c._s < 99)
+      .sort((a, b) => a._s - b._s || norm(a.comune).localeCompare(norm(b.comune)))
+      .slice(0, 10);
+
+    if (!risultati.length) {
+      listComune.classList.add("hidden");
+      return;
+    }
+
+    risultati.forEach(c => {
+      const el = document.createElement("div");
+      el.textContent = `${c.comune} (${String(c.provincia || "").toUpperCase()})`;
+      el.className = "px-4 py-2 cursor-pointer hover:bg-gray-100 text-sm";
+
+      // IMPORTANTISSIMO: pointerdown per evitare che il blur chiuda prima del click
+      el.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        inputComune.value = c.comune;
+        hiddenZona.value = c.comune;
+
+        // Autocompila provincia visibile quando scegli un comune
+        if (c.provincia) {
+          inputProvincia.value = String(c.provincia).trim().toUpperCase();
+        }
+
+        comuneSelected = true;
+        listComune.classList.add("hidden");
+      });
+
+      listComune.appendChild(el);
+    });
+
+    listComune.classList.remove("hidden");
+  });
+
+  inputComune.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!comuneSelected) {
+        inputComune.value = "";
+        hiddenZona.value = "";
+      }
+      listComune.classList.add("hidden");
+    }, 120);
+  });
+
+  // -------------------------
+  // AUTOCOMPLETE PROVINCIA
+  // -------------------------
+  const getProvince = () => {
+    const set = new Set();
+    comuni.forEach(c => {
+      if (c && c.provincia) set.add(String(c.provincia).trim().toUpperCase());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  };
+
+  inputProvincia.setAttribute("autocomplete", "off");
+
+  inputProvincia.addEventListener("input", () => {
+    const qRaw = inputProvincia.value.trim().toUpperCase();
+    const q = norm(qRaw);
+
+    provinciaSelected = false;
+    listProvincia.innerHTML = "";
+
+    if (q.length < 1) {
+      listProvincia.classList.add("hidden");
+      return;
+    }
+
+    const province = getProvince();
+
+    const risultati = province
+      .map(p => ({ p, _s: score(norm(p), q) }))
+      .filter(x => x._s < 99)
+      .sort((a, b) => a._s - b._s || a.p.localeCompare(b.p))
+      .slice(0, 10);
+
+    if (!risultati.length) {
+      listProvincia.classList.add("hidden");
+      return;
+    }
+
+    risultati.forEach(x => {
+      const el = document.createElement("div");
+      el.textContent = x.p;
+      el.className = "px-4 py-2 cursor-pointer hover:bg-gray-100 text-sm";
+
+      el.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        inputProvincia.value = x.p;
+        provinciaSelected = true;
+        listProvincia.classList.add("hidden");
+      });
+
+      listProvincia.appendChild(el);
+    });
+
+    listProvincia.classList.remove("hidden");
+  });
+
+  inputProvincia.addEventListener("blur", () => {
+    setTimeout(() => {
+      // qui NON svuotiamo: così puoi anche scrivere a mano MI/RM ecc
+      listProvincia.classList.add("hidden");
+    }, 120);
+  });
+});
+</script>
+<script>
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".toggle-servizio");
+  if (!btn) return;
+
+  const payload = {
+    codice_servizio: btn.dataset.servizio,
+    utente_id: parseInt(btn.dataset.utente, 10)
+  };
+
+  if (btn.dataset.annuncio) {
+    payload.annuncio_id = parseInt(btn.dataset.annuncio, 10);
+  }
+
+  try {
+    const res = await fetch("/admin/toggle-servizio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.error || "Errore toggle servizio");
+      return;
+    }
+
+    location.reload();
+  } catch (err) {
+    alert("Errore di rete");
+  }
+});
+</script>
+<script>
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".toggle-pacchetto");
+    if (!btn) return;
+
+    const payload = {
+      codice_pacchetto: btn.dataset.pacchetto,
+      utente_id: parseInt(btn.dataset.utente, 10),
+      annuncio_id: parseInt(btn.dataset.annuncio, 10)
+    };
+
+    try {
+      const res = await fetch("/admin/toggle-pacchetto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!data.ok) {
+        alert(data.error || "Errore pacchetto");
+        return;
+      }
+
+      location.reload();
+    } catch {
+      alert("Errore di rete");
+    }
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% set body_class = "home offset-navbar" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+
+<style>
+  body.home {
+    background: linear-gradient(
+      180deg,
+      rgba(230, 238, 255, 1),   /* blu chiarissimo */
+      rgba(255, 235, 245, 0.9), /* rosa chiarissimo */
+      #ffffff
+    );
+  }
+</style>
+
+
+<div class="page-wrapper mt-20">
+
+<style>
+  .chat-card {
+    transition: all 0.2s ease;
+  }
+  .chat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    background-color: #fdfdfd;
+  }
+  .unread-dot {
+    width: 10px;
+    height: 10px;
+    background: #3b82f6;
+    border-radius: 50%;
+  }
+  /* Spazio finale scroll — desktop & tablet */
+  @media (min-width: 768px) {
+    .page-wrapper {
+      padding-bottom: 4rem;
+    }
+  }
+
+</style>
+
+<h1 class="text-3xl font-bold text-center mb-8 text-gray-800 tracking-tight mt-6 sm:mt-8">
+  Benvenuto su <span class="text-blue-600">{{ brand_name }}</span>
+</h1>
+
+<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+
+  {% set categorie = [
+    {"emoji": "🧘", "nome": "Operatori Benessere", "colore": "blue", "descrizione": "Servizi e Trattamenti orientati al Benessere e alla Cura.", "link": "operatori%20benessere"},
+    {"emoji": "👶", "nome": "Babysitter", "colore": "pink", "descrizione": "Servizi affidabili per la cura dei più piccoli, anche occasionali.", "link": "babysitter"},
+    {"emoji": "🐾", "nome": "Pet-Sitter", "colore": "green", "descrizione": "Assistenza per cani, gatti e altri animali domestici.", "link": "petsitter"},
+    {"emoji": "🧓", "nome": "Caregiver", "colore": "yellow", "descrizione": "Supporto e compagnia per anziani o persone fragili.", "link": "caregiver"},
+    {"emoji": "📚", "nome": "Ripetizioni", "colore": "purple", "descrizione": "Lezioni private e sostegno scolastico in varie materie.", "link": "ripetizioni"},
+    {"emoji": "🏠", "nome": "Aiuto in Casa", "colore": "orange", "descrizione": "Pulizie, spesa, stiro, babysitting occasionale e altro.", "link": "aiuto%20in%20casa"},
+    {"emoji": "🥾⚽🚴", "nome": "Escursioni & Sport", "colore": "sky", "descrizione": "Compagni per allenamenti, passeggiate o attività outdoor.", "link": "escursioni%20%26%20sport"},
+    {"emoji": "🎭🎶", "nome": "Biglietti Spettacoli", "colore": "red", "descrizione": "Scambio o acquisto di biglietti per concerti ed eventi.", "link": "biglietti%20spettacoli"},
+    {"emoji": "📖", "nome": "Libri Scuola", "colore": "emerald", "descrizione": "Libri scolastici usati e materiale didattico.", "link": "libri%20scuola"},
+    {"emoji": "☕", "nome": "Caffè & Parole", "colore": "amber", "descrizione": "Incontra persone per praticare le lingue e scambiare idee davanti a un caffè, anche online.", "link": "caffe-parole"}
+    ] %}
+
+  {% for c in categorie %}
+    <a href="/cerca?categoria={{ c.link }}"
+     class="group relative overflow-hidden bg-white rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg
+            transition-all duration-300 border border-gray-100 hover:border-{{ c.colore }}-300 hover:-translate-y-0.5 p-4 sm:p-5">
+
+    <div class="flex flex-col items-center text-center space-y-1 sm:space-y-2 relative z-10">
+      <div class="text-3xl sm:text-4xl md:text-5xl mb-1 sm:mb-2 transition-transform duration-300 group-hover:scale-125 tracking-tight">
+        {{ c.emoji }}
+      </div>
+      <h2 class="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-{{ c.colore }}-600 transition-colors duration-200 leading-snug">
+          {{ c.nome }}
+      </h2>
+      <p class="text-xs sm:text-sm text-gray-500 leading-snug">
+        {{ c.descrizione }}
+      </p>
+    </div>
+
+    <div class="absolute inset-0 bg-{{ c.colore }}-50 opacity-0 group-hover:opacity-50 transition-opacity duration-300 rounded-xl sm:rounded-2xl"></div>
+  </a>
+  {% endfor %}
+
+</div>
+</div>
+{% endblock %}

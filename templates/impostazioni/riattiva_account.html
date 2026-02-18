@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set page = "impostazioni" %}
+{% block content %}
+
+<div class="max-w-md mx-auto px-4 pt-24 pb-10">
+
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">🔓 Riattiva Account</h1>
+
+  <div class="bg-white p-6 rounded-2xl shadow-sm border space-y-6">
+
+    <p class="text-gray-700 leading-relaxed">
+      Il tuo account è attualmente sospeso.
+      <br><br>
+      Puoi riattivarlo immediatamente per tornare a utilizzare tutte le funzionalità.
+    </p>
+
+    <form method="POST" action="{{ url_for('riattiva_account') }}">
+      <button class="w-full bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition">
+        🔓 Riattiva ora
+      </button>
+    </form>
+
+    <a href="{{ url_for('logout') }}"
+       class="block w-full text-center mt-3 text-gray-500 hover:text-gray-700">
+      Esci senza riattivare
+    </a>
+
+  </div>
+
+</div>
+
+{% endblock %}

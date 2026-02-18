@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10 bg-white shadow-lg rounded-lg p-8">
+  <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Crea un account</h2>
+
+  <p class="text-sm text-yellow-600 text-center mb-4">
+    Versione Beta privata — è richiesto un codice invito.
+  </p>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('register') }}" class="space-y-5">
+
+    <!-- Nome -->
+    <div>
+      <label for="nome" class="block text-gray-700 font-semibold mb-1">Nome</label>
+      <input type="text" name="nome" id="nome" required
+             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
+    </div>
+
+    <!-- Cognome -->
+    <div>
+      <label for="cognome" class="block text-gray-700 font-semibold mb-1">Cognome</label>
+      <input type="text" name="cognome" id="cognome" required
+             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
+    </div>
+
+    <!-- Citta -->
+    <div class="relative">
+      <label for="citta-autocomplete" class="block text-sm font-medium text-gray-700">
+        Città / Comune
+      </label>
+
+      <input
+        type="text"
+        id="citta-autocomplete"
+        autocomplete="off"
+        placeholder="Es. Milano"
+        class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400"
+      >
+
+      <!-- valore reale inviato al backend -->
+      <input type="hidden" name="citta" id="citta_hidden">
+
+      <!-- dropdown suggerimenti -->
+      <ul id="citta-suggerimenti"
+          class="absolute z-50 w-full bg-white border border-gray-200 rounded-md mt-1 hidden max-h-56 overflow-y-auto shadow-lg">
+      </ul>
+
+      <input type="hidden" name="provincia" id="provincia">
+      <input type="hidden" name="regione" id="regione">
+    </div>
+
+    <!-- Email -->
+    <div>
+      <label for="email" class="block text-gray-700 font-semibold mb-1">Email</label>
+      <input type="email" name="email" id="email" required
+             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
+    </div>
+
+    <!-- Username -->
+    <div>
+      <label for="username" class="block text-gray-700 font-semibold mb-1">ID utente (nome pubblico)</label>
+      <input type="text" name="username" id="username" required
+             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
+    </div>
+
+    <!-- Password -->
+    <div>
+      <label for="password" class="block text-gray-700 font-semibold mb-1">Password</label>
+      <input type="password" name="password" id="password" required
+             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
+    </div>
+
+    <!-- Conferma Password -->
+    <div>
+      <label for="conferma_password" class="block text-gray-700 font-semibold mb-1">Conferma password</label>
+      <input type="password" name="conferma_password" id="conferma_password" required
+             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
+    </div>
+
+    <!-- Codice invito beta -->
+<div>
+  <label for="codice_invito" class="block text-gray-700 font-semibold mb-1">
+    Codice invito (Beta)
+  </label>
+  <input type="text" name="codice_invito" id="codice_invito" required
+         placeholder="Inserisci il codice fornito"
+         class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
+</div>
+
+    <!-- Termini e privacy -->
+    <div class="flex items-start space-x-2">
+      <input type="checkbox" id="accetto" name="accetto" required class="mt-1 accent-blue-600">
+      <label for="accetto" class="text-sm text-gray-700 leading-tight">
+        Dichiaro di aver letto e accettato i <a href="/termini" class="text-blue-600 underline hover:text-blue-800">Termini d’uso</a>
+        e l’<a href="/privacy" class="text-blue-600 underline hover:text-blue-800">Informativa sulla Privacy</a>.
+      </label>
+    </div>
+
+    <button type="submit"
+            class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+      Registrati
+    </button>
+  </form>
+</div>
+
+<script>
+  // ✅ Verifica che le password coincidano
+  document.querySelector('form').addEventListener('submit', function(e) {
+    const pw = document.getElementById('password').value;
+    const confirm = document.getElementById('conferma_password').value;
+    if (pw !== confirm) {
+      e.preventDefault();
+      alert('Le password non coincidono.');
+    }
+  });
+</script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/autocomplete_citta.js') }}"></script>
+{% endblock %}

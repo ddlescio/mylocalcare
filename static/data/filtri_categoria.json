@@ -1,0 +1,12 @@
+{
+  "operatori benessere": ["Massaggio", "Riflessologia", "Reiki", "Kinesiologia", "Posturale", "Yoga", "Fisioterapia", "Riabilitazione", "Coaching", "Altro"],
+  "ripetizioni": ["Italiano", "Matematica", "Inglese", "Scienze", "Storia", "Fisica", "Chimica", "Latino", "Greco", "Altro"],
+  "aiuto-in-casa": ["Pulizie", "Stiro", "Spesa", "Giardinaggio", "Cucina", "Babysitting occasionale", "Commissioni", "Aiuto traslochi", "Altro"],
+  "babysitter": ["Neonati", "Età scolare", "Compiti", "Cucinare", "Notturno", "Urgenze", "Automunito", "Lingue straniere", "Sindrome di Down", "Autismo", "Disabilità", "Altro"],
+  "petsitter": ["Cane", "Gatto", "Passeggiate", "Pensione", "Somministrazione farmaci", "Taglia grande", "Taglia piccola", "Altro"],
+  "caregiver": ["Compagnia", "Igiene", "Somministrazione farmaci", "Disabilità", "Alzheimer/Demenza", "Flessibilità oraria", "Notturno", "Automunito", "Altro"],
+  "escursioni & sport": ["ESCURSIONI", "Mezza giornata", "Giornata intera", "Montagna", "Trekking", "Città", "ALLENAMENTO", "Palestra", "Corsa", "Bici", "Pattini", "Calisthenics", "PARTITA", "Tennis", "Squash", "Padel", "Sport di squadra", "Altro"],
+  "biglietti spettacoli": ["Offro", "Cerco", "Concerti", "Teatro", "Cinema", "Eventi locali", "Altro"],
+  "libri scuola": ["Elementari", "Medie", "Superiori", "Università", "Altro"],
+  "caffe & parole": ["Inglese", "Francese", "Spagnolo", "Tedesco", "Italiano per stranieri", "Altro"]
+}

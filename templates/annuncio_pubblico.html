@@ -1,0 +1,1317 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-xl mx-auto glass-card rounded-3xl shadow-lg p-5 md:p-6 mt-6">
+
+  <!-- 🔵 HEADER ANNUNCIO -->
+  <div class="
+        relative text-center rounded-3xl p-4
+        bg-gradient-to-br from-blue-50/50 via-white to-pink-50/30
+        border border-blue-100/60
+        shadow-sm
+        backdrop-blur-md
+      ">
+
+    <!-- FOTO -->
+    <div class="flex justify-center mb-4">
+      <img
+        src="{{ url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) }}"
+        class="
+          w-40 h-40 sm:w-44 sm:h-44
+          rounded-full object-cover object-top
+          border-4 border-white
+          shadow-xl
+          ring-2 ring-indigo-200/50
+          hover:scale-105 transition-transform duration-200
+        "
+      />
+    </div>
+
+    {% if annuncio.get('affidabilita_top') == 1 %}
+    <div class="flex justify-center mb-2">
+      <div class="
+        inline-flex items-center gap-1.5
+        px-3 py-1.5
+        rounded-full
+        bg-white/90
+        border border-amber-300
+        shadow-sm
+        backdrop-blur
+      ">
+        <span class="text-sm">🏅</span>
+        <span class="text-xs font-semibold text-amber-700">
+          Fiducia Top
+        </span>
+      </div>
+    </div>
+  {% endif %}
+
+    <!-- TITOLO + TIPO ANNUNCIO -->
+    <div class="flex flex-col items-center gap-2 mb-1">
+
+      <!-- BADGE OFFRO / CERCO -->
+      {% if annuncio['tipo_annuncio'] == 'offro' %}
+      <span class="
+        inline-flex items-center gap-1 text-xs font-medium
+        bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200/50
+      ">
+        🟢 Offro
+      </span>
+
+      {% elif annuncio['tipo_annuncio'] == 'cerco' %}
+      <span class="
+        inline-flex items-center gap-1 text-xs font-medium
+        bg-blue-50 text-blue-700 border-blue-200/50 px-3 py-1 rounded-full border border-green-200/50
+      ">
+
+          🔵 Cerco
+        </span>
+      {% endif %}
+
+      <!-- TITOLO -->
+      <h1 class="text-xl sm:text-2xl font-bold text-blue-800 text-center tracking-tight">
+        {{ annuncio['titolo'] }}
+      </h1>
+
+    </div>
+
+    <!-- AUTORE -->
+    <p class="text-base font-semibold text-gray-800 mb-1">
+      {{ annuncio['username'] or annuncio['nome'] }}
+    </p>
+
+    <!-- ⭐ STELLINE -->
+    {% if annuncio['media_recensioni'] and annuncio['media_recensioni'] > 0 %}
+      {% if not g.utente or g.utente['id'] != annuncio['utente_id'] %}
+        <a href="{{ url_for('recensioni_utente', user_id=annuncio['utente_id']) }}"
+           class="flex justify-center items-center gap-1 mb-2 text-yellow-500 text-sm hover:opacity-80 transition">
+      {% else %}
+        <div class="flex justify-center items-center gap-1 mb-2 text-yellow-500 text-sm">
+      {% endif %}
+
+      <span class="font-semibold text-sm text-gray-800 mr-1">
+        {{ annuncio['media_recensioni']|round(1) }}
+      </span>
+
+        {% for i in range(1,6) %}
+          {% if i <= annuncio['media_recensioni']|round(0, 'floor') %}
+            ⭐
+          {% elif i - annuncio['media_recensioni'] < 1 %}
+            🌟
+          {% else %}
+            ☆
+          {% endif %}
+        {% endfor %}
+
+        {% if annuncio['numero_recensioni'] %}
+        <span class="ml-1 text-gray-500 text-xs">
+          • {{ annuncio['numero_recensioni'] }} recensione/i
+        </span>
+        {% endif %}
+
+      {% if not g.utente or g.utente['id'] != annuncio['utente_id'] %}
+        </a>
+      {% else %}
+        </div>
+      {% endif %}
+    {% endif %}
+
+    <!-- CATEGORIA -->
+    <p class="text-sm text-gray-600 mt-2">
+      {{ annuncio['categoria'] }}
+      {% if annuncio['zona'] %} · {{ annuncio['zona'] }}{% endif %}
+    </p>
+
+    <!-- TAG -->
+    {% if annuncio['filtri_categoria'] %}
+      <div class="flex flex-wrap justify-center gap-2 mt-3">
+        {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
+        <span class="
+          bg-white text-blue-800 text-xs font-medium
+          px-3 py-1.5 rounded-full border border-blue-200/50
+        ">
+
+            {{ f.strip() }}
+          </span>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+
+  <!-- 📄 DESCRIZIONE -->
+  {% if annuncio['descrizione'] %}
+  <div class="
+    mt-6 p-6 rounded-3xl
+    bg-white/95 backdrop-blur
+    border border-gray-200
+    shadow-xl text-left
+  ">
+    <h2 class="text-lg font-semibold text-blue-700 mb-2">📄 Descrizione</h2>
+    <p class="text-gray-700 leading-relaxed whitespace-pre-line">
+      {{ annuncio['descrizione'] }}
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- 🙋 BIO -->
+  {% if annuncio['bio_utente'] %}
+  <div class="
+    mt-6 p-6 rounded-3xl
+    bg-white/95 backdrop-blur
+    border border-gray-200
+    shadow-xl text-center
+  ">
+    <h2 class="text-lg font-semibold text-blue-700 mb-2">🙋‍♂️ Su di me</h2>
+    <p class="text-gray-700 leading-relaxed whitespace-pre-line">
+      {{ annuncio['bio_utente'] }}
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- 📸 IMMAGINI -->
+  {% if annuncio['media'] %}
+  <div class="
+    mt-6 p-6 rounded-3xl
+    bg-white/95 backdrop-blur
+    border border-gray-200
+    shadow-xl text-center
+  ">
+    <h2 class="text-lg font-semibold text-blue-700 mb-3 text-center">📸 Immagini</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {% for foto in annuncio['media'].split(',') if foto %}
+      <img
+        src="{{ url_for('static', filename=foto.strip()) }}"
+        class="rounded-xl object-cover w-full h-40 border shadow hover:scale-105 transition
+               first:col-span-1 sm:first:col-span-3"
+          onclick="apriZoom('{{ url_for('static', filename=foto.strip()) }}')"
+        />
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ✉️ PULSANTE MESSAGGIO -->
+  <div class="flex justify-center mt-6">
+    {% if g.utente and g.utente['id'] != annuncio['utente_id'] %}
+    <a href="{{ url_for('chat_conversazione_view', other_id=annuncio['utente_id']) }}"
+       class="
+         px-8 py-3
+         bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-500
+         text-white rounded-full
+         shadow-lg hover:shadow-xl
+         transition-transform transform hover:scale-105
+         text-sm sm:text-base font-bold
+       ">
+      💬 Scrivi in chat
+    </a>
+    {% elif not g.utente %}
+      <a href="{{ url_for('login') }}"
+         class="px-6 py-2 bg-gray-100 text-gray-700 rounded-full shadow-md hover:bg-gray-200 transition text-sm font-medium">
+        🔒 Accedi per scrivere
+      </a>
+    {% endif %}
+
+  </div>
+
+
+  <!-- 📞 CONTATTI -->
+
+  {% if contatti_attivi and (annuncio['email'] or annuncio['telefono']) %}
+    <!-- 📞 CONTATTI VISIBILI -->
+    <div class="
+      mt-6 p-6 rounded-3xl
+      bg-white/95 backdrop-blur
+      border border-gray-200
+      shadow-xl text-center
+    ">
+      <h2 class="text-lg font-semibold text-blue-700 mb-4 flex items-center justify-center gap-2">
+        📞 Contatta
+      </h2>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+
+        {% if annuncio['email'] %}
+          <a href="mailto:{{ annuncio['email'] }}"
+             class="w-10 h-10 flex items-center justify-center rounded-full
+                    bg-blue-50 hover:bg-blue-100
+                    text-blue-700 shadow-md transition">
+             📧
+          </a>
+
+        {% endif %}
+
+        {% if annuncio['telefono'] %}
+          {% set tel = annuncio['telefono'] | replace(' ', '') | replace('+', '') %}
+
+          <a href="tel:+{{ tel }}"
+             class="w-10 h-10 flex items-center justify-center rounded-full
+                    bg-slate-100 hover:bg-slate-200
+                    text-slate-700 shadow-sm transition">
+             📞
+          </a>
+          <a href="https://wa.me/{{ tel }}"
+             target="_blank"
+             class="w-10 h-10 flex items-center justify-center rounded-full
+                    bg-[#25D366] hover:bg-[#1ebe5b]
+                    text-white shadow-lg transition">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 viewBox="0 0 24 24"
+                 fill="currentColor"
+                 class="w-6 h-6">
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.1.553 4.142 1.6 5.947L0 24l6.265-1.568A11.93 11.93 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm.005 22.195c-1.96 0-3.876-.526-5.56-1.52l-.398-.236-3.71.93.989-3.61-.26-.412A9.993 9.993 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-9.995 10zm5.494-7.5c-.3-.15-1.77-.873-2.043-.972-.272-.1-.47-.15-.668.15-.197.3-.767.972-.94 1.17-.173.2-.347.224-.645.075-.3-.15-1.26-.463-2.398-1.48-.886-.792-1.485-1.77-1.66-2.07-.173-.3-.018-.462.13-.61.135-.134.3-.347.448-.52.15-.174.2-.3.3-.5.1-.2.05-.373-.025-.523-.075-.15-.668-1.61-.915-2.207-.242-.58-.487-.5-.668-.51-.173-.01-.37-.01-.57-.01-.197 0-.52.075-.793.373-.272.3-1.04 1.018-1.04 2.484 0 1.466 1.064 2.88 1.213 3.08.15.2 2.096 3.2 5.076 4.487.71.305 1.265.487 1.697.624.712.226 1.36.194 1.87.118.57-.085 1.77-.723 2.02-1.42.248-.698.248-1.297.173-1.42-.075-.125-.273-.2-.573-.35z"/>
+            </svg>
+          </a>
+
+        {% endif %}
+
+      </div>
+
+    </div>
+
+  {% elif annuncio['email'] or annuncio['telefono'] %}
+    <!-- 🔒 CONTATTI BLOCCATI -->
+    <div class="mt-6 p-6 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm text-center">
+      <h2 class="text-sm font-semibold text-slate-600 mb-1">📞 Contatti</h2>
+      <p class="text-sm text-slate-500 italic">
+        Contatta tramite chat per maggiori informazioni
+      </p>
+    </div>
+  {% endif %}
+
+  <!-- 🔙 BOTTONI -->
+  <div class="flex flex-wrap justify-center gap-3 mt-8">
+    <a href="{{ back_url or url_for('dashboard') }}"
+       class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm shadow">
+      ⬅️ Torna
+    </a>
+    {% if g.utente and g.utente['id'] == annuncio['utente_id'] %}
+      <button
+        onclick="apriVisibilita()"
+        class="px-4 py-2 bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 text-sm flex items-center gap-1"
+      >
+        🚀 Aumenta visibilità
+      </button>
+    {% endif %}
+
+    {% if g.utente and g.utente['id'] == annuncio['utente_id'] %}
+      <a href="{{ url_for('modifica_annuncio', id=annuncio['id']) }}"
+         class="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full shadow">
+        ✏️ Modifica
+      </a>
+
+      <a href="{{ url_for('elimina_annuncio', id=annuncio['id']) }}"
+         onclick="return confirm('Vuoi davvero eliminare questo annuncio?')"
+         class="px-4 py-2 bg-red-100 text-red-700 rounded-full shadow">
+        🗑️ Elimina
+      </a>
+    {% else %}
+      <a href="{{ url_for('profilo_pubblico', id=annuncio['utente_id']) }}"
+         class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full shadow">
+        👤 Vai al profilo
+      </a>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ZOOM -->
+<div id="zoom-overlay"
+     class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+     onclick="chiudiZoom()">
+  <img id="zoom-img" class="max-w-[90%] max-h-[90%] rounded-lg shadow-2xl">
+</div>
+
+<!-- 🚀 MODALE AUMENTA VISIBILITÀ -->
+<div id="modale-visibilita"
+     class="hidden fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+
+  <!-- CONTENUTO -->
+  <div class="
+    w-full sm:max-w-md
+    bg-white
+    rounded-t-3xl sm:rounded-3xl
+    shadow-2xl
+    p-6
+    max-h-[90vh]
+    overflow-y-auto
+  ">
+
+    <!-- HEADER -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-blue-700">
+        Aumenta la visibilità
+      </h2>
+      <button onclick="chiudiVisibilita()" class="text-gray-400 text-xl">
+        ✕
+      </button>
+    </div>
+
+    <!-- STATO ATTUALE -->
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">
+        Ora il tuo annuncio è:
+      </h3>
+
+      <div id="box-visibilita-stato"
+           class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
+        Caricamento stato visibilità…
+      </div>
+    </div>
+
+    <!-- SERVIZI SINGOLI -->
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">
+        Servizi singoli
+      </h3>
+
+      <div class="space-y-3">
+
+        <!-- BOOST LISTA -->
+        <div id="card-boost_lista" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm">🚀 Boost lista</span>
+            <span id="badge-boost_lista" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            Aumenta temporaneamente la visibilità del tuo annuncio nei risultati.
+          </p>
+
+          <p id="info-boost_lista" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-boost_lista"
+            onclick="apriServizio(this)"
+            data-codice="boost_lista"
+            data-titolo="🚀 Boost lista"
+            data-descrizione="Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca."
+            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+        <!-- EVIDENZA -->
+        <div id="card-badge_evidenza" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm">✨ Evidenza</span>
+            <span id="badge-badge_evidenza" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            Rende il tuo annuncio più riconoscibile con cornice e badge.
+          </p>
+
+          <p id="info-badge_evidenza" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-badge_evidenza"
+            onclick="apriServizio(this)"
+            data-codice="badge_evidenza"
+            data-titolo="✨ Evidenza"
+            data-descrizione="Rende il tuo annuncio più visibile con cornice e badge."
+            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+        <!-- VETRINA -->
+        <div id="card-vetrina_annuncio" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm">🪟 Vetrina</span>
+            <span id="badge-vetrina_annuncio" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            Inserisce l’annuncio in una sezione ad alta visibilità.
+          </p>
+
+          <p id="info-vetrina_annuncio" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-vetrina_annuncio"
+            onclick="apriServizio(this)"
+            data-codice="vetrina_annuncio"
+            data-titolo="🪟 Vetrina"
+            data-descrizione="Inserisce il tuo annuncio in una sezione dedicata ad alta visibilità."
+            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+        <!-- URGENTE -->
+        <div id="card-annuncio_urgente" class="border border-rose-200 bg-rose-50/70 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm text-rose-700">⚡ Urgente</span>
+            <span id="badge-annuncio_urgente" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-700">
+            Spinta immediata con notifiche agli utenti compatibili.
+          </p>
+
+          <p id="info-annuncio_urgente" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-annuncio_urgente"
+            onclick="apriServizio(this)"
+            data-codice="annuncio_urgente"
+            data-titolo="⚡ Urgente"
+            data-descrizione="Spinta massima con notifiche agli utenti compatibili."
+            class="mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+        <!-- CONTATTI -->
+        <div id="card-contatti" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm">📞 Sblocco contatti</span>
+            <span id="badge-contatti" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            Consente di visualizzare email e telefono dell’annuncio.
+          </p>
+
+          <p id="info-contatti" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-contatti"
+            onclick="apriServizio(this)"
+            data-codice="contatti"
+            data-titolo="📞 Sblocco contatti"
+            data-descrizione="Consente di visualizzare email e telefono dell’annuncio."
+            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PACCHETTI -->
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">
+        Pacchetti consigliati
+      </h3>
+
+      <div class="space-y-4">
+
+        <!-- PACCHETTO VISIBILITÀ -->
+        <div id="card-pacchetto_visibilita"
+             class="border border-blue-200 bg-blue-50/60 rounded-2xl p-4">
+
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm text-blue-800">📦 Pacchetto Visibilità</span>
+            <span id="badge-pacchetto_visibilita"
+                  class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-700">
+            Combina più servizi per aumentare la visibilità del tuo annuncio.
+          </p>
+
+          <ul class="mt-2 text-xs text-slate-600 list-disc list-inside space-y-1">
+            <li>Boost lista</li>
+            <li>Evidenza</li>
+            <li>Contatti temporanei</li>
+          </ul>
+
+          <p id="info-pacchetto_visibilita" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-pacchetto_visibilita"
+            onclick="apriServizio(this)"
+            data-codice="pacchetto_visibilita"
+            data-titolo="📦 Pacchetto Visibilità"
+            data-descrizione="Pacchetto che combina più servizi di visibilità."
+            class="mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
+            Scopri il pacchetto
+          </button>
+        </div>
+
+        <!-- VISIBILITÀ PREMIUM -->
+        <div id="card-visibilita_premium"
+             class="border border-amber-300 bg-amber-50/70 rounded-2xl p-4">
+
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm text-amber-800">🌟 Visibilità Premium</span>
+            <span id="badge-visibilita_premium"
+                  class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-700">
+            Tutti i servizi inclusi con massima priorità.
+          </p>
+
+          <ul class="mt-2 text-xs text-slate-700 list-disc list-inside space-y-1">
+            <li>Tutti i servizi di visibilità</li>
+            <li>Vetrina</li>
+            <li>Contatti inclusi</li>
+          </ul>
+
+          <p id="info-visibilita_premium" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-visibilita_premium"
+            onclick="apriServizio(this)"
+            data-codice="visibilita_premium"
+            data-titolo="🌟 Visibilità Premium"
+            data-descrizione="Pacchetto con massima visibilità e priorità."
+            class="mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
+            Scopri
+          </button>
+        </div>
+
+        <!-- ✅ MODALE CONFERMA -->
+        <div id="modale-conferma"
+             class="hidden fixed inset-0 z-[70] bg-black/60 flex items-end sm:items-center justify-center">
+
+          <div class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6">
+
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-slate-900">
+                Conferma attivazione
+              </h2>
+              <button onclick="chiudiConferma()" class="text-gray-400 text-xl">✕</button>
+            </div>
+
+            <div class="space-y-3 text-sm text-slate-700">
+              <p>
+                Stai per attivare:
+              </p>
+
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div class="font-semibold" id="conf-titolo">—</div>
+                <div class="text-xs text-slate-500" id="conf-durata">—</div>
+                <div class="text-lg font-bold mt-1" id="conf-prezzo">—</div>
+              </div>
+
+              <p class="text-xs text-slate-500">
+                Il servizio verrà attivato immediatamente sul tuo annuncio.
+              </p>
+            </div>
+
+            <div id="stripe-box" class="mt-4 hidden">
+              <div id="payment-element"></div>
+
+              <button
+                id="pay-button"
+                class="mt-4 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                Paga ora
+              </button>
+
+              <p id="payment-error" class="mt-2 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <button
+              onclick="confermaAttivazione(this)"
+              class="mt-5 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+              Conferma
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 📦 MODALE SERVIZIO (POP CORN) -->
+    <div id="modale-servizio"
+         class="hidden fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center">
+
+      <div class="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6">
+
+        <!-- HEADER -->
+        <div class="flex items-center justify-between mb-4">
+          <h2 id="ms-titolo" class="text-lg font-bold text-blue-700">
+            —
+          </h2>
+          <button onclick="chiudiServizio()" class="text-gray-400 text-xl">✕</button>
+        </div>
+
+        <!-- DESCRIZIONE -->
+        <p id="ms-descrizione" class="text-sm text-slate-700 mb-5">
+          —
+        </p>
+
+        <!-- PIANI -->
+        <div id="ms-piani" class="grid gap-4">
+          <!-- JS inserisce i piani qui -->
+        </div>
+
+        <!-- CTA -->
+        <button id="ms-conferma"
+                disabled
+                class="mt-5 w-full py-3 rounded-full bg-blue-600 text-white text-sm font-semibold opacity-50 cursor-not-allowed">
+          Continua
+        </button>
+
+        <p class="mt-3 text-xs text-gray-500 text-center">
+          Nessun servizio garantisce una posizione fissa nei risultati.
+        </p>
+      </div>
+    </div>
+
+    <!-- NOTA TRASPARENZA -->
+    <div class="text-xs text-gray-500 border-t pt-4">
+      I servizi hanno una durata limitata.
+      Alla scadenza, l’annuncio tornerà visibile normalmente.
+      <br>
+      Nessun servizio garantisce una posizione fissa nei risultati.
+    </div>
+  </div>
+</div>
+<style>
+  .glass-card {
+    background: linear-gradient(180deg, rgba(245, 247, 255, 0.95), white);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(180, 200, 255, 0.35);
+    box-shadow: 0 6px 25px rgba(0,0,0,0.07);
+  }
+
+</style>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  function apriZoom(src) {
+    document.getElementById("zoom-img").src = src;
+    document.getElementById("zoom-overlay").classList.remove("hidden");
+    bodyModalOn();
+  }
+
+  function chiudiZoom() {
+    document.getElementById("zoom-overlay").classList.add("hidden");
+    bodyModalOff();
+  }
+</script>
+<script>
+  function apriVisibilita() {
+    document.getElementById("modale-visibilita").classList.remove("hidden");
+    bodyModalOn();
+  }
+
+  function chiudiVisibilita() {
+    document.getElementById("modale-visibilita").classList.add("hidden");
+    bodyModalOff();
+  }
+</script>
+<script>
+let selezioneCorrente = null;
+
+async function apriServizio(btn) {
+  const modale = document.getElementById("modale-servizio");
+  if (!modale.classList.contains("hidden")) return;
+
+  const codice = btn.dataset.codice;
+  const titolo = btn.dataset.titolo || "Servizio";
+  const descrizione = btn.dataset.descrizione || "";
+
+  try {
+    const tipo = codice.startsWith("pacchetto_") || codice.includes("premium")
+      ? "pacchetti"
+      : "servizi";
+
+    const res = await fetch(`/api/${tipo}/${encodeURIComponent(codice)}/piani`, {
+      headers: { "Accept": "application/json" }
+    });
+
+    if (!res.ok) {
+      alert("Errore nel caricamento dei piani del servizio.");
+      return;
+    }
+
+    const data = await res.json();
+
+    document.getElementById("ms-titolo").innerText = titolo;
+    document.getElementById("ms-descrizione").innerText = descrizione;
+
+    const box = document.getElementById("ms-piani");
+    box.innerHTML = "";
+    selezioneCorrente = null;
+
+    const btnConferma = document.getElementById("ms-conferma");
+    btnConferma.disabled = true;
+    btnConferma.classList.add("opacity-50", "cursor-not-allowed");
+
+    (data.piani || []).forEach(p => {
+      const el = document.createElement("div");
+
+      const permanente = !!p.permanente || p.durata === null || p.durata === undefined;
+
+      el.className = `
+        border rounded-2xl p-4 cursor-pointer transition
+        ${p.evidenziato ? "border-blue-600 scale-[1.03]" : "border-slate-200"}
+      `;
+
+      el.innerHTML = `
+        <div class="flex justify-between items-center mb-1">
+          <span class="font-semibold text-sm">
+            ${permanente ? "♾️ Senza scadenza" : `${p.durata} giorni`}
+          </span>
+          ${p.consigliato ? `
+            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+              ⭐ più scelto
+            </span>` : ""}
+        </div>
+
+        <div class="text-2xl font-bold">
+          ${(p.prezzo / 100).toFixed(2)} €
+        </div>
+
+        <p class="mt-1 text-xs text-slate-500">
+          ${permanente ? "Paghi una sola volta, senza scadenza" : "Scade automaticamente"}
+        </p>
+      `;
+
+      el.onclick = () => {
+        document.querySelectorAll("#ms-piani > div").forEach(x =>
+          x.classList.remove("ring-2", "ring-blue-500")
+        );
+        el.classList.add("ring-2", "ring-blue-500");
+
+        selezioneCorrente = {
+          piano_id: p.id,
+          prezzo: p.prezzo,
+          durata: p.durata,
+          permanente,
+          titolo: titolo,
+          codice: codice,
+          tipo: tipo // "servizi" | "pacchetti"
+        };
+
+        btnConferma.disabled = false;
+        btnConferma.classList.remove("opacity-50", "cursor-not-allowed");
+      };
+
+      box.appendChild(el);
+    });
+
+    modale.classList.remove("hidden");
+  } catch (e) {
+    console.error(e);
+    alert("Errore di rete o JS durante il caricamento del servizio.");
+  }
+}
+
+function chiudiServizio() {
+  document.getElementById("modale-servizio").classList.add("hidden");
+}
+</script>
+<script>
+/* =========================================================
+   CONFIGURAZIONE RINNOVO (UX)
+   ========================================================= */
+const PERCENTUALE_RINNOVO = 0.25; // 25% finale della durata
+const MIN_GIORNI_RINNOVO = 1;     // mai prima di 1 giorno
+
+/* =========================================================
+   STATO GLOBALE
+   ========================================================= */
+const statoServizi = {};
+let serviziCaricati = 0;
+let NUM_SERVIZI_ATTESI = 0;
+
+/* =========================================================
+   INIT
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", () => {
+  const ANNUNCIO_ID = {{ annuncio['id'] }};
+
+  const servizi = [
+    "boost_lista",
+    "badge_evidenza",
+    "vetrina_annuncio",
+    "annuncio_urgente",
+    "contatti",
+    "pacchetto_visibilita",
+    "visibilita_premium"
+  ];
+
+  NUM_SERVIZI_ATTESI = servizi.length;
+
+  servizi.forEach(codice => caricaStatoServizio(ANNUNCIO_ID, codice));
+});
+
+/* =========================================================
+   CARICA STATO SERVIZIO
+   ========================================================= */
+   async function caricaStatoServizio(annuncioId, codice) {
+     try {
+       const res = await fetch(
+         `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
+         { cache: "no-store" }
+       );
+
+       let data = { attivo: false };
+
+       if (res.ok) {
+         data = await res.json();
+       } else {
+         console.warn("API non ok:", codice);
+       }
+
+       // salva stato globale SEMPRE
+       statoServizi[codice] = data;
+
+       const badge = document.getElementById(`badge-${codice}`);
+       const info  = document.getElementById(`info-${codice}`);
+       const btn   = document.getElementById(`btn-${codice}`);
+
+       if (badge && btn) {
+
+         info?.classList.add("hidden");
+
+         /* =====================================================
+            SERVIZIO NON ATTIVO
+            ===================================================== */
+         if (!data.attivo) {
+           badge.textContent = "Non attivo";
+           badge.className =
+             "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+
+           btn.disabled = false;
+           btn.textContent = "Scopri";
+           btn.className =
+             "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
+           } else {
+             badge.textContent = "Attivo";
+             badge.className =
+               "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+
+               // PERMANENTE (admin / infinito)
+               if (data.permanente === true) {
+                 btn.disabled = true;
+                 btn.textContent = "♾️ Senza scadenza";
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-green-100 text-indigo-700 text-sm font-medium cursor-default";
+
+                 if (info) {
+                   info.classList.remove("hidden");
+                   info.textContent = "Servizio attivo senza scadenza";
+                 }
+               }
+
+               // DATE MANCANTI (fallback sicurezza)
+               else if (!data.data_fine || !data.data_inizio) {
+                 btn.disabled = true;
+                 btn.textContent = "Attivo";
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
+               }
+
+             else {
+
+               const fine = new Date(data.data_fine);
+               fine.setHours(23,59,59,999);
+
+               const oggi = new Date();
+               oggi.setHours(0,0,0,0);
+
+               const giorniResidui = Math.ceil((fine - oggi) / 86400000);
+
+               // SCADUTO
+               if (giorniResidui <= 0) {
+                 badge.textContent = "Scaduto";
+                 badge.className =
+                   "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+
+                 btn.disabled = false;
+                 btn.textContent = "Scopri";
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
+               }
+
+               // VICINO SCADENZA (≤ 3 giorni)
+               else if (giorniResidui <= 3) {
+                 btn.disabled = false;
+                 btn.textContent = "Rinnova";
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium";
+               }
+
+               // LONTANO
+               else {
+                 btn.disabled = true;
+                 btn.textContent = `Attivo fino al ${fine.toLocaleDateString('it-IT')}`;
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
+               }
+             }
+           }
+       }
+
+     } catch (e) {
+       console.error("Errore stato servizio", codice, e);
+       statoServizi[codice] = { attivo: false };
+     }
+
+     // QUESTO DEVE SEMPRE PARTIRE
+     serviziCaricati++;
+     if (serviziCaricati === NUM_SERVIZI_ATTESI) {
+       aggiornaStatoPacchetti();
+       aggiornaStatoVisibilita();
+     }
+   }
+</script>
+<script>
+function aggiornaStatoPacchetti() {
+
+  const pacchetti = {
+    pacchetto_visibilita: [
+      "boost_lista",
+      "badge_evidenza",
+      "contatti"
+    ],
+    visibilita_premium: [
+      "boost_lista",
+      "badge_evidenza",
+      "vetrina_annuncio",
+      "contatti"
+    ]
+  };
+
+  Object.entries(pacchetti).forEach(([codicePacchetto, servizi]) => {
+
+    const badge = document.getElementById(`badge-${codicePacchetto}`);
+    const info  = document.getElementById(`info-${codicePacchetto}`);
+    const btn   = document.getElementById(`btn-${codicePacchetto}`);
+
+    if (!badge || !btn) return;
+
+    const stati = servizi
+      .map(s => statoServizi[s])
+      .filter(Boolean);
+
+    if (stati.length === 0) return;
+
+    const tuttiAttivi = stati.every(s => s.attivo === true);
+
+    /* =========================
+       PACCHETTO NON ATTIVO
+       ========================= */
+    if (!tuttiAttivi) {
+      badge.textContent = "Non attivo";
+      badge.className =
+        "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+
+      btn.disabled = false;
+      btn.textContent = "Scopri il pacchetto";
+      btn.className =
+        "mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold";
+      return;
+    }
+
+    /* =========================
+       PACCHETTO ATTIVO
+       ========================= */
+    badge.textContent = "Attivo";
+    badge.className =
+      "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+
+      const attivi = stati.filter(s => s.attivo === true);
+      const servizioInScadenza = attivi
+      .filter(s => s.data_inizio && s.data_fine)
+      .sort((a, b) => new Date(a.data_fine) - new Date(b.data_fine))[0];
+
+    if (servizioInScadenza && info) {
+      const fine = new Date(servizioInScadenza.data_fine);
+      const gg = Math.ceil((fine - new Date()) / 86400000);
+
+      info.classList.remove("hidden");
+      info.textContent =
+        gg > 0
+          ? `Un servizio scade tra ${gg} giorni`
+          : "In scadenza";
+    }
+
+    /* =========================
+       LOGICA RINNOVO PACCHETTO
+       ========================= */
+    if (servizioInScadenza) {
+      const inizio = new Date(servizioInScadenza.data_inizio);
+      const fine   = new Date(servizioInScadenza.data_fine);
+
+      const durataTotale =
+        Math.max(1, Math.ceil((fine - inizio) / 86400000));
+
+      const giorniResidui =
+        Math.ceil((fine - new Date()) / 86400000);
+
+      const sogliaRinnovo = Math.max(
+        MIN_GIORNI_RINNOVO,
+        Math.ceil(durataTotale * PERCENTUALE_RINNOVO)
+      );
+
+      if (giorniResidui > 0 && giorniResidui <= sogliaRinnovo) {
+        btn.disabled = false;
+        btn.textContent = "Rinnova pacchetto";
+        btn.className =
+          "mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold";
+        return;
+      }
+    }
+
+    /* =========================
+       ATTIVO MA NON RINNOVABILE
+       ========================= */
+    btn.disabled = true;
+    btn.textContent = "Attivo";
+    btn.className =
+      "mt-4 w-full py-2.5 rounded-full bg-green-100 text-green-700 cursor-default";
+  });
+}
+</script>
+<script>
+
+function aggiornaStatoVisibilita() {
+  const box = document.getElementById("box-visibilita-stato");
+  if (!box) return;
+
+  const attivo = c => statoServizi[c]?.attivo === true;
+
+  // reset
+  box.innerHTML = "";
+  box.className = "";
+
+  /* ======================================================
+     1️⃣ ANNUNCIO URGENTE → precedenza comunicativa
+     ====================================================== */
+  if (attivo("annuncio_urgente")) {
+    box.className =
+      "relative bg-rose-50 border border-rose-300 rounded-xl p-4 text-sm text-rose-800 shadow-sm";
+    box.innerHTML = `
+      <div class="absolute -top-3 -left-3 bg-rose-500 text-white text-xs px-2 py-1 rounded-full shadow">
+        Priorità
+      </div>
+      ⚡ <b>Annuncio urgente attivo</b><br>
+      Il tuo annuncio sta ricevendo una spinta immediata di visibilità.
+    `;
+    return;
+  }
+
+  /* ======================================================
+     2️⃣ SERVIZI DI VISIBILITÀ REALI
+     ====================================================== */
+  const serviziVisibilita = [
+    "boost_lista",
+    "badge_evidenza",
+    "vetrina_annuncio"
+  ];
+
+  const visAttivi = serviziVisibilita.filter(attivo);
+  const visMancanti = serviziVisibilita.filter(s => !attivo(s));
+  const contattiAttivi = attivo("contatti");
+
+  /* ======================================================
+     3️⃣ MASSIMA VISIBILITÀ (TUTTI I SERVIZI ATTIVI)
+     ====================================================== */
+  if (visMancanti.length === 0 && contattiAttivi) {
+    box.className =
+      "relative bg-gradient-to-br from-amber-50 to-white border border-amber-300 rounded-xl p-4 text-sm text-amber-800 shadow-sm";
+    box.innerHTML = `
+      <div class="absolute -top-3 -left-3 bg-amber-500 text-white text-xs px-2 py-1 rounded-full shadow">
+        Premium
+      </div>
+      🌟 <b>Massima visibilità attiva</b><br>
+      Il tuo annuncio è al massimo livello possibile.<br>
+      <span class="text-xs">Contatti visibili e priorità completa.</span>
+    `;
+    return;
+  }
+
+  /* ======================================================
+     4️⃣ STATO INTERMEDIO
+     ====================================================== */
+  if (visAttivi.length > 0) {
+    box.className =
+      "relative bg-gradient-to-br from-emerald-50 to-white border border-emerald-300 rounded-xl p-4 text-sm text-emerald-800 shadow-sm";
+
+    box.innerHTML = `
+      <div class="absolute -top-3 -left-3 bg-emerald-500 text-white text-xs px-2 py-1 rounded-full shadow">
+      Buona visibilità
+      </div>
+      🚀 <b>Visibilità migliorata</b><br>
+      ${
+        visMancanti.length > 0
+          ? `Ti manca solo <b>${visMancanti.map(s => s.replace("_", " ")).join(" e ")}</b>
+             per ottenere la massima visibilità.`
+          : "La visibilità è già molto alta."
+      }
+      <div class="mt-2 text-xs text-emerald-700">
+        ${contattiAttivi
+          ? "✅ I contatti sono visibili."
+          : "ℹ️ I contatti non sono ancora visibili."}
+      </div>
+    `;
+    return;
+  }
+
+  /* ======================================================
+     5️⃣ BASE
+     ====================================================== */
+  box.className =
+    "relative bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600";
+  box.innerHTML = `
+    <div class="absolute -top-3 -left-3 bg-slate-400 text-white text-xs px-2 py-1 rounded-full shadow">
+      Base
+    </div>
+    Visibilità standard.<br>
+    Puoi aumentare la visibilità per ottenere più contatti.
+  `;
+}
+</script>
+<script>
+  document.getElementById("ms-conferma").onclick = () => {
+    if (!selezioneCorrente) return;
+
+    chiudiServizio();
+
+    document.getElementById("conf-titolo").innerText =
+      selezioneCorrente.titolo;
+
+    document.getElementById("conf-durata").innerText =
+      selezioneCorrente.permanente
+        ? "Senza scadenza"
+        : `${selezioneCorrente.durata} giorni`;
+
+    document.getElementById("conf-prezzo").innerText =
+      `${(selezioneCorrente.prezzo / 100).toFixed(2)} €`;
+
+    document.getElementById("modale-conferma").classList.remove("hidden");
+  };
+</script>
+
+<script>
+  function chiudiConferma() {
+    document.getElementById("modale-conferma").classList.add("hidden");
+  }
+</script>
+<script>
+  const stripe = Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+  let elements = null;
+
+  async function confermaAttivazione(btn) {
+    if (!selezioneCorrente) return;
+
+    // disabilita subito il bottone per evitare doppio click
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("opacity-50", "cursor-not-allowed");
+    }
+
+    try {
+      const res = await fetch("/api/crea-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          annuncio_id: {{ annuncio['id'] }},
+          piano_id: selezioneCorrente.piano_id,
+          tipo: selezioneCorrente.tipo
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.client_secret) {
+        alert(data?.error || "Errore creazione pagamento");
+        throw new Error("PaymentIntent non valido");
+      }
+
+      // 🔑 crea Stripe Elements
+      elements = stripe.elements({ clientSecret: data.client_secret });
+
+      const container = document.getElementById("payment-element");
+      container.innerHTML = "";
+
+      const paymentElement = elements.create("payment");
+      paymentElement.mount(container);
+
+      // mostra Stripe
+      document.getElementById("stripe-box").classList.remove("hidden");
+
+      // nasconde il bottone Conferma (UX pulita)
+      btn?.classList.add("hidden");
+
+    } catch (err) {
+      console.error(err);
+      alert("Errore durante la preparazione del pagamento.");
+
+      // riabilita il bottone SOLO se Stripe non è stato mostrato
+      if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
+        btn.disabled = false;
+        btn.classList.remove("opacity-50", "cursor-not-allowed");
+      }
+    }
+  }
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  const payBtn = document.getElementById("pay-button");
+  const errBox = document.getElementById("payment-error");
+
+  if (!payBtn) return; // sicurezza: bottone non ancora nel DOM
+
+  payBtn.onclick = async () => {
+    // sicurezza: niente pagamento se Stripe Elements non è pronto
+    if (!elements) return;
+
+    // reset errore
+    if (errBox) {
+      errBox.textContent = "";
+      errBox.classList.add("hidden");
+    }
+
+    // evita doppio click
+    payBtn.disabled = true;
+    payBtn.classList.add("opacity-50", "cursor-not-allowed");
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.href
+        }
+      });
+
+      /*
+        - Se error è presente → errore immediato (carta rifiutata, ecc.)
+        - Se NON c'è error → Stripe può fare redirect (3DS)
+          oppure il pagamento va avanti e il webhook farà il resto
+      */
+      if (error) {
+        if (errBox) {
+          errBox.textContent = error.message || "Pagamento non riuscito.";
+          errBox.classList.remove("hidden");
+        } else {
+          alert(error.message || "Pagamento non riuscito.");
+        }
+
+        // riabilita per nuovo tentativo
+        payBtn.disabled = false;
+        payBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      }
+
+    } catch (e) {
+      console.error("Errore Stripe:", e);
+
+      if (errBox) {
+        errBox.textContent = "Errore imprevisto durante il pagamento. Riprova.";
+        errBox.classList.remove("hidden");
+      } else {
+        alert("Errore imprevisto durante il pagamento. Riprova.");
+      }
+
+      // riabilita per nuovo tentativo
+      payBtn.disabled = false;
+      payBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    }
+  };
+
+});
+</script>
+<script>
+  function bodyModalOn() {
+    document.body.classList.add("modal-open");
+  }
+
+  function bodyModalOff() {
+    document.body.classList.remove("modal-open");
+  }
+</script>
+
+{% endblock %}

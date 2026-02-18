@@ -1,0 +1,260 @@
+{# templates/layout_admin.html #}
+{% extends "base.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+
+<div class="admin-wrapper pt-20 md:pt-24">
+
+  {# 🔹 Overlay mobile #}
+  <div id="admin-sidebar-overlay"
+       class="fixed inset-0 bg-black/30 z-30 hidden md:hidden"></div>
+
+  {# 🔹 SIDEBAR ADMIN #}
+  <aside id="admin-sidebar"
+         class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 shadow-sm
+                transform -translate-x-full md:translate-x-0 transition-transform duration-200
+                flex flex-col">
+
+    {# Header sidebar #}
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div class="flex flex-col">
+        <span class="text-xs font-semibold tracking-wide text-slate-400 uppercase">Pannello</span>
+        <span class="text-sm font-semibold text-slate-800">Amministrazione</span>
+      </div>
+
+      {# Bottone chiudi solo mobile #}
+      <button type="button"
+              id="admin-sidebar-close"
+              class="md:hidden inline-flex items-center justify-center rounded-full p-2
+                     text-slate-500 hover:bg-slate-100">
+        ✕
+      </button>
+    </div>
+
+    {# Link di navigazione #}
+    {% set current = request.path %}
+
+    <nav class="flex-1 px-3 py-4 space-y-1 text-sm">
+      <a href="{{ url_for('admin_dashboard') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/dashboard') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>🏠</span>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="{{ url_for('admin_utenti') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/utenti') or current == '/admin' %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>👥</span>
+        <span>Utenti</span>
+      </a>
+
+      <a href="{{ url_for('admin_annunci') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/annunci') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>📣</span>
+        <span>Annunci</span>
+
+        <span id="badge-annunci"
+              class="ml-auto inline-flex items-center justify-center rounded-full min-w-[1.5rem]
+                     h-6 text-xs font-semibold bg-amber-100 text-amber-700 hidden">
+        </span>
+      </a>
+
+      <a href="{{ url_for('admin_recensioni') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/recensioni') or current.startswith('/admin/risposte') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>⭐</span>
+        <span>Recensioni</span>
+
+        <span id="badge-recensioni"
+              class="ml-auto inline-flex items-center justify-center rounded-full min-w-[1.5rem]
+                     h-6 text-xs font-semibold bg-rose-100 text-rose-700 hidden">
+        </span>
+      </a>
+
+      <a href="{{ url_for('admin_statistiche') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/statistiche') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>📊</span>
+        <span>Statistiche</span>
+      </a>
+
+      <a href="{{ url_for('admin_notifiche') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/notifiche') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>🔔</span>
+        <span>Notifiche</span>
+
+        <a href="{{ url_for('admin_servizi') }}"
+           class="flex items-center gap-2 px-3 py-2 rounded-xl
+                  {% if current.startswith('/admin/servizi') %}
+                     bg-slate-900 text-white shadow-sm
+                  {% else %}
+                     text-slate-700 hover:bg-slate-100
+                  {% endif %}">
+          <span>💰</span>
+          <span>Servizi</span>
+        </a>
+
+      </a>
+    </nav>
+
+    {# Footer sidebar: esci #}
+    <div class="px-4 py-4 border-t border-slate-100">
+      <a href="{{ url_for('logout') }}"
+         class="flex items-center justify-center gap-2 w-full px-3 py-2
+                rounded-xl text-sm font-medium
+                bg-rose-50 text-rose-700 hover:bg-rose-100">
+        <span>🚪</span>
+        <span>Esci</span>
+      </a>
+    </div>
+  </aside>
+
+  {# 🔹 CONTENUTO PRINCIPALE ADMIN #}
+  <div class="flex-1 md:ml-64">
+    <div class="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-8">
+
+      {# bottone per aprire sidebar su mobile #}
+      <div class="md:hidden mb-4 flex items-center justify-between">
+        <button id="admin-sidebar-open"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-xl
+                       bg-white border border-slate-200 text-slate-700 shadow-sm">
+          <span>☰</span>
+          <span class="text-sm font-medium">Menu admin</span>
+        </button>
+      </div>
+
+      {# qui dentro ogni pagina admin inietterà i suoi contenuti #}
+      {% block admin_content %}{% endblock %}
+
+    </div>
+  </div>
+</div>
+
+{# 🔹 JS mobile + badge counters #}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const sidebar   = document.getElementById('admin-sidebar');
+  const overlay   = document.getElementById('admin-sidebar-overlay');
+  const btnOpen   = document.getElementById('admin-sidebar-open');
+  const btnClose  = document.getElementById('admin-sidebar-close');
+
+  function openSidebar() {
+    if (!sidebar) return;
+    sidebar.classList.remove('-translate-x-full');
+    if (overlay) overlay.classList.remove('hidden');
+  }
+
+  function closeSidebar() {
+    if (!sidebar) return;
+    sidebar.classList.add('-translate-x-full');
+    if (overlay) overlay.classList.add('hidden');
+  }
+
+  if (btnOpen)  btnOpen.addEventListener('click', openSidebar);
+  if (btnClose) btnClose.addEventListener('click', closeSidebar);
+  if (overlay)  overlay.addEventListener('click', closeSidebar);
+
+  // 🔔 Carica i counters admin
+  fetch('/admin/counters')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) return;
+
+      // Annunci
+      const bAnn = document.getElementById('badge-annunci');
+      if (bAnn && data.annunci && data.annunci > 0) {
+        bAnn.textContent = data.annunci;
+        bAnn.classList.remove('hidden');
+      }
+
+      // Recensioni (recensioni + risposte)
+      const bRec = document.getElementById('badge-recensioni');
+      if (bRec && data.recensioni && data.recensioni > 0) {
+        bRec.textContent = data.recensioni;
+        bRec.classList.remove('hidden');
+      }
+    })
+    .catch(() => {});
+});
+</script>
+<!-- 🔥 Socket.IO aggiornamento realtime badge admin -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const socket = io();
+
+    // 🔁 Quando il server dice "update_admin_counters", aggiorno sidebar + dashboard
+    socket.on("update_admin_counters", () => {
+        console.log("🔄 Aggiornamento counters admin via socket…");
+
+        fetch("/admin/counters")
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+
+                // ---- Sidebar ----
+                const bAnn = document.getElementById("badge-annunci");
+                const bRec = document.getElementById("badge-recensioni");
+
+                if (bAnn) {
+                    if (data.annunci > 0) {
+                        bAnn.textContent = data.annunci;
+                        bAnn.classList.remove("hidden");
+                    } else {
+                        bAnn.classList.add("hidden");
+                    }
+                }
+
+                if (bRec) {
+                    if (data.recensioni > 0) {
+                        bRec.textContent = data.recensioni;
+                        bRec.classList.remove("hidden");
+                    } else {
+                        bRec.classList.add("hidden");
+                    }
+                }
+
+                // ---- Dashboard Admin ----
+                const dUt   = document.getElementById("dash-utenti");
+                const dAnn  = document.getElementById("dash-annunci");
+                const dRec  = document.getElementById("dash-recensioni");
+                const dMsg  = document.getElementById("dash-messaggi");
+
+                if (dUt)  dUt.textContent  = data.utenti      ?? "0";
+                if (dAnn) dAnn.textContent = data.annunci     ?? "0";
+                if (dRec) dRec.textContent = data.recensioni  ?? "0";
+                if (dMsg) dMsg.textContent = data.messaggi    ?? "0";
+            })
+            .catch(err => console.error("Errore aggiornamento counters:", err));
+    });
+});
+</script>
+
+{% endblock %}

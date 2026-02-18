@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+
+<style>
+.page-wrapper { padding-top: 80px; }
+@media (max-width: 640px) { .page-wrapper { padding-top: 95px; } }
+@media (min-width: 641px) and (max-width: 1024px) { .page-wrapper { padding-top: 90px; } }
+</style>
+
+<div class="page-wrapper">
+
+<div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md text-center">
+  <h2 class="text-2xl font-bold mb-4">📸 Carica o scatta la tua foto profilo</h2>
+  <p class="text-gray-600 mb-6">
+    Puoi scattare una foto con la fotocamera del dispositivo o selezionarne una già salvata.
+  </p>
+
+  <form id="fotoForm" method="post" enctype="multipart/form-data" class="space-y-4">
+
+    <!-- Pulsante fotocamera -->
+    <button type="button" id="openCameraBtn"
+            class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">
+      📷 Scatta ora con la fotocamera
+    </button>
+
+    <div class="text-gray-500 text-sm my-2">oppure</div>
+
+    <!-- Upload file -->
+    <label class="block text-gray-700 font-semibold mb-1">Seleziona un file</label>
+    <input type="file" name="foto" accept="image/*"
+           class="w-full border border-gray-300 rounded-lg p-2">
+
+    <!-- Anteprima -->
+    <div id="preview-container" class="mt-4 hidden">
+      <p class="text-gray-600 mb-2">Anteprima:</p>
+      <img id="preview-img" src="#"
+           class="mx-auto rounded-full w-32 h-32 object-cover border-2 border-gray-300 shadow-sm">
+    </div>
+
+    <!-- Bottone salva -->
+    <button type="submit"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
+      Salva foto profilo
+    </button>
+
+    <a href="{{ url_for('dashboard') }}" class="block text-blue-600 mt-3 hover:underline">
+      ⬅ Torna alla Dashboard
+    </a>
+
+  </form>
+</div>
+
+<!-- Modal della fotocamera -->
+<div id="cameraModal"
+     class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50">
+  <div class="bg-white p-4 rounded-lg shadow-lg relative w-80 text-center">
+    <button id="closeCameraBtn"
+            class="absolute top-2 right-3 text-gray-500 hover:text-red-500 text-lg font-bold">
+      ✕
+    </button>
+
+    <h3 class="text-lg font-semibold mb-2">Scatta foto</h3>
+
+    <video id="camera" autoplay playsinline class="w-full rounded-lg border mb-3"></video>
+
+    <button id="captureBtn"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">
+      📸 Scatta
+    </button>
+  </div>
+</div>
+
+</div>
+
+<!-- Carica face-api da static/js -->
+<script defer src="{{ url_for('static', filename='js/face-api.min.js') }}"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+
+    console.log("Controllo faceapi:", typeof faceapi);
+    if (typeof faceapi === "undefined") {
+        alert("Errore: face-api.js non è stato caricato.");
+        return;
+    }
+
+    // Carico modelli
+    console.log("Caricamento modelli...");
+    await faceapi.nets.tinyFaceDetector.loadFromUri("/static/models/");
+    console.log("Modelli caricati!");
+
+    const form = document.getElementById("fotoForm");
+    const input = document.querySelector("input[name='foto']");
+    const previewImg = document.getElementById("preview-img");
+    const previewContainer = document.getElementById("preview-container");
+
+    let lastImageBlob = null;
+
+    /* -------------- UPLOAD FILE ---------------- */
+    input.addEventListener("change", () => {
+        if (!input.files.length) return;
+
+        lastImageBlob = input.files[0];   // <-- fondamentale!
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            previewImg.src = e.target.result;
+            previewContainer.classList.remove("hidden");
+        };
+        reader.readAsDataURL(lastImageBlob);
+    });
+
+    /* -------------- FOTOCAMERA ---------------- */
+    const openBtn = document.getElementById("openCameraBtn");
+    const modal = document.getElementById("cameraModal");
+    const closeBtn = document.getElementById("closeCameraBtn");
+    const captureBtn = document.getElementById("captureBtn");
+    const video = document.getElementById("camera");
+    let stream = null;
+
+    openBtn.addEventListener("click", async () => {
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        } catch (err) {
+            alert("Impossibile accedere alla fotocamera: " + err.message);
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+    });
+
+    closeBtn.addEventListener("click", () => {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+    });
+
+    captureBtn.addEventListener("click", () => {
+
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+
+        canvas.toBlob(blob => {
+
+            lastImageBlob = blob;  // <-- fondamentale!
+
+            previewImg.src = URL.createObjectURL(blob);
+            previewContainer.classList.remove("hidden");
+
+            const file = new File([blob], "foto.png", { type: "image/png" });
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+
+        }, "image/png");
+    });
+
+    /* -------------- BLOCCO SUBMIT SE NON C’È VOLTO ---------------- */
+    form.addEventListener("submit", async (e) => {
+
+        e.preventDefault(); // <-- IMPORTANTISSIMO: impedisce invio immediato
+
+        if (!lastImageBlob) {
+            alert("Seleziona o scatta una foto prima di continuare.");
+            return;
+        }
+
+        const img = await blobToImage(lastImageBlob);
+        const detection = await faceapi.detectSingleFace(
+            img,
+            new faceapi.TinyFaceDetectorOptions()
+        );
+
+        if (!detection) {
+            alert("Per favore carica una foto in cui il tuo viso sia chiaramente visibile.");
+            return;
+        }
+
+        console.log("Volto rilevato! Invio form...");
+        form.submit();   // <-- invio manuale SOLO dopo verifica volto
+    });
+
+    function blobToImage(blob) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.src = URL.createObjectURL(blob);
+        });
+    }
+
+});
+</script>
+{% endblock %}

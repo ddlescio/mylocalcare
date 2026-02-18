@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set page = "impostazioni" %}
+{% block content %}
+
+<div class="max-w-md mx-auto px-4 pt-24 pb-10">
+
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">❌ Conferma Eliminazione</h1>
+
+  <div class="bg-white p-6 rounded-2xl shadow-sm border space-y-6">
+
+    <p class="text-gray-700">
+      Sei sicuro di voler eliminare DEFINITIVAMENTE il tuo account?
+      <br><br>
+      <strong class="text-red-600">Questa operazione non può essere annullata.</strong>
+    </p>
+
+    <form method="POST">
+      <button class="w-full bg-red-600 text-white py-2 rounded-xl hover:bg-red-700 transition">
+        🔥 Elimina definitivamente
+      </button>
+    </form>
+
+    <a href="{{ url_for('impostazioni') }}"
+       class="block w-full text-center mt-3 text-gray-500 hover:text-gray-700">
+      ⬅ Annulla e torna alle impostazioni
+    </a>
+
+  </div>
+
+</div>
+
+{% endblock %}

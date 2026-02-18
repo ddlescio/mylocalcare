@@ -1,0 +1,127 @@
+{% extends "layout_admin.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block admin_content %}
+<div class="max-w-6xl mx-auto">
+
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">
+        🧾 Storico Acquisti
+      </h1>
+      <p class="text-slate-600 mt-1">
+        Elenco completo degli acquisti effettuati (servizi e pacchetti).
+      </p>
+    </div>
+
+    <div class="flex justify-end">
+      <button onclick="history.back()"
+              class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-sm font-semibold">
+        ← Indietro
+      </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
+        <thead class="bg-slate-50 border-b">
+          <tr>
+            <th class="p-3 text-left">Data</th>
+            <th class="p-3 text-left">Utente</th>
+            <th class="p-3 text-left">Tipo</th>
+            <th class="p-3 text-left">Oggetto</th>
+            <th class="p-3 text-center">Annuncio</th>
+            <th class="p-3 text-center">Importo</th>
+            <th class="p-3 text-center">Scadenza</th>
+            <th class="p-3 text-center">Stato</th>
+            <th class="p-3 text-center">Metodo</th>
+            <th class="p-3 text-center">Dettaglio</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100">
+          {% for a in acquisti %}
+          <tr class="hover:bg-slate-50">
+
+            <td class="p-3 text-slate-700">
+              {{ a.created_at | dt_roma }}
+            </td>
+
+            <td class="p-3">
+              <div class="font-semibold">{{ a.email }}</div>
+              <div class="text-xs text-slate-500">ID {{ a.utente_id }}</div>
+            </td>
+
+            <td class="p-3">
+              {% if a.tipo == 'pacchetto' %}
+                <span class="px-2 py-1 rounded bg-indigo-100 text-indigo-700 text-xs font-semibold">
+                  Pacchetto
+                </span>
+              {% else %}
+                <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                  Servizio
+                </span>
+              {% endif %}
+            </td>
+
+            <td class="p-3">
+              {{ a.pacchetto_nome or a.servizio_nome }}
+            </td>
+
+            <td class="p-3 text-center">
+              {% if a.annuncio_id %}
+                #{{ a.annuncio_id }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+
+            <td class="p-3 text-center font-semibold">
+              {{ '%.2f'|format(a.importo_cent / 100) }} €
+            </td>
+
+            <!-- SCADENZA -->
+            <td class="p-3 text-center text-slate-700">
+              {% if a.data_fine %}
+                {{ a.data_fine | dt_roma }}
+              {% else %}
+                ∞
+              {% endif %}
+            </td>
+
+            <!-- STATO -->
+            <td class="p-3 text-center">
+              {% if a.stato_attivo %}
+                <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                  Attivo
+                </span>
+              {% else %}
+                <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
+                  Scaduto
+                </span>
+              {% endif %}
+            </td>
+
+            <td class="p-3 text-center">
+              {{ a.metodo }}
+            </td>
+
+            <td class="p-3 text-center text-xs text-slate-600">
+              {% if a.numero_attivazioni > 1 %}
+                🔁 Rinnovo
+              {% else %}
+                🆕 Nuovo
+              {% endif %}
+              <br>
+              {{ a.numero_attivazioni }} att.              
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

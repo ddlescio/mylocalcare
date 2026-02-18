@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-md p-8 mt-8">
+
+  <h1 class="text-2xl font-bold text-blue-700 mb-4">{{ annuncio['titolo'] }}</h1>
+  <p class="text-gray-600 mb-2">Categoria: {{ annuncio['categoria'] }}</p>
+  <p class="text-gray-600 mb-4">Zona: {{ annuncio['zona'] }}</p>
+
+  {% if annuncio['descrizione'] %}
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Descrizione</h2>
+    <p class="text-gray-700 mb-4 whitespace-pre-line">{{ annuncio['descrizione'] }}</p>
+  {% endif %}
+
+  {% if annuncio['bio_utente'] %}
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Chi sono</h2>
+    <p class="text-gray-700 mb-4 whitespace-pre-line">{{ annuncio['bio_utente'] }}</p>
+  {% endif %}
+
+  {% if annuncio['filtri_categoria'] %}
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-2">Caratteristiche</h2>
+      <div class="flex flex-wrap gap-2">
+        {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
+          <span class="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200">
+            {{ f.strip() }}
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- GALLERIA FOTO -->
+  {% if annuncio['media'] %}
+    {% set foto_list = annuncio['media'].split(',') | select('string') | list %}
+    {% if foto_list %}
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-3">📸 Le tue immagini</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {% for foto in foto_list if foto %}
+            <img
+              src="{{ url_for('static', filename=foto.strip()) }}"
+              alt="Foto annuncio"
+              class="rounded-lg object-cover w-full h-40 border border-gray-200 shadow-sm cursor-pointer hover:scale-105 transition"
+              onclick="apriZoom('{{ url_for('static', filename=foto.strip()) }}')"
+            />
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <div class="flex flex-wrap gap-3 mt-6">
+    <a href="{{ url_for('modifica_annuncio', id=annuncio['id']) }}"
+       class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full text-sm font-medium">
+      ✏️ Modifica annuncio
+    </a>
+    <a href="{{ url_for('elimina_annuncio', id=annuncio['id']) }}"
+       onclick="return confirm('Vuoi davvero eliminare questo annuncio?')"
+       class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-full text-sm font-medium">
+      🗑️ Elimina annuncio
+    </a>
+  </div>
+
+</div>
+
+<!-- 🔹 ZOOM FOTO -->
+<div id="zoom-overlay"
+     class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+     onclick="chiudiZoom()">
+  <img id="zoom-img" src="" alt="" class="max-w-[90%] max-h-[90%] rounded-lg shadow-2xl">
+</div>
+
+<script>
+function apriZoom(src) {
+  const overlay = document.getElementById("zoom-overlay");
+  const img = document.getElementById("zoom-img");
+  img.src = src;
+  overlay.classList.remove("hidden");
+}
+function chiudiZoom() {
+  document.getElementById("zoom-overlay").classList.add("hidden");
+}
+</script>
+{% endblock %}

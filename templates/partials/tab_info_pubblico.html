@@ -1,0 +1,343 @@
+{# partials/tab_info_pubblico.html #}
+
+<div class="info-wrapper border border-gray-100 rounded-2xl shadow-sm p-5">
+  <div class="wrapper-info">
+
+    <!-- 🔹 COLONNA SINISTRA: menu categorie -->
+    <aside class="md:col-span-1">
+      <nav class="space-y-1">
+        {% set sezioni = {
+          'overview': 'Informazioni di base',
+          'work_education': 'Esperienze e formazione',
+          'contacts': 'Contatti',
+          'description': 'Chi sono'
+        } %}
+        {% for key, label in sezioni.items() %}
+          <button type="button"
+                  class="section-btn w-full text-left text-sm font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition
+                         {% if loop.first %}bg-blue-100 text-blue-700{% else %}text-gray-700{% endif %}"
+                  data-section="{{ key }}">
+            {{ label }}
+          </button>
+        {% endfor %}
+      </nav>
+    </aside>
+
+    <!-- 🔹 COLONNA DESTRA: contenuto -->
+    <main class="md:col-span-2" id="info-content">
+
+      <!-- ✅ INFO DI BASE -->
+      <section data-section="overview" class="info-card">
+        <div class="info-card-head">
+          <h4 class="info-card-title">Informazioni di base</h4>
+          <p class="info-card-sub">Dettagli rapidi per capire subito chi è {{ utente['username'] }}.</p>
+        </div>
+
+        {% set lingue = utente.get('lingue')|default('', true)|trim %}
+        {% set frase = utente.get('frase')|default('', true)|trim %}
+
+        <div class="info-grid">
+
+          {# 🔹 CITTÀ — sempre presente (obbligatoria) #}
+          <div class="info-row">
+            <div class="info-ico">📍</div>
+            <div class="info-txt">
+              <div class="info-label">Città</div>
+              <div class="info-value">{{ utente.get('citta') }}</div>
+            </div>
+          </div>
+
+          {# 🔹 LINGUE — solo se presenti #}
+          {% if lingue %}
+          <div class="info-row">
+            <div class="info-ico">🗣️</div>
+            <div class="info-txt">
+              <div class="info-label">Lingue parlate</div>
+              <div class="info-value">{{ lingue }}</div>
+            </div>
+          </div>
+          {% endif %}
+
+          {# 🔹 FRASE PERSONALE — solo se presente #}
+          {% if frase %}
+          <div class="info-row info-row-full">
+            <div class="info-ico">💬</div>
+            <div class="info-txt">
+              <div class="info-label">Frase personale</div>
+              <div class="info-quote">“{{ frase }}”</div>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+      </section>
+
+
+      <!-- ✅ ESPERIENZE / FORMAZIONE -->
+      <section data-section="work_education" class="info-card hidden">
+        <div class="info-card-head">
+          <h4 class="info-card-title">Esperienze e formazione</h4>
+          <p class="info-card-sub">Percorso, competenze e attestati.</p>
+        </div>
+
+        {% set esperienze = [
+          utente.get('esperienza_1')|default('', true)|trim,
+          utente.get('esperienza_2')|default('', true)|trim,
+          utente.get('esperienza_3')|default('', true)|trim
+        ] %}
+        {% set formazioni = [
+          utente.get('studio_1')|default('', true)|trim,
+          utente.get('studio_2')|default('', true)|trim,
+          utente.get('studio_3')|default('', true)|trim
+        ] %}
+        {% set certificazioni = utente.get('certificazioni')|default('', true)|trim %}
+
+        {% set esperienze_presenti = esperienze | reject('equalto','') | list %}
+        {% set formazioni_presenti = formazioni | reject('equalto','') | list %}
+
+        {% if (esperienze_presenti|length == 0) and (formazioni_presenti|length == 0) and (not certificazioni) %}
+          <p class="info-empty-block">L’utente non ha ancora inserito esperienze, formazione o certificazioni.</p>
+        {% else %}
+
+          {% if esperienze_presenti %}
+          <div class="info-block">
+            <div class="info-block-title">💼 Esperienze</div>
+            <ul class="info-list">
+              {% for exp in esperienze_presenti %}
+                <li>{{ exp }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if formazioni_presenti %}
+          <div class="info-block">
+            <div class="info-block-title">🎓 Formazione</div>
+            <ul class="info-list">
+              {% for f in formazioni_presenti %}
+                <li>{{ f }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if certificazioni %}
+          <div class="info-block">
+            <div class="info-block-title">📜 Certificazioni</div>
+            <div class="info-paragraph">{{ certificazioni }}</div>
+          </div>
+          {% endif %}
+
+        {% endif %}
+      </section>
+
+
+      <!-- ✅ CONTATTI -->
+      <section data-section="contacts" class="info-card hidden">
+        <div class="info-card-head">
+          <h4 class="info-card-title">Contatti</h4>
+          <p class="info-card-sub">Se disponibili, puoi contattarlo anche fuori da LocalCare.</p>
+        </div>
+
+        {% set email_pubblica = utente.get('email_pubblica')|default('', true)|trim %}
+        {% set telefono = utente.get('telefono')|default('', true)|trim %}
+        {% set indirizzo_studio = utente.get('indirizzo_studio')|default('', true)|trim %}
+        {% set sito_web = utente.get('sito_web')|default('', true)|trim %}
+        {% set instagram = utente.get('instagram')|default('', true)|trim %}
+        {% set facebook = utente.get('facebook')|default('', true)|trim %}
+        {% set linkedin = utente.get('linkedin')|default('', true)|trim %}
+        {% set orari = utente.get('orari')|default('', true)|trim %}
+        {% set preferenze_contatto = utente.get('preferenze_contatto')|default('', true)|trim %}
+
+        {% set ha_contatti = email_pubblica or telefono or indirizzo_studio or sito_web
+                             or instagram or facebook or linkedin or orari or preferenze_contatto %}
+
+        {% set contatti_attivi = servizio_attivo_per_utente(utente['id'], 'contatti_profilo') %}
+
+        {% if not ha_contatti %}
+
+          <p class="info-empty-block">
+            L’utente non ha ancora fornito informazioni di contatto.
+          </p>
+
+        {% elif contatti_attivi %}
+
+          <!-- 🔓 CONTATTI VISIBILI -->
+          <div class="info-grid">
+            {% if email_pubblica %}
+              <a class="contact-chip" href="mailto:{{ email_pubblica }}">✉️ {{ email_pubblica }}</a>
+            {% endif %}
+            {% if telefono %}
+              <a class="contact-chip" href="tel:{{ telefono|replace(' ', '') }}">📞 {{ telefono }}</a>
+            {% endif %}
+            {% if sito_web %}
+              <a class="contact-chip" href="{{ sito_web }}" target="_blank" rel="noopener">🌐 Sito web</a>
+            {% endif %}
+            {% if instagram %}
+              <a class="contact-chip" href="{{ instagram }}" target="_blank" rel="noopener">📷 Instagram</a>
+            {% endif %}
+            {% if facebook %}
+              <a class="contact-chip" href="{{ facebook }}" target="_blank" rel="noopener">👥 Facebook</a>
+            {% endif %}
+            {% if linkedin %}
+              <a class="contact-chip" href="{{ linkedin }}" target="_blank" rel="noopener">💼 LinkedIn</a>
+            {% endif %}
+          </div>
+
+          {% if indirizzo_studio or orari or preferenze_contatto %}
+          <div class="info-block mt-4">
+            {% if indirizzo_studio %}
+              <div class="info-minirow">
+                <span class="info-miniico">📍</span>
+                <span>{{ indirizzo_studio }}</span>
+              </div>
+            {% endif %}
+            {% if orari %}
+              <div class="info-minirow">
+                <span class="info-miniico">🕒</span>
+                <span>{{ orari }}</span>
+              </div>
+            {% endif %}
+            {% if preferenze_contatto %}
+              <div class="info-minirow">
+                <span class="info-miniico">✅</span>
+                <span>{{ preferenze_contatto }}</span>
+              </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+        {% else %}
+
+          <!-- 🔒 CONTATTI BLOCCATI -->
+          <div class="info-empty-block text-center">
+            <p class="font-medium">📞 Scrivi in Chat per metterti in contatto</p>
+            <p class="text-xs mt-1 text-gray-500">
+              Contatti non disponibili
+            </p>
+          </div>
+
+        {% endif %}
+      </section>
+
+      <!-- ✅ CHI SONO -->
+      <section data-section="description" class="info-card hidden">
+        <div class="info-card-head">
+          <h4 class="info-card-title">Chi sono</h4>
+          <p class="info-card-sub">Una descrizione più completa.</p>
+        </div>
+
+        {% set descrizione = utente.get('descrizione')|default('', true)|trim %}
+        {% if not descrizione %}
+          <p class="info-empty-block">L’utente non ha ancora aggiunto una descrizione personale.</p>
+        {% else %}
+          <div class="info-paragraph">{{ descrizione }}</div>
+        {% endif %}
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<style>
+  /* ✅ look “social” solo per pubblico */
+  .info-wrapper { background:#f5f7ff !important; }
+  .wrapper-info { display:flex; flex-direction:column; gap:1.5rem; align-items:stretch; }
+  @media (min-width:768px){ .wrapper-info{ flex-direction:row; } }
+
+  aside.md\:col-span-1{
+    background: linear-gradient(160deg, rgba(255,255,255,.96), rgba(244,246,255,.90));
+    border: 1px solid rgba(226,232,240,.9);
+    border-radius: 1.35rem;
+    padding: 1.1rem 1.2rem;
+    box-shadow: 0 6px 14px rgba(15,23,42,.06), 0 18px 40px rgba(15,23,42,.12);
+    backdrop-filter: blur(12px);
+    min-width: 210px;
+  }
+  @media (min-width:768px){ aside.md\:col-span-1{ flex:0 0 230px; } main#info-content{ flex:1; } }
+
+  .section-btn{ font-size:.92rem; padding:.55rem .9rem; border-radius:12px; border:1px solid transparent; }
+  .section-btn.bg-blue-100{ background:#e8f1ff !important; border-color:#c7ddff !important; color:#1e40af !important; font-weight:600; }
+
+  .info-card{
+    border-radius: 1.25rem;
+    background: linear-gradient(160deg, rgba(255,255,255,.96), rgba(244,246,255,.90));
+    border: 1px solid rgba(226,232,240,.9);
+    box-shadow: 0 10px 25px rgba(15,23,42,.06), 0 24px 55px rgba(15,23,42,.12);
+    backdrop-filter: blur(14px);
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .info-card-head{ display:flex; flex-direction:column; gap:.25rem; margin-bottom: 1rem; }
+  .info-card-title{ font-weight:700; color:#1e3a8a; font-size:1.05rem; }
+  .info-card-sub{ color:#6b7280; font-size:.85rem; }
+
+  .info-grid{ display:grid; gap:.9rem; grid-template-columns: 1fr; }
+  @media (min-width:640px){ .info-grid{ grid-template-columns: 1fr 1fr; } }
+  .info-row{
+    display:flex; gap:.75rem; align-items:flex-start;
+    background: rgba(255,255,255,.9);
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: .85rem .95rem;
+  }
+  .info-row-full{ grid-column:1 / -1; }
+  .info-ico{ font-size:1.25rem; line-height:1; margin-top:.05rem; }
+  .info-label{ font-size:.78rem; color:#6b7280; font-weight:600; }
+  .info-value{ font-size:.95rem; color:#111827; font-weight:600; margin-top:.1rem; }
+  .info-quote{ font-size:.95rem; color:#374151; font-style: italic; margin-top:.15rem; }
+  .info-empty{ color:#9ca3af; font-style: italic; }
+
+  .info-block{ margin-top:.75rem; background: rgba(255,255,255,.85); border:1px solid #e5e7eb; border-radius:16px; padding: .9rem 1rem; }
+  .info-block-title{ font-weight:700; color:#1f2937; font-size:.9rem; margin-bottom:.45rem; }
+  .info-list{ margin:0; padding-left: 1.1rem; color:#374151; font-size:.92rem; }
+  .info-paragraph{ color:#374151; font-size:.95rem; line-height:1.55; white-space: pre-wrap; }
+
+  .info-empty-block{
+    color:#6b7280; font-size:.92rem; font-style: italic;
+    background: rgba(255,255,255,.7);
+    border:1px dashed #d1d5db;
+    border-radius:16px;
+    padding: .9rem 1rem;
+  }
+
+  .contact-chip{
+    display:inline-flex; align-items:center; justify-content:center;
+    gap:.4rem;
+    padding:.55rem .85rem;
+    border-radius:9999px;
+    border:1px solid #c7ddff;
+    background:#e8f1ff;
+    color:#1e40af;
+    font-weight:700;
+    font-size:.85rem;
+    text-decoration:none;
+    transition: transform .15s ease, filter .15s ease;
+    width: fit-content;
+  }
+  .contact-chip:hover{ transform: translateY(-1px); filter: brightness(.98); }
+
+  .info-minirow{ display:flex; gap:.5rem; align-items:flex-start; color:#374151; font-size:.92rem; }
+  .info-miniico{ width: 1.2rem; text-align:center; }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const sectionBtns = document.querySelectorAll(".section-btn");
+  const contentSections = document.querySelectorAll("main [data-section]");
+
+  function mostraSezione(key) {
+    sectionBtns.forEach(b => b.classList.remove("bg-blue-100","text-blue-700"));
+    const btn = Array.from(sectionBtns).find(b => b.dataset.section === key);
+    if (btn) btn.classList.add("bg-blue-100","text-blue-700");
+
+    contentSections.forEach(s => s.classList.add("hidden"));
+    const target = document.querySelector(`main [data-section="${key}"]`);
+    if (target) target.classList.remove("hidden");
+  }
+
+  sectionBtns.forEach(btn => btn.addEventListener("click", () => mostraSezione(btn.dataset.section)));
+  mostraSezione("overview");
+});
+</script>

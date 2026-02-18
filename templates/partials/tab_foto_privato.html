@@ -1,0 +1,291 @@
+<!-- TAB FOTO (privato o pubblico) -->
+<div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+  <h3 class="text-base font-semibold text-gray-800 mb-4">Galleria personale</h3>
+
+  <!-- 🔹 Messaggio dinamico -->
+  <div id="alert-galleria"
+       class="hidden opacity-0 transition-opacity duration-300 mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 text-sm flex justify-between items-start">
+    <div>
+      📸 Hai raggiunto il limite massimo di 4 foto.<br>
+      Per aggiungerne di nuove, <b>seleziona le foto da rimuovere</b> e premi <b>💾 Salva</b>.
+    </div>
+    <button id="chiudi-alert" class="ml-3 text-yellow-700 hover:text-yellow-900 font-bold text-lg leading-none">×</button>
+  </div>
+
+  {% set foto_list = [] %}
+  {% if utente.get('foto_galleria') %}
+    {% set raw_foto = utente.get('foto_galleria') %}
+    {% if raw_foto.startswith('[') %}
+      {% set foto_list = raw_foto | from_json %}
+    {% else %}
+      {% set foto_list = raw_foto.split(',') %}
+    {% endif %}
+  {% endif %}
+
+  {% set foto_count = foto_list | length %}
+  {% set max_foto = 4 %}
+
+  {% if foto_list %}
+    <form id="form-galleria" method="post" action="{{ url_for('utente_update_galleria') }}" enctype="multipart/form-data" class="space-y-4">
+
+      <!-- 🔹 Galleria -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {% for f in foto_list %}
+          {% if f.strip() %}
+            <label class="relative block group">
+              <img src="{{ url_for('static', filename=f.strip()) }}"
+                   class="w-full aspect-square object-cover rounded-xl border group-hover:opacity-80 transition">
+              {% if not pubblico %}
+                <input type="checkbox" name="remove" value="{{ f.strip() }}"
+                       class="absolute top-2 right-2 w-5 h-5 accent-red-600">
+              {% endif %}
+            </label>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if pubblico %}
+      <!-- 🖼️ MODALE GALLERIA PUBBLICA -->
+      <div id="modalGalleria" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[999] hidden">
+        <button id="chiudiGalleria"
+                class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white text-2xl font-bold rounded-full w-10 h-10 flex items-center justify-center">
+          ✕
+        </button>
+
+        <button id="prevFoto"
+                class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center select-none">
+          ‹
+        </button>
+        <button id="nextFoto"
+                class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center select-none">
+          ›
+        </button>
+
+        <img id="fotoGrande"
+             src=""
+             alt="Foto galleria">
+        </div>
+      {% endif %}
+
+      {% if not pubblico %}
+        <!-- 🟢 Area pulsanti -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+          <label class="text-sm text-gray-700 flex items-center gap-2">
+            <input
+              type="file"
+              name="foto_galleria"
+              multiple
+              accept="image/*"
+              class="mt-1 {{ 'opacity-50 cursor-not-allowed' if foto_count >= max_foto }}"
+              id="input-foto"
+              data-foto-count="{{ foto_count }}"
+            >
+          </label>
+
+          <button type="submit"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm flex items-center gap-2">
+            💾 Salva
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-500 mt-2">
+          Seleziona una o più foto da eliminare, poi premi <b>Salva</b> per confermare.
+        </p>
+      {% endif %}
+    </form>
+
+  {% else %}
+    {% if not pubblico %}
+      <p class="text-gray-500 mb-4">Nessuna foto in galleria.</p>
+      <form method="post" action="{{ url_for('utente_update_galleria') }}" enctype="multipart/form-data"
+            class="flex flex-col sm:flex-row justify-between items-center gap-3">
+        <label class="text-sm text-gray-700">
+          📸 Aggiungi foto (massimo {{ max_foto }}):
+          <input type="file" name="foto_galleria" multiple accept="image/*" class="mt-1" id="input-foto">
+        </label>
+        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Carica</button>
+      </form>
+    {% else %}
+      <p class="text-gray-500">Nessuna foto disponibile.</p>
+    {% endif %}
+  {% endif %}
+
+</div>
+
+<style>
+  /* ✅ Nascondi davvero quando c'è .hidden */
+  #modalGalleria.hidden { display: none !important; }
+
+  /* ✅ Mostra solo quando NON ha .hidden */
+  #modalGalleria:not(.hidden) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    background: rgba(0,0,0,0.92);
+  }
+
+  /* ✅ Immagine grande e centrata ovunque */
+  #fotoGrande {
+    width: auto;
+    height: auto;
+    max-width: 95vw;
+    max-height: 95vh;
+    object-fit: contain;
+    border-radius: 1rem;
+    box-shadow: 0 0 40px rgba(0,0,0,0.4);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    transform: scale(0.95);
+
+    /* 🔥 Aggiunte fondamentali */
+    display: block;
+    margin: auto;
+  }
+  #fotoGrande.is-visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Pulsanti sopra l'immagine */
+  #modalGalleria button { z-index: 10000; }
+</style>
+
+
+<!-- 🧠 SCRIPT DI CONTROLLO -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const inputFoto = document.getElementById("input-foto");
+  const alertBox = document.getElementById("alert-galleria");
+  const chiudiBtn = document.getElementById("chiudi-alert");
+
+  if (!inputFoto || !alertBox) return;
+
+  const maxFoto = 4;
+  const fotoEsistenti = parseInt(inputFoto.dataset.fotoCount || "0");
+
+  // Funzione per mostrare con transizione
+  function mostraMessaggio() {
+    alertBox.classList.remove("hidden");
+    requestAnimationFrame(() => { alertBox.classList.add("opacity-100"); });
+    alertBox.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    clearTimeout(window.alertTimeout);
+    window.alertTimeout = setTimeout(() => {
+      alertBox.classList.remove("opacity-100");
+      setTimeout(() => alertBox.classList.add("hidden"), 300);
+    }, 5000);
+  }
+
+  // Intercetta click
+  inputFoto.addEventListener("click", (e) => {
+    if (fotoEsistenti >= maxFoto) {
+      e.preventDefault();
+      mostraMessaggio();
+    }
+  });
+
+  // Blocca anche eventuale "change"
+  inputFoto.addEventListener("change", (e) => {
+      const nuoviFile = e.target.files.length;
+      const totale = fotoEsistenti + nuoviFile;
+
+      if (totale > maxFoto) {
+          e.preventDefault();
+          inputFoto.value = "";  // reset selezione
+          mostraMessaggio();     // mostra avviso
+      }
+  });  
+
+  // Chiusura manuale
+  chiudiBtn.addEventListener("click", () => {
+    alertBox.classList.remove("opacity-100");
+    setTimeout(() => alertBox.classList.add("hidden"), 300);
+  });
+});
+</script>
+{% if pubblico %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const thumbs = Array.from(document.querySelectorAll('.grid img'));
+  const modal  = document.getElementById('modalGalleria');
+  const bigImg = document.getElementById('fotoGrande');
+  const btnX   = document.getElementById('chiudiGalleria');
+  const prev   = document.getElementById('prevFoto');
+  const next   = document.getElementById('nextFoto');
+
+  if (!thumbs.length || !modal || !bigImg) return;
+
+  let i = 0;
+
+  function show(idx) {
+    i = (idx + thumbs.length) % thumbs.length;
+    // fade-out
+    bigImg.classList.remove('is-visible');
+    // cambia src dopo breve delay per avere l'effetto
+    setTimeout(() => {
+      bigImg.src = thumbs[i].src;
+      bigImg.onload = () => bigImg.classList.add('is-visible'); // fade-in quando pronta
+    }, 120);
+  }
+
+  function openAt(idx) {
+    modal.classList.remove('hidden');
+    show(idx);
+  }
+
+  function closeModal() {
+    bigImg.classList.remove('is-visible');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      bigImg.removeAttribute('src'); // pulizia
+    }, 180);
+  }
+
+  thumbs.forEach((img, idx) => {
+    img.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openAt(idx);
+    });
+  });
+
+  prev.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); show(i - 1); });
+  next.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); show(i + 1); });
+  btnX .addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeModal(); });
+
+  // Chiudi cliccando sullo sfondo scuro
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Tastiera
+  document.addEventListener('keydown', (e) => {
+    if (modal.classList.contains('hidden')) return;
+    if (e.key === 'Escape')      closeModal();
+    else if (e.key === 'ArrowLeft')  show(i - 1);
+    else if (e.key === 'ArrowRight') show(i + 1);
+  });
+
+  // Swipe mobile
+  let startX = 0, swiping = false;
+  bigImg.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    swiping = true;
+    startX = e.touches[0].clientX;
+  });
+  bigImg.addEventListener('touchmove', (e) => {
+    if (!swiping) return;
+    const dx = e.touches[0].clientX - startX;
+    bigImg.style.transform = `translateX(${dx * 0.25}px) scale(0.98)`;
+  });
+  bigImg.addEventListener('touchend', (e) => {
+    if (!swiping) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    swiping = false;
+    bigImg.style.transform = ''; // reset
+    if (Math.abs(dx) > 60) (dx > 0 ? show(i - 1) : show(i + 1));
+  });
+});
+</script>
+{% endif %}

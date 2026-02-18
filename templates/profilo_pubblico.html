@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-6xl mx-auto bg-white rounded-2xl shadow p-0 mt-4 sm:mt-6 overflow-hidden">
+
+  <!-- HEADER PROFILO PUBBLICO -->
+  <section id="profilo-hero">
+
+    <!-- COPERTINA -->
+    <div id="copertina" class="relative h-48 sm:h-[22rem] lg:h-[26rem] w-full rounded-t-2xl overflow-hidden bg-white">
+      <img id="copertina-img"
+           src="{{ url_for('static', filename=(utente.get('copertina') or 'img/copertina_default_localcare.png')) }}"
+           alt="Copertina"
+           class="absolute inset-0 h-full w-auto max-w-none object-contain pointer-events-none bg-[#EAF3FF]" />
+    </div>
+
+    <!-- FOTO + INFO -->
+    <div class="relative max-w-6xl mx-auto flex flex-col sm:flex-row items-end px-6 sm:px-10 -mt-16 sm:-mt-20 z-20 pb-6">
+      <div class="flex-shrink-0 relative sm:mr-6">
+        <img src="{{ url_for('static', filename=(utente.get('foto_profilo') or 'img/user_default.png')) }}"
+             class="w-36 h-36 sm:w-40 sm:h-40 rounded-full object-cover ring-4 ring-white shadow-lg" alt="">
+      </div>
+
+      <div class="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between w-full">
+        <div class="text-center sm:text-left">
+          <h1 class="text-2xl sm:text-3xl font-semibold text-blue-700 leading-tight">
+            <span class="text-gray-500 font-normal">@</span>{{ utente['username'] }}
+          </h1>
+
+          <!-- Stelle -->
+          {% set media = media_recensioni|default(0) %}
+          {% set totale = totale_recensioni|default(0) %}
+          <div class="mt-1 flex flex-wrap items-center justify-center sm:justify-start gap-1 text-[15px]">
+            {% if totale > 0 %}
+              <div class="inline-flex items-center gap-1 text-yellow-500">
+                {% for i in range(1, 6) %}
+                  {% if i <= media|round(0, 'floor') %}
+                    <span>★</span>
+                  {% else %}
+                    <span class="text-gray-300">★</span>
+                  {% endif %}
+                {% endfor %}
+                <span class="font-semibold text-gray-800 ml-1">{{ (media or 0)|round(1) }}/5</span>
+                <span class="text-gray-500 text-sm ml-1">({{ totale }} recension{{ 'e' if totale == 1 else 'i' }})</span>
+              </div>
+            {% else %}
+              <div class="inline-flex items-center gap-1 text-gray-400">
+                <span>☆☆☆☆☆</span>
+                <span class="text-gray-400 text-sm ml-1">(nessuna recensione)</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if utente.get('citta') %}
+          <p class="text-gray-600 text-sm sm:text-base mt-3 sm:mt-0 pr-2">📍 {{ utente['citta'] }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- BARRA TABS -->
+  <div class="bg-white border-t border-gray-200 sticky top-16 sm:top-14 z-10">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <nav class="flex gap-1">
+        {% set tabs = [('annunci','Annunci'), ('recensioni','Recensioni ricevute')] %}
+        {% for key,label in tabs %}
+          <button class="tab-btn px-4 py-3 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition
+                         {% if key=='annunci' %}text-blue-700 border-blue-600{% else %}text-gray-600 border-transparent hover:text-blue-700{% endif %}"
+                  data-tab="{{ key }}" type="button">
+            {{ label }}
+          </button>
+        {% endfor %}
+      </nav>
+    </div>
+  </div>
+
+  <!-- CONTENUTI TABS -->
+  <section>
+
+    <!-- TAB: ANNUNCI -->
+    <div id="tab-annunci" class="tab-pane">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+
+        <!-- INTRO -->
+        <aside class="lg:col-span-1">
+          <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-6 lg:sticky lg:top-24">
+            <h3 class="text-base font-semibold text-gray-800 mb-4">Intro</h3>
+            <div class="space-y-4 text-[15px] text-gray-700 leading-snug">
+              {% if utente.get('lingue') %}
+                <div class="flex items-center gap-2">🗣️ <span>{{ utente['lingue'] }}</span></div>
+              {% endif %}
+              {% if utente.get('frase') %}
+                <div class="flex items-start gap-2">💬 <em class="text-gray-600">"{{ utente['frase'] }}"</em></div>
+              {% endif %}
+              {% set categorie = [
+                'Operatori benessere','Aiuto in casa','Ripetizioni','Pet-sitter',
+                'Caregiver','Gite / Compagni di allenamento','Biglietti spettacoli','Libri scuola'
+              ] %}
+              {% set offro_presenti = [] %}
+              {% set cerco_presenti = [] %}
+              {% for cat in categorie %}
+                {% set i = loop.index %}
+                {% if utente.get('offro_' ~ i) %}{% set _ = offro_presenti.append(cat) %}{% endif %}
+                {% if utente.get('cerco_' ~ i) %}{% set _ = cerco_presenti.append(cat) %}{% endif %}
+              {% endfor %}
+
+              {% if offro_presenti %}
+                <div class="border-t border-gray-200 pt-3">
+                  <p class="text-sm text-gray-500 mb-2 font-medium">Offre in LocalCare:</p>
+                  <div class="flex flex-wrap gap-2 mb-3">
+                    {% for cat in offro_presenti %}
+                      <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700 font-medium">{{ cat }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+              {% if cerco_presenti %}
+                <div class="border-t border-gray-200 pt-3">
+                  <p class="text-sm text-gray-500 mb-2 font-medium">Cerca in LocalCare:</p>
+                  <div class="flex flex-wrap gap-2">
+                    {% for cat in cerco_presenti %}
+                      <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 font-medium">{{ cat }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+
+              {% if not (offro_presenti or cerco_presenti or utente.get('frase') or utente.get('lingue')) %}
+                <p class="text-gray-400 italic text-sm mt-2">Nessuna info introduttiva.</p>
+              {% endif %}
+            </div>
+          </div>
+        </aside>
+
+        <!-- ANNUNCI -->
+        <div class="lg:col-span-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">Annunci pubblicati</h3>
+          {% if annunci and annunci|length %}
+            <div class="space-y-4">
+              {% for a in annunci %}
+                <article class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <a href="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
+                         class="text-base font-semibold text-blue-700 hover:underline break-words">{{ a['titolo'] }}</a>
+                      <p class="text-xs text-gray-500 mt-0.5">📍 {{ a['zona'] or 'n/d' }} · {{ a['categoria'] }}</p>
+                    </div>
+                  </div>
+                  {% if a['descrizione'] %}
+                    <p class="text-sm text-gray-700 mt-2 line-clamp-2">{{ a['descrizione'] }}</p>
+                  {% endif %}
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-gray-500">Nessun annuncio pubblicato.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: RECENSIONI -->
+    <div id="tab-recensioni" class="tab-pane hidden">
+      <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 mt-6">
+        <h3 class="text-base font-semibold text-gray-800 mb-4">Recensioni ricevute</h3>
+        {% if recensioni and recensioni|length %}
+          <div class="space-y-4">
+            {% for r in recensioni %}
+              <div class="border-b border-gray-100 pb-3">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-medium text-blue-700">{{ r['autore'] }}</span>
+                  <span class="text-yellow-500 text-sm">
+                    {% for i in range(1,6) %}{% if i <= r['voto'] %}★{% else %}☆{% endif %}{% endfor %}
+                  </span>
+                </div>
+                <p class="text-gray-700 text-sm">{{ r['testo'] }}</p>
+                <p class="text-gray-400 text-xs mt-1">{{ r['data'] }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-gray-400 italic">Nessuna recensione ricevuta.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<!-- SCRIPT TABS -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const tabs = document.querySelectorAll(".tab-btn");
+  const panes = document.querySelectorAll(".tab-pane");
+  function attivaTab(key) {
+    tabs.forEach(btn => {
+      const attivo = btn.dataset.tab === key;
+      btn.classList.toggle("text-blue-700", attivo);
+      btn.classList.toggle("border-blue-600", attivo);
+      btn.classList.toggle("text-gray-600", !attivo);
+      btn.classList.toggle("border-transparent", !attivo);
+    });
+    panes.forEach(pane => pane.classList.toggle("hidden", pane.id !== `tab-${key}`));
+  }
+  tabs.forEach(btn => btn.addEventListener("click", () => attivaTab(btn.dataset.tab)));
+  attivaTab("annunci");
+});
+</script>
+
+{% endblock %}

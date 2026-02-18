@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow">
+  <h2 class="text-2xl font-bold mb-4 text-center">Modifica profilo</h2>
+
+  <form method="post" class="space-y-4">
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Nome</label>
+      <input type="text" name="nome" value="{{ utente['nome'] }}" required class="border rounded w-full px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Cognome</label>
+      <input type="text" name="cognome" value="{{ utente['cognome'] }}" required class="border rounded w-full px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Username</label>
+      <input type="text" name="username" value="{{ utente['username'] }}" required class="border rounded w-full px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Città</label>
+      <input type="text" name="citta" id="citta" value="{{ utente['citta'] }}" required class="border rounded w-full px-3 py-2">
+    </div>
+
+    <hr class="my-4">
+
+    <p class="text-gray-600 text-sm">Lascia i campi seguenti vuoti se non vuoi cambiare la password.</p>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Nuova password</label>
+      <input type="password" name="nuova_password" class="border rounded w-full px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-gray-700 font-semibold mb-1">Conferma nuova password</label>
+      <input type="password" name="conferma_password" class="border rounded w-full px-3 py-2">
+    </div>
+
+    <button type="submit"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4">
+      Salva modifiche
+    </button>
+
+    <a href="{{ url_for('dashboard') }}" class="block text-center text-blue-600 mt-3 hover:underline">
+      ⬅ Torna alla Dashboard
+    </a>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/autocomplete_citta.js') }}"></script>
+{% endblock %}

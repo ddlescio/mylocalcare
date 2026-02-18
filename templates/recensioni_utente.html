@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% set body_class = "page-recensioni-pubbliche" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6 mt-8">
+  <!-- 🔙 Torna al profilo -->
+  <div class="mb-5">
+    <a href="{{ url_for('profilo_pubblico', id=user_id) }}"
+       class="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+           stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      Torna al profilo
+    </a>
+  </div>
+  <!-- TITOLO + MEDIA -->
+  <div class="mb-6 text-center">
+    <h2 class="text-2xl font-bold text-blue-700 mb-2">Recensioni utente</h2>
+
+
+    {% if totale > 0 %}
+      <p class="text-gray-600 text-sm">
+        ⭐ <span class="font-semibold text-lg text-yellow-500">{{ "%.1f"|format(media) }}</span>
+        su 5 — {{ totale }} recension{{ 'e' if totale == 1 else 'i' }}
+      </p>
+    {% else %}
+      <p class="text-gray-400 italic text-sm">Nessuna recensione disponibile</p>
+    {% endif %}
+  </div>
+
+  <!-- FORM INSERIMENTO / MODIFICA -->
+  {% if session.get('utente_id') and session['utente_id'] != user_id %}
+    <div class="text-center mb-5">
+      <button id="toggle-recensione"
+              class="px-4 py-1.5 border border-blue-300 text-blue-700 font-medium rounded-full bg-white hover:bg-blue-50 hover:border-blue-400 transition-all duration-200">
+        ✍️ Lascia una recensione
+      </button>
+    </div>
+
+    <!-- 🔽 FORM NASCOSTO -->
+    <div id="form-recensione" class="hidden animate-fade-in">
+      <form method="POST" class="border-t border-gray-200 pt-5 mt-5">
+        <h3 class="font-semibold text-gray-800 mb-3 text-center">
+          {% if mia_recensione %}
+            ✏️ Modifica la tua recensione per  @{{ user.username }}
+          {% else %}
+            ✍️ Lascia una recensione per  @{{ user.username }}
+          {% endif %}
+        </h3>
+
+        <div class="flex justify-center gap-1 mb-4">
+          {% for i in range(1,6) %}
+          <button type="button"
+                  onclick="document.getElementById('voto').value={{ i }}; aggiornaStelle({{ i }});"
+                  class="stella text-3xl text-gray-300 hover:text-yellow-400 transition-transform duration-200 transform hover:scale-110 focus:outline-none">★</button>          {% endfor %}
+        </div>
+        <input type="hidden" name="voto" id="voto" value="{{ mia_recensione.voto if mia_recensione else 0 }}">
+
+        <textarea name="testo" rows="3" placeholder="Scrivi la tua recensione (facoltativo)"
+                  class="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none">{{ mia_recensione.testo if mia_recensione else '' }}</textarea>
+
+          <button type="submit"
+                  class="mt-4 w-full border border-blue-400 text-blue-700 font-medium px-4 py-2 rounded-xl bg-white hover:bg-blue-50 transition-all duration-200">
+            💾 Salva recensione
+          </button>
+
+        {% if mia_recensione and mia_recensione.stato == 'in_attesa' %}
+          <p class="mt-3 text-sm text-yellow-600 text-center">
+            ⏳ La tua recensione è in attesa di approvazione.
+          </p>
+        {% elif mia_recensione and mia_recensione.stato == 'rifiutato' %}
+          <p class="mt-3 text-sm text-red-600 text-center">
+            ❌ La tua recensione è stata rifiutata.
+          </p>
+        {% endif %}
+      </form>
+    </div>
+  {% endif %}
+
+  <hr class="my-6">
+
+  <!-- LISTA RECENSIONI -->
+  {% if recensioni %}
+    <div class="space-y-4">
+      {% for r in recensioni %}
+        <div class="p-4 border border-gray-100 rounded-xl bg-gray-50 hover:shadow-md transition">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center gap-2">
+              {% if r.foto_profilo %}
+                <img src="{{ url_for('static', filename=r.foto_profilo) }}" class="w-9 h-9 rounded-full object-cover border border-gray-200">
+              {% else %}
+                <div class="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-lg">👤</div>
+              {% endif %}
+              <a href="{{ url_for('profilo_pubblico', id=r.id_autore) }}"
+                 class="font-medium text-blue-600 hover:text-blue-800 underline">
+                @{{ r.autore_username }}
+              </a>
+              </div>
+            <div class="text-yellow-400 text-lg">
+              {% for i in range(r.voto) %}★{% endfor %}
+            </div>
+          </div>
+
+          {% if r.testo and r.testo|trim != '' %}
+            <p class="text-gray-700 text-sm mt-2 leading-snug">{{ r.testo }}</p>
+          {% else %}
+            <p class="text-gray-400 text-sm mt-2 italic">(Nessun commento)</p>
+          {% endif %}
+
+          <p class="text-xs text-gray-500 mt-1">
+            ✔️ Approvata · {{ (r.ultima_modifica or r.data)|datetimeformat }}
+          </p>
+        </div>
+
+        {% set risposta = get_risposta_by_recensione(r.id) %}
+        {% if risposta %}
+          <div class="ml-6 mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm">
+            <p class="font-medium text-blue-700">
+              💬 Risposta di
+              <a href="{{ url_for('profilo_pubblico', id=risposta.id_autore) }}"
+                 class="text-blue-600 hover:text-blue-800 underline">
+                @{{ risposta.autore_username }}
+              </a>
+            </p>
+            <p class="text-gray-700 mt-1">{{ risposta.testo }}</p>
+            {% if risposta.stato == 'in_attesa' %}
+              <p class="text-xs text-yellow-600 mt-1">⏳ In attesa di approvazione</p>
+            {% elif risposta.stato == 'rifiutato' %}
+              <p class="text-xs text-red-600 mt-1">❌ Rifiutata dall’amministratore</p>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-gray-500 text-center italic">Non ci sono ancora recensioni per questo utente.</p>
+  {% endif %}
+</div>
+
+<script>
+function toggleModifica(id) {
+  const form = document.getElementById('form-modifica-' + id);
+  form.classList.toggle('hidden');
+}
+
+function aggiornaStelle(voto) {
+  document.querySelectorAll('.stella').forEach((s, i) => {
+    s.style.color = (i < voto) ? '#facc15' : '#d1d5db';
+  });
+}
+
+const toggleBtn = document.getElementById('toggle-recensione');
+const formRec = document.getElementById('form-recensione');
+
+if (toggleBtn && formRec) {
+  toggleBtn.addEventListener('click', () => {
+    formRec.classList.toggle('hidden');
+    if (formRec.classList.contains('hidden')) {
+      toggleBtn.innerHTML = '✍️ Lascia una recensione';
+      toggleBtn.className =
+        'px-4 py-1.5 border border-blue-300 text-blue-700 font-medium rounded-full bg-white hover:bg-blue-50 hover:border-blue-400 transition-all duration-200';
+    } else {
+      toggleBtn.innerHTML = '✖ Chiudi modulo';
+      toggleBtn.className =
+        'px-4 py-1.5 border border-gray-300 text-gray-600 font-medium rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200';
+    }
+    });
+}
+
+aggiornaStelle({{ mia_recensione.voto if mia_recensione else 0 }});
+</script>
+
+<style>
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-in-out;
+}
+</style>
+<style>
+/* 🔵 Offset specifico solo per questa pagina (recensioni utente pubblico) */
+body.page-recensioni-pubbliche .max-w-2xl {
+  margin-top: 6.5rem !important;  /* navbar + respiro */
+}
+
+/* iPad verticale/orizzontale */
+@media (min-width: 641px) and (max-width: 1024px) {
+  body.page-recensioni-pubbliche .max-w-2xl {
+    margin-top: 7.2rem !important;
+  }
+}
+
+/* Mobile: navbar più alta */
+@media (max-width: 640px) {
+  body.page-recensioni-pubbliche .max-w-2xl {
+    margin-top: 6rem !important;
+  }
+}
+</style>
+
+{% endblock %}

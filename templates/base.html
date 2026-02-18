@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <script type="text/javascript" src="https://embeds.iubenda.com/widgets/cdc25608-773e-4f62-9a5c-bdc04b36729e.js"></script>
+  <meta charset="UTF-8">
+  <title>LocalCare</title>
+  {% block head_extra %}{% endblock %}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+  #iubenda-cs-banner {
+    margin-top: 12px;
+  }
+
+/* ✨ Font elegante e coerente per tutti i campi compilabili */
+input, textarea, select {
+  font-family: 'Nunito', system-ui, sans-serif !important;
+  font-size: 0.95rem;
+  color: #1e293b;
+  letter-spacing: 0.1px;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* Placeholder leggero e uniforme */
+input::placeholder, textarea::placeholder {
+  color: #94a3b8;
+  opacity: 0.8;
+}
+
+/* Effetto focus morbido e coerente con LocalCare */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #93c5fd; /* blu chiaro LocalCare */
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.25);
+  background-color: #ffffff;
+}
+
+/* Bordo arrotondato e sfondo chiaro di default */
+input, textarea, select {
+  border-radius: 0.6rem;
+  background-color: #fafafa;
+}
+
+/* ✅ Uniforma anche i bottoni “submit” dei form */
+button, input[type="submit"] {
+  font-family: inherit;
+}
+</style>
+<style>
+  /* Sposta correttamente la copertina sotto la navbar */
+  body[data-page="profilo"] .profilo-content-wrapper {
+    padding-top: 4rem !important; /* = 64px = h-16 della navbar */
+  }
+</style>
+
+  <!-- ✅ Fix salto layout dovuto a caricamento ritardato di Tailwind -->
+    <style>
+    .icon-hover { transition: transform .15s ease, color .15s ease; }
+    .icon-hover:hover { transform: translateY(-1px) scale(1.12); }
+    .badge-pop { transition: transform .15s ease; }
+    .icon-hover:hover .badge-pop { transform: scale(1.06); }
+    .avatar-hover { transition: transform .15s ease, box-shadow .15s ease; }
+    .avatar-hover:hover { transform: translateY(-1px) scale(1.06); }
+    .username-link { transition: color .15s ease, transform .15s ease; }
+    .username-link:hover { color: #2563eb; transform: translateY(-1px); }
+
+    /* ✅ scrollbar invisibile */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+
+    /* ✅ effetto luce laterale "hint" */
+    .scroll-hint::before,
+    .scroll-hint::after {
+      content: none !important;
+    }
+      .username-fade {
+        position: relative;
+        display: inline-block;
+        overflow: hidden;
+        white-space: nowrap;
+        max-width: 100%;
+        mask-image: linear-gradient(to right, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(to right, black 90%, transparent);
+
+    }
+    /* 🔵 effetto evidenziazione nuova chat */
+@keyframes flashNew {
+  0% { background-color: #dbeafe; }  /* azzurrino chiaro */
+  100% { background-color: transparent; }
+}
+
+.flash-new {
+  animation: flashNew 1.2s ease-out;
+}
+
+/* ✨ Effetto di apparizione (fade-in + salita) dei messaggi flash */
+.flash-message {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: flashFadeIn 0.35s ease-out forwards;
+}
+
+@keyframes flashFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 💬 Migliora integrazione chat su mobile */
+#flash-root .flash-message {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+  body[data-chat="true"] nav {
+    background: rgba(255,255,255,0.96) !important;
+    backdrop-filter: blur(6px);
+  }
+}
+
+
+/* ✅ Stile elegante per i messaggi flash */
+.flash-message {
+  position: relative;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.flash-message.hide {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+</style>
+<style>
+  /* 🔹 Stile coerente e visibile per la barra categorie */
+  #categorieScroll {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    overflow-x: auto;
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(96,165,250,0.7) rgba(230,240,255,0.3); /* thumb + track */
+    position: relative;
+  }
+
+  /* 🔹 Scrollbar elegante e sempre visibile (Chrome/Safari/WebKit) */
+  #categorieScroll::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  #categorieScroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, rgba(147,197,253,0.9), rgba(59,130,246,0.9)); /* blu LocalCare */
+    border-radius: 4px;
+    border: 2px solid rgba(255,255,255,0.6); /* effetto vetro */
+  }
+
+  #categorieScroll::-webkit-scrollbar-track {
+    background: rgba(230,240,255,0.5);
+    border-radius: 4px;
+  }
+
+  /* 🔹 Margini laterali per evitare tagli */
+  #categorieScroll > a:first-child { margin-left: 0.25rem; }
+  #categorieScroll > a:last-child  { margin-right: 0.25rem; }
+
+  /* 🔹 Chip morbidi e animati */
+  #categorieScroll > a {
+    scroll-snap-align: center;
+    white-space: nowrap;
+    transition: all 0.2s ease-in-out;
+  }
+  #categorieScroll.dragging {
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+    user-select: none;
+    scroll-behavior: auto !important; /* evita rimbalzi */
+  }
+  #categorieScroll {
+    cursor: grab;
+    cursor: -webkit-grab;
+  }
+
+</style>
+<!-- ✅ Evita salto layout all’avvio -->
+<style>
+  body {
+    opacity: 0;
+    transition: opacity 0.25s ease-in-out;
+  }
+  body.loaded {
+    opacity: 1;
+  }
+</style>
+
+
+<script>
+  // Mostra il contenuto solo quando Tailwind & immagini sono pronti
+  window.addEventListener("load", () => {
+    document.body.classList.add("loaded");
+  });
+</script>
+
+</head>
+<body data-page="{{ page or '' }}" class="{{ body_class or '' }} {% if pubblico %}pubblico{% endif %}">
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+
+  {% if session.get('ruolo') == 'admin' %}
+  <script src="{{ url_for('static', filename='js/admin_counters.js') }}"></script>
+  {% endif %}
+
+  <!-- ✅ Navbar fissa in alto -->
+  <nav class="fixed top-0 left-0 right-0 bg-white shadow z-50 transition-all duration-300 ease-in-out">
+    <div class="w-full px-4 sm:px-6 lg:px-8 h-16 flex justify-center">
+      <div class="max-w-7xl w-full flex items-center justify-between gap-6 overflow-visible">
+
+        <!-- 🔹 Logo -->
+        <a href="{{ url_for('home') }}"
+           class="flex items-center gap-1 sm:gap-2 select-none logo-wrapper">
+          <img src="{{ url_for('static', filename='img/logo.png') }}"
+               alt="LocalCare Logo"
+               class="w-9 h-9 md:w-11 md:h-11 object-contain">
+          <span class="text-xl sm:text-2xl font-bold tracking-tight text-blue-700">MyLocalCare</span>
+        </a>
+
+        {% set current_path = g.path|string if g.path is defined else request.path %}
+        {% set show_global_search = True %}
+        {% if show_global_search %}
+          <!-- 🔍 Barra di ricerca globale (desktop only, uniforme alla home) -->
+          <form action="{{ url_for('ricerca_utenti') }}" method="get"
+                class="hidden md:flex items-center gap-2 mx-auto nav-search">
+            <input
+              type="text"
+              name="username"
+              value="{{ request.args.get('username', '') }}"
+              placeholder="Cerca utenti, operatori"
+              class="flex-1 min-w-0 border border-gray-300 rounded-full px-5 py-2 text-base text-gray-700
+                     focus:ring-2 focus:ring-blue-200 focus:border-blue-400 focus:outline-none transition"
+            >
+            <button type="submit"
+                    class="shrink-0 bg-blue-600 text-white px-6 py-2 rounded-full text-base hover:bg-blue-700 transition shadow-sm">
+              Cerca
+            </button>
+          </form>
+        {% else %}
+          <!-- 🔍 Barra di ricerca compatta ma con larghezza fissa per evitare overflow -->
+          <form action="{{ url_for('ricerca_utenti') }}" method="get"
+                class="hidden md:flex items-center gap-2 mx-auto nav-search">
+            <input
+              type="text"
+              name="username"
+              value="{{ request.args.get('username', '') }}"
+              placeholder="Cerca utenti, operatori..."
+              class="flex-1 min-w-0 border border-gray-300 rounded-full px-5 py-2 text-base text-gray-700
+                     focus:ring-2 focus:ring-blue-200 focus:border-blue-400 focus:outline-none transition"
+            >
+            <button type="submit"
+                    class="shrink-0 bg-blue-600 text-white px-6 py-2 rounded-full text-base hover:bg-blue-700 transition shadow-sm">
+              Cerca
+            </button>
+          </form>
+        {% endif %}
+
+        <!-- 🔹 Area utente -->
+        <div class="flex items-center gap-4">
+          {% if not session.get('utente_id') %}
+            <a href="{{ url_for('login') }}" class="text-blue-600 hover:underline text-sm sm:text-base">Accedi</a>
+            <a href="{{ url_for('register') }}" class="text-blue-600 hover:underline text-sm sm:text-base">Registrati</a>
+          {% else %}
+
+            <!-- 🔔 Notifiche -->
+            <a href="{{ url_for('notifiche') }}"
+               class="relative icon-hover text-2xl md:text-[28px] leading-none text-gray-700 hover:text-blue-600">
+              🔔
+              {% set n = unread_notifications() %}
+              {% if n > 0 %}
+                <span id="notifBadge" data-unread="{{ n }}" class="badge-pop absolute -top-1 -right-2 bg-red-600 text-white text-[10px] md:text-xs rounded-full px-1.5">
+                  {{ n }}
+                </span>
+              {% else %}
+                <span id="notifBadge" data-unread="0" style="display:none;" class="badge-pop absolute -top-1 -right-2 bg-red-600 text-white text-[10px] md:text-xs rounded-full px-1.5"></span>
+              {% endif %}
+            </a>
+
+            <!-- 💬 Messaggi -->
+            <a id="navMessagesLink"
+               href="{{ url_for('utente_messaggi') }}"
+               class="relative icon-hover text-2xl md:text-[28px] leading-none text-gray-700 hover:text-blue-600">
+              💬
+              <span id="chatBadge"
+                    data-unread="{{ unread_chat()|default(0) }}"
+                    class="badge-pop absolute -top-1 -right-2 bg-red-600 text-white text-[10px] md:text-xs rounded-full px-1.5">
+                {{ unread_chat() if unread_chat() > 0 else '' }}
+              </span>
+            </a>
+
+            <!-- 👤 Profilo -->
+            <div class="user-info relative flex items-center gap-2">
+
+              <!-- 🔵 Bottone unico avatar + username -->
+              <a href="{{ url_for('dashboard') }}"
+                 class="flex items-center gap-2 avatar-hover focus:outline-none select-none">
+
+                {% if g.utente and g.utente['foto_profilo'] %}
+                  <img src="{{ url_for('static', filename=g.utente['foto_profilo']) }}"
+                       class="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover border hover:ring-2 hover:ring-blue-400 transition flex-shrink-0">
+                {% else %}
+                  <span class="text-2xl md:text-[28px] leading-none flex-shrink-0">👤</span>
+                {% endif %}
+
+                <span class="hidden sm:inline text-gray-700 font-medium text-sm md:text-base truncate max-w-[90px] username-link flex-shrink">
+                  {{ g.utente['username'] or g.utente['nome'] }}
+                </span>
+
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- 🔹 Hamburger mobile -->
+        <div class="2xl:hidden">
+          <button id="nav-toggle" class="text-gray-700 focus:outline-none text-3xl flex-shrink-0" aria-label="Apri menu">☰</button>
+        </div>
+
+    <!-- 🔍 Barra inline per /cerca -->
+    <div id="inline-search"
+         class="hidden fixed top-16 left-0 right-0 bg-white border-b border-gray-200 shadow z-40 px-4 py-3">
+      <form action="{{ url_for('ricerca_utenti') }}" method="get" class="flex items-center gap-2 max-w-xl mx-auto">
+        <input
+          type="text"
+          name="username"
+          value="{{ request.args.get('username', '') }}"
+          placeholder="Cerca utenti..."
+          class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none transition"
+        >
+        <button type="submit"
+                class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition">
+          Cerca
+        </button>
+      </form>
+    </div>
+
+    <!-- ✅ Menu mobile (stile moderno "app") -->
+    <div id="nav-menu"
+         class="hidden absolute left-0 right-0 top-16
+                bg-white shadow-lg border-t border-gray-200
+                transition-all duration-300 ease-in-out opacity-0 translate-y-2
+                rounded-b-3xl overflow-hidden z-40">
+
+      <div class="flex flex-col divide-y divide-gray-100/50">
+
+        <!-- 🔹 Categorie -->
+        <div class="py-2">
+          <a href="/cerca?categoria=operatori benessere"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors">
+             🧘 <span class="font-medium">Benessere</span>
+          </a>
+          <a href="/cerca?categoria=babysitter"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-pink-50/60 hover:text-pink-600 transition-colors">
+             👶 <span class="font-medium">Babysitter</span>
+          </a>
+          <a href="/cerca?categoria=petsitter"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-green-50/60 hover:text-green-600 transition-colors">
+             🐾 <span class="font-medium">Pet-sitter</span>
+          </a>
+          <a href="/cerca?categoria=caregiver"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-yellow-50/60 hover:text-yellow-600 transition-colors">
+             👵 <span class="font-medium">Caregiver</span>
+          </a>
+          <a href="/cerca?categoria=ripetizioni"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-purple-50/60 hover:text-purple-600 transition-colors">
+             📚 <span class="font-medium">Ripetizioni</span>
+          </a>
+          <a href="/cerca?categoria=aiuto-in-casa"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-orange-50/60 hover:text-orange-600 transition-colors">
+             🏠 <span class="font-medium">Aiuto in casa</span>
+          </a>
+          <a href="/cerca?categoria=escursioni-sport"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-sky-50/60 hover:text-sky-600 transition-colors">
+             🥾 <span class="font-medium">Sport</span>
+          </a>
+          <a href="/cerca?categoria=biglietti-spettacoli"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-red-50/60 hover:text-red-600 transition-colors">
+             🎭 <span class="font-medium">Spettacoli</span>
+          </a>
+          <a href="/cerca?categoria=libri-scuola"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-emerald-50/60 hover:text-emerald-600 transition-colors">
+             📖 <span class="font-medium">Libri scuola</span>
+          </a>
+          <a href="/cerca?categoria=caffe-parole"
+             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-amber-50/60 hover:text-amber-600 transition-colors">
+             ☕ <span class="font-medium">Caffè & Parole</span>
+          </a>
+        </div>
+
+
+        <!-- 🔹 Sezione account -->
+        <div class="py-2">
+          {% if not session.get('utente_id') %}
+            <a href="{{ url_for('register') }}" class="block px-6 py-3 text-blue-600 font-medium hover:bg-blue-50/60 transition">Registrati</a>
+            <a href="{{ url_for('login') }}" class="block px-6 py-3 text-blue-600 font-medium hover:bg-blue-50/60 transition">Accedi</a>
+          {% else %}
+            <a href="{{ url_for('dashboard') }}" class="block px-6 py-3 text-blue-600 font-medium hover:bg-blue-50/60 transition">Il tuo Profilo</a>
+            <a href="{{ url_for('logout') }}" class="block px-6 py-3 text-red-600 font-medium hover:bg-red-50/60 transition">Esci</a>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+    </div>
+    </nav>
+
+    {% with flashes = get_flashed_messages(with_categories=true) %}
+      {% if flashes %}
+      <div id="flash-root" class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] w-[min(92vw,900px)] space-y-2 px-4">
+        {% for category, message in flashes %}
+          <div class="flash-message pointer-events-auto px-4 py-2 rounded-xl text-sm font-medium text-center shadow-sm border
+                      {% if category in ['success','ok'] %}
+                        bg-green-50 text-green-700 border-green-200
+                      {% elif category in ['warning','attenzione'] %}
+                        bg-yellow-50 text-yellow-700 border-yellow-200
+                      {% elif category in ['error','danger'] %}
+                        bg-red-50 text-red-700 border-red-200
+                      {% else %}
+                        bg-blue-50 text-blue-700 border-blue-200
+                      {% endif %}"
+               role="alert"
+               data-flash="true"
+               data-category="{{ category|lower }}">
+            {{ message }}
+            <button type="button" class="flash-close absolute right-3 top-2 text-gray-400 hover:text-gray-600 text-sm leading-none">✕</button>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- ❌ Nessuno spazio sotto la navbar -->
+    <div class="pt-0">
+      <div class="container mx-auto p-0">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+  {% if g.path.startswith('/cerca') %}
+  <footer class="hidden md:block sticky-categorie">
+    <div class="max-w-7xl mx-auto flex flex-col items-center relative px-6"> <!-- ✅ allineamento con navbar -->
+
+      <!-- 🔹 Frecce laterali -->
+      <button id="scrollLeft" class="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-2xl">
+        ‹
+      </button>
+      <button id="scrollRight" class="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-2xl">
+        ›
+      </button>
+
+      <!-- 🔹 Barra categorie perfettamente centrata -->
+      <div id="categorieScroll-wrapper" class="relative w-full overflow-hidden">
+        <div id="categorieScroll"
+             class="flex items-center justify-start gap-3 bg-white/85 backdrop-blur-md border border-gray-200 rounded-full px-8 py-2.5 shadow-sm mx-auto overflow-x-auto w-full scroll-smooth"
+             style="scrollbar-gutter: stable;">
+        {% set categorie = [
+          ('operatori-benessere', '🧘', 'Benessere'),
+          ('babysitter', '👶', 'Babysitter'),
+          ('petsitter', '🐾', 'Pet-sitter'),
+          ('caregiver', '👵', 'Caregiver'),
+          ('ripetizioni', '📚', 'Ripetizioni'),
+          ('aiuto-in-casa', '🏠', 'Aiuto in casa'),
+          ('escursioni-sport', '🥾', 'Sport'),
+          ('biglietti-spettacoli', '🎟️', 'Spettacoli'),
+          ('libri-scuola', '📖', 'Libri scuola'),
+          ('caffe-parole', '☕', 'Caffè & Parole')
+        ] %}
+        {% for cat, emoji, label in categorie %}
+        <a href="/cerca?categoria={{ cat }}"
+        class="inline-flex items-center gap-1.5 px-4 py-1.5 text-base rounded-full whitespace-nowrap transition-all duration-150
+               first:ml-2 last:mr-2
+               {% if categoria == cat %}
+                 bg-blue-50 text-blue-700 font-semibold border border-blue-200 shadow-inner
+               {% else %}
+                 text-gray-700 hover:bg-blue-50 hover:text-blue-600
+               {% endif %}">
+          {{ emoji }} <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </footer>
+{% endif %}
+
+  {% block scripts %}{% endblock %}
+
+  <!-- ✅ Script per toggle mobile -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const toggleBtn = document.getElementById("nav-toggle");
+      const menu = document.getElementById("nav-menu");
+
+      if (toggleBtn && menu) {
+        toggleBtn.addEventListener("click", () => {
+          menu.classList.toggle("hidden");
+          menu.classList.toggle("opacity-0");
+          menu.classList.toggle("opacity-100");
+          menu.classList.toggle("translate-y-2");
+        });
+
+        menu.querySelectorAll("a").forEach(link => {
+          link.addEventListener("click", () => {
+            menu.classList.add("hidden");
+            menu.classList.remove("opacity-100", "translate-y-2");
+            menu.classList.add("opacity-0");
+          });
+        });
+      }
+    });
+  </script>
+<script>
+document.addEventListener("click", function(e) {
+  const menu = document.getElementById("nav-menu");
+  const toggle = document.getElementById("nav-toggle");
+
+  // se il menu è aperto
+  if (!menu.classList.contains("hidden")) {
+
+    // clic fuori → chiudi
+    if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+      menu.classList.add("hidden");
+      menu.classList.add("opacity-0");
+      menu.classList.remove("opacity-100", "translate-y-2");
+    }
+  }
+});
+
+</script>
+
+  <!-- ✅ Socket.IO unificato per badge e chat -->
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const chatBadge  = document.querySelector('#chatBadge');
+    const notifBadge = document.querySelector('#notifBadge');
+    let lastUnreadChats  = parseInt(chatBadge?.dataset.unread || chatBadge?.textContent || "0") || 0;
+    let lastUnreadNotifs = parseInt(notifBadge?.dataset.unread || "0") || 0;
+    let reloading = false;
+
+    // Inizializza SEMPRE la socket, anche se alcuni badge non sono presenti
+    window.socket = io({ transports: ['websocket', 'polling'] });
+
+    // 📞 CHIAMATA IN ARRIVO
+    socket.off("incoming_call");
+    socket.on("incoming_call", (data) => {
+        console.log("📞 Incoming call:", data);
+
+        const modal = document.getElementById("incomingCallModal");
+        if (!modal) return;
+
+        modal.dataset.roomUrl  = data.room_url;
+        modal.dataset.roomName = data.room_name;
+        modal.dataset.fromUser = data.from;
+
+        modal.classList.remove("hidden");
+        document.body.classList.add("modal-open");
+    });
+
+    // 👉 Funzioni helper per aggiornare badge
+    async function refreshChatCount() {
+      if (!chatBadge) return;
+      try {
+        const res = await fetch("/chat/unread_count", { credentials: "same-origin" });
+        const js  = await res.json();
+        const n   = (js && typeof js.count === "number") ? js.count : 0;
+
+        chatBadge.textContent = n > 0 ? n : "";
+        chatBadge.style.display = n > 0 ? "inline-block" : "none";
+        chatBadge.dataset.unread = String(n);
+
+        const onThreadsPage = (window.location.pathname === "/utente/messaggi");
+        const increased = n > lastUnreadChats;
+
+        if (onThreadsPage && increased && !reloading && document.visibilityState === "visible") {
+          reloading = true;
+          setTimeout(() => { window.location.reload(); }, 120);
+        }
+
+        lastUnreadChats = n;
+      } catch (err) {
+        console.error("Errore refreshChatCount:", err);
+      }
+    }
+
+    async function refreshNotifCount() {
+      if (!notifBadge) return;
+      try {
+        const res = await fetch("/notifiche/unread_count", { credentials: "same-origin" });
+        const js  = await res.json();
+        const n   = (js && typeof js.count === "number") ? js.count : 0;
+
+        notifBadge.textContent = n > 0 ? n : "";
+        notifBadge.style.display = n > 0 ? "inline-block" : "none";
+        notifBadge.dataset.unread = String(n);
+        lastUnreadNotifs = n;
+      } catch (err) {
+        console.error("Errore refreshNotifCount:", err);
+      }
+    }
+
+    // 🔌 Connessione
+    socket.on("connect", () => {
+      {% if session.get('utente_id') %}
+      socket.emit("join", { user_id: {{ session['utente_id'] }} });
+      {% endif %}
+
+      // Sincronizza subito gli stati badge all'apertura
+      refreshChatCount();
+      refreshNotifCount();
+    });
+
+    // 💬 Conteggio chat non letti
+    socket.off("update_unread_count");
+    socket.on("update_unread_count", () => {
+      refreshChatCount();
+    });
+
+    // 🔔 Conteggio notifiche non lette
+    socket.off("update_notifications");
+    socket.on("update_notifications", () => {
+      refreshNotifCount();
+    });
+    // ⬇️ AGGIUNGI SUBITO QUI
+    socket.off("nuova_notifica");
+    socket.on("nuova_notifica", (data) => {
+        console.log("📩 Notifica realtime ricevuta:", data);
+        refreshNotifCount();
+    });
+
+  });
+  </script>
+  <script src="{{ url_for('static', filename='js/flash_manager.js') }}"></script>
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const toggleBtn = document.getElementById("toggle-search");
+  const inlineSearch = document.getElementById("inline-search");
+  if (toggleBtn && inlineSearch) {
+    toggleBtn.addEventListener("click", () => {
+      inlineSearch.classList.toggle("hidden");
+      inlineSearch.classList.toggle("animate-slide");
+    });
+  }
+});
+</script>
+
+<style>
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.animate-slide { animation: slideDown .25s ease-out; }
+</style>
+{% if not g.path.startswith('/cerca') %}
+<!-- 🔍 Pulsante fluttuante + mini barra ricerca -->
+{% if not (request.endpoint == 'chat_conversazione') %}
+<div id="mobile-search-container" class="fixed bottom-2.5 right-4 z-50 md:hidden">
+  <!-- 💧 Goccia -->
+  <button id="mobile-search-btn"
+     class="bg-white/40 backdrop-blur-md text-blue-700 px-4 py-2 rounded-full shadow-lg
+            text-sm font-medium hover:bg-white/60 active:scale-95 transition-all duration-200 flex items-center gap-2 border border-blue-200">
+    🔍 <span>Cerca</span>
+  </button>
+
+  <!-- 🔎 Barra fluttuante sopra la goccia -->
+  <form id="mobile-search-form"
+        action="{{ url_for('ricerca_utenti') }}"
+        method="get"
+        class="hidden absolute bottom-14 right-0 w-[90vw] max-w-sm bg-white/90 backdrop-blur-md
+               border border-gray-200 shadow-xl rounded-full px-3 py-2 flex items-center gap-2
+               transition-all duration-200 transform opacity-0 translate-y-2">
+          <input type="text" name="username" id="mobile-search-input"
+           placeholder="Cerca utenti..."
+           class="flex-grow border border-gray-300 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none transition">
+           <button type="submit"
+                       class="bg-blue-600 text-white px-4 py-2 rounded-full text-sm hover:bg-blue-700 transition">
+                 Vai
+           </button>
+ </form>
+</div>
+{% endif %}
+
+<!-- 📞 MODALE CHIAMATA IN ARRIVO -->
+<div id="incomingCallModal"
+     class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[99999]">
+
+  <div class="bg-white rounded-2xl p-6 w-80 text-center shadow-2xl">
+    <h2 class="text-lg font-semibold mb-4">📞 Chiamata in arrivo</h2>
+
+    <div class="flex justify-center gap-4">
+      <button onclick="acceptCall()"
+              class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full">
+        Accetta
+      </button>
+
+      <button onclick="rejectCall()"
+              class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full">
+        Rifiuta
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+function acceptCall() {
+    const modal = document.getElementById("incomingCallModal");
+
+    const roomUrl  = modal.dataset.roomUrl;
+    const roomName = modal.dataset.roomName;
+    const fromUser = modal.dataset.fromUser;
+
+    modal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+
+    if (!roomUrl || !roomName || !fromUser) return;
+
+    // 🔥 Salviamo dati in sessionStorage
+    sessionStorage.setItem("incomingCall_roomUrl", roomUrl);
+    sessionStorage.setItem("incomingCall_roomName", roomName);
+
+    // 🔥 Portiamo l’utente nella chat corretta
+    window.location.href = "/chat/" + fromUser;
+}
+
+function rejectCall() {
+
+    const modal = document.getElementById("incomingCallModal");
+
+    const roomName = modal.dataset.roomName;
+    const fromUser = modal.dataset.fromUser;
+
+    modal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+
+    if (window.socket && roomName && fromUser) {
+        window.socket.emit("video_call_rejected", {
+            room: roomName,
+            from_user: fromUser
+        });
+    }
+}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("mobile-search-btn");
+  const form = document.getElementById("mobile-search-form");
+  const input = document.getElementById("mobile-search-input");
+
+  if (btn && form) {
+    // Apri/chiudi barra
+    btn.addEventListener("click", () => {
+      const isOpen = !form.classList.contains("hidden");
+      if (isOpen) {
+        form.classList.add("hidden");
+      } else {
+        form.classList.remove("hidden");
+        setTimeout(() => {
+          form.classList.add("show-search");
+          input.focus();
+        }, 10);      }
+    });
+
+    // Chiudi cliccando fuori
+    document.addEventListener("click", e => {
+      if (!form.contains(e.target) && !btn.contains(e.target)) {
+        form.classList.add("hidden");
+      }
+    });
+  }
+});
+</script>
+{% endif %}
+<style>
+/* 🔹 Animazione slide-up per la barra ricerca */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.show-search {
+  animation: slideUpFade 0.2s ease-out forwards;
+}
+
+/* 🔹 Spazio corretto sotto per il pulsante mobile */
+@media (max-width: 640px) {
+  main, .container, body {
+    padding-bottom: 2.4rem !important; /* ✅ come nella versione visivamente “perfetta” */
+  }
+}
+
+/* 🔹 Effetto vetro per il tasto mobile */
+#mobile-search-btn {
+  background-color: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(210, 210, 255, 0.4);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.7),
+    0 3px 8px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+}
+#mobile-search-btn:hover {
+  background-color: rgba(255, 255, 255, 0.65);
+}
+
+/* ✨ Luce radiale sotto il tasto mobile */
+#mobile-search-container::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 14px;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* 🔹 Bottone “Vai” nella mini barra */
+#mobile-search-form button {
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.7), 0 1px 6px rgba(0,0,0,0.08);
+}
+
+/* 🚫 Niente override sulle card — restano quelle originali di Tailwind */
+</style>
+<style>
+/* 🌿 RESET BASE */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #f8fafc !important;
+  background-image: none !important;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: #1e293b;
+}
+
+/* Riduci leggermente il padding top sotto la navbar */
+.pt-20 {
+  padding-top: 4.2rem !important;
+}
+
+/* 💎 CARD — Effetto vetro perlato avanzato e coerente */
+
+.grid a.group {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(245,247,252,0.85));
+  backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(220, 230, 255, 0.8);
+  border-radius: 1rem;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.04),
+    0 8px 18px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: all 0.35s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ✨ Micro texture perlata */
+.grid a.group::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    rgba(255,255,255,0.4) 0%,
+    rgba(255,255,255,0.15) 25%,
+    rgba(255,255,255,0.25) 50%,
+    rgba(255,255,255,0.05) 75%,
+    transparent 100%
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.grid a.group:hover::before { opacity: 1; }
+
+/* 💡 Luce direzionale */
+.grid a.group::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at top left, rgba(255,255,255,0.8) 0%, transparent 70%);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* 🪩 Hover raffinato */
+.grid a.group:hover {
+  transform: translateY(-3px);
+  background: linear-gradient(160deg, rgba(255,255,255,0.96), rgba(240,243,255,0.92));
+  border-color: rgba(180,200,255,0.9);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 10px 26px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* 🪶 Tipografia */
+.grid a.group h2 {
+  color: #1e293b;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+.grid a.group p {
+  color: #475569;
+  font-size: 0.93rem;
+}
+.grid a.group span {
+  font-size: 1.6rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* 🌙 Dark mode */
+@media (prefers-color-scheme: dark) {
+  .grid a.group {
+    background: linear-gradient(150deg, rgba(30,31,34,0.85), rgba(45,47,50,0.75));
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      0 3px 8px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .grid a.group::before {
+    background: linear-gradient(
+      125deg,
+      rgba(255,255,255,0.1) 0%,
+      rgba(255,255,255,0.03) 50%,
+      transparent 100%
+    );
+  }
+  .grid a.group h2 { color: #f1f5f9; }
+  .grid a.group p  { color: #cbd5e1; }
+}
+
+/* 📱 Effetto pressione naturale su mobile */
+@media (hover: none) and (pointer: coarse) {
+  .grid a.group:active {
+    transform: scale(0.97);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      inset 0 1px 1px rgba(255, 255, 255, 0.6);
+    transition: transform 0.05s ease, box-shadow 0.05s ease;
+  }
+}
+
+/* 🔹 Correzione residuo blu sopra la navbar (Safari/iOS) */
+nav::before {
+  content: none !important;
+  background: none !important;
+  border: none !important;
+}
+</style>
+<style>
+/* ✅ Layout coerente e responsivo per la homepage */
+body.home .grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  justify-content: center;
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  body.home .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+body.home .grid a.group {
+  max-width: 100%;
+  min-height: 150px;
+  padding: 1.25rem;
+  transition: all 0.25s ease;
+}
+</style>
+
+<style>
+footer {
+  position: relative;
+  z-index: 10;
+}
+footer .scroll-fade {
+  margin-top: 1.5rem;
+}
+footer a {
+  transition: all 0.2s ease-in-out;
+}
+</style>
+<style>
+  @media (min-width: 768px) {
+    footer.sticky-categorie {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(200,200,200,0.3);
+      box-shadow: 0 -3px 10px rgba(0,0,0,0.05);
+      z-index: 40;
+      padding: 1rem 0;
+    }
+
+    footer.sticky-categorie > div {
+      max-width: 80rem; /* corrisponde davvero a 7xl di Tailwind */
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+
+
+    /* Frecce laterali */
+    #scrollLeft, #scrollRight {
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-weight: bold;
+      user-select: none;
+    }
+    #scrollLeft { left: 1rem; }
+    #scrollRight { right: 1rem; }
+
+    footer:hover #scrollLeft,
+    footer:hover #scrollRight {
+      opacity: 1;
+    }
+    #scrollLeft:hover, #scrollRight:hover {
+      transform: scale(1.15);
+    }
+  }
+</style>
+<style>
+/* 🔥 Forza il layer sopra tutti gli altri per la barra ricerca nella navbar */
+nav form[action*="ricerca_utenti"] {
+  position: relative !important;
+  z-index: 9999 !important;
+}
+
+/* 🧩 E assicurati che la navbar stessa resti sopra ogni immagine o sezione */
+nav {
+  z-index: 10000 !important;
+  overflow: visible !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+</style>
+<style>
+/* 📱 Padding leggero solo in HOME, solo mobile */
+body.home .container {
+  padding-left: 0.75rem !important;  /* px-3 */
+  padding-right: 0.75rem !important;
+}
+
+@media (min-width: 640px) {
+  /* Da tablet in su torna normale */
+  body.home .container {
+    padding-left: 1.5rem !important; /* p-6 originale */
+    padding-right: 1.5rem !important;
+  }
+}
+</style>
+<style>
+  /* 🔵 CHAT – desktop e iPad */
+  @media (min-width: 641px) {
+    /* Spazio sotto la navbar per la pagina chat */
+    body.page-chat #chatContainer {
+      padding-top: 5.5rem !important; /* ~ navbar (4rem) + respiro */
+    }
+  }
+
+  /* ⭐ Recensioni ricevute */
+  body.page-recensioni-ricevute main,
+  body.page-recensioni-ricevute .max-w-5xl {
+    margin-top: 5.5rem !important;
+  }
+
+  /* ⭐ Le mie recensioni */
+  body.page-recensioni-inviate main,
+  body.page-recensioni-inviate .max-w-5xl {
+    margin-top: 5.5rem !important;
+  }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const bar = document.getElementById("categorieScroll");
+  if (!bar) return;
+
+  // 🔹 Ripristina la posizione salvata
+  const saved = sessionStorage.getItem("categorieScrollLeft");
+  if (saved !== null) bar.scrollLeft = parseFloat(saved);
+
+  // 🔹 Aggiorna la posizione mentre scorri
+  bar.addEventListener("scroll", () => {
+    sessionStorage.setItem("categorieScrollLeft", bar.scrollLeft);
+  });
+
+  // 🔹 Pulisci lo stato se cambi pagina completamente
+  window.addEventListener("beforeunload", () => {
+    sessionStorage.removeItem("categorieScrollLeft");
+  });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const bar = document.getElementById("categorieScroll");
+  if (!bar) return;
+
+  // ✅ Ripristina la posizione salvata (fase iniziale)
+  const saved = sessionStorage.getItem("categorieScrollLeft");
+  if (saved !== null) bar.scrollLeft = parseFloat(saved);
+
+  // ✅ Salva posizione durante lo scroll
+  bar.addEventListener("scroll", () => {
+    sessionStorage.setItem("categorieScrollLeft", bar.scrollLeft);
+  });
+
+  // ✅ Dopo il caricamento completo, garantisci che la categoria selezionata resti visibile
+  const active = bar.querySelector('a.bg-blue-50');
+  if (active) {
+    setTimeout(() => {
+      const rect = active.getBoundingClientRect();
+      const parentRect = bar.getBoundingClientRect();
+      if (rect.left < parentRect.left || rect.right > parentRect.right) {
+        // Scorri solo quanto serve per centrarla visivamente
+        const offset = rect.left - parentRect.left - (parentRect.width / 2) + (rect.width / 2);
+        bar.scrollLeft += offset;
+      }
+    }, 100); // ⏱️ leggero delay per attendere il rendering
+  }
+
+  // ✅ NON cancellare la posizione salvata (serve tra click successivi)
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const bar = document.getElementById("categorieScroll");
+  if (!bar) return;
+
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+
+  // Mouse down → inizio trascinamento
+  bar.addEventListener("mousedown", (e) => {
+    isDown = true;
+    bar.classList.add("dragging");
+    startX = e.pageX - bar.offsetLeft;
+    scrollLeft = bar.scrollLeft;
+  });
+
+  // Mouse lascia → fine trascinamento
+  bar.addEventListener("mouseleave", () => {
+    isDown = false;
+    bar.classList.remove("dragging");
+  });
+
+  // Mouse su → fine trascinamento
+  bar.addEventListener("mouseup", () => {
+    isDown = false;
+    bar.classList.remove("dragging");
+  });
+
+  // Mouse move → muove lo scroll
+  bar.addEventListener("mousemove", (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - bar.offsetLeft;
+    const walk = (x - startX) * 1.2; // moltiplicatore velocità
+    bar.scrollLeft = scrollLeft - walk;
+  });
+
+  // Supporto touch (mobile)
+  let touchStartX = 0;
+  let touchScrollLeft = 0;
+  bar.addEventListener("touchstart", (e) => {
+    touchStartX = e.touches[0].pageX;
+    touchScrollLeft = bar.scrollLeft;
+  });
+  bar.addEventListener("touchmove", (e) => {
+    const x = e.touches[0].pageX;
+    const walk = (x - touchStartX) * 1.2;
+    bar.scrollLeft = touchScrollLeft - walk;
+  });
+});
+</script>
+<style>
+/* 🎯 FIX RESPONSIVO DEFINITIVO BARRA DI RICERCA */
+
+/* 🔹 iPad verticale (820x1180) */
+@media (min-width: 768px) and (max-width: 900px) {
+    nav form.nav-search {
+        flex: 0 1 320px !important;   /* dimensione ideale in verticale */
+        max-width: 320px !important;
+        min-width: 260px !important;
+    }
+}
+
+/* 🔹 iPad orizzontale (1180x820) */
+@media (min-width: 901px) and (max-width: 1180px) {
+    nav form.nav-search {
+        flex: 0 1 480px !important;   /* barra più larga */
+        max-width: 480px !important;
+        min-width: 360px !important;
+    }
+}
+
+/* 🔹 Desktop medio (1180–1440px) */
+@media (min-width: 1181px) and (max-width: 1440px) {
+    nav form.nav-search {
+        flex: 0 1 600px !important;   /* dimensione equilibrata */
+        max-width: 600px !important;
+        min-width: 400px !important;
+    }
+}
+
+/* 🔹 Desktop grande (oltre 1440px) */
+@media (min-width: 1441px) {
+    nav form.nav-search {
+        flex: 0 1 720px !important;   /* bella ampia */
+        max-width: 720px !important;
+    }
+}
+
+/* Garantisce che la barra non forzi gli elementi a destra */
+nav .user-info {
+    flex-shrink: 0 !important;
+}
+</style>
+
+<style>
+
+/* 🧩 Fix definitivo per la barra di ricerca nella pagina profilo pubblico */
+
+/* Forza overflow visibile per tutti i container principali */
+.container,
+.max-w-4xl,
+.max-w-5xl,
+.profile-wrapper,
+.dashboard-section,
+main,
+body {
+  overflow: visible !important;
+  position: relative !important;
+  z-index: auto !important;
+}
+
+/* Porta sopra la barra e il suo bottone */
+nav form[action*="ricerca_utenti"],
+nav form[action*="ricerca_utenti"] button {
+  z-index: 10002 !important;
+  position: relative !important;
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+</style>
+<style>
+/* 🧭 FIX COMPLETO VISIBILITÀ TASTO CERCA NEL PROFILO PUBBLICO */
+
+/* 1️⃣ Isola la navbar dal resto del layout per evitare conflitti di stacking context */
+nav {
+  isolation: isolate !important;
+  z-index: 10000 !important;
+  overflow: visible !important;
+}
+
+/* 2️⃣ Forza visibilità del form e del pulsante */
+nav form[action*="ricerca_utenti"],
+nav form[action*="ricerca_utenti"] button {
+  position: relative !important;
+  z-index: 10001 !important;
+  display: inline-flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* 3️⃣ Evita che contenitori adiacenti lo taglino */
+.container,
+.max-w-4xl,
+.max-w-5xl,
+main,
+body {
+  overflow: visible !important;
+}
+
+/* 4️⃣ Corregge possibili layer sotto-navbar */
+#profilo-hero, #profilo-wrapper, .content-wrapper {
+  position: relative !important;
+  z-index: 1 !important;
+  overflow: visible !important;
+}
+</style>
+<style>
+/* ⭐ FIX NAVBAR CHE COPRE /CERCA SU TUTTI I DISPOSITIVI */
+body.page-cerca .container {
+  padding-top: calc(70px + 1rem) !important; /* navbar + respiro */
+}
+
+@media (max-width: 640px) {
+  body.page-cerca .container {
+    padding-top: calc(70px + 0.5rem) !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  body.page-cerca .container {
+    padding-top: calc(70px + 1.2rem) !important;
+  }
+}
+</style>
+<style>
+/* ⭐ FIX DEFINITIVO Z-INDEX TASTO CERCA MOBILE SU TUTTE LE PAGINE */
+
+#mobile-search-container {
+  position: fixed !important;
+  z-index: 9995 !important; /* sopra TAB e card profilo */
+}
+
+#mobile-search-btn,
+#mobile-search-form {
+  position: relative !important;
+  z-index: 9996 !important;
+}
+
+.tabs-container,
+.tabs-wrapper,
+.tabs {
+  position: relative !important;
+  z-index: 20 !important; /* molto più basso del tasto cerca */
+}
+</style>
+<style>
+/* 🚫 NASCONDI TASTO CERCA MOBILE QUANDO SI È IN CHAT */
+body[data-chat="true"] #mobile-search-container {
+    display: none !important;
+}
+</style>
+<style>
+/* ✅ Forza la visibilità del blocco avatar su mobile, anche nelle pagine chat */
+@media (max-width: 640px) {
+  body[data-chat="true"] nav .user-info {
+    display: flex !important;
+    align-items: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body[data-chat="true"] nav .user-info img,
+  body[data-chat="true"] nav .user-info span {
+    display: inline-block !important;
+  }
+}
+</style>
+<style>
+/* Sposta logo+titolo leggermente a sinistra sui dispositivi stretti */
+
+@media (max-width: 480px) {       /* iPhone e smartphone piccoli */
+  .logo-wrapper {
+    margin-left: -4px !important;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 830px) {  /* iPad verticale / medi */
+  .logo-wrapper {
+    margin-left: 0px !important;
+  }
+}
+
+/* Logo e titolo leggermente più vicini */
+.logo-wrapper img {
+  margin-right: -2px; /* riduce ulteriormente lo spazio */
+}
+</style>
+<style>
+/* 🚫 NASCONDI IL TASTO CERCA MOBILE QUANDO UNA MODALE È APERTA */
+@media (max-width: 640px) {
+  body.modal-open #mobile-search-container {
+    display: none !important;
+    pointer-events: none !important;
+  }
+}
+</style>
+<!-- 🔒 Footer legale Iubenda -->
+<footer class="mt-16 md:mt-10 py-6 text-center text-sm text-gray-500 border-t bg-white">
+</footer>
+
+</body>
+</html>

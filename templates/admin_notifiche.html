@@ -1,0 +1,599 @@
+{% extends "layout_admin.html" %}
+
+{% block admin_title %}Notifiche utenti{% endblock %}
+{% block admin_subtitle %}
+Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli utenti.
+{% endblock %}
+
+{% block admin_content %}
+
+<!-- 🔹 CARD: Impostazioni sistema notifiche -->
+<div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-8">
+
+  <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+    ⚙️ Impostazioni notifiche
+  </h3>
+
+  <form method="post" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <!-- Input TTL -->
+    <div class="flex flex-col">
+      <label class="text-sm font-medium text-slate-700 mb-1">
+        Durata notifiche lette (giorni)
+      </label>
+      <input
+        type="number"
+        name="scadenza_giorni"
+        min="1"
+        value="{{ ttl_corrente }}"
+        class="border border-slate-300 focus:border-blue-500 focus:ring-blue-500 rounded-lg px-3 py-2"
+      >
+    </div>
+
+    <!-- Pulsante Salva -->
+    <div class="flex items-end">
+      <button
+        type="submit"
+        class="w-full px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+        💾 Salva impostazioni
+      </button>
+    </div>
+
+    <!-- Pulizia manuale -->
+    <div class="flex items-end">
+      <a href="{{ url_for('admin_pulisci_notifiche') }}"
+         class="w-full px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition">
+        🧹 Pulisci ora
+      </a>
+    </div>
+
+  </form>
+</div>
+
+<!-- 🔹 CARD: Statistiche notifiche -->
+<div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-8">
+
+  <h3 class="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
+    📊 Stato notifiche attuali
+  </h3>
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+    <!-- Totali -->
+    <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 text-center">
+      <p class="text-slate-500 text-sm">Totali</p>
+      <p class="text-3xl font-bold text-slate-800">{{ stats.totali or 0 }}</p>
+    </div>
+
+    <!-- Non lette -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-center">
+      <p class="text-yellow-600 text-sm">Non lette</p>
+      <p class="text-3xl font-bold text-yellow-600">{{ stats.non_lette or 0 }}</p>
+    </div>
+
+    <!-- Lette -->
+    <div class="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
+      <p class="text-green-600 text-sm">Lette</p>
+      <p class="text-3xl font-bold text-green-600">{{ stats.lette or 0 }}</p>
+    </div>
+
+  </div>
+
+  <p class="text-xs text-slate-500 mt-4 text-center italic">
+    Le notifiche lette vengono eliminate automaticamente dopo
+    <strong>{{ ttl_corrente }}</strong> giorni.
+  </p>
+
+</div>
+
+<!-- 🔹 CARD: Storico notifiche inviate da Admin -->
+<div class="bg-white border border-slate-200 rounded-xl shadow-sm mb-10">
+
+  <!-- HEADER CLICCABILE -->
+  <button
+    type="button"
+    id="toggleStorico"
+    class="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 rounded-xl">
+
+    <div class="flex items-center gap-2">
+      🗂️
+      <span class="text-lg font-semibold text-slate-800">
+        Storico notifiche inviate dall’admin
+      </span>
+    </div>
+
+    <span id="storicoIcon" class="text-slate-400 text-xl">▸</span>
+  </button>
+
+  <!-- CONTENUTO NASCOSTO -->
+  <div id="storicoBody" class="hidden px-6 pb-6">
+
+    {% if not notifiche_admin %}
+      <p class="text-sm text-slate-500 italic">
+        Nessuna notifica inviata dall’admin finora.
+      </p>
+    {% else %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border border-slate-200 rounded-lg table-fixed">
+          <thead class="bg-slate-100 sticky top-0 z-10">
+            <tr>
+              <th class="px-3 py-2 text-left w-40">Data</th>
+              <th class="px-3 py-2 text-left">Contenuto</th>
+              <th class="px-3 py-2 text-left w-[520px]">Filtri</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for n in notifiche_admin %}
+          {% set filtri = n.filtro_json | fromjson %}
+          {% set destinatari = n.destinatari_json | fromjson if n.destinatari_json else None %}
+
+          <tr class="border-t align-top hover:bg-slate-50">
+
+            <!-- DATA -->
+            <td class="px-3 py-3 text-slate-500 whitespace-nowrap">
+              <div class="font-medium">{{ n.created_at[:10] }}</div>
+              <div class="text-xs">{{ n.created_at[11:19] }}</div>
+            </td>
+
+            <!-- CONTENUTO -->
+            <td class="px-3 py-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="font-semibold text-slate-800">{{ n.titolo }}</div>
+                  {% if n.link %}
+                    <a href="{{ n.link }}" class="text-xs text-blue-600 underline inline-block mt-1">
+                      {{ n.link }}
+                    </a>
+                  {% endif %}
+                </div>
+
+                <!-- tipo+dest mini (riassunto) -->
+                <div class="flex flex-col items-end gap-1">
+                  <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+                    {{ n.tipo_invio }}
+                  </span>
+                  <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+                    {{ n.destinatari_count }} dest.
+                  </span>
+                </div>
+              </div>
+
+              <!-- Messaggio: solo preview -->
+              <div class="mt-2 text-sm text-slate-600">
+                <span class="text-slate-500">Messaggio:</span>
+                {{ n.messaggio[:70] }}{% if n.messaggio|length > 70 %}…{% endif %}
+                <button
+                  type="button"
+                  class="open-message-btn text-blue-600 text-xs ml-1 underline"
+                  data-title="{{ n.titolo }}"
+                  data-message="{{ n.messaggio | e }}"
+                >
+                  Apri
+                </button>
+              </div>
+            </td>
+
+            <!-- FILTRI (badge) -->
+            <td class="px-3 py-3 text-sm text-slate-700">
+              <div class="space-y-2">
+
+                <div class="text-xs text-slate-500">
+                  <strong class="text-slate-700">Metodo:</strong> {{ n.tab_attivo }}
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  {% if filtri.zona %}
+                    <span class="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                      Zona: {{ filtri.zona | join(", ") }}
+                    </span>
+                  {% endif %}
+
+                  {% if filtri.categorie %}
+                    <span class="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                      Categorie: {{ filtri.categorie | join(", ") }}
+                    </span>
+                  {% endif %}
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  {% if filtri.zona_info %}
+                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">INFO</span>
+                  {% endif %}
+                  {% if filtri.zona_annunci %}
+                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">ANNUNCI</span>
+                  {% endif %}
+                  {% if filtri.cat_cerco_info %}
+                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">CERCO (info)</span>
+                  {% endif %}
+                  {% if filtri.cat_offro_info %}
+                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">OFFRO (info)</span>
+                  {% endif %}
+                  {% if filtri.cat_annunci %}
+                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">ANNUNCI (cat.)</span>
+                  {% endif %}
+                </div>
+
+                {% if destinatari %}
+                  <details class="mt-1">
+                    <summary class="cursor-pointer text-blue-600 text-xs">
+                      Mostra destinatari ({{ destinatari|length }})
+                    </summary>
+                    <ul class="mt-2 text-xs text-slate-600 list-disc pl-4 space-y-1">
+                      {% for u in destinatari %}
+                        <li>
+                          {{ u.nome }} {{ u.cognome }}
+                          {% if u.email %}<span class="text-slate-400">— {{ u.email }}</span>{% endif %}
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </details>
+                {% endif %}
+
+              </div>
+            </td>
+
+
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- 🔹 CARD: Invio nuova notifica/email -->
+<div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-10">
+
+  <h3 class="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
+    📨 Invia nuova notifica o email
+  </h3>
+
+  <form action="{{ url_for('admin_invia_notifica') }}" method="post" class="space-y-6">
+  <input type="hidden" name="tab-attivo" id="tab-attivo" value="u-singolo">
+
+    <!-- 🔸 Tipo di invio -->
+    <div>
+      <p class="font-medium mb-2 text-slate-700">Tipo di invio</p>
+      <div class="flex flex-wrap gap-6">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="tipo_invio" value="notifica" class="rounded"> Notifica interna
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="tipo_invio" value="email" class="rounded"> Email
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="tipo_invio" value="entrambi" class="rounded"> Entrambe
+        </label>
+      </div>
+    </div>
+
+    <!-- 🔸 Destinatari -->
+    <div>
+      <p class="font-medium mb-2 text-slate-700">Destinatari</p>
+
+      <!-- Tabs -->
+      <div class="flex flex-wrap gap-3 text-sm mb-4 border-b pb-2">
+        <button type="button" class="tab-btn font-medium" data-tab="u-singolo">Utente singolo</button>
+        <button type="button" class="tab-btn" data-tab="u-multipli">Selezione multipla</button>
+        <button type="button" class="tab-btn" data-tab="u-zona">Per zona</button>
+        <button type="button" class="tab-btn" data-tab="u-categoria">Per categoria</button>
+        <button type="button" class="tab-btn" data-tab="u-avanzato">Filtro avanzato</button>
+        <button type="button" class="tab-btn" data-tab="u-tutti">Tutti gli utenti</button>
+      </div>
+
+      <!-- 🔻 CONTENUTO TAB -->
+
+      <!-- Utente singolo -->
+      <div class="tab-panel hidden" id="u-singolo">
+        <label class="block text-sm font-medium mb-1">Email o username utente</label>
+        <input type="text" name="utente_singolo"
+               class="w-full border rounded-lg px-3 py-2"
+               placeholder="Inserisci email o username">
+      </div>
+
+      <!-- Selezione multipla -->
+      <div class="tab-panel hidden" id="u-multipli">
+        <p class="text-sm mb-2">Seleziona utenti:</p>
+        <div class="max-h-60 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+
+          {% for u in utenti %}
+          <label class="flex items-center gap-2 mb-2">
+            <input type="checkbox" name="utenti_multipli" value="{{ u.id }}" class="rounded">
+            {{ u.nome }} {{ u.cognome }} — {{ u.email }}
+          </label>
+          {% endfor %}
+
+        </div>
+      </div>
+
+      <!-- Per zona -->
+      <div class="tab-panel hidden" id="u-zona">
+        <label class="block text-sm font-medium mb-2">Zona</label>
+
+        <!-- Input libero (puoi mettere anche più zone separate da virgola) -->
+        <input type="text" name="zona"
+               class="w-full border rounded-lg px-3 py-2"
+               placeholder="Esempio: Milano, Pavia, Abbiategrasso">
+
+        <!-- Toggle sorgenti zona -->
+        <div class="mt-3 flex flex-wrap gap-4 text-sm">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" name="zona_info" value="1" class="rounded" checked>
+            Cerca in INFO (città utente)
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" name="zona_annunci" value="1" class="rounded" checked>
+            Cerca in ANNUNCI (zona annuncio)
+          </label>
+        </div>
+
+        <p class="text-xs text-slate-500 mt-2">
+          Suggerimento: puoi scrivere più zone separate da virgola. Il backend userà LIKE.
+        </p>
+      </div>
+
+      <!-- Per categoria -->
+      <div class="tab-panel hidden" id="u-categoria">
+        <p class="text-sm mb-2">Seleziona categoria:</p>
+
+        <!-- Toggle sorgenti categoria -->
+        <div class="mb-3 flex flex-wrap gap-4 text-sm">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" name="cat_cerco_info" value="1" class="rounded" checked>
+            CERCO (INFO)
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" name="cat_offro_info" value="1" class="rounded" checked>
+            OFFRO (INFO)
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" name="cat_annunci" value="1" class="rounded" checked>
+            ANNUNCI (categoria annuncio)
+          </label>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          {% for cat in categorie %}
+            <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-slate-50 hover:bg-slate-100 cursor-pointer">
+              <input type="checkbox" name="categorie" value="{{ cat }}" class="rounded">
+              <span class="text-sm">{{ cat }}</span>
+            </label>
+          {% endfor %}
+        </div>
+
+        <p class="text-xs text-slate-500 mt-2">
+          Se selezioni più categorie, il backend include utenti che matchano almeno una delle categorie selezionate.
+        </p>
+      </div>
+
+      <!-- Tutti -->
+      <div class="tab-panel hidden" id="u-tutti">
+        <input type="hidden" name="tutti" value="1">
+        <p class="text-sm text-green-600 font-medium">
+          Verrà inviato a tutti gli utenti attivi
+        </p>
+      </div>
+    </div>
+
+    <!-- Filtro avanzato (incrocio ZONA × CATEGORIA) -->
+<div class="tab-panel hidden" id="u-avanzato">
+  <p class="text-sm mb-3 text-slate-700">
+    Qui puoi combinare ZONA + CATEGORIA (il backend farà INTERSECT = AND).
+  </p>
+
+  <!-- ZONA -->
+  <div class="mb-4">
+    <label class="block text-sm font-medium mb-2">Zona</label>
+    <input type="text" name="zona"
+           class="w-full border rounded-lg px-3 py-2"
+           placeholder="Esempio: Milano, Pavia, Abbiategrasso">
+    <div class="mt-2 flex flex-wrap gap-4 text-sm">
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="zona_info" value="1" class="rounded" checked>
+        INFO (città utente)
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="zona_annunci" value="1" class="rounded" checked>
+        ANNUNCI (zona annuncio)
+      </label>
+    </div>
+  </div>
+
+  <hr class="my-4 border-slate-200">
+
+  <!-- CATEGORIA -->
+  <div class="mb-2">
+    <label class="block text-sm font-medium mb-2">Categoria</label>
+
+    <div class="mb-3 flex flex-wrap gap-4 text-sm">
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="cat_cerco_info" value="1" class="rounded" checked>
+        CERCO (INFO)
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="cat_offro_info" value="1" class="rounded" checked>
+        OFFRO (INFO)
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="cat_annunci" value="1" class="rounded" checked>
+        ANNUNCI
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+      {% for cat in categorie %}
+        <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-slate-50 hover:bg-slate-100 cursor-pointer">
+          <input type="checkbox" name="categorie" value="{{ cat }}" class="rounded">
+          <span class="text-sm">{{ cat }}</span>
+        </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <p class="text-xs text-slate-500 mt-3">
+    Se inserisci sia zona che categoria, verranno presi solo utenti che matchano entrambe.
+  </p>
+</div>
+
+    <!-- 🔸 Contenuto messaggio -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <div class="flex flex-col">
+        <label class="text-sm font-medium mb-1">Titolo</label>
+        <input type="text" name="titolo" class="border rounded-lg px-3 py-2" required>
+      </div>
+
+      <div class="flex flex-col">
+        <label class="text-sm font-medium mb-1">Link (opzionale)</label>
+        <input type="text" name="link" class="border rounded-lg px-3 py-2"
+               placeholder="/cerca?categoria=babysitter">
+      </div>
+
+    </div>
+
+    <div>
+      <label class="text-sm font-medium mb-1">Messaggio</label>
+      <textarea name="messaggio"
+                class="w-full border rounded-lg px-3 py-2 h-32"
+                required></textarea>
+    </div>
+
+    <!-- Bottone invio -->
+    <button
+      type="submit"
+      class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition">
+      📨 Invia notifica
+    </button>
+
+  </form>
+</div>
+
+<!-- 🔔 MODALE MESSAGGIO NOTIFICA -->
+<div id="messageModal"
+     class="fixed inset-0 bg-black/40 hidden z-50 flex items-center justify-center">
+
+  <div class="bg-white w-full max-w-2xl mx-4 rounded-xl shadow-xl">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h3 id="modalTitle" class="text-lg font-semibold text-slate-800">
+        Messaggio
+      </h3>
+      <button
+        type="button"
+        onclick="closeMessageModal()"
+        class="text-slate-400 hover:text-slate-700 text-xl">
+        ✕
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="px-5 py-4 max-h-[60vh] overflow-y-auto">
+      <pre id="modalBody"
+           class="text-sm text-slate-700 whitespace-pre-wrap font-sans"></pre>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-5 py-3 border-t flex justify-end">
+      <button
+        type="button"
+        onclick="closeMessageModal()"
+        class="px-4 py-2 text-sm rounded-lg bg-slate-100 hover:bg-slate-200">
+        Chiudi
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const tabInput = document.getElementById("tab-attivo");
+  const btns = document.querySelectorAll(".tab-btn");
+  const panels = document.querySelectorAll(".tab-panel");
+
+  function openTab(tabId) {
+
+    // 🔒 Disabilita TUTTI i campi di TUTTI i tab
+    panels.forEach(panel => {
+      panel.querySelectorAll("input, select, textarea").forEach(el => {
+        el.disabled = true;
+      });
+      panel.classList.add("hidden");
+    });
+
+    // 🔓 Abilita SOLO il tab attivo
+    const target = document.getElementById(tabId);
+    if (target) {
+      target.classList.remove("hidden");
+      target.querySelectorAll("input, select, textarea").forEach(el => {
+        el.disabled = false;
+      });
+    }
+
+    // 🎨 Stile bottoni
+    btns.forEach(b => b.classList.remove("font-semibold", "text-blue-600"));
+    const activeBtn = Array.from(btns).find(b => b.dataset.tab === tabId);
+    if (activeBtn) activeBtn.classList.add("font-semibold", "text-blue-600");
+
+    // 🧠 Memorizza tab attivo
+    if (tabInput) tabInput.value = tabId;
+  }
+
+  btns.forEach(btn => {
+    btn.addEventListener("click", () => openTab(btn.dataset.tab));
+  });
+
+  // 🚀 Tab iniziale
+  openTab(tabInput?.value || "u-singolo");
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("toggleStorico");
+  const body = document.getElementById("storicoBody");
+  const icon = document.getElementById("storicoIcon");
+
+  if (!btn || !body) return;
+
+  btn.addEventListener("click", () => {
+    const open = !body.classList.contains("hidden");
+    body.classList.toggle("hidden");
+    icon.textContent = open ? "▸" : "▾";
+  });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("messageModal");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalBody = document.getElementById("modalBody");
+
+  document.querySelectorAll(".open-message-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      modalTitle.textContent = btn.dataset.title || "Messaggio";
+      modalBody.textContent = btn.dataset.message || "";
+
+      modal.classList.remove("hidden");
+      document.body.classList.add("overflow-hidden");
+    });
+  });
+});
+
+function closeMessageModal() {
+  const modal = document.getElementById("messageModal");
+  modal.classList.add("hidden");
+  document.body.classList.remove("overflow-hidden");
+}
+
+// chiudi cliccando fuori
+document.getElementById("messageModal")?.addEventListener("click", (e) => {
+  if (e.target.id === "messageModal") {
+    closeMessageModal();
+  }
+});
+</script>
+
+{% endblock %}

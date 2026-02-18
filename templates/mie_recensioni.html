@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% set body_class = "page-recensioni-inviate" %}
+{% block content %}
+
+<div class="max-w-5xl mx-auto mt-8 bg-white rounded-2xl shadow-sm hover:shadow-md transition p-6">
+  <!-- 🔙 Torna alla dashboard -->
+  <div class="mb-5">
+    <a href="javascript:history.back()"
+       class="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+           stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      Torna
+    </a>
+  </div>
+  <h2 class="text-2xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+    ⭐ <span>Le mie recensioni</span>
+  </h2>
+  <p class="text-gray-600 mb-6">
+    Qui trovi tutte le recensioni che hai lasciato ad altri utenti.
+  </p>
+
+  {% if recensioni and recensioni|length > 0 %}
+    <div class="space-y-4">
+      {% for r in recensioni %}
+        <div id="recensione-{{ r.id }}" class="border border-gray-200 rounded-xl p-5 bg-gray-50 hover:bg-white hover:shadow-md transition">
+
+          <p class="font-semibold text-gray-800">
+            A:
+            <a href="{{ url_for('profilo_pubblico', id=r['id_destinatario']) }}"
+               class="text-blue-600 hover:text-blue-800 underline">
+              @{{ r['username'] }}
+            </a>
+          </p>
+
+          <!-- ⭐ Stelle -->
+          <div class="text-yellow-400 text-lg leading-none mt-1" id="stelle-{{ r.id }}">
+            {% for i in range(r.voto) %}★{% endfor %}
+            {% for i in range(5 - r.voto) %}☆{% endfor %}
+          </div>
+
+          <p id="testo-{{ r.id }}" class="text-gray-700 text-sm mt-2">{{ r.testo }}</p>
+
+          {% if r.stato == 'in_attesa' %}
+            <p class="text-sm text-yellow-600 mt-2 stato" id="stato-{{ r.id }}">🕓 In attesa di approvazione</p>
+
+          {% elif r.stato == 'rifiutato' %}
+            <p class="text-sm text-red-600 mt-2 stato" id="stato-{{ r.id }}">❌ Rifiutata - modifica e invia di nuovo</p>
+
+          {% elif r.stato == 'approvato' %}
+            <p class="text-sm text-green-600 mt-2 stato" id="stato-{{ r.id }}">✔️ Approvata</p>
+
+          {% endif %}
+
+          <p class="text-xs text-gray-400 mt-2">{{ (r.ultima_modifica or r.data)|fmt_it_smart }}</p>
+
+          <!-- 🔹 Pulsanti Modifica / Elimina -->
+          <div class="flex items-center gap-2 mt-3 text-xs border-t border-gray-200 pt-3 justify-end">
+            <button
+              type="button"
+              class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-150 cursor-pointer"
+              onclick='toggleEdit({{ {"id": r.id, "voto": r.voto, "testo": r.testo}|tojson|safe }})'>
+              Modifica
+            </button>
+
+            <form method="POST"
+                  action="{{ url_for('elimina_recensione_route', id=r.id) }}"
+                  onsubmit="return confirm('Vuoi davvero eliminare questa recensione?');"
+                  class="inline">
+              <button type="submit"
+                      class="text-gray-600 hover:text-red-600 font-medium transition-colors duration-150 cursor-pointer">
+                Elimina
+              </button>
+            </form>
+          </div>
+
+          <!-- 🔹 Risposta approvata -->
+          {% if r.risposta_testo %}
+            <div class="ml-6 mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm">
+              <p class="font-medium text-blue-700 flex items-center gap-1">
+                💬 <span>Risposta di
+                  <a href="{{ url_for('profilo_pubblico', id=r['id_destinatario']) }}"
+                     class="text-blue-600 hover:text-blue-800 underline">
+                    @{{ r.risposta_autore_username or (r.risposta_autore_nome ~ ' ' ~ r.risposta_autore_cognome) }}
+                  </a>
+                </span>
+              </p>
+              <p class="text-gray-700 mt-1">{{ r.risposta_testo }}</p>
+            </div>
+          {% endif %}
+
+        </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+      <div class="text-center py-10 text-gray-500">
+        <p class="italic">Non hai ancora scritto recensioni.</p>
+      </div>
+    {% endif %}
+</div>
+
+<!-- 🔹 SCRIPT MODIFICA INLINE AJAX -->
+<script>
+  function toggleEdit(data) {
+    const { id, voto, testo } = data;
+    const div = document.getElementById(`recensione-${id}`);
+
+    div.innerHTML = `
+      <div class="bg-gray-50 p-3 rounded-md border border-gray-200">
+        <label class="block mb-2 text-sm font-medium">Voto:</label>
+        <div id="edit-stars-${id}" class="flex gap-1 text-yellow-400 text-xl mb-3 cursor-pointer">
+          ${[1,2,3,4,5].map(v => `
+            <span data-value="${v}" class="star-${id} ${v <= voto ? 'text-yellow-400' : 'text-gray-300'}">★</span>
+          `).join('')}
+        </div>
+        <input type="hidden" id="edit-voto-${id}" value="${voto}">
+
+        <label class="block mb-1 text-sm font-medium">Testo:</label>
+        <textarea id="edit-testo-${id}" class="w-full border rounded p-2 text-sm mb-3" rows="3">${testo}</textarea>
+
+        <div class="flex justify-end gap-2">
+          <button onclick="saveEdit(${id})" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Salva</button>
+          <button onclick="window.location.reload()" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">Annulla</button>
+        </div>
+      </div>
+    `;
+
+    // ⭐ assegna i listener clic dopo l'inserimento nel DOM
+    document.querySelectorAll(`#edit-stars-${id} span`).forEach(star => {
+      star.addEventListener("click", () => {
+        const value = parseInt(star.dataset.value);
+        setStarRating(id, value);
+      });
+      star.addEventListener("mouseover", () => {
+        const value = parseInt(star.dataset.value);
+        highlightStars(id, value);
+      });
+      star.addEventListener("mouseleave", () => {
+        const value = parseInt(document.getElementById(`edit-voto-${id}`).value);
+        highlightStars(id, value);
+      });
+    });
+  }
+  function setStarRating(id, value) {
+  // aggiorna il valore dell’input nascosto
+  document.getElementById(`edit-voto-${id}`).value = value;
+  highlightStars(id, value);
+}
+
+function highlightStars(id, value) {
+  // illumina le stelle fino al valore selezionato
+  document.querySelectorAll(`#edit-stars-${id} span`).forEach(star => {
+    const starValue = parseInt(star.dataset.value);
+    if (starValue <= value) {
+      star.classList.remove('text-gray-300');
+      star.classList.add('text-yellow-400');
+    } else {
+      star.classList.remove('text-yellow-400');
+      star.classList.add('text-gray-300');
+    }
+  });
+}
+async function saveEdit(id) {
+  const testo = document.getElementById(`edit-testo-${id}`).value.trim();
+  const voto = document.getElementById(`edit-voto-${id}`).value;
+
+
+  try {
+    const resp = await fetch("{{ url_for('modifica_recensione') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        id_recensione: id,
+        testo: testo,
+        voto: voto
+      })
+    });
+
+    if (resp.ok) {
+      const recensioneDiv = document.getElementById(`recensione-${id}`);
+      let statoHtml = "";
+
+      if (testo === "") {
+        // ⭐ recensione senza testo → approvata
+        statoHtml = `<p class="text-sm text-green-600 mt-2">✔️ Approvata</p>`;
+      } else {
+        // 🕓 recensione con testo → moderazione
+        statoHtml = `<p class="text-sm text-yellow-600 mt-2">🕓 In attesa di approvazione</p>`;
+      }
+
+      recensioneDiv.innerHTML = `
+        <div class="text-yellow-400 text-lg leading-none mt-1">
+          ${'★'.repeat(voto)}${'☆'.repeat(5 - voto)}
+        </div>
+        <p class="text-gray-700 text-sm mt-2">${testo || ""}</p>
+        ${statoHtml}
+        <p class="text-xs text-gray-400 mt-1 italic">Modifica salvata con successo.</p>
+      `;
+
+      // 🔔 Aggiorna badge admin in tempo reale se socket è attivo
+      if (window.socket) {
+        socket.emit("update_admin_counters");
+      }
+
+      // ✨ Effetto visivo feedback
+      recensioneDiv.classList.add("bg-yellow-50");
+      setTimeout(() => recensioneDiv.classList.remove("bg-yellow-50"), 1500);
+    } else {
+      alert("Errore durante il salvataggio della modifica.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Errore di rete.");
+  }
+}
+</script>
+
+{% endblock %}

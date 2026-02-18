@@ -1,0 +1,746 @@
+
+<!-- TAB INFO PRIVATO -->
+<div class="info-wrapper border border-gray-100 rounded-2xl shadow-sm p-5">
+  <div class="wrapper-info">
+
+    <!-- 🔹 COLONNA SINISTRA: menu categorie -->
+    <aside class="md:col-span-1">
+      <nav class="space-y-1">
+        {% set sezioni = {
+          'overview': 'Informazioni di base',
+          'work_education': 'Esperienze e formazione',
+          'contacts': 'Contatti',
+          'description': 'Chi sono'
+        } %}
+        {% for key, label in sezioni.items() %}
+          <button type="button"
+                  class="section-btn w-full text-left text-sm font-medium px-3 py-2 rounded-lg
+                         hover:bg-blue-50 transition
+                         {% if loop.first %}bg-blue-100 text-blue-700{% else %}text-gray-700{% endif %}"
+                  data-section="{{ key }}">
+            {{ label }}
+          </button>
+        {% endfor %}
+      </nav>
+    </aside>
+
+    <!-- 🔹 COLONNA DESTRA: contenuto -->
+    <main class="md:col-span-2" id="info-content">
+
+      <!-- Sezione: Info di base -->
+      <section data-section="overview">
+
+        <form method="post" action="{{ url_for('utente_update_info') }}" class="space-y-6" id="form-info-base">
+
+          <!-- Città -->
+          <div class="form-box">
+            <label class="label-strong">Città</label>
+            <div class="relative">
+              <!-- input visibile (solo autocomplete) -->
+              <input
+                id="citta-autocomplete"
+                type="text"
+                class="input-modern"
+                placeholder="Es. Milano"
+                autocomplete="off"
+                value="{{ utente.get('citta') or '' }}"
+              >
+
+              <!-- valore reale salvato -->
+              <input
+                type="hidden"
+                name="citta"
+                id="citta_hidden"
+                value="{{ utente.get('citta') or '' }}"
+              >
+
+              <!-- lista suggerimenti -->
+              <ul id="citta-suggerimenti"
+                  class="absolute z-30 left-0 right-0 mt-2 hidden max-h-60 overflow-y-auto
+                         bg-white border border-slate-200 rounded-2xl shadow-lg">
+              </ul>
+            </div>
+          </div>
+
+          <!-- 🔹 Lingue parlate -->
+          <div class="form-box">
+            <label class="label-strong">Lingue parlate</label>
+            <input
+              name="lingue"
+              list="lingue_list"
+              class="input-modern"
+              value="{{ utente.get('lingue') or '' }}"
+              placeholder="{% if not pubblico %}Es. Italiano, Inglese, Spagnolo{% endif %}"
+              {% if pubblico %}disabled{% endif %}
+            >
+            <datalist id="lingue_list">
+              <option value="Italiano">
+              <option value="Inglese">
+              <option value="Spagnolo">
+              <option value="Francese">
+              <option value="Tedesco">
+              <option value="Portoghese">
+            </datalist>
+          </div>
+
+          <!-- 🔹 Frase personale -->
+          <div class="form-box">
+            <label class="label-strong">Frase personale</label>
+            <textarea
+              name="frase"
+              class="input-modern"
+              maxlength="120"
+              rows="3"
+              style="resize:none; min-height: 70px;"
+              placeholder="{% if not pubblico %}Es. Amo aiutare le persone.. prendermi cura degli animali.. sono un tuttofare.. anni di esperienza in..{% endif %}"
+              {% if pubblico %}disabled{% endif %}>{{ utente.get('frase') or '' }}</textarea>
+
+            {% if not pubblico %}
+            <p class="text-xs text-gray-500 mt-1">Facoltativo (max 120 caratteri)</p>
+            {% endif %}
+          </div>
+
+          {% if not pubblico %}
+          <!-- 🔹 Attività LocalCare -->
+          <div class="form-box">
+            <label class="label-strong">Attività su LocalCare</label>
+            <p class="text-xs text-gray-500 mb-3">Seleziona in quali ambiti offri o cerchi aiuto.</p>
+
+            {% set categorie = [
+              'Operatori benessere',
+              'Aiuto in casa',
+              'Ripetizioni',
+              'Babysitter',
+              'Pet-sitter',
+              'Caregiver',
+              'escursioni-sport',
+              'Biglietti spettacoli',
+              'Libri scuola',
+              'Caffe & parole'
+            ] %}
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {% for cat in categorie %}
+                <div class="border border-gray-200 rounded-xl bg-gray-50 p-4 shadow-sm">
+                  <p class="text-sm font-semibold text-gray-800 mb-3">{{ cat }}</p>
+
+                  <div class="flex flex-wrap gap-2">
+                    <input type="hidden" name="offro_{{ loop.index }}" value="{{ 1 if utente.get('offro_' ~ loop.index) else 0 }}">
+                    <input type="hidden" name="cerco_{{ loop.index }}" value="{{ 1 if utente.get('cerco_' ~ loop.index) else 0 }}">
+
+                    <button type="button"
+                            class="pill"
+                            data-target="offro_{{ loop.index }}"
+                            {% if utente.get('offro_' ~ loop.index) %}data-active="1"{% endif %}>
+                      Offro
+                    </button>
+
+                    <button type="button"
+                            class="pill"
+                            data-target="cerco_{{ loop.index }}"
+                            {% if utente.get('cerco_' ~ loop.index) %}data-active="1"{% endif %}>
+                      Cerco
+                    </button>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if not pubblico %}
+          <div class="flex justify-end">
+            <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm">
+              Salva modifiche
+            </button>
+          </div>
+          {% endif %}
+        </form>
+      </section>
+
+      <!-- 🟩 Sezione: Esperienza e formazione -->
+      <section data-section="work_education" class="hidden">
+
+        <form method="post" action="{{ url_for('utente_update_esperienza') }}"
+              class="space-y-6">
+
+          {% set esperienze = [utente.get('esperienza_1',''), utente.get('esperienza_2',''), utente.get('esperienza_3','')] %}
+          {% set formazioni = [utente.get('studio_1',''), utente.get('studio_2',''), utente.get('studio_3','')] %}
+          {% set certificazioni = utente.get('certificazioni','') %}
+
+          {% if pubblico %}
+            {% set esperienze_presenti = esperienze | select('string') | map('trim') | reject('equalto', '') | list %}
+            {% set formazioni_presenti = formazioni | select('string') | map('trim') | reject('equalto', '') | list %}
+            {% set certificazioni_presenti = certificazioni.strip() %}
+
+            {% if not esperienze_presenti and not formazioni_presenti and not certificazioni_presenti %}
+              <p class="text-gray-500 text-sm italic py-3">
+                L’utente non ha ancora inserito esperienze o formazione.
+              </p>
+            {% else %}
+              {% if esperienze_presenti %}
+                <div class="form-box">
+                  <label class="label-strong">Esperienze lavorative</label>
+                  {% for exp in esperienze_presenti %}
+                    <p class="input-modern" disabled>{{ exp }}</p>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              {% if formazioni_presenti %}
+                <div class="form-box">
+                  <label class="label-strong">Formazione</label>
+                  {% for stud in formazioni_presenti %}
+                    <p class="input-modern" disabled>{{ stud }}</p>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              {% if certificazioni_presenti %}
+                <div class="form-box">
+                  <label class="label-strong">Certificazioni</label>
+                  <p class="input-modern" disabled>{{ certificazioni }}</p>
+                </div>
+              {% endif %}
+            {% endif %}
+          {% else %}
+
+            <!-- 🔹 Modalità privata -->
+            <h4 class="text-lg font-semibold text-blue-700 mb-5 flex items-center gap-2">
+              💼 Esperienza e formazione
+            </h4>
+
+            <!-- Esperienze -->
+            <div>
+              <h5 class="text-base font-semibold text-gray-800 mb-3">Esperienze lavorative</h5>
+              {% for i in range(1,4) %}
+                <div class="mb-3">
+                  <label class="text-sm text-gray-600">Esperienza {{ i }}</label>
+                  <input
+                    name="esperienza_{{ i }}"
+                    class="input"
+                    value="{{ utente.get('esperienza_' ~ i) or '' }}"
+                    {% if i == 1 %}
+                      placeholder="Es. Babysitter 2 anni"
+                    {% elif i == 2 %}
+                      placeholder="Es. Ripetizioni matematica"
+                    {% else %}
+                      placeholder="Es. Dog-sitter • Assistente anziani"
+                    {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+
+            <hr class="my-2 border-gray-200">
+
+            <!-- Formazione -->
+            <div>
+              <h5 class="text-base font-semibold text-gray-800 mb-3">Formazione</h5>
+              {% for i in range(1,4) %}
+                <div class="mb-3">
+                  <label class="text-sm text-gray-600">Formazione {{ i }}</label>
+                  <input
+                    name="studio_{{ i }}"
+                    class="input"
+                    value="{{ utente.get('studio_' ~ i) or '' }}"
+                    {% if i == 1 %}
+                      placeholder="Es. Diploma liceo, laurea.."
+                    {% elif i == 2 %}
+                      placeholder="Es. Corso OSS • Corso bagnino"
+                    {% else %}
+                      placeholder="Es. Certificazione linguistica"
+                    {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+
+            <hr class="my-2 border-gray-200">
+
+            <!-- Certificazioni -->
+            <div>
+              <h5 class="text-base font-semibold text-gray-800 mb-3">Certificazioni o attestati</h5>
+              <textarea
+                name="certificazioni"
+                class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500"
+                rows="2"
+                placeholder="Es. Primo soccorso • Corso OSS • Certificazione linguistica • Corso professionale">{{ utente.get('certificazioni') or '' }}</textarea>
+            </div>
+
+            <div class="flex justify-end">
+              <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm">
+                💾 Salva modifiche
+              </button>
+            </div>
+          {% endif %}
+        </form>
+      </section>
+
+      <!-- 🟧 Sezione: Contatti e presenza online -->
+      <section data-section="contacts" class="hidden">
+
+      {% if pubblico %}
+
+          {% if not servizio_contatti_attivo %}
+              <!-- 🔒 CONTATTI BLOCCATI -->
+              <div class="form-box text-center">
+                  <p class="text-gray-600 text-sm mb-2">
+                      📞 Scrivi in chat per metterti in contatto
+                  </p>
+                  <p class="text-xs text-gray-500 italic">
+                      Contatti diretti non disponibili
+                  </p>
+              </div>
+
+          {% else %}
+
+              {% set email_pubblica = utente.get('email_pubblica','')|trim %}
+              {% set telefono = utente.get('telefono','')|trim %}
+              {% set indirizzo_studio = utente.get('indirizzo_studio','')|trim %}
+              {% set sito_web = utente.get('sito_web','')|trim %}
+              {% set instagram = utente.get('instagram','')|trim %}
+              {% set facebook = utente.get('facebook','')|trim %}
+              {% set linkedin = utente.get('linkedin','')|trim %}
+              {% set orari = utente.get('orari','')|trim %}
+              {% set preferenze_contatto = utente.get('preferenze_contatto','')|trim %}
+
+              {% set ha_contatti = email_pubblica or telefono or indirizzo_studio
+                                    or sito_web or instagram or facebook
+                                    or linkedin or orari or preferenze_contatto %}
+
+              {% if not ha_contatti %}
+                  <p class="text-gray-500 text-sm italic py-3 text-center">
+                      L’utente non ha ancora fornito contatti o informazioni.
+                  </p>
+              {% else %}
+
+                  <div class="form-box">
+                      <label class="label-strong">Contatti diretti</label>
+                      {% if email_pubblica %}
+                        <p class="input-modern" disabled>Email: {{ email_pubblica }}</p>
+                      {% endif %}
+                      {% if telefono %}
+                        <p class="input-modern" disabled>Telefono / WhatsApp: {{ telefono }}</p>
+                      {% endif %}
+                      {% if indirizzo_studio %}
+                        <p class="input-modern" disabled>Studio o sede: {{ indirizzo_studio }}</p>
+                      {% endif %}
+                  </div>
+
+                  {% if sito_web or instagram or facebook or linkedin %}
+                  <div class="form-box">
+                      <label class="label-strong">Presenza online</label>
+                      {% if sito_web %}
+                        <p class="input-modern" disabled>Sito web: {{ sito_web }}</p>
+                      {% endif %}
+                      {% if instagram %}
+                        <p class="input-modern" disabled>Instagram: {{ instagram }}</p>
+                      {% endif %}
+                      {% if facebook %}
+                        <p class="input-modern" disabled>Facebook: {{ facebook }}</p>
+                      {% endif %}
+                      {% if linkedin %}
+                        <p class="input-modern" disabled>LinkedIn: {{ linkedin }}</p>
+                      {% endif %}
+                  </div>
+                  {% endif %}
+
+                  {% if orari or preferenze_contatto %}
+                  <div class="form-box">
+                      <label class="label-strong">Disponibilità</label>
+                      {% if orari %}
+                        <p class="input-modern" disabled>Orari indicativi: {{ orari }}</p>
+                      {% endif %}
+                      {% if preferenze_contatto %}
+                        <p class="input-modern" disabled>Modalità di contatto preferita: {{ preferenze_contatto }}</p>
+                      {% endif %}
+                  </div>
+                  {% endif %}
+
+              {% endif %}
+          {% endif %}
+
+      {% else %}
+
+          <!-- 🔓 MODALITÀ PRIVATA -->
+          <h4 class="text-base font-semibold text-gray-800 mb-4">
+              Contatti e presenza online
+          </h4>
+
+          <form method="post"
+                action="{{ url_for('utente_update_contatti') }}"
+                class="grid sm:grid-cols-2 gap-5">
+
+              <!-- Contatti diretti -->
+              <div class="sm:col-span-2">
+                  <h5 class="text-sm font-semibold text-gray-700 mb-2">
+                      Contatti diretti
+                  </h5>
+              </div>
+
+              <div>
+                  <label class="text-sm text-gray-600">Email pubblica</label>
+                  <input name="email_pubblica" class="input"
+                         value="{{ utente.get('email_pubblica') or '' }}">
+              </div>
+
+              <div>
+                  <label class="text-sm text-gray-600">Telefono / WhatsApp</label>
+                  <input name="telefono" class="input"
+                         value="{{ utente.get('telefono') or '' }}">
+              </div>
+
+              <div class="sm:col-span-2">
+                  <label class="text-sm text-gray-600">Studio o sede</label>
+                  <input name="indirizzo_studio" class="input"
+                         value="{{ utente.get('indirizzo_studio') or '' }}">
+              </div>
+
+              <!-- Presenza online -->
+              <div class="sm:col-span-2 mt-4">
+                  <h5 class="text-sm font-semibold text-gray-700 mb-2">
+                      Presenza online
+                  </h5>
+              </div>
+
+              <div>
+                  <label class="text-sm text-gray-600">Sito web</label>
+                  <input name="sito_web" class="input"
+                         value="{{ utente.get('sito_web') or '' }}">
+              </div>
+
+              <div>
+                  <label class="text-sm text-gray-600">Instagram</label>
+                  <input name="instagram" class="input"
+                         value="{{ utente.get('instagram') or '' }}">
+              </div>
+
+              <div>
+                  <label class="text-sm text-gray-600">Facebook</label>
+                  <input name="facebook" class="input"
+                         value="{{ utente.get('facebook') or '' }}">
+              </div>
+
+              <div>
+                  <label class="text-sm text-gray-600">LinkedIn</label>
+                  <input name="linkedin" class="input"
+                         value="{{ utente.get('linkedin') or '' }}">
+              </div>
+
+              <!-- Disponibilità -->
+              <div class="sm:col-span-2 mt-4">
+                  <h5 class="text-sm font-semibold text-gray-700 mb-2">
+                      Disponibilità
+                  </h5>
+              </div>
+
+              <div>
+                  <label class="text-sm text-gray-600">Orari indicativi</label>
+                  <input name="orari" class="input"
+                         value="{{ utente.get('orari') or '' }}">
+              </div>
+
+              <div>
+                  <label class="text-sm text-gray-600">Modalità di contatto</label>
+                  <input name="preferenze_contatto" class="input"
+                         value="{{ utente.get('preferenze_contatto') or '' }}">
+              </div>
+
+              <div class="sm:col-span-2 flex justify-end mt-4">
+                  <button class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
+                      Salva
+                  </button>
+              </div>
+
+          </form>
+
+      {% endif %}
+
+      </section>
+
+      <!-- 🟨 Sezione: Descrizione personale -->
+      <section data-section="description" class="hidden">
+
+        {% if pubblico %}
+          {# --- Modalità PUBBLICA --- #}
+
+          {% set descrizione = utente.get('descrizione','')|trim %}
+
+          {% if not descrizione %}
+            <p class="text-gray-500 text-sm italic py-3 text-center">
+              L’utente non ha ancora aggiunto una descrizione personale.
+            </p>
+          {% else %}
+            <div class="form-box">
+              <label class="label-strong">Descrizione personale</label>
+              <p class="input-modern" disabled>{{ descrizione }}</p>
+            </div>
+          {% endif %}
+
+          {% else %}
+          
+          {# --- Modalità PRIVATA --- #}
+
+          <form method="post" action="{{ url_for('utente_update_descrizione') }}" class="grid gap-4">
+            <div class="form-box">
+              <label class="label-strong">Descrizione personale</label>
+              <textarea
+                  name="descrizione"
+                  class="auto-expand w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500"
+                  rows="4"
+                  data-min-rows="4"
+              >{{ utente.get('descrizione') or '' }}</textarea>
+            </div>
+
+            <div class="flex justify-end mt-3">
+              <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">💾 Salva</button>
+            </div>
+          </form>
+        {% endif %}
+      </section>
+
+    </main>
+  </div>
+</div>
+<style>
+  /* ============================================================
+     ⚙️ LAYOUT GENERALE – stile iOS + Annunci
+  ============================================================ */
+  .wrapper-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+
+  @media (min-width: 768px) {
+    .wrapper-info {
+      flex-direction: row;
+    }
+  }
+
+  .info-wrapper {
+    background: #f5f7ff !important;
+  }
+
+  /* ------------------------------------------------------------------
+     📌 SIDEBAR STILE iOS
+  ------------------------------------------------------------------ */
+  aside.md\:col-span-1 {
+    background: linear-gradient(
+        160deg,
+        rgba(255,255,255,0.96),
+        rgba(244,246,255,0.90)
+    );
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 1.35rem;
+    padding: 1.1rem 1.2rem;
+    box-shadow:
+        0 6px 14px rgba(15, 23, 42, 0.06),
+        0 18px 40px rgba(15, 23, 42, 0.12);
+    backdrop-filter: blur(12px);
+    min-width: 210px;
+  }
+
+  /* Desktop: sidebar fissa + contenuto che prende tutto lo spazio */
+  @media (min-width: 768px) {
+    aside.md\:col-span-1 {
+      flex: 0 0 230px;   /* 👈 larghezza fissa colonna sinistra */
+    }
+    main#info-content {
+      flex: 1;           /* 👈 la colonna di destra prende tutto il resto */
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     📌 BOTTONI SIDEBAR – pill stile iOS
+  ------------------------------------------------------------------ */
+  .section-btn {
+    font-size: 0.92rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 12px;
+    transition: all .15s ease;
+    border: 1px solid transparent;
+  }
+
+  .section-btn:hover {
+    background: #f3f4f6;
+  }
+
+  .section-btn.bg-blue-100 {
+    background: #e8f1ff !important;
+    border-color: #c7ddff !important;
+    color: #1e40af !important;
+    font-weight: 600;
+  }
+
+  /* ------------------------------------------------------------------
+     📌 AREA DESTRA – CARD STILE “Annunci”
+  ------------------------------------------------------------------ */
+  main#info-content section {
+      border-radius: 1.25rem;
+      background: linear-gradient(
+          160deg,
+          rgba(255,255,255,0.96),
+          rgba(244,246,255,0.90)
+      ) !important;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow:
+          0 10px 25px rgba(15,23,42,0.06),
+          0 24px 55px rgba(15,23,42,0.12);
+      backdrop-filter: blur(14px);
+      padding: 1.35rem 1.6rem;
+      margin-bottom: 1.5rem;
+  }
+
+
+  /* ------------------------------------------------------------------
+     📌 BOX INTERNI (form-box) – versione più pulita
+  ------------------------------------------------------------------ */
+  /* MINI-CARDS iOS DENTRO INFO */
+  .input-modern,
+  .input,
+  textarea {
+      width: 100%;
+      padding: 0.8rem 1rem;   /* 👈 più grande e uguale ad Annunci */
+      border-radius: 14px;
+      border: 1px solid #d4d9e3;
+      background: #ffffff;
+      font-size: 0.95rem;
+      transition: all .2s ease;
+  }
+
+  .input-modern:focus,
+  .input:focus,
+  textarea:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.25);
+      outline: none;
+  }
+
+  /* Hover leggerissimo */
+  .form-box:hover {
+    background: #fdfdfd;
+  }
+
+  /* ------------------------------------------------------------------
+     📌 LABEL + INPUT stile iOS
+  ------------------------------------------------------------------ */
+  .label-strong {
+    font-weight: 600;
+    color: #1e3a8a;
+    font-size: 0.92rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .input-modern,
+  .input {
+    width: 100%;
+    padding: 0.55rem 0.9rem;
+    border-radius: 12px;
+    border: 1px solid #cfd8e3;
+    background: #ffffff;
+    transition: all .2s ease;
+  }
+
+  .input-modern:focus,
+  .input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96,165,250,0.3);
+    outline: none;
+  }
+
+  /* ------------------------------------------------------------------
+     📌 PULSANTI OFFRO/CERCO – stile pill iOS
+  ------------------------------------------------------------------ */
+  .pill {
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    border: 1px solid #d1d5db;
+    font-size: 0.82rem;
+    background: #ffffff;
+    transition: all .2s ease;
+  }
+
+  .pill[data-active="1"] {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+
+  /* ------------------------------------------------------------------
+     📌 MODALITÀ PUBBLICA (manteniamo logica identica)
+  ------------------------------------------------------------------ */
+  {% if pubblico %}
+  main#info-content section {
+    padding: 1.2rem 1.4rem !important;
+  }
+
+  .input-modern[disabled],
+  textarea[disabled] {
+    background: #f9fafb !important;
+    border: 1px solid #d1d5db !important;
+    font-weight: 500;
+  }
+
+  .input-modern[disabled],
+.input[disabled],
+textarea[disabled] {
+    cursor: default !important;
+    pointer-events: none !important;
+    background: #f9fafb !important;
+    border: 1px solid #d1d5db !important;
+    font-weight: 500;
+    color: #475569 !important; /* testo leggermente più scuro, come annunci */
+}
+
+/* Disabilita anche il cursore su tutto il box */
+.form-box[disabled],
+.form-box:has(.input-modern[disabled]) {
+    cursor: default !important;
+}
+
+  {% endif %}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const sectionBtns = document.querySelectorAll(".section-btn");
+  const contentSections = document.querySelectorAll("main [data-section]");
+
+  function mostraSezione(key) {
+    sectionBtns.forEach(b => b.classList.remove("bg-blue-100","text-blue-700"));
+    const btn = Array.from(sectionBtns).find(b => b.dataset.section === key);
+    if (btn) btn.classList.add("bg-blue-100","text-blue-700");
+    contentSections.forEach(s => s.classList.add("hidden"));
+    const target = document.querySelector(`main [data-section="${key}"]`);
+    if (target) target.classList.remove("hidden");
+  }
+
+  // 🔹 Clic su bottoni laterali
+  sectionBtns.forEach(btn => {
+    btn.addEventListener("click", () => mostraSezione(btn.dataset.section));
+  });
+
+  // 🔹 Forza apertura “Info di base” anche in pubblico
+  mostraSezione("overview");
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".pill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const active = btn.dataset.active === "1" ? "0" : "1";
+      btn.dataset.active = active;
+      const input = document.querySelector(`input[name='${btn.dataset.target}']`);
+      if (input) input.value = active;
+      // Aggiorna visivamente
+      if (active === "1") {
+        btn.classList.add("bg-blue-600", "text-white", "border-blue-600");
+      } else {
+        btn.classList.remove("bg-blue-600", "text-white", "border-blue-600");
+      }
+    });
+  });
+});
+</script>
+<script src="{{ url_for('static', filename='js/autocomplete_citta.js') }}"></script>
