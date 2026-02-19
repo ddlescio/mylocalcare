@@ -34,16 +34,12 @@ import stripe
 import psycopg2
 import psycopg2.extras
 
-IS_POSTGRES = False
-
 def get_cursor(conn):
-    import psycopg2
-
     if isinstance(conn, psycopg2.extensions.connection):
         return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     else:
         return conn.cursor()
-
+        
 def get_reset_serializer():
     return URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
@@ -86,10 +82,13 @@ def decrypt_with_master(enc_b64: str, nonce_b64: str) -> bytes:
     return cipher.decrypt_and_verify(ct, tag)
 
 def is_admin(user_id):
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    c.execute(sql("SELECT ruolo FROM utenti WHERE id=?", (user_id,))
+    c = get_cursor(conn)
+    c.execute(
+        sql("SELECT ruolo FROM utenti WHERE id=?"),
+        (user_id,)
+    )
     row = c.fetchone()
     conn.close()
     return row and row["ruolo"] == "admin"
@@ -134,8 +133,8 @@ def ensure_x25519_keys(user_id):
     """Verifica o genera le chiavi X25519 per l'utente (rigenera se mancano o sono incoerenti)"""
     conn = sqlite3.connect('database.db')
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    c.execute(sql("SELECT x25519_pub, x25519_priv_enc, x25519_priv_nonce FROM utenti WHERE id = ?", (user_id,))
+    c = get_cursor(conn)
+    c.execute(sql("SELECT x25519_pub, x25519_priv_enc, x25519_priv_nonce FROM utenti WHERE id = ?"), (user_id,))
     row = c.fetchone()
 
     from Crypto.Cipher import AES
@@ -160,7 +159,7 @@ def ensure_x25519_keys(user_id):
             UPDATE utenti
             SET x25519_pub = ?, x25519_priv_enc = ?, x25519_priv_nonce = ?
             WHERE id = ?
-        """, (
+        """), (
             base64.b64encode(bytes(pub)).decode(),
             base64.b64encode(priv_enc + tag).decode(),
             base64.b64encode(nonce).decode(),
@@ -529,6 +528,7 @@ def invia_email_sospensione(email, nome):
 # 2️⃣ FUNZIONE CONNESSIONE DB E MODELS
 # ==========================================================
 import os
+IS_POSTGRES = False
 
 def get_db_connection():
     global IS_POSTGRES
@@ -536,6 +536,11 @@ def get_db_connection():
 
     # 🔹 Render → PostgreSQL
     if database_url:
+        import psycopg2
+        import psycopg2.extras
+
+        IS_POSTGRES = True   # ⭐ QUESTA RIGA MANCAVA
+
         conn = psycopg2.connect(
             database_url,
             sslmode="require"
@@ -546,13 +551,16 @@ def get_db_connection():
     # 🔹 Locale → SQLite
     else:
         import sqlite3
+
+        IS_POSTGRES = False  # ⭐ QUESTA RIGA MANCAVA
+
         conn = sqlite3.connect('database.db', timeout=5)
+        conn.row_factory = sqlite3.Row
 
-
-        conn.execute(sql("PRAGMA foreign_keys = ON;")
-        conn.execute(sql("PRAGMA journal_mode = WAL;")
-        conn.execute(sql("PRAGMA synchronous = NORMAL;")
-        conn.execute(sql("PRAGMA busy_timeout = 5000;")
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
+        conn.execute("PRAGMA busy_timeout = 5000;")
 
         return conn
 
@@ -689,18 +697,18 @@ def admin_counters():
 
     with db_lock:
         conn = get_db_connection()
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        c = get_cursor(conn)
         try:
             # 🟡 Conta annunci in attesa
-            c.execute(sql("SELECT COUNT(*) FROM annunci WHERE stato = 'in_attesa'")
+            c.execute(sql("SELECT COUNT(*) FROM annunci WHERE stato = 'in_attesa'"))
             pending_annunci = c.fetchone()[0]
 
             # 🟡 Conta recensioni in attesa
-            c.execute(sql("SELECT COUNT(*) FROM recensioni WHERE stato = 'in_attesa'")
+            c.execute(sql("SELECT COUNT(*) FROM recensioni WHERE stato = 'in_attesa'"))
             pending_recensioni = c.fetchone()[0]
 
             # 🟡 Conta risposte in attesa
-            c.execute(sql("SELECT COUNT(*) FROM risposte_recensioni WHERE stato = 'in_attesa'")
+            c.execute(sql("SELECT COUNT(*) FROM risposte_recensioni WHERE stato = 'in_attesa'"))
             pending_risposte = c.fetchone()[0]
 
             # ✅ Somma recensioni + risposte nel badge “recensioni”
@@ -711,7 +719,7 @@ def admin_counters():
                 SELECT COALESCE(minuti_totali, 0)
                 FROM video_limiti_mensili
                 WHERE mese = strftime('%Y-%m','now')
-            """)
+            """))
             row = c.fetchone()
             video_minuti = row[0] if row else 0
 
@@ -752,13 +760,13 @@ def leggi_notifica(id):
 @admin_required
 def admin_visualizza_annuncio(id):
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
     c.execute(sql("""
         SELECT a.*, u.nome, u.cognome, u.email, u.username
         FROM annunci a
         JOIN utenti u ON a.utente_id = u.id
         WHERE a.id = ?
-    """, (id,))
+    """), (id,))
     annuncio = c.fetchone()
     conn.close()
 
@@ -772,8 +780,8 @@ def admin_visualizza_annuncio(id):
 @admin_required
 def toggle_annuncio(id):
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    c.execute(sql("SELECT stato FROM annunci WHERE id = ?", (id,))
+    c = get_cursor(conn)
+    c.execute(sql("SELECT stato FROM annunci WHERE id = ?"), (id,))
     row = c.fetchone()
     if not row:
         conn.close()
@@ -781,7 +789,7 @@ def toggle_annuncio(id):
         return redirect(url_for("admin_annunci"))
 
     nuovo_stato = "disattivato" if row["stato"] == "approvato" else "approvato"
-    c.execute(sql("UPDATE annunci SET stato = ? WHERE id = ?", (nuovo_stato, id))
+    c.execute(sql("UPDATE annunci SET stato = ? WHERE id = ?"), (nuovo_stato, id))
     conn.commit()
     conn.close()
 
@@ -835,7 +843,7 @@ from datetime import datetime, timedelta
 def admin_video_calls():
 
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     rows = cur.execute(sql("""
         SELECT
@@ -847,12 +855,12 @@ def admin_video_calls():
         LEFT JOIN utenti u1 ON u1.id = v.utente_1
         LEFT JOIN utenti u2 ON u2.id = v.utente_2
         ORDER BY v.created_at DESC
-    """).fetchall()
+    """)).fetchall()
 
     limiti = cur.execute(sql("""
         SELECT mese, minuti_totali, costo_totale_cent
         FROM video_limiti_mensili
-    """).fetchall()
+    """)).fetchall()
 
     limiti_dict = {l["mese"]: l for l in limiti}
 
@@ -915,14 +923,14 @@ def admin_video_calls():
 def admin_servizi():
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     c.execute(sql("""
         SELECT id, codice, nome, descrizione, ambito, target,
                durata_default_giorni, ripetibile, attivabile_admin, attivo, created_at
         FROM servizi
         ORDER BY created_at DESC
-    """)
+    """))
     servizi = c.fetchall()
     conn.close()
 
@@ -968,14 +976,14 @@ def admin_servizi_nuovo():
             return redirect(url_for("admin_servizi_nuovo"))
 
         conn = get_db_connection()
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        c = get_cursor(conn)
         try:
             c.execute(sql("""
                 INSERT INTO servizi
                 (codice, nome, descrizione, ambito, target,
                  durata_default_giorni, ripetibile, attivabile_admin, attivo)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (codice, nome, descrizione, ambito, target,
+            """), (codice, nome, descrizione, ambito, target,
                   durata, ripetibile, attivabile_admin, attivo))
             conn.commit()
             flash("Servizio creato.", "success")
@@ -996,9 +1004,9 @@ def admin_servizi_nuovo():
 def admin_servizi_modifica(id):
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
-    c.execute(sql("SELECT * FROM servizi WHERE id = ?", (id,))
+    c.execute(sql("SELECT * FROM servizi WHERE id = ?"), (id,))
     servizio = c.fetchone()
 
     if not servizio:
@@ -1047,7 +1055,7 @@ def admin_servizi_modifica(id):
                     durata_default_giorni = ?,
                     ripetibile = ?, attivabile_admin = ?, attivo = ?
                 WHERE id = ?
-            """, (codice, nome, descrizione, ambito, target,
+            """), (codice, nome, descrizione, ambito, target,
                   durata, ripetibile, attivabile_admin, attivo, id))
             conn.commit()
             flash("Servizio aggiornato.", "success")
@@ -1068,9 +1076,9 @@ def admin_servizi_modifica(id):
 def admin_servizi_toggle(id):
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
-    c.execute(sql("SELECT attivo FROM servizi WHERE id = ?", (id,))
+    c.execute(sql("SELECT attivo FROM servizi WHERE id = ?"), (id,))
     row = c.fetchone()
     if not row:
         conn.close()
@@ -1078,7 +1086,7 @@ def admin_servizi_toggle(id):
         return redirect(url_for("admin_servizi"))
 
     nuovo = 0 if row["attivo"] == 1 else 1
-    c.execute(sql("UPDATE servizi SET attivo = ? WHERE id = ?", (nuovo, id))
+    c.execute(sql("UPDATE servizi SET attivo = ? WHERE id = ?"), (nuovo, id))
     conn.commit()
     conn.close()
 
@@ -1089,13 +1097,13 @@ def admin_servizi_toggle(id):
 @admin_required
 def admin_servizi_elimina(servizio_id):
     conn = get_conn()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     c.execute(sql("""
         UPDATE servizi
         SET attivo = 0
         WHERE id = ?
-    """, (servizio_id,))
+    """), (servizio_id,))
 
     conn.commit()
     conn.close()
@@ -1126,7 +1134,7 @@ def admin_toggle_servizio():
             FROM servizi
             WHERE codice = ?
             LIMIT 1
-        """, (codice_servizio,)).fetchone()
+        """), (codice_servizio,)).fetchone()
 
         if not servizio or servizio["attivo"] != 1:
             return jsonify({"ok": False, "error": "Servizio non valido o disattivo"}), 400
@@ -1147,7 +1155,7 @@ def admin_toggle_servizio():
                   AND data_inizio <= datetime('now')
                   AND (data_fine IS NULL OR data_fine > datetime('now'))
                 LIMIT 1
-            """, (servizio["id"], annuncio_id)).fetchone()
+            """), (servizio["id"], annuncio_id)).fetchone()
         else:
             attiva = conn.execute(sql("""
                 SELECT id
@@ -1159,7 +1167,7 @@ def admin_toggle_servizio():
                   AND data_inizio <= datetime('now')
                   AND (data_fine IS NULL OR data_fine > datetime('now'))
                 LIMIT 1
-            """, (servizio["id"], utente_id)).fetchone()
+            """), (servizio["id"], utente_id)).fetchone()
 
 
         # 3️⃣ toggle
@@ -1214,7 +1222,7 @@ def admin_servizi_piani(servizio_id):
         SELECT id, codice, nome
         FROM servizi
         WHERE id = ?
-    """, (servizio_id,)).fetchone()
+    """), (servizio_id,)).fetchone()
 
     if not servizio:
         conn.close()
@@ -1226,7 +1234,7 @@ def admin_servizi_piani(servizio_id):
         FROM servizi_piani
         WHERE servizio_id = ?
         ORDER BY ordine ASC, durata_giorni ASC
-    """, (servizio_id,)).fetchall()
+    """), (servizio_id,)).fetchall()
 
     conn.close()
 
@@ -1249,7 +1257,7 @@ def admin_pacchetti():
         SELECT *
         FROM pacchetti
         ORDER BY created_at DESC
-    """).fetchall()
+    """)).fetchall()
 
     conn.close()
 
@@ -1274,7 +1282,7 @@ def admin_pacchetti_nuovo():
         FROM servizi
         WHERE attivo = 1
         ORDER BY nome
-    """).fetchall()
+    """)).fetchall()
 
     if request.method == "POST":
         codice = request.form.get("codice")
@@ -1283,11 +1291,11 @@ def admin_pacchetti_nuovo():
         attivo = 1 if request.form.get("attivo") else 0
         servizi_selezionati = request.form.getlist("servizi")
 
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur = get_cursor(conn)
         cur.execute(sql("""
             INSERT INTO pacchetti (codice, nome, descrizione, attivo)
             VALUES (?, ?, ?, ?)
-        """, (codice, nome, descrizione, attivo))
+        """), (codice, nome, descrizione, attivo))
 
         pacchetto_id = cur.lastrowid
 
@@ -1295,7 +1303,7 @@ def admin_pacchetti_nuovo():
             cur.execute(sql("""
                 INSERT INTO pacchetti_servizi (pacchetto_id, servizio_id)
                 VALUES (?, ?)
-            """, (pacchetto_id, sid))
+            """), (pacchetto_id, sid))
 
         conn.commit()
         conn.close()
@@ -1331,19 +1339,25 @@ def admin_pacchetti_modifica(id):
         flash("Pacchetto non trovato.", "error")
         return redirect(url_for("admin_pacchetti"))
 
-    servizi = conn.execute(sql("""
-        SELECT id, codice, nome
-        FROM servizi
-        WHERE attivo = 1
-        ORDER BY nome
-    """).fetchall()
+    servizi = conn.execute(
+        sql("""
+            SELECT id, codice, nome
+            FROM servizi
+            WHERE attivo = 1
+            ORDER BY nome
+        """)
+    ).fetchall()
 
     servizi_attivi = [
-        r["servizio_id"] for r in conn.execute(sql("""
-            SELECT servizio_id
-            FROM pacchetti_servizi
-            WHERE pacchetto_id = ?
-        """, (id,)).fetchall()
+        r["servizio_id"]
+        for r in conn.execute(
+            sql("""
+                SELECT servizio_id
+                FROM pacchetti_servizi
+                WHERE pacchetto_id = ?
+            """),
+            (id,)
+        ).fetchall()
     ]
 
     if request.method == "POST":
@@ -1353,21 +1367,30 @@ def admin_pacchetti_modifica(id):
         attivo = 1 if request.form.get("attivo") else 0
         servizi_selezionati = request.form.getlist("servizi")
 
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur = get_cursor(conn)
 
-        cur.execute(sql("""
-            UPDATE pacchetti
-            SET codice = ?, nome = ?, descrizione = ?, attivo = ?
-            WHERE id = ?
-        """, (codice, nome, descrizione, attivo, id))
+        cur.execute(
+            sql("""
+                UPDATE pacchetti
+                SET codice = ?, nome = ?, descrizione = ?, attivo = ?
+                WHERE id = ?
+            """),
+            (codice, nome, descrizione, attivo, id)
+        )
 
-        cur.execute(sql("DELETE FROM pacchetti_servizi WHERE pacchetto_id = ?", (id,))
+    cur.execute(
+        sql("DELETE FROM pacchetti_servizi WHERE pacchetto_id = ?"),
+        (id,)
+    )
 
-        for sid in servizi_selezionati:
-            cur.execute(sql("""
+    for sid in servizi_selezionati:
+        cur.execute(
+            sql("""
                 INSERT INTO pacchetti_servizi (pacchetto_id, servizio_id)
                 VALUES (?, ?)
-            """, (id, sid))
+            """),
+            (id, sid)
+        )
 
         conn.commit()
         conn.close()
@@ -1396,7 +1419,7 @@ def admin_toggle_pacchetto_tabella(id):
         UPDATE pacchetti
         SET attivo = CASE WHEN attivo = 1 THEN 0 ELSE 1 END
         WHERE id = ?
-    """, (id,))
+    """), (id,))
 
     conn.commit()
     conn.close()
@@ -1454,7 +1477,7 @@ def admin_servizi_piani_nuovo(servizio_id):
                  durata_giorni, prezzo_cent, ordine,
                  evidenziato, consigliato, attivo)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, data)
+            """), data)
             conn.commit()
             flash("Piano creato.", "success")
             return redirect(
@@ -1485,7 +1508,7 @@ def admin_servizi_piani_modifica(piano_id):
         FROM servizi_piani p
         JOIN servizi s ON s.id = p.servizio_id
         WHERE p.id = ?
-    """, (piano_id,)).fetchone()
+    """), (piano_id,)).fetchone()
 
     if not piano:
         conn.close()
@@ -1509,7 +1532,7 @@ def admin_servizi_piani_modifica(piano_id):
                 durata_giorni = ?, prezzo_cent = ?, ordine = ?,
                 evidenziato = ?, consigliato = ?, attivo = ?
             WHERE id = ?
-        """, (
+        """), (
             request.form.get("codice"),
             request.form.get("nome"),
             request.form.get("descrizione"),
@@ -1548,7 +1571,7 @@ def admin_servizi_piani_toggle(piano_id):
         UPDATE servizi_piani
         SET attivo = CASE WHEN attivo = 1 THEN 0 ELSE 1 END
         WHERE id = ?
-    """, (piano_id,))
+    """), (piano_id,))
 
     conn.commit()
     conn.close()
@@ -1605,7 +1628,7 @@ def admin_toggle_pacchetto():
                 FROM servizi
                 WHERE codice = ?
                   AND attivo = 1
-            """, (codice_servizio,)).fetchone()
+            """), (codice_servizio,)).fetchone()
 
             if not servizio:
                 continue
@@ -1622,7 +1645,7 @@ def admin_toggle_pacchetto():
                       AND data_inizio <= datetime('now')
                       AND (data_fine IS NULL OR data_fine > datetime('now'))
                     LIMIT 1
-                """, (servizio["id"], annuncio_id)).fetchone()
+                """), (servizio["id"], annuncio_id)).fetchone()
             else:
                 row = conn.execute(sql("""
                     SELECT id
@@ -1634,7 +1657,7 @@ def admin_toggle_pacchetto():
                       AND data_inizio <= datetime('now')
                       AND (data_fine IS NULL OR data_fine > datetime('now'))
                     LIMIT 1
-                """, (servizio["id"], utente_id)).fetchone()
+                """), (servizio["id"], utente_id)).fetchone()
 
             if row:
                 pacchetto_attivo = True
@@ -1711,7 +1734,7 @@ def admin_pacchetti_piani(pacchetto_id):
         FROM pacchetti_piani
         WHERE pacchetto_id = ?
         ORDER BY ordine ASC, created_at ASC
-    """, (pacchetto_id,)).fetchall()
+    """), (pacchetto_id,)).fetchall()
 
     conn.close()
 
@@ -1764,7 +1787,7 @@ def admin_pacchetti_piani_nuovo(pacchetto_id):
                  durata_giorni, prezzo_cent, ordine,
                  evidenziato, consigliato, attivo)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, data)
+            """), data)
             conn.commit()
             flash("Piano pacchetto creato.", "success")
             return redirect(url_for("admin_pacchetti_piani", pacchetto_id=pacchetto_id))
@@ -1812,7 +1835,7 @@ def admin_pacchetti_piani_modifica(id):
                 durata_giorni = ?, prezzo_cent = ?, ordine = ?,
                 evidenziato = ?, consigliato = ?, attivo = ?
             WHERE id = ?
-        """, (
+        """), (
             request.form["codice"],
             request.form["nome"],
             request.form.get("descrizione"),
@@ -1875,10 +1898,10 @@ def admin_pacchetti_piani_toggle(piano_id):
 @admin_required
 def toggle_utente(id):
     conn = get_db_connection()
-    user = conn.execute(sql("SELECT attivo FROM utenti WHERE id = ?", (id,)).fetchone()
+    user = conn.execute(sql("SELECT attivo FROM utenti WHERE id = ?"), (id,)).fetchone()
     if user:
         nuovo_stato = 0 if user['attivo'] else 1
-        conn.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?", (nuovo_stato, id))
+        conn.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?"), (nuovo_stato, id))
         conn.commit()
         flash("Utente {} correttamente.".format("disattivato" if nuovo_stato == 0 else "attivato"))
     conn.close()
@@ -1957,9 +1980,9 @@ def admin_utenti():
 
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
-    c.execute(sql("SELECT COUNT(*) FROM utenti")
+    c.execute(sql("SELECT COUNT(*) FROM utenti"))
     totale_utenti = c.fetchone()[0]
 
     query = """
@@ -2040,9 +2063,9 @@ def admin_utenti():
 @admin_required
 def toggle_utente_admin(id):
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
-    c.execute(sql("SELECT attivo, sospeso FROM utenti WHERE id = ?", (id,))
+    c.execute(sql("SELECT attivo, sospeso FROM utenti WHERE id = ?"), (id,))
     row = c.fetchone()
 
     if not row:
@@ -2060,7 +2083,7 @@ def toggle_utente_admin(id):
         flash("Impossibile attivare un utente sospeso.", "error")
     else:
         nuovo_stato = 0 if attivo == 1 else 1
-        c.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?", (nuovo_stato, id))
+        c.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?"), (nuovo_stato, id))
         conn.commit()
 
         flash("Stato utente aggiornato.", "success")
@@ -2202,7 +2225,7 @@ def admin_acquisti():
         WHERE a.stato IN ('creato', 'pending', 'paid')
         ORDER BY a.created_at DESC
         LIMIT 500
-    """).fetchall()
+    """)).fetchall()
 
     conn.close()
 
@@ -2233,28 +2256,28 @@ def admin_acquisti():
 def admin_statistiche():
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
-    c.execute(sql("SELECT COUNT(*) FROM utenti WHERE attivo = 1")
+    c.execute(sql("SELECT COUNT(*) FROM utenti WHERE attivo = 1"))
     utenti_attivi = c.fetchone()[0]
 
-    c.execute(sql("SELECT COUNT(*) FROM annunci")
+    c.execute(sql("SELECT COUNT(*) FROM annunci"))
     annunci_totali = c.fetchone()[0]
 
-    c.execute(sql("SELECT COUNT(DISTINCT utente_id) FROM annunci")
+    c.execute(sql("SELECT COUNT(DISTINCT utente_id) FROM annunci"))
     utenti_con_annunci = c.fetchone()[0]
 
     c.execute(sql("""
         SELECT COUNT(*)
         FROM utenti
         WHERE id NOT IN (SELECT DISTINCT utente_id FROM annunci)
-    """)
+    """))
     utenti_senza_annunci = c.fetchone()[0]
 
     c.execute(sql("""
         SELECT COUNT(DISTINCT id_destinatario)
         FROM recensioni
-    """)
+    """))
     utenti_recensiti = c.fetchone()[0]
 
     c.execute(sql("""
@@ -2272,7 +2295,7 @@ def admin_statistiche():
             FROM messaggi_chat
             GROUP BY a, b
         )
-    """)
+    """))
     chat_totali = c.fetchone()[0]
 
     conn.close()
@@ -2314,7 +2337,7 @@ def admin_notifiche():
             SUM(CASE WHEN letta = 0 THEN 1 ELSE 0 END) AS non_lette,
             SUM(CASE WHEN letta = 1 THEN 1 ELSE 0 END) AS lette
         FROM notifiche
-    """).fetchone()
+    """)).fetchone()
 
     # ✅ STORICO NOTIFICHE INVIATE DALL’ADMIN
     notifiche_admin = conn.execute(sql("""
@@ -2332,7 +2355,7 @@ def admin_notifiche():
         FROM notifiche_admin
         ORDER BY datetime(created_at) DESC
         LIMIT 50
-    """).fetchall()
+    """)).fetchall()
 
     # ✅ lista utenti (per selezione multipla)
     utenti = conn.execute(sql("""
@@ -2340,7 +2363,7 @@ def admin_notifiche():
         FROM utenti
         WHERE sospeso = 0 AND attivo = 1
         ORDER BY nome, cognome
-    """).fetchall()
+    """)).fetchall()
 
     conn.close()
 
@@ -2415,7 +2438,7 @@ def admin_invia_notifica():
                 })
 
         conn = get_conn()
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        c = get_cursor(conn)
         c.execute(sql("""
             INSERT INTO notifiche_admin (
                 titolo,
@@ -2428,7 +2451,7 @@ def admin_invia_notifica():
                 destinatari_json
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+        """), (
             titolo,
             messaggio,
             link,
@@ -2551,9 +2574,9 @@ def _is_checked(form, key: str) -> bool:
 
 
 def _filtra_utenti(form):
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # ------------------------------------------------------------
     # 0) Base filter per utenti
@@ -2880,12 +2903,12 @@ def _crea_notifica(id_utente, titolo, messaggio, tipo="generica", link=None):
     import sqlite3
     from app import socketio
 
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    conn =  conn = get_db_connection()
+    c = get_cursor(conn)
     c.execute(sql("""
         INSERT INTO notifiche (id_utente, titolo, messaggio, tipo, link, letta)
         VALUES (?, ?, ?, ?, ?, 0)
-    """, (id_utente, titolo, messaggio, tipo, link))
+    """), (id_utente, titolo, messaggio, tipo, link))
     conn.commit()
     conn.close()
 
@@ -2907,14 +2930,14 @@ def processa_match_nuovi_annunci():
 
     conn = sqlite3.connect("database.db", timeout=30)
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     nuovi = c.execute(sql("""
         SELECT id, utente_id, categoria, zona
         FROM annunci
         WHERE stato = 'approvato'
           AND match_da_processare = 1
-    """).fetchall()
+    """)).fetchall()
 
     if not nuovi:
         conn.close()
@@ -2953,7 +2976,7 @@ def processa_match_nuovi_annunci():
                     INSERT INTO match_utenti
                     (utente_cerca_id, utente_offre_id, categoria, zona, annuncio_id)
                     VALUES (?, ?, ?, ?, ?)
-                """, (u["id"], offre_id, categoria, zona, annuncio_id))
+                """), (u["id"], offre_id, categoria, zona, annuncio_id))
 
                 notifiche_per_utente.setdefault(u["id"], {})
                 notifiche_per_utente[u["id"]].setdefault(categoria, 0)
@@ -2984,7 +3007,7 @@ def processa_match_nuovi_annunci():
                 id_utente, titolo, messaggio, link, tipo, data
             )
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (
+        """), (
             user_id,
             "Nuovi annunci disponibili",
             messaggio,
@@ -2994,7 +3017,7 @@ def processa_match_nuovi_annunci():
         ))
 
     # Segna match come notificati
-    c.execute(sql("UPDATE match_utenti SET notificato = 1 WHERE notificato = 0")
+    c.execute(sql("UPDATE match_utenti SET notificato = 1 WHERE notificato = 0"))
 
     if annunci_processati:
         q = ",".join("?" * len(annunci_processati))
@@ -3063,7 +3086,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
     """
 
     conn = get_conn()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # ---------------------------------------------------------
     # 1️⃣ Recupera annuncio + verifica servizio urgente ATTIVO
@@ -3088,7 +3111,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
           AND act.stato = 'attivo'
           AND act.data_inizio <= datetime('now')
           AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
-    """, (annuncio_id,))
+    """), (annuncio_id,))
     annuncio = c.fetchone()
 
     if not annuncio:
@@ -3128,7 +3151,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
           AND u.disattivato_admin = 0
           AND u.attivo = 1
           AND u.email_notifiche = 1
-    """, (tipo_opposto, categoria, provincia, autore_id))
+    """), (tipo_opposto, categoria, provincia, autore_id))
 
     for (uid,) in c.fetchall():
         notificati.add(uid)
@@ -3180,7 +3203,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
                 link,
                 tipo
             ) VALUES (?, ?, ?, ?, ?)
-        """, (
+        """), (
             uid,
             "urgente",  # titolo tecnico, non visibile
             messaggio,
@@ -3199,7 +3222,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
                 eseguito_da,
                 note
             ) VALUES (?, 'notifica_inviata', ?, ?)
-        """, (
+        """), (
             attivazione_id,
             eseguito_da,
             f"Inviate {len(notificati)} notifiche urgenti"
@@ -3231,13 +3254,13 @@ def approva_recensione(id):
         approva_elemento("recensioni", id)
 
         conn = get_db_connection()
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        c = get_cursor(conn)
         c.execute(sql("""
             SELECT r.id_autore, r.id_destinatario, r.ultima_modifica, u.username
             FROM recensioni r
             JOIN utenti u ON r.id_autore = u.id
             WHERE r.id = ?
-        """, (id,))
+        """), (id,))
         row = c.fetchone()
         conn.close()
 
@@ -3287,8 +3310,8 @@ def rifiuta_recensione(id):
         rifiuta_elemento("recensioni", id)
 
         conn = get_db_connection()
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        c.execute(sql("SELECT id_autore FROM recensioni WHERE id = ?", (id,))
+        c = get_cursor(conn)
+        c.execute(sql("SELECT id_autore FROM recensioni WHERE id = ?"), (id,))
         row = c.fetchone()
         conn.close()
 
@@ -3329,14 +3352,14 @@ def approva_risposta(id):
         approva_elemento("risposte_recensioni", id)
 
         conn = get_db_connection()
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        c = get_cursor(conn)
         c.execute(sql("""
             SELECT r.id_autore, u.username
             FROM recensioni r
             JOIN risposte_recensioni rr ON rr.id_recensione = r.id
             JOIN utenti u ON rr.id_autore = u.id
             WHERE rr.id = ?
-        """, (id,))
+        """), (id,))
         row = c.fetchone()
         conn.close()
 
@@ -3380,8 +3403,8 @@ def rifiuta_risposta(id):
 
         # 2️⃣ Recupero l'autore della risposta
         conn = get_db_connection()
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        c.execute(sql("SELECT id_autore FROM risposte_recensioni WHERE id = ?", (id,))
+        c = get_cursor(conn)
+        c.execute(sql("SELECT id_autore FROM risposte_recensioni WHERE id = ?"), (id,))
         row = c.fetchone()
         conn.close()
 
@@ -3440,9 +3463,9 @@ def admin_annunci():
     # =========================
     # DB
     # =========================
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     query = """
         SELECT
@@ -3580,9 +3603,9 @@ def admin_annunci():
 @app.route("/admin/annunci/approva/<int:id>")
 @admin_required
 def approva_annuncio(id):
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     c.execute(sql("""
         UPDATE annunci
@@ -3590,15 +3613,15 @@ def approva_annuncio(id):
             approvato_il = datetime('now'),
             match_da_processare = 1
         WHERE id = ?
-    """, (id,))
+    """), (id,))
 
-    c.execute(sql("SELECT utente_id FROM annunci WHERE id = ?", (id,))
+    c.execute(sql("SELECT utente_id FROM annunci WHERE id = ?"), (id,))
     row = c.fetchone()
 
     utente_id = None
     if row:
         utente_id = row["utente_id"]
-        c.execute(sql("UPDATE utenti SET visibile_pubblicamente = 1 WHERE id = ?", (utente_id,))
+        c.execute(sql("UPDATE utenti SET visibile_pubblicamente = 1 WHERE id = ?"), (utente_id,))
         conn.commit()
 
     conn.close()
@@ -3627,9 +3650,9 @@ def approva_annuncio(id):
 @app.route("/admin/annunci/rifiuta/<int:id>")
 @admin_required
 def rifiuta_annuncio(id):
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    c.execute(sql("UPDATE annunci SET stato = 'rifiutato' WHERE id = ?", (id,))
+    conn =  conn = get_db_connection()
+    c = get_cursor(conn)
+    c.execute(sql("UPDATE annunci SET stato = 'rifiutato' WHERE id = ?"), (id,))
     conn.commit()
     conn.close()
 
@@ -3657,8 +3680,8 @@ def get_notifiche_utente(user_id):
 
 def conta_non_lette(user_id):
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    c.execute(sql("SELECT COUNT(*) FROM notifiche WHERE id_utente = ? AND letta = 0", (user_id,))
+    c = get_cursor(conn)
+    c.execute(sql("SELECT COUNT(*) FROM notifiche WHERE id_utente = ? AND letta = 0"), (user_id,))
     count = c.fetchone()[0]
     conn.close()
     return count
@@ -3669,7 +3692,7 @@ def segna_notifica_letta(notifica_id, user_id):
         UPDATE notifiche
         SET letta = 1, data_lettura = datetime('now')
         WHERE id = ? AND id_utente = ?
-    """, (notifica_id, user_id))
+    """), (notifica_id, user_id))
     conn.commit()
     conn.close()
 
@@ -3808,7 +3831,7 @@ def load_logged_in_user():
 def modifica_annuncio(id):
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     annuncio = c.execute(
         "SELECT * FROM annunci WHERE id = ?",
@@ -3913,7 +3936,7 @@ def modifica_annuncio(id):
                 filtri_categoria = ?,
                 stato = 'in_attesa'
             WHERE id = ?
-        """, (
+        """), (
             titolo,
             descrizione,
             categoria,
@@ -3967,7 +3990,7 @@ def dashboard():
                descrizione
         FROM utenti
         WHERE id = ?
-    """, (session["utente_id"],)).fetchone()
+    """), (session["utente_id"],)).fetchone()
 
     conn.close()
 
@@ -3988,14 +4011,14 @@ def dashboard():
     # 🔹 Carica gli annunci dell'utente loggato
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
     c.execute(sql("""
         SELECT id, titolo, categoria, descrizione, zona, filtri_categoria,
                data_pubblicazione, stato
         FROM annunci
         WHERE utente_id = ?
         ORDER BY datetime(data_pubblicazione) DESC
-    """, (session["utente_id"],))
+    """), (session["utente_id"],))
     annunci = [dict(r) for r in c.fetchall()]
     conn.close()
 
@@ -4020,7 +4043,7 @@ def utente_update_info():
         return redirect(url_for("dashboard"))
 
     conn = get_conn()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # 🔹 Campi base
     citta = request.form.get("citta", "")
@@ -4039,7 +4062,7 @@ def utente_update_info():
     preferenze_contatto = request.form.get("preferenze_contatto", "")
     # ✅ Non aggiornare mai "email" da questo form (non viene inviato)
     # ✅ email_pubblica: se nel form non c'è, la lasciamo invariata
-    row = c.execute(sql("SELECT email, email_pubblica FROM utenti WHERE id = ?", (user_id,)).fetchone()
+    row = c.execute(sql("SELECT email, email_pubblica FROM utenti WHERE id = ?"), (user_id,)).fetchone()
     email_db = row[0] if row else ""
     email_pubblica_db = row[1] if row else ""
 
@@ -4132,7 +4155,7 @@ def utente_update_esperienza():
         return redirect(url_for("login"))
 
     conn = get_conn()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     esperienza_1 = request.form.get("esperienza_1", "")
     esperienza_2 = request.form.get("esperienza_2", "")
@@ -4151,7 +4174,7 @@ def utente_update_esperienza():
                 studio_1 = ?, studio_2 = ?, studio_3 = ?,
                 certificazioni = ?
             WHERE id = ?
-        """, (esperienza_1, esperienza_2, esperienza_3, studio_1, studio_2, studio_3, certificazioni, user_id))
+        """), (esperienza_1, esperienza_2, esperienza_3, studio_1, studio_2, studio_3, certificazioni, user_id))
         conn.commit()
         flash("✅ Esperienza e formazione aggiornate con successo.", "success")
     except Exception as e:
@@ -4173,7 +4196,7 @@ def utente_update_contatti():
 
     user_id = session.get("utente_id")
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     telefono = request.form.get("telefono", "")
     email_pubblica = request.form.get("email_pubblica", "")
@@ -4191,7 +4214,7 @@ def utente_update_contatti():
                 telefono=?, email_pubblica=?, indirizzo_studio=?, sito_web=?,
                 instagram=?, facebook=?, linkedin=?, orari=?, preferenze_contatto=?
             WHERE id=?
-        """, (telefono, email_pubblica, indirizzo_studio, sito_web,
+        """), (telefono, email_pubblica, indirizzo_studio, sito_web,
               instagram, facebook, linkedin, orari, preferenze_contatto, user_id))
         conn.commit()
         flash("✅ Contatti aggiornati con successo.", "success")
@@ -4220,10 +4243,10 @@ def utente_update_descrizione():
     descrizione = request.form.get("descrizione", "").strip()
 
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     try:
-        c.execute(sql("UPDATE utenti SET descrizione = ? WHERE id = ?", (descrizione, user_id))
+        c.execute(sql("UPDATE utenti SET descrizione = ? WHERE id = ?"), (descrizione, user_id))
         conn.commit()
         flash("✅ Descrizione aggiornata con successo.", "success")
     except Exception as e:
@@ -4244,10 +4267,10 @@ def utente_update_galleria():
     print("📸 FILES:", request.files)
 
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # --- Recupera galleria esistente ---
-    row = c.execute(sql("SELECT foto_galleria FROM utenti WHERE id = ?", (g.utente['id'],)).fetchone()
+    row = c.execute(sql("SELECT foto_galleria FROM utenti WHERE id = ?"), (g.utente['id'],)).fetchone()
     correnti = []
     if row and row['foto_galleria']:
         try:
@@ -4275,7 +4298,7 @@ def utente_update_galleria():
             correnti.append(f"uploads/profili/galleria/{nome_file}")
 
     # --- Salva nel DB (come JSON per maggiore flessibilità) ---
-    c.execute(sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?", (json.dumps(correnti), g.utente['id']))
+    c.execute(sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"), (json.dumps(correnti), g.utente['id']))
     conn.commit()
     conn.close()
 
@@ -4286,14 +4309,14 @@ def utente_update_galleria():
 @login_required
 def elimina_annuncio(id):
     conn = get_db_connection()
-    annuncio = conn.execute(sql("SELECT * FROM annunci WHERE id = ?", (id,)).fetchone()
+    annuncio = conn.execute(sql("SELECT * FROM annunci WHERE id = ?"), (id,)).fetchone()
 
     if not annuncio or annuncio["utente_id"] != g.utente["id"]:
         conn.close()
         flash("Non puoi eliminare questo annuncio.", "error")
         return redirect(url_for("dashboard"))
 
-    conn.execute(sql("DELETE FROM annunci WHERE id = ?", (id,))
+    conn.execute(sql("DELETE FROM annunci WHERE id = ?"), (id,))
     conn.commit()
     conn.close()
 
@@ -4338,7 +4361,7 @@ def upload_foto():
             file.save(file_path)
 
             conn = get_db_connection()
-            conn.execute(sql("UPDATE utenti SET foto_profilo = ? WHERE id = ?", (f"uploads/profili/{filename}", g.utente['id']))
+            conn.execute(sql("UPDATE utenti SET foto_profilo = ? WHERE id = ?"), (f"uploads/profili/{filename}", g.utente['id']))
             conn.commit()
             conn.close()
 
@@ -4379,7 +4402,7 @@ def upload_copertina():
 
     # Salva percorso nel DB
     conn = get_db_connection()
-    conn.execute(sql("UPDATE utenti SET copertina = ? WHERE id = ?", (f"uploads/profili/copertine/{filename}", g.utente['id']))
+    conn.execute(sql("UPDATE utenti SET copertina = ? WHERE id = ?"), (f"uploads/profili/copertine/{filename}", g.utente['id']))
     conn.commit()
     conn.close()
 
@@ -4393,7 +4416,7 @@ def rimuovi_copertina():
     user_id = g.utente['id']
 
     conn = get_db_connection()
-    row = conn.execute(sql("SELECT copertina FROM utenti WHERE id = ?", (user_id,)).fetchone()
+    row = conn.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (user_id,)).fetchone()
 
     if row and row['copertina']:
         path = os.path.join(app.root_path, 'static', row['copertina'])
@@ -4403,7 +4426,7 @@ def rimuovi_copertina():
             except Exception as e:
                 print(f"⚠️ Errore eliminando la copertina: {e}")
 
-    conn.execute(sql("UPDATE utenti SET copertina = NULL WHERE id = ?", (user_id,))
+    conn.execute(sql("UPDATE utenti SET copertina = NULL WHERE id = ?"), (user_id,))
     conn.commit()
     conn.close()
 
@@ -4428,7 +4451,7 @@ def utente_annunci():
         SELECT * FROM annunci
         WHERE utente_id = ?
         ORDER BY data_pubblicazione DESC
-    """, (g.utente['id'],)).fetchall()
+    """), (g.utente['id'],)).fetchall()
     conn.close()
     return render_template('utente_annunci.html', annunci=annunci, utente=g.utente)
 # ==========================================================
@@ -4473,12 +4496,12 @@ def modifica_recensione():
 
     # Recupera il destinatario della recensione
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
     c.execute(sql("""
         SELECT id_destinatario
         FROM recensioni
         WHERE id = ? AND id_autore = ?
-    """, (id_recensione, g.utente["id"]))
+    """), (id_recensione, g.utente["id"]))
     row = c.fetchone()
     conn.close()
 
@@ -4595,7 +4618,7 @@ def recensioni_utente(user_id):
 
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # ✅ verifica utente
     c.execute(sql("""
@@ -4604,7 +4627,7 @@ def recensioni_utente(user_id):
           AND sospeso = 0
           AND (disattivato_admin IS NULL OR disattivato_admin = 0)
           AND attivo = 1
-    """, (user_id,))
+    """), (user_id,))
     user = c.fetchone()
     if not user:
         conn.close()
@@ -4620,7 +4643,7 @@ def recensioni_utente(user_id):
 
         # 🔒 Blocca recensioni se l’utente non ha caricato una foto profilo
         autore_id = session.get("utente_id")
-        c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?", (autore_id,))
+        c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?"), (autore_id,))
         fp_row = c.fetchone()
 
         if not fp_row or not fp_row["foto_profilo"]:
@@ -4645,13 +4668,13 @@ def recensioni_utente(user_id):
             conn.execute(sql("""
                 INSERT INTO recensioni (id_autore, id_destinatario, voto, testo, stato, data)
                 VALUES (?, ?, ?, ?, ?, datetime('now'))
-            """, (id_autore, user_id, voto, testo, stato))
+            """), (id_autore, user_id, voto, testo, stato))
             conn.commit()
 
             # ✅ notifica automatica se solo stelline
             if stato == "approvato":
                 # recupera username autore
-                c.execute(sql("SELECT username FROM utenti WHERE id = ?", (id_autore,))
+                c.execute(sql("SELECT username FROM utenti WHERE id = ?"), (id_autore,))
                 row = c.fetchone()
                 username_autore = row["username"] if row and row["username"] else "utente"
 
@@ -4763,14 +4786,14 @@ def register():
         macro_area = provincia
 
         conn = get_db_connection()
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        c = get_cursor(conn)
 
         # ✅ Controllo duplicati
         c.execute(sql("""
             SELECT * FROM utenti
             WHERE email = ?
                OR UPPER(username) = ?
-        """, (email, username))
+        """), (email, username))
 
         existing_user = c.fetchone()
         if existing_user:
@@ -4812,7 +4835,7 @@ def register():
                 versione_consenso
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+        """), (
             nome, cognome, email, username, hashed_pw,
             citta, provincia, macro_area,
             0, token,
@@ -4862,12 +4885,12 @@ def privacy():
 @app.route('/conferma/<token>')
 def conferma_email(token):
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    c.execute(sql("SELECT * FROM utenti WHERE token_verifica = ?", (token,))
+    c = get_cursor(conn)
+    c.execute(sql("SELECT * FROM utenti WHERE token_verifica = ?"), (token,))
     utente = c.fetchone()
 
     if utente:
-        c.execute(sql("UPDATE utenti SET attivo = 1, token_verifica = NULL WHERE id = ?", (utente['id'],))
+        c.execute(sql("UPDATE utenti SET attivo = 1, token_verifica = NULL WHERE id = ?"), (utente['id'],))
         conn.commit()
 
         # 🔔 Aggiunta: prima notifica all'utente
@@ -4894,8 +4917,8 @@ def login():
 
         conn = get_db_connection()
 
-        c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        c.execute(sql("SELECT * FROM utenti WHERE email = ?", (email,))
+        c = get_cursor(conn)
+        c.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
         utente = c.fetchone()
         conn.close()
 
@@ -5039,7 +5062,7 @@ def login():
                 UPDATE utenti
                 SET admin_session_token = ?, admin_session_expiry = ?
                 WHERE id = ?
-            """, (session_token, expiry, utente["id"]))
+            """), (session_token, expiry, utente["id"]))
             conn.commit()
             conn.close()
 
@@ -5054,7 +5077,7 @@ def login():
             UPDATE utenti
             SET admin_browser_fingerprint = ?
             WHERE id = ?
-        """, (browser_fingerprint, utente["id"]))
+        """), (browser_fingerprint, utente["id"]))
         conn.commit()
         conn.close()
 
@@ -5091,8 +5114,8 @@ def password_dimenticata():
         # 🔎 Cerca utente
         conn = sqlite3.connect('database.db')
 
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql("SELECT * FROM utenti WHERE email = ?", (email,))
+        cur = get_cursor(conn)
+        cur.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
         utente = cur.fetchone()
         conn.close()
 
@@ -5108,21 +5131,21 @@ def password_dimenticata():
         reset_url = url_for('reset_password', token=token, _external=True)
 
         # ✅ Salva token nel DB e invalida i precedenti
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        conn =  conn = get_db_connection()
+        cur = get_cursor(conn)
 
         # invalida eventuali token ancora aperti
         cur.execute(sql("""
             UPDATE password_reset_tokens
             SET usato = 1
             WHERE utente_id = ?
-        """, (utente['id'],))
+        """), (utente['id'],))
 
         # salva nuovo token
         cur.execute(sql("""
             INSERT INTO password_reset_tokens (utente_id, token, scadenza, usato)
             VALUES (?, ?, strftime('%s','now') + 3600, 0)
-        """, (utente['id'], token))
+        """), (utente['id'], token))
 
         conn.commit()
         conn.close()
@@ -5173,10 +5196,10 @@ def reset_password(token):
         return redirect(url_for('password_dimenticata'))
 
     # ✅ Verifica token non già usato
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute(sql("SELECT * FROM password_reset_tokens WHERE token = ? AND usato = 0", (token,))
+    cur = get_cursor(conn)
+    cur.execute(sql("SELECT * FROM password_reset_tokens WHERE token = ? AND usato = 0"), (token,))
     token_row = cur.fetchone()
 
     if not token_row:
@@ -5201,7 +5224,7 @@ def reset_password(token):
             return redirect(url_for('reset_password', token=token))
 
         # ✅ Recupera utente
-        cur.execute(sql("SELECT * FROM utenti WHERE email = ?", (email,))
+        cur.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
         utente = cur.fetchone()
 
         if not utente:
@@ -5211,10 +5234,10 @@ def reset_password(token):
 
         # ✅ Aggiorna SOLO la password (le chiavi restano invariate)
         pwd_hash = generate_password_hash(password)
-        cur.execute(sql("UPDATE utenti SET password = ? WHERE email = ?", (pwd_hash, email))
+        cur.execute(sql("UPDATE utenti SET password = ? WHERE email = ?"), (pwd_hash, email))
 
         # ✅ Marca token come usato
-        cur.execute(sql("UPDATE password_reset_tokens SET usato = 1 WHERE token = ?", (token,))
+        cur.execute(sql("UPDATE password_reset_tokens SET usato = 1 WHERE token = ?"), (token,))
         conn.commit()
         conn.close()
 
@@ -5288,7 +5311,7 @@ def logout():
                 admin_session_expiry = NULL,
                 admin_browser_fingerprint = NULL
             WHERE id = ?
-        """, (session["utente_id"],))
+        """), (session["utente_id"],))
         conn.commit()
         conn.close()
 
@@ -5310,8 +5333,8 @@ def landing():
     # 1️⃣ Se loggato → recupero macro_area dal DB
     if utente_id:
         conn = get_conn()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql("SELECT macro_area FROM utenti WHERE id = ?", (utente_id,))
+        cur = get_cursor(conn)
+        cur.execute(sql("SELECT macro_area FROM utenti WHERE id = ?"), (utente_id,))
         row = cur.fetchone()
         conn.close()
 
@@ -5412,7 +5435,7 @@ def cerca():
         if utente_id:
             conn_tmp = get_conn()
             cur_tmp = conn_tmp.cursor()
-            cur_tmp.execute(sql("SELECT provincia FROM utenti WHERE id = ?", (utente_id,))
+            cur_tmp.execute(sql("SELECT provincia FROM utenti WHERE id = ?"), (utente_id,))
             row = cur_tmp.fetchone()
             conn_tmp.close()
 
@@ -5433,9 +5456,9 @@ def cerca():
     # =========================================================
     # DB
     # =========================================================
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # =========================================================
     # SQL FLAGS (DEVONO STARE PRIMA DI ESSERE USATE)
@@ -5714,7 +5737,7 @@ def apri_notifica(id):
         return redirect(url_for("notifiche"))
 
     # Segna come letta
-    conn.execute(sql("UPDATE notifiche SET letta = 1 WHERE id = ?", (id,))
+    conn.execute(sql("UPDATE notifiche SET letta = 1 WHERE id = ?"), (id,))
     conn.commit()
     conn.close()
 
@@ -5796,14 +5819,14 @@ def suggerimenti_comuni():
 @login_required
 def api_servizi_piani(codice):
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     # servizio
     cur.execute(sql("""
         SELECT id, nome, descrizione
         FROM servizi
         WHERE codice = ? AND attivo = 1
-    """, (codice,))
+    """), (codice,))
     servizio = cur.fetchone()
 
     if not servizio:
@@ -5821,7 +5844,7 @@ def api_servizi_piani(codice):
         WHERE servizio_id = ?
           AND attivo = 1
         ORDER BY ordine ASC, prezzo_cent ASC
-    """, (servizio["id"],))
+    """), (servizio["id"],))
 
     piani = [
         {
@@ -5850,14 +5873,14 @@ def api_servizi_piani(codice):
 @login_required
 def api_annuncio_servizio_stato(annuncio_id, codice):
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     # servizio
     cur.execute(sql("""
         SELECT id, ambito
         FROM servizi
         WHERE codice = ? AND attivo = 1
-    """, (codice,))
+    """), (codice,))
     servizio = cur.fetchone()
 
     if not servizio:
@@ -5879,7 +5902,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
               AND annuncio_id IS NULL
             ORDER BY datetime(data_inizio) DESC
             LIMIT 1
-        """, (servizio["id"], g.utente["id"]))
+        """), (servizio["id"], g.utente["id"]))
     else:
         cur.execute(sql("""
             SELECT
@@ -5894,7 +5917,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
               AND utente_id = ?
             ORDER BY datetime(data_inizio) DESC
             LIMIT 1
-        """, (servizio["id"], annuncio_id, g.utente["id"]))
+        """), (servizio["id"], annuncio_id, g.utente["id"]))
 
     att = cur.fetchone()
     conn.close()
@@ -5928,14 +5951,14 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
 @login_required
 def api_pacchetti_piani(codice):
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     # pacchetto
     cur.execute(sql("""
         SELECT id, nome, descrizione
         FROM pacchetti
         WHERE codice = ? AND attivo = 1
-    """, (codice,))
+    """), (codice,))
     pacchetto = cur.fetchone()
 
     if not pacchetto:
@@ -5954,7 +5977,7 @@ def api_pacchetti_piani(codice):
         WHERE pacchetto_id = ?
           AND attivo = 1
         ORDER BY ordine ASC, prezzo_cent ASC
-    """, (pacchetto["id"],))
+    """), (pacchetto["id"],))
 
     piani = [
         {
@@ -5993,7 +6016,7 @@ def api_attiva():
 
     conn = get_db_connection()
 
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     try:
         # 1️⃣ recupero piano + prezzo
@@ -6002,13 +6025,13 @@ def api_attiva():
                 SELECT p.id, p.prezzo_cent
                 FROM servizi_piani p
                 WHERE p.id = ? AND p.attivo = 1
-            """, (piano_id,))
+            """), (piano_id,))
         else:
             cur.execute(sql("""
                 SELECT p.id, p.prezzo_cent
                 FROM pacchetti_piani p
                 WHERE p.id = ? AND p.attivo = 1
-            """, (piano_id,))
+            """), (piano_id,))
 
         piano = cur.fetchone()
         if not piano:
@@ -6030,7 +6053,7 @@ def api_attiva():
                 SELECT pacchetto_id
                 FROM pacchetti_piani
                 WHERE id = ?
-            """, (piano_id,))
+            """), (piano_id,))
             row = cur.fetchone()
             if not row:
                 return jsonify({"error": "Pacchetto non valido"}), 400
@@ -6051,7 +6074,7 @@ def api_attiva():
                 created_at
             )
             VALUES (?, ?, ?, ?, 'stripe', ?, 'pending', ?, datetime('now','utc'))
-        """, (
+        """), (
             g.utente["id"],
             tipo_acquisto,
             ref_id,
@@ -6081,7 +6104,7 @@ def api_attiva():
             UPDATE acquisti
             SET riferimento_esterno = ?
             WHERE id = ?
-        """, (intent.id, acquisto_id))
+        """), (intent.id, acquisto_id))
 
         conn.commit()
 
@@ -6112,7 +6135,7 @@ def crea_payment_intent():
 
     conn = get_db_connection()
 
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     try:
         if tipo == "servizi":
@@ -6120,7 +6143,7 @@ def crea_payment_intent():
                 SELECT id, prezzo_cent
                 FROM servizi_piani
                 WHERE id = ? AND attivo = 1
-            """, (piano_id,))
+            """), (piano_id,))
             piano = cur.fetchone()
             if not piano:
                 return jsonify({"error": "Piano servizio non trovato"}), 404
@@ -6133,7 +6156,7 @@ def crea_payment_intent():
                 SELECT pacchetto_id, prezzo_cent
                 FROM pacchetti_piani
                 WHERE id = ? AND attivo = 1
-            """, (piano_id,))
+            """), (piano_id,))
             piano = cur.fetchone()
             if not piano:
                 return jsonify({"error": "Piano pacchetto non trovato"}), 404
@@ -6148,7 +6171,7 @@ def crea_payment_intent():
             INSERT INTO acquisti
             (utente_id, tipo, ref_id, prezzo_id, metodo, importo_cent, stato, annuncio_id, created_at)
             VALUES (?, ?, ?, ?, 'stripe', ?, 'creato', ?, datetime('now','utc'))
-        """, (
+        """), (
             g.utente["id"],
             tipo_acquisto,
             ref_id,
@@ -6187,18 +6210,18 @@ def gestisci_pagamento_confermato(payment_intent):
 
     conn = get_db_connection()
 
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     try:
         # lock di scrittura
-        cur.execute(sql("BEGIN IMMEDIATE")
+        cur.execute(sql("BEGIN IMMEDIATE"))
 
         # fonte di verità: l’acquisto
         cur.execute(sql("""
             SELECT id, utente_id, tipo, ref_id, prezzo_id, stato, annuncio_id
             FROM acquisti
             WHERE id = ?
-        """, (int(acquisto_id),))
+        """), (int(acquisto_id),))
         acquisto = cur.fetchone()
 
         if not acquisto:
@@ -6226,7 +6249,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 metodo = 'stripe',
                 riferimento_esterno = ?
             WHERE id = ?
-        """, (riferimento_esterno, int(acquisto_id)))
+        """), (riferimento_esterno, int(acquisto_id)))
 
         # ===============================
         # SERVIZIO SINGOLO
@@ -6240,7 +6263,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 SELECT servizio_id, durata_giorni, prezzo_cent
                 FROM servizi_piani
                 WHERE id = ?
-            """, (piano_servizio_id,))
+            """), (piano_servizio_id,))
             piano = cur.fetchone()
             if not piano:
                 raise Exception("Piano servizio non trovato")
@@ -6250,7 +6273,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 INSERT INTO acquisti_servizi
                 (utente_id, servizio_id, metodo, importo, valuta, riferimento_esterno)
                 VALUES (?, ?, 'stripe', ?, 'EUR', ?)
-            """, (
+            """), (
                 utente_id,
                 int(piano["servizio_id"]),
                 float(int(piano["prezzo_cent"]) / 100.0),
@@ -6284,7 +6307,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 SELECT durata_giorni, prezzo_cent
                 FROM pacchetti_piani
                 WHERE id = ?
-            """, (int(piano_id),))
+            """), (int(piano_id),))
             piano_p = cur.fetchone()
             if not piano_p:
                 raise Exception("Piano pacchetto non trovato")
@@ -6297,7 +6320,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 SELECT servizio_id
                 FROM pacchetti_servizi
                 WHERE pacchetto_id = ?
-            """, (ref_id,))
+            """), (ref_id,))
             servizi = cur.fetchall()
 
             if not servizi:
@@ -6313,7 +6336,7 @@ def gestisci_pagamento_confermato(payment_intent):
                     INSERT INTO acquisti_servizi
                     (utente_id, servizio_id, metodo, importo, valuta, riferimento_esterno)
                     VALUES (?, ?, 'stripe', ?, 'EUR', ?)
-                """, (
+                """), (
                     utente_id,
                     servizio_id,
                     float(quota),
@@ -6374,13 +6397,13 @@ def attiva_servizio_da_piano(conn, piano_id, annuncio_id, utente_id, acquisto_id
     Versione generica (non solo Stripe): attiva un singolo servizio da un piano
     e registra lo storico in acquisti_servizi secondo lo schema reale.
     """
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     cur.execute(sql("""
         SELECT servizio_id, durata_giorni
         FROM servizi_piani
         WHERE id = ?
-    """, (piano_id,))
+    """), (piano_id,))
     piano = cur.fetchone()
 
     if not piano:
@@ -6393,7 +6416,7 @@ def attiva_servizio_da_piano(conn, piano_id, annuncio_id, utente_id, acquisto_id
         INSERT INTO acquisti_servizi
         (utente_id, servizio_id, metodo, importo, valuta, riferimento_esterno)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (int(utente_id), servizio_id, metodo, float(importo), (valuta or "EUR").upper(), riferimento_esterno))
+    """), (int(utente_id), servizio_id, metodo, float(importo), (valuta or "EUR").upper(), riferimento_esterno))
 
     # ✅ attiva
     attiva_servizio(
@@ -6412,7 +6435,7 @@ def attiva_pacchetto_da_piano(conn, piano_id, annuncio_id, utente_id, acquisto_i
     Versione generica (non solo Stripe): attiva tutti i servizi del pacchetto
     e registra lo storico in acquisti_servizi secondo lo schema reale.
     """
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     cur.execute(sql("""
         SELECT
@@ -6426,7 +6449,7 @@ def attiva_pacchetto_da_piano(conn, piano_id, annuncio_id, utente_id, acquisto_i
             FROM pacchetti_piani
             WHERE id = ?
         )
-    """, (piano_id,))
+    """), (piano_id,))
 
     servizi = cur.fetchall()
     if not servizi:
@@ -6442,7 +6465,7 @@ def attiva_pacchetto_da_piano(conn, piano_id, annuncio_id, utente_id, acquisto_i
             INSERT INTO acquisti_servizi
             (utente_id, servizio_id, metodo, importo, valuta, riferimento_esterno)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (int(utente_id), servizio_id, metodo, quota, (valuta or "EUR").upper(), riferimento_esterno))
+        """), (int(utente_id), servizio_id, metodo, quota, (valuta or "EUR").upper(), riferimento_esterno))
 
         # ✅ attiva
         attiva_servizio(
@@ -6460,7 +6483,7 @@ def attiva_pacchetto_da_piano(conn, piano_id, annuncio_id, utente_id, acquisto_i
 @login_required
 def modifica_profilo():
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     if request.method == 'POST':
         nome = request.form['nome'].strip()
@@ -6471,7 +6494,7 @@ def modifica_profilo():
         conferma_password = request.form.get('conferma_password', '').strip()
 
         # 🔹 Controlla che lo username non sia già usato da altri
-        c.execute(sql("SELECT id FROM utenti WHERE username = ? AND id != ?", (username, g.utente['id']))
+        c.execute(sql("SELECT id FROM utenti WHERE username = ? AND id != ?"), (username, g.utente['id']))
         altro = c.fetchone()
         if altro:
             flash("Questo username è già in uso. Scegline un altro.")
@@ -6506,7 +6529,7 @@ def modifica_profilo():
         return redirect(url_for('dashboard'))
 
     # GET → mostra dati correnti
-    utente = conn.execute(sql("SELECT * FROM utenti WHERE id = ?", (g.utente['id'],)).fetchone()
+    utente = conn.execute(sql("SELECT * FROM utenti WHERE id = ?"), (g.utente['id'],)).fetchone()
     conn.close()
     return render_template('modifica_profilo.html', utente=utente)
 
@@ -6529,11 +6552,11 @@ def modifica_username():
         nuovo = request.form.get("username", "").strip().upper()   # ✅ SALVA MAIUSCOLO
 
         if nuovo:
-            conn = sqlite3.connect("database.db")
-            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            conn =  conn = get_db_connection()
+            cur = get_cursor(conn)
 
             # ✅ controllo duplicati case-insensitive
-            cur.execute(sql("SELECT id FROM utenti WHERE UPPER(username)=?", (nuovo,))
+            cur.execute(sql("SELECT id FROM utenti WHERE UPPER(username)=?"), (nuovo,))
             esistente = cur.fetchone()
 
             if esistente and esistente[0] != session["utente_id"]:
@@ -6573,10 +6596,10 @@ def modifica_password():
             flash("La password deve avere almeno 8 caratteri.", "error")
             return redirect(url_for("modifica_password"))
 
-        conn = sqlite3.connect("database.db")
+        conn =  conn = get_db_connection()
 
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql("SELECT * FROM utenti WHERE id = ?", (session["utente_id"],))
+        cur = get_cursor(conn)
+        cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (session["utente_id"],))
         utente = cur.fetchone()
 
         if not utente:
@@ -6592,7 +6615,7 @@ def modifica_password():
 
         # 🔹 Aggiorna SOLO l'hash della password
         hash_pw = generate_password_hash(nuova_pw)
-        cur.execute(sql("UPDATE utenti SET password = ? WHERE id = ?", (hash_pw, session["utente_id"]))
+        cur.execute(sql("UPDATE utenti SET password = ? WHERE id = ?"), (hash_pw, session["utente_id"]))
         conn.commit()
         conn.close()
 
@@ -6611,12 +6634,12 @@ def elimina_account_step1():
 @app.route("/impostazioni/sospendi-account", methods=["POST"])
 @login_required
 def sospendi_account():
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     # Aggiorna DB
-    cur.execute(sql("UPDATE utenti SET sospeso=1 WHERE id=?", (session["utente_id"],))
+    cur.execute(sql("UPDATE utenti SET sospeso=1 WHERE id=?"), (session["utente_id"],))
     conn.commit()
 
     # Recupera email e nome per invio notifica
@@ -6641,10 +6664,10 @@ def sospendi_account():
 @login_required
 def elimina_account_step2():
     if request.method == "POST":
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        conn =  conn = get_db_connection()
+        cur = get_cursor(conn)
 
-        cur.execute(sql("DELETE FROM utenti WHERE id=?", (session["utente_id"],))
+        cur.execute(sql("DELETE FROM utenti WHERE id=?"), (session["utente_id"],))
         conn.commit()
 
         session.clear()
@@ -6666,10 +6689,10 @@ def riattivazione_account():
 @app.route("/impostazioni/riattiva-account", methods=["POST"])
 @login_required
 def riattiva_account():
-    conn = sqlite3.connect("database.db")
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    conn =  conn = get_db_connection()
+    cur = get_cursor(conn)
 
-    cur.execute(sql("UPDATE utenti SET sospeso=0 WHERE id=?", (session["utente_id"],))
+    cur.execute(sql("UPDATE utenti SET sospeso=0 WHERE id=?"), (session["utente_id"],))
     conn.commit()
 
     # rimuove flag sospeso
@@ -6698,10 +6721,10 @@ def controllo_sospensione():
         return
 
     # Controlla stato nel DB
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    c.execute(sql("SELECT sospeso, disattivato_admin FROM utenti WHERE id=?", (session["utente_id"],))
+    c = get_cursor(conn)
+    c.execute(sql("SELECT sospeso, disattivato_admin FROM utenti WHERE id=?"), (session["utente_id"],))
     stato = c.fetchone()
     conn.close()
 
@@ -6725,9 +6748,9 @@ def controllo_sospensione():
 def email_notifiche():
     if request.method == "POST":
         attivo = 1 if request.form.get("email_notifiche") == "on" else 0
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql("UPDATE utenti SET email_notifiche=? WHERE id=?", (attivo, session["utente_id"]))
+        conn =  conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute(sql("UPDATE utenti SET email_notifiche=? WHERE id=?"), (attivo, session["utente_id"]))
         conn.commit()
         flash("Preferenze aggiornate", "success")
         return redirect(url_for("impostazioni"))
@@ -6758,11 +6781,11 @@ def cambia_foto():
         # SALVA IL PERCORSO COERENTE
         percorso_db = f"uploads/profile/{filename}"
 
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        conn =  conn = get_db_connection()
+        cur = get_cursor(conn)
         cur.execute(sql("""
             UPDATE utenti SET foto_profilo=? WHERE id=?
-        """, (percorso_db, session["utente_id"]))
+        """), (percorso_db, session["utente_id"]))
         conn.commit()
         conn.close()
 
@@ -6791,11 +6814,11 @@ def cambia_copertina():
 
         percorso_db = f"uploads/profili/copertine/{filename}"
 
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        conn =  conn = get_db_connection()
+        cur = get_cursor(conn)
         cur.execute(sql("""
             UPDATE utenti SET copertina=? WHERE id=?
-        """, (percorso_db, session["utente_id"]))
+        """), (percorso_db, session["utente_id"]))
         conn.commit()
         conn.close()
 
@@ -6814,9 +6837,9 @@ def nuovo_annuncio():
         flash("Devi essere loggato per creare un annuncio.", "error")
         return redirect(url_for("login"))
 
-    conn = sqlite3.connect("database.db")
+    conn =  conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # ✅ Verifica che l’utente sia attivo
     utente = c.execute(
@@ -6894,7 +6917,7 @@ def nuovo_annuncio():
               AND categoria = ?
               AND stato IN ('in_attesa', 'approvato')
             LIMIT 1
-        """, (utente["id"], categoria)).fetchone()
+        """), (utente["id"], categoria)).fetchone()
 
         if esiste:
             conn.close()
@@ -6940,7 +6963,7 @@ def nuovo_annuncio():
                 email,
                 stato
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_attesa')
-        """, (
+        """), (
             utente["id"],
             username_modificato,
             categoria,
@@ -6961,7 +6984,7 @@ def nuovo_annuncio():
         conn.close()
 
         # 👁️ Visibilità pubblica automatica
-        conn = sqlite3.connect("database.db")
+        conn =  conn = get_db_connection()
         conn.execute(
             "UPDATE utenti SET visibile_pubblicamente = 1 WHERE id = ?",
             (utente["id"],)
@@ -6999,7 +7022,7 @@ def inject_servizi_utils():
 def visualizza_annuncio_pubblico(id):
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # 🔹 SQL condivisa: AFFIDABILITÀ TOP (identica a /cerca)
     affidabilita_top_sql = """
@@ -7118,9 +7141,9 @@ def visualizza_annuncio_pubblico(id):
 def profilo_operatore(id):
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
-    c.execute(sql("SELECT * FROM operatori WHERE id = ?", (id,))
+    c.execute(sql("SELECT * FROM operatori WHERE id = ?"), (id,))
     operatore = c.fetchone()
     conn.close()
 
@@ -7136,7 +7159,7 @@ def profilo_pubblico(id):
     """Visualizza il profilo pubblico completo di un utente (stile Facebook)."""
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # 🔹 Carica dati utente
     c.execute(sql("""
@@ -7158,7 +7181,7 @@ def profilo_pubblico(id):
           AND (disattivato_admin IS NULL OR disattivato_admin = 0)
           AND attivo = 1
           AND (ruolo IS NULL OR ruolo != 'admin')
-    """, (id,))
+    """), (id,))
     utente = c.fetchone()
 
     if not utente:
@@ -7199,7 +7222,7 @@ def profilo_pubblico(id):
         FROM annunci
         WHERE utente_id = ? AND stato = 'approvato'
         ORDER BY data_pubblicazione DESC
-    """, (id,))
+    """), (id,))
     annunci = [dict(r) for r in c.fetchall()]
     conn.close()
 
@@ -7254,10 +7277,10 @@ def profilo_pubblico(id):
 @login_required
 def toggle_visibilita():
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # Leggi stato attuale
-    c.execute(sql("SELECT visibile_pubblicamente FROM utenti WHERE id = ?", (g.utente["id"],))
+    c.execute(sql("SELECT visibile_pubblicamente FROM utenti WHERE id = ?"), (g.utente["id"],))
     row = c.fetchone()
     if not row:
         conn.close()
@@ -7271,7 +7294,7 @@ def toggle_visibilita():
         c.execute(sql("""
             SELECT COUNT(*) FROM annunci
             WHERE utente_id = ? AND stato = 'approvato'
-        """, (g.utente["id"],))
+        """), (g.utente["id"],))
         annunci_attivi = c.fetchone()[0]
 
         if annunci_attivi > 0:
@@ -7282,7 +7305,7 @@ def toggle_visibilita():
 
     # Alterna stato
     nuovo_stato = 0 if stato_attuale == 1 else 1
-    c.execute(sql("UPDATE utenti SET visibile_pubblicamente = ? WHERE id = ?", (nuovo_stato, g.utente["id"]))
+    c.execute(sql("UPDATE utenti SET visibile_pubblicamente = ? WHERE id = ?"), (nuovo_stato, g.utente["id"]))
     conn.commit()
     conn.close()
 
@@ -7296,7 +7319,7 @@ def toggle_visibilita():
 @app.route("/ricerca-utenti")
 def ricerca_utenti():
     conn = get_db_connection()
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     raw_nome = (request.args.get("username") or request.args.get("nome") or "").strip()
     zona = (request.args.get("zona") or "").strip()
@@ -7436,12 +7459,12 @@ def chat_conversazione_json(other_id):
     # 🔹 Recupero info "altro utente" per nome/avatar
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
     c.execute(sql("""
         SELECT id, nome, cognome, username, foto_profilo
         FROM utenti
         WHERE id = ?
-    """, (other_id,))
+    """), (other_id,))
     altro = c.fetchone()
     conn.close()
 
@@ -7496,7 +7519,7 @@ def chat_conversazione_view(other_id):
     """Mostra la pagina della chat tra l’utente loggato e un altro utente."""
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
     # 🔹 Recupera l’altro utente (solo se non sospeso / non disattivato)
     c.execute(sql("""
@@ -7506,7 +7529,7 @@ def chat_conversazione_view(other_id):
           AND sospeso = 0
           AND (disattivato_admin IS NULL OR disattivato_admin = 0)
           AND attivo = 1
-    """, (other_id,))
+    """), (other_id,))
     altro = c.fetchone()
     if not altro:
         conn.close()
@@ -7548,7 +7571,7 @@ def chiudi_chat(other_id):
     conn.execute(sql("""
         INSERT INTO chat_chiusure (admin_id, user_id, closed_at)
         VALUES (?, ?, datetime('now'))
-    """, (admin_id, other_id))
+    """), (admin_id, other_id))
 
     conn.commit()
     conn.close()
@@ -7572,7 +7595,7 @@ def video_start():
     import os
 
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = get_cursor(conn)
 
     # 🚫 BLOCCO SE UTENTE GIÀ IN CHIAMATA
     call_in_corso = cur.execute(sql("""
@@ -7580,7 +7603,7 @@ def video_start():
         WHERE in_corso = 1
         AND (utente_1 = ? OR utente_2 = ?)
         LIMIT 1
-    """, (g.utente["id"], g.utente["id"])).fetchone()
+    """), (g.utente["id"], g.utente["id"])).fetchone()
 
     if call_in_corso:
         conn.close()
@@ -7610,7 +7633,7 @@ def video_start():
         SELECT bloccato
         FROM video_limiti_mensili
         WHERE mese = ?
-    """, (mese_corrente,)).fetchone()
+    """), (mese_corrente,)).fetchone()
 
     if limite and limite["bloccato"] == 1:
         conn.close()
@@ -7664,7 +7687,7 @@ def video_start():
             last_ping
         )
         VALUES (?, ?, ?, 1, datetime('now'))
-    """, (room_name, g.utente["id"], altro_id))
+    """), (room_name, g.utente["id"], altro_id))
 
     conn.commit()
     conn.close()
@@ -7705,7 +7728,7 @@ def verifica_maggiorenne():
             ip_verifica_maggiorenne = ?,
             versione_consenso = ?
         WHERE id = ?
-    """, (ip, "v1.0_video", g.utente["id"]))
+    """), (ip, "v1.0_video", g.utente["id"]))
 
     conn.commit()
     conn.close()
@@ -7727,7 +7750,7 @@ def video_end():
         SELECT id, created_at
         FROM video_call_log
         WHERE room_name = ?
-    """, (room_name,)).fetchone()
+    """), (room_name,)).fetchone()
 
     if not call:
         conn.close()
@@ -7753,7 +7776,7 @@ def video_end():
         SELECT minuti_totali
         FROM video_limiti_mensili
         WHERE mese = ?
-    """, (mese,)).fetchone()
+    """), (mese,)).fetchone()
 
     used_minutes = used["minuti_totali"] if used else 0
 
@@ -7769,7 +7792,7 @@ def video_end():
             in_corso = 0,
             ended_at = datetime('now')
         WHERE id = ?
-    """, (durata_secondi, costo_cent, call["id"]))
+    """), (durata_secondi, costo_cent, call["id"]))
 
     # 📊 AGGIORNA LIMITE MENSILE
     mese = datetime.now().strftime("%Y-%m")
@@ -7780,27 +7803,27 @@ def video_end():
         ON CONFLICT(mese) DO UPDATE SET
             minuti_totali = minuti_totali + excluded.minuti_totali,
             costo_totale_cent = costo_totale_cent + excluded.costo_totale_cent
-    """, (mese, participant_minutes, costo_cent))
+    """), (mese, participant_minutes, costo_cent))
 
     check = conn.execute(sql("""
         SELECT costo_totale_cent
         FROM video_limiti_mensili
         WHERE mese = ?
-    """, (mese,)).fetchone()
+    """), (mese,)).fetchone()
 
     if check and check["costo_totale_cent"] >= 2000:
         conn.execute(sql("""
             UPDATE video_limiti_mensili
             SET bloccato = 1
             WHERE mese = ?
-        """, (mese,))
+        """), (mese,))
 
     # 🟢 NOTIFICA UTENTE DISPONIBILE
     call_users = conn.execute(sql("""
         SELECT utente_1, utente_2
         FROM video_call_log
         WHERE room_name = ?
-    """, (room_name,)).fetchone()
+    """), (room_name,)).fetchone()
 
     if call_users:
         socketio.emit("video_busy", {"user_id": call_users["utente_1"], "busy": False})
@@ -7829,7 +7852,7 @@ def video_ping():
         SET last_ping = datetime('now')
         WHERE room_name = ?
         AND in_corso = 1
-    """, (room_name,))
+    """), (room_name,))
 
     conn.commit()
     conn.close()
@@ -7917,7 +7940,7 @@ def check_video_status(data):
         WHERE in_corso = 1
         AND (utente_1 = ? OR utente_2 = ?)
         LIMIT 1
-    """, (user_id, user_id)).fetchone()
+    """), (user_id, user_id)).fetchone()
 
     conn.close()
 
@@ -7957,9 +7980,9 @@ def handle_send_message(data):
     # 🔒 1) BLOCCO: verifica foto profilo dell’utente che scrive
     conn = get_db_connection()
 
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c = get_cursor(conn)
 
-    c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?", (mittente_id,))
+    c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?"), (mittente_id,))
     row = c.fetchone()
 
     if not row or not row["foto_profilo"]:
@@ -7975,8 +7998,8 @@ def handle_send_message(data):
     msg_id = chat_invia(mittente_id, int(destinatario_id), testo)
 
     # 🔹 Rendi visibile il profilo in chat
-    conn = sqlite3.connect("database.db")
-    conn.execute(sql("UPDATE utenti SET visibile_in_chat = 1 WHERE id = ?", (mittente_id,))
+    conn =  conn = get_db_connection()
+    conn.execute(sql("UPDATE utenti SET visibile_in_chat = 1 WHERE id = ?"), (mittente_id,))
     conn.commit()
     conn.close()
 
@@ -8138,7 +8161,7 @@ def cleanup_video_calls():
     while True:
         try:
             conn = get_db_connection()
-            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur = get_cursor(conn)
 
             limite = datetime.now() - timedelta(seconds=60)
 
@@ -8148,7 +8171,7 @@ def cleanup_video_calls():
                 WHERE in_corso = 1
                 AND last_ping IS NOT NULL
                 AND datetime(last_ping) < ?
-            """, (limite.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
+            """), (limite.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
 
             for call in calls:
                 print("🧹 Cleanup call fantasma:", call["room_name"])
@@ -8157,7 +8180,7 @@ def cleanup_video_calls():
                     UPDATE video_call_log
                     SET in_corso = 0
                     WHERE id = ?
-                """, (call["id"],))
+                """), (call["id"],))
 
                 # sblocca utenti realtime
                 socketio.emit("video_busy", {"user_id": call["utente_1"], "busy": False})
