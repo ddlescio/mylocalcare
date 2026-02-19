@@ -522,7 +522,7 @@ import os
 def get_db_connection():
     database_url = os.getenv("DATABASE_URL")
 
-    # 🔹 SU RENDER → PostgreSQL
+    # 🔹 Render → PostgreSQL
     if database_url:
         import psycopg2
         import psycopg2.extras
@@ -530,15 +530,14 @@ def get_db_connection():
         conn = psycopg2.connect(database_url)
         conn.autocommit = True
 
-        # 🔥 IMPORTANTISSIMO: ritorna dict come SQLite
+        # 🔥 QUESTA RIGA È LA CHIAVE
         conn.cursor_factory = psycopg2.extras.RealDictCursor
 
         return conn
 
-    # 🔹 IN LOCALE → SQLite
+    # 🔹 Locale → SQLite
     else:
         import sqlite3
-
         conn = sqlite3.connect('database.db', timeout=5)
         conn.row_factory = sqlite3.Row
 
@@ -548,7 +547,7 @@ def get_db_connection():
         conn.execute("PRAGMA busy_timeout = 5000;")
 
         return conn
-                
+                        
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
     from functools import wraps
