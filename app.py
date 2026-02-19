@@ -285,7 +285,7 @@ socketio = SocketIO(
     cors_allowed_origins="*",
     async_mode="threading"
 )
-    
+
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 
@@ -517,18 +517,31 @@ def invia_email_sospensione(email, nome):
 # ==========================================================
 # 2️⃣ FUNZIONE CONNESSIONE DB E MODELS
 # ==========================================================
+import os
+
 def get_db_connection():
-    conn = sqlite3.connect('database.db', timeout=5)
-    conn.row_factory = sqlite3.Row
+    database_url = os.getenv("DATABASE_URL")
 
-    # sicurezza + concorrenza
-    conn.execute("PRAGMA foreign_keys = ON;")
-    conn.execute("PRAGMA journal_mode = WAL;")
-    conn.execute("PRAGMA synchronous = NORMAL;")
-    conn.execute("PRAGMA busy_timeout = 5000;")
+    # 🔹 SE siamo su Render → usa PostgreSQL
+    if database_url:
+        import psycopg2
+        conn = psycopg2.connect(database_url)
+        conn.autocommit = True
+        return conn
 
-    return conn
+    # 🔹 SE siamo in locale → usa SQLite
+    else:
+        import sqlite3
+        conn = sqlite3.connect('database.db', timeout=5)
+        conn.row_factory = sqlite3.Row
 
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
+        conn.execute("PRAGMA busy_timeout = 5000;")
+
+        return conn
+        
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
     from functools import wraps
