@@ -280,18 +280,11 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(32))
 
 import os
 
-if os.getenv("RENDER") or os.getenv("FLASK_ENV") == "production":
-    socketio = SocketIO(
-        app,
-        cors_allowed_origins="*",
-        async_mode="eventlet"
-    )
-else:
-    socketio = SocketIO(
-        app,
-        cors_allowed_origins=["http://127.0.0.1:5050", "http://localhost:5050"],
-        async_mode="threading"
-    )
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="threading"
+)
     
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
