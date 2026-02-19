@@ -1,22 +1,12 @@
 # models.py
-import sqlite3
 
 def get_db_connection():
-    conn = sqlite3.connect('database.db', timeout=5)  # attende fino a 5s se il DB è occupato
-    conn.row_factory = sqlite3.Row
-    # Migliora la concorrenza:
-    conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA synchronous=NORMAL;")
-    conn.execute("PRAGMA busy_timeout=5000;")  # retry interno di SQLite (5s)
-    return conn
-
-def _conn():
-    return get_db_connection()
-
+    from app import get_db_connection as _get_db_connection
+    return _get_db_connection()
 # -----------------------------
 # CHAT – FUNZIONI PRINCIPALI (aggiornate con consegnato/letto/orario)
 # -----------------------------
-
+import sqlite3
 import base64
 from flask import session
 from Crypto.Cipher import AES
@@ -59,7 +49,7 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     priv_mittente = PrivateKey(x_priv_bytes)
 
     # --- Recupera chiave pubblica del destinatario ---
-    conn = _conn()
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("SELECT x25519_pub FROM utenti WHERE id = ?", (destinatario_id,))
     row = c.fetchone()
@@ -116,8 +106,8 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
     """Restituisce la conversazione decifrando i messaggi leggibili con la chiave privata X25519."""
     from nacl.public import Box
 
-    conn = _conn()
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection()
+
     c = conn.cursor()
 
     # 🔍 Recupera ruolo utente per capire se applicare il cutoff
@@ -182,7 +172,7 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
                 eph_priv = PrivateKey(eph_priv_bytes)
 
                 # --- Recupera chiave pubblica del destinatario ---
-                conn2 = _conn()
+                conn2 = get_db_connection()
                 try:
                     c2 = conn2.cursor()
                     c2.execute("SELECT x25519_pub FROM utenti WHERE id = ?", (r["destinatario_id"],))
@@ -213,7 +203,7 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
         messaggi_decifrati.append(r)
 
     return messaggi_decifrati
-    
+
 def chat_threads(user_id: int):
     """
     Restituisce la lista delle chat con:
@@ -225,8 +215,8 @@ def chat_threads(user_id: int):
     from nacl.public import PrivateKey, PublicKey, Box
     from Crypto.Cipher import AES
 
-    conn = _conn()
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection()
+
     c = conn.cursor()
 
     # 🔍 Recupera ruolo utente (serve per capire se filtrare le chat chiuse)
@@ -374,7 +364,7 @@ def chat_threads(user_id: int):
                     eph_priv = PrivateKey(eph_priv_bytes)
 
                     # chiave pubblica destinatario
-                    conn2 = _conn()
+                    conn2 = get_db_connection()
                     try:
                         c2 = conn2.cursor()
                         c2.execute("SELECT x25519_pub FROM utenti WHERE id = ?", (r["ultimo_destinatario_id"],))
@@ -408,7 +398,7 @@ def chat_threads(user_id: int):
 
 def chat_segna_letti(user_id: int, other_id: int):
     """Segna tutti i messaggi ricevuti dall’altro come letti."""
-    conn = _conn()
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("""
         UPDATE messaggi_chat
@@ -421,7 +411,7 @@ def chat_segna_letti(user_id: int, other_id: int):
 
 def count_chat_non_letti(user_id: int) -> int:
     """Conta tutti i messaggi di chat non letti da un utente."""
-    conn = _conn()
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("""
         SELECT COUNT(*)
@@ -593,7 +583,7 @@ def segna_tutte_lette(utente_id):
     conn.close()
 
 def crea_tabella_annunci():
-    conn = sqlite3.connect("database.db")
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS annunci (
@@ -613,8 +603,8 @@ def crea_tabella_annunci():
     conn.close()
 
 def get_messaggi_contatto():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection()
+
     c = conn.cursor()
     c.execute("SELECT * FROM messaggi_contatto ORDER BY id DESC")
     rows = c.fetchall()
@@ -625,7 +615,7 @@ def get_messaggi_contatto():
 def get_annunci_utente(utente_id):
     """Restituisce tutti gli annunci di un utente (approvati, in attesa o rifiutati)."""
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
     c = conn.cursor()
     c.execute("""
         SELECT id, titolo, categoria, descrizione, zona, filtri_categoria,
@@ -644,7 +634,7 @@ from datetime import datetime
 def get_recensioni_utente(user_id):
     """Restituisce solo le recensioni approvate per l’utente (destinatario)."""
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
     cur = conn.cursor()
     cur.execute("""
         SELECT
@@ -670,7 +660,7 @@ def get_recensioni_utente(user_id):
 def get_recensioni_scritte(id_autore):
     """Restituisce tutte le recensioni scritte dall'utente loggato (autore), con eventuali risposte approvate."""
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
     cur = conn.cursor()
     cur.execute("""
         SELECT
@@ -698,7 +688,7 @@ def get_recensioni_scritte(id_autore):
 def get_recensione_autore_vs_destinatario(id_autore, id_destinatario):
     """Restituisce la recensione che un autore ha lasciato a un destinatario."""
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
     cur = conn.cursor()
     cur.execute("""
         SELECT * FROM recensioni
@@ -767,8 +757,8 @@ def calcola_media_recensioni(user_id):
 
 
 def get_tutte_recensioni():
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection()
+
     c = conn.cursor()
 
     c.execute("""
@@ -794,8 +784,8 @@ def get_tutte_recensioni():
 
 def get_tutte_recensioni_con_risposte():
     """Restituisce tutte le recensioni con eventuali risposte (anche in_attesa o rifiutate)."""
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection()
+
     c = conn.cursor()
 
     c.execute("""
@@ -853,7 +843,7 @@ def elimina_recensione(id_recensione, id_autore=None, is_admin=False):
 def get_risposta_by_recensione(id_recensione, solo_approvate=True):
     """Restituisce la risposta (solo se approvata se richiesto)."""
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
     sql = """
         SELECT
             rr.id,
@@ -931,7 +921,7 @@ def aggiungi_o_modifica_risposta(id_recensione=None, id_autore=None, testo=None,
 def get_tutte_risposte():
     """Restituisce tutte le risposte (per admin)."""
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
     cur = conn.cursor()
     cur.execute("""
         SELECT rr.*,

@@ -1,6 +1,23 @@
-import sqlite3
 from typing import Optional, Dict, Any, List, Tuple
-from db import get_db_connection
+
+def get_db_connection():
+    from app import get_db_connection as _f
+    return _f()
+
+def get_cursor(conn):
+    from app import get_cursor as _f
+    return _f(conn)
+
+def sql(query):
+    from app import sql as _f
+    return _f(query)
+
+def is_postgres():
+    from app import IS_POSTGRES
+    return IS_POSTGRES
+
+def now_sql():
+    return "CURRENT_TIMESTAMP" if is_postgres() else "datetime('now')"    
 # ---------------------------------------------------------
 # Normalizzazione codici servizio (alias)
 # ---------------------------------------------------------
@@ -17,19 +34,31 @@ def _normalize_codice_servizio(codice: str) -> str:
 # SERVIZI / ATTIVAZIONI - CORE ENGINE (STEP 3A)
 # =========================================================
 
-def _fetchone(conn, query: str, params: tuple = ()) -> Optional[sqlite3.Row]:
-    cur = conn.cursor()
-    cur.execute(query, params)
+def _fetchone(conn, query: str, params: tuple = ()) -> Optional[dict]:
+    cur = get_cursor(conn)
+    cur.execute(sql(query), params)   # <-- QUI
     return cur.fetchone()
 
-def _fetchall(conn, query: str, params: tuple = ()) -> List[sqlite3.Row]:
-    cur = conn.cursor()
-    cur.execute(query, params)
+def _fetchall(conn, query: str, params: tuple = ()) -> List[dict]:
+    cur = get_cursor(conn)
+    cur.execute(sql(query), params)   # <-- QUI
     return cur.fetchall()
 
 def _now_sql() -> str:
-    # SQLite: datetime('now') è UTC. Va bene per logica interna.
-    return "datetime('now')"
+    return now_sql()
+
+def _add_days_sql(days: int) -> str:
+    days = int(days)
+    if is_postgres():
+        return f"{_now_sql()} + INTERVAL '{days} days'"
+    return f"datetime('now','+{days} days')"
+
+def _extend_from_current_or_end_sql(days: int) -> str:
+    days = int(days)
+    if is_postgres():
+        return f"(CASE WHEN data_fine > {_now_sql()} THEN data_fine ELSE {_now_sql()} END) + INTERVAL '{days} days'"
+    # SQLite: datetime(base_expr, '+N days')
+    return f"datetime(CASE WHEN data_fine > {_now_sql()} THEN data_fine ELSE {_now_sql()} END, '+{days} days')"
 
 def _to_int_bool(v: Any) -> int:
     try:
@@ -43,7 +72,7 @@ def servizio_attivo_per_utente(utente_id: int, codice_servizio: str) -> bool:
     """
     codice_servizio = _normalize_codice_servizio(codice_servizio)
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
 
     row = _fetchone(conn, f"""
         SELECT 1
@@ -67,7 +96,7 @@ def servizio_attivo_per_annuncio(annuncio_id: int, codice_servizio: str) -> bool
     """
     codice_servizio = _normalize_codice_servizio(codice_servizio)
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
 
     row = _fetchone(conn, f"""
         SELECT 1
@@ -90,7 +119,7 @@ def get_servizi_attivi_utente(utente_id: int) -> List[Dict[str, Any]]:
     Ritorna la lista dei servizi attivi per utente (utile per debug/pannello).
     """
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
 
     rows = _fetchall(conn, f"""
         SELECT
@@ -122,7 +151,7 @@ def get_servizi_attivi_annuncio(annuncio_id: int) -> List[Dict[str, Any]]:
     Ritorna la lista dei servizi attivi per annuncio (utile per debug/pannello).
     """
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
 
     rows = _fetchall(conn, f"""
         SELECT
@@ -154,16 +183,16 @@ def aggiorna_servizi_scaduti() -> int:
     Ritorna quante righe sono state aggiornate.
     """
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
 
-    cur.execute(f"""
+    cur = get_cursor(conn)
+
+    cur.execute(sql(f"""
         UPDATE attivazioni_servizi
         SET stato = 'scaduto'
         WHERE stato = 'attivo'
           AND data_fine IS NOT NULL
           AND data_fine <= {_now_sql()}
-    """)
+    """))
 
     updated = cur.rowcount
     conn.commit()
@@ -197,16 +226,15 @@ def get_peso_annuncio(annuncio_id: int) -> int:
 # Storico
 # ---------------------------------------------------------
 def _storico_append(conn, attivazione_id: int, azione: str, eseguito_da: str, note: str = "") -> None:
-    conn.execute("""
+    cur = get_cursor(conn)
+    cur.execute(sql("""
         INSERT INTO storico_servizi (attivazione_id, azione, eseguito_da, note)
         VALUES (?, ?, ?, ?)
-    """, (attivazione_id, azione, eseguito_da, note or ""))
-
-
+    """), (attivazione_id, azione, eseguito_da, note or ""))
 # ---------------------------------------------------------
 # Query di utilità
 # ---------------------------------------------------------
-def _get_servizio_by_codice(conn, codice_servizio: str) -> Optional[sqlite3.Row]:
+def _get_servizio_by_codice(conn, codice_servizio: str) -> Optional[dict]:
     return _fetchone(conn, """
         SELECT id, codice, nome, descrizione, ambito, target,
                durata_default_giorni, ripetibile, attivabile_admin, attivo
@@ -215,7 +243,7 @@ def _get_servizio_by_codice(conn, codice_servizio: str) -> Optional[sqlite3.Row]
         LIMIT 1
     """, (codice_servizio,))
 
-def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: Optional[int]) -> Optional[sqlite3.Row]:
+def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: Optional[int]) -> Optional[dict]:
     # se annuncio_id è NULL, cerchiamo attivazioni globali/profilo (annuncio_id IS NULL)
     if annuncio_id is None:
         return _fetchone(conn, f"""
@@ -260,7 +288,7 @@ def attiva_servizio(
     acquisto_id: Optional[int] = None,
     attivato_da: str = "utente",
     note: str = "",
-    conn: Optional[sqlite3.Connection] = None
+    conn: Optional[Any] = None
 ) -> Tuple[bool, str, Optional[int]]:
 
     if attivato_da not in ("utente", "admin", "sistema", "stripe"):
@@ -270,10 +298,13 @@ def attiva_servizio(
     if conn is None:
         conn = get_db_connection()
         own_conn = True
-    conn.row_factory = sqlite3.Row
+
+    cur = get_cursor(conn)
 
     try:
-        # 1️⃣ servizio
+        # -------------------------------
+        # 1️⃣ RECUPERO SERVIZIO
+        # -------------------------------
         if servizio_id is not None:
             s = _fetchone(conn, """
                 SELECT id, codice, ambito, durata_default_giorni,
@@ -293,6 +324,7 @@ def attiva_servizio(
             return False, "Servizio disattivato.", None
 
         ambito = (s["ambito"] or "").lower()
+
         if ambito == "annuncio":
             if annuncio_id is None:
                 return False, "annuncio_id obbligatorio.", None
@@ -302,12 +334,15 @@ def attiva_servizio(
             annuncio_id = None
 
         durata_finale = durata_giorni if durata_giorni is not None else s["durata_default_giorni"]
+
         if durata_finale is not None:
             durata_finale = int(durata_finale)
             if durata_finale <= 0:
                 return False, "Durata non valida.", None
 
-        # 2️⃣ ultima attivazione (ATTIVA O REVOCATA)
+        # -------------------------------
+        # 2️⃣ ULTIMA ATTIVAZIONE
+        # -------------------------------
         if annuncio_id is None:
             last = _fetchone(conn, """
                 SELECT *
@@ -328,55 +363,64 @@ def attiva_servizio(
                 ORDER BY id DESC
                 LIMIT 1
             """, (utente_id, s["id"], annuncio_id))
-            
-        # ============================
-        # 🔁 RINNOVO SOLO SE ATTIVO
-        # ============================
+
+        # -------------------------------
+        # 🔁 RINNOVO
+        # -------------------------------
         if last and last["stato"] == "attivo":
+
             if last["data_fine"] is None:
                 return False, "Servizio già attivo senza scadenza.", None
+
             if durata_finale is None:
                 return False, "Servizio già attivo.", None
 
-            conn.execute(f"""
+            cur.execute(sql(f"""
                 UPDATE attivazioni_servizi
-                SET data_fine = datetime(
-                    CASE
-                        WHEN data_fine > datetime('now') THEN data_fine
-                        ELSE datetime('now')
-                    END,
-                    '+{durata_finale} days'
-                )
+                SET data_fine = {_extend_from_current_or_end_sql(durata_finale)}
                 WHERE id = ?
-            """, (last["id"],))
+            """), (last["id"],))
 
-            _storico_append(conn, last["id"], "rinnovato", attivato_da, note or "Rinnovo servizio")
+            _storico_append(conn, last["id"], "rinnovato", attivato_da, note or "")
 
             if own_conn:
                 conn.commit()
+
             return True, "Servizio rinnovato.", int(last["id"])
 
-        # ============================
+        # -------------------------------
         # 🆕 NUOVA ATTIVAZIONE
-        # ============================
+        # -------------------------------
         if durata_finale is None:
-            conn.execute("""
-                INSERT INTO attivazioni_servizi
-                (acquisto_id, servizio_id, utente_id, annuncio_id,
-                 data_inizio, data_fine, stato, attivato_da)
-                VALUES (?, ?, ?, ?, datetime('now'), NULL, 'attivo', ?)
-            """, (acquisto_id, s["id"], utente_id, annuncio_id, attivato_da))
-        else:
-            conn.execute(f"""
-                INSERT INTO attivazioni_servizi
-                (acquisto_id, servizio_id, utente_id, annuncio_id,
-                 data_inizio, data_fine, stato, attivato_da)
-                VALUES (?, ?, ?, ?, datetime('now'),
-                        datetime('now','+{durata_finale} days'),
-                        'attivo', ?)
-            """, (acquisto_id, s["id"], utente_id, annuncio_id, attivato_da))
 
-        att_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            cur.execute(sql(f"""
+                INSERT INTO attivazioni_servizi
+                (acquisto_id, servizio_id, utente_id, annuncio_id,
+                 data_inizio, data_fine, stato, attivato_da)
+                VALUES (?, ?, ?, ?, {_now_sql()}, NULL, 'attivo', ?)
+            """), (acquisto_id, s["id"], utente_id, annuncio_id, attivato_da))
+
+        else:
+
+            cur.execute(sql(f"""
+                INSERT INTO attivazioni_servizi
+                (acquisto_id, servizio_id, utente_id, annuncio_id,
+                 data_inizio, data_fine, stato, attivato_da)
+                VALUES (?, ?, ?, ?, {_now_sql()},
+                        {_add_days_sql(durata_finale)},
+                        'attivo', ?)
+            """), (acquisto_id, s["id"], utente_id, annuncio_id, attivato_da))
+
+        # -------------------------------
+        # 🔑 RECUPERO ID INSERITO
+        # -------------------------------
+        if is_postgres():
+            cur.execute(sql("SELECT currval(pg_get_serial_sequence('attivazioni_servizi','id'))"))
+            att_id = cur.fetchone()["currval"]
+        else:
+            cur.execute(sql("SELECT last_insert_rowid()"))
+            att_id = cur.fetchone()[0]
+
         _storico_append(conn, att_id, "creato", attivato_da, note or "")
 
         if own_conn:
@@ -392,13 +436,12 @@ def attiva_servizio(
     finally:
         if own_conn:
             conn.close()
-
 # ---------------------------------------------------------
 # (opzionale ma utile) Revoca forzata
 # ---------------------------------------------------------
 def revoca_attivazione(attivazione_id: int, eseguito_da: str = "admin", note: str = "") -> Tuple[bool, str]:
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+
     try:
         row = _fetchone(conn, "SELECT stato FROM attivazioni_servizi WHERE id = ? LIMIT 1", (attivazione_id,))
         if not row:
@@ -406,11 +449,12 @@ def revoca_attivazione(attivazione_id: int, eseguito_da: str = "admin", note: st
         if row["stato"] != "attivo":
             return False, "Attivazione non è in stato attivo."
 
-        conn.execute("""
+        cur = get_cursor(conn)
+        cur.execute(sql("""
             UPDATE attivazioni_servizi
             SET stato='revocato'
             WHERE id = ?
-        """, (attivazione_id,))
+        """), (attivazione_id,))
         _storico_append(conn, attivazione_id, "revocato", eseguito_da, note or "")
         conn.commit()
         return True, "Attivazione revocata."
@@ -439,8 +483,8 @@ def get_boost_score_sql() -> str:
       JOIN servizi s ON s.id = a.servizio_id
       WHERE a.annuncio_id = annunci.id
         AND a.stato = 'attivo'
-        AND a.data_inizio <= datetime('now')
-        AND (a.data_fine IS NULL OR a.data_fine > datetime('now'))
+        AND a.data_inizio <= {_now_sql()}
+        AND (a.data_fine IS NULL OR a.data_fine > {_now_sql()})
     )
     """
 
@@ -455,10 +499,10 @@ def get_servizio_con_piani(codice_servizio: str):
     """
 
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
+    cur = get_cursor(conn)
 
     # 1️⃣ servizio
-    servizio = conn.execute("""
+    cur.execute(sql("""
         SELECT
             id,
             codice,
@@ -470,14 +514,15 @@ def get_servizio_con_piani(codice_servizio: str):
         WHERE codice = ?
           AND attivo = 1
         LIMIT 1
-    """, (codice_servizio,)).fetchone()
+    """), (codice_servizio,))
+    servizio = cur.fetchone()
 
     if not servizio:
         conn.close()
         return None
 
     # 2️⃣ piani attivi (popcorn 🍿)
-    piani = conn.execute("""
+    cur.execute(sql("""
         SELECT
             id,
             codice,
@@ -492,7 +537,8 @@ def get_servizio_con_piani(codice_servizio: str):
         WHERE servizio_id = ?
           AND attivo = 1
         ORDER BY ordine ASC, durata_giorni ASC
-    """, (servizio["id"],)).fetchall()
+    """), (servizio["id"],))
+    piani = cur.fetchall()
 
     conn.close()
 
