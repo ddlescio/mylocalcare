@@ -31,7 +31,6 @@ from datetime import datetime, timedelta, timezone
 from services import attiva_servizio, revoca_attivazione, servizio_attivo_per_annuncio, servizio_attivo_per_utente
 import secrets
 import stripe
-import psycopg2.extras
 
 
 def get_reset_serializer():
@@ -519,18 +518,19 @@ def invia_email_sospensione(email, nome):
 # 2️⃣ FUNZIONE CONNESSIONE DB E MODELS
 # ==========================================================
 import os
+import psycopg2
+import psycopg2.extras
 
 def get_db_connection():
     database_url = os.getenv("DATABASE_URL")
 
     # 🔹 Render → PostgreSQL
     if database_url:
-        import psycopg2
-        import psycopg2.extras
-
-        conn = psycopg2.connect(database_url)
+        conn = psycopg2.connect(
+            database_url,
+            sslmode="require"
+        )
         conn.autocommit = True
-
         return conn
 
     # 🔹 Locale → SQLite
