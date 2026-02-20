@@ -569,6 +569,21 @@ def sql(query):
         return query.replace("?", "%s")
     return query
 
+def now_sql():
+    return "CURRENT_TIMESTAMP" if IS_POSTGRES else "datetime('now')"
+
+
+def order_datetime(field):
+    return field if IS_POSTGRES else f"datetime({field})"
+
+def dt_sql(field: str) -> str:
+    """
+    Converte un campo data/ora in modo compatibile:
+    - SQLite: datetime(field)
+    - Postgres: field::timestamp (funziona anche se field è già timestamp)
+    """
+    return f"{field}::timestamp" if IS_POSTGRES else f"datetime({field})"
+
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
     from functools import wraps
@@ -8165,13 +8180,13 @@ def cleanup_video_calls():
 
             limite = datetime.now() - timedelta(seconds=60)
 
-            calls = cur.execute(sql("""
+            calls = cur.execute(sql(f"""
                 SELECT id, room_name, utente_1, utente_2
                 FROM video_call_log
                 WHERE in_corso = 1
-                AND last_ping IS NOT NULL
-                AND last_ping < ?
-            """), (limite,)).fetchall()
+                  AND last_ping IS NOT NULL
+                  AND {dt_sql("last_ping")} < ?
+            """), (limite.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
 
             for call in calls:
                 print("🧹 Cleanup call fantasma:", call["room_name"])
