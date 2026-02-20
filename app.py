@@ -8211,12 +8211,12 @@ def cleanup_video_calls():
 
 
 # avvia thread automatico
-Thread(target=cleanup_video_calls, daemon=True).start()
 
 # ==========================================================
 # 7️⃣ AVVIO SERVER
 # ==========================================================
 if __name__ == "__main__":
+    Thread(target=cleanup_video_calls, daemon=True).start()
     socketio.run(
         app,
         host="127.0.0.1",
