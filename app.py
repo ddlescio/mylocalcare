@@ -49,6 +49,7 @@ def get_cursor(conn):
 
     # fallback
     return conn.cursor()
+    
 def get_reset_serializer():
     return URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
