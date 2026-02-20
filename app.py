@@ -35,11 +35,20 @@ import psycopg2
 import psycopg2.extras
 
 def get_cursor(conn):
+    import sqlite3
+    import psycopg2.extras
+
+    # PostgreSQL (Render)
     if isinstance(conn, psycopg2.extensions.connection):
         return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    else:
+
+    # SQLite (locale)
+    elif isinstance(conn, sqlite3.Connection):
+        conn.row_factory = sqlite3.Row
         return conn.cursor()
 
+    # fallback
+    return conn.cursor()
 def get_reset_serializer():
     return URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
@@ -259,17 +268,13 @@ import zoneinfo
 # 1️⃣ CONFIGURAZIONE DI BASE E APP
 # ==========================================================
 
-# 🔹 Carica le variabili dal file .env
-from pathlib import Path
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
-
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# 🔹 carica .env "normale"
-load_dotenv(".env")
-# 🔹 carica anche .env.secrets (se lo usi)
-load_dotenv(".env.secrets")
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env.secrets")
 
 MASTER_SECRET_HEX = os.getenv("MASTER_SECRET_KEY")
 if not MASTER_SECRET_HEX:
@@ -484,6 +489,9 @@ app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+app.config['MAIL_TIMEOUT'] = 20
+app.config['MAIL_MAX_EMAILS'] = None
+app.config['MAIL_DEBUG'] = True
 
 # 🔐 Salt usato per i token di reset password (mettilo anche in mail.env se vuoi)
 app.config['SECURITY_PASSWORD_SALT'] = os.getenv(
@@ -493,7 +501,8 @@ app.config['SECURITY_PASSWORD_SALT'] = os.getenv(
 
 # 🔹 Inizializza Flask-Mail
 mail = Mail(app)
-
+print("MAIL_USERNAME =", repr(app.config.get("MAIL_USERNAME")))
+print("MAIL_PASSWORD =", repr(app.config.get("MAIL_PASSWORD")))
 # ---------------------------------------------------------
 # 📧 FUNZIONI EMAIL – UTENTE
 # ---------------------------------------------------------
