@@ -49,7 +49,7 @@ def get_cursor(conn):
 
     # fallback
     return conn.cursor()
-    
+
 def get_reset_serializer():
     return URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
@@ -141,7 +141,7 @@ def crea_room_daily(nome_room: str):
 # ==========================================================
 def ensure_x25519_keys(user_id):
     """Verifica o genera le chiavi X25519 per l'utente (rigenera se mancano o sono incoerenti)"""
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
 
     c = get_cursor(conn)
     c.execute(sql("SELECT x25519_pub, x25519_priv_enc, x25519_priv_nonce FROM utenti WHERE id = ?"), (user_id,))
@@ -553,8 +553,10 @@ def get_db_connection():
 
         conn = psycopg2.connect(
             database_url,
-            sslmode="require"
+            sslmode="require",
+            cursor_factory=psycopg2.extras.RealDictCursor
         )
+        
         conn.autocommit = True
         return conn
 
@@ -5137,7 +5139,7 @@ def password_dimenticata():
             return redirect(url_for('password_dimenticata'))
 
         # 🔎 Cerca utente
-        conn = sqlite3.connect('database.db')
+        conn = get_db_connection()
 
         cur = get_cursor(conn)
         cur.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
