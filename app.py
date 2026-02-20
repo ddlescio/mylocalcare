@@ -39,7 +39,7 @@ def get_cursor(conn):
         return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     else:
         return conn.cursor()
-        
+
 def get_reset_serializer():
     return URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
@@ -8170,8 +8170,8 @@ def cleanup_video_calls():
                 FROM video_call_log
                 WHERE in_corso = 1
                 AND last_ping IS NOT NULL
-                AND datetime(last_ping) < ?
-            """), (limite.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
+                AND last_ping < ?
+            """), (limite,)).fetchall()
 
             for call in calls:
                 print("🧹 Cleanup call fantasma:", call["room_name"])
