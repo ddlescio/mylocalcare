@@ -6,12 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <script>
-    var _iub = _iub || [];
-    _iub.csConfiguration = {
-      floatingPreferencesButtonDisplay: "never"
-    };
+  var _iub = _iub || [];
+  _iub.csConfiguration = {
+    enableFloatingPreferencesButton: false,
+    floatingPreferencesButtonDisplay: "never"
+  };
   </script>
-
   <script type="text/javascript" src="https://embeds.iubenda.com/widgets/cdc25608-773e-4f62-9a5c-bdc04b36729e.js"></script>
 
   <title>LocalCare</title>
@@ -21,6 +21,10 @@
   <style>
   #iubenda-cs-banner {
     margin-top: 12px;
+  }
+
+  #iubenda-cs-floating-button {
+    display: none !important;
   }
 
 /* ✨ Font elegante e coerente per tutti i campi compilabili */
