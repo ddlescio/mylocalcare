@@ -33,6 +33,8 @@ import stripe
 import psycopg2
 import psycopg2.extras
 import re
+from models import fetchone_value
+
 
 def get_cursor(conn):
     import sqlite3
@@ -655,21 +657,6 @@ def dt_sql(field: str) -> str:
     - Postgres: field::timestamp (funziona anche se field è già timestamp)
     """
     return f"{field}::timestamp" if IS_POSTGRES else f"datetime({field})"
-
-def fetchone_value(row):
-    """
-    Restituisce il primo valore di una fetchone()
-    compatibile SQLite + Postgres.
-    """
-    if row is None:
-        return None
-
-    # Postgres → dict
-    if isinstance(row, dict):
-        return next(iter(row.values()))
-
-    # SQLite → tuple/Row
-    return row[0]
 
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
