@@ -396,8 +396,9 @@ def crea_tabella_video_config():
     """))
 
     # Garantiamo che esista sempre UNA SOLA riga
-    c.execute("SELECT COUNT(*) FROM video_config")
-    count = c.fetchone()[0]
+    c.execute(sql("SELECT COUNT(*) FROM video_config"))
+    row = c.fetchone()
+    count = row[0] if isinstance(row, (list, tuple)) else list(row.values())[0]
 
     if count == 0:
         c.execute(sql("""
