@@ -753,7 +753,7 @@ def calcola_media_recensioni(user_id):
     """, (user_id,))
     media, n = cur.fetchone()
     conn.close()
-    return round(media, 1) if media else 0, n
+    return round(float(media), 1) if media else 0, n
 
 
 def get_tutte_recensioni():
