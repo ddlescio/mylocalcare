@@ -525,6 +525,37 @@ def invia_email_sospensione(email, nome):
 
 IS_POSTGRES = False
 
+class PGConnectionWrapper:
+    """
+    Wrapper che rende psycopg2 compatibile con stile SQLite.
+    Permette di usare conn.execute() ovunque nel codice.
+    """
+
+    def __init__(self, conn):
+        self.conn = conn
+
+    def execute(self, query, params=None):
+        cur = self.conn.cursor()
+
+        # converte placeholder SQLite → Postgres
+        query = query.replace("?", "%s")
+
+        cur.execute(query, params or ())
+        return cur
+
+    def cursor(self):
+        return self.conn.cursor()
+
+    def commit(self):
+        return self.conn.commit()
+
+    def close(self):
+        return self.conn.close()
+
+    def __getattr__(self, name):
+        return getattr(self.conn, name)
+
+
 def get_db_connection():
     global IS_POSTGRES
     database_url = os.getenv("DATABASE_URL")
@@ -543,7 +574,7 @@ def get_db_connection():
         )
 
         conn.autocommit = True
-        return conn
+        return PGConnectionWrapper(conn)
 
     # 🔹 Locale → SQLite
     else:
