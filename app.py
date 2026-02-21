@@ -504,7 +504,7 @@ app.config['SECURITY_PASSWORD_SALT'] = os.getenv(
 
 # 🔹 Inizializza Flask-Mail
 mail = Mail(app)
-print("APP_BASE_URL =", repr(APP_BASE_URL))
+print("APP_BASE_URL =", repr(app.config.get("APP_BASE_URL")))
 # ---------------------------------------------------------
 # 📧 FUNZIONI EMAIL – UTENTE
 # ---------------------------------------------------------
