@@ -11,7 +11,7 @@ def get_conn():
 def crea_tabella_utenti():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS utenti (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
@@ -92,7 +92,7 @@ def crea_tabella_utenti():
         numero_recensioni INTEGER DEFAULT 0,
 
         -- 🕒 Data creazione
-        data_creazione TEXT DEFAULT """ + now_sql() + """,
+        data_creazione TEXT DEFAULT {now_sql()},
 
         -- 📸 Galleria immagini
         foto_galleria TEXT,
@@ -164,7 +164,7 @@ def crea_tabella_operatori():
 def crea_tabella_annunci():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS annunci (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         utente_id INTEGER NOT NULL,
@@ -181,7 +181,7 @@ def crea_tabella_annunci():
         prezzo TEXT,
         telefono TEXT,
         email TEXT,
-        data_pubblicazione TEXT DEFAULT """ + now_sql() + """,
+        data_pubblicazione TEXT DEFAULT {now_sql()},
         stato TEXT DEFAULT 'in_attesa',
         urgente INTEGER DEFAULT 0,
         approvato_il TEXT,
@@ -211,7 +211,7 @@ def crea_indici_annunci():
 def crea_tabella_match_utenti():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS match_utenti (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -225,7 +225,7 @@ def crea_tabella_match_utenti():
         -- annuncio che ha generato il match (di solito quello “nuovo approvato”)
         annuncio_id INTEGER NOT NULL,
 
-        created_at TEXT DEFAULT """ + now_sql() + """,
+        created_at TEXT DEFAULT {now_sql()},
         notificato INTEGER DEFAULT 0,
 
         FOREIGN KEY (utente_cerca_id) REFERENCES utenti(id),
@@ -249,7 +249,7 @@ def crea_tabella_match_utenti():
 def crea_tabella_messaggi_chat():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS messaggi_chat (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         mittente_id INTEGER NOT NULL,
@@ -260,7 +260,7 @@ def crea_tabella_messaggi_chat():
         eph_pub TEXT,
         eph_priv_enc TEXT,
         eph_priv_nonce TEXT,
-        created_at TEXT DEFAULT """ + now_sql() + """,
+        created_at TEXT DEFAULT {now_sql()},
         consegnato INTEGER DEFAULT 0,
         letto INTEGER DEFAULT 0,
         visibile_destinatario INTEGER DEFAULT 1,
@@ -297,7 +297,7 @@ def crea_tabella_chat_chiusure():
 def crea_tabella_segnalazioni_chat():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS segnalazioni_chat (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         messaggio_id INTEGER NOT NULL,
@@ -306,7 +306,7 @@ def crea_tabella_segnalazioni_chat():
         stato TEXT DEFAULT 'aperta',
         gestita_da INTEGER,
         data_gestione TEXT,
-        created_at TEXT DEFAULT """ + now_sql() + """,
+        created_at TEXT DEFAULT {now_sql()},
         FOREIGN KEY (messaggio_id) REFERENCES messaggi_chat(id),
         FOREIGN KEY (segnalato_da) REFERENCES utenti(id),
         FOREIGN KEY (gestita_da) REFERENCES utenti(id)
@@ -326,14 +326,14 @@ def crea_tabella_segnalazioni_chat():
 def crea_tabella_video_call_log():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS video_call_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room_name TEXT NOT NULL,
         utente_1 INTEGER NOT NULL,
         utente_2 INTEGER NOT NULL,
 
-        created_at TEXT DEFAULT """ + now_sql() + """,   -- inizio call
+        created_at TEXT DEFAULT {now_sql()},   -- inizio call
         ended_at TEXT,                               -- fine call
 
         durata_secondi INTEGER DEFAULT 0,
@@ -386,12 +386,12 @@ def crea_tabella_video_config():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS video_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         budget_mensile_cent INTEGER NOT NULL DEFAULT 2000,
         attivo INTEGER DEFAULT 1,
-        updated_at TEXT DEFAULT """ + now_sql() + """
+        updated_at TEXT DEFAULT {now_sql()}
     );
     """))
 
@@ -409,14 +409,13 @@ def crea_tabella_video_config():
     conn.commit()
     conn.close()
     print("✅ Tabella 'video_config' pronta.")
-
 # ---------------------------------------------------------
 # ⭐ TABELLA RECENSIONI
 # ---------------------------------------------------------
 def crea_tabella_recensioni():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS recensioni (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         id_autore INTEGER NOT NULL,
@@ -424,7 +423,7 @@ def crea_tabella_recensioni():
         voto INTEGER NOT NULL CHECK(voto BETWEEN 1 AND 5),
         testo TEXT,
         stato TEXT DEFAULT 'in_attesa',
-        data TEXT DEFAULT """ + now_sql() + """,
+        data TEXT DEFAULT {now_sql()},
         ultima_modifica TEXT,
         FOREIGN KEY (id_autore) REFERENCES utenti(id),
         FOREIGN KEY (id_destinatario) REFERENCES utenti(id),
@@ -442,14 +441,14 @@ def crea_tabella_recensioni():
 def crea_tabella_risposte():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS risposte_recensioni (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         id_recensione INTEGER NOT NULL,
         id_autore INTEGER NOT NULL,
         testo TEXT NOT NULL,
         stato TEXT DEFAULT 'in_attesa',
-        data TEXT DEFAULT """ + now_sql() + """,
+        data TEXT DEFAULT {now_sql()},
         ultima_modifica TEXT,
         FOREIGN KEY (id_recensione) REFERENCES recensioni(id) ON DELETE CASCADE,
         FOREIGN KEY (id_autore) REFERENCES utenti(id)
@@ -541,7 +540,7 @@ def crea_tabella_reset_password():
 def crea_tabella_servizi():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS servizi (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         codice TEXT UNIQUE NOT NULL,
@@ -553,7 +552,7 @@ def crea_tabella_servizi():
         ripetibile INTEGER DEFAULT 1,
         attivabile_admin INTEGER DEFAULT 1,
         attivo INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT """ + now_sql() + """
+        created_at TEXT DEFAULT {now_sql()}
     );
     """))
     conn.commit()
@@ -606,14 +605,14 @@ def crea_tabella_servizi_piani():
 def crea_tabella_pacchetti():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS pacchetti (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       codice TEXT UNIQUE NOT NULL,
       nome TEXT NOT NULL,
       descrizione TEXT,
       attivo INTEGER DEFAULT 1,
-      created_at TEXT DEFAULT """ + now_sql() + """
+      created_at TEXT DEFAULT {now_sql()}
     );
     """))
     conn.commit()
@@ -660,7 +659,7 @@ def crea_tabella_pacchetti_piani():
 def crea_tabella_pacchetti_servizi():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS pacchetti_servizi (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       pacchetto_id INTEGER NOT NULL,
@@ -669,7 +668,7 @@ def crea_tabella_pacchetti_servizi():
       -- ⏱ override opzionale durata servizio nel pacchetto
       durata_override INTEGER,
 
-      created_at TEXT DEFAULT """ + now_sql() + """,
+      created_at TEXT DEFAULT {now_sql()},
 
       UNIQUE(pacchetto_id, servizio_id),
       FOREIGN KEY (pacchetto_id) REFERENCES pacchetti(id),
@@ -683,7 +682,7 @@ def crea_tabella_pacchetti_servizi():
 def crea_tabella_prezzi():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS prezzi (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -700,7 +699,7 @@ def crea_tabella_prezzi():
       stripe_price_id TEXT,
       paypal_plan_id TEXT,
 
-      created_at TEXT DEFAULT """ + now_sql() + """,
+      created_at TEXT DEFAULT {now_sql()},
 
       UNIQUE(tipo, ref_id, durata_giorni)
     );
@@ -713,7 +712,7 @@ def crea_tabella_acquisti():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS acquisti (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -732,7 +731,7 @@ def crea_tabella_acquisti():
       stato TEXT DEFAULT 'creato',
       riferimento_esterno TEXT,
 
-      created_at TEXT DEFAULT """ + now_sql() + """,
+      created_at TEXT DEFAULT {now_sql()},
 
       FOREIGN KEY (utente_id) REFERENCES utenti(id),
       FOREIGN KEY (prezzo_id) REFERENCES prezzi(id),
@@ -771,7 +770,7 @@ def crea_tabella_acquisti_servizi():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS acquisti_servizi (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         utente_id INTEGER NOT NULL,
@@ -780,7 +779,7 @@ def crea_tabella_acquisti_servizi():
         importo REAL,
         valuta TEXT,
         riferimento_esterno TEXT,
-        created_at TEXT DEFAULT """ + now_sql() + """,
+        created_at TEXT DEFAULT {now_sql()},
         FOREIGN KEY (utente_id) REFERENCES utenti(id),
         FOREIGN KEY (servizio_id) REFERENCES servizi(id)
     );
@@ -796,7 +795,7 @@ def crea_tabella_acquisti_servizi():
 def crea_tabella_attivazioni_servizi():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS attivazioni_servizi (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -811,7 +810,7 @@ def crea_tabella_attivazioni_servizi():
         stato TEXT DEFAULT 'attivo',
         attivato_da TEXT DEFAULT 'utente',
 
-        created_at TEXT DEFAULT """ + now_sql() + """,
+        created_at TEXT DEFAULT {now_sql()},
 
         FOREIGN KEY (acquisto_id) REFERENCES acquisti(id),
         FOREIGN KEY (servizio_id) REFERENCES servizi(id),
@@ -835,14 +834,14 @@ def crea_tabella_attivazioni_servizi():
 def crea_tabella_storico_servizi():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS storico_servizi (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         attivazione_id INTEGER NOT NULL,
         azione TEXT NOT NULL,
         eseguito_da TEXT NOT NULL,
         note TEXT,
-        data TEXT DEFAULT """ + now_sql() + """,
+        data TEXT DEFAULT {now_sql()},
         FOREIGN KEY (attivazione_id) REFERENCES attivazioni_servizi(id)
     );
     """))
@@ -857,7 +856,7 @@ def crea_tabella_storico_servizi():
 def crea_tabella_override_admin():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS override_admin (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         admin_id INTEGER NOT NULL,
@@ -867,7 +866,7 @@ def crea_tabella_override_admin():
         data_inizio TEXT NOT NULL,
         data_fine TEXT,
         motivo TEXT,
-        created_at TEXT DEFAULT """ + now_sql() + """,
+        created_at TEXT DEFAULT {now_sql()},
         FOREIGN KEY (admin_id) REFERENCES utenti(id),
         FOREIGN KEY (servizio_id) REFERENCES servizi(id),
         FOREIGN KEY (utente_id) REFERENCES utenti(id),
@@ -930,7 +929,7 @@ def aggiorna_colonne_mancanti():
         # Recensioni e tracking
         "media_recensioni": "REAL DEFAULT 0",
         "numero_recensioni": "INTEGER DEFAULT 0",
-        "data_creazione": "TEXT DEFAULT """ + now_sql() + """",
+        "data_creazione": f"TEXT DEFAULT {now_sql()}",
         "foto_galleria": "TEXT",
 
         # Cifratura (DEK + ID + X25519)

@@ -25,7 +25,6 @@ from models import (
 )
 from models import crea_notifica
 from flask_login import login_required
-from init_db import get_conn
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from datetime import datetime, timedelta, timezone
 from services import attiva_servizio, revoca_attivazione, servizio_attivo_per_annuncio, servizio_attivo_per_utente
@@ -593,7 +592,7 @@ def sql(query):
         query = query.replace("DATETIME", "TIMESTAMP")
 
     return query
-        
+
 def now_sql():
     return "CURRENT_TIMESTAMP" if IS_POSTGRES else "datetime('now')"
 
