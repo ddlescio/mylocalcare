@@ -15,6 +15,8 @@ from Crypto.Random import get_random_bytes
 import threading
 from models import calcola_media_recensioni, get_recensioni_utente
 from models import (
+    get_conn,   # ← AGGIUNGI SOLO QUESTA RIGA
+
     get_operatori, get_operatore_by_id,
     aggiungi_operatore, modifica_operatore, elimina_operatore, get_tutte_le_zone,
     get_utenti, attiva_utente, elimina_utente,
@@ -659,7 +661,7 @@ def dt_sql(field: str) -> str:
     return f"{field}::timestamp" if IS_POSTGRES else f"datetime({field})"
 
 app.config["DB_CONN_FACTORY"] = get_db_connection
-app.config["IS_POSTGRES"] = IS_POSTGRES    
+app.config["IS_POSTGRES"] = IS_POSTGRES
 
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
