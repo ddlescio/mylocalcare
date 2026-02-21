@@ -1,4 +1,16 @@
 from app import get_db_connection, sql, IS_POSTGRES, now_sql
+
+def dt_col(default_now=False):
+    """
+    Tipo colonna datetime compatibile:
+    - SQLite → TEXT
+    - Postgres → TIMESTAMP
+    """
+    if IS_POSTGRES:
+        return "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" if default_now else "TIMESTAMP"
+    else:
+        return f"TEXT DEFAULT {now_sql()}" if default_now else "TEXT"
+
 # =========================================================
 # INIZIALIZZAZIONE DATABASE LOCALE - LocalCare (2025)
 # =========================================================
@@ -92,8 +104,7 @@ def crea_tabella_utenti():
         numero_recensioni INTEGER DEFAULT 0,
 
         -- 🕒 Data creazione
-        data_creazione TEXT DEFAULT {now_sql()},
-
+        data_creazione {dt_col(True)},
         -- 📸 Galleria immagini
         foto_galleria TEXT,
 
@@ -112,14 +123,14 @@ def crea_tabella_utenti():
 
         -- 🔐 Sicurezza login / admin
         failed_logins INTEGER DEFAULT 0,
-        lock_until TEXT,
+        lock_until {dt_col()},
         admin_session_token TEXT,
-        admin_session_expiry TEXT,
+        admin_session_expiry {dt_col()},
         admin_browser_fingerprint TEXT,
 
         -- 🛡️ Verifica maggiore età
         maggiorenne_verificato INTEGER DEFAULT 0,
-        data_verifica_maggiorenne TEXT,
+        data_verifica_maggiorenne {dt_col()},
         ip_verifica_maggiorenne TEXT,
         versione_consenso TEXT
     );
@@ -181,7 +192,7 @@ def crea_tabella_annunci():
         prezzo TEXT,
         telefono TEXT,
         email TEXT,
-        data_pubblicazione TEXT DEFAULT {now_sql()},
+        data_pubblicazione {dt_col(True)},
         stato TEXT DEFAULT 'in_attesa',
         urgente INTEGER DEFAULT 0,
         approvato_il TEXT,
@@ -225,7 +236,7 @@ def crea_tabella_match_utenti():
         -- annuncio che ha generato il match (di solito quello “nuovo approvato”)
         annuncio_id INTEGER NOT NULL,
 
-        created_at TEXT DEFAULT {now_sql()},
+        created_at {dt_col(True)},
         notificato INTEGER DEFAULT 0,
 
         FOREIGN KEY (utente_cerca_id) REFERENCES utenti(id),
@@ -260,7 +271,7 @@ def crea_tabella_messaggi_chat():
         eph_pub TEXT,
         eph_priv_enc TEXT,
         eph_priv_nonce TEXT,
-        created_at TEXT DEFAULT {now_sql()},
+        created_at {dt_col(True)},
         consegnato INTEGER DEFAULT 0,
         letto INTEGER DEFAULT 0,
         visibile_destinatario INTEGER DEFAULT 1,
@@ -306,7 +317,7 @@ def crea_tabella_segnalazioni_chat():
         stato TEXT DEFAULT 'aperta',
         gestita_da INTEGER,
         data_gestione TEXT,
-        created_at TEXT DEFAULT {now_sql()},
+        created_at {dt_col(True)},
         FOREIGN KEY (messaggio_id) REFERENCES messaggi_chat(id),
         FOREIGN KEY (segnalato_da) REFERENCES utenti(id),
         FOREIGN KEY (gestita_da) REFERENCES utenti(id)
@@ -333,9 +344,8 @@ def crea_tabella_video_call_log():
         utente_1 INTEGER NOT NULL,
         utente_2 INTEGER NOT NULL,
 
-        created_at TEXT DEFAULT {now_sql()},   -- inizio call
-        ended_at TEXT,                               -- fine call
-
+        created_at {dt_col(True)},
+        ended_at {dt_col()},
         durata_secondi INTEGER DEFAULT 0,
 
         -- minuti reali Daily già calcolati (participant-minutes)
@@ -805,14 +815,12 @@ def crea_tabella_attivazioni_servizi():
         utente_id INTEGER NOT NULL,
         annuncio_id INTEGER,
 
-        data_inizio TEXT NOT NULL,
-        data_fine TEXT,
-
+        data_inizio {dt_col()},
+        data_fine {dt_col()},
         stato TEXT DEFAULT 'attivo',
         attivato_da TEXT DEFAULT 'utente',
 
-        created_at TEXT DEFAULT {now_sql()},
-
+        created_at {dt_col(True)},
         FOREIGN KEY (acquisto_id) REFERENCES acquisti(id),
         FOREIGN KEY (servizio_id) REFERENCES servizi(id),
         FOREIGN KEY (utente_id) REFERENCES utenti(id),
@@ -864,10 +872,10 @@ def crea_tabella_override_admin():
         servizio_id INTEGER NOT NULL,
         utente_id INTEGER NOT NULL,
         annuncio_id INTEGER,
-        data_inizio TEXT NOT NULL,
-        data_fine TEXT,
+        data_inizio {dt_col()},
+        data_fine {dt_col()},
         motivo TEXT,
-        created_at TEXT DEFAULT {now_sql()},
+        created_at {dt_col(True)},
         FOREIGN KEY (admin_id) REFERENCES utenti(id),
         FOREIGN KEY (servizio_id) REFERENCES servizi(id),
         FOREIGN KEY (utente_id) REFERENCES utenti(id),
@@ -1117,7 +1125,7 @@ if not IS_POSTGRES:
         aggiorna_colonne_mancanti()
     except Exception:
         pass
-        
+
     print("✅ Tutte le tabelle create o aggiornate correttamente (senza perdita dati).")
 
 def imposta_admin_predefinito():
