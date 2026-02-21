@@ -617,17 +617,16 @@ def get_annunci_utente(utente_id):
     conn = get_db_connection()
 
     c = conn.cursor()
-    c.execute("""
+    c.execute(sql(f"""
         SELECT id, titolo, categoria, descrizione, zona, filtri_categoria,
                data_pubblicazione, stato
         FROM annunci
         WHERE utente_id = ?
-        ORDER BY datetime(data_pubblicazione) DESC
-    """, (utente_id,))
+        ORDER BY {dt_sql("data_pubblicazione")} DESC
+    """), (utente_id,))
     rows = c.fetchall()
     conn.close()
     return [dict(r) for r in rows]
-
 # ------------------ RECENSIONI ------------------ #
 from datetime import datetime
 
