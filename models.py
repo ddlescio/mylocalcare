@@ -747,14 +747,18 @@ def calcola_media_recensioni(user_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        SELECT AVG(voto), COUNT(*)
+        SELECT AVG(voto) AS media, COUNT(*) AS n
         FROM recensioni
         WHERE id_destinatario = ? AND stato = 'approvato'
     """, (user_id,))
-    media, n = cur.fetchone()
-    conn.close()
-    return round(float(media), 1) if media else 0, n
 
+    row = cur.fetchone()
+    conn.close()
+
+    media = row["media"]
+    n = row["n"]
+
+    return round(float(media), 1) if media else 0, n
 
 def get_tutte_recensioni():
     conn = get_db_connection()
