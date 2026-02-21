@@ -15,7 +15,6 @@ from Crypto.Random import get_random_bytes
 import threading
 from models import calcola_media_recensioni, get_recensioni_utente
 from models import (
-    get_conn,   # ← AGGIUNGI SOLO QUESTA RIGA
 
     get_operatori, get_operatore_by_id,
     aggiungi_operatore, modifica_operatore, elimina_operatore, get_tutte_le_zone,
