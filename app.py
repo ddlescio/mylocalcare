@@ -3827,12 +3827,11 @@ def pulisci_notifiche_vecchie():
     """Elimina notifiche lette e scadute in base al TTL configurato"""
     giorni = app.config.get("NOTIFICHE_TTL_GIORNI", 10)
     conn = get_db_connection()
-    conn.execute(f"""
+    conn.execute(sql(f"""
         DELETE FROM notifiche
         WHERE letta = 1
-          AND data_lettura IS NOT NULL
-          AND data_lettura < datetime('now', '-{giorni} days')
-    """)
+          AND data_lettura < {now_sql()} - INTERVAL '{giorni} days'
+    """))
     conn.commit()
     conn.close()
 
