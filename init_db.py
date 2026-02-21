@@ -1112,9 +1112,12 @@ def inizializza_database():
     crea_tabella_storico_servizi()
     crea_tabella_override_admin()
 
-    if not IS_POSTGRES:
+if not IS_POSTGRES:
+    try:
         aggiorna_colonne_mancanti()
-
+    except Exception:
+        pass
+        
     print("✅ Tutte le tabelle create o aggiornate correttamente (senza perdita dati).")
 
 def imposta_admin_predefinito():
