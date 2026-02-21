@@ -1190,7 +1190,7 @@ def admin_servizi_toggle(id):
 @app.route("/admin/servizi/<int:servizio_id>/elimina", methods=["POST"])
 @admin_required
 def admin_servizi_elimina(servizio_id):
-    conn = get_db_connection())
+    conn = get_db_connection()
     c = get_cursor(conn)
 
     c.execute(sql("""
@@ -2531,7 +2531,7 @@ def admin_invia_notifica():
                     "cognome": u["cognome"] if "cognome" in u.keys() else None,
                 })
 
-        conn = get_db_connection())
+        conn = get_db_connection()
         c = get_cursor(conn)
         c.execute(sql("""
             INSERT INTO notifiche_admin (
@@ -3179,7 +3179,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
     - da riattivazione futura
     """
 
-    conn = get_db_connection())
+    conn = get_db_connection()
     c = get_cursor(conn)
 
     # ---------------------------------------------------------
@@ -4136,7 +4136,7 @@ def utente_update_info():
         flash("Errore: sessione utente non valida.", "error")
         return redirect(url_for("dashboard"))
 
-    conn = get_db_connection())
+    conn = get_db_connection()
     c = get_cursor(conn)
 
     # 🔹 Campi base
@@ -4248,7 +4248,7 @@ def utente_update_esperienza():
         flash("Sessione non valida.", "error")
         return redirect(url_for("login"))
 
-    conn = get_db_connection())
+    conn = get_db_connection()
     c = get_cursor(conn)
 
     esperienza_1 = request.form.get("esperienza_1", "")
@@ -5426,7 +5426,7 @@ def landing():
 
     # 1️⃣ Se loggato → recupero macro_area dal DB
     if utente_id:
-        conn = get_db_connection())
+        conn = get_db_connection()
         cur = get_cursor(conn)
         cur.execute(sql("SELECT macro_area FROM utenti WHERE id = ?"), (utente_id,))
         row = cur.fetchone()
@@ -5527,7 +5527,7 @@ def cerca():
     if not provincia_attiva:
         utente_id = session.get("utente_id")
         if utente_id:
-            conn_tmp = get_db_connection())
+            conn_tmp = get_db_connection()
             cur_tmp = conn_tmp.cursor()
             cur_tmp.execute(sql("SELECT provincia FROM utenti WHERE id = ?"), (utente_id,))
             row = cur_tmp.fetchone()
