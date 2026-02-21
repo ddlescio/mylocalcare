@@ -639,7 +639,7 @@ def sql(query):
         # 🔥 FIX GLOBALE datetime(campo)
         query = re.sub(r"datetime\((.*?)\)", r"\1::timestamp", query)
 
-    return query    
+    return query
 
 def now_sql():
     return "CURRENT_TIMESTAMP" if IS_POSTGRES else "datetime('now')"
@@ -655,6 +655,21 @@ def dt_sql(field: str) -> str:
     - Postgres: field::timestamp (funziona anche se field è già timestamp)
     """
     return f"{field}::timestamp" if IS_POSTGRES else f"datetime({field})"
+
+def fetchone_value(row):
+    """
+    Restituisce il primo valore di una fetchone()
+    compatibile SQLite + Postgres.
+    """
+    if row is None:
+        return None
+
+    # Postgres → dict
+    if isinstance(row, dict):
+        return next(iter(row.values()))
+
+    # SQLite → tuple/Row
+    return row[0]
 
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
@@ -788,15 +803,15 @@ def admin_counters():
         try:
             # 🟡 Conta annunci in attesa
             c.execute(sql("SELECT COUNT(*) FROM annunci WHERE stato = 'in_attesa'"))
-            pending_annunci = c.fetchone()[0]
+            pending_annunci = fetchone_value(c.fetchone())
 
             # 🟡 Conta recensioni in attesa
             c.execute(sql("SELECT COUNT(*) FROM recensioni WHERE stato = 'in_attesa'"))
-            pending_recensioni = c.fetchone()[0]
+            pending_recensioni = fetchone_value(c.fetchone())
 
             # 🟡 Conta risposte in attesa
             c.execute(sql("SELECT COUNT(*) FROM risposte_recensioni WHERE stato = 'in_attesa'"))
-            pending_risposte = c.fetchone()[0]
+            pending_risposte = fetchone_value(c.fetchone())
 
             # ✅ Somma recensioni + risposte nel badge “recensioni”
             pending_recensioni_totali = pending_recensioni + pending_risposte
@@ -2070,7 +2085,7 @@ def admin_utenti():
     c = get_cursor(conn)
 
     c.execute(sql("SELECT COUNT(*) FROM utenti"))
-    totale_utenti = c.fetchone()[0]
+    totale_utenti = fetchone_value(c.fetchone())
 
     query = """
         SELECT
@@ -2346,26 +2361,26 @@ def admin_statistiche():
     c = get_cursor(conn)
 
     c.execute(sql("SELECT COUNT(*) FROM utenti WHERE attivo = 1"))
-    utenti_attivi = c.fetchone()[0]
+    utenti_attivi = fetchone_value(c.fetchone())
 
     c.execute(sql("SELECT COUNT(*) FROM annunci"))
-    annunci_totali = c.fetchone()[0]
+    annunci_totali = fetchone_value(c.fetchone())
 
     c.execute(sql("SELECT COUNT(DISTINCT utente_id) FROM annunci"))
-    utenti_con_annunci = c.fetchone()[0]
+    utenti_con_annunci = fetchone_value(c.fetchone())
 
     c.execute(sql("""
         SELECT COUNT(*)
         FROM utenti
         WHERE id NOT IN (SELECT DISTINCT utente_id FROM annunci)
     """))
-    utenti_senza_annunci = c.fetchone()[0]
+    utenti_senza_annunci = fetchone_value(c.fetchone())
 
     c.execute(sql("""
         SELECT COUNT(DISTINCT id_destinatario)
         FROM recensioni
     """))
-    utenti_recensiti = c.fetchone()[0]
+    utenti_recensiti = fetchone_value(c.fetchone())
 
     c.execute(sql("""
         SELECT COUNT(*)
@@ -2383,7 +2398,7 @@ def admin_statistiche():
             GROUP BY a, b
         )
     """))
-    chat_totali = c.fetchone()[0]
+    chat_totali = fetchone_value(c.fetchone())
 
     conn.close()
 
@@ -3769,7 +3784,7 @@ def conta_non_lette(user_id):
     conn = get_db_connection()
     c = get_cursor(conn)
     c.execute(sql("SELECT COUNT(*) FROM notifiche WHERE id_utente = ? AND letta = 0"), (user_id,))
-    count = c.fetchone()[0]
+    count = fetchone_value(c.fetchone())
     conn.close()
     return count
 
@@ -7382,7 +7397,7 @@ def toggle_visibilita():
             SELECT COUNT(*) FROM annunci
             WHERE utente_id = ? AND stato = 'approvato'
         """), (g.utente["id"],))
-        annunci_attivi = c.fetchone()[0]
+        annunci_attivi = fetchone_value(c.fetchone())
 
         if annunci_attivi > 0:
             conn.close()
