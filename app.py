@@ -556,7 +556,7 @@ def get_db_connection():
             sslmode="require",
             cursor_factory=psycopg2.extras.RealDictCursor
         )
-        
+
         conn.autocommit = True
         return conn
 
@@ -578,9 +578,22 @@ def get_db_connection():
 
 def sql(query):
     if IS_POSTGRES:
-        return query.replace("?", "%s")
-    return query
+        query = query.replace("?", "%s")
 
+        # 🔑 AUTOINCREMENT compatibile
+        query = query.replace(
+            "INTEGER PRIMARY KEY AUTOINCREMENT",
+            "SERIAL PRIMARY KEY"
+        )
+
+        # 🕒 datetime compatibile
+        query = query.replace("datetime('now')", "CURRENT_TIMESTAMP")
+
+        # 🕒 DATETIME -> TIMESTAMP
+        query = query.replace("DATETIME", "TIMESTAMP")
+
+    return query
+        
 def now_sql():
     return "CURRENT_TIMESTAMP" if IS_POSTGRES else "datetime('now')"
 
