@@ -12,6 +12,7 @@ from flask import session
 from Crypto.Cipher import AES
 from nacl.public import PrivateKey, PublicKey
 from flask_socketio import SocketIO
+from app import fetchone_value
 
 # ------------------------------------------------------
 # Helper: ottiene la DEK decifrata (dalla sessione)
