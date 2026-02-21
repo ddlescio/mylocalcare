@@ -17,7 +17,11 @@ def is_postgres():
     return IS_POSTGRES
 
 def now_sql():
-    return "CURRENT_TIMESTAMP" if is_postgres() else "datetime('now')"    
+    return "CURRENT_TIMESTAMP" if is_postgres() else "datetime('now')"
+
+def dt_sql(field):
+    from app import dt_sql as _f
+    return _f(field)
 # ---------------------------------------------------------
 # Normalizzazione codici servizio (alias)
 # ---------------------------------------------------------
@@ -55,11 +59,13 @@ def _add_days_sql(days: int) -> str:
 
 def _extend_from_current_or_end_sql(days: int) -> str:
     days = int(days)
-    if is_postgres():
-        return f"(CASE WHEN data_fine > {_now_sql()} THEN data_fine ELSE {_now_sql()} END) + INTERVAL '{days} days'"
-    # SQLite: datetime(base_expr, '+N days')
-    return f"datetime(CASE WHEN data_fine > {_now_sql()} THEN data_fine ELSE {_now_sql()} END, '+{days} days')"
 
+    if is_postgres():
+        return f"(CASE WHEN {dt_sql('data_fine')} > {_now_sql()} THEN {dt_sql('data_fine')} ELSE {_now_sql()} END) + INTERVAL '{days} days'"
+
+    # SQLite
+    return f"datetime(CASE WHEN data_fine > {_now_sql()} THEN data_fine ELSE {_now_sql()} END, '+{days} days')"
+    
 def _to_int_bool(v: Any) -> int:
     try:
         return 1 if int(v) == 1 else 0
@@ -81,8 +87,8 @@ def servizio_attivo_per_utente(utente_id: int, codice_servizio: str) -> bool:
         WHERE a.utente_id = ?
           AND s.codice = ?
           AND a.stato = 'attivo'
-          AND a.data_inizio <= {_now_sql()}
-          AND (a.data_fine IS NULL OR a.data_fine > {_now_sql()})
+          AND {dt_sql("a.data_inizio")} <= {_now_sql()}
+          AND (a.data_fine IS NULL OR {dt_sql("a.data_fine")} > {_now_sql()})
         LIMIT 1
     """, (utente_id, codice_servizio))
 
@@ -105,8 +111,8 @@ def servizio_attivo_per_annuncio(annuncio_id: int, codice_servizio: str) -> bool
         WHERE a.annuncio_id = ?
           AND s.codice = ?
           AND a.stato = 'attivo'
-          AND a.data_inizio <= {_now_sql()}
-          AND (a.data_fine IS NULL OR a.data_fine > {_now_sql()})
+          AND {dt_sql("a.data_inizio")} <= {_now_sql()}
+          AND (a.data_fine IS NULL OR {dt_sql("a.data_fine")} > {_now_sql()})
         LIMIT 1
     """, (annuncio_id, codice_servizio))
 
@@ -137,8 +143,8 @@ def get_servizi_attivi_utente(utente_id: int) -> List[Dict[str, Any]]:
         JOIN servizi s ON s.id = a.servizio_id
         WHERE a.utente_id = ?
           AND a.stato = 'attivo'
-          AND a.data_inizio <= {_now_sql()}
-          AND (a.data_fine IS NULL OR a.data_fine > {_now_sql()})
+          AND {dt_sql("a.data_inizio")} <= {_now_sql()}
+          AND (a.data_fine IS NULL OR {dt_sql("a.data_fine")} > {_now_sql()})
         ORDER BY a.data_inizio DESC
     """, (utente_id,))
 
@@ -168,8 +174,8 @@ def get_servizi_attivi_annuncio(annuncio_id: int) -> List[Dict[str, Any]]:
         JOIN servizi s ON s.id = a.servizio_id
         WHERE a.annuncio_id = ?
           AND a.stato = 'attivo'
-          AND a.data_inizio <= {_now_sql()}
-          AND (a.data_fine IS NULL OR a.data_fine > {_now_sql()})
+          AND {dt_sql("a.data_inizio")} <= {_now_sql()}
+          AND (a.data_fine IS NULL OR {dt_sql("a.data_fine")} > {_now_sql()})
         ORDER BY a.data_inizio DESC
     """, (annuncio_id,))
 
@@ -191,7 +197,7 @@ def aggiorna_servizi_scaduti() -> int:
         SET stato = 'scaduto'
         WHERE stato = 'attivo'
           AND data_fine IS NOT NULL
-          AND data_fine <= {_now_sql()}
+          AND {dt_sql("data_fine")} <= {_now_sql()}
     """))
 
     updated = cur.rowcount
@@ -253,8 +259,8 @@ def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: 
               AND servizio_id = ?
               AND annuncio_id IS NULL
               AND stato = 'attivo'
-              AND data_inizio <= {_now_sql()}
-              AND (data_fine IS NULL OR data_fine > {_now_sql()})
+              AND {dt_sql("data_inizio")} <= {_now_sql()}
+              AND (data_fine IS NULL OR {dt_sql("data_fine")} > {_now_sql()})
             LIMIT 1
         """, (utente_id, servizio_id))
     else:
@@ -265,8 +271,8 @@ def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: 
               AND servizio_id = ?
               AND annuncio_id = ?
               AND stato = 'attivo'
-              AND data_inizio <= {_now_sql()}
-              AND (data_fine IS NULL OR data_fine > {_now_sql()})
+              AND {dt_sql("data_inizio")} <= {_now_sql()}
+              AND (data_fine IS NULL OR {dt_sql("data_fine")} > {_now_sql()})
             LIMIT 1
         """, (utente_id, servizio_id, annuncio_id))
 
@@ -483,8 +489,8 @@ def get_boost_score_sql() -> str:
       JOIN servizi s ON s.id = a.servizio_id
       WHERE a.annuncio_id = annunci.id
         AND a.stato = 'attivo'
-        AND a.data_inizio <= {_now_sql()}
-        AND (a.data_fine IS NULL OR a.data_fine > {_now_sql()})
+        AND {dt_sql("a.data_inizio")} <= {_now_sql()}
+        AND (a.data_fine IS NULL OR {dt_sql("a.data_fine")} > {_now_sql()})
     )
     """
 

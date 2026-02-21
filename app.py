@@ -658,6 +658,9 @@ def dt_sql(field: str) -> str:
     """
     return f"{field}::timestamp" if IS_POSTGRES else f"datetime({field})"
 
+app.config["DB_CONN_FACTORY"] = get_db_connection
+app.config["IS_POSTGRES"] = IS_POSTGRES    
+
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
     from functools import wraps

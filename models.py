@@ -1,8 +1,12 @@
 # models.py
 
-def get_db_connection():
-    from app import get_db_connection as _get_db_connection
-    return _get_db_connection()
+from db import (
+    get_db_connection,
+    get_cursor,
+    sql,
+    is_postgres,
+    dt_sql
+)    
 # -----------------------------
 # CHAT – FUNZIONI PRINCIPALI (aggiornate con consegnato/letto/orario)
 # -----------------------------
