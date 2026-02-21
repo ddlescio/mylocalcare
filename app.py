@@ -268,7 +268,7 @@ import zoneinfo
 # 1️⃣ CONFIGURAZIONE DI BASE E APP
 # ==========================================================
 
-import os
+
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -293,7 +293,7 @@ import json
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s or "[]")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(32))
 
-import os
+
 
 socketio = SocketIO(
     app,
@@ -493,6 +493,9 @@ app.config['MAIL_TIMEOUT'] = 20
 app.config['MAIL_MAX_EMAILS'] = None
 app.config['MAIL_DEBUG'] = True
 
+# 🌐 Base URL per generare link assoluti (prod vs locale)
+app.config["APP_BASE_URL"] = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
+
 # 🔐 Salt usato per i token di reset password (mettilo anche in mail.env se vuoi)
 app.config['SECURITY_PASSWORD_SALT'] = os.getenv(
     'SECURITY_PASSWORD_SALT',
@@ -501,11 +504,18 @@ app.config['SECURITY_PASSWORD_SALT'] = os.getenv(
 
 # 🔹 Inizializza Flask-Mail
 mail = Mail(app)
-print("MAIL_USERNAME =", repr(app.config.get("MAIL_USERNAME")))
-print("MAIL_PASSWORD =", repr(app.config.get("MAIL_PASSWORD")))
+print("APP_BASE_URL =", repr(APP_BASE_URL))
 # ---------------------------------------------------------
 # 📧 FUNZIONI EMAIL – UTENTE
 # ---------------------------------------------------------
+def build_external_url(endpoint: str, **values) -> str:
+    base = (app.config.get("APP_BASE_URL") or "").rstrip("/")
+    path = url_for(endpoint, _external=False, **values)   # /conferma/<token>
+    return f"{base}{path}"
+
+def send_async_email(app, msg):
+    with app.app_context():
+        mail.send(msg)
 
 def get_reset_serializer():
     """Restituisce il serializer firmato per i token di reset password."""
@@ -536,7 +546,7 @@ def invia_email_sospensione(email, nome):
 # ==========================================================
 # 2️⃣ FUNZIONE CONNESSIONE DB E MODELS
 # ==========================================================
-import os
+
 IS_POSTGRES = False
 
 def get_db_connection():
@@ -4765,7 +4775,7 @@ def recensioni_utente(user_id):
 # 5️⃣ AUTENTICAZIONE
 # ==========================================================
 import json
-import os
+
 
 def get_comune_info(comune_input):
     path = os.path.join(app.static_folder, "data", "comuni.json")
@@ -4888,7 +4898,7 @@ def register():
         conn.close()
 
         # 📧 Email conferma
-        link = url_for('conferma_email', token=token, _external=True)
+        link = build_external_url("conferma_email", token=token)
 
         messaggio = Message(
             'Conferma la tua registrazione su MyLocalCare',
@@ -4905,7 +4915,7 @@ def register():
         messaggio.html = html
         messaggio.body = f"Conferma il tuo account: {link}"
 
-        mail.send(messaggio)
+        threading.Thread(target=send_async_email, args=(app, messaggio), daemon=True).start()
 
         flash("Registrazione completata! Controlla la tua email per confermare l'account.")
         return redirect(url_for('login'))
@@ -7631,7 +7641,7 @@ def video_start():
     from datetime import datetime
     import time
     import requests
-    import os
+
 
     conn = get_db_connection()
     cur = get_cursor(conn)
