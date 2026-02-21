@@ -325,8 +325,8 @@ def fromjson_filter(value):
     except Exception:
         return {}
 
-import pytz
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 print(">>> TEMPLATE DIR:", app.template_folder)
 print(">>> STATIC DIR:", app.static_folder)
@@ -347,100 +347,65 @@ def parse_iso(dt_str):
 
 @app.template_filter('to_datetime')
 def to_datetime_filter(value):
-    """
-    Converte una stringa datetime del DB (naive o ISO)
-    in oggetto datetime con timezone UTC.
-    """
     if not value:
         return None
-
     try:
-        # Uniforma formati tipo "2025-02-11 14:22:10"
-        v = value.replace(" ", "T")
-
-        # Parsing robusto
+        v = str(value).replace(" ", "T")
         dt = datetime.fromisoformat(v)
 
-        # Se non ha timezone → assumiamo che il DB sia UTC
+        # se naive → assumo UTC
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=pytz.UTC)
-
+            dt = dt.replace(tzinfo=timezone.utc)
         return dt
-
     except Exception as e:
         print("❌ Errore filtro to_datetime:", e)
         return None
 
+
 @app.template_filter('fmt_it')
 def fmt_it(value):
-    """
-    Converte datetime DB → Europe/Rome e formatta:
-    DD-MM-YYYY HH:MM
-    """
     try:
         dt = to_datetime_filter(value)
         if not dt:
             return value
 
-        roma = pytz.timezone("Europe/Rome")
-
-        # conversione con gestione automatica ora legale
-        dt_it = dt.astimezone(roma)
-
+        dt_it = dt.astimezone(ZoneInfo("Europe/Rome"))
         return dt_it.strftime("%d-%m-%Y %H:%M")
-
     except Exception as e:
         print("❌ Errore filtro fmt_it:", e)
         return value
 
+
 @app.template_filter('fmt_it_smart')
 def fmt_it_smart(value):
-    """
-    Formatta date notifiche/chat con logica:
-    - oggi → 'oggi HH:MM'
-    - ieri → 'ieri HH:MM'
-    - stessa settimana → 'Lunedì HH:MM'
-    - altrimenti → 'DD-MM-YYYY HH:MM'
-    Gestisce automaticamente ora legale.
-    """
     try:
         dt = to_datetime_filter(value)
         if not dt:
             return value
 
-        roma = pytz.timezone("Europe/Rome")
+        roma = ZoneInfo("Europe/Rome")
         dt_it = dt.astimezone(roma)
-
         now = datetime.now(roma)
 
         date_it = dt_it.date()
         today = now.date()
-        yesterday = today.replace(day=today.day - 1)
+        yesterday = (now - timedelta(days=1)).date()
 
-        # oggi
         if date_it == today:
             return f"oggi {dt_it.strftime('%H:%M')}"
 
-        # ieri
         if date_it == yesterday:
             return f"ieri {dt_it.strftime('%H:%M')}"
 
-        # stessa settimana
         if dt_it.isocalendar()[1] == now.isocalendar()[1] and dt_it.year == now.year:
-            giorni = [
-                "lunedì", "martedì", "mercoledì", "giovedì",
-                "venerdì", "sabato", "domenica"
-            ]
-            nome_giorno = giorni[dt_it.weekday()]
-            return f"{nome_giorno} {dt_it.strftime('%H:%M')}"
+            giorni = ["lunedì","martedì","mercoledì","giovedì","venerdì","sabato","domenica"]
+            return f"{giorni[dt_it.weekday()]} {dt_it.strftime('%H:%M')}"
 
-        # fallback
         return dt_it.strftime("%d-%m-%Y %H:%M")
 
     except Exception as e:
         print("❌ Errore filtro fmt_it_smart:", e)
         return value
-
 
 @app.context_processor
 def inject_session():
@@ -451,12 +416,23 @@ def inject_session():
 
 # Imposta tempo di "grazia" (in secondi) dopo la chiusura chat
 app.config.setdefault('CHAT_RECENTLY_READ_TTL', 5)
+# ---------------------------------------------------------
+# Sessioni (Render-friendly)
+# ---------------------------------------------------------
 from flask_session import Session
 
-# Configura sessione lato server
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_FILE_DIR'] = os.path.join(app.root_path, '.flask_session')
-os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
+
+# Su Render /tmp è più veloce e sicuro rispetto alla cartella del progetto
+session_dir = os.getenv("SESSION_FILE_DIR") or "/tmp/.flask_session"
+app.config['SESSION_FILE_DIR'] = session_dir
+
+try:
+    os.makedirs(session_dir, exist_ok=True)
+except Exception as e:
+    # non blocchiamo il boot per un errore filesystem
+    print("⚠️ Impossibile creare SESSION_FILE_DIR:", session_dir, e)
+
 Session(app)
 
 print("Percorso database usato:", os.path.abspath('database.db'))
@@ -491,7 +467,7 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 app.config['MAIL_TIMEOUT'] = 20
 app.config['MAIL_MAX_EMAILS'] = None
-app.config['MAIL_DEBUG'] = True
+app.config['MAIL_DEBUG'] = (os.getenv("FLASK_ENV") == "development")
 
 # 🌐 Base URL per generare link assoluti (prod vs locale)
 app.config["APP_BASE_URL"] = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
