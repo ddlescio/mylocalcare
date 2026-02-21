@@ -423,7 +423,7 @@ def count_chat_non_letti(user_id: int) -> int:
           AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
           AND u.attivo = 1
     """, (user_id,))
-    n = c.fetchone()[0]
+    n = fetchone_value(c.fetchone())
     conn.close()
     return n
 
