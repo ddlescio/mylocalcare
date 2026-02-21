@@ -32,6 +32,7 @@ import secrets
 import stripe
 import psycopg2
 import psycopg2.extras
+import re
 
 def get_cursor(conn):
     import sqlite3
@@ -623,19 +624,22 @@ def sql(query):
     if IS_POSTGRES:
         query = query.replace("?", "%s")
 
-        # 🔑 AUTOINCREMENT compatibile
+        # AUTOINCREMENT
         query = query.replace(
             "INTEGER PRIMARY KEY AUTOINCREMENT",
             "SERIAL PRIMARY KEY"
         )
 
-        # 🕒 datetime compatibile
+        # datetime('now')
         query = query.replace("datetime('now')", "CURRENT_TIMESTAMP")
 
-        # 🕒 DATETIME -> TIMESTAMP
+        # DATETIME -> TIMESTAMP
         query = query.replace("DATETIME", "TIMESTAMP")
 
-    return query
+        # 🔥 FIX GLOBALE datetime(campo)
+        query = re.sub(r"datetime\((.*?)\)", r"\1::timestamp", query)
+
+    return query    
 
 def now_sql():
     return "CURRENT_TIMESTAMP" if IS_POSTGRES else "datetime('now')"
@@ -4100,7 +4104,7 @@ def dashboard():
                data_pubblicazione, stato
         FROM annunci
         WHERE utente_id = ?
-        ORDER BY datetime(data_pubblicazione) DESC
+        ORDER BY data_pubblicazione DESC
     """), (session["utente_id"],))
     annunci = [dict(r) for r in c.fetchall()]
     conn.close()
