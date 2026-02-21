@@ -525,6 +525,33 @@ def invia_email_sospensione(email, nome):
 
 IS_POSTGRES = False
 
+class PGCursorWrapper:
+    """
+    Wrapper del cursor per convertire automaticamente
+    i placeholder SQLite (?) in PostgreSQL (%s)
+    """
+
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    def execute(self, query, params=None):
+        query = query.replace("?", "%s")
+        return self.cursor.execute(query, params or ())
+
+    def executemany(self, query, params_list):
+        query = query.replace("?", "%s")
+        return self.cursor.executemany(query, params_list)
+
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    def fetchall(self):
+        return self.cursor.fetchall()
+
+    def __getattr__(self, name):
+        return getattr(self.cursor, name)
+
+
 class PGConnectionWrapper:
     """
     Wrapper che rende psycopg2 compatibile con stile SQLite.
@@ -544,7 +571,7 @@ class PGConnectionWrapper:
         return cur
 
     def cursor(self):
-        return self.conn.cursor()
+        return PGCursorWrapper(self.conn.cursor())
 
     def commit(self):
         return self.conn.commit()
