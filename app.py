@@ -603,8 +603,9 @@ class PGCursorWrapper:
 
     def execute(self, query, params=None):
         query = query.replace("?", "%s")
-        return self.cursor.execute(query, params or ())
-
+        self.cursor.execute(query, params or ())
+        return self
+    
     def executemany(self, query, params_list):
         query = query.replace("?", "%s")
         return self.cursor.executemany(query, params_list)
