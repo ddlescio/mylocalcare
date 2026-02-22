@@ -2,15 +2,15 @@ from app import get_db_connection, sql, IS_POSTGRES, now_sql
 
 def dt_col(default_now=False):
     """
-    Tipo colonna datetime compatibile:
-    - SQLite → TEXT
-    - Postgres → TIMESTAMP
+    Colonna datetime compatibile:
+    - SQLite: TEXT (con default now_sql() se richiesto)
+    - Postgres: TIMESTAMPTZ (con default CURRENT_TIMESTAMP se richiesto)
     """
     if IS_POSTGRES:
-        return "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" if default_now else "TIMESTAMP"
+        return "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP" if default_now else "TIMESTAMPTZ"
     else:
+        # now_sql() deve restituire un'espressione valida per SQLite, es: (datetime('now'))
         return f"TEXT DEFAULT {now_sql()}" if default_now else "TEXT"
-
 # =========================================================
 # INIZIALIZZAZIONE DATABASE LOCALE - LocalCare (2025)
 # =========================================================
@@ -401,7 +401,7 @@ def crea_tabella_video_config():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         budget_mensile_cent INTEGER NOT NULL DEFAULT 2000,
         attivo INTEGER DEFAULT 1,
-        updated_at TEXT DEFAULT {now_sql()}
+        updated_at {dt_col(True)}
     );
     """))
 
@@ -434,8 +434,8 @@ def crea_tabella_recensioni():
         voto INTEGER NOT NULL CHECK(voto BETWEEN 1 AND 5),
         testo TEXT,
         stato TEXT DEFAULT 'in_attesa',
-        data TEXT DEFAULT {now_sql()},
-        ultima_modifica TEXT,
+        data {dt_col(True)},
+        ultima_modifica {dt_col()},
         FOREIGN KEY (id_autore) REFERENCES utenti(id),
         FOREIGN KEY (id_destinatario) REFERENCES utenti(id),
         CONSTRAINT univoco_autore_dest UNIQUE (id_autore, id_destinatario)
@@ -459,8 +459,8 @@ def crea_tabella_risposte():
         id_autore INTEGER NOT NULL,
         testo TEXT NOT NULL,
         stato TEXT DEFAULT 'in_attesa',
-        data TEXT DEFAULT {now_sql()},
-        ultima_modifica TEXT,
+        data {dt_col(True)},
+        ultima_modifica {dt_col()},
         FOREIGN KEY (id_recensione) REFERENCES recensioni(id) ON DELETE CASCADE,
         FOREIGN KEY (id_autore) REFERENCES utenti(id)
     );
@@ -476,20 +476,20 @@ def crea_tabella_risposte():
 def crea_tabella_notifiche():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS notifiche (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         id_utente INTEGER NOT NULL,
 
-        titolo TEXT,                  -- 🆕 titolo notifica
+        titolo TEXT,
         messaggio TEXT NOT NULL,
         link TEXT,
 
-        tipo TEXT DEFAULT 'generica', -- tipo notifica
+        tipo TEXT DEFAULT 'generica',
 
         letta INTEGER DEFAULT 0,
-        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        data_lettura TIMESTAMP,
+        data {dt_col(True)},
+        data_lettura {dt_col()},
         scadenza_giorni INTEGER DEFAULT 10,
 
         FOREIGN KEY (id_utente) REFERENCES utenti(id)
@@ -506,7 +506,7 @@ def crea_tabella_notifiche_admin():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS notifiche_admin (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         titolo TEXT NOT NULL,
@@ -517,10 +517,9 @@ def crea_tabella_notifiche_admin():
         filtro_json TEXT NOT NULL,
         destinatari_count INTEGER NOT NULL,
         destinatari_json TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at {dt_col(True)}
     );
     """))
-
     conn.commit()
     conn.close()
     print("✅ Tabella 'notifiche_admin' pronta.")
@@ -563,7 +562,7 @@ def crea_tabella_servizi():
         ripetibile INTEGER DEFAULT 1,
         attivabile_admin INTEGER DEFAULT 1,
         attivo INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT {now_sql()}
+        created_at {dt_col(True)}
     );
     """))
     conn.commit()
@@ -576,7 +575,7 @@ def crea_tabella_servizi():
 def crea_tabella_servizi_piani():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS servizi_piani (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -596,7 +595,7 @@ def crea_tabella_servizi_piani():
 
         attivo INTEGER NOT NULL DEFAULT 1,
 
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at {dt_col(True)},
 
         FOREIGN KEY (servizio_id)
             REFERENCES servizi(id)
@@ -623,7 +622,7 @@ def crea_tabella_pacchetti():
       nome TEXT NOT NULL,
       descrizione TEXT,
       attivo INTEGER DEFAULT 1,
-      created_at TEXT DEFAULT {now_sql()}
+      created_at {dt_col(True)}
     );
     """))
     conn.commit()
@@ -633,7 +632,7 @@ def crea_tabella_pacchetti():
 def crea_tabella_pacchetti_piani():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS pacchetti_piani (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -653,7 +652,7 @@ def crea_tabella_pacchetti_piani():
 
         attivo INTEGER NOT NULL DEFAULT 1,
 
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at {dt_col(True)},
 
         FOREIGN KEY (pacchetto_id)
             REFERENCES pacchetti(id)
@@ -679,7 +678,7 @@ def crea_tabella_pacchetti_servizi():
       -- ⏱ override opzionale durata servizio nel pacchetto
       durata_override INTEGER,
 
-      created_at TEXT DEFAULT {now_sql()},
+      created_at {dt_col(True)},
 
       UNIQUE(pacchetto_id, servizio_id),
       FOREIGN KEY (pacchetto_id) REFERENCES pacchetti(id),
@@ -710,7 +709,7 @@ def crea_tabella_prezzi():
       stripe_price_id TEXT,
       paypal_plan_id TEXT,
 
-      created_at TEXT DEFAULT {now_sql()},
+      created_at {dt_col(True)},
 
       UNIQUE(tipo, ref_id, durata_giorni)
     );
@@ -742,7 +741,7 @@ def crea_tabella_acquisti():
       stato TEXT DEFAULT 'creato',
       riferimento_esterno TEXT,
 
-      created_at TEXT DEFAULT {now_sql()},
+      created_at {dt_col(True)},
 
       FOREIGN KEY (utente_id) REFERENCES utenti(id),
       FOREIGN KEY (prezzo_id) REFERENCES prezzi(id),
@@ -790,7 +789,7 @@ def crea_tabella_acquisti_servizi():
         importo REAL,
         valuta TEXT,
         riferimento_esterno TEXT,
-        created_at TEXT DEFAULT {now_sql()},
+        created_at {dt_col(True)},
         FOREIGN KEY (utente_id) REFERENCES utenti(id),
         FOREIGN KEY (servizio_id) REFERENCES servizi(id)
     );
@@ -832,6 +831,10 @@ def crea_tabella_attivazioni_servizi():
         CREATE INDEX IF NOT EXISTS idx_attivazioni_acquisto
         ON attivazioni_servizi(acquisto_id);
     """))
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_attivazioni_annuncio_stato_date
+        ON attivazioni_servizi (annuncio_id, stato, data_inizio, data_fine);
+    """))
 
     conn.commit()
     conn.close()
@@ -850,7 +853,7 @@ def crea_tabella_storico_servizi():
         azione TEXT NOT NULL,
         eseguito_da TEXT NOT NULL,
         note TEXT,
-        data TEXT DEFAULT {now_sql()},
+        data {dt_col(True)},
         FOREIGN KEY (attivazione_id) REFERENCES attivazioni_servizi(id)
     );
     """))
@@ -1131,11 +1134,10 @@ if not IS_POSTGRES:
 def imposta_admin_predefinito():
     conn = get_conn()
     c = conn.cursor()
-    c.execute("UPDATE utenti SET ruolo = 'admin' WHERE id = 1")
+    c.execute(sql("UPDATE utenti SET ruolo = 'admin' WHERE id = 1"))
     conn.commit()
     conn.close()
     print("👑 Utente #1 impostato come amministratore.")
-
 # ---------------------------------------------------------
 # ✅ ESECUZIONE DIRETTA
 # ---------------------------------------------------------

@@ -36,7 +36,6 @@ import psycopg2.extras
 import re
 from models import fetchone_value
 
-
 def get_cursor(conn):
     import sqlite3
     import psycopg2.extras
