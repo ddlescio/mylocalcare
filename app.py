@@ -69,7 +69,7 @@ def init_pg_pool():
 
 class PooledConn:
     """
-    Wrapper che fa sì che conn.close() NON chiuda su Postgres,
+    Wrapper che fa sì che  NON chiuda su Postgres,
     ma rilasci al pool.
     """
     def __init__(self, conn, release_fn):
@@ -83,7 +83,7 @@ class PooledConn:
         except Exception:
             # fallback: chiudi davvero se qualcosa va storto
             try:
-                self._conn.close()
+                self._
             except Exception:
                 pass
 
@@ -156,7 +156,7 @@ def is_admin(user_id):
         (user_id,)
     )
     row = c.fetchone()
-    conn.close()
+
     return row and row["ruolo"] == "admin"
 
 import requests
@@ -249,7 +249,7 @@ def ensure_x25519_keys(user_id):
         session["x25519_priv_b64"] = base64.b64encode(priv_bytes).decode()
         session["x25519_pub_b64"] = row["x25519_pub"]
 
-    conn.close()
+
 
 
 # Slug -> chiave nel JSON + label umana
@@ -366,16 +366,13 @@ from zoneinfo import ZoneInfo
 
 @app.teardown_request
 def _release_pg_conn(exc):
-    if not IS_POSTGRES:
-        return
     conn = getattr(g, "db_conn", None)
-    if conn is None:
-        return
-    try:
-        conn.close()
-    except:
-        pass
-    g.db_conn = None
+    if conn:
+        try:
+            conn.close()   # ← rilascia al pool (NON chiude davvero)
+        except Exception:
+            pass
+        g.db_conn = None
 
 @app.template_filter("dt_roma")
 def dt_roma(value):
@@ -647,7 +644,7 @@ class PGConnectionWrapper:
         return self.conn.commit()
 
     def close(self):
-        return self.conn.close()
+        return self.
 
     def __getattr__(self, name):
         return getattr(self.conn, name)
@@ -668,14 +665,14 @@ def get_db_connection():
                 # verifica che sia ancora valida
                 g.db_conn.cursor().execute("SELECT 1")
                 return g.db_conn
-            except Exception:
-                # connessione morta → la rilasciamo
-                try:
-                    g.db_conn.close()
-                except:
-                    pass
-                g.db_conn = None
-        
+        except Exception:
+            # connessione morta → rilascia al pool
+            try:
+                g.db_conn.close()
+            except:
+                pass
+            g.db_conn = None
+
         raw = _pg_pool.getconn()
 
         # 🔥 FIX CRASH: se la connessione è morta, ricreala
@@ -900,7 +897,7 @@ def admin_counters():
             video_minuti = list(row.values())[0] if row else 0
 
         finally:
-            conn.close()
+
 
     totale = pending_annunci + pending_recensioni_totali
     payload = {
@@ -944,7 +941,7 @@ def admin_visualizza_annuncio(id):
         WHERE a.id = ?
     """), (id,))
     annuncio = c.fetchone()
-    conn.close()
+
 
     if not annuncio:
         return "Annuncio non trovato", 404
@@ -960,14 +957,14 @@ def toggle_annuncio(id):
     c.execute(sql("SELECT stato FROM annunci WHERE id = ?"), (id,))
     row = c.fetchone()
     if not row:
-        conn.close()
+
         flash("Annuncio non trovato.", "error")
         return redirect(url_for("admin_annunci"))
 
     nuovo_stato = "disattivato" if row["stato"] == "approvato" else "approvato"
     c.execute(sql("UPDATE annunci SET stato = ? WHERE id = ?"), (nuovo_stato, id))
     conn.commit()
-    conn.close()
+
 
     flash(f"Annuncio {nuovo_stato}.", "info")
     next_url = request.args.get("next")
@@ -1040,7 +1037,7 @@ def admin_video_calls():
 
     limiti_dict = {l["mese"]: l for l in limiti}
 
-    conn.close()
+
 
     mesi = {}
 
@@ -1108,7 +1105,7 @@ def admin_servizi():
         ORDER BY created_at DESC
     """))
     servizi = c.fetchall()
-    conn.close()
+
 
     return render_template(
     "admin_servizi.html",
@@ -1169,7 +1166,7 @@ def admin_servizi_nuovo():
             flash("Codice già esistente (deve essere univoco).", "error")
             return redirect(url_for("admin_servizi_nuovo"))
         finally:
-            conn.close()
+
 
     # GET
     return render_template("admin_servizi_form.html", servizio=None)
@@ -1186,7 +1183,7 @@ def admin_servizi_modifica(id):
     servizio = c.fetchone()
 
     if not servizio:
-        conn.close()
+
         flash("Servizio non trovato.", "error")
         return redirect(url_for("admin_servizi"))
 
@@ -1209,17 +1206,17 @@ def admin_servizi_modifica(id):
         allowed_target = {"offre", "cerca", "entrambi"}
 
         if not codice or not nome:
-            conn.close()
+
             flash("Codice e Nome sono obbligatori.", "error")
             return redirect(url_for("admin_servizi_modifica", id=id))
 
         if ambito not in allowed_ambiti:
-            conn.close()
+
             flash("Ambito non valido.", "error")
             return redirect(url_for("admin_servizi_modifica", id=id))
 
         if target not in allowed_target:
-            conn.close()
+
             flash("Target non valido.", "error")
             return redirect(url_for("admin_servizi_modifica", id=id))
 
@@ -1241,9 +1238,9 @@ def admin_servizi_modifica(id):
             flash("Codice già esistente (deve essere univoco).", "error")
             return redirect(url_for("admin_servizi_modifica", id=id))
         finally:
-            conn.close()
 
-    conn.close()
+
+
     return render_template("admin_servizi_form.html", servizio=servizio)
 
 
@@ -1257,14 +1254,14 @@ def admin_servizi_toggle(id):
     c.execute(sql("SELECT attivo FROM servizi WHERE id = ?"), (id,))
     row = c.fetchone()
     if not row:
-        conn.close()
+
         flash("Servizio non trovato.", "error")
         return redirect(url_for("admin_servizi"))
 
     nuovo = 0 if row["attivo"] == 1 else 1
     c.execute(sql("UPDATE servizi SET attivo = ? WHERE id = ?"), (nuovo, id))
     conn.commit()
-    conn.close()
+
 
     flash("Stato servizio aggiornato.", "success")
     return redirect(url_for("admin_servizi"))
@@ -1282,7 +1279,7 @@ def admin_servizi_elimina(servizio_id):
     """), (servizio_id,))
 
     conn.commit()
-    conn.close()
+
 
     flash("Servizio disattivato correttamente.", "success")
     return redirect(url_for("admin_servizi"))
@@ -1349,7 +1346,7 @@ def admin_toggle_servizio():
         # 3️⃣ toggle
         if attiva:
             ok, msg = revoca_attivazione(attiva["id"], eseguito_da="admin")
-            conn.close()
+
             return jsonify({
                 "ok": ok,
                 "azione": "disattivato",
@@ -1376,7 +1373,7 @@ def admin_toggle_servizio():
                     # ⚠️ Non blocca il toggle se la notifica fallisce
                     print(f"⚠️ Errore notifica urgente: {e}")
 
-            conn.close()
+
             return jsonify({
                 "ok": ok,
                 "azione": "attivato",
@@ -1385,7 +1382,7 @@ def admin_toggle_servizio():
             })
 
     except Exception as e:
-        conn.close()
+
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/admin/servizi/<int:servizio_id>/piani")
@@ -1401,7 +1398,7 @@ def admin_servizi_piani(servizio_id):
     """), (servizio_id,)).fetchone()
 
     if not servizio:
-        conn.close()
+
         flash("Servizio non trovato.", "error")
         return redirect(url_for("admin_servizi"))
 
@@ -1412,7 +1409,7 @@ def admin_servizi_piani(servizio_id):
         ORDER BY ordine ASC, durata_giorni ASC
     """), (servizio_id,)).fetchall()
 
-    conn.close()
+
 
     return render_template(
         "admin_servizi_piani.html",
@@ -1435,7 +1432,7 @@ def admin_pacchetti():
         ORDER BY created_at DESC
     """)).fetchall()
 
-    conn.close()
+
 
     return render_template(
         "admin_pacchetti.html",
@@ -1482,12 +1479,12 @@ def admin_pacchetti_nuovo():
             """), (pacchetto_id, sid))
 
         conn.commit()
-        conn.close()
+
 
         flash("Pacchetto creato.", "success")
         return redirect(url_for("admin_pacchetti"))
 
-    conn.close()
+
     return render_template(
         "admin_pacchetti_form.html",
         pacchetto=None,
@@ -1511,7 +1508,7 @@ def admin_pacchetti_modifica(id):
     ).fetchone()
 
     if not pacchetto:
-        conn.close()
+
         flash("Pacchetto non trovato.", "error")
         return redirect(url_for("admin_pacchetti"))
 
@@ -1569,12 +1566,12 @@ def admin_pacchetti_modifica(id):
         )
 
         conn.commit()
-        conn.close()
+
 
         flash("Pacchetto aggiornato.", "success")
         return redirect(url_for("admin_pacchetti"))
 
-    conn.close()
+
     return render_template(
         "admin_pacchetti_form.html",
         pacchetto=pacchetto,
@@ -1598,7 +1595,7 @@ def admin_toggle_pacchetto_tabella(id):
     """), (id,))
 
     conn.commit()
-    conn.close()
+
 
     flash("Stato pacchetto aggiornato.", "success")
     return redirect(url_for("admin_pacchetti"))
@@ -1618,7 +1615,7 @@ def admin_servizi_piani_nuovo(servizio_id):
     ).fetchone()
 
     if not servizio:
-        conn.close()
+
         flash("Servizio non trovato.", "error")
         return redirect(url_for("admin_servizi"))
 
@@ -1662,7 +1659,7 @@ def admin_servizi_piani_nuovo(servizio_id):
         except sqlite3.IntegrityError:
             flash("Codice piano già esistente per questo servizio.", "error")
 
-    conn.close()
+
     return render_template(
         "admin_servizi_piani_form.html",
         servizio=servizio,
@@ -1687,7 +1684,7 @@ def admin_servizi_piani_modifica(piano_id):
     """), (piano_id,)).fetchone()
 
     if not piano:
-        conn.close()
+
         flash("Piano non trovato.", "error")
         return redirect(url_for("admin_servizi"))
 
@@ -1722,13 +1719,13 @@ def admin_servizi_piani_modifica(piano_id):
         ))
 
         conn.commit()
-        conn.close()
+
         flash("Piano aggiornato.", "success")
         return redirect(
             url_for("admin_servizi_piani", servizio_id=piano["servizio_id"])
         )
 
-    conn.close()
+
     return render_template(
         "admin_servizi_piani_form.html",
         servizio={
@@ -1750,7 +1747,7 @@ def admin_servizi_piani_toggle(piano_id):
     """), (piano_id,))
 
     conn.commit()
-    conn.close()
+
 
     flash("Stato piano aggiornato.", "success")
     return redirect(request.referrer or url_for("admin_servizi"))
@@ -1850,7 +1847,7 @@ def admin_toggle_pacchetto():
                     note=f"Revoca pacchetto {codice_pacchetto}"
                 )
 
-            conn.close()
+
             return jsonify({
                 "ok": True,
                 "azione": "disattivato",
@@ -1874,7 +1871,7 @@ def admin_toggle_pacchetto():
             if ok:
                 attivati.append(att_id)
 
-        conn.close()
+
         return jsonify({
             "ok": True,
             "azione": "attivato",
@@ -1883,7 +1880,7 @@ def admin_toggle_pacchetto():
         })
 
     except Exception as e:
-        conn.close()
+
         return jsonify({"ok": False, "error": str(e)}), 500
 
 # ===============================
@@ -1901,7 +1898,7 @@ def admin_pacchetti_piani(pacchetto_id):
     ).fetchone()
 
     if not pacchetto:
-        conn.close()
+
         flash("Pacchetto non trovato.", "error")
         return redirect(url_for("admin_pacchetti"))
 
@@ -1912,7 +1909,7 @@ def admin_pacchetti_piani(pacchetto_id):
         ORDER BY ordine ASC, created_at ASC
     """), (pacchetto_id,)).fetchall()
 
-    conn.close()
+
 
     return render_template(
         "admin_pacchetti_piani.html",
@@ -1935,7 +1932,7 @@ def admin_pacchetti_piani_nuovo(pacchetto_id):
     ).fetchone()
 
     if not pacchetto:
-        conn.close()
+
         flash("Pacchetto non trovato.", "error")
         return redirect(url_for("admin_pacchetti"))
 
@@ -1970,7 +1967,7 @@ def admin_pacchetti_piani_nuovo(pacchetto_id):
         except sqlite3.IntegrityError:
             flash("Codice piano già esistente per questo pacchetto.", "error")
 
-    conn.close()
+
     return render_template(
         "admin_pacchetti_piani_form.html",
         pacchetto=pacchetto,
@@ -1992,7 +1989,7 @@ def admin_pacchetti_piani_modifica(id):
     ).fetchone()
 
     if not piano:
-        conn.close()
+
         flash("Piano non trovato.", "error")
         return redirect(url_for("admin_pacchetti"))
 
@@ -2027,7 +2024,7 @@ def admin_pacchetti_piani_modifica(id):
         flash("Piano aggiornato.", "success")
         return redirect(url_for("admin_pacchetti_piani", pacchetto_id=pacchetto["id"]))
 
-    conn.close()
+
     return render_template(
         "admin_pacchetti_piani_form.html",
         pacchetto=pacchetto,
@@ -2049,7 +2046,7 @@ def admin_pacchetti_piani_toggle(piano_id):
     ).fetchone()
 
     if not piano:
-        conn.close()
+
         flash("Piano non trovato.", "error")
         return redirect(url_for("admin_pacchetti"))
 
@@ -2060,7 +2057,7 @@ def admin_pacchetti_piani_toggle(piano_id):
         (nuovo_stato, piano_id)
     )
     conn.commit()
-    conn.close()
+
 
     flash("Stato piano aggiornato.", "success")
     return redirect(
@@ -2082,7 +2079,7 @@ def toggle_utente(id):
         conn.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?"), (nuovo_stato, id))
         conn.commit()
         flash("Utente {} correttamente.".format("disattivato" if nuovo_stato == 0 else "attivato"))
-    conn.close()
+
     return redirect(url_for('admin'))
 
 
@@ -2222,7 +2219,7 @@ def admin_utenti():
     utenti = c.fetchall()
     totale_filtrati = len(utenti)
 
-    conn.close()
+
 
     return render_template(
         "admin_utenti.html",
@@ -2247,7 +2244,7 @@ def toggle_utente_admin(id):
     row = c.fetchone()
 
     if not row:
-        conn.close()
+
         flash("Utente non trovato.", "error")
         return redirect(url_for('admin_utenti'))
 
@@ -2266,7 +2263,7 @@ def toggle_utente_admin(id):
 
         flash("Stato utente aggiornato.", "success")
 
-    conn.close()
+
     return redirect(url_for("admin_utenti"))
 
 # ==========================================================
@@ -2405,7 +2402,7 @@ def admin_acquisti():
         LIMIT 500
     """)).fetchall()
 
-    conn.close()
+
 
     # ✅ CONVERSIONE UTC → ORA ITALIANA
     acquisti = []
@@ -2476,7 +2473,7 @@ def admin_statistiche():
     """))
     chat_totali = fetchone_value(c.fetchone())
 
-    conn.close()
+
 
     return render_template(
         "admin_statistiche.html",
@@ -2543,7 +2540,7 @@ def admin_notifiche():
         ORDER BY nome, cognome
     """)).fetchall()
 
-    conn.close()
+
 
     # ✅ categorie (da JSON, non dal DB)
     json_path = os.path.join(app.root_path, "static", "data", "filtri_categoria.json")
@@ -2640,7 +2637,7 @@ def admin_invia_notifica():
             json.dumps(destinatari_snapshot, ensure_ascii=False) if destinatari_snapshot else None
         ))
         conn.commit()
-        conn.close()
+
 
     except Exception as e:
         print("❌ ERRORE storico notifiche_admin:", e)
@@ -2781,9 +2778,9 @@ def _filtra_utenti(form):
                 LIMIT 1
             """, (valore, valore))
             row = c.fetchone()
-            conn.close()
+
             return [row] if row else []
-        conn.close()
+
         return []
 
     # ------------------------------------------------------------
@@ -2793,7 +2790,7 @@ def _filtra_utenti(form):
         multipli = form.getlist("utenti_multipli")
         multipli = [m for m in multipli if str(m).strip().isdigit()]
         if not multipli:
-            conn.close()
+
             return []
         placeholders = ",".join(["?"] * len(multipli))
         c.execute(f"""
@@ -2803,7 +2800,7 @@ def _filtra_utenti(form):
               AND {BASE_UTENTI_WHERE}
         """, multipli)
         rows = c.fetchall()
-        conn.close()
+
         return rows
 
     # ------------------------------------------------------------
@@ -2817,7 +2814,7 @@ def _filtra_utenti(form):
             ORDER BY u.nome, u.cognome
         """)
         rows = c.fetchall()
-        conn.close()
+
         return rows
 
     # ------------------------------------------------------------
@@ -2876,7 +2873,7 @@ def _filtra_utenti(form):
     # Se tab è zona/categoria ma input vuoto => nessun destinatario
     if (tab in ["u-zona", "u-categoria"] or tab == "u-avanzato"):
         if not has_zona and not has_cat:
-            conn.close()
+
             return []
 
     # ------------------------------------------------------------
@@ -2926,7 +2923,7 @@ def _filtra_utenti(form):
         if include_zona_info and not include_zona_annunci:
             # SOLO INFO
             if not zona_info_sql:
-                conn.close()
+
                 return []
             zona_sql = zona_info_sql
             zona_params = zona_info_params
@@ -2934,7 +2931,7 @@ def _filtra_utenti(form):
         elif include_zona_annunci and not include_zona_info:
             # SOLO ANNUNCI
             if not zona_annunci_sql:
-                conn.close()
+
                 return []
             zona_sql = zona_annunci_sql
             zona_params = zona_annunci_params
@@ -2942,7 +2939,7 @@ def _filtra_utenti(form):
         elif include_zona_info and include_zona_annunci:
             # INFO + ANNUNCI
             if not zona_info_sql and not zona_annunci_sql:
-                conn.close()
+
                 return []
 
             queries = []
@@ -2956,7 +2953,7 @@ def _filtra_utenti(form):
 
         else:
             # zona richiesta ma nessun checkbox valido
-            conn.close()
+
             return []
 
         # BLOCCO DURO FINALE
@@ -2966,7 +2963,7 @@ def _filtra_utenti(form):
         ).fetchone()[0]
 
         if count == 0:
-            conn.close()
+
             return []
 
     # ------------------------------------------------------------
@@ -3022,7 +3019,7 @@ def _filtra_utenti(form):
 
     if has_zona and has_cat:
         if not zona_sql or not cat_sql:
-            conn.close()
+
             return []
         final_ids_sql = f"""
             SELECT uid FROM (
@@ -3035,7 +3032,7 @@ def _filtra_utenti(form):
 
     elif has_zona:
         if not zona_sql:
-            conn.close()
+
             return []
         final_ids_sql = f"""
             SELECT uid FROM (
@@ -3046,7 +3043,7 @@ def _filtra_utenti(form):
 
     elif has_cat:
         if not cat_sql:
-            conn.close()
+
             return []
         final_ids_sql = f"""
             SELECT uid FROM (
@@ -3056,7 +3053,7 @@ def _filtra_utenti(form):
         final_params = cat_params
 
     else:
-        conn.close()
+
         return []
     # ------------------------------------------------------------
     # 5D) Query finale utenti
@@ -3073,7 +3070,7 @@ def _filtra_utenti(form):
     """, final_params)
 
     rows = c.fetchall()
-    conn.close()
+
     return rows
 
 
@@ -3088,7 +3085,7 @@ def _crea_notifica(id_utente, titolo, messaggio, tipo="generica", link=None):
         VALUES (?, ?, ?, ?, ?, 0)
     """), (id_utente, titolo, messaggio, tipo, link))
     conn.commit()
-    conn.close()
+
 
     print(f"💾 Notifica registrata nel DB → utente {id_utente}")
 
@@ -3118,7 +3115,7 @@ def processa_match_nuovi_annunci():
     """)).fetchall()
 
     if not nuovi:
-        conn.close()
+
         return 0
 
     annunci_processati = []
@@ -3205,7 +3202,7 @@ def processa_match_nuovi_annunci():
         )
 
     conn.commit()
-    conn.close()
+
     return len(annunci_processati)
 
 
@@ -3293,7 +3290,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
     annuncio = c.fetchone()
 
     if not annuncio:
-        conn.close()
+
         print("⚠️ Annuncio non valido o non urgente.")
         return
 
@@ -3359,7 +3356,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
             notificati.add(uid)
 
     if not notificati:
-        conn.close()
+
         print("ℹ️ Nessun destinatario compatibile.")
         return
 
@@ -3407,7 +3404,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
         ))
 
     conn.commit()
-    conn.close()
+
 
     print(f"✅ Notifica urgente inviata a {len(notificati)} utenti.")
 
@@ -3440,7 +3437,7 @@ def approva_recensione(id):
             WHERE r.id = ?
         """), (id,))
         row = c.fetchone()
-        conn.close()
+
 
         if row:
             id_autore = list(row.values())[0]
@@ -3491,7 +3488,7 @@ def rifiuta_recensione(id):
         c = get_cursor(conn)
         c.execute(sql("SELECT id_autore FROM recensioni WHERE id = ?"), (id,))
         row = c.fetchone()
-        conn.close()
+
 
         if row:
             id_autore = list(row.values())[0]
@@ -3539,7 +3536,7 @@ def approva_risposta(id):
             WHERE rr.id = ?
         """), (id,))
         row = c.fetchone()
-        conn.close()
+
 
         if row:
             id_autore = list(row.values())[0]
@@ -3584,7 +3581,7 @@ def rifiuta_risposta(id):
         c = get_cursor(conn)
         c.execute(sql("SELECT id_autore FROM risposte_recensioni WHERE id = ?"), (id,))
         row = c.fetchone()
-        conn.close()
+
 
         if row:
             id_autore = list(row.values())[0]
@@ -3764,7 +3761,7 @@ def admin_annunci():
     # =========================
     c.execute(query, params)
     annunci = [dict(row) for row in c.fetchall()]
-    conn.close()
+
 
     # =========================
     # CATEGORIE (select admin)
@@ -3802,7 +3799,7 @@ def approva_annuncio(id):
         c.execute(sql("UPDATE utenti SET visibile_pubblicamente = 1 WHERE id = ?"), (utente_id,))
         conn.commit()
 
-    conn.close()
+
 
     if utente_id:
         crea_notifica(
@@ -3832,7 +3829,7 @@ def rifiuta_annuncio(id):
     c = get_cursor(conn)
     c.execute(sql("UPDATE annunci SET stato = 'rifiutato' WHERE id = ?"), (id,))
     conn.commit()
-    conn.close()
+
 
     # 🔁 Aggiorna counters admin
     invalidate_admin_counters()
@@ -3853,7 +3850,7 @@ def get_notifiche_utente(user_id):
         "SELECT * FROM notifiche WHERE id_utente = ? ORDER BY data DESC",
         (user_id,)
     ).fetchall()
-    conn.close()
+
     return notifiche
 
 def conta_non_lette(user_id):
@@ -3861,7 +3858,7 @@ def conta_non_lette(user_id):
     c = get_cursor(conn)
     c.execute(sql("SELECT COUNT(*) FROM notifiche WHERE id_utente = ? AND letta = 0"), (user_id,))
     count = fetchone_value(c.fetchone())
-    conn.close()
+
     return count
 
 def segna_notifica_letta(notifica_id, user_id):
@@ -3872,7 +3869,7 @@ def segna_notifica_letta(notifica_id, user_id):
         WHERE id = ? AND id_utente = ?
     """), (notifica_id, user_id))
     conn.commit()
-    conn.close()
+
 
 @app.route("/notifiche/segna_tutte_lette", methods=["POST"])
 def segna_tutte_lette_route():
@@ -3918,7 +3915,7 @@ def pulisci_notifiche_vecchie():
           AND data_lettura < {now_sql()} - INTERVAL '{giorni} days'
     """))
     conn.commit()
-    conn.close()
+
 
 # Rende disponibile in tutti i template un helper per le notifiche non lette
 @app.context_processor
@@ -4000,7 +3997,7 @@ def load_logged_in_user():
         cur = get_cursor(conn)
         cur.execute(sql('SELECT * FROM utenti WHERE id = ?'), (user_id,))
         g.utente = cur.fetchone()
-        conn.close()
+
     # 🔹 Identifica il percorso corrente (utile per la navbar)
     g.path = request.path
 
@@ -4019,7 +4016,7 @@ def modifica_annuncio(id):
 
     # 🔒 Sicurezza: annuncio esistente e di proprietà dell’utente
     if not annuncio or annuncio["utente_id"] != g.utente["id"]:
-        conn.close()
+
         flash("Non puoi modificare questo annuncio.", "error")
         return redirect(url_for("dashboard"))
 
@@ -4031,7 +4028,7 @@ def modifica_annuncio(id):
         # 🧩 Protezione extra contro manomissione ID
         id_form = request.form.get("id_annuncio")
         if id_form and str(id_form) != str(id):
-            conn.close()
+
             flash("Tentativo di modifica non autorizzato.", "error")
             return redirect(url_for("dashboard"))
 
@@ -4057,12 +4054,12 @@ def modifica_annuncio(id):
         # 🛡️ VALIDAZIONI
         # =====================================================
         if tipo_annuncio not in ("offro", "cerco"):
-            conn.close()
+
             flash("Devi specificare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
 
         if not zona or not provincia:
-            conn.close()
+
             flash("Seleziona un comune valido dall’elenco.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
 
@@ -4132,7 +4129,7 @@ def modifica_annuncio(id):
         ))
 
         conn.commit()
-        conn.close()
+
 
         # 🔁 Aggiorna contatori admin
         invalidate_admin_counters()
@@ -4143,7 +4140,7 @@ def modifica_annuncio(id):
     # =========================================================
     # 📥 GET
     # =========================================================
-    conn.close()
+
     return render_template(
         "modifica_annuncio.html",
         modalita="modifica",
@@ -4171,7 +4168,7 @@ def dashboard():
         WHERE id = ?
     """), (session["utente_id"],)).fetchone()
 
-    conn.close()
+
 
     # Se non trovato, gestisci come preferisci
     if not ut:
@@ -4199,7 +4196,7 @@ def dashboard():
         ORDER BY data_pubblicazione DESC
     """), (session["utente_id"],))
     annunci = [dict(r) for r in c.fetchall()]
-    conn.close()
+
 
     # 🔹 Ritorna la dashboard con gli annunci caricati
     return render_template(
@@ -4320,7 +4317,7 @@ def utente_update_info():
         flash(f"Errore nel salvataggio: {e}", "error")
         print("❌ ERRORE SALVATAGGIO:", e)
     finally:
-        conn.close()
+
 
     return redirect(url_for("dashboard"))
 
@@ -4361,7 +4358,7 @@ def utente_update_esperienza():
         conn.rollback()
         flash(f"❌ Errore durante il salvataggio: {e}", "error")
     finally:
-        conn.close()
+
 
     return redirect(url_for("dashboard") + "#tab-info")
 
@@ -4402,7 +4399,7 @@ def utente_update_contatti():
         conn.rollback()
         flash(f"❌ Errore durante il salvataggio dei contatti: {e}", "error")
     finally:
-        conn.close()
+
 
     return redirect(url_for("dashboard"))
 
@@ -4433,7 +4430,7 @@ def utente_update_descrizione():
         conn.rollback()
         flash(f"❌ Errore durante il salvataggio della descrizione: {e}", "error")
     finally:
-        conn.close()
+
 
     return redirect(url_for("dashboard") + "#tab-descrizione")
 
@@ -4481,7 +4478,7 @@ def utente_update_galleria():
     # --- Salva nel DB (come JSON per maggiore flessibilità) ---
     c.execute(sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"), (json.dumps(correnti), g.utente['id']))
     conn.commit()
-    conn.close()
+
 
     flash("✅ Galleria aggiornata correttamente 📸", "success")
     return redirect(url_for("dashboard") + "#tab-foto")
@@ -4495,13 +4492,13 @@ def elimina_annuncio(id):
     annuncio = cur.fetchone()
 
     if not annuncio or annuncio["utente_id"] != g.utente["id"]:
-        conn.close()
+
         flash("Non puoi eliminare questo annuncio.", "error")
         return redirect(url_for("dashboard"))
 
     conn.execute(sql("DELETE FROM annunci WHERE id = ?"), (id,))
     conn.commit()
-    conn.close()
+
 
     # 🔁 Se l'annuncio era 'in_attesa', i counters admin vanno aggiornati
     invalidate_admin_counters()
@@ -4546,7 +4543,7 @@ def upload_foto():
             conn = get_db_connection()
             conn.execute(sql("UPDATE utenti SET foto_profilo = ? WHERE id = ?"), (f"uploads/profili/{filename}", g.utente['id']))
             conn.commit()
-            conn.close()
+
 
             flash("Foto profilo aggiornata con successo.")
             return redirect(url_for('dashboard'))
@@ -4587,7 +4584,7 @@ def upload_copertina():
     conn = get_db_connection()
     conn.execute(sql("UPDATE utenti SET copertina = ? WHERE id = ?"), (f"uploads/profili/copertine/{filename}", g.utente['id']))
     conn.commit()
-    conn.close()
+
 
     flash("Copertina aggiornata con successo 📸", "success")
     return redirect(request.referrer or url_for('dashboard'))
@@ -4613,7 +4610,7 @@ def rimuovi_copertina():
 
     conn.execute(sql("UPDATE utenti SET copertina = NULL WHERE id = ?"), (user_id,))
     conn.commit()
-    conn.close()
+
 
     flash("Copertina rimossa. Tornerà il fondo di default 💙", "info")
     return redirect(request.referrer or url_for('dashboard'))
@@ -4637,7 +4634,7 @@ def utente_annunci():
         WHERE utente_id = ?
         ORDER BY data_pubblicazione DESC
     """), (g.utente['id'],)).fetchall()
-    conn.close()
+
     return render_template('utente_annunci.html', annunci=annunci, utente=g.utente)
 # ==========================================================
 # RECENSIONI – AREA PERSONALE UTENTE
@@ -4688,7 +4685,7 @@ def modifica_recensione():
         WHERE id = ? AND id_autore = ?
     """), (id_recensione, g.utente["id"]))
     row = c.fetchone()
-    conn.close()
+
 
     if not row:
         flash("Recensione non trovata o non autorizzata.", "error")
@@ -4815,7 +4812,7 @@ def recensioni_utente(user_id):
     """), (user_id,))
     user = c.fetchone()
     if not user:
-        conn.close()
+
         flash("Utente non trovato.", "error")
         return redirect(url_for("cerca"))
 
@@ -4823,7 +4820,7 @@ def recensioni_utente(user_id):
     if request.method == "POST":
         if "utente_id" not in session:
             flash("Devi accedere per lasciare una recensione.", "warning")
-            conn.close()
+
             return redirect(url_for("login"))
 
         # 🔒 Blocca recensioni se l’utente non ha caricato una foto profilo
@@ -4833,7 +4830,7 @@ def recensioni_utente(user_id):
 
         if not fp_row or not fp_row["foto_profilo"]:
             flash("Per lasciare una recensione devi prima caricare una foto profilo.", "warning")
-            conn.close()
+
             return redirect(url_for("dashboard"))  # modifica se la tua pagina profilo ha un nome diverso
 
 
@@ -4844,7 +4841,7 @@ def recensioni_utente(user_id):
         esistente = get_recensione_autore_vs_destinatario(id_autore, user_id)
         if esistente:
             flash("⚠️ Hai già lasciato una recensione per questo utente. Puoi solo modificarla.", "warning")
-            conn.close()
+
             return redirect(url_for("recensioni_utente", user_id=user_id))
 
         try:
@@ -4887,14 +4884,14 @@ def recensioni_utente(user_id):
             flash(f"❌ Errore durante il salvataggio della recensione: {e}", "error")
 
         finally:
-            conn.close()
+
 
         return redirect(url_for("recensioni_utente", user_id=user_id))
 
     # ✅ GET: mostra recensioni
     recensioni = get_recensioni_utente(user_id)
     media, totale = calcola_media_recensioni(user_id)
-    conn.close()
+
 
     return render_template(
         "recensioni_utente.html",
@@ -4986,7 +4983,7 @@ def register():
                 flash("Questa email è già registrata.")
             else:
                 flash("Questo ID utente è già in uso.")
-            conn.close()
+
             return redirect(url_for('register'))
 
         # 🔐 Sicurezza
@@ -5031,7 +5028,7 @@ def register():
         ))
 
         conn.commit()
-        conn.close()
+
 
         # 📧 Email conferma
         link = build_external_url("conferma_email", token=token)
@@ -5088,7 +5085,7 @@ def conferma_email(token):
     else:
         flash("Token non valido o già usato.")
 
-    conn.close()
+
     return redirect(url_for('login'))
 
 # ==========================================================
@@ -5325,7 +5322,7 @@ def password_dimenticata():
         cur = get_cursor(conn)
         cur.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
         utente = cur.fetchone()
-        conn.close()
+
 
         # ✅ Non riveliamo nulla
         if not utente:
@@ -5356,7 +5353,7 @@ def password_dimenticata():
         """), (utente['id'], token))
 
         conn.commit()
-        conn.close()
+
 
         # ✅ Invia email
         try:
@@ -5411,7 +5408,7 @@ def reset_password(token):
     token_row = cur.fetchone()
 
     if not token_row:
-        conn.close()
+
         flash("Questo link è già stato utilizzato o invalidato.", "error")
         return redirect(url_for('password_dimenticata'))
 
@@ -5436,7 +5433,7 @@ def reset_password(token):
         utente = cur.fetchone()
 
         if not utente:
-            conn.close()
+
             flash("Errore interno. Contatta il supporto.", "error")
             return redirect(url_for('login'))
 
@@ -5447,7 +5444,7 @@ def reset_password(token):
         # ✅ Marca token come usato
         cur.execute(sql("UPDATE password_reset_tokens SET usato = 1 WHERE token = ?"), (token,))
         conn.commit()
-        conn.close()
+
 
         # ✅ Login automatico
         session.clear()
@@ -5521,7 +5518,7 @@ def logout():
             WHERE id = ?
         """), (session["utente_id"],))
         conn.commit()
-        conn.close()
+
 
     session.pop("dek_b64", None)
     session.pop("id_priv_b64", None)
@@ -5544,7 +5541,7 @@ def landing():
         cur = get_cursor(conn)
         cur.execute(sql("SELECT macro_area FROM utenti WHERE id = ?"), (utente_id,))
         row = cur.fetchone()
-        conn.close()
+
 
         if row and row["macro_area"]:
             session['macro_area'] = row["macro_area"]
@@ -5913,7 +5910,7 @@ def cerca():
 
     c.execute(query_annunci, params)
     annunci = [dict(row) for row in c.fetchall()]
-    conn.close()
+
 
     return render_template(
         "cerca.html",
@@ -5942,7 +5939,7 @@ def apri_notifica(id):
     # Segna come letta
     conn.execute(sql("UPDATE notifiche SET letta = 1 WHERE id = ?"), (id,))
     conn.commit()
-    conn.close()
+
 
     # 🔔 aggiorna il badge
     socketio.emit('update_notifications', {'for_user': g.utente["id"]}, room=f"user_{g.utente['id']}")
@@ -6061,7 +6058,7 @@ def api_servizi_piani(codice):
         for r in cur.fetchall()
     ]
 
-    conn.close()
+
 
     return jsonify({
         "servizio": {
@@ -6087,7 +6084,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
     servizio = cur.fetchone()
 
     if not servizio:
-        conn.close()
+
         return jsonify({"error": "Servizio non trovato"}), 404
 
     # query dinamica in base all’ambito
@@ -6123,7 +6120,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
         """), (servizio["id"], annuncio_id, g.utente["id"]))
 
     att = cur.fetchone()
-    conn.close()
+
 
     if not att:
         return jsonify({
@@ -6165,7 +6162,7 @@ def api_pacchetti_piani(codice):
     pacchetto = cur.fetchone()
 
     if not pacchetto:
-        conn.close()
+
         return jsonify({"error": "Pacchetto non trovato"}), 404
 
     # piani pacchetto
@@ -6194,7 +6191,7 @@ def api_pacchetti_piani(codice):
         for r in cur.fetchall()
     ]
 
-    conn.close()
+
 
     return jsonify({
         "pacchetto": {
@@ -6321,7 +6318,7 @@ def api_attiva():
         return jsonify({"error": str(e)}), 500
 
     finally:
-        conn.close()
+
 
 
 @app.route("/api/crea-payment-intent", methods=["POST"])
@@ -6387,7 +6384,7 @@ def crea_payment_intent():
         conn.commit()
 
     finally:
-        conn.close()
+
 
     # PaymentIntent Stripe
     intent = stripe.PaymentIntent.create(
@@ -6577,7 +6574,7 @@ def gestisci_pagamento_confermato(payment_intent):
         print("❌ ERRORE STRIPE:", e)
 
     finally:
-        conn.close()
+
 
 def attiva_servizio_by_id(conn, servizio_id, **kwargs):
     row = conn.execute(
@@ -6701,14 +6698,14 @@ def modifica_profilo():
         altro = c.fetchone()
         if altro:
             flash("Questo username è già in uso. Scegline un altro.")
-            conn.close()
+
             return redirect(url_for('modifica_profilo'))
 
         # 🔹 Gestione cambio password (facoltativo)
         if nuova_password:
             if nuova_password != conferma_password:
                 flash("Le password non coincidono.")
-                conn.close()
+
                 return redirect(url_for('modifica_profilo'))
             hashed_pw = generate_password_hash(nuova_password)
             c.execute(
@@ -6726,7 +6723,7 @@ def modifica_profilo():
         # 🔹 Aggiorna la sessione con i nuovi dati dell'utente
         session['utente_username'] = username
         session.modified = True
-        conn.close()
+
 
         flash("Profilo aggiornato con successo.")
         return redirect(url_for('dashboard'))
@@ -6735,7 +6732,7 @@ def modifica_profilo():
     cur = get_cursor(conn)
     cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (g.utente['id'],))
     utente = cur.fetchone()
-    conn.close()
+
     return render_template('modifica_profilo.html', utente=utente)
 
 # ---------------------------
@@ -6766,7 +6763,7 @@ def modifica_username():
 
             if esistente and esistente[0] != session["utente_id"]:
                 flash("Questo ID utente è già stato scelto.", "error")
-                conn.close()
+
                 return redirect(url_for("modifica_username"))
 
             cur.execute(
@@ -6774,7 +6771,7 @@ def modifica_username():
                 (nuovo, session["utente_id"])
             )
             conn.commit()
-            conn.close()
+
 
             # ✅ aggiorna sessione
             session['utente_username'] = nuovo
@@ -6808,13 +6805,13 @@ def modifica_password():
         utente = cur.fetchone()
 
         if not utente:
-            conn.close()
+
             flash("Utente non trovato.", "error")
             return redirect(url_for("login"))
 
         # 🔹 Verifica password attuale
         if not check_password_hash(utente["password"], pw_attuale):
-            conn.close()
+
             flash("La password attuale non è corretta.", "error")
             return redirect(url_for("modifica_password"))
 
@@ -6822,7 +6819,7 @@ def modifica_password():
         hash_pw = generate_password_hash(nuova_pw)
         cur.execute(sql("UPDATE utenti SET password = ? WHERE id = ?"), (hash_pw, session["utente_id"]))
         conn.commit()
-        conn.close()
+
 
         flash("Password aggiornata con successo!", "success")
         return redirect(url_for("impostazioni"))
@@ -6853,7 +6850,7 @@ def sospendi_account():
         (session["utente_id"],)
     ).fetchone()
 
-    conn.close()
+
 
     # Invia email
     invia_email_sospensione(utente["email"], utente["nome"])
@@ -6931,7 +6928,7 @@ def controllo_sospensione():
     c = get_cursor(conn)
     c.execute(sql("SELECT sospeso, disattivato_admin FROM utenti WHERE id=?"), (session["utente_id"],))
     stato = c.fetchone()
-    conn.close()
+
 
     # 🔒 Utente sospeso → attiva pagina riattivazione
     if stato and stato["sospeso"] == 1:
@@ -6992,7 +6989,7 @@ def cambia_foto():
             UPDATE utenti SET foto_profilo=? WHERE id=?
         """), (percorso_db, session["utente_id"]))
         conn.commit()
-        conn.close()
+
 
         flash("Foto profilo aggiornata con successo!", "success")
         return redirect(url_for("impostazioni"))
@@ -7025,7 +7022,7 @@ def cambia_copertina():
             UPDATE utenti SET copertina=? WHERE id=?
         """), (percorso_db, session["utente_id"]))
         conn.commit()
-        conn.close()
+
 
         flash("Copertina aggiornata con successo!", "success")
         return redirect(url_for("impostazioni"))
@@ -7054,7 +7051,7 @@ def nuovo_annuncio():
     utente = c.fetchone()
 
     if not utente or utente["attivo"] != 1:
-        conn.close()
+
         flash("Il tuo account deve essere approvato per pubblicare annunci.", "warning")
         return redirect(url_for("dashboard"))
 
@@ -7075,17 +7072,17 @@ def nuovo_annuncio():
         descrizione = request.form.get("descrizione", "").strip()
 
         if not categoria:
-            conn.close()
+
             flash("Seleziona una categoria.", "warning")
             return redirect(url_for("nuovo_annuncio"))
 
         if not titolo:
-            conn.close()
+
             flash("Inserisci un titolo per l’annuncio.", "warning")
             return redirect(url_for("nuovo_annuncio"))
 
         if not descrizione:
-            conn.close()
+
             flash("Inserisci una descrizione dettagliata.", "warning")
             return redirect(url_for("nuovo_annuncio"))
 
@@ -7106,12 +7103,12 @@ def nuovo_annuncio():
         # =====================================================
 
         if tipo_annuncio not in ("offro", "cerco"):
-            conn.close()
+
             flash("Devi selezionare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("nuovo_annuncio"))
 
         if not zona:
-            conn.close()
+
             flash("Seleziona una zona o un comune dall’elenco.", "warning")
             return redirect(url_for("nuovo_annuncio"))
 
@@ -7128,7 +7125,7 @@ def nuovo_annuncio():
         esiste = c.fetchone()
 
         if esiste:
-            conn.close()
+
             flash(
                 "Hai già un annuncio in questa categoria (in attesa o approvato). "
                 "Per pubblicarne un altro, elimina o modifica quello esistente.",
@@ -7189,7 +7186,7 @@ def nuovo_annuncio():
         ))
 
         conn.commit()
-        conn.close()
+
 
         # 👁️ Visibilità pubblica automatica
         conn =  conn = get_db_connection()
@@ -7198,7 +7195,7 @@ def nuovo_annuncio():
             (utente["id"],)
         )
         conn.commit()
-        conn.close()
+
 
         # 🔔 Aggiorna contatori admin
         invalidate_admin_counters()
@@ -7212,7 +7209,7 @@ def nuovo_annuncio():
     # =========================================================
     # 📥 GET
     # =========================================================
-    conn.close()
+
     return render_template(
         "nuovo_annuncio.html",
         username=utente["username"],
@@ -7307,7 +7304,7 @@ def visualizza_annuncio_pubblico(id):
     """, (id,))
 
     row = c.fetchone()
-    conn.close()
+
 
     # ❌ Annuncio non trovato
     if not row:
@@ -7353,7 +7350,7 @@ def profilo_operatore(id):
 
     c.execute(sql("SELECT * FROM operatori WHERE id = ?"), (id,))
     operatore = c.fetchone()
-    conn.close()
+
 
     if not operatore:
         return "Operatore non trovato", 404
@@ -7393,7 +7390,7 @@ def profilo_pubblico(id):
     utente = c.fetchone()
 
     if not utente:
-        conn.close()
+
         flash("Profilo non trovato.", "error")
         return redirect(url_for("cerca"))
 
@@ -7407,7 +7404,7 @@ def profilo_pubblico(id):
     # 🔒 Controllo visibilità profilo
     if not bool(utente.get("visibile_pubblicamente", 0)):
         if not g.utente or g.utente["id"] != utente["id"]:
-            conn.close()
+
             flash("Questo profilo è privato.", "info")
             return redirect(url_for("cerca"))
 
@@ -7432,7 +7429,7 @@ def profilo_pubblico(id):
         ORDER BY data_pubblicazione DESC
     """), (id,))
     annunci = [dict(r) for r in c.fetchall()]
-    conn.close()
+
 
     # =========================================================
     # 🔹 OFFRO / CERCO
@@ -7491,7 +7488,7 @@ def toggle_visibilita():
     c.execute(sql("SELECT visibile_pubblicamente FROM utenti WHERE id = ?"), (g.utente["id"],))
     row = c.fetchone()
     if not row:
-        conn.close()
+
         flash("Utente non trovato.", "error")
         return redirect(url_for("dashboard"))
 
@@ -7506,7 +7503,7 @@ def toggle_visibilita():
         annunci_attivi = fetchone_value(c.fetchone())
 
         if annunci_attivi > 0:
-            conn.close()
+
             flash("⚠️ Non puoi rendere invisibile il profilo mentre hai annunci pubblicati. "
                   "Archivia o elimina prima gli annunci approvati.", "warning")
             return redirect(request.referrer or url_for("dashboard"))
@@ -7515,7 +7512,7 @@ def toggle_visibilita():
     nuovo_stato = 0 if stato_attuale == 1 else 1
     c.execute(sql("UPDATE utenti SET visibile_pubblicamente = ? WHERE id = ?"), (nuovo_stato, g.utente["id"]))
     conn.commit()
-    conn.close()
+
 
     if nuovo_stato == 1:
         flash("✅ Il tuo profilo è ora visibile pubblicamente.", "success")
@@ -7603,7 +7600,7 @@ def ricerca_utenti():
 
     c.execute(query, params)
     utenti = c.fetchall()
-    conn.close()
+
 
     logged_in = "utente_id" in session
 
@@ -7674,7 +7671,7 @@ def chat_conversazione_json(other_id):
         WHERE id = ?
     """), (other_id,))
     altro = c.fetchone()
-    conn.close()
+
 
     # 🔒 Maschera admin
     if altro and is_admin(altro["id"]):
@@ -7740,7 +7737,7 @@ def chat_conversazione_view(other_id):
     """), (other_id,))
     altro = c.fetchone()
     if not altro:
-        conn.close()
+
         return "Utente non disponibile", 404
 
     # 🔒 Maschera l'admin verso gli altri utenti
@@ -7753,7 +7750,7 @@ def chat_conversazione_view(other_id):
 
     # 🔹 Recupera i messaggi esistenti
     messaggi = chat_conversazione(g.utente["id"], other_id)
-    conn.close()
+
 
     # 🔹 Segna come letti i messaggi ricevuti
     chat_segna_letti(g.utente["id"], other_id)
@@ -7782,7 +7779,7 @@ def chiudi_chat(other_id):
     """), (admin_id, other_id))
 
     conn.commit()
-    conn.close()
+
 
     flash("Chat chiusa correttamente.", "success")
     return redirect(url_for("utente_messaggi"))
@@ -7814,7 +7811,7 @@ def video_start():
     """), (g.utente["id"], g.utente["id"])).fetchone()
 
     if call_in_corso:
-        conn.close()
+
         return jsonify({
             "error": "Sei già in una videochiamata in corso."
         }), 409
@@ -7831,7 +7828,7 @@ def video_start():
     ).fetchone()
 
     if not altro:
-        conn.close()
+
         return jsonify({"error": "Utente non trovato"}), 404
 
     # 🔒 CONTROLLO BUDGET
@@ -7844,18 +7841,18 @@ def video_start():
     """), (mese_corrente,)).fetchone()
 
     if limite and limite["bloccato"] == 1:
-        conn.close()
+
         return jsonify({
             "error": "Il servizio video è temporaneamente sospeso per questo mese."
         }), 403
 
     # 🔞 VERIFICA MAGGIORENNE
     if me["maggiorenne_verificato"] != 1:
-        conn.close()
+
         return jsonify({"need_verifica": True}), 200
 
     if altro["maggiorenne_verificato"] != 1:
-        conn.close()
+
         return jsonify({
             "error": "L’altro utente non è verificato come maggiorenne."
         }), 403
@@ -7880,7 +7877,7 @@ def video_start():
     )
 
     if r.status_code != 200:
-        conn.close()
+
         return jsonify({"error": "Errore creazione room Daily"}), 500
 
     room_url = r.json()["url"]
@@ -7898,7 +7895,7 @@ def video_start():
     """), (room_name, g.utente["id"], altro_id))
 
     conn.commit()
-    conn.close()
+
 
     # 📞 NOTIFICA CHIAMATA
     socketio.emit(
@@ -7939,7 +7936,7 @@ def verifica_maggiorenne():
     """), (ip, "v1.0_video", g.utente["id"]))
 
     conn.commit()
-    conn.close()
+
 
     return jsonify({"success": True})
 
@@ -7961,7 +7958,7 @@ def video_end():
     """), (room_name,)).fetchone()
 
     if not call:
-        conn.close()
+
         return jsonify({"error": "Call non trovata"}), 404
 
     start_time = datetime.strptime(call["created_at"], "%Y-%m-%d %H:%M:%S")
@@ -8038,7 +8035,7 @@ def video_end():
         socketio.emit("video_busy", {"user_id": call_users["utente_2"], "busy": False})
 
     conn.commit()
-    conn.close()
+
 
     return jsonify({"status": "ok"})
 
@@ -8063,7 +8060,7 @@ def video_ping():
     """), (room_name,))
 
     conn.commit()
-    conn.close()
+
 
     return jsonify({"ok": True})
 
@@ -8150,7 +8147,7 @@ def check_video_status(data):
         LIMIT 1
     """), (user_id, user_id)).fetchone()
 
-    conn.close()
+
 
     emit("video_status_result", {
         "busy": bool(call)
@@ -8197,10 +8194,10 @@ def handle_send_message(data):
         emit("error", {
             "message": "Per inviare messaggi devi prima caricare una foto profilo."
         })
-        conn.close()
+
         return
 
-    conn.close()
+
 
     # 🔵 2) SALVATAGGIO nel DB
     msg_id = chat_invia(mittente_id, int(destinatario_id), testo)
@@ -8209,7 +8206,7 @@ def handle_send_message(data):
     conn =  conn = get_db_connection()
     conn.execute(sql("UPDATE utenti SET visibile_in_chat = 1 WHERE id = ?"), (mittente_id,))
     conn.commit()
-    conn.close()
+
 
     # Messaggio che viene ritornato
     messaggio = {
@@ -8395,7 +8392,7 @@ def cleanup_video_calls():
                 socketio.emit("video_busy", {"user_id": call["utente_2"], "busy": False})
 
             conn.commit()
-            conn.close()
+
 
         except Exception as e:
             print("Errore cleanup video:", e)

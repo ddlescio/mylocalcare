@@ -67,7 +67,7 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     c.execute("SELECT x25519_pub FROM utenti WHERE id = ?", (destinatario_id,))
     row = c.fetchone()
     if not row or not row[0]:
-        conn.close()
+
         raise ValueError("Destinatario senza chiave pubblica registrata")
 
     dest_pub_b64 = row[0]
@@ -112,7 +112,7 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     ))
     conn.commit()
     msg_id = c.lastrowid
-    conn.close()
+
     return msg_id
 
 def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: int | None = None):
@@ -153,7 +153,7 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
         LIMIT ?
     """
     rows = c.execute(sql, [user_id, other_id, other_id, user_id, cutoff, cutoff, limit]).fetchall()
-    conn.close()
+
     rows = list(reversed(rows))  # mostra dal più vecchio al più recente
 
     messaggi_decifrati = []
@@ -332,7 +332,7 @@ def chat_threads(user_id: int):
         ORDER BY last_msg_id DESC;
     """, (user_id, user_id, user_id, cutoff, cutoff)).fetchall()
 
-    conn.close()
+
 
     # 🔑 recupero chiavi dalla sessione (stessa logica di chat_conversazione)
     x_priv_b64 = session.get("x25519_priv_b64")
@@ -419,7 +419,7 @@ def chat_segna_letti(user_id: int, other_id: int):
         WHERE destinatario_id = ? AND mittente_id = ? AND letto = 0
     """, (user_id, other_id))
     conn.commit()
-    conn.close()
+
 
 
 def count_chat_non_letti(user_id: int) -> int:
@@ -437,7 +437,7 @@ def count_chat_non_letti(user_id: int) -> int:
           AND u.attivo = 1
     """, (user_id,))
     n = fetchone_value(c.fetchone())
-    conn.close()
+
     return n
 
 
@@ -462,14 +462,14 @@ def get_operatori(categoria=None, zona=None, filtri=None):
 
     cur = get_cursor(conn)
     res = cur.execute(sql(query), params).fetchall()
-    conn.close()
+
     return res
 
 def get_operatore_by_id(id):
     conn = get_db_connection()
     cur = get_cursor(conn)
     row = cur.execute(sql("SELECT * FROM operatori WHERE id = ?"), (id,)).fetchone()
-    conn.close()
+
     return row
 
 def aggiungi_operatore(nome, categoria, zona, servizi, prezzo, bio, filtri_categoria):
@@ -479,7 +479,7 @@ def aggiungi_operatore(nome, categoria, zona, servizi, prezzo, bio, filtri_categ
         VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (nome, categoria, zona, servizi, prezzo, bio, filtri_categoria))
     conn.commit()
-    conn.close()
+
 
 def modifica_operatore(id, nome, categoria, zona, servizi, prezzo, bio, filtri_categoria=None):
     conn = get_db_connection()
@@ -496,20 +496,20 @@ def modifica_operatore(id, nome, categoria, zona, servizi, prezzo, bio, filtri_c
             WHERE id = ?
         ''', (nome, categoria, zona, servizi, prezzo, bio, id))
     conn.commit()
-    conn.close()
+
 
 def elimina_operatore(id):
     conn = get_db_connection()
     conn.execute("DELETE FROM operatori WHERE id = ?", (id,))
     conn.commit()
-    conn.close()
+
 
 def get_tutte_le_zone():
     conn = get_db_connection()
     rows = conn.execute(
         "SELECT DISTINCT zona FROM operatori WHERE zona IS NOT NULL AND zona != ''"
     ).fetchall()
-    conn.close()
+
     return [r[0] for r in rows]
 
 # ------------------ UTENTI ------------------ #
@@ -517,20 +517,20 @@ def get_utenti():
     conn = get_db_connection()
     cur = get_cursor(conn)
     rows = cur.execute(sql("SELECT * FROM utenti ORDER BY id DESC")).fetchall()
-    conn.close()
+    
     return rows
 
 def attiva_utente(id):
     conn = get_db_connection()
     conn.execute("UPDATE utenti SET attivo = 1 WHERE id = ?", (id,))
     conn.commit()
-    conn.close()
+
 
 def elimina_utente(id):
     conn = get_db_connection()
     conn.execute("DELETE FROM utenti WHERE id = ?", (id,))
     conn.commit()
-    conn.close()
+
 
 # ------------------ NOTIFICHE ------------------ #
 def count_notifiche_non_lette(utente_id):
@@ -539,7 +539,7 @@ def count_notifiche_non_lette(utente_id):
         "SELECT COUNT(*) AS tot FROM notifiche WHERE id_utente = ? AND letta = 0",
         (utente_id,)
     ).fetchone()
-    conn.close()
+
     return row['tot'] if row else 0
 
 def crea_notifica(utente_id, messaggio, link=None, tipo="generica"):
@@ -549,7 +549,7 @@ def crea_notifica(utente_id, messaggio, link=None, tipo="generica"):
         VALUES (?, ?, ?, ?)
     """, (utente_id, messaggio, link, tipo))
     conn.commit()
-    conn.close()
+
 
     # 🔔 Emissione live del badge aggiornato
     invia_notifica_live(utente_id)
@@ -568,35 +568,35 @@ def lista_notifiche(utente_id):
         "SELECT * FROM notifiche WHERE id_utente = ? ORDER BY data DESC",
         (utente_id,)
     ).fetchall()
-    conn.close()
+
     return rows
 
 def marca_notifica_letta(notifica_id):
     conn = get_db_connection()
     conn.execute("UPDATE notifiche SET letta = 1 WHERE id = ?", (notifica_id,))
     conn.commit()
-    conn.close()
+
 
 def elimina_notifica(notifica_id, utente_id):
     """Elimina una singola notifica (solo del proprio utente)."""
     conn = get_db_connection()
     conn.execute("DELETE FROM notifiche WHERE id = ? AND id_utente = ?", (notifica_id, utente_id))
     conn.commit()
-    conn.close()
+
 
 def elimina_tutte_notifiche(utente_id):
     """Elimina tutte le notifiche di un utente."""
     conn = get_db_connection()
     conn.execute("DELETE FROM notifiche WHERE id_utente = ?", (utente_id,))
     conn.commit()
-    conn.close()
+
 
 def segna_tutte_lette(utente_id):
     """Segna tutte le notifiche come lette."""
     conn = get_db_connection()
     conn.execute("UPDATE notifiche SET letta = 1 WHERE id_utente = ?", (utente_id,))
     conn.commit()
-    conn.close()
+
 
 def crea_tabella_annunci():
     conn = get_db_connection()
@@ -616,7 +616,7 @@ def crea_tabella_annunci():
         )
     """)
     conn.commit()
-    conn.close()
+
 
 def get_messaggi_contatto():
     conn = get_db_connection()
@@ -624,7 +624,7 @@ def get_messaggi_contatto():
     c = conn.cursor()
     c.execute("SELECT * FROM messaggi_contatto ORDER BY id DESC")
     rows = c.fetchall()
-    conn.close()
+
     return [dict(r) for r in rows]
 
 # ------------------ ANNUNCI ------------------ #
@@ -641,7 +641,7 @@ def get_annunci_utente(utente_id):
         ORDER BY {dt_sql("data_pubblicazione")} DESC
     """), (utente_id,))
     rows = c.fetchall()
-    conn.close()
+
     return [dict(r) for r in rows]
 # ------------------ RECENSIONI ------------------ #
 from datetime import datetime
@@ -669,7 +669,7 @@ def get_recensioni_utente(user_id):
         ORDER BY r.data DESC
     """, (user_id,))
     rows = cur.fetchall()
-    conn.close()
+
     return rows
 
 def get_recensioni_scritte(id_autore):
@@ -697,7 +697,7 @@ def get_recensioni_scritte(id_autore):
         ORDER BY r.data DESC
     """, (id_autore,))
     rows = cur.fetchall()
-    conn.close()
+
     return rows
 
 def get_recensione_autore_vs_destinatario(id_autore, id_destinatario):
@@ -710,7 +710,7 @@ def get_recensione_autore_vs_destinatario(id_autore, id_destinatario):
         WHERE id_autore = ? AND id_destinatario = ?
     """, (id_autore, id_destinatario))
     row = cur.fetchone()
-    conn.close()
+
     return row
 
 
@@ -755,7 +755,7 @@ def aggiungi_o_modifica_recensione(id_autore, id_destinatario, voto, testo, stat
         """, (id_autore, id_destinatario, voto, testo, stato))
 
     conn.commit()
-    conn.close()
+
 
 def calcola_media_recensioni(user_id):
     """Calcola media e numero solo delle recensioni approvate."""
@@ -768,7 +768,7 @@ def calcola_media_recensioni(user_id):
     """, (user_id,))
 
     row = cur.fetchone()
-    conn.close()
+
 
     media = row["media"]
     n = row["n"]
@@ -798,7 +798,7 @@ def get_tutte_recensioni():
     """)
 
     rows = c.fetchall()
-    conn.close()
+
     return [dict(r) for r in rows]
 
 def get_tutte_recensioni_con_risposte():
@@ -844,7 +844,7 @@ def get_tutte_recensioni_con_risposte():
     """)
 
     result = [dict(r) for r in c.fetchall()]
-    conn.close()
+
     return result
 
 def elimina_recensione(id_recensione, id_autore=None, is_admin=False):
@@ -856,7 +856,7 @@ def elimina_recensione(id_recensione, id_autore=None, is_admin=False):
     else:
         cur.execute("DELETE FROM recensioni WHERE id = ? AND id_autore = ?", (id_recensione, id_autore))
     conn.commit()
-    conn.close()
+
 
 # ------------------ RISPOSTE ------------------ #
 def get_risposta_by_recensione(id_recensione, solo_approvate=True):
@@ -885,7 +885,7 @@ def get_risposta_by_recensione(id_recensione, solo_approvate=True):
     cur = conn.cursor()
     cur.execute(sql, (id_recensione,))
     row = cur.fetchone()
-    conn.close()
+
     return row
 
 
@@ -928,7 +928,7 @@ def aggiungi_o_modifica_risposta(id_recensione=None, id_autore=None, testo=None,
             """, (id_recensione, id_autore, testo.strip()))
 
     conn.commit()
-    conn.close()
+
 
     # 🧹 Aggiorna immediatamente badge admin
     try:
@@ -954,7 +954,7 @@ def get_tutte_risposte():
         ORDER BY rr.data DESC
     """)
     rows = cur.fetchall()
-    conn.close()
+
     return rows
 
 def elimina_risposta(id_risposta, id_autore=None, is_admin=False):
@@ -966,7 +966,7 @@ def elimina_risposta(id_risposta, id_autore=None, is_admin=False):
     else:
         cur.execute("DELETE FROM risposte_recensioni WHERE id = ? AND id_autore = ?", (id_risposta, id_autore))
     conn.commit()
-    conn.close()
+
 
 
 # ------------------ APPROVAZIONE GENERICA ------------------ #
@@ -983,7 +983,7 @@ def approva_elemento(tabella, elemento_id):
         c = conn.cursor()
         c.execute(f"UPDATE {tabella} SET stato = 'approvato' WHERE id = ?", (elemento_id,))
         conn.commit()
-        conn.close()
+
 
 
 def rifiuta_elemento(tabella, elemento_id):
@@ -1018,6 +1018,6 @@ def rifiuta_elemento(tabella, elemento_id):
             row = c.fetchone()
 
         conn.commit()
-        conn.close()
+
 
     # ------------------ FUNZIONI COMUNI DI APPROVAZIONE ------------------ #

@@ -65,20 +65,20 @@ def _extend_from_current_or_end_sql(days: int) -> str:
 
     # SQLite
     return f"datetime(CASE WHEN data_fine > {_now_sql()} THEN data_fine ELSE {_now_sql()} END, '+{days} days')"
-    
+
 def _to_int_bool(v: Any) -> int:
     try:
         return 1 if int(v) == 1 else 0
     except Exception:
         return 0
 
-def servizio_attivo_per_utente(utente_id: int, codice_servizio: str) -> bool:
+def servizio_attivo_per_utente(utente_id: int, codice_servizio: str, conn=None) -> bool:
     """
     True se l'utente ha una attivazione attiva (non scaduta) per quel servizio.
     """
     codice_servizio = _normalize_codice_servizio(codice_servizio)
-    conn = get_db_connection()
-
+    if conn is None:
+        conn = get_db_connection()
 
     row = _fetchone(conn, f"""
         SELECT 1
@@ -92,17 +92,17 @@ def servizio_attivo_per_utente(utente_id: int, codice_servizio: str) -> bool:
         LIMIT 1
     """, (utente_id, codice_servizio))
 
-    conn.close()
+
     return row is not None
 
 
-def servizio_attivo_per_annuncio(annuncio_id: int, codice_servizio: str) -> bool:
+def servizio_attivo_per_annuncio(annuncio_id: int, codice_servizio: str, conn=None) -> bool:
     """
     True se l'annuncio ha una attivazione attiva (non scaduta) per quel servizio.
     """
     codice_servizio = _normalize_codice_servizio(codice_servizio)
-    conn = get_db_connection()
-
+    if conn is None:
+        conn = get_db_connection()
 
     row = _fetchone(conn, f"""
         SELECT 1
@@ -116,16 +116,16 @@ def servizio_attivo_per_annuncio(annuncio_id: int, codice_servizio: str) -> bool
         LIMIT 1
     """, (annuncio_id, codice_servizio))
 
-    conn.close()
+
     return row is not None
 
 
-def get_servizi_attivi_utente(utente_id: int) -> List[Dict[str, Any]]:
+def get_servizi_attivi_utente(utente_id: int, conn=None) -> List[Dict[str, Any]]:
     """
     Ritorna la lista dei servizi attivi per utente (utile per debug/pannello).
     """
-    conn = get_db_connection()
-
+    if conn is None:
+        conn = get_db_connection()
 
     rows = _fetchall(conn, f"""
         SELECT
@@ -148,16 +148,16 @@ def get_servizi_attivi_utente(utente_id: int) -> List[Dict[str, Any]]:
         ORDER BY a.data_inizio DESC
     """, (utente_id,))
 
-    conn.close()
+
     return [dict(r) for r in rows]
 
 
-def get_servizi_attivi_annuncio(annuncio_id: int) -> List[Dict[str, Any]]:
+def get_servizi_attivi_annuncio(annuncio_id: int, conn=None) -> List[Dict[str, Any]]:
     """
     Ritorna la lista dei servizi attivi per annuncio (utile per debug/pannello).
     """
-    conn = get_db_connection()
-
+    if conn is None:
+        conn = get_db_connection()
 
     rows = _fetchall(conn, f"""
         SELECT
@@ -179,7 +179,7 @@ def get_servizi_attivi_annuncio(annuncio_id: int) -> List[Dict[str, Any]]:
         ORDER BY a.data_inizio DESC
     """, (annuncio_id,))
 
-    conn.close()
+
     return [dict(r) for r in rows]
 
 
@@ -204,7 +204,6 @@ def aggiorna_servizi_scaduti() -> int:
     conn.commit()
     conn.close()
     return updated
-
 
 # ---------------------------------------------------------
 # PUNTEGGIO / PRIORITÀ (base) - la useremo nello STEP 3B
@@ -494,7 +493,7 @@ def get_boost_score_sql() -> str:
     )
     """
 
-def get_servizio_con_piani(codice_servizio: str):
+def get_servizio_con_piani(codice_servizio: str, conn=None):
     """
     Ritorna:
     {
@@ -504,7 +503,10 @@ def get_servizio_con_piani(codice_servizio: str):
     oppure None se servizio non valido / non attivo
     """
 
-    conn = get_db_connection()
+    own_conn = False
+    if conn is None:
+        conn = get_db_connection()
+        own_conn = True
     cur = get_cursor(conn)
 
     # 1️⃣ servizio
@@ -524,7 +526,8 @@ def get_servizio_con_piani(codice_servizio: str):
     servizio = cur.fetchone()
 
     if not servizio:
-        conn.close()
+        if own_conn:
+            conn.close()
         return None
 
     # 2️⃣ piani attivi (popcorn 🍿)
@@ -546,9 +549,14 @@ def get_servizio_con_piani(codice_servizio: str):
     """), (servizio["id"],))
     piani = cur.fetchall()
 
-    conn.close()
 
-    return {
+
+    result = {
         "servizio": dict(servizio),
         "piani": [dict(p) for p in piani]
     }
+
+    if own_conn:
+        conn.close()
+
+    return result
