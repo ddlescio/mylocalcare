@@ -1143,4 +1143,7 @@ def imposta_admin_predefinito():
 # ✅ ESECUZIONE DIRETTA
 # ---------------------------------------------------------
 if __name__ == "__main__":
-    inizializza_database()
+    from app import app
+
+    with app.app_context():
+        inizializza_database()
