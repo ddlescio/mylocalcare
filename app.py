@@ -624,26 +624,14 @@ def get_db_connection():
         return conn
 
 def sql(query):
+    """
+    Compatibilità placeholder SQLite/Postgres.
+    NON modifica la logica SQL.
+    """
     if IS_POSTGRES:
-        query = query.replace("?", "%s")
-
-        # AUTOINCREMENT
-        query = query.replace(
-            "INTEGER PRIMARY KEY AUTOINCREMENT",
-            "SERIAL PRIMARY KEY"
-        )
-
-        # " + sql_now() + "
-        query = query.replace("" + sql_now() + "", "CURRENT_TIMESTAMP")
-
-        # DATETIME -> TIMESTAMP
-        query = query.replace("DATETIME", "TIMESTAMP")
-
-        # 🔥 FIX GLOBALE datetime(campo)
-        query = re.sub(r"datetime\((.*?)\)", r"\1::timestamp", query)
-
+        return query.replace("?", "%s")
     return query
-
+    
 def now_sql():
     return "CURRENT_TIMESTAMP" if IS_POSTGRES else "" + sql_now() + ""
 
