@@ -661,6 +661,11 @@ def get_db_connection():
 
         raw = _pg_pool.getconn()
 
+        # 🔥 FIX CRASH: se la connessione è morta, ricreala
+        if raw.closed:
+            _pg_pool.putconn(raw, close=True)
+            raw = _pg_pool.getconn()
+
         # autocommit per non pagare commit inutili
         raw.autocommit = True
 
@@ -669,11 +674,11 @@ def get_db_connection():
 
         pooled = PooledConn(raw, release)
 
-        # 👇 QUESTO è IL PUNTO CHIAVE:
         wrapped = PGConnectionWrapper(pooled)
 
         g.db_conn = wrapped
         return wrapped
+
     # ================================
     # SQLITE (locale)
     # ================================
@@ -695,7 +700,7 @@ def get_db_connection():
 
         g.db_conn = conn
         return conn
-
+        
 def sql(query):
     """
     Compatibilità placeholder SQLite/Postgres.
