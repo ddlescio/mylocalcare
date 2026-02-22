@@ -1992,7 +1992,8 @@ def admin_pacchetti_piani_toggle(piano_id):
 def toggle_utente(id):
     conn = get_db_connection()
     cur = get_cursor(conn)
-    user = cur.execute(sql("SELECT attivo FROM utenti WHERE id = ?"), (id,)).fetchone()
+    cur.execute(sql("SELECT attivo FROM utenti WHERE id = ?"), (id,))
+    user = cur.fetchone()
     if user:
         nuovo_stato = 0 if user['attivo'] else 1
         conn.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?"), (nuovo_stato, id))
@@ -3914,7 +3915,8 @@ def load_logged_in_user():
     else:
         conn = get_db_connection()
         cur = get_cursor(conn)
-        g.utente = cur.execute(sql('SELECT * FROM utenti WHERE id = ?'), (user_id,)).fetchone()
+        cur.execute(sql('SELECT * FROM utenti WHERE id = ?'), (user_id,))
+        g.utente = cur.fetchone()
         conn.close()
     # 🔹 Identifica il percorso corrente (utile per la navbar)
     g.path = request.path
@@ -4156,7 +4158,8 @@ def utente_update_info():
     preferenze_contatto = request.form.get("preferenze_contatto", "")
     # ✅ Non aggiornare mai "email" da questo form (non viene inviato)
     # ✅ email_pubblica: se nel form non c'è, la lasciamo invariata
-    row = c.execute(sql("SELECT email, email_pubblica FROM utenti WHERE id = ?"), (user_id,)).fetchone()
+    c.execute(sql("SELECT email, email_pubblica FROM utenti WHERE id = ?"), (user_id,))
+    row = c.fetchone()
     email_db = row[0] if row else ""
     email_pubblica_db = row[1] if row else ""
 
@@ -4364,7 +4367,8 @@ def utente_update_galleria():
     c = get_cursor(conn)
 
     # --- Recupera galleria esistente ---
-    row = c.execute(sql("SELECT foto_galleria FROM utenti WHERE id = ?"), (g.utente['id'],)).fetchone()
+    c.execute(sql("SELECT foto_galleria FROM utenti WHERE id = ?"), (g.utente['id'],))
+    row = c.fetchone()
     correnti = []
     if row and row['foto_galleria']:
         try:
@@ -4404,7 +4408,8 @@ def utente_update_galleria():
 def elimina_annuncio(id):
     conn = get_db_connection()
     cur = get_cursor(conn)
-    annuncio = cur.execute(sql("SELECT * FROM annunci WHERE id = ?"), (id,)).fetchone()
+    cur.execute(sql("SELECT * FROM annunci WHERE id = ?"), (id,))
+    annuncio = cur.fetchone()
 
     if not annuncio or annuncio["utente_id"] != g.utente["id"]:
         conn.close()
@@ -4512,7 +4517,8 @@ def rimuovi_copertina():
 
     conn = get_db_connection()
     cur = get_cursor(conn)
-    row = cur.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (user_id,)).fetchone()
+    cur.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (user_id,))
+    row = cur.fetchone()
 
     if row and row['copertina']:
         path = os.path.join(app.root_path, 'static', row['copertina'])
@@ -6626,7 +6632,8 @@ def modifica_profilo():
 
     # GET → mostra dati correnti
     cur = get_cursor(conn)
-    utente = cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (g.utente['id'],)).fetchone()
+    cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (g.utente['id'],))
+    utente = cur.fetchone()
     conn.close()
     return render_template('modifica_profilo.html', utente=utente)
 
