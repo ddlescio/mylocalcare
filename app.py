@@ -4997,19 +4997,28 @@ def conferma_email(token):
 
 # ==========================================================
 # 🔐 LOGIN UTENTE + DECIFRATURA CHIAVI PERSONALI
+# (VERSIONE PROFILING — NON MODIFICA LOGICA)
 # ==========================================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    import time
+    t_start = time.perf_counter()
+
     if request.method == 'POST':
         email = request.form['email'].strip().lower()
         password = request.form['password']
 
+        # ===============================
+        # DB SELECT UTENTE
+        # ===============================
         conn = get_db_connection()
-
         c = get_cursor(conn)
         c.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
         utente = c.fetchone()
         conn.close()
+
+        t_select = time.perf_counter()
+        print("⏱ SELECT utente:", round(t_select - t_start, 4), "sec")
 
         # 1️⃣ Utente inesistente
         if not utente:
@@ -5017,7 +5026,7 @@ def login():
             return redirect(url_for('login'))
 
         # ---------------------------------------------------------
-        # 🔐  BLOCCO 1 — controllo lock temporaneo
+        # 🔐 BLOCCO LOCK
         # ---------------------------------------------------------
         from datetime import datetime, timezone
 
@@ -5036,18 +5045,20 @@ def login():
             minuti = int((lock_until - now).total_seconds() // 60) + 1
             flash(f"Troppi tentativi falliti. Riprova tra {minuti} minuti.", "error")
             return redirect(url_for('login'))
-        # 2️⃣ Email non confermata
+
+        # Email non confermata
         if int(utente['attivo']) != 1:
             flash("Devi confermare l'email prima di accedere.", "warning")
             return redirect(url_for('login'))
 
-        # 3️⃣ Password errata — con incremento tentativi
+        # ---------------------------------------------------------
+        # PASSWORD CHECK
+        # ---------------------------------------------------------
         if not check_password_hash(utente['password'], password):
 
             failed = (utente["failed_logins"] or 0) + 1
             lock_until = None
 
-            # Blocca dopo 5 tentativi per 15 minuti
             if failed >= 5:
                 from datetime import timedelta
                 lock_until = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
@@ -5063,30 +5074,28 @@ def login():
             flash("Email o password non validi.", "error")
             return redirect(url_for('login'))
 
-        # 4️⃣ Disattivato dall'admin (sqlite3.Row NON ha .get())
+        t_pwd = time.perf_counter()
+        print("⏱ password check:", round(t_pwd - t_select, 4), "sec")
+
+        # ---------------------------------------------------------
+        # STATUS CHECK
+        # ---------------------------------------------------------
         disattivato_admin = utente['disattivato_admin'] if 'disattivato_admin' in utente.keys() else 0
         if disattivato_admin == 1:
-            flash("Il tuo account è stato disattivato dall’amministrazione.", "error")
+            flash("Account disattivato.", "error")
             return redirect(url_for('login'))
 
-        # 5️⃣ Utente sospeso
         sospeso = utente['sospeso'] if 'sospeso' in utente.keys() else 0
         if sospeso == 1:
             session.clear()
             session['utente_id'] = utente['id']
             session['sospeso'] = True
-            flash("Il tuo account è sospeso. Riattivalo per continuare.", "warning")
             return redirect(url_for('riattivazione_account'))
 
-
-        # ======================================================
-        # ✅ LOGIN OK → ORA IMPOSTIAMO LA MACRO AREA
-        # ======================================================
-
-        # 👉 città salvata nel DB
+        # ---------------------------------------------------------
+        # MACRO AREA
+        # ---------------------------------------------------------
         citta = utente["citta"]
-
-        # 👉 ricaviamo la provincia
         provincia = get_provincia_from_comune(citta)
 
         if provincia:
@@ -5094,24 +5103,28 @@ def login():
         else:
             session["macro_area"] = "Italia"
 
+        t_geo = time.perf_counter()
+        print("⏱ lookup provincia:", round(t_geo - t_pwd, 4), "sec")
 
-        # ✅ Import necessari per la parte crittografica
-        import base64  # lo usiamo per sessione e chiavi
+        # ---------------------------------------------------------
+        # DECRYPT MASTER (DEK)
+        # ---------------------------------------------------------
+        import base64
 
-        # =======================================================
-        # 🔐 Decifra DEK con MASTER_SECRET
-        # =======================================================
         try:
             dek = decrypt_with_master(utente['dek_enc'], utente['dek_nonce'])
             session['dek_b64'] = base64.b64encode(dek).decode()
         except Exception as e:
-            print("Errore nella decifratura DEK con MASTER:", e)
-            flash("Errore nella decifratura della chiave personale. Contatta il supporto.", "error")
+            print("Errore decrypt MASTER:", e)
+            flash("Errore chiave personale.", "error")
             return redirect(url_for("login"))
 
-        # =======================================================
-        # 🔐 Decifra chiave privata X25519
-        # =======================================================
+        t_dek = time.perf_counter()
+        print("⏱ decrypt DEK:", round(t_dek - t_geo, 4), "sec")
+
+        # ---------------------------------------------------------
+        # DECRYPT X25519
+        # ---------------------------------------------------------
         try:
             x_priv_nonce = base64.b64decode(utente["x25519_priv_nonce"])
             x_priv_ct, x_priv_tag = gcm_unpack(utente["x25519_priv_enc"])
@@ -5123,10 +5136,13 @@ def login():
             session["x25519_pub_b64"] = utente["x25519_pub"]
 
         except Exception as e:
-            print("Errore nella decifratura della chiave privata X25519:", e)
+            print("Errore decrypt X25519:", e)
+
+        t_x = time.perf_counter()
+        print("⏱ decrypt X25519:", round(t_x - t_dek, 4), "sec")
 
         # ---------------------------------------------------------
-        # 🔐 Reset tentativi falliti dopo login corretto
+        # RESET FAIL LOGIN
         # ---------------------------------------------------------
         conn = get_db_connection()
         conn.execute(
@@ -5136,8 +5152,11 @@ def login():
         conn.commit()
         conn.close()
 
+        t_reset = time.perf_counter()
+        print("⏱ reset failed:", round(t_reset - t_x, 4), "sec")
+
         # ---------------------------------------------------------
-        # 🔒 SESSION TOKEN ADMIN — generato solo per l’amministratore
+        # ADMIN SESSION
         # ---------------------------------------------------------
         from datetime import datetime, timedelta, timezone
         import secrets
@@ -5155,10 +5174,8 @@ def login():
             conn.commit()
             conn.close()
 
-            # Salva il token in sessione
             session["admin_session_token"] = session_token
 
-        # 🔒 Salva fingerprint SOLO per admin
         browser_fingerprint = request.headers.get("User-Agent", "unknown")
 
         conn = get_db_connection()
@@ -5172,16 +5189,27 @@ def login():
 
         session["admin_browser_fingerprint"] = browser_fingerprint
 
-        # 🔹 Dati base in sessione
+        t_admin = time.perf_counter()
+        print("⏱ admin updates:", round(t_admin - t_reset, 4), "sec")
+
+        # ---------------------------------------------------------
+        # SESSION BASE
+        # ---------------------------------------------------------
         session['utente_id'] = utente['id']
         session['utente_username'] = utente['username']
 
         ensure_x25519_keys(utente['id'])
 
+        t_keys = time.perf_counter()
+        print("⏱ ensure_x25519_keys:", round(t_keys - t_admin, 4), "sec")
+
         from flask import get_flashed_messages
         get_flashed_messages()
 
         flash("Accesso effettuato con successo.", "success")
+
+        t_total = time.perf_counter()
+        print("🔥 LOGIN TOTALE:", round(t_total - t_start, 4), "sec")
 
         next_page = request.args.get('next')
         if next_page:
@@ -5190,7 +5218,7 @@ def login():
         return redirect(url_for('dashboard'))
 
     return render_template('login.html')
-
+    
 @app.route('/password_dimenticata', methods=['GET', 'POST'])
 def password_dimenticata():
     if request.method == 'POST':
