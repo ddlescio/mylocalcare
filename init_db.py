@@ -11,6 +11,15 @@ def dt_col(default_now=False):
     else:
         # now_sql() deve restituire un'espressione valida per SQLite, es: (datetime('now'))
         return f"TEXT DEFAULT {now_sql()}" if default_now else "TEXT"
+
+def pk_col():
+    """
+    PK compatibile:
+    - SQLite: INTEGER PRIMARY KEY AUTOINCREMENT
+    - Postgres: BIGSERIAL PRIMARY KEY
+    """
+    return "BIGSERIAL PRIMARY KEY" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
+
 # =========================================================
 # INIZIALIZZAZIONE DATABASE LOCALE - LocalCare (2025)
 # =========================================================
@@ -25,7 +34,7 @@ def crea_tabella_utenti():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS utenti (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         nome TEXT NOT NULL,
         cognome TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,
@@ -147,7 +156,7 @@ def crea_tabella_operatori():
     c = conn.cursor()
     c.execute(sql("""
     CREATE TABLE IF NOT EXISTS operatori (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         id_utente INTEGER,
         nome TEXT NOT NULL,
         categoria TEXT NOT NULL,
@@ -177,7 +186,7 @@ def crea_tabella_annunci():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS annunci (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         utente_id INTEGER NOT NULL,
         username TEXT,
         categoria TEXT NOT NULL,
@@ -224,7 +233,7 @@ def crea_tabella_match_utenti():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS match_utenti (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
 
         -- chi cerca e chi offre
         utente_cerca_id INTEGER NOT NULL,
@@ -262,7 +271,7 @@ def crea_tabella_messaggi_chat():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS messaggi_chat (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         mittente_id INTEGER NOT NULL,
         destinatario_id INTEGER NOT NULL,
         testo TEXT,
@@ -290,7 +299,7 @@ def crea_tabella_chat_chiusure():
     c = conn.cursor()
     c.execute(sql("""
     CREATE TABLE IF NOT EXISTS chat_chiusure (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         admin_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         closed_at TEXT NOT NULL,
@@ -310,7 +319,7 @@ def crea_tabella_segnalazioni_chat():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS segnalazioni_chat (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         messaggio_id INTEGER NOT NULL,
         segnalato_da INTEGER NOT NULL,
         motivo TEXT,
@@ -339,7 +348,7 @@ def crea_tabella_video_call_log():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS video_call_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         room_name TEXT NOT NULL,
         utente_1 INTEGER NOT NULL,
         utente_2 INTEGER NOT NULL,
@@ -377,7 +386,7 @@ def crea_tabella_video_limiti_mensili():
     c = conn.cursor()
     c.execute(sql("""
     CREATE TABLE IF NOT EXISTS video_limiti_mensili (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         mese TEXT NOT NULL,              -- formato YYYY-MM
         minuti_totali INTEGER DEFAULT 0,
         costo_totale_cent INTEGER DEFAULT 0,
@@ -398,7 +407,7 @@ def crea_tabella_video_config():
 
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS video_config (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         budget_mensile_cent INTEGER NOT NULL DEFAULT 2000,
         attivo INTEGER DEFAULT 1,
         updated_at {dt_col(True)}
@@ -428,7 +437,7 @@ def crea_tabella_recensioni():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS recensioni (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         id_autore INTEGER NOT NULL,
         id_destinatario INTEGER NOT NULL,
         voto INTEGER NOT NULL CHECK(voto BETWEEN 1 AND 5),
@@ -454,7 +463,7 @@ def crea_tabella_risposte():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS risposte_recensioni (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         id_recensione INTEGER NOT NULL,
         id_autore INTEGER NOT NULL,
         testo TEXT NOT NULL,
@@ -478,7 +487,7 @@ def crea_tabella_notifiche():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS notifiche (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         id_utente INTEGER NOT NULL,
 
         titolo TEXT,
@@ -508,7 +517,7 @@ def crea_tabella_notifiche_admin():
 
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS notifiche_admin (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         titolo TEXT NOT NULL,
         messaggio TEXT NOT NULL,
         link TEXT,
@@ -532,7 +541,7 @@ def crea_tabella_reset_password():
     c = conn.cursor()
     c.execute(sql("""
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         utente_id INTEGER NOT NULL,
         token TEXT NOT NULL UNIQUE,
         scadenza INTEGER NOT NULL,
@@ -552,7 +561,7 @@ def crea_tabella_servizi():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS servizi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         codice TEXT UNIQUE NOT NULL,
         nome TEXT NOT NULL,
         descrizione TEXT,
@@ -577,7 +586,7 @@ def crea_tabella_servizi_piani():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS servizi_piani (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
 
         servizio_id INTEGER NOT NULL,
 
@@ -617,7 +626,7 @@ def crea_tabella_pacchetti():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS pacchetti (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id {pk_col()},
       codice TEXT UNIQUE NOT NULL,
       nome TEXT NOT NULL,
       descrizione TEXT,
@@ -634,7 +643,7 @@ def crea_tabella_pacchetti_piani():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS pacchetti_piani (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
 
         pacchetto_id INTEGER NOT NULL,
 
@@ -671,7 +680,7 @@ def crea_tabella_pacchetti_servizi():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS pacchetti_servizi (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id {pk_col()},
       pacchetto_id INTEGER NOT NULL,
       servizio_id INTEGER NOT NULL,
 
@@ -694,7 +703,7 @@ def crea_tabella_prezzi():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS prezzi (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id {pk_col()},
 
       tipo TEXT NOT NULL CHECK(tipo IN ('servizio','pacchetto')),
       ref_id INTEGER NOT NULL,
@@ -724,7 +733,7 @@ def crea_tabella_acquisti():
 
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS acquisti (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id {pk_col()},
 
       utente_id INTEGER NOT NULL,
 
@@ -782,7 +791,7 @@ def crea_tabella_acquisti_servizi():
 
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS acquisti_servizi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         utente_id INTEGER NOT NULL,
         servizio_id INTEGER NOT NULL,
         metodo TEXT,
@@ -807,7 +816,7 @@ def crea_tabella_attivazioni_servizi():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS attivazioni_servizi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
 
         acquisto_id INTEGER,   -- riferimento a acquisti.id
         servizio_id INTEGER NOT NULL,
@@ -848,7 +857,7 @@ def crea_tabella_storico_servizi():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS storico_servizi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         attivazione_id INTEGER NOT NULL,
         azione TEXT NOT NULL,
         eseguito_da TEXT NOT NULL,
@@ -870,7 +879,7 @@ def crea_tabella_override_admin():
     c = conn.cursor()
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS override_admin (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {pk_col()},
         admin_id INTEGER NOT NULL,
         servizio_id INTEGER NOT NULL,
         utente_id INTEGER NOT NULL,
