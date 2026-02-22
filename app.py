@@ -631,7 +631,7 @@ def sql(query):
     if IS_POSTGRES:
         return query.replace("?", "%s")
     return query
-    
+
 def now_sql():
     return "CURRENT_TIMESTAMP" if IS_POSTGRES else "" + sql_now() + ""
 
@@ -4179,7 +4179,7 @@ def utente_update_info():
 
     # 🔹 Query esplicita e completa
     # 🔹 Query SOLO per TAB "Info di base"
-    sql = """
+    query_update = """
         UPDATE utenti SET
             citta = ?,
             provincia = ?,
@@ -4199,7 +4199,7 @@ def utente_update_info():
     )
 
     try:
-        c.execute(sql, valori)
+        c.execute(sql(query_update), valori)
         conn.commit()
         flash("✅ Modifiche salvate con successo.", "success")
 
@@ -5553,19 +5553,19 @@ def cerca():
     # =========================================================
     # SQL FLAGS (DEVONO STARE PRIMA DI ESSERE USATE)
     # =========================================================
-    has_urgente_sql = """
-        (
-          CASE WHEN EXISTS (
-            SELECT 1
-            FROM attivazioni_servizi act
-            JOIN servizi s ON s.id = act.servizio_id
-            WHERE act.annuncio_id = a.id
-              AND s.codice = 'annuncio_urgente'
-              AND act.stato = 'attivo'
-              AND act.data_inizio <= " + sql_now() + "
-              AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
-          ) THEN 1 ELSE 0 END
-        ) AS has_urgente
+    has_urgente_sql = f"""
+    (
+      CASE WHEN EXISTS (
+        SELECT 1
+        FROM attivazioni_servizi act
+        JOIN servizi s ON s.id = act.servizio_id
+        WHERE act.annuncio_id = a.id
+          AND s.codice = 'annuncio_urgente'
+          AND act.stato = 'attivo'
+          AND act.data_inizio <= {now_sql()}
+          AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
+      ) THEN 1 ELSE 0 END
+    ) AS has_urgente
     """
 
     affidabilita_top_sql = """
@@ -5614,7 +5614,6 @@ def cerca():
             {has_urgente_sql},
             {affidabilita_top_sql},
 
-            /* ⭐ MEDIA RECENSIONI */
             COALESCE(ROUND((
                 SELECT AVG(r.voto)
                 FROM recensioni r
@@ -5622,7 +5621,6 @@ def cerca():
                   AND r.stato = 'approvato'
             ), 1), 0) AS media_recensioni,
 
-            /* 🔢 NUMERO RECENSIONI */
             COALESCE((
                 SELECT COUNT(*)
                 FROM recensioni r
@@ -5637,8 +5635,8 @@ def cerca():
         WHERE
             s.codice = 'vetrina_annuncio'
             AND act.stato = 'attivo'
-            AND act.data_inizio <= " + sql_now() + "
-            AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
+            AND act.data_inizio <= {now_sql()}
+            AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
             AND a.stato = 'approvato'
             AND u.attivo = 1
             AND u.sospeso = 0
@@ -5678,7 +5676,7 @@ def cerca():
     # =========================================================
     # 🔥 BOOST SCORE – LISTA
     # =========================================================
-    urgent_score_sql = """
+    urgent_score_sql = f"""
     (
       CASE WHEN EXISTS (
         SELECT 1
@@ -5687,42 +5685,39 @@ def cerca():
         WHERE act.annuncio_id = a.id
           AND s.codice = 'annuncio_urgente'
           AND act.stato = 'attivo'
-          AND act.data_inizio <= " + sql_now() + "
-          AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
+          AND act.data_inizio <= {now_sql()}
+          AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
       ) THEN 200 ELSE 0 END
     ) AS urgent_score
     """
-
-    boost_score_sql = """
-        (
-          CASE WHEN EXISTS (
-            SELECT 1
-            FROM attivazioni_servizi act
-            JOIN servizi s ON s.id = act.servizio_id
-            WHERE act.annuncio_id = a.id
-              AND s.codice = 'boost_lista'
-              AND act.stato = 'attivo'
-              AND act.data_inizio <= " + sql_now() + "
-              AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
-          ) THEN 100 ELSE 0 END
-        ) AS boost_score
+    boost_score_sql = f"""
+    (
+      CASE WHEN EXISTS (
+        SELECT 1
+        FROM attivazioni_servizi act
+        JOIN servizi s ON s.id = act.servizio_id
+        WHERE act.annuncio_id = a.id
+          AND s.codice = 'boost_lista'
+          AND act.stato = 'attivo'
+          AND act.data_inizio <= {now_sql()}
+          AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
+      ) THEN 100 ELSE 0 END
+    ) AS boost_score
     """
-
-    has_evidenza_sql = """
-        (
-          CASE WHEN EXISTS (
-            SELECT 1
-            FROM attivazioni_servizi act
-            JOIN servizi s ON s.id = act.servizio_id
-            WHERE act.annuncio_id = a.id
-              AND s.codice = 'badge_evidenza'
-              AND act.stato = 'attivo'
-              AND act.data_inizio <= " + sql_now() + "
-              AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
-          ) THEN 1 ELSE 0 END
-        ) AS has_evidenza
+    has_evidenza_sql = f"""
+    (
+      CASE WHEN EXISTS (
+        SELECT 1
+        FROM attivazioni_servizi act
+        JOIN servizi s ON s.id = act.servizio_id
+        WHERE act.annuncio_id = a.id
+          AND s.codice = 'badge_evidenza'
+          AND act.stato = 'attivo'
+          AND act.data_inizio <= {now_sql()}
+          AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
+      ) THEN 1 ELSE 0 END
+    ) AS has_evidenza
     """
-
 
     query_annunci = f"""
         SELECT
