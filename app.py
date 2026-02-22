@@ -364,18 +364,11 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-@app.teardown_request
-def _release_pg_conn(exc):
-    if not IS_POSTGRES:
-        return
-    conn = getattr(g, "pg_conn", None)
-    if conn is None:
-        return
-    try:
-        conn.close()  # su PooledConn = putconn
-    except Exception:
-        pass
-    g.pg_conn = None
+@app.teardown_appcontext
+def close_db_conn(exception=None):
+    conn = getattr(g, "db_conn", None)
+    if conn is not None:
+        conn.close()
 
 @app.template_filter("dt_roma")
 def dt_roma(value):
@@ -654,51 +647,54 @@ class PGConnectionWrapper:
 
 
 def get_db_connection():
-    """
-    - SQLite: come prima
-    - Postgres (Render): usa POOL + 1 connessione per request (riuso)
-    """
-    global IS_POSTGRES
+    global IS_POSTGRES, _pg_pool
 
     database_url = os.getenv("DATABASE_URL")
 
-    # -------------------------
-    # 🔹 Render → PostgreSQL
-    # -------------------------
     if database_url:
         IS_POSTGRES = True
-
         init_pg_pool()
 
-        # ✅ riuso per-request (stessa conn per tutta la request)
-        if hasattr(g, "pg_conn") and g.pg_conn is not None:
-            return g.pg_conn
+        # riuso per-request
+        if hasattr(g, "db_conn") and g.db_conn is not None:
+            return g.db_conn
 
         raw = _pg_pool.getconn()
 
-        # Manteniamo il comportamento precedente (autocommit True)
-        # così NON rompiamo codice che oggi si aspetta autocommit.
+        # autocommit per non pagare commit inutili
         raw.autocommit = True
 
-        wrapped = PooledConn(raw, _pg_pool.putconn)
-        g.pg_conn = wrapped
+        def release(c):
+            _pg_pool.putconn(c)
+
+        pooled = PooledConn(raw, release)
+
+        # 👇 QUESTO è IL PUNTO CHIAVE:
+        wrapped = PGConnectionWrapper(pooled)
+
+        g.db_conn = wrapped
         return wrapped
+    # ================================
+    # SQLITE (locale)
+    # ================================
+    else:
+        IS_POSTGRES = False
 
-    # -------------------------
-    # 🔹 Locale → SQLite
-    # -------------------------
-    IS_POSTGRES = False
+        if hasattr(g, "db_conn"):
+            return g.db_conn
 
-    import sqlite3
-    conn = sqlite3.connect("database.db", timeout=5)
-    conn.row_factory = sqlite3.Row
+        import sqlite3
 
-    conn.execute("PRAGMA foreign_keys = ON;")
-    conn.execute("PRAGMA journal_mode = WAL;")
-    conn.execute("PRAGMA synchronous = NORMAL;")
-    conn.execute("PRAGMA busy_timeout = 5000;")
+        conn = sqlite3.connect('database.db', timeout=5)
+        conn.row_factory = sqlite3.Row
 
-    return conn
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
+        conn.execute("PRAGMA busy_timeout = 5000;")
+
+        g.db_conn = conn
+        return conn
 
 def sql(query):
     """
@@ -5093,7 +5089,6 @@ def login():
         c = get_cursor(conn)
         c.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
         utente = c.fetchone()
-        conn.close()
 
         t_select = time.perf_counter()
         print("⏱ SELECT utente:", round(t_select - t_start, 4), "sec")
@@ -5147,7 +5142,6 @@ def login():
                 (failed, lock_until, utente["id"])
             )
             conn.commit()
-            conn.close()
 
             flash("Email o password non validi.", "error")
             return redirect(url_for('login'))
@@ -5228,7 +5222,6 @@ def login():
             (utente["id"],)
         )
         conn.commit()
-        conn.close()
 
         t_reset = time.perf_counter()
         print("⏱ reset failed:", round(t_reset - t_x, 4), "sec")
@@ -5250,7 +5243,6 @@ def login():
                 WHERE id = ?
             """), (session_token, expiry, utente["id"]))
             conn.commit()
-            conn.close()
 
             session["admin_session_token"] = session_token
 
@@ -5263,7 +5255,6 @@ def login():
             WHERE id = ?
         """), (browser_fingerprint, utente["id"]))
         conn.commit()
-        conn.close()
 
         session["admin_browser_fingerprint"] = browser_fingerprint
 
