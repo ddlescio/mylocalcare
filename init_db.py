@@ -1,24 +1,16 @@
-from app import get_db_connection, sql, IS_POSTGRES, now_sql
+import app
+from app import get_db_connection
+
+sql = app.sql   # ✅ alias: così non devi cambiare mille righe
 
 def dt_col(default_now=False):
-    """
-    Colonna datetime compatibile:
-    - SQLite: TEXT (con default now_sql() se richiesto)
-    - Postgres: TIMESTAMPTZ (con default CURRENT_TIMESTAMP se richiesto)
-    """
-    if IS_POSTGRES:
+    if app.IS_POSTGRES:
         return "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP" if default_now else "TIMESTAMPTZ"
     else:
-        # now_sql() deve restituire un'espressione valida per SQLite, es: (datetime('now'))
-        return f"TEXT DEFAULT {now_sql()}" if default_now else "TEXT"
+        return f"TEXT DEFAULT {app.now_sql()}" if default_now else "TEXT"
 
 def pk_col():
-    """
-    PK compatibile:
-    - SQLite: INTEGER PRIMARY KEY AUTOINCREMENT
-    - Postgres: BIGSERIAL PRIMARY KEY
-    """
-    return "BIGSERIAL PRIMARY KEY" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
+    return "BIGSERIAL PRIMARY KEY" if app.IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
 # =========================================================
 # INIZIALIZZAZIONE DATABASE LOCALE - LocalCare (2025)
@@ -154,7 +146,7 @@ def crea_tabella_utenti():
 def crea_tabella_operatori():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS operatori (
         id {pk_col()},
         id_utente INTEGER,
@@ -297,7 +289,7 @@ def crea_tabella_messaggi_chat():
 def crea_tabella_chat_chiusure():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS chat_chiusure (
         id {pk_col()},
         admin_id INTEGER NOT NULL,
@@ -384,7 +376,7 @@ def crea_tabella_video_call_log():
 def crea_tabella_video_limiti_mensili():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS video_limiti_mensili (
         id {pk_col()},
         mese TEXT NOT NULL,              -- formato YYYY-MM
@@ -539,7 +531,7 @@ def crea_tabella_notifiche_admin():
 def crea_tabella_reset_password():
     conn = get_conn()
     c = conn.cursor()
-    c.execute(sql("""
+    c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
         id {pk_col()},
         utente_id INTEGER NOT NULL,
@@ -950,7 +942,7 @@ def aggiorna_colonne_mancanti():
         # Recensioni e tracking
         "media_recensioni": "REAL DEFAULT 0",
         "numero_recensioni": "INTEGER DEFAULT 0",
-        "data_creazione": f"TEXT DEFAULT {now_sql()}",
+        "data_creazione": f"TEXT DEFAULT {app.now_sql()}",
         "foto_galleria": "TEXT",
 
         # Cifratura (DEK + ID + X25519)
@@ -1132,7 +1124,7 @@ def inizializza_database():
     crea_tabella_storico_servizi()
     crea_tabella_override_admin()
 
-if not IS_POSTGRES:
+if not app.IS_POSTGRES:
     try:
         aggiorna_colonne_mancanti()
     except Exception:
