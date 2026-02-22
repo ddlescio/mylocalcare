@@ -364,11 +364,18 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-@app.teardown_appcontext
-def close_db_conn(exception=None):
+@app.teardown_request
+def _release_pg_conn(exc):
+    if not IS_POSTGRES:
+        return
     conn = getattr(g, "db_conn", None)
-    if conn is not None:
+    if conn is None:
+        return
+    try:
         conn.close()
+    except:
+        pass
+    g.db_conn = None
 
 @app.template_filter("dt_roma")
 def dt_roma(value):
@@ -700,7 +707,7 @@ def get_db_connection():
 
         g.db_conn = conn
         return conn
-        
+
 def sql(query):
     """
     Compatibilità placeholder SQLite/Postgres.
