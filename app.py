@@ -633,8 +633,8 @@ def sql(query):
             "SERIAL PRIMARY KEY"
         )
 
-        # datetime('now')
-        query = query.replace("datetime('now')", "CURRENT_TIMESTAMP")
+        # " + sql_now() + "
+        query = query.replace("" + sql_now() + "", "CURRENT_TIMESTAMP")
 
         # DATETIME -> TIMESTAMP
         query = query.replace("DATETIME", "TIMESTAMP")
@@ -645,7 +645,7 @@ def sql(query):
     return query
 
 def now_sql():
-    return "CURRENT_TIMESTAMP" if IS_POSTGRES else "datetime('now')"
+    return "CURRENT_TIMESTAMP" if IS_POSTGRES else "" + sql_now() + ""
 
 
 def order_datetime(field):
@@ -1245,8 +1245,8 @@ def admin_toggle_servizio():
                 WHERE servizio_id = ?
                   AND annuncio_id = ?
                   AND stato = 'attivo'
-                  AND data_inizio <= datetime('now')
-                  AND (data_fine IS NULL OR data_fine > datetime('now'))
+                  AND data_inizio <= " + sql_now() + "
+                  AND (data_fine IS NULL OR data_fine > " + sql_now() + ")
                 LIMIT 1
             """), (servizio["id"], annuncio_id)).fetchone()
         else:
@@ -1257,8 +1257,8 @@ def admin_toggle_servizio():
                   AND utente_id = ?
                   AND annuncio_id IS NULL
                   AND stato = 'attivo'
-                  AND data_inizio <= datetime('now')
-                  AND (data_fine IS NULL OR data_fine > datetime('now'))
+                  AND data_inizio <= " + sql_now() + "
+                  AND (data_fine IS NULL OR data_fine > " + sql_now() + ")
                 LIMIT 1
             """), (servizio["id"], utente_id)).fetchone()
 
@@ -1735,8 +1735,8 @@ def admin_toggle_pacchetto():
                     WHERE servizio_id = ?
                       AND annuncio_id = ?
                       AND stato = 'attivo'
-                      AND data_inizio <= datetime('now')
-                      AND (data_fine IS NULL OR data_fine > datetime('now'))
+                      AND data_inizio <= " + sql_now() + "
+                      AND (data_fine IS NULL OR data_fine > " + sql_now() + ")
                     LIMIT 1
                 """), (servizio["id"], annuncio_id)).fetchone()
             else:
@@ -1747,8 +1747,8 @@ def admin_toggle_pacchetto():
                       AND utente_id = ?
                       AND annuncio_id IS NULL
                       AND stato = 'attivo'
-                      AND data_inizio <= datetime('now')
-                      AND (data_fine IS NULL OR data_fine > datetime('now'))
+                      AND data_inizio <= " + sql_now() + "
+                      AND (data_fine IS NULL OR data_fine > " + sql_now() + ")
                     LIMIT 1
                 """), (servizio["id"], utente_id)).fetchone()
 
@@ -2099,8 +2099,8 @@ def admin_utenti():
               WHERE a.utente_id = u.id
                 AND s.codice = 'contatti'
                 AND a.stato = 'attivo'
-                AND a.data_inizio <= datetime('now')
-                AND (a.data_fine IS NULL OR a.data_fine > datetime('now'))
+                AND a.data_inizio <= " + sql_now() + "
+                AND (a.data_fine IS NULL OR a.data_fine > " + sql_now() + ")
               LIMIT 1
             ) AS contatti_attivi
 
@@ -3204,8 +3204,8 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
           AND a.stato = 'approvato'
           AND s.codice = 'annuncio_urgente'
           AND act.stato = 'attivo'
-          AND act.data_inizio <= datetime('now')
-          AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+          AND act.data_inizio <= " + sql_now() + "
+          AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
     """), (annuncio_id,))
     annuncio = c.fetchone()
 
@@ -3588,8 +3588,8 @@ def admin_annunci():
                 WHERE act.annuncio_id = a.id
                   AND s.codice = 'boost_lista'
                   AND act.stato = 'attivo'
-                  AND act.data_inizio <= datetime('now')
-                  AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+                  AND act.data_inizio <= " + sql_now() + "
+                  AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
             ) THEN 1 ELSE 0 END AS has_boost_lista,
 
             /* VETRINA */
@@ -3600,8 +3600,8 @@ def admin_annunci():
                 WHERE act.annuncio_id = a.id
                   AND s.codice = 'vetrina_annuncio'
                   AND act.stato = 'attivo'
-                  AND act.data_inizio <= datetime('now')
-                  AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+                  AND act.data_inizio <= " + sql_now() + "
+                  AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
             ) THEN 1 ELSE 0 END AS has_vetrina,
 
             /* BADGE EVIDENZA */
@@ -3612,8 +3612,8 @@ def admin_annunci():
                 WHERE act.annuncio_id = a.id
                   AND s.codice = 'badge_evidenza'
                   AND act.stato = 'attivo'
-                  AND act.data_inizio <= datetime('now')
-                  AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+                  AND act.data_inizio <= " + sql_now() + "
+                  AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
             ) THEN 1 ELSE 0 END AS has_badge_evidenza,
 
             /* 🚨 ANNUNCIO URGENTE */
@@ -3624,8 +3624,8 @@ def admin_annunci():
                 WHERE act.annuncio_id = a.id
                   AND s.codice = 'annuncio_urgente'
                   AND act.stato = 'attivo'
-                  AND act.data_inizio <= datetime('now')
-                  AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+                  AND act.data_inizio <= " + sql_now() + "
+                  AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
             ) THEN 1 ELSE 0 END AS has_urgente,
 
             /* BADGE AFFIDABILITÀ (profilo) */
@@ -3705,7 +3705,7 @@ def approva_annuncio(id):
     c.execute(sql("""
         UPDATE annunci
         SET stato = 'approvato',
-            approvato_il = datetime('now'),
+            approvato_il = " + sql_now() + ",
             match_da_processare = 1
         WHERE id = ?
     """), (id,))
@@ -3785,7 +3785,7 @@ def segna_notifica_letta(notifica_id, user_id):
     conn = get_db_connection()
     conn.execute(sql("""
         UPDATE notifiche
-        SET letta = 1, data_lettura = datetime('now')
+        SET letta = 1, data_lettura = " + sql_now() + "
         WHERE id = ? AND id_utente = ?
     """), (notifica_id, user_id))
     conn.commit()
@@ -4769,7 +4769,7 @@ def recensioni_utente(user_id):
 
             conn.execute(sql("""
                 INSERT INTO recensioni (id_autore, id_destinatario, voto, testo, stato, data)
-                VALUES (?, ?, ?, ?, ?, datetime('now'))
+                VALUES (?, ?, ?, ?, ?, " + sql_now() + ")
             """), (id_autore, user_id, voto, testo, stato))
             conn.commit()
 
@@ -5574,8 +5574,8 @@ def cerca():
             WHERE act.annuncio_id = a.id
               AND s.codice = 'annuncio_urgente'
               AND act.stato = 'attivo'
-              AND act.data_inizio <= datetime('now')
-              AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+              AND act.data_inizio <= " + sql_now() + "
+              AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
           ) THEN 1 ELSE 0 END
         ) AS has_urgente
     """
@@ -5649,8 +5649,8 @@ def cerca():
         WHERE
             s.codice = 'vetrina_annuncio'
             AND act.stato = 'attivo'
-            AND act.data_inizio <= datetime('now')
-            AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+            AND act.data_inizio <= " + sql_now() + "
+            AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
             AND a.stato = 'approvato'
             AND u.attivo = 1
             AND u.sospeso = 0
@@ -5699,8 +5699,8 @@ def cerca():
         WHERE act.annuncio_id = a.id
           AND s.codice = 'annuncio_urgente'
           AND act.stato = 'attivo'
-          AND act.data_inizio <= datetime('now')
-          AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+          AND act.data_inizio <= " + sql_now() + "
+          AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
       ) THEN 200 ELSE 0 END
     ) AS urgent_score
     """
@@ -5714,8 +5714,8 @@ def cerca():
             WHERE act.annuncio_id = a.id
               AND s.codice = 'boost_lista'
               AND act.stato = 'attivo'
-              AND act.data_inizio <= datetime('now')
-              AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+              AND act.data_inizio <= " + sql_now() + "
+              AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
           ) THEN 100 ELSE 0 END
         ) AS boost_score
     """
@@ -5729,8 +5729,8 @@ def cerca():
             WHERE act.annuncio_id = a.id
               AND s.codice = 'badge_evidenza'
               AND act.stato = 'attivo'
-              AND act.data_inizio <= datetime('now')
-              AND (act.data_fine IS NULL OR act.data_fine > datetime('now'))
+              AND act.data_inizio <= " + sql_now() + "
+              AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
           ) THEN 1 ELSE 0 END
         ) AS has_evidenza
     """
@@ -7677,7 +7677,7 @@ def chiudi_chat(other_id):
 
     conn.execute(sql("""
         INSERT INTO chat_chiusure (admin_id, user_id, closed_at)
-        VALUES (?, ?, datetime('now'))
+        VALUES (?, ?, " + sql_now() + ")
     """), (admin_id, other_id))
 
     conn.commit()
@@ -7793,7 +7793,7 @@ def video_start():
             in_corso,
             last_ping
         )
-        VALUES (?, ?, ?, 1, datetime('now'))
+        VALUES (?, ?, ?, 1, " + sql_now() + ")
     """), (room_name, g.utente["id"], altro_id))
 
     conn.commit()
@@ -7831,7 +7831,7 @@ def verifica_maggiorenne():
     conn.execute(sql("""
         UPDATE utenti
         SET maggiorenne_verificato = 1,
-            data_verifica_maggiorenne = datetime('now'),
+            data_verifica_maggiorenne = " + sql_now() + ",
             ip_verifica_maggiorenne = ?,
             versione_consenso = ?
         WHERE id = ?
@@ -7897,7 +7897,7 @@ def video_end():
         SET durata_secondi = ?,
             costo_stimato_cent = ?,
             in_corso = 0,
-            ended_at = datetime('now')
+            ended_at = " + sql_now() + "
         WHERE id = ?
     """), (durata_secondi, costo_cent, call["id"]))
 
@@ -7956,7 +7956,7 @@ def video_ping():
 
     conn.execute(sql("""
         UPDATE video_call_log
-        SET last_ping = datetime('now')
+        SET last_ping = " + sql_now() + "
         WHERE room_name = ?
         AND in_corso = 1
     """), (room_name,))
