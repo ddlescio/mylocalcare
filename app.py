@@ -897,7 +897,10 @@ def admin_counters():
             video_minuti = list(row.values())[0] if row else 0
 
         finally:
-
+            try:
+                conn.close()
+            except:
+                pass
 
     totale = pending_annunci + pending_recensioni_totali
     payload = {
@@ -1166,6 +1169,10 @@ def admin_servizi_nuovo():
             flash("Codice già esistente (deve essere univoco).", "error")
             return redirect(url_for("admin_servizi_nuovo"))
         finally:
+            try:
+                conn.close()
+            except:
+                pass
 
 
     # GET
@@ -1238,6 +1245,10 @@ def admin_servizi_modifica(id):
             flash("Codice già esistente (deve essere univoco).", "error")
             return redirect(url_for("admin_servizi_modifica", id=id))
         finally:
+            try:
+                conn.close()
+            except:
+                pass
 
 
 
@@ -4317,6 +4328,10 @@ def utente_update_info():
         flash(f"Errore nel salvataggio: {e}", "error")
         print("❌ ERRORE SALVATAGGIO:", e)
     finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 
     return redirect(url_for("dashboard"))
@@ -4358,6 +4373,10 @@ def utente_update_esperienza():
         conn.rollback()
         flash(f"❌ Errore durante il salvataggio: {e}", "error")
     finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 
     return redirect(url_for("dashboard") + "#tab-info")
@@ -4399,6 +4418,10 @@ def utente_update_contatti():
         conn.rollback()
         flash(f"❌ Errore durante il salvataggio dei contatti: {e}", "error")
     finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 
     return redirect(url_for("dashboard"))
@@ -4430,6 +4453,10 @@ def utente_update_descrizione():
         conn.rollback()
         flash(f"❌ Errore durante il salvataggio della descrizione: {e}", "error")
     finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 
     return redirect(url_for("dashboard") + "#tab-descrizione")
@@ -4884,6 +4911,10 @@ def recensioni_utente(user_id):
             flash(f"❌ Errore durante il salvataggio della recensione: {e}", "error")
 
         finally:
+            try:
+                conn.close()
+            except:
+                pass
 
 
         return redirect(url_for("recensioni_utente", user_id=user_id))
@@ -6318,6 +6349,10 @@ def api_attiva():
         return jsonify({"error": str(e)}), 500
 
     finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 
 
@@ -6384,6 +6419,10 @@ def crea_payment_intent():
         conn.commit()
 
     finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 
     # PaymentIntent Stripe
@@ -6574,6 +6613,10 @@ def gestisci_pagamento_confermato(payment_intent):
         print("❌ ERRORE STRIPE:", e)
 
     finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 
 def attiva_servizio_by_id(conn, servizio_id, **kwargs):
