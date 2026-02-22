@@ -10,8 +10,7 @@ def dt_col(default_now=False):
         return f"TEXT DEFAULT {app.now_sql()}" if default_now else "TEXT"
 
 def pk_col():
-    return "BIGSERIAL PRIMARY KEY" if app.IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
-
+    return "BIGSERIAL PRIMARY KEY" if app.config.get("IS_POSTGRES") else "INTEGER PRIMARY KEY AUTOINCREMENT"
 # =========================================================
 # INIZIALIZZAZIONE DATABASE LOCALE - LocalCare (2025)
 # =========================================================
