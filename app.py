@@ -814,7 +814,7 @@ def admin_counters():
                 WHERE mese = strftime('%Y-%m','now')
             """))
             row = c.fetchone()
-            video_minuti = row[0] if row else 0
+            video_minuti = list(row.values())[0] if row else 0
 
         finally:
             conn.close()
@@ -3360,10 +3360,10 @@ def approva_recensione(id):
         conn.close()
 
         if row:
-            id_autore = row[0]
-            id_destinatario = row[1]
-            ultima_modifica = row[2]
-            username_autore = row[3] or "utente"
+            id_autore = list(row.values())[0]
+            id_destinatario = list(row.values())[1]
+            ultima_modifica = list(row.values())[2]
+            username_autore = list(row.values())[3] or "utente"
 
             if ultima_modifica:
                 messaggio = f"@{username_autore} ha modificato la sua recensione su di te"
@@ -3411,7 +3411,7 @@ def rifiuta_recensione(id):
         conn.close()
 
         if row:
-            id_autore = row[0]
+            id_autore = list(row.values())[0]
 
             crea_notifica(
                 id_autore,
@@ -3459,8 +3459,8 @@ def approva_risposta(id):
         conn.close()
 
         if row:
-            id_autore = row[0]
-            username_risposta = row[1] or "utente"
+            id_autore = list(row.values())[0]
+            username_risposta = list(row.values())[1] or "utente"
 
             crea_notifica(
                 id_autore,
@@ -3504,7 +3504,7 @@ def rifiuta_risposta(id):
         conn.close()
 
         if row:
-            id_autore = row[0]
+            id_autore = list(row.values())[0]
 
             # 3️⃣ Creo la notifica per l'autore della risposta
             crea_notifica(
@@ -4160,8 +4160,8 @@ def utente_update_info():
     # ✅ email_pubblica: se nel form non c'è, la lasciamo invariata
     c.execute(sql("SELECT email, email_pubblica FROM utenti WHERE id = ?"), (user_id,))
     row = c.fetchone()
-    email_db = row[0] if row else ""
-    email_pubblica_db = row[1] if row else ""
+    email_db = list(row.values())[0] if row else ""
+    email_pubblica_db = list(row.values())[1] if row else ""
 
     email = email_db  # resta quella vera dell’account
 
@@ -4611,7 +4611,7 @@ def modifica_recensione():
         flash("Recensione non trovata o non autorizzata.", "error")
         return redirect(url_for("mie_recensioni"))
 
-    id_destinatario = row[0]
+    id_destinatario = list(row.values())[0]
 
     # 🟦 DECISIONE AUTOMATICA DELLO STATO
     # - Se il testo è vuoto → la recensione è approvata subito
@@ -5440,8 +5440,8 @@ def landing():
         row = cur.fetchone()
         conn.close()
 
-        if row and row[0]:
-            session['macro_area'] = row[0]
+        if row and row["macro_area"]:
+            session['macro_area'] = row["macro_area"]
             return redirect(url_for('home_v2'))
 
     # 2️⃣ Se non loggato ma ha già scelto macro_area
@@ -5541,8 +5541,8 @@ def cerca():
             row = cur_tmp.fetchone()
             conn_tmp.close()
 
-            if row and row[0]:
-                provincia_attiva = row[0]
+            if row and list(row.values())[0]:
+                provincia_attiva = list(row.values())[0]
                 session["macro_area"] = provincia_attiva
 
     provincia_query = provincia_filtro or provincia_attiva or "__INVALID__"
