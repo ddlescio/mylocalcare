@@ -1991,7 +1991,8 @@ def admin_pacchetti_piani_toggle(piano_id):
 @admin_required
 def toggle_utente(id):
     conn = get_db_connection()
-    user = conn.execute(sql("SELECT attivo FROM utenti WHERE id = ?"), (id,)).fetchone()
+    cur = get_cursor(conn)
+    user = cur.execute(sql("SELECT attivo FROM utenti WHERE id = ?"), (id,)).fetchone()
     if user:
         nuovo_stato = 0 if user['attivo'] else 1
         conn.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?"), (nuovo_stato, id))
@@ -3912,7 +3913,8 @@ def load_logged_in_user():
         g.utente = None
     else:
         conn = get_db_connection()
-        g.utente = conn.execute('SELECT * FROM utenti WHERE id = ?', (user_id,)).fetchone()
+        cur = get_cursor(conn)
+        g.utente = cur.execute(sql('SELECT * FROM utenti WHERE id = ?'), (user_id,)).fetchone()
         conn.close()
     # 🔹 Identifica il percorso corrente (utile per la navbar)
     g.path = request.path
@@ -4401,7 +4403,8 @@ def utente_update_galleria():
 @login_required
 def elimina_annuncio(id):
     conn = get_db_connection()
-    annuncio = conn.execute(sql("SELECT * FROM annunci WHERE id = ?"), (id,)).fetchone()
+    cur = get_cursor(conn)
+    annuncio = cur.execute(sql("SELECT * FROM annunci WHERE id = ?"), (id,)).fetchone()
 
     if not annuncio or annuncio["utente_id"] != g.utente["id"]:
         conn.close()
@@ -4508,7 +4511,8 @@ def rimuovi_copertina():
     user_id = g.utente['id']
 
     conn = get_db_connection()
-    row = conn.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (user_id,)).fetchone()
+    cur = get_cursor(conn)
+    row = cur.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (user_id,)).fetchone()
 
     if row and row['copertina']:
         path = os.path.join(app.root_path, 'static', row['copertina'])
@@ -6621,7 +6625,8 @@ def modifica_profilo():
         return redirect(url_for('dashboard'))
 
     # GET → mostra dati correnti
-    utente = conn.execute(sql("SELECT * FROM utenti WHERE id = ?"), (g.utente['id'],)).fetchone()
+    cur = get_cursor(conn)
+    utente = cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (g.utente['id'],)).fetchone()
     conn.close()
     return render_template('modifica_profilo.html', utente=utente)
 

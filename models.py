@@ -6,7 +6,7 @@ from db import (
     sql,
     is_postgres,
     dt_sql
-)    
+)
 # -----------------------------
 # CHAT – FUNZIONI PRINCIPALI (aggiornate con consegnato/letto/orario)
 # -----------------------------
@@ -460,13 +460,15 @@ def get_operatori(categoria=None, zona=None, filtri=None):
             query += " AND filtri_categoria LIKE ?"
             params.append(f"%{filtro}%")
 
-    res = conn.execute(query, params).fetchall()
+    cur = get_cursor(conn)
+    res = cur.execute(sql(query), params).fetchall()
     conn.close()
     return res
 
 def get_operatore_by_id(id):
     conn = get_db_connection()
-    row = conn.execute("SELECT * FROM operatori WHERE id = ?", (id,)).fetchone()
+    cur = get_cursor(conn)
+    row = cur.execute(sql("SELECT * FROM operatori WHERE id = ?"), (id,)).fetchone()
     conn.close()
     return row
 
@@ -513,7 +515,8 @@ def get_tutte_le_zone():
 # ------------------ UTENTI ------------------ #
 def get_utenti():
     conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM utenti ORDER BY id DESC").fetchall()
+    cur = get_cursor(conn)
+    rows = cur.execute(sql("SELECT * FROM utenti ORDER BY id DESC")).fetchall()
     conn.close()
     return rows
 
