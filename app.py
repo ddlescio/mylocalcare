@@ -664,8 +664,18 @@ def get_db_connection():
 
         # riuso per-request
         if hasattr(g, "db_conn") and g.db_conn is not None:
-            return g.db_conn
-
+            try:
+                # verifica che sia ancora valida
+                g.db_conn.cursor().execute("SELECT 1")
+                return g.db_conn
+            except Exception:
+                # connessione morta → la rilasciamo
+                try:
+                    g.db_conn.close()
+                except:
+                    pass
+                g.db_conn = None
+        
         raw = _pg_pool.getconn()
 
         # 🔥 FIX CRASH: se la connessione è morta, ricreala
