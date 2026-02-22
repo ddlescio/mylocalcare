@@ -36,6 +36,60 @@ import psycopg2.extras
 import re
 from models import fetchone_value
 
+import os
+from flask import g
+
+# ==========================================================
+# DB POOL (Postgres) + Connessione riutilizzabile per-request
+# ==========================================================
+IS_POSTGRES = bool(os.getenv("DATABASE_URL"))
+
+_pg_pool = None
+
+def init_pg_pool():
+    global _pg_pool
+    if _pg_pool is not None:
+        return
+
+    if not IS_POSTGRES:
+        return
+
+    import psycopg2.extras
+    from psycopg2.pool import ThreadedConnectionPool
+
+    dsn = os.getenv("DATABASE_URL")
+
+    _pg_pool = ThreadedConnectionPool(
+        minconn=1,
+        maxconn=12,
+        dsn=dsn,
+        sslmode="require",
+        cursor_factory=psycopg2.extras.RealDictCursor
+    )
+
+class PooledConn:
+    """
+    Wrapper che fa sì che conn.close() NON chiuda su Postgres,
+    ma rilasci al pool.
+    """
+    def __init__(self, conn, release_fn):
+        self._conn = conn
+        self._release_fn = release_fn
+
+    def close(self):
+        # invece di chiudere: release al pool
+        try:
+            self._release_fn(self._conn)
+        except Exception:
+            # fallback: chiudi davvero se qualcosa va storto
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
 def get_cursor(conn):
     import sqlite3
     import psycopg2.extras
@@ -309,6 +363,19 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+@app.teardown_request
+def _release_pg_conn(exc):
+    if not IS_POSTGRES:
+        return
+    conn = getattr(g, "pg_conn", None)
+    if conn is None:
+        return
+    try:
+        conn.close()  # su PooledConn = putconn
+    except Exception:
+        pass
+    g.pg_conn = None
 
 @app.template_filter("dt_roma")
 def dt_roma(value):
@@ -587,40 +654,51 @@ class PGConnectionWrapper:
 
 
 def get_db_connection():
+    """
+    - SQLite: come prima
+    - Postgres (Render): usa POOL + 1 connessione per request (riuso)
+    """
     global IS_POSTGRES
+
     database_url = os.getenv("DATABASE_URL")
 
+    # -------------------------
     # 🔹 Render → PostgreSQL
+    # -------------------------
     if database_url:
-        import psycopg2
-        import psycopg2.extras
+        IS_POSTGRES = True
 
-        IS_POSTGRES = True   # ⭐ QUESTA RIGA MANCAVA
+        init_pg_pool()
 
-        conn = psycopg2.connect(
-            database_url,
-            sslmode="require",
-            cursor_factory=psycopg2.extras.RealDictCursor
-        )
+        # ✅ riuso per-request (stessa conn per tutta la request)
+        if hasattr(g, "pg_conn") and g.pg_conn is not None:
+            return g.pg_conn
 
-        conn.autocommit = True
-        return PGConnectionWrapper(conn)
+        raw = _pg_pool.getconn()
 
+        # Manteniamo il comportamento precedente (autocommit True)
+        # così NON rompiamo codice che oggi si aspetta autocommit.
+        raw.autocommit = True
+
+        wrapped = PooledConn(raw, _pg_pool.putconn)
+        g.pg_conn = wrapped
+        return wrapped
+
+    # -------------------------
     # 🔹 Locale → SQLite
-    else:
-        import sqlite3
+    # -------------------------
+    IS_POSTGRES = False
 
-        IS_POSTGRES = False  # ⭐ QUESTA RIGA MANCAVA
+    import sqlite3
+    conn = sqlite3.connect("database.db", timeout=5)
+    conn.row_factory = sqlite3.Row
 
-        conn = sqlite3.connect('database.db', timeout=5)
-        conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA synchronous = NORMAL;")
+    conn.execute("PRAGMA busy_timeout = 5000;")
 
-        conn.execute("PRAGMA foreign_keys = ON;")
-        conn.execute("PRAGMA journal_mode = WAL;")
-        conn.execute("PRAGMA synchronous = NORMAL;")
-        conn.execute("PRAGMA busy_timeout = 5000;")
-
-        return conn
+    return conn
 
 def sql(query):
     """
@@ -647,7 +725,7 @@ def dt_sql(field: str) -> str:
     return f"{field}::timestamp" if IS_POSTGRES else f"datetime({field})"
 
 app.config["DB_CONN_FACTORY"] = get_db_connection
-app.config["IS_POSTGRES"] = IS_POSTGRES
+app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
 
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
@@ -5218,7 +5296,7 @@ def login():
         return redirect(url_for('dashboard'))
 
     return render_template('login.html')
-    
+
 @app.route('/password_dimenticata', methods=['GET', 'POST'])
 def password_dimenticata():
     if request.method == 'POST':
