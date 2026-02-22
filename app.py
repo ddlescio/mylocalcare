@@ -644,7 +644,7 @@ class PGConnectionWrapper:
         return self.conn.commit()
 
     def close(self):
-        return self.
+        self.conn.close()
 
     def __getattr__(self, name):
         return getattr(self.conn, name)
@@ -665,13 +665,13 @@ def get_db_connection():
                 # verifica che sia ancora valida
                 g.db_conn.cursor().execute("SELECT 1")
                 return g.db_conn
-        except Exception:
-            # connessione morta → rilascia al pool
-            try:
-                g.db_conn.close()
-            except:
-                pass
-            g.db_conn = None
+            except Exception:
+                # connessione morta → rilascia al pool
+                try:
+                    g.db_conn.close()
+                except:
+                    pass
+                g.db_conn = None
 
         raw = _pg_pool.getconn()
 
