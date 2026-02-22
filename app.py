@@ -6946,10 +6946,11 @@ def nuovo_annuncio():
     c = get_cursor(conn)
 
     # ✅ Verifica che l’utente sia attivo
-    utente = c.execute(
+    c.execute(
         "SELECT * FROM utenti WHERE id = ?",
         (session["utente_id"],)
-    ).fetchone()
+    )
+    utente = c.fetchone()
 
     if not utente or utente["attivo"] != 1:
         conn.close()
@@ -7014,14 +7015,16 @@ def nuovo_annuncio():
             return redirect(url_for("nuovo_annuncio"))
 
         # 🔒 1 annuncio per categoria per utente
-        esiste = c.execute(sql("""
+        c.execute(sql("""
             SELECT id
             FROM annunci
             WHERE utente_id = ?
               AND categoria = ?
               AND stato IN ('in_attesa', 'approvato')
             LIMIT 1
-        """), (utente["id"], categoria)).fetchone()
+        """), (utente["id"], categoria))
+
+        esiste = c.fetchone()
 
         if esiste:
             conn.close()
