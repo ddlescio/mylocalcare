@@ -42,22 +42,20 @@ from flask import g
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
 # ==========================================================
-IS_POSTGRES = bool(os.getenv("DATABASE_URL"))
 
 _pg_pool = None
 
 def init_pg_pool():
     global _pg_pool
+
     if _pg_pool is not None:
         return
 
-    if not IS_POSTGRES:
+    dsn = os.getenv("DATABASE_URL")
+    if not dsn:
         return
 
-    import psycopg2.extras
     from psycopg2.pool import ThreadedConnectionPool
-
-    dsn = os.getenv("DATABASE_URL")
 
     _pg_pool = ThreadedConnectionPool(
         minconn=1,
@@ -81,12 +79,11 @@ class PooledConn:
         try:
             self._release_fn(self._conn)
         except Exception:
-            # fallback: chiudi davvero se qualcosa va storto
             try:
-                self._
-            except Exception:
+                self._conn.close()
+            except:
                 pass
-
+        
     def __getattr__(self, name):
         return getattr(self._conn, name)
 
@@ -590,8 +587,6 @@ def invia_email_sospensione(email, nome):
 # 2️⃣ FUNZIONE CONNESSIONE DB E MODELS
 # ==========================================================
 
-IS_POSTGRES = False
-
 class PGCursorWrapper:
     """
     Wrapper del cursor per convertire automaticamente
@@ -605,7 +600,7 @@ class PGCursorWrapper:
         query = query.replace("?", "%s")
         self.cursor.execute(query, params or ())
         return self
-    
+
     def executemany(self, query, params_list):
         query = query.replace("?", "%s")
         return self.cursor.executemany(query, params_list)
@@ -652,13 +647,15 @@ class PGConnectionWrapper:
 
 
 def get_db_connection():
-    global IS_POSTGRES, _pg_pool
+    global _pg_pool
 
     database_url = os.getenv("DATABASE_URL")
+    app.config["IS_POSTGRES"] = bool(database_url)
 
     if database_url:
-        IS_POSTGRES = True
-        init_pg_pool()
+
+        if _pg_pool is None:
+            init_pg_pool()
 
         # riuso per-request
         if hasattr(g, "db_conn") and g.db_conn is not None:
@@ -683,6 +680,7 @@ def get_db_connection():
 
         # autocommit per non pagare commit inutili
         raw.autocommit = True
+        raw.set_session(readonly=False, autocommit=True)
 
         def release(c):
             _pg_pool.putconn(c)
@@ -698,7 +696,7 @@ def get_db_connection():
     # SQLITE (locale)
     # ================================
     else:
-        IS_POSTGRES = False
+
 
         if hasattr(g, "db_conn"):
             return g.db_conn
@@ -717,20 +715,16 @@ def get_db_connection():
         return conn
 
 def sql(query):
-    """
-    Compatibilità placeholder SQLite/Postgres.
-    NON modifica la logica SQL.
-    """
-    if IS_POSTGRES:
+    if app.config.get("IS_POSTGRES"):
         return query.replace("?", "%s")
     return query
 
 def now_sql():
-    return "CURRENT_TIMESTAMP" if IS_POSTGRES else "" + sql_now() + ""
+    return "CURRENT_TIMESTAMP" if app.config.get("IS_POSTGRES") else sql_now()
 
 
 def order_datetime(field):
-    return field if IS_POSTGRES else f"datetime({field})"
+    return field if app.config.get("IS_POSTGRES") else f"datetime({field})"
 
 def dt_sql(field: str) -> str:
     """
@@ -738,7 +732,7 @@ def dt_sql(field: str) -> str:
     - SQLite: datetime(field)
     - Postgres: field::timestamp (funziona anche se field è già timestamp)
     """
-    return f"{field}::timestamp" if IS_POSTGRES else f"datetime({field})"
+    return f"{field}::timestamp" if app.config.get("IS_POSTGRES") else f"datetime({field})"
 
 app.config["DB_CONN_FACTORY"] = get_db_connection
 app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
@@ -889,11 +883,18 @@ def admin_counters():
             pending_recensioni_totali = pending_recensioni + pending_risposte
 
                         # 🎥 Minuti video usati (mese corrente)
-            c.execute(sql("""
-                SELECT COALESCE(minuti_totali, 0)
-                FROM video_limiti_mensili
-                WHERE mese = strftime('%Y-%m','now')
-            """))
+            if app.config.get("IS_POSTGRES"):
+                c.execute("""
+                    SELECT COALESCE(minuti_totali, 0)
+                    FROM video_limiti_mensili
+                    WHERE mese = TO_CHAR(NOW(),'YYYY-MM')
+                """)
+            else:
+                c.execute("""
+                    SELECT COALESCE(minuti_totali, 0)
+                    FROM video_limiti_mensili
+                    WHERE mese = strftime('%Y-%m','now')
+                """)
             row = c.fetchone()
             video_minuti = list(row.values())[0] if row else 0
 
