@@ -145,7 +145,7 @@ def decrypt_with_master(enc_b64: str, nonce_b64: str) -> bytes:
     return cipher.decrypt_and_verify(ct, tag)
 
 def is_admin(user_id):
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     c = get_cursor(conn)
     c.execute(
@@ -346,13 +346,42 @@ app = Flask(__name__)
 import json
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s or "[]")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(32))
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=True,  # SOLO se sei su HTTPS
+)
+
+@app.before_request
+def ensure_csrf_token():
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+
+def verify_csrf():
+    token = None
+
+    # JSON (fetch/AJAX)
+    if request.is_json:
+        token = request.headers.get("X-CSRF-Token")
+
+    # Form classico
+    else:
+        token = request.form.get("csrf_token")
+
+    if not token or token != session.get("csrf_token"):
+        abort(403)
 
 
+import os
 
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",
-    async_mode="threading"
+    cors_allowed_origins=[
+        "https://mylocalcare.it",
+        "https://www.mylocalcare.it",
+        "http://127.0.0.1:5050",
+        "http://localhost:5050"
+    ]
 )
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
@@ -479,11 +508,6 @@ def fromjson_filter(value):
 
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
-
-print(">>> TEMPLATE DIR:", app.template_folder)
-print(">>> STATIC DIR:", app.static_folder)
-print(">>> WORKING DIR:", os.getcwd())
-print(">>> FILE APP.PY:", __file__)
 
 def now_utc():
     return datetime.now(timezone.utc)
@@ -1383,6 +1407,7 @@ def admin_servizi_elimina(servizio_id):
 @app.route("/admin/toggle-servizio", methods=["POST"])
 @admin_required
 def admin_toggle_servizio():
+    verify_csrf()
 
     data = request.get_json(silent=True) or {}
 
@@ -1870,6 +1895,7 @@ PACCHETTI = {
 @app.route("/admin/toggle-pacchetto", methods=["POST"])
 @admin_required
 def admin_toggle_pacchetto():
+    verify_csrf()
 
     data = request.get_json(silent=True) or {}
 
@@ -2850,7 +2876,7 @@ def _is_checked(form, key: str) -> bool:
 
 
 def _filtra_utenti(form):
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     c = get_cursor(conn)
 
@@ -2871,13 +2897,13 @@ def _filtra_utenti(form):
         singolo = (form.get("utente_singolo") or "").strip()
         if singolo:
             valore = singolo.lower()
-            c.execute(f"""
+            c.execute(sql(f"""
                 SELECT u.*
                 FROM utenti u
                 WHERE (LOWER(u.email) = ? OR LOWER(u.username) = ?)
                   AND {BASE_UTENTI_WHERE}
                 LIMIT 1
-            """, (valore, valore))
+            """), (valore, valore))
             row = c.fetchone()
 
             return [row] if row else []
@@ -2894,12 +2920,12 @@ def _filtra_utenti(form):
 
             return []
         placeholders = ",".join(["?"] * len(multipli))
-        c.execute(f"""
+        c.execute(sql(f"""
             SELECT u.*
             FROM utenti u
             WHERE u.id IN ({placeholders})
               AND {BASE_UTENTI_WHERE}
-        """, multipli)
+        """), multipli)
         rows = c.fetchall()
 
         return rows
@@ -2908,12 +2934,12 @@ def _filtra_utenti(form):
     # 4) Tutti
     # ------------------------------------------------------------
     if tab == "u-tutti":
-        c.execute(f"""
+        c.execute(sql(f"""
             SELECT u.*
             FROM utenti u
             WHERE {BASE_UTENTI_WHERE}
             ORDER BY u.nome, u.cognome
-        """)
+        """))
         rows = c.fetchall()
 
         return rows
@@ -3159,7 +3185,7 @@ def _filtra_utenti(form):
     # ------------------------------------------------------------
     # 5D) Query finale utenti
     # ------------------------------------------------------------
-    c.execute(f"""
+    c.execute(sql(f"""
         WITH destinatari AS (
             {final_ids_sql}
         )
@@ -3168,7 +3194,7 @@ def _filtra_utenti(form):
         JOIN destinatari d ON d.uid = u.id
         WHERE {BASE_UTENTI_WHERE}
         ORDER BY u.nome, u.cognome
-    """, final_params)
+    """), final_params)
 
     rows = c.fetchall()
 
@@ -3179,7 +3205,7 @@ def _crea_notifica(id_utente, titolo, messaggio, tipo="generica", link=None):
     import sqlite3
     from app import socketio
 
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
     c = get_cursor(conn)
     c.execute(sql("""
         INSERT INTO notifiche (id_utente, titolo, messaggio, tipo, link, letta)
@@ -3233,7 +3259,7 @@ def processa_match_nuovi_annunci():
             annunci_processati.append(annuncio_id)
             continue
 
-        utenti = c.execute(f"""
+        utenti = c.execute(sql(f"""
             SELECT id, citta
             FROM utenti
             WHERE cerco_{idx} = 1
@@ -3241,7 +3267,7 @@ def processa_match_nuovi_annunci():
               AND sospeso = 0
               AND visibile_pubblicamente = 1
               AND id != ?
-        """, (offre_id,)).fetchall()
+        """), (offre_id,)).fetchall()
 
         for u in utenti:
             if not place_match(zona, u["citta"] or ""):
@@ -3441,7 +3467,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
     if categoria_index:
         colonna = f"{tipo_opposto}_{categoria_index}"
 
-        c.execute(f"""
+        c.execute(sql(f"""
             SELECT id
             FROM utenti
             WHERE provincia = ?
@@ -3451,7 +3477,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
               AND attivo = 1
               AND email_notifiche = 1
               AND {colonna} = 1
-        """, (provincia, autore_id))
+        """), (provincia, autore_id))
 
         for (uid,) in c.fetchall():
             notificati.add(uid)
@@ -3739,7 +3765,7 @@ def admin_annunci():
     # =========================
     # DB
     # =========================
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     c = get_cursor(conn)
 
@@ -3873,7 +3899,7 @@ def admin_annunci():
 @app.route("/admin/annunci/approva/<int:id>")
 @admin_required
 def approva_annuncio(id):
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     c = get_cursor(conn)
 
@@ -3920,7 +3946,7 @@ def approva_annuncio(id):
 @app.route("/admin/annunci/rifiuta/<int:id>")
 @admin_required
 def rifiuta_annuncio(id):
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
     c = get_cursor(conn)
     c.execute(sql("UPDATE annunci SET stato = 'rifiutato' WHERE id = ?"), (id,))
     conn.commit()
@@ -5451,7 +5477,7 @@ def password_dimenticata():
         reset_url = url_for('reset_password', token=token, _external=True)
 
         # ✅ Salva token nel DB e invalida i precedenti
-        conn =  conn = get_db_connection()
+        conn = get_db_connection()
         cur = get_cursor(conn)
 
         # invalida eventuali token ancora aperti
@@ -5516,7 +5542,7 @@ def reset_password(token):
         return redirect(url_for('password_dimenticata'))
 
     # ✅ Verifica token non già usato
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     cur = get_cursor(conn)
     cur.execute(sql("SELECT * FROM password_reset_tokens WHERE token = ? AND usato = 0"), (token,))
@@ -5776,7 +5802,7 @@ def cerca():
     # =========================================================
     # DB
     # =========================================================
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     c = get_cursor(conn)
 
@@ -6886,7 +6912,7 @@ def modifica_username():
         nuovo = request.form.get("username", "").strip().upper()   # ✅ SALVA MAIUSCOLO
 
         if nuovo:
-            conn =  conn = get_db_connection()
+            conn = get_db_connection()
             cur = get_cursor(conn)
 
             # ✅ controllo duplicati case-insensitive
@@ -6930,7 +6956,7 @@ def modifica_password():
             flash("La password deve avere almeno 8 caratteri.", "error")
             return redirect(url_for("modifica_password"))
 
-        conn =  conn = get_db_connection()
+        conn = get_db_connection()
 
         cur = get_cursor(conn)
         cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (session["utente_id"],))
@@ -6968,7 +6994,7 @@ def elimina_account_step1():
 @app.route("/impostazioni/sospendi-account", methods=["POST"])
 @login_required
 def sospendi_account():
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     cur = get_cursor(conn)
 
@@ -6998,7 +7024,7 @@ def sospendi_account():
 @login_required
 def elimina_account_step2():
     if request.method == "POST":
-        conn =  conn = get_db_connection()
+        conn = get_db_connection()
         cur = get_cursor(conn)
 
         cur.execute(sql("DELETE FROM utenti WHERE id=?"), (session["utente_id"],))
@@ -7023,7 +7049,7 @@ def riattivazione_account():
 @app.route("/impostazioni/riattiva-account", methods=["POST"])
 @login_required
 def riattiva_account():
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
     cur = get_cursor(conn)
 
     cur.execute(sql("UPDATE utenti SET sospeso=0 WHERE id=?"), (session["utente_id"],))
@@ -7055,7 +7081,7 @@ def controllo_sospensione():
         return
 
     # Controlla stato nel DB
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     c = get_cursor(conn)
     c.execute(sql("SELECT sospeso, disattivato_admin FROM utenti WHERE id=?"), (session["utente_id"],))
@@ -7082,7 +7108,7 @@ def controllo_sospensione():
 def email_notifiche():
     if request.method == "POST":
         attivo = 1 if request.form.get("email_notifiche") == "on" else 0
-        conn =  conn = get_db_connection()
+        conn = get_db_connection()
         cur = get_cursor(conn)
         cur.execute(sql("UPDATE utenti SET email_notifiche=? WHERE id=?"), (attivo, session["utente_id"]))
         conn.commit()
@@ -7115,7 +7141,7 @@ def cambia_foto():
         # SALVA IL PERCORSO COERENTE
         percorso_db = f"uploads/profile/{filename}"
 
-        conn =  conn = get_db_connection()
+        conn = get_db_connection()
         cur = get_cursor(conn)
         cur.execute(sql("""
             UPDATE utenti SET foto_profilo=? WHERE id=?
@@ -7148,7 +7174,7 @@ def cambia_copertina():
 
         percorso_db = f"uploads/profili/copertine/{filename}"
 
-        conn =  conn = get_db_connection()
+        conn = get_db_connection()
         cur = get_cursor(conn)
         cur.execute(sql("""
             UPDATE utenti SET copertina=? WHERE id=?
@@ -7171,7 +7197,7 @@ def nuovo_annuncio():
         flash("Devi essere loggato per creare un annuncio.", "error")
         return redirect(url_for("login"))
 
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
 
     c = get_cursor(conn)
 
@@ -7321,7 +7347,7 @@ def nuovo_annuncio():
 
 
         # 👁️ Visibilità pubblica automatica
-        conn =  conn = get_db_connection()
+        conn = get_db_connection()
         conn.execute(
             "UPDATE utenti SET visibile_pubblicamente = 1 WHERE id = ?",
             (utente["id"],)
@@ -7396,7 +7422,7 @@ def visualizza_annuncio_pubblico(id):
     """
 
     # 🔹 Query annuncio pubblico
-    c.execute(f"""
+    c.execute(sql(f"""
         SELECT
             a.*,
             a.tipo_annuncio,
@@ -7433,7 +7459,7 @@ def visualizza_annuncio_pubblico(id):
           AND u.sospeso = 0
           AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
           AND (u.ruolo IS NULL OR u.ruolo != 'admin')
-    """, (id,))
+    """), (id,))
 
     row = c.fetchone()
 
@@ -8335,7 +8361,7 @@ def handle_send_message(data):
     msg_id = chat_invia(mittente_id, int(destinatario_id), testo)
 
     # 🔹 Rendi visibile il profilo in chat
-    conn =  conn = get_db_connection()
+    conn = get_db_connection()
     conn.execute(sql("UPDATE utenti SET visibile_in_chat = 1 WHERE id = ?"), (mittente_id,))
     conn.commit()
 
@@ -8495,42 +8521,40 @@ import time
 from datetime import datetime, timedelta
 
 def cleanup_video_calls():
-    while True:
-        try:
-            conn = get_db_connection()
-            cur = get_cursor(conn)
+    with app.app_context():
+        while True:
+            try:
+                conn = get_db_connection()
+                cur = get_cursor(conn)
 
-            limite = datetime.now() - timedelta(seconds=60)
+                limite = datetime.now() - timedelta(seconds=60)
 
-            calls = cur.execute(sql(f"""
-                SELECT id, room_name, utente_1, utente_2
-                FROM video_call_log
-                WHERE in_corso = 1
-                  AND last_ping IS NOT NULL
-                  AND {dt_sql("last_ping")} < ?
-            """), (limite.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
+                calls = cur.execute(sql(f"""
+                    SELECT id, room_name, utente_1, utente_2
+                    FROM video_call_log
+                    WHERE in_corso = 1
+                      AND last_ping IS NOT NULL
+                      AND {dt_sql("last_ping")} < ?
+                """), (limite.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
 
-            for call in calls:
-                print("🧹 Cleanup call fantasma:", call["room_name"])
+                for call in calls:
+                    print("🧹 Cleanup call fantasma:", call["room_name"])
 
-                cur.execute(sql("""
-                    UPDATE video_call_log
-                    SET in_corso = 0
-                    WHERE id = ?
-                """), (call["id"],))
+                    cur.execute(sql("""
+                        UPDATE video_call_log
+                        SET in_corso = 0
+                        WHERE id = ?
+                    """), (call["id"],))
 
-                # sblocca utenti realtime
-                socketio.emit("video_busy", {"user_id": call["utente_1"], "busy": False})
-                socketio.emit("video_busy", {"user_id": call["utente_2"], "busy": False})
+                    socketio.emit("video_busy", {"user_id": call["utente_1"], "busy": False})
+                    socketio.emit("video_busy", {"user_id": call["utente_2"], "busy": False})
 
-            conn.commit()
+                conn.commit()
 
+            except Exception as e:
+                print("Errore cleanup video:", e)
 
-        except Exception as e:
-            print("Errore cleanup video:", e)
-
-        time.sleep(30)  # controlla ogni 30 secondi
-
+            time.sleep(30)
 
 # avvia thread automatico
 

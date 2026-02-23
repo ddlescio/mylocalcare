@@ -334,6 +334,9 @@
 
 </div>
 <script>
+  window.CSRF_TOKEN = "{{ session['csrf_token'] }}";
+</script>
+<script>
 document.addEventListener("DOMContentLoaded", () => {
   // --- COMUNE ---
   const inputComune = document.getElementById("zona-autocomplete");
@@ -526,8 +529,11 @@ document.addEventListener("click", async (e) => {
   try {
     const res = await fetch("/admin/toggle-servizio", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": window.CSRF_TOKEN
+      },
+      body: JSON.stringify({...})
     });
 
     const data = await res.json();
@@ -557,10 +563,13 @@ document.addEventListener("click", async (e) => {
     try {
       const res = await fetch("/admin/toggle-pacchetto", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": window.CSRF_TOKEN
+        },
+        body: JSON.stringify({...})
       });
-
+      
       const data = await res.json();
       if (!data.ok) {
         alert(data.error || "Errore pacchetto");

@@ -201,6 +201,9 @@
 
 </div>
 <script>
+  window.CSRF_TOKEN = "{{ session['csrf_token'] }}";
+</script>
+<script>
 document.addEventListener("DOMContentLoaded", () => {
   const inputCitta = document.getElementById("citta-autocomplete");
   const listCitta  = document.getElementById("citta-suggerimenti");
@@ -366,6 +369,7 @@ function toggleContattiProfilo(utenteId) {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
+      "X-CSRF-Token": window.CSRF_TOKEN
     },
     body: JSON.stringify({
       codice_servizio: "contatti",
