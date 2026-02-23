@@ -83,7 +83,7 @@ class PooledConn:
                 self._conn.close()
             except:
                 pass
-        
+
     def __getattr__(self, name):
         return getattr(self._conn, name)
 
@@ -719,20 +719,42 @@ def sql(query):
         return query.replace("?", "%s")
     return query
 
-def now_sql():
-    return "CURRENT_TIMESTAMP" if app.config.get("IS_POSTGRES") else sql_now()
+# ==========================================================
+# 🕒 FUNZIONI TEMPO COMPATIBILI SQLite + PostgreSQL
+# ==========================================================
 
+def now_sql():
+    """
+    Timestamp corrente compatibile con entrambi i DB.
+    """
+    if app.config.get("IS_POSTGRES"):
+        return "CURRENT_TIMESTAMP"
+    else:
+        return "datetime('now')"
+
+
+def epoch_now_sql():
+    """
+    Timestamp unix (secondi) compatibile con entrambi i DB.
+    """
+    if app.config.get("IS_POSTGRES"):
+        return "EXTRACT(EPOCH FROM NOW())::INT"
+    else:
+        return "strftime('%s','now')"
+
+
+def dt_sql(field):
+    """
+    Normalizza conversione datetime nelle query ORDER BY.
+    """
+    if app.config.get("IS_POSTGRES"):
+        return field
+    else:
+        return f"datetime({field})"
 
 def order_datetime(field):
     return field if app.config.get("IS_POSTGRES") else f"datetime({field})"
 
-def dt_sql(field: str) -> str:
-    """
-    Converte un campo data/ora in modo compatibile:
-    - SQLite: datetime(field)
-    - Postgres: field::timestamp (funziona anche se field è già timestamp)
-    """
-    return f"{field}::timestamp" if app.config.get("IS_POSTGRES") else f"datetime({field})"
 
 app.config["DB_CONN_FACTORY"] = get_db_connection
 app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
