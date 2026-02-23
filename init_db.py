@@ -1,13 +1,15 @@
-import app
-from app import get_db_connection
+import app as app_module
+from app import app, get_db_connection
 
-sql = app.sql   # ✅ alias: così non devi cambiare mille righe
+app.IS_POSTGRES = app.config.get("IS_POSTGRES", False)
+
+sql = app_module.sql
 
 def dt_col(default_now=False):
-    if app.IS_POSTGRES:
+    if app.config.get("IS_POSTGRES"):
         return "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP" if default_now else "TIMESTAMPTZ"
     else:
-        return f"TEXT DEFAULT {app.now_sql()}" if default_now else "TEXT"
+        return f"TEXT DEFAULT {app_module.now_sql()}" if default_now else "TEXT"
 
 def pk_col():
     return "BIGSERIAL PRIMARY KEY" if app.config.get("IS_POSTGRES") else "INTEGER PRIMARY KEY AUTOINCREMENT"
@@ -941,7 +943,7 @@ def aggiorna_colonne_mancanti():
         # Recensioni e tracking
         "media_recensioni": "REAL DEFAULT 0",
         "numero_recensioni": "INTEGER DEFAULT 0",
-        "data_creazione": f"TEXT DEFAULT {app.now_sql()}",
+        "data_creazione": f"TEXT DEFAULT {app_module.now_sql()}",
         "foto_galleria": "TEXT",
 
         # Cifratura (DEK + ID + X25519)
@@ -1123,7 +1125,7 @@ def inizializza_database():
     crea_tabella_storico_servizi()
     crea_tabella_override_admin()
 
-if not app.IS_POSTGRES:
+if not app.config.get("IS_POSTGRES"):
     try:
         aggiorna_colonne_mancanti()
     except Exception:
