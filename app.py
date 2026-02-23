@@ -863,7 +863,7 @@ def admin_required(view_func):
         row = g.utente
 
         # 2) deve avere ruolo = 'admin'
-        ruolo = row["ruolo"] if "ruolo" in row.keys() else None
+        ruolo = row.get("ruolo") if row else None
         if ruolo != "admin":
             flash("Accesso riservato agli amministratori.", "error")
             return redirect(url_for("home"))
