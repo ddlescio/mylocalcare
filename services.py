@@ -13,9 +13,9 @@ def sql(query):
     return _f(query)
 
 def is_postgres():
-    from app import IS_POSTGRES
-    return IS_POSTGRES
-
+    from flask import current_app
+    return current_app.config.get("IS_POSTGRES", False)
+    
 def now_sql():
     return "CURRENT_TIMESTAMP" if is_postgres() else "datetime('now')"
 
