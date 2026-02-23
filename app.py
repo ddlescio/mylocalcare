@@ -381,7 +381,8 @@ socketio = SocketIO(
         "https://www.mylocalcare.it",
         "http://127.0.0.1:5050",
         "http://localhost:5050"
-    ]
+    ],
+    async_mode="threading"
 )
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
