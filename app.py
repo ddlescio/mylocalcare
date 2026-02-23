@@ -776,14 +776,17 @@ def insert_and_get_id(cursor, query, params):
     Esegue INSERT compatibile SQLite + PostgreSQL
     e ritorna sempre l'id inserito.
     """
+
     if app.config.get("IS_POSTGRES"):
-        query += " RETURNING id"
-        cursor.execute(sql(query), params)
-        return cursor.fetchone()[0]
+        q = query.strip().rstrip(";") + " RETURNING id"
+        cursor.execute(sql(q), params)
+        row = cursor.fetchone()
+        return row[0] if row else None
+
     else:
         cursor.execute(sql(query), params)
         return cursor.lastrowid
-
+        
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
     from functools import wraps
