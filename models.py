@@ -98,21 +98,26 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     eph_priv_nonce_b64 = base64.b64encode(cipher_eph.nonce).decode()
 
     # --- 💾 Salva nel DB (aggiunte le colonne per la chiave effimera cifrata) ---
-    c.execute("""
+    c.execute(sql("""
         INSERT INTO messaggi_chat (
             mittente_id, destinatario_id, testo,
             ciphertext, nonce, eph_pub,
             eph_priv_enc, eph_priv_nonce,
             consegnato, letto
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0)
-    """, (
+        RETURNING id
+    """), (
         mittente_id, destinatario_id, "🔒",
         blob_b64, nonce_b64, eph_pub_b64,
         eph_priv_enc_b64, eph_priv_nonce_b64
     ))
-    conn.commit()
-    msg_id = c.lastrowid
 
+    if app.config.get("IS_POSTGRES"):
+        msg_id = c.fetchone()[0]
+    else:
+        msg_id = c.lastrowid
+
+    conn.commit()
     return msg_id
 
 def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: int | None = None):

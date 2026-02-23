@@ -15,13 +15,15 @@ def sql(query):
 def is_postgres():
     from flask import current_app
     return current_app.config.get("IS_POSTGRES", False)
-    
+
 def now_sql():
     return "CURRENT_TIMESTAMP" if is_postgres() else "datetime('now')"
 
 def dt_sql(field):
     from app import dt_sql as _f
     return _f(field)
+
+    
 # ---------------------------------------------------------
 # Normalizzazione codici servizio (alias)
 # ---------------------------------------------------------

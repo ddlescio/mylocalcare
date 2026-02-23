@@ -755,6 +755,14 @@ def dt_sql(field):
 def order_datetime(field):
     return field if app.config.get("IS_POSTGRES") else f"datetime({field})"
 
+def get_last_id(cur):
+    """
+    Compatibile SQLite + PostgreSQL.
+    """
+    if app.config.get("IS_POSTGRES"):
+        return cur.fetchone()[0]
+    else:
+        return cur.lastrowid
 
 app.config["DB_CONN_FACTORY"] = get_db_connection
 app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
