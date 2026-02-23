@@ -2433,7 +2433,7 @@ def admin_acquisti():
                     FROM attivazioni_servizi at
                     WHERE at.acquisto_id = a.id
                       AND at.stato = 'attivo'
-                      AND (at.data_fine IS NULL OR at.data_fine > datetime('now','utc'))
+                      AND (at.data_fine IS NULL OR at.data_fine > {now_sql()})
                 )
                 THEN 1
                 ELSE 0
@@ -6368,7 +6368,7 @@ def api_attiva():
                 annuncio_id,
                 created_at
             )
-            VALUES (?, ?, ?, ?, 'stripe', ?, 'pending', ?, datetime('now','utc'))
+            VALUES (?, ?, ?, ?, 'stripe', ?, 'pending', ?, {now_sql()})
             """,
             (
                 g.utente["id"],
@@ -6471,7 +6471,7 @@ def crea_payment_intent():
             """
             INSERT INTO acquisti
             (utente_id, tipo, ref_id, prezzo_id, metodo, importo_cent, stato, annuncio_id, created_at)
-            VALUES (?, ?, ?, ?, 'stripe', ?, 'creato', ?, datetime('now','utc'))
+            VALUES (?, ?, ?, ?, 'stripe', ?, 'creato', ?, {now_sql()})
             """,
             (
                 g.utente["id"],
