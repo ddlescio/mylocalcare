@@ -1535,12 +1535,15 @@ def admin_pacchetti_nuovo():
         servizi_selezionati = request.form.getlist("servizi")
 
         cur = get_cursor(conn)
-        cur.execute(sql("""
+
+        pacchetto_id = insert_and_get_id(
+            cur,
+            """
             INSERT INTO pacchetti (codice, nome, descrizione, attivo)
             VALUES (?, ?, ?, ?)
-        """), (codice, nome, descrizione, attivo))
-
-        pacchetto_id = cur.lastrowid
+            """,
+            (codice, nome, descrizione, attivo)
+        )
 
         for sid in servizi_selezionati:
             cur.execute(sql("""
@@ -6350,7 +6353,9 @@ def api_attiva():
             ref_id = row["pacchetto_id"]
 
         # ✅ INSERT COMPLETO (UGUALE A crea-payment-intent)
-        cur.execute(sql("""
+        acquisto_id = insert_and_get_id(
+            cur,
+            """
             INSERT INTO acquisti
             (
                 utente_id,
@@ -6364,16 +6369,16 @@ def api_attiva():
                 created_at
             )
             VALUES (?, ?, ?, ?, 'stripe', ?, 'pending', ?, datetime('now','utc'))
-        """), (
-            g.utente["id"],
-            tipo_acquisto,
-            ref_id,
-            piano_id,
-            prezzo,
-            annuncio_id
-        ))
-
-        acquisto_id = cur.lastrowid
+            """,
+            (
+                g.utente["id"],
+                tipo_acquisto,
+                ref_id,
+                piano_id,
+                prezzo,
+                annuncio_id
+            )
+        )
 
         # 3️⃣ PaymentIntent Stripe
         intent = stripe.PaymentIntent.create(
@@ -6461,20 +6466,23 @@ def crea_payment_intent():
         prezzo = int(piano["prezzo_cent"])
 
         # crea acquisto locale (stato: creato)
-        cur.execute(sql("""
+        acquisto_id = insert_and_get_id(
+            cur,
+            """
             INSERT INTO acquisti
             (utente_id, tipo, ref_id, prezzo_id, metodo, importo_cent, stato, annuncio_id, created_at)
             VALUES (?, ?, ?, ?, 'stripe', ?, 'creato', ?, datetime('now','utc'))
-        """), (
-            g.utente["id"],
-            tipo_acquisto,
-            ref_id,
-            piano_id,
-            prezzo,
-            annuncio_id
-        ))
+            """,
+            (
+                g.utente["id"],
+                tipo_acquisto,
+                ref_id,
+                piano_id,
+                prezzo,
+                annuncio_id
+            )
+        )
 
-        acquisto_id = cur.lastrowid
         conn.commit()
 
     finally:

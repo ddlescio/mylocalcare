@@ -896,6 +896,12 @@ def crea_tabella_override_admin():
 # 🧱 AGGIORNA COLONNE MANCANTI (no perdita dati)
 # ---------------------------------------------------------
 def aggiorna_colonne_mancanti():
+
+    # 🔴 CRITICO: questa funzione serve SOLO per SQLite
+    if app.config.get("IS_POSTGRES"):
+        print("⏭️ Skip migrazione colonne: ambiente PostgreSQL")
+        return
+
     conn = get_conn()
     c = conn.cursor()
 
