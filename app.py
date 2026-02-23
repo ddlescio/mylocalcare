@@ -416,8 +416,6 @@ def get_last_id(cur):
     else:
         return cur.lastrowid
 
-app.config["DB_CONN_FACTORY"] = get_db_connection
-app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
 
 def insert_and_get_id(cursor, query, params):
     """
@@ -791,6 +789,9 @@ def get_db_connection():
 
         g.db_conn = conn
         return conn
+
+app.config["DB_CONN_FACTORY"] = get_db_connection
+app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
 
 
 # --- Middleware di protezione per login richiesto ---
