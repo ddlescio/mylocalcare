@@ -714,11 +714,15 @@ def get_db_connection():
         g.db_conn = conn
         return conn
 
-def sql(query):
+def now_sql():
+    """
+    Timestamp corrente compatibile con entrambi i DB.
+    Sempre restituito già pronto per SQL.
+    """
     if app.config.get("IS_POSTGRES"):
-        return query.replace("?", "%s")
-    return query
-
+        return "CURRENT_TIMESTAMP::timestamp"
+    else:
+        return "datetime('now')"
 # ==========================================================
 # 🕒 FUNZIONI TEMPO COMPATIBILI SQLite + PostgreSQL
 # ==========================================================
