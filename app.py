@@ -928,7 +928,7 @@ def admin_required(view_func):
             flash("La sessione amministratore è scaduta. Accedi di nuovo.", "warning")
             session.clear()
             return redirect(url_for("login"))
-    
+
         # 4) tutto ok → esegui la view
         return view_func(*args, **kwargs)
 
@@ -1106,7 +1106,7 @@ def admin_video_calls():
     conn = get_db_connection()
     cur = get_cursor(conn)
 
-    rows = cur.execute(sql("""
+    rows = cur.execute(sql(f"""
         SELECT
             v.*,
             u1.username AS user1_name,
@@ -1412,32 +1412,34 @@ def admin_toggle_servizio():
 
         # 2️⃣ cerca attivazione attiva
         if ambito == "annuncio":
+
             if not annuncio_id:
                 return jsonify({"ok": False, "error": "annuncio_id obbligatorio"}), 400
 
-            attiva = conn.execute(sql("""
+            attiva = conn.execute(sql(f"""
                 SELECT id
                 FROM attivazioni_servizi
                 WHERE servizio_id = ?
                   AND annuncio_id = ?
                   AND stato = 'attivo'
-                  AND data_inizio <= " + sql_now() + "
-                  AND (data_fine IS NULL OR data_fine > " + sql_now() + ")
+                  AND data_inizio <= {now_sql()}
+                  AND (data_fine IS NULL OR data_fine > {now_sql()})
                 LIMIT 1
             """), (servizio["id"], annuncio_id)).fetchone()
+
         else:
-            attiva = conn.execute(sql("""
+
+            attiva = conn.execute(sql(f"""
                 SELECT id
                 FROM attivazioni_servizi
                 WHERE servizio_id = ?
                   AND utente_id = ?
                   AND annuncio_id IS NULL
                   AND stato = 'attivo'
-                  AND data_inizio <= " + sql_now() + "
-                  AND (data_fine IS NULL OR data_fine > " + sql_now() + ")
+                  AND data_inizio <= {now_sql()}
+                  AND (data_fine IS NULL OR data_fine > {now_sql()})
                 LIMIT 1
             """), (servizio["id"], utente_id)).fetchone()
-
 
         # 3️⃣ toggle
         if attiva:
@@ -1908,26 +1910,26 @@ def admin_toggle_pacchetto():
             ambito = servizio["ambito"]
 
             if ambito == "annuncio":
-                row = conn.execute(sql("""
+                row = conn.execute(sql(f"""
                     SELECT id
                     FROM attivazioni_servizi
                     WHERE servizio_id = ?
                       AND annuncio_id = ?
                       AND stato = 'attivo'
-                      AND data_inizio <= " + sql_now() + "
-                      AND (data_fine IS NULL OR data_fine > " + sql_now() + ")
+                      AND data_inizio <= {now_sql()}
+                      AND (data_fine IS NULL OR data_fine > {now_sql()})
                     LIMIT 1
                 """), (servizio["id"], annuncio_id)).fetchone()
             else:
-                row = conn.execute(sql("""
+                row = conn.execute(sql(f"""
                     SELECT id
                     FROM attivazioni_servizi
                     WHERE servizio_id = ?
                       AND utente_id = ?
                       AND annuncio_id IS NULL
                       AND stato = 'attivo'
-                      AND data_inizio <= " + sql_now() + "
-                      AND (data_fine IS NULL OR data_fine > " + sql_now() + ")
+                      AND data_inizio <= {now_sql()}
+                      AND (data_fine IS NULL OR data_fine > {now_sql()})
                     LIMIT 1
                 """), (servizio["id"], utente_id)).fetchone()
 
@@ -2259,7 +2261,7 @@ def admin_utenti():
     c.execute(sql("SELECT COUNT(*) FROM utenti"))
     totale_utenti = fetchone_value(c.fetchone())
 
-    query = """
+    query = f"""
         SELECT
             u.id,
             u.nome,
@@ -2278,8 +2280,8 @@ def admin_utenti():
               WHERE a.utente_id = u.id
                 AND s.codice = 'contatti'
                 AND a.stato = 'attivo'
-                AND a.data_inizio <= " + sql_now() + "
-                AND (a.data_fine IS NULL OR a.data_fine > " + sql_now() + ")
+                AND a.data_inizio <= {now_sql()}
+                AND (a.data_fine IS NULL OR a.data_fine > {now_sql()})
               LIMIT 1
             ) AS contatti_attivi
 
@@ -2314,7 +2316,7 @@ def admin_utenti():
 
     query += " ORDER BY cognome ASC, nome ASC"
 
-    c.execute(query, params)
+    c.execute(sql(query), params)
     utenti = c.fetchall()
     totale_filtrati = len(utenti)
 
@@ -3365,7 +3367,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
     # ---------------------------------------------------------
     # 1️⃣ Recupera annuncio + verifica servizio urgente ATTIVO
     # ---------------------------------------------------------
-    c.execute(sql("""
+    c.execute(sql(f"""
         SELECT
             a.id,
             a.utente_id,
@@ -3383,8 +3385,8 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
           AND a.stato = 'approvato'
           AND s.codice = 'annuncio_urgente'
           AND act.stato = 'attivo'
-          AND act.data_inizio <= " + sql_now() + "
-          AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
+          AND act.data_inizio <= {now_sql()}
+          AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
     """), (annuncio_id,))
     annuncio = c.fetchone()
 
@@ -3741,12 +3743,12 @@ def admin_annunci():
 
     c = get_cursor(conn)
 
-    query = """
+    query = f"""
         SELECT
             a.id,
             a.titolo,
             a.categoria,
-            a.tipo_annuncio,          -- ⬅️ IMPORTANTE
+            a.tipo_annuncio,
             a.zona,
             a.provincia,
             a.stato,
@@ -3754,10 +3756,6 @@ def admin_annunci():
             u.nome,
             u.cognome,
             u.email,
-
-            /* =========================
-               STATO SERVIZI (ADMIN)
-            ========================= */
 
             /* BOOST LISTA */
             CASE WHEN EXISTS (
@@ -3767,8 +3765,8 @@ def admin_annunci():
                 WHERE act.annuncio_id = a.id
                   AND s.codice = 'boost_lista'
                   AND act.stato = 'attivo'
-                  AND act.data_inizio <= " + sql_now() + "
-                  AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
+                  AND act.data_inizio <= {now_sql()}
+                  AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
             ) THEN 1 ELSE 0 END AS has_boost_lista,
 
             /* VETRINA */
@@ -3779,8 +3777,8 @@ def admin_annunci():
                 WHERE act.annuncio_id = a.id
                   AND s.codice = 'vetrina_annuncio'
                   AND act.stato = 'attivo'
-                  AND act.data_inizio <= " + sql_now() + "
-                  AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
+                  AND act.data_inizio <= {now_sql()}
+                  AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
             ) THEN 1 ELSE 0 END AS has_vetrina,
 
             /* BADGE EVIDENZA */
@@ -3791,11 +3789,11 @@ def admin_annunci():
                 WHERE act.annuncio_id = a.id
                   AND s.codice = 'badge_evidenza'
                   AND act.stato = 'attivo'
-                  AND act.data_inizio <= " + sql_now() + "
-                  AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
+                  AND act.data_inizio <= {now_sql()}
+                  AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
             ) THEN 1 ELSE 0 END AS has_badge_evidenza,
 
-            /* 🚨 ANNUNCIO URGENTE */
+            /* ANNUNCIO URGENTE */
             CASE WHEN EXISTS (
                 SELECT 1
                 FROM attivazioni_servizi act
@@ -3803,11 +3801,11 @@ def admin_annunci():
                 WHERE act.annuncio_id = a.id
                   AND s.codice = 'annuncio_urgente'
                   AND act.stato = 'attivo'
-                  AND act.data_inizio <= " + sql_now() + "
-                  AND (act.data_fine IS NULL OR act.data_fine > " + sql_now() + ")
+                  AND act.data_inizio <= {now_sql()}
+                  AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
             ) THEN 1 ELSE 0 END AS has_urgente,
 
-            /* BADGE AFFIDABILITÀ (profilo) */
+            /* BADGE AFFIDABILITÀ */
             CASE WHEN EXISTS (
                 SELECT 1
                 FROM attivazioni_servizi act
@@ -3822,7 +3820,6 @@ def admin_annunci():
         JOIN utenti u ON a.utente_id = u.id
         WHERE 1=1
     """
-
     params = []
 
     # =========================
@@ -3858,9 +3855,8 @@ def admin_annunci():
     # =========================
     # EXEC
     # =========================
-    c.execute(query, params)
+    c.execute(sql(query), params)
     annunci = [dict(row) for row in c.fetchall()]
-
 
     # =========================
     # CATEGORIE (select admin)
@@ -3881,10 +3877,10 @@ def approva_annuncio(id):
 
     c = get_cursor(conn)
 
-    c.execute(sql("""
+    c.execute(sql(f"""
         UPDATE annunci
         SET stato = 'approvato',
-            approvato_il = " + sql_now() + ",
+            approvato_il = {now_sql()},
             match_da_processare = 1
         WHERE id = ?
     """), (id,))
@@ -3962,9 +3958,9 @@ def conta_non_lette(user_id):
 
 def segna_notifica_letta(notifica_id, user_id):
     conn = get_db_connection()
-    conn.execute(sql("""
+    conn.execute(sql(f"""
         UPDATE notifiche
-        SET letta = 1, data_lettura = " + sql_now() + "
+        data_lettura = {now_sql()}
         WHERE id = ? AND id_utente = ?
     """), (notifica_id, user_id))
     conn.commit()
@@ -4962,9 +4958,9 @@ def recensioni_utente(user_id):
         try:
             stato = "approvato" if not testo else "in_attesa"
 
-            conn.execute(sql("""
+            conn.execute(sql(f"""
                 INSERT INTO recensioni (id_autore, id_destinatario, voto, testo, stato, data)
-                VALUES (?, ?, ?, ?, ?, " + sql_now() + ")
+                VALUES (?, ?, ?, ?, ?, {now_sql()})
             """), (id_autore, user_id, voto, testo, stato))
             conn.commit()
 
@@ -5898,7 +5894,7 @@ def cerca():
 
     query_vetrina += " ORDER BY a.id ASC"
 
-    c.execute(query_vetrina, params_vetrina)
+    c.execute(sql(query_vetrina), params_vetrina)
     rows = [dict(r) for r in c.fetchall()]
 
     annunci_vetrina = []
@@ -6027,7 +6023,7 @@ def cerca():
               affidabilita_top DESC
     """
 
-    c.execute(query_annunci, params)
+    c.execute(sql(query_annunci), params)
     annunci = [dict(row) for row in c.fetchall()]
 
 
@@ -7734,7 +7730,7 @@ def ricerca_utenti():
 
     query += " GROUP BY u.id ORDER BY media_recensioni DESC"
 
-    c.execute(query, params)
+    c.execute(sql(query), params)
     utenti = c.fetchall()
 
 
@@ -7909,9 +7905,9 @@ def chiudi_chat(other_id):
 
     conn = get_db_connection()
 
-    conn.execute(sql("""
+    conn.execute(sql(f"""
         INSERT INTO chat_chiusure (admin_id, user_id, closed_at)
-        VALUES (?, ?, " + sql_now() + ")
+        VALUES (?, ?, {now_sql()})
     """), (admin_id, other_id))
 
     conn.commit()
@@ -8019,7 +8015,7 @@ def video_start():
     room_url = r.json()["url"]
 
     # 📝 LOG CHIAMATA
-    cur.execute(sql("""
+    cur.execute(sql(f"""
         INSERT INTO video_call_log (
             room_name,
             utente_1,
@@ -8027,7 +8023,7 @@ def video_start():
             in_corso,
             last_ping
         )
-        VALUES (?, ?, ?, 1, " + sql_now() + ")
+        VALUES (?, ?, ?, 1, {now_sql()})
     """), (room_name, g.utente["id"], altro_id))
 
     conn.commit()
@@ -8062,10 +8058,10 @@ def verifica_maggiorenne():
     ip = request.remote_addr
 
     conn = get_db_connection()
-    conn.execute(sql("""
+    conn.execute(sql(f"""
         UPDATE utenti
         SET maggiorenne_verificato = 1,
-            data_verifica_maggiorenne = " + sql_now() + ",
+            data_verifica_maggiorenne = {now_sql()},
             ip_verifica_maggiorenne = ?,
             versione_consenso = ?
         WHERE id = ?
@@ -8126,12 +8122,12 @@ def video_end():
 
     costo_cent = int(over_free * COSTO_PER_MINUTO * 100)
 
-    conn.execute(sql("""
+    conn.execute(sql(f"""
         UPDATE video_call_log
         SET durata_secondi = ?,
             costo_stimato_cent = ?,
             in_corso = 0,
-            ended_at = " + sql_now() + "
+            ended_at = {now_sql()}
         WHERE id = ?
     """), (durata_secondi, costo_cent, call["id"]))
 
@@ -8188,9 +8184,9 @@ def video_ping():
 
     conn = get_db_connection()
 
-    conn.execute(sql("""
+    conn.execute(sql(f"""
         UPDATE video_call_log
-        SET last_ping = " + sql_now() + "
+        SET last_ping = {now_sql()}
         WHERE room_name = ?
         AND in_corso = 1
     """), (room_name,))
