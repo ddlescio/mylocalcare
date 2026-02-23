@@ -903,9 +903,23 @@ def admin_required(view_func):
             return redirect(url_for("login"))
 
         # deve essere ancora valido (non scaduto)
+        expiry_dt = None
         try:
-            expiry_dt = datetime.fromisoformat(db_expiry) if db_expiry else None
-        except Exception:
+            if not db_expiry:
+                expiry_dt = None
+            elif isinstance(db_expiry, datetime):
+                expiry_dt = db_expiry
+            elif isinstance(db_expiry, str):
+                expiry_dt = datetime.fromisoformat(db_expiry)
+            else:
+                expiry_dt = None
+
+            # se arriva naive, rendilo UTC
+            if expiry_dt and expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+
+        except Exception as e:
+            print("❌ admin_required expiry parse error:", repr(e), "db_expiry=", repr(db_expiry))
             session.clear()
             flash("Sessione non valida (errore token).", "error")
             return redirect(url_for("login"))
@@ -914,7 +928,7 @@ def admin_required(view_func):
             flash("La sessione amministratore è scaduta. Accedi di nuovo.", "warning")
             session.clear()
             return redirect(url_for("login"))
-
+    
         # 4) tutto ok → esegui la view
         return view_func(*args, **kwargs)
 
