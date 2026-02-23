@@ -328,7 +328,6 @@ def chat_threads(user_id: int):
             AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
             AND u.attivo = 1
         JOIN last_msg lm ON lm.altro_id = a.altro_id
-        GROUP BY a.altro_id
         ORDER BY last_msg_id DESC;
     """, (user_id, user_id, user_id, cutoff, cutoff)).fetchall()
 
@@ -517,7 +516,7 @@ def get_utenti():
     conn = get_db_connection()
     cur = get_cursor(conn)
     rows = cur.execute(sql("SELECT * FROM utenti ORDER BY id DESC")).fetchall()
-    
+
     return rows
 
 def attiva_utente(id):
