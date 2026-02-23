@@ -771,6 +771,19 @@ def get_last_id(cur):
 app.config["DB_CONN_FACTORY"] = get_db_connection
 app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
 
+def insert_and_get_id(cursor, query, params):
+    """
+    Esegue INSERT compatibile SQLite + PostgreSQL
+    e ritorna sempre l'id inserito.
+    """
+    if app.config.get("IS_POSTGRES"):
+        query += " RETURNING id"
+        cursor.execute(sql(query), params)
+        return cursor.fetchone()[0]
+    else:
+        cursor.execute(sql(query), params)
+        return cursor.lastrowid
+
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
     from functools import wraps
