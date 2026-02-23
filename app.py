@@ -384,6 +384,18 @@ def now_sql():
     else:
         return "datetime('now')"
 
+def month_sql(field=None):
+    """
+    Restituisce YYYY-MM compatibile SQLite/Postgres.
+    """
+    if app.config.get("IS_POSTGRES"):
+        if field:
+            return f"TO_CHAR({field}, 'YYYY-MM')"
+        return "TO_CHAR(NOW(), 'YYYY-MM')"
+    else:
+        if field:
+            return f"strftime('%Y-%m', {field})"
+        return "strftime('%Y-%m','now')"
 
 def epoch_now_sql():
     """
@@ -950,7 +962,7 @@ def admin_counters():
                 c.execute("""
                     SELECT COALESCE(minuti_totali, 0)
                     FROM video_limiti_mensili
-                    WHERE mese = strftime('%Y-%m','now')
+                    WHERE mese = {month_sql()}
                 """)
             row = c.fetchone()
             video_minuti = list(row.values())[0] if row else 0
@@ -1085,7 +1097,7 @@ def admin_video_calls():
             v.*,
             u1.username AS user1_name,
             u2.username AS user2_name,
-            strftime('%Y-%m', v.created_at) AS mese
+            {month_sql("v.created_at")} AS mese
         FROM video_call_log v
         LEFT JOIN utenti u1 ON u1.id = v.utente_1
         LEFT JOIN utenti u2 ON u2.id = v.utente_2
@@ -2601,7 +2613,7 @@ def admin_notifiche():
             destinatari_json,
             created_at
         FROM notifiche_admin
-        ORDER BY datetime(created_at) DESC
+        ORDER BY {order_datetime("created_at")} DESC
         LIMIT 50
     """)).fetchall()
 
@@ -5442,7 +5454,7 @@ def password_dimenticata():
         # salva nuovo token
         cur.execute(sql("""
             INSERT INTO password_reset_tokens (utente_id, token, scadenza, usato)
-            VALUES (?, ?, strftime('%s','now') + 3600, 0)
+            VALUES (?, ?, {epoch_now_sql()} + 3600, 0)
         """), (utente['id'], token))
 
         conn.commit()
@@ -6193,7 +6205,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
             WHERE servizio_id = ?
               AND utente_id = ?
               AND annuncio_id IS NULL
-            ORDER BY datetime(data_inizio) DESC
+            ORDER BY {order_datetime("data_inizio")} DESC
             LIMIT 1
         """), (servizio["id"], g.utente["id"]))
     else:
@@ -6208,7 +6220,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
             WHERE servizio_id = ?
               AND annuncio_id = ?
               AND utente_id = ?
-            ORDER BY datetime(data_inizio) DESC
+            ORDER BY {order_datetime("data_inizio")} DESC
             LIMIT 1
         """), (servizio["id"], annuncio_id, g.utente["id"]))
 
