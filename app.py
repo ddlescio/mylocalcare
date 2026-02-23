@@ -357,6 +357,84 @@ socketio = SocketIO(
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
+# ==========================================================
+# SQL HELPER (placeholder compatibili SQLite / Postgres)
+# ==========================================================
+
+def sql(query):
+    """
+    Converte automaticamente i placeholder:
+    SQLite  -> ?
+    Postgres -> %s
+    """
+    if app.config.get("IS_POSTGRES"):
+        return query.replace("?", "%s")
+    return query
+
+# ==========================================================
+# 🕒 FUNZIONI TEMPO COMPATIBILI SQLite + PostgreSQL
+# ==========================================================
+
+def now_sql():
+    """
+    Timestamp corrente compatibile con entrambi i DB.
+    """
+    if app.config.get("IS_POSTGRES"):
+        return "CURRENT_TIMESTAMP"
+    else:
+        return "datetime('now')"
+
+
+def epoch_now_sql():
+    """
+    Timestamp unix (secondi) compatibile con entrambi i DB.
+    """
+    if app.config.get("IS_POSTGRES"):
+        return "EXTRACT(EPOCH FROM NOW())::INT"
+    else:
+        return "strftime('%s','now')"
+
+
+def dt_sql(field):
+    """
+    Normalizza conversione datetime nelle query ORDER BY.
+    """
+    if app.config.get("IS_POSTGRES"):
+        return field
+    else:
+        return f"datetime({field})"
+
+def order_datetime(field):
+    return field if app.config.get("IS_POSTGRES") else f"datetime({field})"
+
+def get_last_id(cur):
+    """
+    Compatibile SQLite + PostgreSQL.
+    """
+    if app.config.get("IS_POSTGRES"):
+        return cur.fetchone()[0]
+    else:
+        return cur.lastrowid
+
+app.config["DB_CONN_FACTORY"] = get_db_connection
+app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
+
+def insert_and_get_id(cursor, query, params):
+    """
+    Esegue INSERT compatibile SQLite + PostgreSQL
+    e ritorna sempre l'id inserito.
+    """
+
+    if app.config.get("IS_POSTGRES"):
+        q = query.strip().rstrip(";") + " RETURNING id"
+        cursor.execute(sql(q), params)
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+    else:
+        cursor.execute(sql(query), params)
+        return cursor.lastrowid
+
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -714,79 +792,7 @@ def get_db_connection():
         g.db_conn = conn
         return conn
 
-def now_sql():
-    """
-    Timestamp corrente compatibile con entrambi i DB.
-    Sempre restituito già pronto per SQL.
-    """
-    if app.config.get("IS_POSTGRES"):
-        return "CURRENT_TIMESTAMP::timestamp"
-    else:
-        return "datetime('now')"
-# ==========================================================
-# 🕒 FUNZIONI TEMPO COMPATIBILI SQLite + PostgreSQL
-# ==========================================================
 
-def now_sql():
-    """
-    Timestamp corrente compatibile con entrambi i DB.
-    """
-    if app.config.get("IS_POSTGRES"):
-        return "CURRENT_TIMESTAMP"
-    else:
-        return "datetime('now')"
-
-
-def epoch_now_sql():
-    """
-    Timestamp unix (secondi) compatibile con entrambi i DB.
-    """
-    if app.config.get("IS_POSTGRES"):
-        return "EXTRACT(EPOCH FROM NOW())::INT"
-    else:
-        return "strftime('%s','now')"
-
-
-def dt_sql(field):
-    """
-    Normalizza conversione datetime nelle query ORDER BY.
-    """
-    if app.config.get("IS_POSTGRES"):
-        return field
-    else:
-        return f"datetime({field})"
-
-def order_datetime(field):
-    return field if app.config.get("IS_POSTGRES") else f"datetime({field})"
-
-def get_last_id(cur):
-    """
-    Compatibile SQLite + PostgreSQL.
-    """
-    if app.config.get("IS_POSTGRES"):
-        return cur.fetchone()[0]
-    else:
-        return cur.lastrowid
-
-app.config["DB_CONN_FACTORY"] = get_db_connection
-app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
-
-def insert_and_get_id(cursor, query, params):
-    """
-    Esegue INSERT compatibile SQLite + PostgreSQL
-    e ritorna sempre l'id inserito.
-    """
-
-    if app.config.get("IS_POSTGRES"):
-        q = query.strip().rstrip(";") + " RETURNING id"
-        cursor.execute(sql(q), params)
-        row = cursor.fetchone()
-        return row[0] if row else None
-
-    else:
-        cursor.execute(sql(query), params)
-        return cursor.lastrowid
-        
 # --- Middleware di protezione per login richiesto ---
 def login_required(view):
     from functools import wraps
