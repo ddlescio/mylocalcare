@@ -6042,7 +6042,7 @@ def cerca():
 
               CASE
                 WHEN urgent_score > 0 OR boost_score > 0
-                THEN (abs(a.id * 1103515245 + 12345) % 97)
+                THEN (abs(a.id * 1103515245 + 12345) %% 97)
                 ELSE NULL
               END ASC,
 
