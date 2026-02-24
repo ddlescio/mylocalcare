@@ -1637,13 +1637,12 @@ def admin_pacchetti_nuovo():
 def admin_pacchetti_modifica(id):
     conn = get_db_connection()
 
-
     pacchetto = conn.execute(
-        "SELECT * FROM pacchetti WHERE id = ?", (id,)
+        sql("SELECT * FROM pacchetti WHERE id = ?"),
+        (id,)
     ).fetchone()
 
     if not pacchetto:
-
         flash("Pacchetto non trovato.", "error")
         return redirect(url_for("admin_pacchetti"))
 
@@ -1677,6 +1676,7 @@ def admin_pacchetti_modifica(id):
 
         cur = get_cursor(conn)
 
+        # UPDATE pacchetto
         cur.execute(
             sql("""
                 UPDATE pacchetti
@@ -1686,26 +1686,26 @@ def admin_pacchetti_modifica(id):
             (codice, nome, descrizione, attivo, id)
         )
 
-    cur.execute(
-        sql("DELETE FROM pacchetti_servizi WHERE pacchetto_id = ?"),
-        (id,)
-    )
-
-    for sid in servizi_selezionati:
+        # RESET servizi collegati
         cur.execute(
-            sql("""
-                INSERT INTO pacchetti_servizi (pacchetto_id, servizio_id)
-                VALUES (?, ?)
-            """),
-            (id, sid)
+            sql("DELETE FROM pacchetti_servizi WHERE pacchetto_id = ?"),
+            (id,)
         )
+
+        # RE-INSERIMENTO servizi selezionati
+        for sid in servizi_selezionati:
+            cur.execute(
+                sql("""
+                    INSERT INTO pacchetti_servizi (pacchetto_id, servizio_id)
+                    VALUES (?, ?)
+                """),
+                (id, sid)
+            )
 
         conn.commit()
 
-
         flash("Pacchetto aggiornato.", "success")
         return redirect(url_for("admin_pacchetti"))
-
 
     return render_template(
         "admin_pacchetti_form.html",
