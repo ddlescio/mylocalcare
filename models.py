@@ -21,9 +21,16 @@ def fetchone_value(row):
     if row is None:
         return None
 
+    # dict puro
     if isinstance(row, dict):
         return next(iter(row.values()))
 
+    # sqlite3.Row / RowMapping / oggetti simili (supportano keys())
+    if hasattr(row, "keys"):
+        keys = list(row.keys())
+        return row[keys[0]] if keys else None
+
+    # tuple/list classici
     return row[0]
 
 # ------------------------------------------------------
@@ -72,7 +79,6 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     if not dest_pub_b64:
         raise ValueError("Destinatario senza chiave pubblica registrata")
 
-    dest_pub_b64 = row[0]
     pub_dest = PublicKey(base64.b64decode(dest_pub_b64))
 
     # --- Genera chiave effimera e calcola chiave condivisa ---
@@ -126,7 +132,7 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
 
     conn = get_db_connection()
 
-    c = conn.cursor()
+    c = get_cursor(conn)
 
     # 🔍 Recupera ruolo utente per capire se applicare il cutoff
     ruolo_row = c.execute("SELECT ruolo FROM utenti WHERE id = ?", (user_id,)).fetchone()
@@ -143,7 +149,7 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
         """, (user_id,)).fetchone()
         cutoff = row["closed_at"] if row else None
 
-    sql = """
+    query = """
         SELECT id, mittente_id, destinatario_id,
                testo, ciphertext, nonce, eph_pub,
                eph_priv_enc, eph_priv_nonce,
@@ -157,7 +163,7 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
         ORDER BY created_at DESC
         LIMIT ?
     """
-    rows = c.execute(sql, [user_id, other_id, other_id, user_id, cutoff, cutoff, limit]).fetchall()
+    rows = c.execute(sql(query), [user_id, other_id, other_id, user_id, cutoff, cutoff, limit]).fetchall()
 
     rows = list(reversed(rows))  # mostra dal più vecchio al più recente
 
@@ -238,7 +244,7 @@ def chat_threads(user_id: int):
 
     conn = get_db_connection()
 
-    c = conn.cursor()
+    c = get_cursor(conn)
 
     # 🔍 Recupera ruolo utente (serve per capire se filtrare le chat chiuse)
     ruolo = c.execute("SELECT ruolo FROM utenti WHERE id = ?", (user_id,)).fetchone()
@@ -386,12 +392,16 @@ def chat_threads(user_id: int):
                     # chiave pubblica destinatario
                     conn2 = get_db_connection()
                     try:
-                        c2 = conn2.cursor()
-                        c2.execute("SELECT x25519_pub FROM utenti WHERE id = ?", (r["ultimo_destinatario_id"],))
+                        c2 = get_cursor(conn2)
+                        c2.execute(sql("SELECT x25519_pub FROM utenti WHERE id = ?"), (r["ultimo_destinatario_id"],))
                         row_dest = c2.fetchone()
-                        if not row_dest or not row_dest[0]:
+
+                        dest_pub_b64 = (row_dest["x25519_pub"] if row_dest else None)
+                        if not dest_pub_b64:
                             raise ValueError("Destinatario senza chiave pubblica")
-                        pub_dest = PublicKey(base64.b64decode(row_dest[0]))
+
+                        pub_dest = PublicKey(base64.b64decode(dest_pub_b64))
+
                     finally:
                         conn2.close()
 
