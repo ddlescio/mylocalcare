@@ -354,25 +354,27 @@ body {
 
 
 <script>
-document.addEventListener("DOMContentLoaded", async function initChat() {
-  // 🔄 Attesa socket globale
-  let socket;
-  for (let i = 0; i < 20; i++) {
-    if (window.socket && window.socket.connected) { socket = window.socket; break; }
-    await new Promise(r => setTimeout(r, 100));
-  }
-  if (!socket) socket = io({ transports: ['websocket', 'polling'] });
-  console.log("🟢 Chat collegata al socket globale");
-  // 🔵 Join stanza personale
-  socket.emit('join', { user_id: meId });
+  document.addEventListener("DOMContentLoaded", async function initChat() {
 
-  const wrap = document.getElementById('msgWrap');
-  const input = document.getElementById('msgInput');
-  const form = document.getElementById('composer');
-  const typingIndicator = document.getElementById('typingIndicator');
-  const destId = parseInt(document.getElementById('destinatario_id').value);
-  const meId = parseInt("{{ g.utente['id'] }}");
+    const meId = parseInt("{{ g.utente['id'] }}");  // ✅ METTI QUI
 
+    let socket;
+    for (let i = 0; i < 20; i++) {
+      if (window.socket && window.socket.connected) { socket = window.socket; break; }
+      await new Promise(r => setTimeout(r, 100));
+    }
+    if (!socket) socket = io({ transports: ['websocket', 'polling'] });
+
+    console.log("🟢 Chat collegata al socket globale");
+
+    socket.emit('join', { user_id: meId });  // ✅ ora funziona
+
+    const wrap = document.getElementById('msgWrap');
+    const input = document.getElementById('msgInput');
+    const form = document.getElementById('composer');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const destId = parseInt(document.getElementById('destinatario_id').value);
+    
   // 📡 Notifica apertura
   socket.emit('chat_aperta', { other_id: destId });
   socket.emit('mark_as_read', { other_id: destId });
