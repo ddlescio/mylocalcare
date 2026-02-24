@@ -8362,7 +8362,7 @@ def handle_send_message(data):
         'mittente_id': mittente_id,
         'destinatario_id': destinatario_id,
         'testo': testo,
-        'created_at': datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z"),
+        'created_at': datetime.now(ZoneInfo("Europe/Rome")).isoformat(),
         'consegnato': True,
         'letto': False
     }
