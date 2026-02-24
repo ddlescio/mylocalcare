@@ -2470,7 +2470,7 @@ def admin_acquisti():
     conn = get_db_connection()
 
 
-    rows = conn.execute(sql("""
+    rows = conn.execute(sql(f"""
         SELECT
             a.id            AS acquisto_id,
             a.tipo,
