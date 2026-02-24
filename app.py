@@ -5977,41 +5977,43 @@ def cerca():
     """
 
     query_annunci = f"""
-        SELECT
-            a.*,
-            u.id AS utente_id,
-            u.username AS utente_username,
-            u.nome AS nome_utente,
-            u.cognome AS cognome_utente,
-            u.email AS email_utente,
-            u.foto_profilo,
-            {urgent_score_sql},
-            {boost_score_sql},
-            {has_evidenza_sql},
-            {has_urgente_sql},
-            {affidabilita_top_sql},
-            COALESCE(ROUND((
-                SELECT AVG(r.voto)
-                FROM recensioni r
-                WHERE r.id_destinatario = a.utente_id
-                  AND r.stato = 'approvato'
-            ), 1), 0) AS media_recensioni,
-            COALESCE((
-                SELECT COUNT(*)
-                FROM recensioni r
-                WHERE r.id_destinatario = a.utente_id
-                  AND r.stato = 'approvato'
-            ), 0) AS numero_recensioni
-        FROM annunci a
-        JOIN utenti u ON a.utente_id = u.id
-        WHERE a.stato = 'approvato'
-          AND u.attivo = 1
-          AND u.sospeso = 0
-          AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
-          AND u.foto_profilo IS NOT NULL
-          AND u.foto_profilo != ''
-          AND (u.ruolo IS NULL OR u.ruolo != 'admin')
-          AND a.provincia = ?
+        SELECT *
+        FROM (
+            SELECT
+                a.*,
+                u.id AS utente_id,
+                u.username AS utente_username,
+                u.nome AS nome_utente,
+                u.cognome AS cognome_utente,
+                u.email AS email_utente,
+                u.foto_profilo,
+                {urgent_score_sql},
+                {boost_score_sql},
+                {has_evidenza_sql},
+                {has_urgente_sql},
+                {affidabilita_top_sql},
+                COALESCE(ROUND((
+                    SELECT AVG(r.voto)
+                    FROM recensioni r
+                    WHERE r.id_destinatario = a.utente_id
+                      AND r.stato = 'approvato'
+                ), 1), 0) AS media_recensioni,
+                COALESCE((
+                    SELECT COUNT(*)
+                    FROM recensioni r
+                    WHERE r.id_destinatario = a.utente_id
+                      AND r.stato = 'approvato'
+                ), 0) AS numero_recensioni
+            FROM annunci a
+            JOIN utenti u ON a.utente_id = u.id
+            WHERE a.stato = 'approvato'
+              AND u.attivo = 1
+              AND u.sospeso = 0
+              AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
+              AND u.foto_profilo IS NOT NULL
+              AND u.foto_profilo != ''
+              AND (u.ruolo IS NULL OR u.ruolo != 'admin')
+              AND a.provincia = ?
     """
 
     params = [provincia_query]
@@ -6032,22 +6034,24 @@ def cerca():
         query_annunci += " AND a.filtri_categoria LIKE ?"
         params.append(f"%{f_att}%")
 
+    # 🔒 CHIUSURA SUBQUERY + ORDER BY ESTERNO (PostgreSQL safe)
     query_annunci += """
-            ORDER BY
-              CASE
-                WHEN urgent_score > 0 THEN 0
-                WHEN boost_score > 0 THEN 1
-                ELSE 2
-              END ASC,
+        ) sub
+        ORDER BY
+          CASE
+            WHEN urgent_score > 0 THEN 0
+            WHEN boost_score > 0 THEN 1
+            ELSE 2
+          END ASC,
 
-              CASE
-                WHEN urgent_score > 0 OR boost_score > 0
-                THEN (abs(a.id * 1103515245 + 12345) %% 97)
-                ELSE NULL
-              END ASC,
+          CASE
+            WHEN urgent_score > 0 OR boost_score > 0
+            THEN (abs(id * 1103515245 + 12345) %% 97)
+            ELSE NULL
+          END ASC,
 
-              a.data_pubblicazione DESC,
-              affidabilita_top DESC
+          data_pubblicazione DESC,
+          affidabilita_top DESC
     """
 
     c.execute(sql(query_annunci), params)
