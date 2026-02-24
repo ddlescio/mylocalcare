@@ -337,7 +337,7 @@ def chat_threads(user_id: int):
                   AND mittente_id = a.altro_id
                   AND letto = 0
             ) AS non_letti
-        FROM all_msgs a
+        FROM (SELECT DISTINCT altro_id FROM all_msgs) a
         JOIN utenti u ON u.id = a.altro_id
             AND u.sospeso = 0
             AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)

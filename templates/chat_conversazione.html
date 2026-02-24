@@ -363,6 +363,8 @@ document.addEventListener("DOMContentLoaded", async function initChat() {
   }
   if (!socket) socket = io({ transports: ['websocket', 'polling'] });
   console.log("🟢 Chat collegata al socket globale");
+  // 🔵 Join stanza personale
+  socket.emit('join', { user_id: meId });
 
   const wrap = document.getElementById('msgWrap');
   const input = document.getElementById('msgInput');
