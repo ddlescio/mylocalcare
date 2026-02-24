@@ -38,6 +38,7 @@ from models import fetchone_value
 
 import os
 from flask import g
+from db import (insert_and_get_id)
 
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
@@ -459,30 +460,6 @@ def get_last_id(cur):
         return cur.lastrowid
 
 
-def insert_and_get_id(cursor, query, params):
-    """
-    Esegue INSERT compatibile SQLite + PostgreSQL
-    e ritorna sempre l'id inserito.
-    """
-
-    if app.config.get("IS_POSTGRES"):
-        q = query.strip().rstrip(";") + " RETURNING id"
-        cursor.execute(sql(q), params)
-        row = cursor.fetchone()
-
-        if not row:
-            return None
-
-        # PostgreSQL → dict-like row
-        if isinstance(row, dict):
-            return row.get("id")
-
-        # fallback sicurezza
-        return row[0]
-
-    else:
-        cursor.execute(sql(query), params)
-        return cursor.lastrowid
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
