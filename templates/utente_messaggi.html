@@ -70,11 +70,7 @@
             </h2>
             <span class="text-[11px] sm:text-xs text-gray-400 whitespace-nowrap ml-2">
               {% if c['ultimo_invio'] %}
-                {{ c['ultimo_invio'][8:10] }}/{{ c['ultimo_invio'][5:7] }}/{{ c['ultimo_invio'][0:4] }}
-                {% set dt = c['ultimo_invio'] | replace("T", " ") | to_datetime %}
-                {% if dt %}
-                  {{ dt.astimezone(pytz.timezone("Europe/Rome")).strftime("%H:%M") }}
-                {% endif %}
+                {{ c['ultimo_invio'].strftime('%d/%m/%Y %H:%M') }}
               {% endif %}
             </span>
           </div>
