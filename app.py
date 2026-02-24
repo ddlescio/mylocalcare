@@ -469,12 +469,20 @@ def insert_and_get_id(cursor, query, params):
         q = query.strip().rstrip(";") + " RETURNING id"
         cursor.execute(sql(q), params)
         row = cursor.fetchone()
-        return row[0] if row else None
+
+        if not row:
+            return None
+
+        # PostgreSQL → dict-like row
+        if isinstance(row, dict):
+            return row.get("id")
+
+        # fallback sicurezza
+        return row[0]
 
     else:
         cursor.execute(sql(query), params)
         return cursor.lastrowid
-
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
