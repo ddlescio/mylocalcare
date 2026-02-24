@@ -5,7 +5,8 @@ from db import (
     get_cursor,
     sql,
     is_postgres,
-    dt_sql
+    dt_sql,
+    insert_and_get_id
 )
 # -----------------------------
 # CHAT – FUNZIONI PRINCIPALI (aggiornate con consegnato/letto/orario)
