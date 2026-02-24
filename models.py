@@ -63,11 +63,13 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
 
     # --- Recupera chiave pubblica del destinatario ---
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT x25519_pub FROM utenti WHERE id = ?", (destinatario_id,))
-    row = c.fetchone()
-    if not row or not row[0]:
+    c = get_cursor(conn)  # <-- usa lo stesso cursor helper (IMPORTANTE)
 
+    c.execute(sql("SELECT x25519_pub FROM utenti WHERE id = ?"), (destinatario_id,))
+    row = c.fetchone()
+
+    dest_pub_b64 = (row["x25519_pub"] if row else None)
+    if not dest_pub_b64:
         raise ValueError("Destinatario senza chiave pubblica registrata")
 
     dest_pub_b64 = row[0]
@@ -117,7 +119,7 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
 
     conn.commit()
     return msg_id
-    
+
 def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: int | None = None):
     """Restituisce la conversazione decifrando i messaggi leggibili con la chiave privata X25519."""
     from nacl.public import Box
@@ -190,12 +192,15 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
                 # --- Recupera chiave pubblica del destinatario ---
                 conn2 = get_db_connection()
                 try:
-                    c2 = conn2.cursor()
-                    c2.execute("SELECT x25519_pub FROM utenti WHERE id = ?", (r["destinatario_id"],))
+                    c2 = get_cursor(conn2)
+
+                    c2.execute(sql("SELECT x25519_pub FROM utenti WHERE id = ?"), (r["destinatario_id"],))
                     row_dest = c2.fetchone()
-                    if not row_dest or not row_dest[0]:
+
+                    dest_pub_b64 = (row_dest["x25519_pub"] if row_dest else None)
+                    if not dest_pub_b64:
                         raise ValueError("Destinatario senza chiave pubblica")
-                    pub_dest = PublicKey(base64.b64decode(row_dest[0]))
+                    pub_dest = PublicKey(base64.b64decode(dest_pub_b64))
                 finally:
                     conn2.close()
 
