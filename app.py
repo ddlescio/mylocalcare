@@ -2643,7 +2643,7 @@ def admin_notifiche():
     """)).fetchone()
 
     # ✅ STORICO NOTIFICHE INVIATE DALL’ADMIN
-    notifiche_admin = conn.execute(sql("""
+    notifiche_admin = conn.execute(sql(f"""
         SELECT
             id,
             titolo,
