@@ -8322,7 +8322,11 @@ def clear_recently_read(user_id, delay=None):
 @socketio.on('send_message')
 def handle_send_message(data):
     mittente_id = session.get('utente_id')
-    destinatario_id = data.get('destinatario_id')
+    try:
+        destinatario_id = int(data.get('destinatario_id'))
+    except (TypeError, ValueError):
+        emit('error', {'message': 'destinatario_id non valido'})
+        return
     testo = data.get('testo', '').strip()
 
     # 🔍 Validazione minima

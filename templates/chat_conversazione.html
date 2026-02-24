@@ -359,45 +359,33 @@ if (!window.socket) {
 </script>
 
 <script>
-  document.addEventListener("DOMContentLoaded", async function initChat() {
+  document.addEventListener("DOMContentLoaded", function initChat() {
 
-    const meId = parseInt("{{ g.utente['id'] }}");  // ✅ METTI QUI
-
+    const meId = parseInt("{{ g.utente['id'] }}", 10);
     const socket = window.socket;
-
-    console.log("🟢 Chat collegata al socket globale");
-
-    // ⚡ aspetta connessione reale prima di join
-    function initSocketEvents() {
-
-      console.log("🟢 Socket pronto → join stanza");
-
-      socket.emit('join', { user_id: meId });
-
-      // 📡 Notifica apertura
-      socket.emit('chat_aperta', { other_id: destId });
-      socket.emit('mark_as_read', { other_id: destId });
-
-    }
-
-    if (socket.connected) {
-      initSocketEvents();
-    } else {
-      socket.once('connect', initSocketEvents);
-    }
 
     const wrap = document.getElementById('msgWrap');
     const input = document.getElementById('msgInput');
     const form = document.getElementById('composer');
     const typingIndicator = document.getElementById('typingIndicator');
-    const destId = parseInt(document.getElementById('destinatario_id').value);
 
-  // 📡 Notifica apertura
-  socket.emit('chat_aperta', { other_id: destId });
-  socket.emit('mark_as_read', { other_id: destId });
+    const destId = parseInt(document.getElementById('destinatario_id').value, 10);
 
-  // 🧹 Chiusura pagina
-  window.addEventListener('beforeunload', () => socket.emit('chat_chiusa', { other_id: destId }));
+    console.log("🟢 Chat collegata al socket globale", { meId, destId, connected: socket.connected });
+
+    function initSocketEvents() {
+      console.log("🟢 Socket pronto → join stanza");
+      socket.emit('join', { user_id: meId });
+
+      // 📡 Notifica apertura (UNA SOLA VOLTA)
+      socket.emit('chat_aperta', { other_id: destId });
+      socket.emit('mark_as_read', { other_id: destId });
+    }
+
+    if (socket.connected) initSocketEvents();
+    else socket.once('connect', initSocketEvents);
+
+    window.addEventListener('beforeunload', () => socket.emit('chat_chiusa', { other_id: destId }));
 
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
