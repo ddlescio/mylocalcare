@@ -351,30 +351,47 @@ body {
   window.chatAperta = true;
   window.addEventListener('beforeunload', () => { window.chatAperta = false; });
 </script>
-
+<script>
+if (!window.socket) {
+  window.socket = io({ transports: ['websocket', 'polling'] });
+  console.log("🟢 Socket globale creato");
+}
+</script>
 
 <script>
   document.addEventListener("DOMContentLoaded", async function initChat() {
 
     const meId = parseInt("{{ g.utente['id'] }}");  // ✅ METTI QUI
 
-    let socket;
-    for (let i = 0; i < 20; i++) {
-      if (window.socket && window.socket.connected) { socket = window.socket; break; }
-      await new Promise(r => setTimeout(r, 100));
-    }
-    if (!socket) socket = io({ transports: ['websocket', 'polling'] });
+    const socket = window.socket;
 
     console.log("🟢 Chat collegata al socket globale");
 
-    socket.emit('join', { user_id: meId });  // ✅ ora funziona
+    // ⚡ aspetta connessione reale prima di join
+    function initSocketEvents() {
+
+      console.log("🟢 Socket pronto → join stanza");
+
+      socket.emit('join', { user_id: meId });
+
+      // 📡 Notifica apertura
+      socket.emit('chat_aperta', { other_id: destId });
+      socket.emit('mark_as_read', { other_id: destId });
+
+    }
+
+    if (socket.connected) {
+      initSocketEvents();
+    } else {
+      socket.once('connect', initSocketEvents);
+    }
 
     const wrap = document.getElementById('msgWrap');
     const input = document.getElementById('msgInput');
     const form = document.getElementById('composer');
     const typingIndicator = document.getElementById('typingIndicator');
     const destId = parseInt(document.getElementById('destinatario_id').value);
-    
+
   // 📡 Notifica apertura
   socket.emit('chat_aperta', { other_id: destId });
   socket.emit('mark_as_read', { other_id: destId });
@@ -563,41 +580,57 @@ body {
   aggiornaIntestazioniDate();
   setTimeout(() => scrollBottom(false), 100);
 
-  // 💬 Ricezione messaggi
+  // 💬 Ricezione messaggi (versione blindata)
   socket.on('new_message', (m) => {
-    const sameChat =
-      (m.mittente_id === meId && m.destinatario_id === destId) ||
-      (m.destinatario_id === meId && m.mittente_id === destId);
 
-    if (!sameChat) return;
+    try {
 
-    const alreadyBottom = isAtBottom();
-    ensureDateHeaderFor(m.created_at);
+      const sameChat =
+        (m.mittente_id === meId && m.destinatario_id === destId) ||
+        (m.destinatario_id === meId && m.mittente_id === destId);
 
-    // aggiungi bolla
-    const bolla = bubble({ ...m, me_id: meId });
-    wrap.appendChild(bolla);
-    cleanDuplicateDates();
+      if (!sameChat) return;
 
-    if (alreadyBottom) setTimeout(() => scrollBottom(true), 80);
+      const alreadyBottom = isAtBottom();
 
-    // ⭐ AGGIORNA SOLO LA BOLLA CORRETTA
-    if (m.mittente_id === meId) {
-      const spunte = bolla.querySelector('.spunte');
-
-      if (m.letto) {
-        spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
-      } else if (m.consegnato) {
-        spunte.innerHTML = '<span class="text-gray-400">✔</span>';
-      } else {
-        spunte.innerHTML = '<span class="text-gray-400">⏳</span>';
+      if (m.created_at) {
+        ensureDateHeaderFor(m.created_at);
       }
+
+      const bolla = bubble({ ...m, me_id: meId });
+      wrap.appendChild(bolla);
+
+      cleanDuplicateDates();
+
+      if (alreadyBottom) {
+        setTimeout(() => scrollBottom(true), 80);
+      }
+
+      // ⭐ aggiorna spunte solo se è mio
+      if (m.mittente_id === meId) {
+        const spunte = bolla.querySelector('.spunte');
+        if (spunte) {
+          if (m.letto) {
+            spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
+          } else if (m.consegnato) {
+            spunte.innerHTML = '<span class="text-gray-400">✔</span>';
+          } else {
+            spunte.innerHTML = '<span class="text-gray-400">⏳</span>';
+          }
+        }
+      }
+
+      // Se ricevo → segno come letto
+      if (m.destinatario_id === meId) {
+        socket.emit('mark_as_read', { other_id: m.mittente_id });
+      }
+
+    } catch (err) {
+
+      console.error("🔥 Errore in new_message:", err, m);
+
     }
 
-    // SE ricevo → segno come letto
-    if (m.destinatario_id === meId) {
-      socket.emit('mark_as_read', { other_id: m.mittente_id });
-    }
   });
 
   // 🔵 Aggiornamento spunte
@@ -669,8 +702,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     // ==============================
     // SOCKET
     // ==============================
-    let socket = window.socket;
-    if (!socket) socket = io({ transports: ['websocket', 'polling'] });
+    const socket = window.socket;
 
     // 🔥 DEFINIZIONE CORRETTA
     const meId = parseInt("{{ g.utente['id'] }}");
@@ -891,9 +923,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const videoBtn = document.getElementById("videoBtn");
     if (!videoBtn) return;
 
-    let socket = window.socket;
-    if (!socket) socket = io({ transports: ['websocket','polling'] });
-
+    const socket = window.socket;
     const destId = parseInt(document.getElementById("destinatario_id").value);
 
     // =========================
