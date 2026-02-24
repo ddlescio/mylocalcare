@@ -6230,7 +6230,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
     cur = get_cursor(conn)
 
     # servizio
-    cur.execute(sql("""
+    cur.execute(sql(f"""
         SELECT id, ambito
         FROM servizi
         WHERE codice = ? AND attivo = 1
@@ -6243,7 +6243,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
 
     # query dinamica in base all’ambito
     if servizio["ambito"] == "profilo":
-        cur.execute(sql("""
+        cur.execute(sql(f"""
             SELECT
                 id,
                 data_inizio,
@@ -6258,7 +6258,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
             LIMIT 1
         """), (servizio["id"], g.utente["id"]))
     else:
-        cur.execute(sql("""
+        cur.execute(sql(f"""
             SELECT
                 id,
                 data_inizio,
