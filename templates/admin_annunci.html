@@ -533,7 +533,7 @@ document.addEventListener("click", async (e) => {
         "Content-Type": "application/json",
         "X-CSRF-Token": window.CSRF_TOKEN
       },
-      body: JSON.stringify({...})
+      body: JSON.stringify(payload)
     });
 
     const data = await res.json();
@@ -550,37 +550,37 @@ document.addEventListener("click", async (e) => {
 });
 </script>
 <script>
-  document.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".toggle-pacchetto");
-    if (!btn) return;
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".toggle-pacchetto");
+  if (!btn) return;
 
-    const payload = {
-      codice_pacchetto: btn.dataset.pacchetto,
-      utente_id: parseInt(btn.dataset.utente, 10),
-      annuncio_id: parseInt(btn.dataset.annuncio, 10)
-    };
+  const payload = {
+    codice_pacchetto: btn.dataset.pacchetto,
+    utente_id: parseInt(btn.dataset.utente, 10),
+    annuncio_id: parseInt(btn.dataset.annuncio, 10)
+  };
 
-    try {
-      const res = await fetch("/admin/toggle-pacchetto", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": window.CSRF_TOKEN
-        },
-        body: JSON.stringify({...})
-      });
-      
-      const data = await res.json();
-      if (!data.ok) {
-        alert(data.error || "Errore pacchetto");
-        return;
-      }
+  try {
+    const res = await fetch("/admin/toggle-pacchetto", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": window.CSRF_TOKEN
+      },
+      body: JSON.stringify(payload)
+    });
 
-      location.reload();
-    } catch {
-      alert("Errore di rete");
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.error || "Errore pacchetto");
+      return;
     }
-  });
-</script>
 
+    location.reload();
+  } catch (err) {
+    alert("Errore di rete");
+  }
+});
+</script>
 {% endblock %}
