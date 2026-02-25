@@ -386,7 +386,7 @@ socketio = SocketIO(
     async_mode="threading"
 )
 
-from realtime import init_realtime
+from realtime import init_realtime, emit_update_notifications
 init_realtime(socketio)
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
