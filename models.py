@@ -581,9 +581,6 @@ from realtime import emit_update_notifications
 def invia_notifica_live(user_id):
     emit_update_notifications(user_id)
 
-    except Exception as e:
-        print("⚠️ Errore invio notifica live:", e)
-
 def lista_notifiche(utente_id):
     conn = get_db_connection()
     rows = conn.execute(
