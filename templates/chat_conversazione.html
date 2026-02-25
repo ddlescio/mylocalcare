@@ -76,10 +76,18 @@ body {
   }
 
   html, body {
-    height: 100%;
+    /* 🔥 invece di height:100% → segue il viewport reale gestito da --vvh */
+    height: calc(var(--vvh) * 100);
     margin: 0;
+
+    /* tieni il blocco scroll pagina (come avevi) */
     overflow: hidden;
+
     background: #fff !important;
+
+    /* 🔥 iOS: evita “rimbalzi”/ricomposizioni strane */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
   }
 
   /* container principale chat */
@@ -95,6 +103,10 @@ body {
     display: flex;
     flex-direction: column;
     background: #fff;
+
+    /* 🔥 iOS: stabilizza i fixed quando cambia viewport (tastiera) */
+    transform: translateZ(0);
+    will-change: height;
   }
 
   /* disattiva card desktop */
@@ -111,12 +123,14 @@ body {
     flex: 0 0 auto;
     position: relative !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    z-index: 5;
   }
 
   /* area messaggi */
   #msgWrap {
     flex: 1 1 auto;
-    min-height: 0; /* 🔥 evita bug di scroll/flex su iOS */
+    min-height: 0;
+    height: auto !important;          /* ✅ OVERRIDE di h-[65vh] (Tailwind) */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     background: #f9fafb;
@@ -131,13 +145,18 @@ body {
   /* composer */
   #composer {
     flex: 0 0 auto;
-    position: relative;
+
+    position: relative;               /* ✅ NO sticky su iOS */
+    bottom: auto;
+
     border-top: 1px solid #e5e7eb;
     background: #fff;
     padding: 0.5rem 0.8rem;
 
     /* safe area iPhone (notch / home bar) */
     padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+
+    z-index: 6;
   }
 
   /* BLOCCA ZOOM IOS */
@@ -957,25 +976,49 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 <script>
 (function () {
-  function setVVH() {
+  let lastH = null;
+
+  function apply(h) {
+    if (!h || h === lastH) return;
+    lastH = h;
+    document.documentElement.style.setProperty("--vvh", (h * 0.01) + "px");
+  }
+
+  function readHeight() {
     const vv = window.visualViewport;
-    const h = vv ? vv.height : window.innerHeight;
-    document.documentElement.style.setProperty('--vvh', (h * 0.01) + 'px');
+    return vv ? vv.height : window.innerHeight;
+  }
+
+  function setVVH() {
+    apply(readHeight());
+  }
+
+  // iOS: spesso serve un “doppio tick” per avere il valore finale
+  function setVVHStable() {
+    requestAnimationFrame(() => {
+      setVVH();
+      setTimeout(setVVH, 50);
+      setTimeout(setVVH, 150);
+    });
   }
 
   // init
-  setVVH();
+  setVVHStable();
 
-  // iOS keyboard / resize
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', setVVH);
-    window.visualViewport.addEventListener('scroll', setVVH); // iOS a volte “scrolla” il viewport
+  const vv = window.visualViewport;
+  if (vv) {
+    vv.addEventListener("resize", setVVHStable, { passive: true });
+    vv.addEventListener("scroll", setVVHStable, { passive: true });
   }
 
-  window.addEventListener('resize', setVVH);
-  window.addEventListener('orientationchange', () => setTimeout(setVVH, 50));
+  window.addEventListener("resize", setVVHStable, { passive: true });
+  window.addEventListener("orientationchange", () => setTimeout(setVVHStable, 50), { passive: true });
+
+  // 🔥 questi due risolvono molti “layout resta sfasato dopo chiusura tastiera”
+  document.addEventListener("focusin", setVVHStable, { passive: true });
+  document.addEventListener("focusout", () => setTimeout(setVVHStable, 50), { passive: true });
+
 })();
 </script>
-
 </div>
 {% endblock %}
