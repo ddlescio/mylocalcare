@@ -7791,7 +7791,7 @@ def chat_threads_json():
         if is_admin(d.get("other_id")):
             d["other_nome"] = "MyLocalCare • Supporto"
             d["other_username"] = "support"
-            d["other_foto"] = "/static/img/support.png"
+            d["other_foto"] = "img/support.png"
 
         threads.append(d)
 
@@ -7824,7 +7824,7 @@ def chat_conversazione_json(other_id):
     # 🔒 Maschera admin
     if altro and is_admin(altro["id"]):
         other_display_name = "MyLocalCare • Supporto"
-        other_avatar = "/static/img/support.png"
+        other_avatar = "img/support.png"
     elif altro:
         other_display_name = f"{altro['nome']} {altro['cognome']}"
         other_avatar = altro["foto_profilo"]
@@ -7894,7 +7894,7 @@ def chat_conversazione_view(other_id):
         altro["nome"] = "MyLocalCare"
         altro["cognome"] = "Supporto"
         altro["username"] = "support"
-        altro["foto_profilo"] = "/static/img/support.png"
+        altro["foto_profilo"] = "img/support.png"
 
     # 🔹 Recupera i messaggi esistenti
     messaggi = chat_conversazione(g.utente["id"], other_id)
