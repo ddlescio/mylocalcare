@@ -7,6 +7,21 @@
       document.body.dataset.chat = "true";
     });
   </script>
+  <script>
+(function() {
+
+  function setRealViewportHeight() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--real-vh', `${vh}px`);
+  }
+
+  setRealViewportHeight();
+
+  window.addEventListener('resize', setRealViewportHeight);
+  window.addEventListener('orientationchange', setRealViewportHeight);
+
+})();
+</script>
 {% endblock %}
 
 {% block content %}
@@ -76,9 +91,10 @@ body {
     background: #fff !important;
     margin: 0;
     padding: 0;
-    height: 100vh;                  /* 🔹 Necessario per Safari */
-    overflow-y: hidden;             /* 🔹 Evita doppio scroll */
-    position: relative;             /* 🔹 Rende visibili i fixed bottom */
+
+    height: calc(var(--real-vh, 1vh) * 100); /* 🔥 fallback universale */
+    overflow: hidden;
+    position: relative;
   }
 
   /* ✅ Disattiva layout desktop */
@@ -103,9 +119,14 @@ body {
 
   /* ✅ Area messaggi fra header e composer - FIX Safari */
   #msgWrap {
-    position: absolute; /* ⬅️ non più fixed */
+    position: absolute;
     top: calc(var(--navbar-height) + 58px);
-    height: calc(100vh - var(--navbar-height) - 58px - 60px); /* 🔹 calcolo diretto dell'altezza */
+    height: calc(
+      (var(--real-vh, 1vh) * 100)
+      - var(--navbar-height)
+      - 58px
+      - 60px
+    );
     left: 0;
     right: 0;
     overflow-y: auto;
