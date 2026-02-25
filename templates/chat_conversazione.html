@@ -973,23 +973,28 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const composer = document.getElementById("composer");
-  if (!composer) return;
+  document.addEventListener("DOMContentLoaded", () => {
+    const composer = document.getElementById("composer");
+    if (!composer) return;
 
-  function setComposerH() {
-    const h = composer.offsetHeight || 72;
-    document.documentElement.style.setProperty("--composer-h", h + "px");
-  }
+    function setComposerH() {
+      const h = composer.offsetHeight || 72;
+      document.documentElement.style.setProperty("--composer-h", h + "px");
+    }
 
-  setComposerH();
+    setComposerH();
 
-  // aggiorna su resize / tastiera iOS
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", setComposerH, { passive: true });
-  }
-  window.addEventListener("resize", setComposerH, { passive: true });
-});
+    // ✅ aggiorna SOLO quando serve davvero
+    window.addEventListener("orientationchange", () => {
+      setTimeout(setComposerH, 100);
+    });
+
+    // 🔥 IMPORTANTISSIMO:
+    // aggiorna DOPO chiusura tastiera, non durante
+    document.addEventListener("focusout", () => {
+      setTimeout(setComposerH, 100);
+    });
+  });
 </script>
 
 </div>
