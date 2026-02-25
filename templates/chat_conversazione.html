@@ -7,21 +7,6 @@
       document.body.dataset.chat = "true";
     });
   </script>
-  <script>
-(function() {
-
-  function setRealViewportHeight() {
-    const vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--real-vh', `${vh}px`);
-  }
-
-  setRealViewportHeight();
-
-  window.addEventListener('resize', setRealViewportHeight);
-  window.addEventListener('orientationchange', setRealViewportHeight);
-
-})();
-</script>
 {% endblock %}
 
 {% block content %}
@@ -86,102 +71,74 @@ body {
 /* --- 📱 MOBILE --- */
 @media (max-width: 480px) {
 
-  /* ✅ Sfondo semplice */
-  body {
-    background: #fff !important;
+  html, body {
+    height: 100%;
     margin: 0;
-    padding: 0;
-
-    height: calc(var(--real-vh, 1vh) * 100); /* 🔥 fallback universale */
     overflow: hidden;
-    position: relative;
+    background: #fff !important;
   }
 
-  /* ✅ Disattiva layout desktop */
-  .max-w-3xl.mx-auto {
-    all: unset;
-    display: block;
-  }
-
-  /* ✅ Header fisso sotto la navbar */
-  .chat-header {
-    position: fixed !important;
-    top: var(--navbar-height) !important;
-    left: 0;
-    right: 0;
-    z-index: 50;
-    background: rgba(255,255,255,0.98);
-    backdrop-filter: blur(8px);
-    padding: 0.6rem 0.9rem !important;
-    border-bottom: 1px solid #e5e7eb;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-  }
-
-  /* ✅ Area messaggi fra header e composer - FIX Safari */
-  #msgWrap {
-    position: absolute;
-    top: calc(var(--navbar-height) + 58px);
-    height: calc(
-      (var(--real-vh, 1vh) * 100)
-      - var(--navbar-height)
-      - 58px
-      - 60px
-    );
-    left: 0;
-    right: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    background: #f9fafb;
-    padding: 0.5rem 0.7rem 1rem 0.7rem;
-  }
-
-  /* ✅ Composer fisso in basso */
-  #composer {
+  /* container principale chat */
+  #chatContainer {
     position: fixed;
+    top: var(--navbar-height);
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 60;
-    background: #fff;
-    border-top: 1px solid #e5e7eb;
-    padding: 0.5rem 0.8rem;
+
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 -1px 5px rgba(0,0,0,0.04);
+    flex-direction: column;
+    background: #fff;
   }
 
-  /* ✅ Input dentro composer */
+  /* disattiva card desktop */
+  .max-w-3xl.mx-auto {
+    all: unset;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* header */
+  .chat-header {
+    flex: 0 0 auto;
+    position: relative !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  /* area messaggi */
+  #msgWrap {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #f9fafb;
+    padding: 0.5rem 0.7rem;
+  }
+
+  /* typing indicator */
+  #typingIndicator {
+    flex: 0 0 auto;
+  }
+
+  /* composer */
+  #composer {
+    flex: 0 0 auto;
+    position: relative;
+    border-top: 1px solid #e5e7eb;
+    background: #fff;
+    padding: 0.5rem 0.8rem;
+  }
+
+  /* BLOCCA ZOOM IOS */
   .chat-input {
-    width: 100%;
-    border: 1px solid #d1d5db;
-    border-radius: 1rem;
-    padding: 0.4rem 0.9rem;
-    font-size: 0.9rem;
+    font-size: 16px !important;
   }
 
-  /* ✅ Bottone invia */
   .send-btn {
-    background: #2563eb;
-    color: #fff;
-    border-radius: 0.75rem;
-    padding: 0.4rem 1rem;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 14px;
   }
 
-  /* ✅ Emoji button */
-  .emoji-btn {
-    font-size: 1.2rem;
-  }
-
-  .chat-header img { width: 38px !important; height: 38px !important; }
-  .chat-back {
-    font-size: 1.4rem !important;
-    font-weight: 600;
-    color: #2563eb !important;
-  }
-} /* ⬅️ QUESTO CHIUDE IL BLOCCO @media (max-width: 480px) */
+}
 </style>
 
 <style>
