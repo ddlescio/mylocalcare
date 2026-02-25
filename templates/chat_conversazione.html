@@ -71,27 +71,25 @@ body {
 /* --- 📱 MOBILE --- */
 @media (max-width: 480px) {
 
+  /* NON blocchiamo più overflow globale */
   html, body {
-    height: 100%;
     margin: 0;
-    overflow: hidden;
     background: #fff !important;
   }
 
   /* container principale chat */
   #chatContainer {
-    position: fixed;
-    top: var(--navbar-height);
-    bottom: 0;
-    left: 0;
-    right: 0;
-
     display: flex;
     flex-direction: column;
+
+    /* dynamic viewport height iOS-safe */
+    height: calc(100dvh - var(--navbar-height));
+    margin-top: var(--navbar-height);
+
     background: #fff;
   }
 
-  /* disattiva card desktop */
+  /* disattiva card desktop ma senza rompere layout */
   .max-w-3xl.mx-auto {
     all: unset;
     display: flex;
@@ -120,10 +118,11 @@ body {
     flex: 0 0 auto;
   }
 
-  /* composer */
+  /* composer sticky iOS safe */
   #composer {
     flex: 0 0 auto;
-    position: relative;
+    position: sticky;
+    bottom: 0;
     border-top: 1px solid #e5e7eb;
     background: #fff;
     padding: 0.5rem 0.8rem;
@@ -142,6 +141,7 @@ body {
     display: none !important;
   }
 
+  /* FIX dimensioni immagine header */
   .chat-header img {
     width: 36px !important;
     height: 36px !important;
@@ -149,7 +149,7 @@ body {
     min-height: 36px;
     object-fit: cover;
     display: block;
-  }  
+  }
 
 }
 </style>
