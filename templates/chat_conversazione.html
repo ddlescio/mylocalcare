@@ -96,17 +96,13 @@ body {
     top: var(--navbar-height);
     left: 0;
     right: 0;
-
-    /* 🔥 invece di bottom:0 -> height controllata (fix iOS keyboard) */
-    height: calc((var(--vvh) * 100) - var(--navbar-height));
+    bottom: 0; /* ✅ torna a bottom:0 */
 
     display: flex;
     flex-direction: column;
     background: #fff;
 
-    /* 🔥 iOS: stabilizza i fixed quando cambia viewport (tastiera) */
-    transform: translateZ(0);
-    will-change: height;
+    /* ❌ RIMOSSI: height calc + transform + will-change */
   }
 
   /* disattiva card desktop */
@@ -135,6 +131,8 @@ body {
     -webkit-overflow-scrolling: touch;
     background: #f9fafb;
     padding: 0.5rem 0.7rem;
+    padding-bottom: calc(var(--composer-h, 72px) + 12px) !important;
+}
   }
 
   /* typing indicator */
@@ -144,19 +142,19 @@ body {
 
   /* composer */
   #composer {
-    flex: 0 0 auto;
+    position: fixed;              /* ✅ fisso al viewport */
+    left: 0;
+    right: 0;
+    bottom: 0;
 
-    position: relative;               /* ✅ NO sticky su iOS */
-    bottom: auto;
-
-    border-top: 1px solid #e5e7eb;
     background: #fff;
+    border-top: 1px solid #e5e7eb;
     padding: 0.5rem 0.8rem;
 
-    /* safe area iPhone (notch / home bar) */
+    /* safe area iPhone */
     padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
 
-    z-index: 6;
+    z-index: 999;                 /* ✅ sopra al resto */
   }
 
   /* BLOCCA ZOOM IOS */
@@ -975,50 +973,24 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <script>
-(function () {
-  let lastH = null;
+document.addEventListener("DOMContentLoaded", () => {
+  const composer = document.getElementById("composer");
+  if (!composer) return;
 
-  function apply(h) {
-    if (!h || h === lastH) return;
-    lastH = h;
-    document.documentElement.style.setProperty("--vvh", (h * 0.01) + "px");
+  function setComposerH() {
+    const h = composer.offsetHeight || 72;
+    document.documentElement.style.setProperty("--composer-h", h + "px");
   }
 
-  function readHeight() {
-    const vv = window.visualViewport;
-    return vv ? vv.height : window.innerHeight;
+  setComposerH();
+
+  // aggiorna su resize / tastiera iOS
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", setComposerH, { passive: true });
   }
-
-  function setVVH() {
-    apply(readHeight());
-  }
-
-  // iOS: spesso serve un “doppio tick” per avere il valore finale
-  function setVVHStable() {
-    requestAnimationFrame(() => {
-      setVVH();
-      setTimeout(setVVH, 50);
-      setTimeout(setVVH, 150);
-    });
-  }
-
-  // init
-  setVVHStable();
-
-  const vv = window.visualViewport;
-  if (vv) {
-    vv.addEventListener("resize", setVVHStable, { passive: true });
-    vv.addEventListener("scroll", setVVHStable, { passive: true });
-  }
-
-  window.addEventListener("resize", setVVHStable, { passive: true });
-  window.addEventListener("orientationchange", () => setTimeout(setVVHStable, 50), { passive: true });
-
-  // 🔥 questi due risolvono molti “layout resta sfasato dopo chiusura tastiera”
-  document.addEventListener("focusin", setVVHStable, { passive: true });
-  document.addEventListener("focusout", () => setTimeout(setVVHStable, 50), { passive: true });
-
-})();
+  window.addEventListener("resize", setComposerH, { passive: true });
+});
 </script>
+
 </div>
 {% endblock %}
