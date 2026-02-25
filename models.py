@@ -576,12 +576,11 @@ def crea_notifica(utente_id, messaggio, link=None, tipo="generica"):
     # 🔔 Emissione live del badge aggiornato
     invia_notifica_live(utente_id)
 
+from realtime import emit_update_notifications
+
 def invia_notifica_live(user_id):
-    """Aggiorna in tempo reale il badge notifiche via SocketIO."""
-    try:
-        from app import socketio
-        count = conta_non_lette(user_id)
-        emit_update_notifications(user_id)
+    emit_update_notifications(user_id)
+
     except Exception as e:
         print("⚠️ Errore invio notifica live:", e)
 

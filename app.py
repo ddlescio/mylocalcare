@@ -3941,7 +3941,7 @@ def rifiuta_annuncio(id):
         return redirect(next_url)
 
     return redirect(url_for("admin_annunci"))
-        
+
 # ==========================================================
 # NOTIFICHE - FUNZIONI DI SUPPORTO (AGGIUNTA)
 # ==========================================================
@@ -3966,11 +3966,10 @@ def segna_notifica_letta(notifica_id, user_id):
     conn = get_db_connection()
     conn.execute(sql(f"""
         UPDATE notifiche
-        data_lettura = {now_sql()}
+        SET data_lettura = {now_sql()}
         WHERE id = ? AND id_utente = ?
     """), (notifica_id, user_id))
     conn.commit()
-
 
 @app.route("/notifiche/segna_tutte_lette", methods=["POST"])
 def segna_tutte_lette_route():

@@ -1,20 +1,10 @@
 # realtime.py
-_socketio = None
-
-def init_realtime(socketio_instance):
-    global _socketio
-    _socketio = socketio_instance
+from app import socketio, count_notifiche_non_lette
 
 def emit_update_notifications(user_id: int):
-    if not _socketio:
-        return
+    count = count_notifiche_non_lette(user_id)
 
-    # import locale per evitare circular
-    from app import conta_non_lette
-
-    count = conta_non_lette(user_id)
-
-    _socketio.emit(
+    socketio.emit(
         "update_notifications",
         {"count": count},
         room=f"user_{user_id}"
