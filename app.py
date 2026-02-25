@@ -3910,16 +3910,23 @@ def rifiuta_annuncio(id):
     conn = get_db_connection()
     c = get_cursor(conn)
 
-    # 🔎 Recupero utente prima dell’update
+    # 1️⃣ Update stato
+    c.execute(sql("""
+        UPDATE annunci
+        SET stato = 'rifiutato'
+        WHERE id = ?
+    """), (id,))
+
+    # 2️⃣ Recupero utente DOPO update (come approva)
     c.execute(sql("SELECT utente_id FROM annunci WHERE id = ?"), (id,))
     row = c.fetchone()
-    utente_id = row["utente_id"] if row else None
 
-    # ❌ Rifiuto annuncio
-    c.execute(sql("UPDATE annunci SET stato = 'rifiutato' WHERE id = ?"), (id,))
-    conn.commit()
+    utente_id = None
+    if row:
+        utente_id = row["utente_id"]
+        conn.commit()
 
-    # 🔔 Notifica utente
+    # 3️⃣ Notifica dopo commit completo
     if utente_id:
         crea_notifica(
             utente_id,
@@ -3930,7 +3937,6 @@ def rifiuta_annuncio(id):
 
         emit_update_notifications(utente_id)
 
-    # 🔁 Aggiorna counters admin
     invalidate_admin_counters()
 
     flash("Annuncio rifiutato ❌", "warning")
@@ -3940,7 +3946,7 @@ def rifiuta_annuncio(id):
         return redirect(next_url)
 
     return redirect(url_for("admin_annunci"))
-
+    
 # ==========================================================
 # NOTIFICHE - FUNZIONI DI SUPPORTO (AGGIUNTA)
 # ==========================================================
