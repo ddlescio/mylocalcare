@@ -71,30 +71,39 @@ body {
 /* --- 📱 MOBILE --- */
 @media (max-width: 480px) {
 
-  /* NON blocchiamo più overflow globale */
+  :root {
+    --vvh: 1vh; /* fallback, verrà aggiornato da JS su iOS */
+  }
+
   html, body {
+    height: 100%;
     margin: 0;
+    overflow: hidden;
     background: #fff !important;
   }
 
   /* container principale chat */
   #chatContainer {
+    position: fixed;
+    top: var(--navbar-height);
+    left: 0;
+    right: 0;
+
+    /* 🔥 invece di bottom:0 -> height controllata (fix iOS keyboard) */
+    height: calc((var(--vvh) * 100) - var(--navbar-height));
+
     display: flex;
     flex-direction: column;
-
-    /* dynamic viewport height iOS-safe */
-    height: calc(100dvh - var(--navbar-height));
-    margin-top: var(--navbar-height);
-
     background: #fff;
   }
 
-  /* disattiva card desktop ma senza rompere layout */
+  /* disattiva card desktop */
   .max-w-3xl.mx-auto {
     all: unset;
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-height: 0; /* importante per flex overflow */
   }
 
   /* header */
@@ -107,6 +116,7 @@ body {
   /* area messaggi */
   #msgWrap {
     flex: 1 1 auto;
+    min-height: 0; /* 🔥 evita bug di scroll/flex su iOS */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     background: #f9fafb;
@@ -118,14 +128,16 @@ body {
     flex: 0 0 auto;
   }
 
-  /* composer sticky iOS safe */
+  /* composer */
   #composer {
     flex: 0 0 auto;
-    position: sticky;
-    bottom: 0;
+    position: relative;
     border-top: 1px solid #e5e7eb;
     background: #fff;
     padding: 0.5rem 0.8rem;
+
+    /* safe area iPhone (notch / home bar) */
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
   }
 
   /* BLOCCA ZOOM IOS */
@@ -141,7 +153,6 @@ body {
     display: none !important;
   }
 
-  /* FIX dimensioni immagine header */
   .chat-header img {
     width: 36px !important;
     height: 36px !important;
@@ -150,7 +161,6 @@ body {
     object-fit: cover;
     display: block;
   }
-
 }
 </style>
 
@@ -944,6 +954,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 });
+</script>
+<script>
+(function () {
+  function setVVH() {
+    const vv = window.visualViewport;
+    const h = vv ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty('--vvh', (h * 0.01) + 'px');
+  }
+
+  // init
+  setVVH();
+
+  // iOS keyboard / resize
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', setVVH);
+    window.visualViewport.addEventListener('scroll', setVVH); // iOS a volte “scrolla” il viewport
+  }
+
+  window.addEventListener('resize', setVVH);
+  window.addEventListener('orientationchange', () => setTimeout(setVVH, 50));
+})();
 </script>
 
 </div>
