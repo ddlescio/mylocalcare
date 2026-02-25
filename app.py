@@ -3910,20 +3910,38 @@ def approva_annuncio(id):
 def rifiuta_annuncio(id):
     conn = get_db_connection()
     c = get_cursor(conn)
+
+    # 🔎 Recupero utente prima dell’update
+    c.execute(sql("SELECT utente_id FROM annunci WHERE id = ?"), (id,))
+    row = c.fetchone()
+    utente_id = row["utente_id"] if row else None
+
+    # ❌ Rifiuto annuncio
     c.execute(sql("UPDATE annunci SET stato = 'rifiutato' WHERE id = ?"), (id,))
     conn.commit()
 
+    # 🔔 Notifica utente
+    if utente_id:
+        crea_notifica(
+            utente_id,
+            "Il tuo annuncio è stato rifiutato perché non conforme alle linee guida di MyLocalCare. "
+            "Puoi modificarlo e ripubblicarlo. ❌",
+            link=url_for("dashboard") + "?tab=annunci"
+        )
+
+        emit_update_notifications(utente_id)
 
     # 🔁 Aggiorna counters admin
     invalidate_admin_counters()
 
     flash("Annuncio rifiutato ❌", "warning")
+
     next_url = request.args.get("next")
     if next_url and next_url.startswith("/admin/annunci"):
         return redirect(next_url)
 
     return redirect(url_for("admin_annunci"))
-
+        
 # ==========================================================
 # NOTIFICHE - FUNZIONI DI SUPPORTO (AGGIUNTA)
 # ==========================================================
