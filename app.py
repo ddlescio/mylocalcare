@@ -39,6 +39,7 @@ from models import fetchone_value
 import os
 from flask import g
 from db import (insert_and_get_id)
+from realtime import emit_update_notifications
 
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
@@ -386,8 +387,6 @@ socketio = SocketIO(
     async_mode="threading"
 )
 
-from realtime import init_realtime, emit_update_notifications
-init_realtime(socketio)
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 

@@ -1,7 +1,10 @@
 # realtime.py
-from app import socketio, count_notifiche_non_lette
 
 def emit_update_notifications(user_id: int):
+    # Import locale per evitare circular import
+    from app import socketio
+    from models import count_notifiche_non_lette
+
     count = count_notifiche_non_lette(user_id)
 
     socketio.emit(
