@@ -637,16 +637,38 @@ document.addEventListener("click", function(e) {
 
     // 🔔 Conteggio notifiche non lette
     socket.off("update_notifications");
-    socket.on("update_notifications", () => {
+    socket.on("update_notifications", (data) => {
+      // ✅ Nuovo payload dal backend: { count: numero }
+      if (data && typeof data.count === "number") {
+        const n = data.count;
+
+        if (notifBadge) {
+          notifBadge.textContent = n > 0 ? n : "";
+          notifBadge.style.display = n > 0 ? "inline-block" : "none";
+          notifBadge.dataset.unread = String(n);
+          lastUnreadNotifs = n;
+        }
+        return;
+      }
+
+      // 🔁 Fallback: se arriva evento vecchio/esterno senza payload
       refreshNotifCount();
     });
     // ⬇️ AGGIUNGI SUBITO QUI
     socket.off("nuova_notifica");
     socket.on("nuova_notifica", (data) => {
-        console.log("📩 Notifica realtime ricevuta:", data);
-        refreshNotifCount();
+      if (data && typeof data.count === "number") {
+        const n = data.count;
+        if (notifBadge) {
+          notifBadge.textContent = n > 0 ? n : "";
+          notifBadge.style.display = n > 0 ? "inline-block" : "none";
+          notifBadge.dataset.unread = String(n);
+          lastUnreadNotifs = n;
+        }
+        return;
+      }
+      refreshNotifCount();
     });
-
   });
   </script>
   <script src="{{ url_for('static', filename='js/flash_manager.js') }}"></script>

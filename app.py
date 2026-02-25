@@ -386,6 +386,9 @@ socketio = SocketIO(
     async_mode="threading"
 )
 
+from realtime import init_realtime
+init_realtime(socketio)
+
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 # ==========================================================
@@ -1019,7 +1022,7 @@ def admin_counters():
 def leggi_notifica(id):
     segna_notifica_letta(id, g.utente['id'])
     # 🔔 aggiorna il badge in tempo reale
-    socketio.emit('update_notifications', {'for_user': g.utente['id']}, room=f"user_{g.utente['id']}")
+    emit_update_notifications(g.utente['id'])
     flash("Notifica segnata come letta.")
     return redirect(url_for('notifiche'))
 
@@ -2767,11 +2770,7 @@ def admin_invia_notifica():
                 tipo="generica",
                 link=link
             )
-            socketio.emit(
-                "update_notifications",
-                {},
-                room=f"user_{user['id']}"
-            )
+            emit_update_notifications(user["id"])
 
         if "email" in tipo_invio or "entrambi" in tipo_invio:
             _invia_email(
@@ -3188,28 +3187,28 @@ def _filtra_utenti(form):
 
 
 def _crea_notifica(id_utente, titolo, messaggio, tipo="generica", link=None):
-    import sqlite3
-    from app import socketio
-
     conn = get_db_connection()
-    c = get_cursor(conn)
-    c.execute(sql("""
-        INSERT INTO notifiche (id_utente, titolo, messaggio, tipo, link, letta)
-        VALUES (?, ?, ?, ?, ?, 0)
-    """), (id_utente, titolo, messaggio, tipo, link))
-    conn.commit()
+    try:
+        c = get_cursor(conn)
 
+        c.execute(sql("""
+            INSERT INTO notifiche (
+                id_utente,
+                titolo,
+                messaggio,
+                tipo,
+                link,
+                letta
+            ) VALUES (?, ?, ?, ?, ?, 0)
+        """), (id_utente, titolo, messaggio, tipo, link))
 
-    print(f"💾 Notifica registrata nel DB → utente {id_utente}")
+        conn.commit()
 
-    # 🔵 Aggiorna solo il badge notifiche
-    socketio.emit(
-        "update_notifications",
-        {"for_user": id_utente},
-        room=f"user_{id_utente}"
-    )
-
-    print(f"📡 Aggiornato badge notifiche → user_{id_utente}")
+    finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 def processa_match_nuovi_annunci():
     import sqlite3
@@ -3525,11 +3524,8 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
     # 6️⃣ EMISSIONE SOCKET REALTIME (come recensioni)
     # ---------------------------------------------------------
     for uid in notificati:
-        socketio.emit(
-            "update_notifications",
-            {"for_user": uid},
-            room=f"user_{uid}"
-        )
+        count = conta_non_lette(uid)
+        emit_update_notifications(uid)
 
 # ==========================================================
 # APPROVA / RIFIUTA RECENSIONI E RISPOSTE
@@ -3569,11 +3565,7 @@ def approva_recensione(id):
                 link=url_for("mie_recensioni_ricevute")
             )
 
-            socketio.emit(
-                "update_notifications",
-                {"for_user": id_destinatario},
-                room=f"user_{id_destinatario}"
-            )
+            emit_update_notifications(id_destinatario)
 
         # 🔁 Aggiorna counters admin (recensioni in attesa)
         invalidate_admin_counters()
@@ -3612,11 +3604,7 @@ def rifiuta_recensione(id):
                 link=url_for("mie_recensioni")
             )
 
-            socketio.emit(
-                "update_notifications",
-                {"for_user": id_autore},
-                room=f"user_{id_autore}"
-            )
+            emit_update_notifications(id_autore)
 
         # 🔁 Aggiorna counters admin (recensioni in attesa)
         invalidate_admin_counters()
@@ -3661,11 +3649,7 @@ def approva_risposta(id):
                 link=url_for("mie_recensioni")
             )
 
-            socketio.emit(
-                "update_notifications",
-                {"for_user": id_autore},
-                room=f"user_{id_autore}"
-            )
+            emit_update_notifications(id_autore)
 
         # 🔁 Aggiorna counters admin (recensioni in attesa)
         invalidate_admin_counters()
@@ -3707,11 +3691,7 @@ def rifiuta_risposta(id):
             )
 
             # 4️⃣ Aggiorno in tempo reale il badge notifiche (Socket.IO)
-            socketio.emit(
-                "update_notifications",
-                {"for_user": id_autore},
-                room=f"user_{id_autore}"
-            )
+            emit_update_notifications(id_autore)
 
         # 🔁 Aggiorna counters admin (recensioni in attesa)
         invalidate_admin_counters()
@@ -3915,11 +3895,7 @@ def approva_annuncio(id):
             link=url_for("dashboard") + "?tab=annunci"
         )
 
-        socketio.emit(
-            "update_notifications",
-            {"for_user": utente_id},
-            room=f"user_{utente_id}"
-        )
+        emit_update_notifications(utente_id)
 
     # 🔁 Aggiorna counters admin (annunci in attesa)
     invalidate_admin_counters()
@@ -3987,11 +3963,7 @@ def segna_tutte_lette_route():
     segna_tutte_lette(session["utente_id"])
 
     # 🔔 Aggiorna il badge in tempo reale
-    socketio.emit(
-        "update_notifications",
-        {"for_user": session["utente_id"]},
-        room=f"user_{session['utente_id']}"
-    )
+    emit_update_notifications(session["utente_id"])
 
     return jsonify({"success": True})
 
@@ -4004,11 +3976,7 @@ def elimina_tutte_notifiche_route():
     elimina_tutte_notifiche(session["utente_id"])
 
     # 🔔 Aggiorna il badge in tempo reale
-    socketio.emit(
-        "update_notifications",
-        {"for_user": session["utente_id"]},
-        room=f"user_{session['utente_id']}"
-    )
+    emit_update_notifications(session["utente_id"])
 
     return jsonify({"success": True})
 
@@ -4990,12 +4958,8 @@ def recensioni_utente(user_id):
                     link=url_for("mie_recensioni_ricevute")
                 )
 
-                # ✅ invio realtime Socket.IO
-                socketio.emit(
-                    "update_notifications",
-                    {"for_user": user_id},
-                    room=f"user_{user_id}"
-                )
+                # ✅ invio realtime Socket.IO (badge notifiche)
+                emit_update_notifications(user_id)
 
                 flash("⭐ Recensione salvata!", "success")
 
@@ -6073,7 +6037,7 @@ def apri_notifica(id):
 
 
     # 🔔 aggiorna il badge
-    socketio.emit('update_notifications', {'for_user': g.utente["id"]}, room=f"user_{g.utente['id']}")
+    emit_update_notifications(g.utente["id"])
 
     # Reindirizza al link
     if notifica["link"]:

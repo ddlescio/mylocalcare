@@ -40,9 +40,10 @@
       });
 
       // opzionale: se usi questo evento per le notifiche, puoi rinfrescare i badge
-      socket.on("update_notifications", () => {
+      socket.on("update_notifications", (data) => {
+        // compatibile sia con vecchio evento vuoto che con nuovo payload {count}
         fetchCounters();
-      });
+      });      
     }
   });
 })();

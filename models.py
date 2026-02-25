@@ -17,7 +17,7 @@ from flask import session
 from Crypto.Cipher import AES
 from nacl.public import PrivateKey, PublicKey
 from flask_socketio import SocketIO
-
+from realtime import emit_update_notifications
 def fetchone_value(row):
     if row is None:
         return None
@@ -430,7 +430,7 @@ def chat_threads(user_id: int):
         threads.append(d)
 
     return threads
-    
+
 def chat_segna_letti(user_id: int, other_id: int):
     """Segna tutti i messaggi ricevuti dall’altro come letti."""
     conn = get_db_connection()
@@ -580,7 +580,8 @@ def invia_notifica_live(user_id):
     """Aggiorna in tempo reale il badge notifiche via SocketIO."""
     try:
         from app import socketio
-        socketio.emit("update_notifications", {"for_user": user_id}, room=f"user_{user_id}")
+        count = conta_non_lette(user_id)
+        emit_update_notifications(user_id)
     except Exception as e:
         print("⚠️ Errore invio notifica live:", e)
 
