@@ -70,7 +70,11 @@
             </h2>
             <span class="text-[11px] sm:text-xs text-gray-400 whitespace-nowrap ml-2">
               {% if c['ultimo_invio'] %}
-                {{ c['ultimo_invio'].strftime('%d/%m/%Y %H:%M') }}
+              {% set dt = c['ultimo_invio'] %}
+              {% if dt.tzinfo is none %}
+                {% set dt = dt.replace(tzinfo=pytz.UTC) %}
+              {% endif %}
+              {{ dt.astimezone(pytz.timezone("Europe/Rome")).strftime('%d/%m/%Y %H:%M') }}
               {% endif %}
             </span>
           </div>
