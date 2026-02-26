@@ -69,6 +69,19 @@ body {
 .chat-header img { width: 44px; height: 44px; }
 
 .video-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0,0,0,0.85);
+
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -78,7 +91,6 @@ body {
   opacity: 1;
   pointer-events: auto;
 }
-
 
 /* --- 📱 MOBILE --- */
 @media (max-width: 480px) {
@@ -412,23 +424,6 @@ body {
   </form>
 </div>
 
-<!-- 🎥 VIDEO OVERLAY -->
-<div id="videoOverlay"
-     class="video-overlay fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center">
-
-     <div id="videoContainer"
-          class="relative w-[95%] h-[90%] bg-black rounded-xl overflow-hidden">
-
-         <button id="closeVideo"
-                 class="absolute top-3 right-3 z-50 bg-red-600 text-white px-3 py-1 rounded-lg text-sm">
-             ✖ Chiudi
-         </button>
-
-         <!-- 👇 QUI dentro scriviamo menu e iframe Daily -->
-         <div id="videoMount" class="w-full h-full"></div>
-
-     </div>
-</div>
 <script>
   window.chatAperta = true;
   window.addEventListener('beforeunload', () => { window.chatAperta = false; });
