@@ -91,21 +91,22 @@ body {
 
   /* container principale chat */
   #chatContainer {
-    position: absolute;
+    position: absolute; /* NON fixed */
     top: var(--navbar-height);
     left: 0;
     right: 0;
 
-    /* ✅ iOS-safe: altezza vera della viewport (aggiornata via JS) */
-    height: calc((var(--vvh, 1vh) * 100) - var(--navbar-height));
-    min-height: calc((var(--vvh, 1vh) * 100) - var(--navbar-height));
-
+    /* ✅ al posto di bottom:0 (su iOS può sballare) */
+    height: var(--chat-h, calc(100dvh - var(--navbar-height)));
+    min-height: var(--chat-h, calc(100dvh - var(--navbar-height)));
     display: flex;
     flex-direction: column;
     background: #fff;
+
+    /* ✅ niente scroll qui: scroll solo in msgWrap */
     overflow: hidden;
   }
-  
+
   /* disattiva card desktop */
   .max-w-3xl.mx-auto {
     all: unset;
@@ -988,6 +989,91 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Applichiamo solo su mobile
+  if (window.matchMedia("(min-width: 481px)").matches) return;
+
+  const chat = document.getElementById("chatContainer");
+  const msgWrap = document.getElementById("msgWrap");
+  if (!chat || !msgWrap) return;
+
+  // iOS detection (sufficiente per questo fix)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (!isIOS) return;
+
+  const navbarH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--navbar-height")) || 70;
+
+  let lastH = null;
+  let ticking = false;
+
+  function applyChatHeight() {
+    const vv = window.visualViewport;
+    const viewportH = vv ? vv.height : window.innerHeight;
+
+    // px finali del container
+    const h = Math.max(100, Math.round(viewportH - navbarH));
+
+    // evita write inutili (riduce “micro-sfarfallii”)
+    if (lastH === h) return;
+    lastH = h;
+
+    // salva scroll interno chat (non vogliamo perderlo)
+    const saved = msgWrap.scrollTop;
+
+    // forza altezza in px (bypassa i bug di dvh al close tastiera)
+    document.documentElement.style.setProperty("--chat-h", h + "px");
+
+    // forza reflow
+    void chat.offsetHeight;
+
+    // ripristina scroll interno
+    msgWrap.scrollTop = saved;
+  }
+
+  function scheduleApply(delay = 0) {
+    if (ticking) return;
+    ticking = true;
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        applyChatHeight();
+        ticking = false;
+      });
+    }, delay);
+  }
+
+  // --- eventi viewport reali (tastiera su/giù) ---
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => scheduleApply(0));
+    window.visualViewport.addEventListener("scroll", () => scheduleApply(0));
+  }
+
+  // --- eventi fallback ---
+  window.addEventListener("resize", () => scheduleApply(50));
+  window.addEventListener("orientationchange", () => scheduleApply(150));
+
+  // --- focus: quando chiudi tastiera, iOS spesso aggiorna in ritardo ---
+  document.addEventListener("focusin", () => scheduleApply(50));
+
+  document.addEventListener("focusout", () => {
+    // 1) applica dopo chiusura tastiera (ritardato)
+    scheduleApply(250);
+
+    // 2) “desfasamento” pagina: Safari lascia un offset di scroll sulla pagina
+    //    Noi riportiamo a 0 senza toccare lo scroll interno della chat.
+    setTimeout(() => {
+      // se la pagina è stata traslata/scrollata, la raddrizziamo
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      // seconda passata: a volte serve doppio colpo
+      setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }), 60);
+    }, 20);
+  });
+
+  // prima applicazione
+  scheduleApply(0);
 });
 </script>
 
