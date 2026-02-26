@@ -128,8 +128,8 @@ body {
     -webkit-overflow-scrolling: touch;
     background: #f9fafb;
     padding: 0.5rem 0.7rem;
-}
   }
+
 
   /* typing indicator */
   #typingIndicator {
@@ -167,6 +167,18 @@ body {
     object-fit: cover;
     display: block;
   }
+
+  .video-overlay {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .video-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
 }
 </style>
 
@@ -342,7 +354,7 @@ body {
 
 <!-- 🎥 VIDEO OVERLAY -->
 <div id="videoOverlay"
-     class="hidden fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center">
+     class="video-overlay fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center">
 
     <div id="videoContainer"
          class="relative w-[95%] h-[90%] bg-black rounded-xl overflow-hidden">
@@ -824,7 +836,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             }).catch(() => {});
         }, 10000); // ogni 10 secondi
 
-        overlay.classList.remove("hidden");
+        overlay.classList.add("active");
 
         container.innerHTML = `
             <div class="flex flex-col items-center justify-center h-full text-white">
@@ -844,7 +856,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         document.getElementById("cancelCall").onclick = () => {
             socket.emit("video_call_rejected", { room: currentRoomName });
-            overlay.classList.add("hidden");
+            overlay.classList.remove("active");
             currentRoomName = null;
         };
 
@@ -885,7 +897,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     async function endCall() {
 
-        overlay.classList.add("hidden");
+        overlay.classList.remove("active");
 
         if (pingInterval) {
             clearInterval(pingInterval);
@@ -984,32 +996,6 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(setComposerH, 100);
     });
   });
-</script>
-<script>
-(function() {
-
-  function forceRepaint() {
-    const el = document.getElementById("chatContainer");
-    if (!el) return;
-
-    el.style.display = "none";
-    void el.offsetHeight; // forza reflow
-    el.style.display = "flex";
-  }
-
-  // quando tastiera si chiude
-  window.addEventListener("focusout", () => {
-    setTimeout(forceRepaint, 150);
-  });
-
-  // quando viewport cambia (chiusura tastiera iOS)
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", () => {
-      setTimeout(forceRepaint, 150);
-    });
-  }
-
-})();
 </script>
 
 </div>
