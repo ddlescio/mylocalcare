@@ -558,6 +558,7 @@ document.addEventListener("click", function(e) {
 
     // Inizializza SEMPRE la socket, anche se alcuni badge non sono presenti
     window.socket = io({ transports: ['websocket', 'polling'] });
+    const socket = window.socket;
 
     // 📞 CHIAMATA IN ARRIVO
     socket.off("incoming_call");
