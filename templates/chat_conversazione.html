@@ -1012,12 +1012,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function applyChatHeight() {
     const vv = window.visualViewport;
+
     const viewportH = vv ? vv.height : window.innerHeight;
+    const offsetTop = vv ? vv.offsetTop : 0;
 
-    // altezza reale disponibile sotto navbar
-    const h = Math.max(100, Math.round(viewportH - navbarH));
+    // 🔥 compensazione tastiera iOS
+    const usableHeight = viewportH + offsetTop;
 
-    // 🔥 TOP FISSO. NON segue offsetTop.
+    const h = Math.max(100, Math.round(usableHeight - navbarH));
+
     document.documentElement.style.setProperty(
       "--chat-top",
       Math.round(navbarH) + "px"
@@ -1034,7 +1037,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     msgWrap.scrollTop = saved;
   }
-  
+    
   function scheduleApply(delay = 0) {
     if (ticking) return;
     ticking = true;
