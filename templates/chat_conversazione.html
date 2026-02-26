@@ -89,17 +89,14 @@ body {
 
   /* container principale chat */
   #chatContainer {
-    position: fixed;
-    top: var(--navbar-height);
-    left: 0;
-    right: 0;
-    height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height));
-    bottom: auto; /* IMPORTANTISSIMO: non usare bottom:0 insieme a height dinamica */
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-
-    /* ❌ RIMOSSI: height calc + transform + will-change */
+      position: fixed;
+      top: var(--navbar-height);
+      left: 0;
+      right: 0;
+      bottom: 0;     /* ✅ questo deve restare */
+      display: flex;
+      flex-direction: column;
+      background: #fff;
   }
 
   /* disattiva card desktop */
@@ -121,9 +118,7 @@ body {
 
   /* area messaggi */
   #msgWrap {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto !important;          /* ✅ OVERRIDE di h-[65vh] (Tailwind) */
+    flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     background: #f9fafb;
@@ -192,11 +187,6 @@ body {
     background: #fff !important;
   }
 
-  body[data-chat="true"] {
-    overflow: hidden !important;
-    position: fixed;   /* chiave su iOS */
-    width: 100%;
-  }
 
 }
 </style>
@@ -1015,27 +1005,6 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(setComposerH, 100);
     });
   });
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const chat = document.getElementById("chatContainer");
-  if (!chat) return;
-
-  function applyVV() {
-    const vv = window.visualViewport;
-    const h = vv ? vv.height : window.innerHeight;
-    document.documentElement.style.setProperty("--vvh", (h * 0.01) + "px");
-  }
-
-  applyVV();
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", applyVV);
-    window.visualViewport.addEventListener("scroll", applyVV);
-  } else {
-    window.addEventListener("resize", applyVV);
-  }
-});
 </script>
 
 </div>
