@@ -4,7 +4,6 @@ Flask-Mail==0.9.1
 Flask-Session==0.6.0
 Flask-SocketIO==5.3.6
 
-eventlet==0.36.1
 gunicorn==21.2.0
 
 python-dotenv==1.0.1
@@ -18,3 +17,6 @@ stripe
 pytz==2024.1
 
 psycopg2-binary
+
+gevent==24.2.1
+gevent-websocket==0.10.1
