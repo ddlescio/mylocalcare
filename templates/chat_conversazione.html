@@ -68,13 +68,6 @@ body {
 }
 .chat-header img { width: 44px; height: 44px; }
 
-.video-overlay {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 999999 !important;
 
   display: flex;
   align-items: center;
@@ -87,10 +80,6 @@ body {
   transition: opacity 0.2s ease;
 }
 
-.video-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-}
 
 /* --- 📱 MOBILE --- */
 @media (max-width: 480px) {
@@ -799,7 +788,77 @@ window.addEventListener("load", async function initVideoSystem() {
 
     const destId = parseInt(destIdEl.value, 10);
 
-    let currentRoomName = null;
+    let currentRoomName = null
+
+    // 👇 METTI QUI LA FUNZIONE
+    async function attemptVideoStart() {
+
+        const res = await fetch("/video/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ altro_utente_id: destId })
+        });
+
+        const data = await res.json();
+
+        if (data.need_verifica) {
+            showMaggiorenneModal();
+            return false;
+        }
+
+        if (!res.ok || data.error) {
+            alert(data.error || "Errore video");
+            return false;
+        }
+
+        await startCall(data.room_name, data.room_url);
+        return true;
+    }
+
+    const maggiorenneModal = document.getElementById("maggiorenneModal");
+    const maggiorenneCheck = document.getElementById("maggiorenneCheck");
+    const maggiorenneConfirm = document.getElementById("maggiorenneConfirm");
+    const maggiorenneCancel = document.getElementById("maggiorenneCancel");
+
+    function showMaggiorenneModal() {
+        maggiorenneCheck.checked = false;
+        maggiorenneModal.classList.remove("hidden");
+        maggiorenneModal.classList.add("flex");
+    }
+
+    function hideMaggiorenneModal() {
+        maggiorenneModal.classList.add("hidden");
+        maggiorenneModal.classList.remove("flex");
+    }
+
+    maggiorenneCancel.onclick = () => {
+        hideMaggiorenneModal();
+    };
+
+    maggiorenneConfirm.onclick = async () => {
+
+        if (!maggiorenneCheck.checked) {
+            alert("Devi confermare di essere maggiorenne.");
+            return;
+        }
+
+        try {
+            await fetch("/video/verifica-maggiorenne", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
+
+            hideMaggiorenneModal();
+
+            // 🔁 riprova ad avviare la call
+            await attemptVideoStart();
+
+        } catch (err) {
+            console.error("Errore verifica maggiorenne", err);
+            alert("Errore verifica.");
+        }
+    };
+
     let callObject = null;
     let pingInterval = null;
 
@@ -826,42 +885,24 @@ window.addEventListener("load", async function initVideoSystem() {
     // ==============================
     videoBtn.addEventListener("click", async function () {
 
-        console.log("🎥 Click video");
-
-        if (videoBtn.disabled) {
-            console.log("⛔ Bottone disabilitato");
-            return;
-        }
-
-        if (!confirm("Vuoi avviare la videochiamata?")) return;
+        if (videoBtn.disabled) return;
 
         videoBtn.disabled = true;
-        videoBtn.innerText = "⏳ Avvio...";
+        videoBtn.innerText = "⏳ Controllo...";
 
         try {
+            const started = await attemptVideoStart();
 
-            const res = await fetch("/video/start", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ altro_utente_id: destId })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                alert(data.error || "Errore video");
+            // reset solo se la call NON parte
+            if (!started) {
                 resetBtn();
-                return;
             }
 
-            await startCall(data.room_name, data.room_url);
-
         } catch (err) {
-            console.error("❌ Errore avvio video:", err);
+            console.error("Errore avvio video:", err);
             alert("Errore connessione video");
+            resetBtn();
         }
-
-        resetBtn();
     });
 
     function resetBtn() {
@@ -889,8 +930,8 @@ window.addEventListener("load", async function initVideoSystem() {
             }).catch(() => {});
         }, 10000);
 
-        overlay.classList.add("active");
-
+        overlay.classList.remove("hidden");
+        overlay.classList.add("flex");
         mount.innerHTML = `
             <div class="flex flex-col items-center justify-center h-full text-white">
                 <h2 class="text-xl mb-6">Videochiamata pronta</h2>
@@ -955,7 +996,11 @@ window.addEventListener("load", async function initVideoSystem() {
 
     async function endCall() {
 
-        overlay.classList.remove("active");
+        // 🛡️ Evita doppia esecuzione
+        if (!currentRoomName) return;
+
+        overlay.classList.add("hidden");
+        overlay.classList.remove("flex");
 
         if (pingInterval) {
             clearInterval(pingInterval);
@@ -967,19 +1012,19 @@ window.addEventListener("load", async function initVideoSystem() {
             callObject = null;
         }
 
-        if (currentRoomName) {
-            try {
-                await fetch("/video/end", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ room_name: currentRoomName })
-                });
-            } catch (_) {}
-        }
+        try {
+            await fetch("/video/end", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ room_name: currentRoomName })
+            });
+        } catch (_) {}
 
         currentRoomName = null;
-    }
 
+        // 🔄 Reset bottone video
+        resetBtn();
+    }
 });
 </script>
 <script>

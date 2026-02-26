@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g
 import os
 import sqlite3
@@ -383,9 +385,9 @@ socketio = SocketIO(
         "https://www.mylocalcare.it",
         "http://127.0.0.1:5050",
         "http://localhost:5050"
-    ]
+    ],
+    async_mode="eventlet"
 )
-
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
@@ -8045,6 +8047,7 @@ def video_start():
     socketio.emit(
         "video_busy",
         {"user_id": g.utente["id"], "busy": True},
+        room=f"user_{altro_id}"
     )
 
     return jsonify({
@@ -8164,8 +8167,17 @@ def video_end():
     """), (room_name,)).fetchone()
 
     if call_users:
-        socketio.emit("video_busy", {"user_id": call_users["utente_1"], "busy": False})
-        socketio.emit("video_busy", {"user_id": call_users["utente_2"], "busy": False})
+        socketio.emit(
+            "video_busy",
+            {"user_id": call_users["utente_1"], "busy": False},
+            room=f"user_{call_users['utente_2']}"
+        )
+
+        socketio.emit(
+            "video_busy",
+            {"user_id": call_users["utente_2"], "busy": False},
+            room=f"user_{call_users['utente_1']}"
+        )
 
     conn.commit()
 
@@ -8273,6 +8285,16 @@ def check_video_status(data):
     user_id = data.get("user_id")
 
     conn = get_db_connection()
+
+    # 🧹 Chiudi call zombie
+    conn.execute(sql("""
+        UPDATE video_call_log
+        SET in_corso = 0
+        WHERE in_corso = 1
+        AND last_ping < datetime('now', '-30 seconds')
+    """))
+    conn.commit()
+
     call = conn.execute(sql("""
         SELECT id FROM video_call_log
         WHERE in_corso = 1
@@ -8280,12 +8302,9 @@ def check_video_status(data):
         LIMIT 1
     """), (user_id, user_id)).fetchone()
 
-
-
     emit("video_status_result", {
         "busy": bool(call)
     })
-
 
 def clear_recently_read(user_id, delay=None):
     """
