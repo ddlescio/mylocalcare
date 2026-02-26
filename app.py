@@ -40,8 +40,6 @@ import os
 from flask import g
 from db import (insert_and_get_id)
 from realtime import emit_update_notifications
-import eventlet
-eventlet.monkey_patch()
 
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
