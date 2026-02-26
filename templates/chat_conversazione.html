@@ -783,7 +783,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     const pendingRoomUrl  = sessionStorage.getItem("incomingCall_roomUrl");
     const pendingRoomName = sessionStorage.getItem("incomingCall_roomName");
 
-    if (pendingRoomUrl && pendingRoomName) {
+    // 👇 AGGIUNGI QUESTO
+    const isMobile = window.matchMedia("(max-width: 480px)").matches;
+
+    if (isMobile && pendingRoomUrl && pendingRoomName) {
 
         console.log("📞 Avvio automatico chiamata entrante");
 
@@ -792,7 +795,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         startCall(pendingRoomName, pendingRoomUrl);
     }
-
 
     // ==============================
     // 🎥 AVVIO VIDEO (CHIAMANTE)
@@ -1037,7 +1039,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     msgWrap.scrollTop = saved;
   }
-    
+
   function scheduleApply(delay = 0) {
     if (ticking) return;
     ticking = true;
