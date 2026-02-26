@@ -92,7 +92,7 @@ body {
   /* container principale chat */
   #chatContainer {
     position: absolute; /* NON fixed */
-    top: var(--navbar-height);
+    top: var(--chat-top, var(--navbar-height));
     left: 0;
     right: 0;
 
@@ -1013,10 +1013,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function applyChatHeight() {
     const vv = window.visualViewport;
     const viewportH = vv ? vv.height : window.innerHeight;
+    const offsetTop = vv ? vv.offsetTop : 0;
 
     // px finali del container
     const h = Math.max(100, Math.round(viewportH - navbarH));
 
+    // ✅ top dinamico: navbar + offsetTop (risolve il “salto in alto” con tastiera)
+    const topPx = Math.max(0, Math.round(navbarH + offsetTop));
+    document.documentElement.style.setProperty("--chat-top", topPx + "px");
     // evita write inutili (riduce “micro-sfarfallii”)
     if (lastH === h) return;
     lastH = h;
