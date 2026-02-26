@@ -91,23 +91,21 @@ body {
 
   /* container principale chat */
   #chatContainer {
-    position: absolute; /* NON fixed */
+    position: absolute;
     top: var(--navbar-height);
     left: 0;
     right: 0;
 
-    /* ✅ al posto di bottom:0 (su iOS può sballare) */
-    height: calc(100dvh - var(--navbar-height));
-    min-height: calc(100dvh - var(--navbar-height));
+    /* ✅ iOS-safe: altezza vera della viewport (aggiornata via JS) */
+    height: calc((var(--vvh, 1vh) * 100) - var(--navbar-height));
+    min-height: calc((var(--vvh, 1vh) * 100) - var(--navbar-height));
 
     display: flex;
     flex-direction: column;
     background: #fff;
-
-    /* ✅ niente scroll qui: scroll solo in msgWrap */
     overflow: hidden;
   }
-
+  
   /* disattiva card desktop */
   .max-w-3xl.mx-auto {
     all: unset;
