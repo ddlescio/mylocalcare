@@ -416,15 +416,18 @@ body {
 <div id="videoOverlay"
      class="video-overlay fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center">
 
-    <div id="videoContainer"
-         class="relative w-[95%] h-[90%] bg-black rounded-xl overflow-hidden">
+     <div id="videoContainer"
+          class="relative w-[95%] h-[90%] bg-black rounded-xl overflow-hidden">
 
-        <button id="closeVideo"
-                class="absolute top-3 right-3 z-50 bg-red-600 text-white px-3 py-1 rounded-lg text-sm">
-            ✖ Chiudi
-        </button>
+         <button id="closeVideo"
+                 class="absolute top-3 right-3 z-50 bg-red-600 text-white px-3 py-1 rounded-lg text-sm">
+             ✖ Chiudi
+         </button>
 
-    </div>
+         <!-- 👇 QUI dentro scriviamo menu e iframe Daily -->
+         <div id="videoMount" class="w-full h-full"></div>
+
+     </div>
 </div>
 <script>
   window.chatAperta = true;
@@ -792,8 +795,9 @@ window.addEventListener("load", async function initVideoSystem() {
     const container  = document.getElementById("videoContainer");
     const closeBtn   = document.getElementById("closeVideo");
     const destIdEl   = document.getElementById("destinatario_id");
+    const mount = document.getElementById("videoMount");
 
-    if (!videoBtn || !overlay || !container || !closeBtn || !destIdEl) {
+    if (!videoBtn || !overlay || !container || !mount || !closeBtn || !destIdEl) {
         console.error("❌ Elementi video mancanti");
         return;
     }
@@ -892,7 +896,7 @@ window.addEventListener("load", async function initVideoSystem() {
 
         overlay.classList.add("active");
 
-        container.innerHTML = `
+        mount.innerHTML = `
             <div class="flex flex-col items-center justify-center h-full text-white">
                 <h2 class="text-xl mb-6">Videochiamata pronta</h2>
                 <div class="flex gap-4">
@@ -908,17 +912,29 @@ window.addEventListener("load", async function initVideoSystem() {
             </div>
         `;
 
-        document.getElementById("cancelCall").onclick = () => {
+        document.getElementById("cancelCall").onclick = async () => {
             socket.emit("video_call_rejected", { room: currentRoomName });
-            overlay.classList.remove("active");
-            currentRoomName = null;
+            await endCall();
         };
 
         document.getElementById("enterCall").onclick = async () => {
 
-            container.innerHTML = "";
+            try {
 
-            callObject = Daily.createFrame(container, {
+                // 🔥 FORZA PERMESSI PRIMA (FONDAMENTALE SU SAFARI)
+                await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+
+            } catch (err) {
+                alert("Devi consentire accesso a camera e microfono.");
+                return;
+            }
+
+            mount.innerHTML = "";
+
+            callObject = Daily.createFrame(mount, {
                 showLeaveButton: true,
                 iframeStyle: {
                     width: "100%",
@@ -932,12 +948,18 @@ window.addEventListener("load", async function initVideoSystem() {
                 endCall();
             });
 
-            callObject.on("error", () => {
+            callObject.on("error", (e) => {
+                console.error("Daily error:", e);
                 socket.emit("video_call_left", { room: currentRoomName });
                 endCall();
             });
 
-            await callObject.join({ url: roomUrl });
+            await callObject.join({
+                url: roomUrl,
+                audioSource: true,
+                videoSource: true
+            });
+
         };
     }
     window.startIncomingCall = startCall;
