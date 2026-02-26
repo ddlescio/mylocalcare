@@ -563,8 +563,31 @@ document.addEventListener("click", function(e) {
     // 📞 CHIAMATA IN ARRIVO
     socket.off("incoming_call");
     socket.on("incoming_call", (data) => {
+
         console.log("📞 Incoming call:", data);
 
+        // ✅ Se siamo già in chat
+        if (window.chatAperta === true) {
+
+            const currentDestId = parseInt(
+                document.getElementById("destinatario_id")?.value || "0",
+                10
+            );
+
+            // Se la chiamata è proprio con questo utente
+            if (currentDestId === parseInt(data.from, 10)) {
+
+                console.log("🎯 Siamo già nella chat corretta → avvio diretto");
+
+                if (typeof window.startIncomingCall === "function") {
+                    window.startIncomingCall(data.room_name, data.room_url);
+                }
+
+                return; // 🚫 NON mostrare modale
+            }
+        }
+
+        // ❗ Se NON siamo in chat → modale normale
         const modal = document.getElementById("incomingCallModal");
         if (!modal) return;
 
@@ -575,7 +598,6 @@ document.addEventListener("click", function(e) {
         modal.classList.remove("hidden");
         document.body.classList.add("modal-open");
     });
-
     // 👉 Funzioni helper per aggiornare badge
     async function refreshChatCount() {
       if (!chatBadge) return;
