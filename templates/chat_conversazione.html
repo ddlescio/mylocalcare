@@ -80,7 +80,6 @@ body {
     margin: 0;
     background: #fff !important;
 
-
     /* 🔥 iOS: evita “rimbalzi”/ricomposizioni strane */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: auto;
@@ -90,17 +89,23 @@ body {
     position: relative; /* 🔥 necessario per absolute child */
   }
 
-
   /* container principale chat */
   #chatContainer {
-      position: absolute;   /* NON fixed */
-      top: var(--navbar-height);
-      left: 0;
-      right: 0;
-      bottom: 0;            /* LO MANTENIAMO */
-      display: flex;
-      flex-direction: column;
-      background: #fff;
+    position: absolute; /* NON fixed */
+    top: var(--navbar-height);
+    left: 0;
+    right: 0;
+
+    /* ✅ al posto di bottom:0 (su iOS può sballare) */
+    height: calc(100dvh - var(--navbar-height));
+    min-height: calc(100dvh - var(--navbar-height));
+
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+
+    /* ✅ niente scroll qui: scroll solo in msgWrap */
+    overflow: hidden;
   }
 
   /* disattiva card desktop */
@@ -108,8 +113,11 @@ body {
     all: unset;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 0; /* importante per flex overflow */
+
+    /* ✅ più affidabile di height:100% su iOS */
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
   }
 
   /* header */
@@ -122,14 +130,13 @@ body {
 
   /* area messaggi */
   #msgWrap {
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: auto;
     background: #f9fafb;
     padding: 0.5rem 0.7rem;
   }
-
 
   /* typing indicator */
   #typingIndicator {
@@ -191,8 +198,6 @@ body {
   .chat-header {
     background: #fff !important;
   }
-
-
 }
 </style>
 
