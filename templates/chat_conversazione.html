@@ -76,18 +76,18 @@ body {
   }
 
   html, body {
-    /* 🔥 invece di height:100% → segue il viewport reale gestito da --vvh */
-    height: calc(var(--vvh) * 100);
+    height: 100%;
     margin: 0;
-
-    /* tieni il blocco scroll pagina (come avevi) */
-    overflow: hidden;
-
     background: #fff !important;
+
 
     /* 🔥 iOS: evita “rimbalzi”/ricomposizioni strane */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: auto;
+  }
+
+  body[data-chat="true"] {
+    overflow: hidden;
   }
 
   /* container principale chat */
@@ -131,7 +131,6 @@ body {
     -webkit-overflow-scrolling: touch;
     background: #f9fafb;
     padding: 0.5rem 0.7rem;
-    padding-bottom: calc(var(--composer-h, 72px) + 12px) !important;
 }
   }
 
@@ -142,19 +141,12 @@ body {
 
   /* composer */
   #composer {
-    position: fixed;              /* ✅ fisso al viewport */
-    left: 0;
-    right: 0;
-    bottom: 0;
-
+    flex: 0 0 auto;
+    position: relative; /* 🔥 NON fixed */
     background: #fff;
     border-top: 1px solid #e5e7eb;
     padding: 0.5rem 0.8rem;
-
-    /* safe area iPhone */
     padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-
-    z-index: 999;                 /* ✅ sopra al resto */
   }
 
   /* BLOCCA ZOOM IOS */
