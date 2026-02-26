@@ -1013,31 +1013,28 @@ document.addEventListener("DOMContentLoaded", () => {
   function applyChatHeight() {
     const vv = window.visualViewport;
     const viewportH = vv ? vv.height : window.innerHeight;
-    const offsetTop = vv ? vv.offsetTop : 0;
 
-    // px finali del container
+    // altezza reale disponibile sotto navbar
     const h = Math.max(100, Math.round(viewportH - navbarH));
 
-    // ✅ top dinamico: navbar + offsetTop (risolve il “salto in alto” con tastiera)
-    const topPx = Math.max(0, Math.round(navbarH + offsetTop));
-    document.documentElement.style.setProperty("--chat-top", topPx + "px");
-    // evita write inutili (riduce “micro-sfarfallii”)
+    // 🔥 TOP FISSO. NON segue offsetTop.
+    document.documentElement.style.setProperty(
+      "--chat-top",
+      Math.round(navbarH) + "px"
+    );
+
     if (lastH === h) return;
     lastH = h;
 
-    // salva scroll interno chat (non vogliamo perderlo)
     const saved = msgWrap.scrollTop;
 
-    // forza altezza in px (bypassa i bug di dvh al close tastiera)
     document.documentElement.style.setProperty("--chat-h", h + "px");
 
-    // forza reflow
     void chat.offsetHeight;
 
-    // ripristina scroll interno
     msgWrap.scrollTop = saved;
   }
-
+  
   function scheduleApply(delay = 0) {
     if (ticking) return;
     ticking = true;
