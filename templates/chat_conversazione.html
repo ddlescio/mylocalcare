@@ -93,8 +93,8 @@ body {
     top: var(--navbar-height);
     left: 0;
     right: 0;
-    bottom: 0; /* ✅ torna a bottom:0 */
-
+    height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height));
+    bottom: auto; /* IMPORTANTISSIMO: non usare bottom:0 insieme a height dinamica */
     display: flex;
     flex-direction: column;
     background: #fff;
@@ -177,6 +177,25 @@ body {
   .video-overlay.active {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  /* iOS FIX: niente blur su elementi in fixed */
+  .chat-header,
+  .max-w-3xl.mx-auto,
+  #chatContainer {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* l’header aveva anche background semi-trasparente */
+  .chat-header {
+    background: #fff !important;
+  }
+
+  body[data-chat="true"] {
+    overflow: hidden !important;
+    position: fixed;   /* chiave su iOS */
+    width: 100%;
   }
 
 }
@@ -996,6 +1015,27 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(setComposerH, 100);
     });
   });
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const chat = document.getElementById("chatContainer");
+  if (!chat) return;
+
+  function applyVV() {
+    const vv = window.visualViewport;
+    const h = vv ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty("--vvh", (h * 0.01) + "px");
+  }
+
+  applyVV();
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", applyVV);
+    window.visualViewport.addEventListener("scroll", applyVV);
+  } else {
+    window.addEventListener("resize", applyVV);
+  }
+});
 </script>
 
 </div>
