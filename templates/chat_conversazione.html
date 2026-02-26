@@ -222,24 +222,34 @@ body {
 }
 </style>
 <style>
-/* -------------------------------------------------------
-   FIX: Evita che l’header della chat copra il primo messaggio
-   Desktop + iPad (min-width: 481px)
-------------------------------------------------------- */
-@media (min-width: 481px) {
+  @media (min-width: 481px) {
 
-  /* L’header deve stare sotto la navbar */
-  .chat-header {
-    position: sticky !important;
-    top: var(--navbar-height) !important;
-    z-index: 200 !important;
-  }
+    /* Il container non deve forzare viewport height */
+    #chatContainer {
+      position: relative !important;
+      height: auto !important;
+      min-height: 0 !important;
+    }
 
-  /* Aggiungo spazio sufficiente per far vedere il primo messaggio */
-  #msgWrap {
-    padding-top: 80px; /* valore testato per imitare mobile */
+    .max-w-3xl.mx-auto {
+      height: 75vh;              /* finestra chat */
+      max-height: 75vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    #msgWrap {
+      flex: 1;
+      overflow-y: auto;
+      padding-top: 0;
+    }
   }
-}
 </style>
 
 
