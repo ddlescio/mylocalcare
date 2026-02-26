@@ -279,7 +279,7 @@ body {
       margin-top: auto;
     }
 
-  }  
+  }
 </style>
 
 
@@ -769,84 +769,70 @@ document.addEventListener("DOMContentLoaded", () => {
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", async function () {
+window.addEventListener("load", async function initVideoSystem() {
+
+    console.log("🎥 Video system init");
 
     // ==============================
     // SOCKET
     // ==============================
     const socket = window.socket;
+    if (!socket) {
+        console.error("❌ Socket non disponibile");
+        return;
+    }
 
-    // 🔥 DEFINIZIONE CORRETTA
-    const meId = parseInt("{{ g.utente['id'] }}");
+    const meId = parseInt("{{ g.utente['id'] }}", 10);
 
     // ==============================
     // ELEMENTI
     // ==============================
-    const videoBtn = document.getElementById("videoBtn");
-    const overlay = document.getElementById("videoOverlay");
-    const container = document.getElementById("videoContainer");
-    const closeBtn = document.getElementById("closeVideo");
-    const destId = parseInt(document.getElementById("destinatario_id").value);
+    const videoBtn   = document.getElementById("videoBtn");
+    const overlay    = document.getElementById("videoOverlay");
+    const container  = document.getElementById("videoContainer");
+    const closeBtn   = document.getElementById("closeVideo");
+    const destIdEl   = document.getElementById("destinatario_id");
 
-    const incomingModal = document.getElementById("incomingCallModal");
-    const acceptBtn = document.getElementById("acceptCall");
-    const rejectBtn = document.getElementById("rejectCall");
-    const callerNameEl = document.getElementById("callerName");
+    if (!videoBtn || !overlay || !container || !closeBtn || !destIdEl) {
+        console.error("❌ Elementi video mancanti");
+        return;
+    }
+
+    const destId = parseInt(destIdEl.value, 10);
 
     let currentRoomName = null;
     let callObject = null;
-    let incomingData = null;
     let pingInterval = null;
 
-    // 🔴 Se l'altro rifiuta la chiamata
+    // ==============================
+    // EVENTI SOCKET
+    // ==============================
     socket.on("video_call_rejected", (data) => {
-
-        console.log("❌ Chiamata rifiutata:", data);
-
         if (!currentRoomName) return;
-
         if (data.room === currentRoomName) {
             alert("L'utente ha rifiutato la chiamata.");
             endCall();
         }
     });
-    // 🔴 Se l'altro chiude la chiamata
+
     socket.on("video_call_left", (data) => {
-
-        console.log("👋 L'altro ha chiuso:", data);
-
         if (!currentRoomName) return;
-
         if (data.room === currentRoomName) {
             endCall();
         }
     });
 
-    if (!videoBtn) return;
-
-    // =======================================
-    // 🔥 AVVIO AUTOMATICO SE CHIAMATA PENDENTE
-    // =======================================
-    const pendingRoomUrl  = sessionStorage.getItem("incomingCall_roomUrl");
-    const pendingRoomName = sessionStorage.getItem("incomingCall_roomName");
-
-    // 👇 AGGIUNGI QUESTO
-    const isMobile = window.matchMedia("(max-width: 480px)").matches;
-
-    if (isMobile && pendingRoomUrl && pendingRoomName) {
-
-        console.log("📞 Avvio automatico chiamata entrante");
-
-        sessionStorage.removeItem("incomingCall_roomUrl");
-        sessionStorage.removeItem("incomingCall_roomName");
-
-        startCall(pendingRoomName, pendingRoomUrl);
-    }
-
     // ==============================
-    // 🎥 AVVIO VIDEO (CHIAMANTE)
+    // CLICK VIDEO
     // ==============================
-    videoBtn.addEventListener("click", async () => {
+    videoBtn.addEventListener("click", async function () {
+
+        console.log("🎥 Click video");
+
+        if (videoBtn.disabled) {
+            console.log("⛔ Bottone disabilitato");
+            return;
+        }
 
         if (!confirm("Vuoi avviare la videochiamata?")) return;
 
@@ -871,7 +857,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             await startCall(data.room_name, data.room_url);
 
-        } catch (_) {
+        } catch (err) {
+            console.error("❌ Errore avvio video:", err);
             alert("Errore connessione video");
         }
 
@@ -884,24 +871,24 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     // ==============================
-    // 🎬 START CALL (COMUNE)
+    // START CALL
     // ==============================
     async function startCall(roomName, roomUrl) {
 
+        console.log("📞 Start call:", roomName);
+
         currentRoomName = roomName;
 
-        // ❤️ avvia ping automatico
         if (pingInterval) clearInterval(pingInterval);
 
         pingInterval = setInterval(() => {
             if (!currentRoomName) return;
-
             fetch("/video/ping", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({room_name: currentRoomName})
+                body: JSON.stringify({ room_name: currentRoomName })
             }).catch(() => {});
-        }, 10000); // ogni 10 secondi
+        }, 10000);
 
         overlay.classList.add("active");
 
@@ -910,11 +897,11 @@ document.addEventListener("DOMContentLoaded", async function () {
                 <h2 class="text-xl mb-6">Videochiamata pronta</h2>
                 <div class="flex gap-4">
                     <button id="enterCall"
-                            class="bg-green-600 px-5 py-2 rounded-lg">
+                        class="bg-green-600 px-5 py-2 rounded-lg">
                         Entra
                     </button>
                     <button id="cancelCall"
-                            class="bg-gray-600 px-5 py-2 rounded-lg">
+                        class="bg-gray-600 px-5 py-2 rounded-lg">
                         Annulla
                     </button>
                 </div>
@@ -955,7 +942,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     // ==============================
-    // ❌ CHIUDI CALL
+    // CHIUSURA
     // ==============================
     closeBtn.addEventListener("click", async () => {
         if (callObject) await callObject.leave();
