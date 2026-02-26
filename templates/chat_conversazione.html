@@ -919,19 +919,6 @@ window.addEventListener("load", async function initVideoSystem() {
 
         document.getElementById("enterCall").onclick = async () => {
 
-            try {
-
-                // 🔥 FORZA PERMESSI PRIMA (FONDAMENTALE SU SAFARI)
-                await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: true
-                });
-
-            } catch (err) {
-                alert("Devi consentire accesso a camera e microfono.");
-                return;
-            }
-
             mount.innerHTML = "";
 
             callObject = Daily.createFrame(mount, {
