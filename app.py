@@ -40,6 +40,8 @@ import os
 from flask import g
 from db import (insert_and_get_id)
 from realtime import emit_update_notifications
+import eventlet
+eventlet.monkey_patch()
 
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
@@ -384,7 +386,7 @@ socketio = SocketIO(
         "http://127.0.0.1:5050",
         "http://localhost:5050"
     ],
-    async_mode="threading"
+    async_mode="eventlet"
 )
 
 
@@ -3946,7 +3948,7 @@ def rifiuta_annuncio(id):
         return redirect(next_url)
 
     return redirect(url_for("admin_annunci"))
-    
+
 # ==========================================================
 # NOTIFICHE - FUNZIONI DI SUPPORTO (AGGIUNTA)
 # ==========================================================
