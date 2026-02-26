@@ -985,6 +985,32 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 </script>
+<script>
+(function() {
+
+  function forceRepaint() {
+    const el = document.getElementById("chatContainer");
+    if (!el) return;
+
+    el.style.display = "none";
+    void el.offsetHeight; // forza reflow
+    el.style.display = "flex";
+  }
+
+  // quando tastiera si chiude
+  window.addEventListener("focusout", () => {
+    setTimeout(forceRepaint, 150);
+  });
+
+  // quando viewport cambia (chiusura tastiera iOS)
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => {
+      setTimeout(forceRepaint, 150);
+    });
+  }
+
+})();
+</script>
 
 </div>
 {% endblock %}
