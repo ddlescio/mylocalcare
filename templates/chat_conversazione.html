@@ -104,22 +104,18 @@ body {
 
   /* container principale chat */
   #chatContainer {
-    position: absolute; /* NON fixed */
-    top: var(--chat-top, var(--navbar-height));
-    left: 0;
-    right: 0;
+      position: fixed;
+      top: var(--navbar-height);
+      left: 0;
+      right: 0;
+      bottom: 0;
 
-    /* ✅ al posto di bottom:0 (su iOS può sballare) */
-    height: var(--chat-h, calc(100dvh - var(--navbar-height)));
-    min-height: var(--chat-h, calc(100dvh - var(--navbar-height)));
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-
-    /* ✅ niente scroll qui: scroll solo in msgWrap */
-    overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      overflow: hidden;
   }
-
+  
   /* disattiva card desktop */
   .max-w-3xl.mx-auto {
     all: unset;
@@ -956,6 +952,14 @@ window.addEventListener("load", async function initVideoSystem() {
         document.getElementById("enterCall").onclick = async () => {
 
             mount.innerHTML = "";
+
+            const check = await fetch("/video/check-maggiorenne");
+            const checkData = await check.json();
+
+            if (!checkData.verified) {
+                showMaggiorenneModal();
+                return;
+            }
 
             callObject = Daily.createFrame(mount, {
                 showLeaveButton: true,

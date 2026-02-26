@@ -7986,12 +7986,6 @@ def video_start():
 
         return jsonify({"need_verifica": True}), 200
 
-    if altro["maggiorenne_verificato"] != 1:
-
-        return jsonify({
-            "error": "L’altro utente non è verificato come maggiorenne."
-        }), 403
-
     # 🎥 CREAZIONE ROOM
     room_name = f"lc_{g.utente['id']}_{altro_id}_{int(time.time())}"
 
@@ -8076,6 +8070,19 @@ def verifica_maggiorenne():
 
     return jsonify({"success": True})
 
+@app.route("/video/check-maggiorenne")
+@login_required
+def video_check_maggiorenne():
+    conn = get_db_connection()
+    me = conn.execute(
+        "SELECT maggiorenne_verificato FROM utenti WHERE id = ?",
+        (g.utente["id"],)
+    ).fetchone()
+
+    return jsonify({
+        "verified": me["maggiorenne_verificato"] == 1
+    })
+    
 @app.route("/video/end", methods=["POST"])
 def video_end():
     from datetime import datetime
