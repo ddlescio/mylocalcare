@@ -237,7 +237,7 @@ body {
 
   /* Aggiungo spazio sufficiente per far vedere il primo messaggio */
   #msgWrap {
-    padding-top: 80px !important; /* valore testato per imitare mobile */
+    padding-top: 80px; /* valore testato per imitare mobile */
   }
 }
 </style>
@@ -605,8 +605,13 @@ if (!window.socket) {
   }
   // 🧹 All’avvio
   aggiornaIntestazioniDate();
-  setTimeout(() => scrollBottom(false), 100);
 
+  // doppio frame per assicurare layout stabile
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scrollBottom(false);
+    });
+  });
   // 💬 Ricezione messaggi (versione blindata)
   socket.on('new_message', (m) => {
 
