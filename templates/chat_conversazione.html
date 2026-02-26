@@ -86,6 +86,10 @@ body {
     -webkit-overflow-scrolling: auto;
   }
 
+  body {
+    position: relative; /* 🔥 necessario per absolute child */
+  }
+
 
   /* container principale chat */
   #chatContainer {
@@ -119,6 +123,7 @@ body {
   /* area messaggi */
   #msgWrap {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: auto;
     background: #f9fafb;
@@ -295,7 +300,7 @@ body {
 
   <!-- AREA MESSAGGI -->
   <div id="msgWrap"
-       class="h-[65vh] overflow-y-auto px-6 py-5 bg-gradient-to-b from-gray-50 to-gray-100 space-y-1 rounded-b-2xl">
+       class="overflow-y-auto px-6 py-5 bg-gradient-to-b from-gray-50 to-gray-100 space-y-1 rounded-b-2xl">
        {% set last_written_day = None %}
        {% for m in conversazione %}
          {% set is_me = (m['mittente_id'] == g.utente['id']) %}
