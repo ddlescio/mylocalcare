@@ -864,6 +864,15 @@ window.addEventListener("load", async function initVideoSystem() {
     let callObject = null;
     let pingInterval = null;
 
+    // 🔥 Rende disponibile startIncomingCall in modo sicuro
+    window.startIncomingCall = async function(roomName, roomUrl) {
+        if (typeof startCall === "function") {
+            await startCall(roomName, roomUrl);
+        } else {
+            console.error("❌ startCall non inizializzata");
+        }
+    };
+
     // ==============================
     // EVENTI SOCKET
     // ==============================
@@ -995,7 +1004,6 @@ window.addEventListener("load", async function initVideoSystem() {
 
         };
     }
-    window.startIncomingCall = startCall;
     // ==============================
     // CHIUSURA
     // ==============================
