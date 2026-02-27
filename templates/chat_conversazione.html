@@ -89,32 +89,31 @@ body {
   }
 
   html, body {
-    height: calc(var(--vvh) * 100);
-    overflow: hidden;
+    height: 100%;
     margin: 0;
     background: #fff !important;
-
-    overscroll-behavior: none;
-    -webkit-overflow-scrolling: auto;
-
   }
-  body[data-chat="true"] {
-    overflow: hidden;
+  body[data-chat="true"]{
+    overflow: hidden; /* lo applichi solo quando sei in chat */
   }
 
   body {
     position: relative; /* 🔥 necessario per absolute child */
   }
 
-  #chatContainer {
-      position: fixed;
-      top: var(--navbar-height);
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      background: #fff;
+  #chatContainer{
+    position: fixed;
+    top: var(--navbar-height);
+    left: 0;
+    right: 0;
+
+    /* ✅ altezza reale visibile (sopra barra indirizzi iOS) */
+    height: calc(100dvh - var(--navbar-height));
+
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    overflow: hidden;
   }
 
   /* disattiva card desktop */
