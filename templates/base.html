@@ -594,6 +594,10 @@ document.addEventListener("click", function(e) {
         modal.dataset.roomUrl  = data.room_url;
         modal.dataset.roomName = data.room_name;
         modal.dataset.fromUser = data.from;
+        window.pendingIncomingCall = {
+          roomName: data.room_name,
+          roomUrl: data.room_url
+      };
 
         modal.classList.remove("hidden");
         document.body.classList.add("modal-open");
@@ -762,19 +766,34 @@ document.addEventListener("DOMContentLoaded", () => {
 </div>
 <script>
 window.acceptCall = function() {
+
     const modal = document.getElementById("incomingCallModal");
     if (!modal) return;
 
     const roomUrl  = modal.dataset.roomUrl;
     const roomName = modal.dataset.roomName;
+    const fromUser = modal.dataset.fromUser;
 
     modal.classList.add("hidden");
     document.body.classList.remove("modal-open");
 
-    if (roomUrl && roomName && typeof window.startIncomingCall === "function") {
+    // 🔥 Se sono già nella pagina chat attiva → avvia subito
+    if (window.chatAperta === true &&
+        roomUrl &&
+        roomName &&
+        typeof window.startIncomingCall === "function") {
+
         window.startIncomingCall(roomName, roomUrl);
-    } else {
-        console.error("❌ startIncomingCall non disponibile");
+        return;
+    }
+
+    // 🚀 Se NON sono nella pagina chat → reindirizza
+    if (fromUser && roomName && roomUrl) {
+        const url = new URL("/chat/" + fromUser, window.location.origin);
+        url.searchParams.set("incoming", "1");
+        url.searchParams.set("room", roomName);
+        url.searchParams.set("url", roomUrl);
+        window.location.href = url.toString();
     }
 }
 

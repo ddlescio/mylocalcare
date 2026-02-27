@@ -428,7 +428,6 @@ if (!window.socket) {
 
 <script>
   document.addEventListener("DOMContentLoaded", function initChat() {
-
     const meId = parseInt("{{ g.utente['id'] }}", 10);
     const socket = window.socket;
 
@@ -758,8 +757,7 @@ document.addEventListener("DOMContentLoaded", () => {
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 
 <script>
-window.addEventListener("load", async function initVideoSystem() {
-
+async function initVideoSystem() {
     console.log("🎥 Video system init");
 
     // ==============================
@@ -789,6 +787,20 @@ window.addEventListener("load", async function initVideoSystem() {
     }
 
     const destId = parseInt(destIdEl.value, 10);
+    // 🔥 Se arrivo da chiamata in ingresso via redirect
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("incoming") === "1") {
+
+        const roomName = params.get("room");
+        const roomUrl  = params.get("url");
+
+        if (roomName && roomUrl) {
+            console.log("📞 Avvio automatico chiamata dopo redirect");
+            setTimeout(() => {
+                startCall(roomName, roomUrl);
+            }, 500);
+        }
+    }
 
     let currentRoomName = null
 
@@ -1044,6 +1056,7 @@ window.addEventListener("load", async function initVideoSystem() {
         resetBtn();
     }
 });
+document.addEventListener("DOMContentLoaded", initVideoSystem);
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
