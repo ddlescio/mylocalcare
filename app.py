@@ -761,12 +761,14 @@ def get_db_connection():
     database_url = os.getenv("DATABASE_URL")
     app.config["IS_POSTGRES"] = bool(database_url)
 
+    # =========================
+    # POSTGRES
+    # =========================
     if database_url:
 
         if _pg_pool is None:
             init_pg_pool()
 
-        # riuso SOLO dentro request HTTP
         if has_request_context():
             if hasattr(g, "db_conn") and g.db_conn is not None:
                 try:
@@ -781,12 +783,10 @@ def get_db_connection():
 
         raw = _pg_pool.getconn()
 
-        # 🔥 FIX CRASH: se la connessione è morta, ricreala
         if raw.closed:
             _pg_pool.putconn(raw, close=True)
             raw = _pg_pool.getconn()
 
-        # autocommit per non pagare commit inutili
         raw.autocommit = True
         raw.set_session(readonly=False, autocommit=True)
 
@@ -794,31 +794,17 @@ def get_db_connection():
             _pg_pool.putconn(c)
 
         pooled = PooledConn(raw, release)
-
         wrapped = PGConnectionWrapper(pooled)
 
         if has_request_context():
             g.db_conn = wrapped
+
         return wrapped
 
-def close_db_connection(conn):
-    """
-    Chiude/rilascia la connessione.
-    - In HTTP: teardown_request già lo fa (ma se la chiami non succede nulla di male)
-    - In SocketIO: è OBBLIGATORIA (per non esaurire il pool)
-    """
-    if not conn:
-        return
-    try:
-        conn.close()
-    except Exception:
-        pass
-
-    # ================================
-    # SQLITE (locale)
-    # ================================
+    # =========================
+    # SQLITE
+    # =========================
     else:
-
 
         if hasattr(g, "db_conn"):
             return g.db_conn
@@ -835,6 +821,14 @@ def close_db_connection(conn):
 
         g.db_conn = conn
         return conn
+
+def close_db_connection(conn):
+    if not conn:
+        return
+    try:
+        conn.close()
+    except:
+        pass
 
 app.config["DB_CONN_FACTORY"] = get_db_connection
 app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
