@@ -8540,6 +8540,7 @@ def cleanup_video_calls():
                     UPDATE video_call_log
                     SET in_corso = 0
                     WHERE in_corso = 1
+                      AND last_ping IS NOT NULL
                       AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
                 """))
 
