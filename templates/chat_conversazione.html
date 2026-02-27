@@ -93,29 +93,29 @@ body {
     margin: 0;
     background: #fff !important;
 
-    /* 🔥 iOS: evita “rimbalzi”/ricomposizioni strane */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: auto;
+
+    overflow: hidden; /* 👈 QUESTA È LA RIGA CHE MANCA */
   }
 
   body {
     position: relative; /* 🔥 necessario per absolute child */
   }
 
-  /* container principale chat */
   #chatContainer {
-      position: fixed;
-      top: var(--navbar-height);
+      position: absolute;
+      top: var(--chat-top, var(--navbar-height));
       left: 0;
       right: 0;
-      bottom: 0;
-
+      height: var(--chat-h, calc(100dvh - var(--navbar-height)));
+      min-height: var(--chat-h, calc(100dvh - var(--navbar-height)));
       display: flex;
       flex-direction: column;
       background: #fff;
       overflow: hidden;
   }
-  
+
   /* disattiva card desktop */
   .max-w-3xl.mx-auto {
     all: unset;
