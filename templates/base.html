@@ -762,6 +762,44 @@ document.addEventListener("DOMContentLoaded", () => {
 </div>
 <script>
 function acceptCall() {
+
+    const modal = document.getElementById("incomingCallModal");
+    if (!modal) return;
+
+    const roomUrl  = modal.dataset.roomUrl;
+    const roomName = modal.dataset.roomName;
+
+    modal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+
+    if (roomUrl && roomName && typeof window.startIncomingCall === "function") {
+        window.startIncomingCall(roomName, roomUrl);
+    } else {
+        console.error("❌ startIncomingCall non disponibile");
+    }
+}
+
+function rejectCall() {
+
+    const modal = document.getElementById("incomingCallModal");
+    if (!modal) return;
+
+    const roomName = modal.dataset.roomName;
+    const fromUser = modal.dataset.fromUser;
+
+    modal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+
+    if (window.socket && roomName && fromUser) {
+        window.socket.emit("video_call_rejected", {
+            room: roomName,
+            from_user: fromUser
+        });
+    }
+}
+</script>
+<script>
+function acceptCall() {
     const modal = document.getElementById("incomingCallModal");
 
     const roomUrl  = modal.dataset.roomUrl;
