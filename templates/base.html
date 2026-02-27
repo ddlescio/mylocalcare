@@ -761,9 +761,7 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
 </div>
 <script>
-<script>
-function acceptCall() {
-
+window.acceptCall = function() {
     const modal = document.getElementById("incomingCallModal");
     if (!modal) return;
 
@@ -780,7 +778,7 @@ function acceptCall() {
     }
 }
 
-function rejectCall() {
+window.rejectCall = function() {
 
     const modal = document.getElementById("incomingCallModal");
     if (!modal) return;
