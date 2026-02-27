@@ -717,7 +717,7 @@ function whenSocketReady(callback) {
     socket.emit('send_message', { destinatario_id: destId, testo });
     input.value = '';
     toggleEmoji(false);
-    });
+  });
   });
 });
 </script>
@@ -919,7 +919,7 @@ async function initVideoSystem() {
             alert("Errore connessione video");
             resetBtn();
         }
-    });
+    };
 
     function resetBtn() {
         videoBtn.disabled = false;
