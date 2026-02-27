@@ -470,12 +470,19 @@ from zoneinfo import ZoneInfo
 @app.teardown_request
 def _release_pg_conn(exc):
     conn = getattr(g, "db_conn", None)
-    if conn:
-        try:
-            conn.close()   # ← rilascia al pool (NON chiude davvero)
-        except Exception:
-            pass
-        g.db_conn = None
+    if not conn:
+        return
+
+    try:
+        if current_app.config.get("IS_POSTGRES"):
+            # restituisce la connessione al pool
+            current_app.config["_PG_POOL"].putconn(conn)
+        else:
+            conn.close()
+    except Exception:
+        pass
+
+    g.db_conn = None
 
 @app.template_filter("dt_roma")
 def dt_roma(value):
@@ -7938,7 +7945,7 @@ def video_start():
     cur = get_cursor(conn)
 
     # 🚫 BLOCCO SE UTENTE GIÀ IN CHIAMATA ATTIVA (con timeout 60s)
-    call_in_corso = cur.execute(sql("""
+    cur.execute(sql("""
         SELECT id
         FROM video_call_log
         WHERE in_corso = 1
@@ -7946,9 +7953,12 @@ def video_start():
           AND last_ping IS NOT NULL
           AND last_ping >= CURRENT_TIMESTAMP - INTERVAL '60 seconds'
         LIMIT 1
-    """), (g.utente["id"], g.utente["id"])).fetchone()
+    """), (g.utente["id"], g.utente["id"]))
+
+    call_in_corso = cur.fetchone()
 
     if call_in_corso:
+        cur.close()
         return jsonify({
             "error": "Sei già in una videochiamata in corso."
         }), 409
@@ -7965,7 +7975,7 @@ def video_start():
     ).fetchone()
 
     if not altro:
-
+        cur.close()
         return jsonify({"error": "Utente non trovato"}), 404
 
     # 🔒 CONTROLLO BUDGET
@@ -7978,14 +7988,14 @@ def video_start():
     """), (mese_corrente,)).fetchone()
 
     if limite and limite["bloccato"] == 1:
-
+        cur.close()
         return jsonify({
             "error": "Il servizio video è temporaneamente sospeso per questo mese."
         }), 403
 
     # 🔞 VERIFICA MAGGIORENNE
     if me["maggiorenne_verificato"] != 1:
-
+        cur.close()
         return jsonify({"need_verifica": True}), 200
 
     # 🎥 CREAZIONE ROOM
@@ -8008,7 +8018,7 @@ def video_start():
     )
 
     if r.status_code != 200:
-
+        cur.close()
         return jsonify({"error": "Errore creazione room Daily"}), 500
 
     room_url = r.json()["url"]
@@ -8026,7 +8036,7 @@ def video_start():
     """), (room_name, g.utente["id"], altro_id))
 
     conn.commit()
-
+    cur.close()
 
     # 📞 NOTIFICA CHIAMATA
     socketio.emit(
