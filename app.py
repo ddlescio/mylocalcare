@@ -7943,7 +7943,8 @@ def video_start():
         FROM video_call_log
         WHERE in_corso = 1
           AND (utente_1 = ? OR utente_2 = ?)
-          AND last_ping >= CURRENT_TIMESTAMP - INTERVAL '60 seconds'
+          AND last_ping IS NOT NULL
+          AND last_ping >= CURRENT_TIMESTAMP - INTERVAL '60 seconds'          
         LIMIT 1
     """), (g.utente["id"], g.utente["id"])).fetchone()
 
@@ -8091,8 +8092,9 @@ def video_end():
     if not room_name:
         return jsonify({"error": "Room non valida"}), 400
 
+    from datetime import datetime, timezone
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = get_cursor(conn)
 
     # 🔒 Prendi SOLO chiamata ancora attiva
     call = cur.execute(sql("""
@@ -8108,7 +8110,7 @@ def video_end():
 
     # 🔥 created_at ora è datetime vero (TIMESTAMPTZ)
     start_time = call["created_at"]
-    end_time = datetime.utcnow()
+    end_time = datetime.now(timezone.utc)
 
     durata_secondi = int((end_time - start_time).total_seconds())
 
@@ -8172,7 +8174,7 @@ def video_end():
         )
 
     return jsonify({"status": "ok"})
-    
+
 # ==========================================================
 # ❤️ PING CHIAMATA (mantiene viva la call)
 # ==========================================================
@@ -8283,9 +8285,11 @@ def check_video_status(data):
     # 🧹 Chiudi call zombie
     conn.execute(sql("""
         UPDATE video_call_log
-        SET in_corso = 0
+        SET in_corso = 0,
+            ended_at = CURRENT_TIMESTAMP
         WHERE in_corso = 1
-        AND last_ping < datetime('now', '-30 seconds')
+          AND last_ping IS NOT NULL
+          AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
     """))
     conn.commit()
 
@@ -8517,21 +8521,48 @@ def cleanup_video_calls():
                 conn = get_db_connection()
                 cur = get_cursor(conn)
 
-                cur.execute(sql("""
-                    UPDATE video_call_log
-                    SET in_corso = 0
+                # 1) prendo le call zombie (così posso notificare gli utenti)
+                zombies = cur.execute(sql("""
+                    SELECT id, room_name, utente_1, utente_2
+                    FROM video_call_log
                     WHERE in_corso = 1
                       AND last_ping IS NOT NULL
                       AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
-                """))
+                """)).fetchall()
 
-                conn.commit()
+                if zombies:
+                    # 2) chiudo davvero (anche ended_at)
+                    cur.execute(sql("""
+                        UPDATE video_call_log
+                        SET in_corso = 0,
+                            ended_at = CURRENT_TIMESTAMP
+                        WHERE in_corso = 1
+                          AND last_ping IS NOT NULL
+                          AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
+                    """))
+
+                    conn.commit()
+
+                    # 3) notifiche busy FALSE ai due utenti (per UI)
+                    for z in zombies:
+                        u1 = z["utente_1"]
+                        u2 = z["utente_2"]
+
+                        socketio.emit(
+                            "video_busy",
+                            {"user_id": u1, "busy": False},
+                            room=f"user_{u2}"
+                        )
+                        socketio.emit(
+                            "video_busy",
+                            {"user_id": u2, "busy": False},
+                            room=f"user_{u1}"
+                        )
 
         except Exception as e:
             print("Errore cleanup video:", e)
 
         socketio.sleep(30)
-
 # ==========================================================
 # 7️⃣ AVVIO SERVER
 # ==========================================================
