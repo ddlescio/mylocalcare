@@ -420,17 +420,22 @@ body {
   window.addEventListener('beforeunload', () => { window.chatAperta = false; });
 </script>
 <script>
-if (!window.socket) {
-  window.socket = io({ transports: ['websocket', 'polling'] });
-  console.log("🟢 Socket globale creato");
+function whenSocketReady(callback) {
+  if (window.socket) {
+    callback(window.socket);
+  } else {
+    window.addEventListener("socket_ready", () => {
+      callback(window.socket);
+    }, { once: true });
+  }
 }
 </script>
 
 <script>
-  document.addEventListener("DOMContentLoaded", function initChat() {
-    const meId = parseInt("{{ g.utente['id'] }}", 10);
-    const socket = window.socket;
+  document.addEventListener("DOMContentLoaded", () => {
+    whenSocketReady((socket) => {
 
+      const meId = parseInt("{{ g.utente['id'] }}", 10);
     const wrap = document.getElementById('msgWrap');
     const input = document.getElementById('msgInput');
     const form = document.getElementById('composer');
@@ -759,6 +764,11 @@ document.addEventListener("DOMContentLoaded", () => {
 <script>
 async function initVideoSystem() {
     console.log("🎥 Video system init");
+    if (window.__videoSystemInited) {
+        console.log("🎥 Video system già inizializzato, skip.");
+        return;
+      }
+      window.__videoSystemInited = true;
 
     // ==============================
     // SOCKET
@@ -787,20 +797,6 @@ async function initVideoSystem() {
     }
 
     const destId = parseInt(destIdEl.value, 10);
-    // 🔥 Se arrivo da chiamata in ingresso via redirect
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("incoming") === "1") {
-
-        const roomName = params.get("room");
-        const roomUrl  = params.get("url");
-
-        if (roomName && roomUrl) {
-            console.log("📞 Avvio automatico chiamata dopo redirect");
-            setTimeout(() => {
-                startCall(roomName, roomUrl);
-            }, 500);
-        }
-    }
 
     let currentRoomName = null
 
@@ -876,37 +872,33 @@ async function initVideoSystem() {
     let callObject = null;
     let pingInterval = null;
 
-    // 🔥 Rende disponibile startIncomingCall in modo sicuro
-    window.startIncomingCall = async function(roomName, roomUrl) {
-        if (typeof startCall === "function") {
-            await startCall(roomName, roomUrl);
-        } else {
-            console.error("❌ startCall non inizializzata");
-        }
-    };
 
     // ==============================
     // EVENTI SOCKET
     // ==============================
-    socket.on("video_call_rejected", (data) => {
+    socket.off("video_call_rejected");
+    socket.off("video_call_left");
+
+    socket.on("video_call_rejected", async (data) => {
         if (!currentRoomName) return;
         if (data.room === currentRoomName) {
             alert("L'utente ha rifiutato la chiamata.");
-            endCall();
+            await endCall();
         }
     });
 
-    socket.on("video_call_left", (data) => {
+    socket.on("video_call_left", async (data) => {
         if (!currentRoomName) return;
         if (data.room === currentRoomName) {
-            endCall();
+            await endCall();
         }
     });
 
     // ==============================
     // CLICK VIDEO
     // ==============================
-    videoBtn.addEventListener("click", async function () {
+    videoBtn.onclick = null;   // reset handler vecchio
+    videoBtn.onclick = async function () {
 
         if (videoBtn.disabled) return;
 
@@ -976,6 +968,7 @@ async function initVideoSystem() {
             await endCall();
         };
 
+
         document.getElementById("enterCall").onclick = async () => {
 
             mount.innerHTML = "";
@@ -1016,6 +1009,33 @@ async function initVideoSystem() {
 
         };
     }
+    // ✅ Disponibile SEMPRE per base.html
+    window.startIncomingCall = async function(roomName, roomUrl) {
+        await startCall(roomName, roomUrl);
+    };
+
+    // 🔥 INCOMING REDIRECT (ORA È SICURO)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("incoming") === "1") {
+      const roomName = params.get("room");
+      const roomUrl  = params.get("url");
+
+      if (roomName && roomUrl) {
+        console.log("📞 Incoming redirect → avvio quando socket è pronto");
+
+        const startWhenReady = () => {
+          if (socket && socket.connected) {
+            startCall(roomName, roomUrl);
+          } else {
+            socket.once("connect", () => startCall(roomName, roomUrl));
+          }
+        };
+
+        startWhenReady();
+        history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
     // ==============================
     // CHIUSURA
     // ==============================
@@ -1043,70 +1063,85 @@ async function initVideoSystem() {
         }
 
         try {
-            await fetch("/video/end", {
+            const res = await fetch("/video/end", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ room_name: currentRoomName })
             });
-        } catch (_) {}
+
+            const data = await res.json();
+            console.log("🧹 /video/end risposta:", data);
+
+        } catch (err) {
+            console.error("❌ Errore /video/end:", err);
+        }
 
         currentRoomName = null;
 
         // 🔄 Reset bottone video
         resetBtn();
     }
-});
-document.addEventListener("DOMContentLoaded", initVideoSystem);
+  } // fine initVideoSystem
+
+  document.addEventListener("DOMContentLoaded", () => {
+    whenSocketReady(() => {
+      initVideoSystem();
+    });
+  });
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-    const videoBtn = document.getElementById("videoBtn");
-    if (!videoBtn) return;
+    whenSocketReady((socket) => {
 
-    const socket = window.socket;
-    const destId = parseInt(document.getElementById("destinatario_id").value);
+        const videoBtn = document.getElementById("videoBtn");
+        if (!videoBtn) return;
 
-    // =========================
-    // 🔍 CHECK STATUS ALL’APERTURA
-    // =========================
-    socket.emit("check_video_status", { user_id: destId });
+        const destId = parseInt(document.getElementById("destinatario_id").value);
 
-    socket.on("video_status_result", (data) => {
-        if (data.busy) {
-            videoBtn.disabled = true;
-            videoBtn.innerText = "🔴 In chiamata";
-            videoBtn.classList.remove("bg-green-100","text-green-700");
-            videoBtn.classList.add("bg-gray-200","text-gray-500");
-        }
-    });
+        // =========================
+        // 🔍 CHECK STATUS ALL’APERTURA
+        // =========================
+        socket.emit("check_video_status", { user_id: destId });
 
-    // =========================
-    // 🔴 REALTIME BUSY UPDATE
-    // =========================
-    socket.on("video_busy", (data) => {
-
-        if (!data) return;
-
-        if (data.user_id === destId) {
-
+        socket.off("video_status_result");
+        socket.on("video_status_result", (data) => {
             if (data.busy) {
                 videoBtn.disabled = true;
                 videoBtn.innerText = "🔴 In chiamata";
                 videoBtn.classList.remove("bg-green-100","text-green-700");
                 videoBtn.classList.add("bg-gray-200","text-gray-500");
-            } else {
-                videoBtn.disabled = false;
-                videoBtn.innerText = "🎥 Video";
-                videoBtn.classList.add("bg-green-100","text-green-700");
-                videoBtn.classList.remove("bg-gray-200","text-gray-500");
             }
+        });
 
-        }
-    });
+        // =========================
+        // 🔴 REALTIME BUSY UPDATE
+        // =========================
+        socket.off("video_busy");
+        socket.on("video_busy", (data) => {
+
+            if (!data) return;
+
+            if (data.user_id === destId) {
+
+                if (data.busy) {
+                    videoBtn.disabled = true;
+                    videoBtn.innerText = "🔴 In chiamata";
+                    videoBtn.classList.remove("bg-green-100","text-green-700");
+                    videoBtn.classList.add("bg-gray-200","text-gray-500");
+                } else {
+                    videoBtn.disabled = false;
+                    videoBtn.innerText = "🎥 Video";
+                    videoBtn.classList.add("bg-green-100","text-green-700");
+                    videoBtn.classList.remove("bg-gray-200","text-gray-500");
+                }
+
+            }
+        });
+
+    }); // fine whenSocketReady
 
 });
 </script>
-
 </div>
 {% endblock %}

@@ -560,6 +560,8 @@ document.addEventListener("click", function(e) {
     window.socket = io({ transports: ['websocket', 'polling'] });
     const socket = window.socket;
 
+    window.dispatchEvent(new Event("socket_ready"));
+    
     // 📞 CHIAMATA IN ARRIVO
     socket.off("incoming_call");
     socket.on("incoming_call", (data) => {
