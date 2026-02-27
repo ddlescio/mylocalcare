@@ -8086,42 +8086,41 @@ def video_check_maggiorenne():
 
 @app.route("/video/end", methods=["POST"])
 def video_end():
-    from datetime import datetime
 
     room_name = request.json.get("room_name")
-
     if not room_name:
         return jsonify({"error": "Room non valida"}), 400
 
     conn = get_db_connection()
+    cur = conn.cursor()
 
-    call = conn.execute(sql("""
+    # 🔒 Prendi SOLO chiamata ancora attiva
+    call = cur.execute(sql("""
         SELECT id, created_at
         FROM video_call_log
         WHERE room_name = ?
+          AND in_corso = 1
+        LIMIT 1
     """), (room_name,)).fetchone()
 
     if not call:
+        return jsonify({"status": "already_closed"})
 
-        return jsonify({"error": "Call non trovata"}), 404
-
-    start_time = datetime.strptime(call["created_at"], "%Y-%m-%d %H:%M:%S")
+    # 🔥 created_at ora è datetime vero (TIMESTAMPTZ)
+    start_time = call["created_at"]
     end_time = datetime.utcnow()
 
     durata_secondi = int((end_time - start_time).total_seconds())
-    durata_minuti = durata_secondi / 60
 
-    # 🎯 Daily usa participant-minutes
     import math
     participant_minutes = math.ceil((durata_secondi / 60) * 2)
 
     FREE_MONTHLY = 10000
     COSTO_PER_MINUTO = 0.002
 
-    # recupera totale già usato
     mese = datetime.now().strftime("%Y-%m")
 
-    used = conn.execute(sql("""
+    used = cur.execute(sql("""
         SELECT minuti_totali
         FROM video_limiti_mensili
         WHERE mese = ?
@@ -8129,69 +8128,51 @@ def video_end():
 
     used_minutes = used["minuti_totali"] if used else 0
 
-    # minuti che superano il free
     over_free = max(0, (used_minutes + participant_minutes) - FREE_MONTHLY)
-
     costo_cent = int(over_free * COSTO_PER_MINUTO * 100)
 
-    conn.execute(sql(f"""
+    # 🔴 CHIUSURA DEFINITIVA
+    cur.execute(sql("""
         UPDATE video_call_log
         SET durata_secondi = ?,
+            participant_minutes = ?,
             costo_stimato_cent = ?,
             in_corso = 0,
-            ended_at = {now_sql()}
+            ended_at = CURRENT_TIMESTAMP
         WHERE id = ?
-    """), (durata_secondi, costo_cent, call["id"]))
+    """), (durata_secondi, participant_minutes, costo_cent, call["id"]))
 
-    # 📊 AGGIORNA LIMITE MENSILE
-    mese = datetime.now().strftime("%Y-%m")
-
-    conn.execute(sql("""
+    # 📊 UPDATE LIMITE
+    cur.execute(sql("""
         INSERT INTO video_limiti_mensili (mese, minuti_totali, costo_totale_cent)
         VALUES (?, ?, ?)
         ON CONFLICT(mese) DO UPDATE SET
-            minuti_totali = minuti_totali + excluded.minuti_totali,
-            costo_totale_cent = costo_totale_cent + excluded.costo_totale_cent
+            minuti_totali = video_limiti_mensili.minuti_totali + EXCLUDED.minuti_totali,
+            costo_totale_cent = video_limiti_mensili.costo_totale_cent + EXCLUDED.costo_totale_cent
     """), (mese, participant_minutes, costo_cent))
 
-    check = conn.execute(sql("""
-        SELECT costo_totale_cent
-        FROM video_limiti_mensili
-        WHERE mese = ?
-    """), (mese,)).fetchone()
-
-    if check and check["costo_totale_cent"] >= 2000:
-        conn.execute(sql("""
-            UPDATE video_limiti_mensili
-            SET bloccato = 1
-            WHERE mese = ?
-        """), (mese,))
-
-    # 🟢 NOTIFICA UTENTE DISPONIBILE
-    call_users = conn.execute(sql("""
+    # 🟢 Recupera utenti
+    users = cur.execute(sql("""
         SELECT utente_1, utente_2
         FROM video_call_log
-        WHERE room_name = ?
-    """), (room_name,)).fetchone()
-
-    if call_users:
-        socketio.emit(
-            "video_busy",
-            {"user_id": call_users["utente_1"], "busy": False},
-            room=f"user_{call_users['utente_2']}"
-        )
-
-        socketio.emit(
-            "video_busy",
-            {"user_id": call_users["utente_2"], "busy": False},
-            room=f"user_{call_users['utente_1']}"
-        )
+        WHERE id = ?
+    """), (call["id"],)).fetchone()
 
     conn.commit()
 
+    # 🟢 Notifica DOPO commit
+    if users:
+        socketio.emit("video_busy",
+            {"user_id": users["utente_1"], "busy": False},
+            room=f"user_{users['utente_2']}"
+        )
+        socketio.emit("video_busy",
+            {"user_id": users["utente_2"], "busy": False},
+            room=f"user_{users['utente_1']}"
+        )
 
     return jsonify({"status": "ok"})
-
+    
 # ==========================================================
 # ❤️ PING CHIAMATA (mantiene viva la call)
 # ==========================================================

@@ -357,7 +357,7 @@ def crea_tabella_video_call_log():
         costo_stimato_cent INTEGER DEFAULT 0,
 
         in_corso INTEGER DEFAULT 1,
-        last_ping TEXT,
+        last_ping {dt_col()},
 
         FOREIGN KEY (utente_1) REFERENCES utenti(id),
         FOREIGN KEY (utente_2) REFERENCES utenti(id)
