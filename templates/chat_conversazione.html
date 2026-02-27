@@ -66,20 +66,26 @@ body {
   gap: 0.4rem;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
-.chat-header img { width: 44px; height: 44px; }
+.chat-header img {
+  width: 44px;
+  height: 44px;
+}
 
-
+/* Overlay video corretto */
+#videoOverlay {
   display: flex;
   align-items: center;
   justify-content: center;
-
   background: rgba(0,0,0,0.85);
-
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
 }
 
+#videoOverlay.flex {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 /* --- 📱 MOBILE --- */
 @media (max-width: 480px) {
