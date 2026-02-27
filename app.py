@@ -7937,16 +7937,17 @@ def video_start():
     conn = get_db_connection()
     cur = get_cursor(conn)
 
-    # 🚫 BLOCCO SE UTENTE GIÀ IN CHIAMATA
-    call_in_corso = cur.execute(sql("""
-        SELECT id FROM video_call_log
+    # 🚫 BLOCCO SE UTENTE GIÀ IN CHIAMATA ATTIVA (con timeout 60s)
+    call_in_corso = cur.execute(sql(f"""
+        SELECT id
+        FROM video_call_log
         WHERE in_corso = 1
-        AND (utente_1 = ? OR utente_2 = ?)
+          AND (utente_1 = ? OR utente_2 = ?)
+          AND {dt_sql("last_ping")} >= {now_sql()} - INTERVAL 60 SECOND
         LIMIT 1
     """), (g.utente["id"], g.utente["id"])).fetchone()
 
     if call_in_corso:
-
         return jsonify({
             "error": "Sei già in una videochiamata in corso."
         }), 409
@@ -8082,7 +8083,7 @@ def video_check_maggiorenne():
     return jsonify({
         "verified": me["maggiorenne_verificato"] == 1
     })
-    
+
 @app.route("/video/end", methods=["POST"])
 def video_end():
     from datetime import datetime
@@ -8232,6 +8233,11 @@ def handle_connect():
     join_room(room)
 
     print(f"🟢 Socket connesso e utente {user_id} entrato in {room}")
+
+    # 🚀 Avvia cleanup una sola volta
+    if not hasattr(app, "video_cleanup_started"):
+        app.video_cleanup_started = True
+        socketio.start_background_task(cleanup_video_calls)
 
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
@@ -8521,53 +8527,33 @@ def webhook_stripe():
 # 🧹 AUTO CLEANUP VIDEO CALL FANTASMA
 # =====================================================
 
-from threading import Thread
-import time
 from datetime import datetime, timedelta
 
 def cleanup_video_calls():
-    with app.app_context():
-        while True:
-            try:
+    while True:
+        try:
+            with app.app_context():
                 conn = get_db_connection()
                 cur = get_cursor(conn)
 
-                limite = datetime.now() - timedelta(seconds=60)
-
-                calls = cur.execute(sql(f"""
-                    SELECT id, room_name, utente_1, utente_2
-                    FROM video_call_log
+                cur.execute(sql(f"""
+                    UPDATE video_call_log
+                    SET in_corso = 0
                     WHERE in_corso = 1
-                      AND last_ping IS NOT NULL
-                      AND {dt_sql("last_ping")} < ?
-                """), (limite.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
-
-                for call in calls:
-                    print("🧹 Cleanup call fantasma:", call["room_name"])
-
-                    cur.execute(sql("""
-                        UPDATE video_call_log
-                        SET in_corso = 0
-                        WHERE id = ?
-                    """), (call["id"],))
-
-                    socketio.emit("video_busy", {"user_id": call["utente_1"], "busy": False})
-                    socketio.emit("video_busy", {"user_id": call["utente_2"], "busy": False})
+                      AND {dt_sql("last_ping")} < {now_sql()} - INTERVAL 60 SECOND
+                """))
 
                 conn.commit()
 
-            except Exception as e:
-                print("Errore cleanup video:", e)
+        except Exception as e:
+            print("Errore cleanup video:", e)
 
-            time.sleep(30)
-
-# avvia thread automatico
+        socketio.sleep(30)
 
 # ==========================================================
 # 7️⃣ AVVIO SERVER
 # ==========================================================
 if __name__ == "__main__":
-    Thread(target=cleanup_video_calls, daemon=True).start()
     socketio.run(
         app,
         host="127.0.0.1",
