@@ -89,14 +89,17 @@ body {
   }
 
   html, body {
-    height: 100%;
+    height: calc(var(--vvh) * 100);
+    overflow: hidden;
     margin: 0;
     background: #fff !important;
 
     overscroll-behavior: none;
     -webkit-overflow-scrolling: auto;
 
-    overflow: hidden; /* 👈 QUESTA È LA RIGA CHE MANCA */
+  }
+  body[data-chat="true"] {
+    overflow: hidden;
   }
 
   body {
@@ -112,9 +115,8 @@ body {
       display: flex;
       flex-direction: column;
       background: #fff;
-      overflow: hidden;
   }
-  
+
   /* disattiva card desktop */
   .max-w-3xl.mx-auto {
     all: unset;
