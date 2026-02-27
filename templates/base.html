@@ -561,7 +561,7 @@ document.addEventListener("click", function(e) {
     const socket = window.socket;
 
     window.dispatchEvent(new Event("socket_ready"));
-    
+
     // 📞 CHIAMATA IN ARRIVO
     socket.off("incoming_call");
     socket.on("incoming_call", (data) => {
@@ -604,6 +604,37 @@ document.addEventListener("click", function(e) {
         modal.classList.remove("hidden");
         document.body.classList.add("modal-open");
     });
+
+    // 📛 CHIAMATA RIFIUTATA (arriva SOLO al chiamante)
+    socket.off("video_call_rejected");
+    socket.on("video_call_rejected", (data) => {
+
+      console.log("📛 video_call_rejected ricevuto:", data);
+
+      // ✅ Cleanup unico e definitivo
+      if (typeof window.endCallCleanup === "function") {
+        window.endCallCleanup("remote_rejected");
+      }
+
+      // ✅ Forza stop eventuale iframe / provider video
+      const mount = document.getElementById("videoMount");
+      if (mount) {
+        mount.innerHTML = "";
+      }
+
+      // ✅ Reset variabili chiamata
+      window.inCall = false;
+      window.callRoom = null;
+      window.pendingIncomingCall = null;
+
+      // ✅ Se la pagina chat ha un flag tipo "calling"
+      if (typeof window.isCalling !== "undefined") {
+        window.isCalling = false;
+      }
+
+      alert("L'utente ha rifiutato la chiamata.");
+    });
+
     // 👉 Funzioni helper per aggiornare badge
     async function refreshChatCount() {
       if (!chatBadge) return;
@@ -645,6 +676,18 @@ document.addEventListener("click", function(e) {
         console.error("Errore refreshNotifCount:", err);
       }
     }
+
+    socket.off("force_call_end");
+    socket.on("force_call_end", (data) => {
+      console.log("🛑 force_call_end ricevuto:", data);
+
+      if (typeof window.endCallCleanup === "function") {
+        window.endCallCleanup("force_call_end");
+      }
+
+      const mount = document.getElementById("videoMount");
+      if (mount) mount.innerHTML = "";
+    });
 
     // 🔌 Connessione
     socket.on("connect", () => {
@@ -810,6 +853,9 @@ window.rejectCall = function() {
     modal.classList.add("hidden");
     document.body.classList.remove("modal-open");
 
+    // 🧠 Reset stato locale
+    window.pendingIncomingCall = null;
+
     if (window.socket && roomName && fromUser) {
         window.socket.emit("video_call_rejected", {
             room: roomName,
@@ -817,6 +863,7 @@ window.rejectCall = function() {
         });
     }
 }
+
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -1538,6 +1585,65 @@ body[data-chat="true"] #mobile-search-container {
 
   </div>
 </div>
+<script>
+/**
+ * ✅ Cleanup unico chiamata/video overlay
+ * Usalo per: ✖ Chiudi, Rifiuta remoto, reset stati
+ */
+window.endCallCleanup = function(reason = "") {
+
+  console.log("🧹 endCallCleanup:", reason);
+
+  // 1) Chiudi overlay video
+  const overlay = document.getElementById("videoOverlay");
+  if (overlay) {
+    overlay.classList.add("hidden");
+    overlay.classList.remove("flex");
+  }
+
+  // 2) Svuota mount (IMPORTANTISSIMO: stoppa la video-call davvero)
+  const mount = document.getElementById("videoMount");
+  if (mount) mount.innerHTML = "";
+
+  // 3) Reset stati globali (quelli che usi già)
+  window.inCall = false;
+  window.callRoom = null;
+  window.pendingIncomingCall = null;
+
+  // 4) Se hai suoneria globale
+  if (window.callRingtone) {
+    try {
+      window.callRingtone.pause();
+      window.callRingtone.currentTime = 0;
+    } catch(e) {}
+  }
+
+  // 5) Rimuovi stato modale se per caso era attivo
+  document.body.classList.remove("modal-open");
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  // ✖ Chiudi → cleanup
+  const closeBtn = document.getElementById("closeVideo");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      window.endCallCleanup("close_button");
+    });
+  }
+
+  // (opzionale) ESC → cleanup
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const overlay = document.getElementById("videoOverlay");
+      if (overlay && !overlay.classList.contains("hidden")) {
+        window.endCallCleanup("escape");
+      }
+    }
+  });
+
+});
+</script>
 
 </body>
 </html>

@@ -7944,7 +7944,7 @@ def video_start():
         WHERE in_corso = 1
           AND (utente_1 = ? OR utente_2 = ?)
           AND last_ping IS NOT NULL
-          AND last_ping >= CURRENT_TIMESTAMP - INTERVAL '60 seconds'          
+          AND last_ping >= CURRENT_TIMESTAMP - INTERVAL '60 seconds'
         LIMIT 1
     """), (g.utente["id"], g.utente["id"])).fetchone()
 
@@ -8257,6 +8257,13 @@ def handle_video_call_rejected(data):
         {"room": room_name},
         room=f"user_{from_user}"
     )
+
+# 🔥 Notifica anche la room video (se qualcuno fosse già entrato)
+socketio.emit(
+    "force_call_end",
+    {"room": room_name},
+    room=room_name
+)
 
 # ==========================================================
 # 🔴 EVENTI SOCKET.IO — CHAT IN TEMPO REALE
