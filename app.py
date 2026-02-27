@@ -8320,21 +8320,22 @@ def check_video_status(data):
 
 def clear_recently_read(user_id, delay=None):
     """
-    Cancella l'ultima chat letta dopo 'delay' secondi usando Eventlet.
-    Se delay non è specificato, usa app.config['CHAT_RECENTLY_READ_TTL'].
+    Cancella l'ultima chat letta dopo 'delay' secondi usando eventlet.
     """
     if delay is None:
         delay = app.config.get('CHAT_RECENTLY_READ_TTL', 5)
 
-    def _clear():
-        if 'CHAT_ULTIMA_LETTA' in app.config:
-            app.config['CHAT_ULTIMA_LETTA'].pop(user_id, None)
-            print(f"🧹 Pulita ultima chat letta per utente {user_id}")
+    socketio.start_background_task(_delayed_clear_recently_read, user_id, delay)
 
-    # Usa Eventlet per programmare il task
-    from threading import Timer
-    Timer(delay, _clear).start()
 
+def _delayed_clear_recently_read(user_id, delay):
+    # 🔥 Yield cooperativo
+    socketio.sleep(delay)
+
+    if 'CHAT_ULTIMA_LETTA' in app.config:
+        app.config['CHAT_ULTIMA_LETTA'].pop(user_id, None)
+        print(f"🧹 Pulita ultima chat letta per utente {user_id}")
+        
 @socketio.on('send_message')
 def handle_send_message(data):
     mittente_id = session.get('utente_id')
@@ -8541,12 +8542,13 @@ from datetime import datetime, timedelta
 
 def cleanup_video_calls():
     while True:
+        conn = None
         try:
             with app.app_context():
                 conn = get_db_connection()
                 cur = get_cursor(conn)
 
-                # 1) prendo le call zombie (così posso notificare gli utenti)
+                # 1️⃣ Trova call zombie
                 zombies = cur.execute(sql("""
                     SELECT id, room_name, utente_1, utente_2
                     FROM video_call_log
@@ -8556,7 +8558,7 @@ def cleanup_video_calls():
                 """)).fetchall()
 
                 if zombies:
-                    # 2) chiudo davvero (anche ended_at)
+                    # 2️⃣ Chiudi realmente le call
                     cur.execute(sql("""
                         UPDATE video_call_log
                         SET in_corso = 0,
@@ -8568,7 +8570,7 @@ def cleanup_video_calls():
 
                     conn.commit()
 
-                    # 3) notifiche busy FALSE ai due utenti (per UI)
+                    # 3️⃣ Notifica agli utenti che non sono più occupati
                     for z in zombies:
                         u1 = z["utente_1"]
                         u2 = z["utente_2"]
@@ -8587,7 +8589,17 @@ def cleanup_video_calls():
         except Exception as e:
             print("Errore cleanup video:", e)
 
+        finally:
+            # 🔥 QUESTO ERA IL PROBLEMA
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+
+        # 🟢 Yield cooperativo per eventlet
         socketio.sleep(30)
+
 # ==========================================================
 # 7️⃣ AVVIO SERVER
 # ==========================================================
