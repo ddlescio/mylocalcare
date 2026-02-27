@@ -7938,12 +7938,12 @@ def video_start():
     cur = get_cursor(conn)
 
     # 🚫 BLOCCO SE UTENTE GIÀ IN CHIAMATA ATTIVA (con timeout 60s)
-    call_in_corso = cur.execute(sql(f"""
+    call_in_corso = cur.execute(sql("""
         SELECT id
         FROM video_call_log
         WHERE in_corso = 1
           AND (utente_1 = ? OR utente_2 = ?)
-          AND {dt_sql("last_ping")} >= {now_sql()} - INTERVAL 60 SECOND
+          AND last_ping >= CURRENT_TIMESTAMP - INTERVAL '60 seconds'
         LIMIT 1
     """), (g.utente["id"], g.utente["id"])).fetchone()
 
@@ -8536,11 +8536,11 @@ def cleanup_video_calls():
                 conn = get_db_connection()
                 cur = get_cursor(conn)
 
-                cur.execute(sql(f"""
+                cur.execute(sql("""
                     UPDATE video_call_log
                     SET in_corso = 0
                     WHERE in_corso = 1
-                      AND {dt_sql("last_ping")} < {now_sql()} - INTERVAL 60 SECOND
+                      AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
                 """))
 
                 conn.commit()
