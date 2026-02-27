@@ -756,6 +756,7 @@ class PGConnectionWrapper:
 
 def get_db_connection():
     global _pg_pool
+    from flask import has_request_context
 
     database_url = os.getenv("DATABASE_URL")
     app.config["IS_POSTGRES"] = bool(database_url)
@@ -765,19 +766,18 @@ def get_db_connection():
         if _pg_pool is None:
             init_pg_pool()
 
-        # riuso per-request
-        if hasattr(g, "db_conn") and g.db_conn is not None:
-            try:
-                # verifica che sia ancora valida
-                g.db_conn.cursor().execute("SELECT 1")
-                return g.db_conn
-            except Exception:
-                # connessione morta → rilascia al pool
+        # riuso SOLO dentro request HTTP
+        if has_request_context():
+            if hasattr(g, "db_conn") and g.db_conn is not None:
                 try:
-                    g.db_conn.close()
-                except:
-                    pass
-                g.db_conn = None
+                    g.db_conn.cursor().execute("SELECT 1")
+                    return g.db_conn
+                except Exception:
+                    try:
+                        g.db_conn.close()
+                    except:
+                        pass
+                    g.db_conn = None
 
         raw = _pg_pool.getconn()
 
@@ -797,8 +797,22 @@ def get_db_connection():
 
         wrapped = PGConnectionWrapper(pooled)
 
-        g.db_conn = wrapped
+        if has_request_context():
+            g.db_conn = wrapped
         return wrapped
+
+def close_db_connection(conn):
+    """
+    Chiude/rilascia la connessione.
+    - In HTTP: teardown_request già lo fa (ma se la chiami non succede nulla di male)
+    - In SocketIO: è OBBLIGATORIA (per non esaurire il pool)
+    """
+    if not conn:
+        return
+    try:
+        conn.close()
+    except Exception:
+        pass
 
     # ================================
     # SQLITE (locale)
@@ -8297,29 +8311,38 @@ def on_join(data=None):
 def check_video_status(data):
     user_id = data.get("user_id")
 
-    conn = get_db_connection()
+    conn = None
+    try:
+        conn = get_db_connection()
 
-    # 🧹 Chiudi call zombie
-    conn.execute(sql("""
-        UPDATE video_call_log
-        SET in_corso = 0,
-            ended_at = CURRENT_TIMESTAMP
-        WHERE in_corso = 1
-          AND last_ping IS NOT NULL
-          AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
-    """))
-    conn.commit()
+        conn.execute(sql("""
+            UPDATE video_call_log
+            SET in_corso = 0,
+                ended_at = CURRENT_TIMESTAMP
+            WHERE in_corso = 1
+              AND last_ping IS NOT NULL
+              AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
+        """))
+        conn.commit()
 
-    call = conn.execute(sql("""
-        SELECT id FROM video_call_log
-        WHERE in_corso = 1
-        AND (utente_1 = ? OR utente_2 = ?)
-        LIMIT 1
-    """), (user_id, user_id)).fetchone()
+        call = conn.execute(sql("""
+            SELECT id FROM video_call_log
+            WHERE in_corso = 1
+            AND (utente_1 = ? OR utente_2 = ?)
+            LIMIT 1
+        """), (user_id, user_id)).fetchone()
 
-    emit("video_status_result", {
-        "busy": bool(call)
-    })
+        emit("video_status_result", {
+            "busy": bool(call)
+        })
+
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
+
 
 def clear_recently_read(user_id, delay=None):
     """
@@ -8341,45 +8364,59 @@ def clear_recently_read(user_id, delay=None):
 @socketio.on('send_message')
 def handle_send_message(data):
     mittente_id = session.get('utente_id')
+
     try:
         destinatario_id = int(data.get('destinatario_id'))
     except (TypeError, ValueError):
         emit('error', {'message': 'destinatario_id non valido'})
         return
+
     testo = data.get('testo', '').strip()
 
-    # 🔍 Validazione minima
     if not mittente_id or not destinatario_id or not testo:
         emit('error', {'message': 'Dati mancanti o sessione non valida'})
         return
 
-    # 🔒 1) BLOCCO: verifica foto profilo dell’utente che scrive
-    conn = get_db_connection()
+    conn = None
+    c = None
 
-    c = get_cursor(conn)
+    try:
+        conn = get_db_connection()
+        c = get_cursor(conn)
 
-    c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?"), (mittente_id,))
-    row = c.fetchone()
+        # 🔒 Verifica foto profilo
+        c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?"), (mittente_id,))
+        row = c.fetchone()
 
-    if not row or not row["foto_profilo"]:
-        emit("error", {
-            "message": "Per inviare messaggi devi prima caricare una foto profilo."
-        })
+        if not row or not row["foto_profilo"]:
+            emit("error", {
+                "message": "Per inviare messaggi devi prima caricare una foto profilo."
+            })
+            return
 
-        return
+        # 🔵 Salvataggio messaggio
+        msg_id = chat_invia(mittente_id, destinatario_id, testo)
 
+        # 🔹 Aggiorna visibilità
+        conn.execute(sql(
+            "UPDATE utenti SET visibile_in_chat = 1 WHERE id = ?"
+        ), (mittente_id,))
+        conn.commit()
 
+    finally:
+        try:
+            if c:
+                c.close()
+        except:
+            pass
 
-    # 🔵 2) SALVATAGGIO nel DB
-    msg_id = chat_invia(mittente_id, int(destinatario_id), testo)
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
 
-    # 🔹 Rendi visibile il profilo in chat
-    conn = get_db_connection()
-    conn.execute(sql("UPDATE utenti SET visibile_in_chat = 1 WHERE id = ?"), (mittente_id,))
-    conn.commit()
-
-
-    # Messaggio che viene ritornato
+    # 🔵 Costruzione oggetto messaggio
     messaggio = {
         'id': msg_id,
         'mittente_id': mittente_id,
@@ -8394,18 +8431,15 @@ def handle_send_message(data):
     emit('new_message', messaggio, room=f"user_{mittente_id}")
     emit('new_message', messaggio, room=f"user_{destinatario_id}")
 
-    # 🔔 Conferma consegna
     socketio.emit("message_delivered", {
         "id": msg_id,
         "mittente_id": mittente_id,
         "destinatario_id": destinatario_id
     }, room=f"user_{mittente_id}")
 
-    # 🔄 Aggiorna badge conversazioni
     socketio.emit('update_unread_count', {'for_user': mittente_id}, room=f"user_{mittente_id}")
     socketio.emit('update_unread_count', {'for_user': destinatario_id}, room=f"user_{destinatario_id}")
 
-    # ♻️ Aggiorna lista thread chat
     socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{mittente_id}")
     socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{destinatario_id}")
 

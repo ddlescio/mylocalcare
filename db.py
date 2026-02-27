@@ -1,12 +1,4 @@
-from flask import current_app, g
-
-def get_db_connection():
-    if hasattr(g, "db_conn") and g.db_conn:
-        return g.db_conn
-
-    conn = current_app.config["DB_CONN_FACTORY"]()
-    g.db_conn = conn
-    return conn    
+from flask import current_app
 
 def get_cursor(conn):
     return conn.cursor()
