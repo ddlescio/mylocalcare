@@ -8258,12 +8258,12 @@ def handle_video_call_rejected(data):
         room=f"user_{from_user}"
     )
 
-# 🔥 Notifica anche la room video (se qualcuno fosse già entrato)
-socketio.emit(
-    "force_call_end",
-    {"room": room_name},
-    room=room_name
-)
+    # 🔥 Notifica anche la room video (se qualcuno fosse già entrato)
+    socketio.emit(
+        "force_call_end",
+        {"room": room_name},
+        room=room_name
+    )
 
 # ==========================================================
 # 🔴 EVENTI SOCKET.IO — CHAT IN TEMPO REALE
