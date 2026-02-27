@@ -69,28 +69,6 @@ def init_pg_pool():
         cursor_factory=psycopg2.extras.RealDictCursor
     )
 
-class PooledConn:
-    """
-    Wrapper che fa sì che  NON chiuda su Postgres,
-    ma rilasci al pool.
-    """
-    def __init__(self, conn, release_fn):
-        self._conn = conn
-        self._release_fn = release_fn
-
-    def close(self):
-        # invece di chiudere: release al pool
-        try:
-            self._release_fn(self._conn)
-        except Exception:
-            try:
-                self._conn.close()
-            except:
-                pass
-
-    def __getattr__(self, name):
-        return getattr(self._conn, name)
-
 def get_cursor(conn):
     import sqlite3
     import psycopg2.extras
@@ -747,7 +725,14 @@ class PGConnectionWrapper:
         return self.conn.commit()
 
     def close(self):
-        self.conn.close()
+        global _pg_pool
+        try:
+            _pg_pool.putconn(self.conn)
+        except Exception:
+            try:
+                self.conn.close()
+            except:
+                pass
 
     def __getattr__(self, name):
         return getattr(self.conn, name)
@@ -789,11 +774,7 @@ def get_db_connection():
         raw.autocommit = True
         raw.set_session(readonly=False, autocommit=True)
 
-        def release(c):
-            _pg_pool.putconn(c)
-
-        pooled = PooledConn(raw, release)
-        wrapped = PGConnectionWrapper(pooled)
+        wrapped = PGConnectionWrapper(raw)
 
         if has_request_context():
             g.db_conn = wrapped
