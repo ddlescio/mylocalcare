@@ -474,11 +474,10 @@ def _release_pg_conn(exc):
         return
 
     try:
-        if current_app.config.get("IS_POSTGRES"):
-            # restituisce la connessione al pool
-            current_app.config["_PG_POOL"].putconn(conn)
-        else:
-            conn.close()
+        # ⚠️ IMPORTANTE:
+        # non usare putconn manuale
+        # il wrapper gestisce già il rilascio al pool
+        conn.close()
     except Exception:
         pass
 
