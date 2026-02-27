@@ -717,6 +717,7 @@ function whenSocketReady(callback) {
     socket.emit('send_message', { destinatario_id: destId, testo });
     input.value = '';
     toggleEmoji(false);
+    });
   });
 });
 </script>
