@@ -873,6 +873,15 @@ async function initVideoSystem() {
     let callObject = null;
     let pingInterval = null;
 
+    // 🔥 CHIUSURA FORZATA SE LASCIO LA PAGINA
+    window.addEventListener("beforeunload", () => {
+        if (currentRoomName) {
+            navigator.sendBeacon("/video/end",
+                JSON.stringify({ room_name: currentRoomName })
+            );
+        }
+    });
+
 
     // ==============================
     // EVENTI SOCKET
@@ -1050,6 +1059,10 @@ async function initVideoSystem() {
         // 🛡️ Evita doppia esecuzione
         if (!currentRoomName) return;
 
+        // 🔥 Salva prima la stanza e azzera subito (anti doppio trigger)
+        const roomToClose = currentRoomName;
+        currentRoomName = null;
+
         overlay.classList.add("hidden");
         overlay.classList.remove("flex");
 
@@ -1059,7 +1072,11 @@ async function initVideoSystem() {
         }
 
         if (callObject) {
-            callObject.destroy();
+            try {
+                callObject.destroy();
+            } catch (e) {
+                console.warn("Errore destroy Daily:", e);
+            }
             callObject = null;
         }
 
@@ -1067,7 +1084,7 @@ async function initVideoSystem() {
             const res = await fetch("/video/end", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ room_name: currentRoomName })
+                body: JSON.stringify({ room_name: roomToClose })
             });
 
             const data = await res.json();
@@ -1077,12 +1094,9 @@ async function initVideoSystem() {
             console.error("❌ Errore /video/end:", err);
         }
 
-        currentRoomName = null;
-
         // 🔄 Reset bottone video
         resetBtn();
     }
-  } // fine
 
   // 🔥 Avvio immediato sicuro
   whenSocketReady(() => {
