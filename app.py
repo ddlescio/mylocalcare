@@ -330,7 +330,7 @@ app.jinja_env.filters['from_json'] = lambda s: json.loads(s or "[]")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(32))
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=True,  # SOLO se sei su HTTPS
 )
 
