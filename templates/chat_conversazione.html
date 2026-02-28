@@ -904,6 +904,16 @@ async function initVideoSystem() {
         }
     });
 
+    socket.off("video_call_ended");
+
+    socket.on("video_call_ended", async (data) => {
+        if (!currentRoomName) return;
+        if (data.room === currentRoomName) {
+            console.log("🛑 Sync hard end");
+            await endCall();
+        }
+    });
+
     // ==============================
     // CLICK VIDEO
     // ==============================
@@ -943,6 +953,7 @@ async function initVideoSystem() {
         console.log("📞 Start call:", roomName);
 
         currentRoomName = roomName;
+        socket.emit("join_video_room", { room: roomName });
 
         if (pingInterval) clearInterval(pingInterval);
 
@@ -1071,6 +1082,7 @@ async function initVideoSystem() {
             pingInterval = null;
         }
 
+        mount.innerHTML = "";
         if (callObject) {
             try {
                 callObject.destroy();

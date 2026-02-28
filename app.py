@@ -8102,7 +8102,7 @@ def video_end():
 
     if not room_name:
         return jsonify({"error": "Room non valida"}), 400
-        
+
     from datetime import datetime, timezone
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -8184,6 +8184,13 @@ def video_end():
             room=f"user_{users['utente_1']}"
         )
 
+        # 🔴 Chiusura forzata per tutti nella room video
+        socketio.emit(
+            "video_call_ended",
+            {"room": room_name},
+            room=room_name
+        )
+
     return jsonify({"status": "ok"})
 
 # ==========================================================
@@ -8230,22 +8237,25 @@ def handle_connect():
 
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
-    from flask import session
-
     room_name = data.get("room")
     if not room_name:
         return
 
-    user_id = session.get("utente_id")
-    if not user_id:
-        return
-
-    # manda l'evento a TUTTI tranne chi lo ha inviato
+    # manda SOLO ai partecipanti della room
     socketio.emit(
         "video_call_left",
         {"room": room_name},
-        skip_sid=request.sid
+        room=room_name,
+        include_self=False
     )
+
+
+@socketio.on("join_video_room")
+def handle_join_video_room(data):
+    room_name = data.get("room")
+    if not room_name:
+        return
+    join_room(room_name)
 
 @socketio.on("video_call_rejected")
 def handle_video_call_rejected(data):
