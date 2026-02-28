@@ -1098,11 +1098,15 @@ async function initVideoSystem() {
         resetBtn();
     }
 
-  // 🔥 Avvio immediato sicuro
-  whenSocketReady(() => {
-      initVideoSystem();
-  });
-}
+} // ← chiusura initVideoSystem
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    whenSocketReady(() => {
+        initVideoSystem();
+    });
+});
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
