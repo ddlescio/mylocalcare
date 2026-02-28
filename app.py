@@ -367,6 +367,7 @@ socketio = SocketIO(
     async_mode="eventlet"
 )
 
+
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 # ==========================================================
@@ -8216,11 +8217,6 @@ def handle_connect():
 
     print(f"🟢 Socket connesso e utente {user_id} entrato in {room}")
 
-    # 🚀 Avvia cleanup una sola volta
-    if not hasattr(app, "video_cleanup_started"):
-        app.video_cleanup_started = True
-        socketio.start_background_task(cleanup_video_calls)
-
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     from flask import session
@@ -8601,6 +8597,8 @@ def cleanup_video_calls():
         # 🟢 Yield cooperativo per eventlet
         socketio.sleep(30)
 
+# 🔥 Avvia cleanup UNA SOLA VOLTA all’avvio del worker
+socketio.start_background_task(cleanup_video_calls)
 # ==========================================================
 # 7️⃣ AVVIO SERVER
 # ==========================================================
