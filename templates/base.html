@@ -213,6 +213,12 @@ button, input[type="submit"] {
     document.body.classList.add("loaded");
   });
 </script>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="theme-color" content="#1f2937">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
 
 </head>
 <body data-page="{{ page or '' }}" class="{{ body_class or '' }} {% if pubblico %}pubblico{% endif %}">
@@ -1660,6 +1666,19 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
 });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')
+      .then(function(registration) {
+        console.log('ServiceWorker registrato:', registration.scope);
+      })
+      .catch(function(error) {
+        console.error('Errore ServiceWorker:', error);
+      });
+  });
+}
 </script>
 
 </body>
