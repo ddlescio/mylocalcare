@@ -552,6 +552,7 @@ document.addEventListener("click", function(e) {
   document.addEventListener("DOMContentLoaded", () => {
     const chatBadge  = document.querySelector('#chatBadge');
     const notifBadge = document.querySelector('#notifBadge');
+    const isChatPage = window.location.pathname.startsWith("/chat/");
     let lastUnreadChats  = parseInt(chatBadge?.dataset.unread || chatBadge?.textContent || "0") || 0;
     let lastUnreadNotifs = parseInt(notifBadge?.dataset.unread || "0") || 0;
     let reloading = false;
@@ -560,7 +561,7 @@ document.addEventListener("click", function(e) {
     window.socket = io({
       transports: ['websocket'],
       upgrade: false
-    });    
+    });
     const socket = window.socket;
 
     window.dispatchEvent(new Event("socket_ready"));
@@ -694,24 +695,28 @@ document.addEventListener("click", function(e) {
 
     // 🔌 Connessione
     socket.on("connect", () => {
+
       {% if session.get('utente_id') %}
       socket.emit("join", { user_id: {{ session['utente_id'] }} });
       {% endif %}
 
-      // Sincronizza subito gli stati badge all'apertura
-      refreshChatCount();
-      refreshNotifCount();
+      // 🚫 Evita fetch concorrenti quando sei dentro una chat
+      if (!isChatPage) {
+          refreshChatCount();
+          refreshNotifCount();
+      }
     });
 
     // 💬 Conteggio chat non letti
     socket.off("update_unread_count");
     socket.on("update_unread_count", () => {
-      refreshChatCount();
+      if (!isChatPage) refreshChatCount();
     });
 
     // 🔔 Conteggio notifiche non lette
     socket.off("update_notifications");
     socket.on("update_notifications", (data) => {
+      if (isChatPage) return;
       // ✅ Nuovo payload dal backend: { count: numero }
       if (data && typeof data.count === "number") {
         const n = data.count;
