@@ -8002,7 +8002,8 @@ def video_start():
     r = requests.post(
         "https://api.daily.co/v1/rooms",
         headers=headers,
-        json=payload
+        json=payload,
+        timeout=5   # 🔥 fondamentale
     )
 
     if r.status_code != 200:
@@ -8335,7 +8336,7 @@ def _delayed_clear_recently_read(user_id, delay):
     if 'CHAT_ULTIMA_LETTA' in app.config:
         app.config['CHAT_ULTIMA_LETTA'].pop(user_id, None)
         print(f"🧹 Pulita ultima chat letta per utente {user_id}")
-        
+
 @socketio.on('send_message')
 def handle_send_message(data):
     mittente_id = session.get('utente_id')

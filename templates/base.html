@@ -557,7 +557,10 @@ document.addEventListener("click", function(e) {
     let reloading = false;
 
     // Inizializza SEMPRE la socket, anche se alcuni badge non sono presenti
-    window.socket = io({ transports: ['websocket', 'polling'] });
+    window.socket = io({
+      transports: ['websocket'],
+      upgrade: false
+    });    
     const socket = window.socket;
 
     window.dispatchEvent(new Event("socket_ready"));
