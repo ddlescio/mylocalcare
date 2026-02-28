@@ -565,14 +565,10 @@ document.addEventListener("click", function(e) {
       const isVisible = window.getComputedStyle(overlay).display !== "none";
       return !isVisible;
     }
-    
-    // Inizializza SEMPRE la socket, anche se alcuni badge non sono presenti
-    window.socket = io({
-      transports: ['websocket'],
-      upgrade: false
-    });
-    const socket = window.socket;
 
+    // Inizializza socket in modo compatibile con Render
+    window.socket = io();
+    const socket = window.socket;
     window.dispatchEvent(new Event("socket_ready"));
 
     // 📞 CHIAMATA IN ARRIVO
