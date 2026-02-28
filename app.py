@@ -8088,10 +8088,21 @@ def video_check_maggiorenne():
 @app.route("/video/end", methods=["POST"])
 def video_end():
 
-    room_name = request.json.get("room_name")
+    import json
+
+    data = request.get_json(silent=True)
+
+    if not data:
+        try:
+            data = json.loads(request.data.decode("utf-8") or "{}")
+        except Exception:
+            data = {}
+
+    room_name = data.get("room_name")
+
     if not room_name:
         return jsonify({"error": "Room non valida"}), 400
-
+        
     from datetime import datetime, timezone
     conn = get_db_connection()
     cur = get_cursor(conn)
