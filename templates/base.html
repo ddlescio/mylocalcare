@@ -1680,6 +1680,32 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+<script>
+(function() {
+
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches
+           || window.navigator.standalone === true;
+  }
+
+  function updateAppMode() {
+    if (isStandalone()) {
+      document.documentElement.classList.add('pwa-installed');
+      document.documentElement.classList.remove('pwa-browser');
+      console.log("Modalità PWA standalone");
+    } else {
+      document.documentElement.classList.add('pwa-browser');
+      document.documentElement.classList.remove('pwa-installed');
+      console.log("Modalità Browser");
+    }
+  }
+
+  updateAppMode();
+
+  window.addEventListener('resize', updateAppMode);
+
+})();
+</script>
 
 </body>
 </html>
