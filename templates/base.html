@@ -557,6 +557,15 @@ document.addEventListener("click", function(e) {
     let lastUnreadNotifs = parseInt(notifBadge?.dataset.unread || "0") || 0;
     let reloading = false;
 
+    // 🔒 Blocca fetch badge quando overlay video è aperto
+    function canDoBadgeFetch() {
+      const overlay = document.getElementById("videoOverlay");
+      if (!overlay) return true;
+
+      const isVisible = window.getComputedStyle(overlay).display !== "none";
+      return !isVisible;
+    }
+    
     // Inizializza SEMPRE la socket, anche se alcuni badge non sono presenti
     window.socket = io({
       transports: ['websocket'],
@@ -642,6 +651,7 @@ document.addEventListener("click", function(e) {
     // 👉 Funzioni helper per aggiornare badge
     async function refreshChatCount() {
       if (!chatBadge) return;
+      if (!canDoBadgeFetch()) return;   // ← AGGIUNGI QUESTA RIGA
       try {
         const res = await fetch("/chat/unread_count", { credentials: "same-origin" });
         const js  = await res.json();
@@ -667,6 +677,7 @@ document.addEventListener("click", function(e) {
 
     async function refreshNotifCount() {
       if (!notifBadge) return;
+      if (!canDoBadgeFetch()) return;   // ← AGGIUNGI QUESTA RIGA
       try {
         const res = await fetch("/notifiche/unread_count", { credentials: "same-origin" });
         const js  = await res.json();
@@ -701,7 +712,7 @@ document.addEventListener("click", function(e) {
       {% endif %}
 
       // 🚫 Evita fetch concorrenti quando sei dentro una chat
-      if (!isChatPage) {
+      if (!isChatPage && canDoBadgeFetch()) {
           refreshChatCount();
           refreshNotifCount();
       }
@@ -710,12 +721,13 @@ document.addEventListener("click", function(e) {
     // 💬 Conteggio chat non letti
     socket.off("update_unread_count");
     socket.on("update_unread_count", () => {
-      if (!isChatPage) refreshChatCount();
+      if (!isChatPage && canDoBadgeFetch()) refreshChatCount();
     });
 
     // 🔔 Conteggio notifiche non lette
     socket.off("update_notifications");
     socket.on("update_notifications", (data) => {
+      if (!canDoBadgeFetch()) return;
       if (isChatPage) return;
       // ✅ Nuovo payload dal backend: { count: numero }
       if (data && typeof data.count === "number") {
@@ -736,6 +748,7 @@ document.addEventListener("click", function(e) {
     // ⬇️ AGGIUNGI SUBITO QUI
     socket.off("nuova_notifica");
     socket.on("nuova_notifica", (data) => {
+      if (!canDoBadgeFetch()) return;
       if (data && typeof data.count === "number") {
         const n = data.count;
         if (notifBadge) {
