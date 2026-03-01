@@ -9,7 +9,9 @@ def dt_col(default_now=False):
     if app.config.get("IS_POSTGRES"):
         return "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP" if default_now else "TIMESTAMPTZ"
     else:
-        return f"TEXT DEFAULT {app_module.now_sql()}" if default_now else "TEXT"
+        if default_now:
+            return f"TEXT DEFAULT ({app_module.now_sql()})"
+        return "TEXT"
 
 def pk_col():
     return "BIGSERIAL PRIMARY KEY" if app.config.get("IS_POSTGRES") else "INTEGER PRIMARY KEY AUTOINCREMENT"
@@ -18,7 +20,27 @@ def pk_col():
 # =========================================================
 
 def get_conn():
-    return get_db_connection()
+    import os
+
+    database_url = os.getenv("DATABASE_URL")
+
+    # ======================
+    # POSTGRES (Render)
+    # ======================
+    if database_url:
+        import psycopg2
+        conn = psycopg2.connect(database_url)
+        conn.autocommit = True
+        return conn
+
+    # ======================
+    # SQLITE (locale)
+    # ======================
+    else:
+        import sqlite3
+        conn = sqlite3.connect("database.db")
+        conn.row_factory = sqlite3.Row
+        return conn
 # ---------------------------------------------------------
 # 🧩 TABELLA UTENTI
 # ---------------------------------------------------------
@@ -410,7 +432,7 @@ def crea_tabella_video_config():
     # Garantiamo che esista sempre UNA SOLA riga
     c.execute(sql("SELECT COUNT(*) FROM video_config"))
     row = c.fetchone()
-    count = row[0] if isinstance(row, (list, tuple)) else list(row.values())[0]
+    count = row[0] if row else 0
 
     if count == 0:
         c.execute(sql("""
@@ -500,6 +522,33 @@ def crea_tabella_notifiche():
     conn.commit()
     conn.close()
     print("✅ Tabella 'notifiche' pronta.")
+
+def crea_tabella_push_subscriptions():
+    conn = get_conn()
+    c = conn.cursor()
+
+    # ✅ Tabella push subscriptions (compatibile Postgres / SQLite)
+    c.execute(sql(f"""
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id {pk_col()},
+        utente_id INTEGER NOT NULL,
+        endpoint TEXT NOT NULL,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at {dt_col(True)},
+        UNIQUE(endpoint)
+    );
+    """))
+
+    # (opzionale ma utile) indice per recuperare velocemente tutte le sub di un utente
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_push_subscriptions_utente
+        ON push_subscriptions(utente_id);
+    """))
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'push_subscriptions' pronta.")
 
 # ---------------------------------------------------------
 # 🗂️ TABELLA NOTIFICHE INVIATE DALL'ADMIN
@@ -1110,6 +1159,7 @@ def inizializza_database():
     crea_tabella_recensioni()
     crea_tabella_risposte()
     crea_tabella_notifiche()
+    crea_tabella_push_subscriptions()
     crea_tabella_notifiche_admin()
     crea_tabella_reset_password()
     crea_tabella_chat_chiusure()
