@@ -18,6 +18,17 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://js.stripe.com/v3/"></script>
   <style>
+  /* Modalità browser normale */
+  html.pwa-browser .only-pwa {
+    display: none !important;
+  }
+
+  /* Modalità PWA installata */
+  html.pwa-installed .only-browser {
+    display: none !important;
+  }
+  </style>
+  <style>
   #iubenda-cs-banner {
     margin-top: 12px;
   }
@@ -242,6 +253,13 @@ button, input[type="submit"] {
                class="w-9 h-9 md:w-11 md:h-11 object-contain">
           <span class="text-xl sm:text-2xl font-bold tracking-tight text-blue-700">MyLocalCare</span>
         </a>
+        <div class="only-browser" style="background:red;color:white;padding:10px;text-align:center;">
+  SONO NEL BROWSER
+</div>
+
+<div class="only-pwa" style="background:green;color:white;padding:10px;text-align:center;">
+  SONO NELLA PWA
+</div>
 
         {% set current_path = g.path|string if g.path is defined else request.path %}
         {% set show_global_search = True %}
