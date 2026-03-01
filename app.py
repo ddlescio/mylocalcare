@@ -371,6 +371,18 @@ socketio = SocketIO(
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 # ==========================================================
+# VAPID PUSH CONFIG
+# ==========================================================
+
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_PUBLIC_KEY  = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_CLAIM_EMAIL = os.environ.get("VAPID_CLAIM_EMAIL", "mailto:info@mylocalcare.it")
+
+# Converte i "\n" in newline reali
+if VAPID_PRIVATE_KEY:
+    VAPID_PRIVATE_KEY = VAPID_PRIVATE_KEY.replace("\\n", "\n")
+
+# ==========================================================
 # SQL HELPER (placeholder compatibili SQLite / Postgres)
 # ==========================================================
 
@@ -383,6 +395,16 @@ def sql(query):
     if app.config.get("IS_POSTGRES"):
         return query.replace("?", "%s")
     return query
+
+def sql_now_minus_seconds(seconds: int) -> str:
+    """
+    Ritorna un'espressione SQL 'now - X seconds' compatibile con:
+    - Postgres: CURRENT_TIMESTAMP - INTERVAL 'X seconds'
+    - SQLite:   datetime('now','-X seconds')
+    """
+    if app.config.get("IS_POSTGRES"):
+        return f"CURRENT_TIMESTAMP - INTERVAL '{int(seconds)} seconds'"
+    return f"datetime('now','-{int(seconds)} seconds')"
 
 # ==========================================================
 # 🕒 FUNZIONI TEMPO COMPATIBILI SQLite + PostgreSQL
@@ -7934,13 +7956,13 @@ def video_start():
     cur = get_cursor(conn)
 
     # 🚫 BLOCCO SE UTENTE GIÀ IN CHIAMATA ATTIVA (con timeout 60s)
-    cur.execute(sql("""
+    cur.execute(sql(f"""
         SELECT id
         FROM video_call_log
         WHERE in_corso = 1
           AND (utente_1 = ? OR utente_2 = ?)
           AND last_ping IS NOT NULL
-          AND last_ping >= CURRENT_TIMESTAMP - INTERVAL '60 seconds'
+          AND last_ping >= {sql_now_minus_seconds(60)}
         LIMIT 1
     """), (g.utente["id"], g.utente["id"]))
 
@@ -8307,13 +8329,13 @@ def check_video_status(data):
     try:
         conn = get_db_connection()
 
-        conn.execute(sql("""
+        conn.execute(sql(f"""
             UPDATE video_call_log
             SET in_corso = 0,
                 ended_at = CURRENT_TIMESTAMP
             WHERE in_corso = 1
               AND last_ping IS NOT NULL
-              AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
+              AND last_ping < {sql_now_minus_seconds(60)}
         """))
         conn.commit()
 
@@ -8567,23 +8589,23 @@ def cleanup_video_calls():
                 cur = get_cursor(conn)
 
                 # 1️⃣ Trova call zombie
-                zombies = cur.execute(sql("""
+                zombies = cur.execute(sql(f"""
                     SELECT id, room_name, utente_1, utente_2
                     FROM video_call_log
                     WHERE in_corso = 1
                       AND last_ping IS NOT NULL
-                      AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
+                      AND last_ping < {sql_now_minus_seconds(60)}
                 """)).fetchall()
 
                 if zombies:
                     # 2️⃣ Chiudi realmente le call
-                    cur.execute(sql("""
+                    cur.execute(sql(f"""
                         UPDATE video_call_log
                         SET in_corso = 0,
                             ended_at = CURRENT_TIMESTAMP
                         WHERE in_corso = 1
                           AND last_ping IS NOT NULL
-                          AND last_ping < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
+                          AND last_ping < {sql_now_minus_seconds(60)}
                     """))
 
                     conn.commit()
