@@ -253,13 +253,6 @@ button, input[type="submit"] {
                class="w-9 h-9 md:w-11 md:h-11 object-contain">
           <span class="text-xl sm:text-2xl font-bold tracking-tight text-blue-700">MyLocalCare</span>
         </a>
-        <div class="only-browser" style="background:red;color:white;padding:10px;text-align:center;">
-  SONO NEL BROWSER
-</div>
-
-<div class="only-pwa" style="background:green;color:white;padding:10px;text-align:center;">
-  SONO NELLA PWA
-</div>
 
         {% set current_path = g.path|string if g.path is defined else request.path %}
         {% set show_global_search = True %}
@@ -447,6 +440,24 @@ button, input[type="submit"] {
     </div>
     </div>
     </nav>
+    <div id="installBanner"
+     class="only-browser hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] bg-white shadow-xl border border-gray-200 rounded-2xl px-5 py-3 flex items-center gap-4">
+
+    <div class="text-sm">
+      <div class="font-semibold text-gray-800">Installa MyLocalCare</div>
+      <div class="text-gray-500 text-xs">Accesso rapido e notifiche in tempo reale</div>
+    </div>
+
+    <button id="installBtn"
+            class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm hover:bg-blue-700 transition">
+      Installa
+    </button>
+
+    <button id="closeInstallBanner"
+            class="text-gray-400 hover:text-gray-600 text-sm">
+      ✕
+    </button>
+  </div>
 
     {% with flashes = get_flashed_messages(with_categories=true) %}
       {% if flashes %}
@@ -1723,6 +1734,49 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('resize', updateAppMode);
 
 })();
+</script>
+<script>
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  const banner = document.getElementById("installBanner");
+  if (banner && document.documentElement.classList.contains("pwa-browser")) {
+    banner.classList.remove("hidden");
+  }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const installBtn = document.getElementById("installBtn");
+  const banner = document.getElementById("installBanner");
+  const closeBtn = document.getElementById("closeInstallBanner");
+
+  if (installBtn) {
+    installBtn.addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+
+      if (choice.outcome === "accepted") {
+        console.log("PWA installata");
+      }
+
+      deferredPrompt = null;
+      banner.classList.add("hidden");
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      banner.classList.add("hidden");
+    });
+  }
+
+});
 </script>
 
 </body>
