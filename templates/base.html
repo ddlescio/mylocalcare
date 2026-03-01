@@ -458,6 +458,23 @@ button, input[type="submit"] {
       ✕
     </button>
   </div>
+  <div id="iosInstallBanner"
+     class="only-browser hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] bg-white shadow-xl border border-gray-200 rounded-2xl px-5 py-4 w-[90%] max-w-sm text-sm">
+
+  <div class="font-semibold text-gray-800 mb-2">
+    Installa MyLocalCare su iPhone
+  </div>
+
+  <div class="text-gray-600 mb-3 leading-snug">
+    1️⃣ Tocca <strong>Condividi</strong> (⬆️)<br>
+    2️⃣ Seleziona <strong>Aggiungi alla schermata Home</strong>
+  </div>
+
+  <button id="closeIosBanner"
+          class="w-full bg-blue-600 text-white py-2 rounded-full text-sm">
+    Ho capito
+  </button>
+</div>
 
     {% with flashes = get_flashed_messages(with_categories=true) %}
       {% if flashes %}
@@ -1773,6 +1790,34 @@ document.addEventListener("DOMContentLoaded", () => {
   if (closeBtn) {
     closeBtn.addEventListener("click", () => {
       banner.classList.add("hidden");
+    });
+  }
+
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+  function isIos() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+
+  function isInStandaloneMode() {
+    return ('standalone' in window.navigator) && window.navigator.standalone;
+  }
+
+  const iosBanner = document.getElementById("iosInstallBanner");
+  const closeBtn = document.getElementById("closeIosBanner");
+
+  if (isIos() && !isInStandaloneMode()) {
+    if (iosBanner && document.documentElement.classList.contains("pwa-browser")) {
+      iosBanner.classList.remove("hidden");
+    }
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", function() {
+      iosBanner.classList.add("hidden");
     });
   }
 
