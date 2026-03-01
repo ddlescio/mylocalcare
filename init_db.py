@@ -1,12 +1,12 @@
+import os
 import app as app_module
-from app import app, get_db_connection
+from app import app
 
-app.IS_POSTGRES = app.config.get("IS_POSTGRES", False)
-
+IS_POSTGRES = bool(os.getenv("DATABASE_URL"))
 sql = app_module.sql
 
 def dt_col(default_now=False):
-    if app.config.get("IS_POSTGRES"):
+    if IS_POSTGRES:
         return "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP" if default_now else "TIMESTAMPTZ"
     else:
         if default_now:
@@ -14,33 +14,24 @@ def dt_col(default_now=False):
         return "TEXT"
 
 def pk_col():
-    return "BIGSERIAL PRIMARY KEY" if app.config.get("IS_POSTGRES") else "INTEGER PRIMARY KEY AUTOINCREMENT"
+    return "BIGSERIAL PRIMARY KEY" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
 # =========================================================
 # INIZIALIZZAZIONE DATABASE LOCALE - LocalCare (2025)
 # =========================================================
 
 def get_conn():
-    import os
-
     database_url = os.getenv("DATABASE_URL")
 
-    # ======================
-    # POSTGRES (Render)
-    # ======================
     if database_url:
         import psycopg2
         conn = psycopg2.connect(database_url)
         conn.autocommit = True
         return conn
-
-    # ======================
-    # SQLITE (locale)
-    # ======================
     else:
         import sqlite3
         conn = sqlite3.connect("database.db")
         conn.row_factory = sqlite3.Row
-        return conn
+        return conn        
 # ---------------------------------------------------------
 # 🧩 TABELLA UTENTI
 # ---------------------------------------------------------
@@ -947,7 +938,7 @@ def crea_tabella_override_admin():
 def aggiorna_colonne_mancanti():
 
     # 🔴 CRITICO: questa funzione serve SOLO per SQLite
-    if app.config.get("IS_POSTGRES"):
+    if IS_POSTGRES:
         print("⏭️ Skip migrazione colonne: ambiente PostgreSQL")
         return
 
@@ -1181,7 +1172,7 @@ def inizializza_database():
     crea_tabella_storico_servizi()
     crea_tabella_override_admin()
 
-if not app.config.get("IS_POSTGRES"):
+if not IS_POSTGRES:
     try:
         aggiorna_colonne_mancanti()
     except Exception:
@@ -1200,7 +1191,5 @@ def imposta_admin_predefinito():
 # ✅ ESECUZIONE DIRETTA
 # ---------------------------------------------------------
 if __name__ == "__main__":
-    from app import app
-
     with app.app_context():
         inizializza_database()
