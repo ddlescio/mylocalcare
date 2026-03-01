@@ -1823,6 +1823,47 @@ document.addEventListener("DOMContentLoaded", function() {
 
 });
 </script>
+<script>
+async function registerPush() {
+
+    if (!("serviceWorker" in navigator)) return;
+    if (!("PushManager" in window)) return;
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+        console.log("Permesso notifiche negato");
+        return;
+    }
+
+    const registration = await navigator.serviceWorker.register("/static/service-worker.js");
+
+    const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array("BMr-_xkK7hRokwB5LNwRYkbZFryCNYXiVZ-bGEtzEUzyFo_GqvSqz2RZluulcpsqzv8hzTHItZRJioYL8RP72c0=")
+    });
+
+    await fetch("/push/subscribe", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(subscription)
+    });
+
+    console.log("Push registrata correttamente");
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+
+    const rawData = window.atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+</script>
 
 </body>
 </html>
