@@ -4854,6 +4854,92 @@ def modifica_recensione():
 
     return redirect(url_for("mie_recensioni"))
 
+# =========================================================
+# 🔔 PUSH NOTIFICATIONS
+# =========================================================
+
+from pywebpush import webpush, WebPushException
+import json
+import os
+
+@app.route("/push/subscribe", methods=["POST"])
+@login_required
+def push_subscribe():
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "Nessun dato ricevuto"}), 400
+
+    endpoint = data.get("endpoint")
+    keys = data.get("keys")
+
+    if not endpoint or not keys:
+        return jsonify({"error": "Subscription non valida"}), 400
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    cur.execute(sql("""
+        INSERT INTO push_subscriptions (utente_id, endpoint, p256dh, auth)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(endpoint) DO NOTHING
+    """), (
+        g.utente["id"],
+        endpoint,
+        keys.get("p256dh"),
+        keys.get("auth")
+    ))
+
+    conn.commit()
+    cur.close()
+
+    return jsonify({"success": True})
+
+
+@app.route("/push/test")
+@login_required
+def push_test():
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    cur.execute(sql("""
+        SELECT endpoint, p256dh, auth
+        FROM push_subscriptions
+        WHERE utente_id = ?
+    """), (g.utente["id"],))
+
+    subs = cur.fetchall()
+    cur.close()
+
+    if not subs:
+        return "Nessuna subscription trovata"
+
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub["endpoint"],
+                    "keys": {
+                        "p256dh": sub["p256dh"],
+                        "auth": sub["auth"],
+                    },
+                },
+                data=json.dumps({
+                    "title": "Test Push LocalCare",
+                    "body": "Push funzionante 🎉"
+                }),
+                vapid_private_key=os.getenv("VAPID_PRIVATE_KEY"),
+                vapid_claims={
+                    "sub": "mailto:lescio@gmail.com"
+                }
+            )
+        except WebPushException as e:
+            print("Errore push:", e)
+
+    return "Push inviata"
+
 
 # ==========================================================
 # NOTIFICHE - ROTTE (AGGIUNTA)

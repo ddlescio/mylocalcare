@@ -19,3 +19,5 @@ pytz==2024.1
 psycopg2-binary
 
 eventlet==0.36.1
+
+pywebpush
