@@ -4863,7 +4863,6 @@ import json
 import os
 
 @app.route("/push/subscribe", methods=["POST"])
-@login_required
 def push_subscribe():
 
     data = request.get_json()
