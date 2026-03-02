@@ -16,31 +16,33 @@ self.addEventListener('fetch', event => {
 
 self.addEventListener('push', function(event) {
 
-  console.log("Push ricevuta", event);
+  console.log("🔥 PUSH RICEVUTO");
 
-  let data = {};
-
-  try {
-    if (event.data) {
-      data = event.data.json();
-    }
-  } catch (e) {
-    console.error("Errore parsing push data", e);
-  }
-
-  const title = data.title || "LocalCare";
-
-  const options = {
-    body: data.body || "Hai una nuova notifica",
-    icon: "/static/icons/icon-192.png",
-    badge: "/static/icons/icon-192.png",
-    data: {
-      url: data.url || "/"
-    }
+  let data = {
+    title: "LocalCare",
+    body: "Nuova notifica",
+    url: "/utente/dashboard"
   };
 
+  if (event.data) {
+    try {
+      // Prova JSON
+      data = event.data.json();
+    } catch (e) {
+      // Se non è JSON, usa testo semplice
+      data.body = event.data.text();
+    }
+  }
+
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/static/icons/icon-192.png",
+      badge: "/static/icons/icon-192.png",
+      data: {
+        url: data.url
+      }
+    })
   );
 });
 
