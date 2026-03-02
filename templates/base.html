@@ -1865,6 +1865,20 @@ function urlBase64ToUint8Array(base64String) {
     return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
 }
 </script>
+<button id="debugPushBtn" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  DEBUG PUSH
+</button>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const btn = document.getElementById("debugPushBtn");
+    if (btn) {
+        btn.addEventListener("click", function() {
+            console.log("Click reale intercettato");
+            registerPush();
+        });
+    }
+});
+</script>
 
 </body>
 </html>
