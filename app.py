@@ -326,12 +326,24 @@ if not DAILY_API_KEY:
 
 app = Flask(__name__)
 import json
+from datetime import timedelta
+
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s or "[]")
-app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(32))
+
+# ✅ 1) Chiave STABILE (niente fallback random, altrimenti dopo restart/redeploy ti slogga)
+#    Su Render DEVI avere FLASK_SECRET_KEY valorizzata nelle env.
+app.secret_key = os.environ["FLASK_SECRET_KEY"]
+
+# ✅ 2) Persistenza 30 giorni (cookie permanente)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="None",
-    SESSION_COOKIE_SECURE=True,  # SOLO se sei su HTTPS
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=True,
+
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+
+    # (opzionale ma utile) evita che ad ogni request ti riscriva/estenda il cookie
+    SESSION_REFRESH_EACH_REQUEST=False,
 )
 
 @app.before_request
@@ -591,19 +603,26 @@ app.config.setdefault('CHAT_RECENTLY_READ_TTL', 5)
 # ---------------------------------------------------------
 # Sessioni (Render-friendly)
 # ---------------------------------------------------------
+# ---------------------------------------------------------
+# Sessioni Redis (Production SaaS)
+# ---------------------------------------------------------
+
+import redis
 from flask_session import Session
+from datetime import timedelta
 
-app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_REDIS'] = redis.from_url(os.environ['REDIS_URL'])
 
-# Su Render /tmp è più veloce e sicuro rispetto alla cartella del progetto
-session_dir = os.getenv("SESSION_FILE_DIR") or "/tmp/.flask_session"
-app.config['SESSION_FILE_DIR'] = session_dir
+# sessione persistente 30 giorni
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
-try:
-    os.makedirs(session_dir, exist_ok=True)
-except Exception as e:
-    # non blocchiamo il boot per un errore filesystem
-    print("⚠️ Impossibile creare SESSION_FILE_DIR:", session_dir, e)
+# sicurezza cookie
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
 
 Session(app)
 
@@ -5503,6 +5522,8 @@ def login():
         # ---------------------------------------------------------
         # SESSION BASE
         # ---------------------------------------------------------
+        session.permanent = True  # ✅ cookie persistente (usa PERMANENT_SESSION_LIFETIME)
+
         session['utente_id'] = utente['id']
         session['utente_username'] = utente['username']
 
