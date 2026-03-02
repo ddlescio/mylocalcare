@@ -4940,7 +4940,9 @@ def push_test():
 
     return "Push inviata"
 
-
+@app.route("/service-worker.js")
+def service_worker():
+    return app.send_static_file("service-worker.js")
 # ==========================================================
 # NOTIFICHE - ROTTE (AGGIUNTA)
 # ==========================================================
