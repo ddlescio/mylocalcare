@@ -1841,7 +1841,7 @@ async function registerPush() {
 
     const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array("BMr-_xkK7hRokwB5LNwRYkbZFryCNYXiVZ-bGEtzEUzyFo_GqvSqz2RZluulcpsqzv8hzTHItZRJioYL8RP72c0=")
+        applicationServerKey: urlBase64ToUint8Array("BI7ruKyBvwQ5MRJ0IVUnimhvQGyQpTWxBi1R6c-9VdJkHMBWSbrOtprNJ5axs9ZXQQ-zLiFtMTR5lWqLXTdTObM")
     });
 
     await fetch("/push/subscribe", {
