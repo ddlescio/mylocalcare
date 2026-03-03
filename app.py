@@ -8439,7 +8439,6 @@ def handle_connect():
 
     print(f"🟢 Socket connesso utente {user_id} | socket attivi: {len(online_users[user_id])}")
 
-@socketio.on("video_call_left")
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8457,7 +8456,8 @@ def handle_disconnect():
         if not online_users[user_id]:
             del online_users[user_id]
             print(f"🔴 Utente {user_id} OFFLINE")
-            
+
+@socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
     if not room_name:
@@ -8667,23 +8667,23 @@ def handle_send_message(data):
     socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{mittente_id}")
     socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{destinatario_id}")
 
-# =====================================
-# 🔔 PUSH SE LA CHAT NON È APERTA
-# =====================================
+    # =====================================
+    # 🔔 PUSH SE LA CHAT NON È APERTA
+    # =====================================
 
-chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
+    chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
 
-if chat_aperta != mittente_id:
-    print(f"🔔 Push inviata a {destinatario_id}")
+    if chat_aperta != mittente_id:
+        print(f"🔔 Push inviata a {destinatario_id}")
 
-    try:
-        invia_push(
-            destinatario_id,
-            title="Nuovo messaggio su LocalCare",
-            body=testo[:100]
-        )
-    except Exception as e:
-        print("Errore invio push:", e)
+        try:
+            invia_push(
+                destinatario_id,
+                title="Nuovo messaggio su LocalCare",
+                body=testo[:100]
+            )
+        except Exception as e:
+            print("Errore invio push:", e)
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
