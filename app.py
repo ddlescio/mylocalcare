@@ -379,11 +379,17 @@ socketio = SocketIO(
     async_mode="eventlet"
 )
 
+# =====================================================
+# UTENTI ONLINE (socket registry)
+# =====================================================
+
+ONLINE_USERS = {}
+
 # ==============================
 # TRACKING UTENTI ONLINE
 # ==============================
 
-online_users = set()
+online_users = {}
 
 def is_user_online(user_id):
     return user_id in online_users
@@ -7977,7 +7983,11 @@ def chat_conversazione_json(other_id):
     # 🔹 Messaggi
     messaggi = chat_conversazione(user_id, other_id, after_id=after_id)
     chat_segna_letti(user_id, other_id)
-    socketio.emit('update_unread_count', {'for_user': user_id}, room=f"user_{user_id}")
+    socketio.emit(
+        'update_unread_count',
+        {'count': chat_count_unread(user_id)},
+        room=f"user_{user_id}"
+    )
 
     # 🔹 Recupero info "altro utente" per nome/avatar
     conn = get_db_connection()
@@ -8411,7 +8421,7 @@ def video_ping():
 
 @socketio.on("connect")
 def handle_connect():
-    from flask import session
+    from flask import session, request
 
     user_id = session.get("utente_id")
     if not user_id:
@@ -8420,24 +8430,34 @@ def handle_connect():
     room = f"user_{user_id}"
     join_room(room)
 
-    online_users.add(user_id)   # ✅ AGGIUNTO
+    sid = request.sid
 
-    print(f"🟢 Socket connesso e utente {user_id} entrato in {room}")
+    if user_id not in online_users:
+        online_users[user_id] = set()
+
+    online_users[user_id].add(sid)
+
+    print(f"🟢 Socket connesso utente {user_id} | socket attivi: {len(online_users[user_id])}")
 
 @socketio.on("video_call_left")
 
 @socketio.on("disconnect")
 def handle_disconnect():
-    from flask import session
+    from flask import session, request
 
     user_id = session.get("utente_id")
+    sid = request.sid
+
     if not user_id:
         return
 
-    online_users.discard(user_id)  # evita errore se non presente
+    if user_id in online_users:
+        online_users[user_id].discard(sid)
 
-    print(f"🔴 Utente {user_id} OFFLINE")
-
+        if not online_users[user_id]:
+            del online_users[user_id]
+            print(f"🔴 Utente {user_id} OFFLINE")
+            
 def handle_video_call_left(data):
     room_name = data.get("room")
     if not room_name:
@@ -8632,27 +8652,38 @@ def handle_send_message(data):
         "destinatario_id": destinatario_id
     }, room=f"user_{mittente_id}")
 
-    socketio.emit('update_unread_count', {'for_user': mittente_id}, room=f"user_{mittente_id}")
-    socketio.emit('update_unread_count', {'for_user': destinatario_id}, room=f"user_{destinatario_id}")
+    socketio.emit(
+        'update_unread_count',
+        {'count': chat_count_unread(mittente_id)},
+        room=f"user_{mittente_id}"
+    )
+
+    socketio.emit(
+        'update_unread_count',
+        {'count': chat_count_unread(destinatario_id)},
+        room=f"user_{destinatario_id}"
+    )
 
     socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{mittente_id}")
     socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{destinatario_id}")
 
-    # =====================================
-    # 🔔 PUSH SOLO SE DESTINATARIO OFFLINE
-    # =====================================
+# =====================================
+# 🔔 PUSH SE LA CHAT NON È APERTA
+# =====================================
 
-    # if not is_user_online(destinatario_id):
-    #     print(f"🔔 Destinatario {destinatario_id} offline → invio push")
-    #
-    #     try:
-    #         invia_push(
-    #             destinatario_id,
-    #             title="Nuovo messaggio su LocalCare",
-    #             body=testo[:100]  # limite preview
-    #         )
-    #     except Exception as e:
-    #         print("Errore invio push:", e)
+chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
+
+if chat_aperta != mittente_id:
+    print(f"🔔 Push inviata a {destinatario_id}")
+
+    try:
+        invia_push(
+            destinatario_id,
+            title="Nuovo messaggio su LocalCare",
+            body=testo[:100]
+        )
+    except Exception as e:
+        print("Errore invio push:", e)
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
@@ -8678,7 +8709,11 @@ def handle_mark_as_read(data):
         socketio.emit('messages_read', {'from': user_id}, room=f"user_{other_id}")
 
         # 🔵 aggiorna contatore per l’utente nella navbar
-        socketio.emit('update_unread_count', {'for_user': user_id}, room=f"user_{user_id}")
+        socketio.emit(
+            'update_unread_count',
+            {'count': chat_count_unread(user_id)},
+            room=f"user_{user_id}"
+        )
 
         # 🔵 aggiorna anche la lista chat
         socketio.emit('chat_threads_update', {'from': other_id}, room=f"user_{user_id}")

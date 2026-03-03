@@ -622,7 +622,7 @@ document.addEventListener("click", function(e) {
     window.socket = io(window.location.origin, {
       transports: ["websocket"],   // 🔥 forza solo websocket
       withCredentials: true
-    });    
+    });
     const socket = window.socket;
     window.dispatchEvent(new Event("socket_ready"));
 
@@ -763,16 +763,26 @@ document.addEventListener("click", function(e) {
       {% endif %}
 
       // 🚫 Evita fetch concorrenti quando sei dentro una chat
-      if (!isChatPage && canDoBadgeFetch()) {
-          refreshChatCount();
-          refreshNotifCount();
-      }
+    //   if (!isChatPage && canDoBadgeFetch()) {
+    //       refreshChatCount();
+    //       refreshNotifCount();
+    //   }
     });
 
     // 💬 Conteggio chat non letti
     socket.off("update_unread_count");
-    socket.on("update_unread_count", () => {
-      if (!isChatPage && canDoBadgeFetch()) refreshChatCount();
+    socket.on("update_unread_count", (data) => {
+
+      if (!data || typeof data.count !== "number") return;
+
+      const n = data.count;
+
+      if (chatBadge) {
+        chatBadge.textContent = n > 0 ? n : "";
+        chatBadge.style.display = n > 0 ? "inline-block" : "none";
+        chatBadge.dataset.unread = String(n);
+      }
+
     });
 
     // 🔔 Conteggio notifiche non lette
