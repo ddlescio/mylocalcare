@@ -379,6 +379,15 @@ socketio = SocketIO(
     async_mode="eventlet"
 )
 
+# ==============================
+# TRACKING UTENTI ONLINE
+# ==============================
+
+online_users = set()
+
+def is_user_online(user_id):
+    return user_id in online_users
+
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
@@ -4959,6 +4968,53 @@ def push_test():
 
     return "Push inviata"
 
+# =========================================================
+# 🔔 INVIO PUSH GENERICA (SERVER-SIDE)
+# =========================================================
+
+def invia_push(user_id, title, body):
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    cur.execute(sql("""
+        SELECT endpoint, p256dh, auth
+        FROM push_subscriptions
+        WHERE utente_id = ?
+    """), (user_id,))
+
+    subs = cur.fetchall()
+    cur.close()
+
+    if not subs:
+        print(f"Nessuna subscription push per utente {user_id}")
+        return
+
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub["endpoint"],
+                    "keys": {
+                        "p256dh": sub["p256dh"],
+                        "auth": sub["auth"],
+                    },
+                },
+                data=json.dumps({
+                    "title": title,
+                    "body": body,
+                    "url": "/utente/messaggi"
+                }),
+                vapid_private_key=os.getenv("VAPID_PRIVATE_KEY"),
+                vapid_claims={
+                    "sub": os.getenv("VAPID_CLAIM_EMAIL")
+                }
+            )
+        except WebPushException as e:
+            print("Errore push:", e)
+
+    conn.close()
+
 @app.route("/service-worker.js")
 def service_worker():
     return app.send_static_file("service-worker.js")
@@ -8364,9 +8420,24 @@ def handle_connect():
     room = f"user_{user_id}"
     join_room(room)
 
+    online_users.add(user_id)   # ✅ AGGIUNTO
+
     print(f"🟢 Socket connesso e utente {user_id} entrato in {room}")
 
 @socketio.on("video_call_left")
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    from flask import session
+
+    user_id = session.get("utente_id")
+    if not user_id:
+        return
+
+    online_users.discard(user_id)  # evita errore se non presente
+
+    print(f"🔴 Utente {user_id} OFFLINE")
+
 def handle_video_call_left(data):
     room_name = data.get("room")
     if not room_name:
@@ -8566,6 +8637,22 @@ def handle_send_message(data):
 
     socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{mittente_id}")
     socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{destinatario_id}")
+
+    # =====================================
+    # 🔔 PUSH SOLO SE DESTINATARIO OFFLINE
+    # =====================================
+
+    if not is_user_online(destinatario_id):
+        print(f"🔔 Destinatario {destinatario_id} offline → invio push")
+
+        try:
+            invia_push(
+                destinatario_id,
+                title="Nuovo messaggio su LocalCare",
+                body=testo[:100]  # limite preview
+            )
+        except Exception as e:
+            print("Errore invio push:", e)
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
