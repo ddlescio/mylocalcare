@@ -619,7 +619,10 @@ document.addEventListener("click", function(e) {
     }
 
     // Inizializza socket in modo compatibile con Render
-    window.socket = io();
+    window.socket = io(window.location.origin, {
+      transports: ["websocket"],   // 🔥 forza solo websocket
+      withCredentials: true
+    });    
     const socket = window.socket;
     window.dispatchEvent(new Event("socket_ready"));
 
