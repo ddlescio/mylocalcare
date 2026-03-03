@@ -8642,17 +8642,17 @@ def handle_send_message(data):
     # 🔔 PUSH SOLO SE DESTINATARIO OFFLINE
     # =====================================
 
-    if not is_user_online(destinatario_id):
-        print(f"🔔 Destinatario {destinatario_id} offline → invio push")
-
-        try:
-            invia_push(
-                destinatario_id,
-                title="Nuovo messaggio su LocalCare",
-                body=testo[:100]  # limite preview
-            )
-        except Exception as e:
-            print("Errore invio push:", e)
+    # if not is_user_online(destinatario_id):
+    #     print(f"🔔 Destinatario {destinatario_id} offline → invio push")
+    #
+    #     try:
+    #         invia_push(
+    #             destinatario_id,
+    #             title="Nuovo messaggio su LocalCare",
+    #             body=testo[:100]  # limite preview
+    #         )
+    #     except Exception as e:
+    #         print("Errore invio push:", e)
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
