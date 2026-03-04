@@ -8450,6 +8450,17 @@ def handle_connect():
 
     print(f"🟢 Socket connesso utente {user_id} | socket attivi: {len(online_users[user_id])}")
 
+    # 🔔 invia subito il contatore reale alla navbar
+    try:
+        unread = chat_count_unread(user_id)
+
+        socketio.emit(
+            "update_unread_count",
+            {"count": unread},
+            room=f"user_{user_id}"
+        )
+    except Exception as e:
+        print("Errore invio unread count:", e)
 
 @socketio.on("disconnect")
 def handle_disconnect():
