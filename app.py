@@ -8048,6 +8048,36 @@ def chat_conversazione_json(other_id):
         "typing": typing_state.get((other_id, user_id), False)
     })
 
+@app.route("/chat/<int:other_id>/older")
+@login_required
+def chat_load_older(other_id):
+
+    user_id = g.utente["id"]
+    before_id = request.args.get("before_id", type=int)
+
+    if not before_id:
+        return jsonify([])
+
+    messaggi = chat_conversazione(
+        user_id,
+        other_id,
+        limit=35,
+        before_id=before_id
+    )
+
+    return jsonify([
+        {
+            "id": m["id"],
+            "mittente_id": m["mittente_id"],
+            "destinatario_id": m["destinatario_id"],
+            "testo": m["testo"],
+            "created_at": m["created_at"],
+            "consegnato": m["consegnato"],
+            "letto": m["letto"]
+        }
+        for m in messaggi
+    ])
+
 @app.route("/chat/unread_count")
 def chat_unread_count():
 
@@ -8469,7 +8499,7 @@ def handle_connect():
         )
     except Exception as e:
         print("Errore invio unread count:", e)
-        
+
 import time
 
 @socketio.on("disconnect")

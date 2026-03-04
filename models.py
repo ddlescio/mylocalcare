@@ -127,7 +127,7 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     conn.commit()
     return msg_id
 
-def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: int | None = None):
+def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: int | None = None, before_id: int | None = None):
     """
     Restituisce la conversazione decifrando i messaggi leggibili con la chiave privata X25519.
     LOGICA IDENTICA, solo ottimizzata.
@@ -160,26 +160,83 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
         """, (user_id,)).fetchone()
         cutoff = row["closed_at"] if row else None
 
-    # 🔹 Query (ordine ASC diretto → niente reverse)
-    query = """
-        SELECT id, mittente_id, destinatario_id,
-               testo, ciphertext, nonce, eph_pub,
-               eph_priv_enc, eph_priv_nonce,
-               created_at, consegnato, letto
-        FROM messaggi_chat
-        WHERE (
-               (mittente_id = ? AND destinatario_id = ?)
-            OR (mittente_id = ? AND destinatario_id = ?)
-        )
-        AND ( ? IS NULL OR created_at > ? )
-        ORDER BY created_at ASC
-        LIMIT ?
-    """
+    # -----------------------------
+    # QUERY MESSAGGI
+    # -----------------------------
 
-    rows = c.execute(
-        sql(query),
-        [user_id, other_id, other_id, user_id, cutoff, cutoff, limit]
-    ).fetchall()
+    # apertura chat (ultimi N messaggi)
+    if after_id is None and before_id is None:
+
+        query = """
+            SELECT id, mittente_id, destinatario_id,
+                   testo, ciphertext, nonce, eph_pub,
+                   eph_priv_enc, eph_priv_nonce,
+                   created_at, consegnato, letto
+            FROM (
+                SELECT id, mittente_id, destinatario_id,
+                       testo, ciphertext, nonce, eph_pub,
+                       eph_priv_enc, eph_priv_nonce,
+                       created_at, consegnato, letto
+                FROM messaggi_chat
+                WHERE (
+                       (mittente_id = ? AND destinatario_id = ?)
+                    OR (mittente_id = ? AND destinatario_id = ?)
+                )
+                AND ( ? IS NULL OR created_at > ? )
+                ORDER BY id DESC
+                LIMIT ?
+            ) t
+            ORDER BY id ASC
+        """
+
+        params = [user_id, other_id, other_id, user_id, cutoff, cutoff, limit]
+
+    # nuovi messaggi (polling)
+    elif after_id is not None:
+
+        query = """
+            SELECT id, mittente_id, destinatario_id,
+                   testo, ciphertext, nonce, eph_pub,
+                   eph_priv_enc, eph_priv_nonce,
+                   created_at, consegnato, letto
+            FROM messaggi_chat
+            WHERE (
+                   (mittente_id = ? AND destinatario_id = ?)
+                OR (mittente_id = ? AND destinatario_id = ?)
+            )
+            AND id > ?
+            AND ( ? IS NULL OR created_at > ? )
+            ORDER BY id ASC
+        """
+
+        params = [user_id, other_id, other_id, user_id, after_id, cutoff, cutoff]
+
+    # messaggi più vecchi (scroll verso l'alto)
+    else:
+
+        query = """
+            SELECT id, mittente_id, destinatario_id,
+                   testo, ciphertext, nonce, eph_pub,
+                   eph_priv_enc, eph_priv_nonce,
+                   created_at, consegnato, letto
+            FROM messaggi_chat
+            WHERE (
+                   (mittente_id = ? AND destinatario_id = ?)
+                OR (mittente_id = ? AND destinatario_id = ?)
+            )
+            AND id < ?
+            AND ( ? IS NULL OR created_at > ? )
+            ORDER BY id DESC
+            LIMIT ?
+        """
+
+        params = [user_id, other_id, other_id, user_id, before_id, cutoff, cutoff, limit]
+
+    rows = c.execute(sql(query), params).fetchall()
+
+    # se carico messaggi vecchi invertiamo ordine
+    if before_id is not None:
+        rows = list(reversed(rows))
 
     # 🔑 Se non ho chiave privata → ritorno senza decrypt
     x_priv_b64 = session.get("x25519_priv_b64")
@@ -216,7 +273,6 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
                 if not r.get("eph_priv_enc") or not r.get("eph_priv_nonce"):
                     raise ValueError("Chiave effimera privata mancante")
 
-                # 🔐 Decifra chiave effimera privata
                 eph_ct_raw = base64.b64decode(r["eph_priv_enc"])
                 eph_nonce = base64.b64decode(r["eph_priv_nonce"])
                 eph_ct, eph_tag = eph_ct_raw[:-16], eph_ct_raw[-16:]
@@ -247,7 +303,7 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 100, after_id: 
         messaggi_decifrati.append(r)
 
     return messaggi_decifrati
-
+    
 def chat_threads(user_id: int):
     """
     Logica IDENTICA alla tua.

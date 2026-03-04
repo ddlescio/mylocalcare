@@ -437,11 +437,76 @@ function whenSocketReady(callback) {
 
     const meId = parseInt("{{ g.utente['id'] }}", 10);
     const wrap = document.getElementById('msgWrap');
+    let loadingOlder = false;
+    let oldestMessageId = null;
+
+    const destId = parseInt(document.getElementById('destinatario_id').value, 10);
+
+    // -----------------------------
+    // 🚀 CARICAMENTO MESSAGGI VECCHI
+    // -----------------------------
+    async function loadOlderMessages() {
+
+      if (loadingOlder || !oldestMessageId) return;
+
+      loadingOlder = true;
+
+      const prevHeight = wrap.scrollHeight;
+
+      try {
+
+        const res = await fetch(`/chat/${destId}/older?before_id=${oldestMessageId}`);
+        const msgs = await res.json();
+
+        if (!msgs || !msgs.length) {
+          loadingOlder = false;
+          return;
+        }
+
+        msgs.forEach(m => {
+
+          const bolla = bubble({ ...m, me_id: meId });
+
+          const first = wrap.firstChild;
+          wrap.insertBefore(bolla, first);
+
+          if (m.created_at) ensureDateHeaderFor(m.created_at);
+
+        });
+
+        cleanDuplicateDates();
+
+        oldestMessageId = msgs[0].id;
+
+        const newHeight = wrap.scrollHeight;
+        wrap.scrollTop += (newHeight - prevHeight);
+
+      } catch (err) {
+
+        console.error("Errore caricando messaggi vecchi", err);
+
+      }
+
+      loadingOlder = false;
+    }
+
+    // trova il messaggio più vecchio già presente
+    function initOldestMessage() {
+      const msgs = wrap.querySelectorAll('[data-mid]');
+      if (!msgs.length) return;
+      oldestMessageId = parseInt(msgs[0].getAttribute('data-mid'));
+    }
+    initOldestMessage();
+    wrap.addEventListener("scroll", () => {
+
+      if (wrap.scrollTop < 120) {
+        loadOlderMessages();
+      }
+
+    });
     const input = document.getElementById('msgInput');
     const form = document.getElementById('composer');
     const typingIndicator = document.getElementById('typingIndicator');
-
-    const destId = parseInt(document.getElementById('destinatario_id').value, 10);
 
     console.log("🟢 Chat collegata al socket globale", { meId, destId, connected: socket.connected });
 
@@ -492,10 +557,11 @@ function whenSocketReady(callback) {
       try {
         if (socket && socket.connected) {
           socket.emit('chat_chiusa', { other_id: destId });
+          socket.disconnect(); // ← AGGIUNGI QUESTA RIGA
         }
       } catch (e) {}
     });
-    
+
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPopover = document.getElementById('emojiPopover');
@@ -695,14 +761,24 @@ function whenSocketReady(callback) {
 
       const alreadyBottom = isAtBottom();
 
+      let newDateInserted = false;
+
       if (m.created_at) {
+        const before = document.querySelectorAll('#msgWrap .date-header').length;
         ensureDateHeaderFor(m.created_at);
+        const after = document.querySelectorAll('#msgWrap .date-header').length;
+        newDateInserted = after > before;
       }
 
       const bolla = bubble({ ...m, me_id: meId });
       wrap.appendChild(bolla);
+      if (!oldestMessageId) {
+        oldestMessageId = m.id;
+      }
 
-      cleanDuplicateDates();
+      if (newDateInserted) {
+        cleanDuplicateDates();
+      }
 
       if (alreadyBottom) {
         setTimeout(() => scrollBottom(true), 80);
