@@ -8049,9 +8049,16 @@ def chat_conversazione_json(other_id):
     })
 
 @app.route("/chat/unread_count")
-@login_required
 def chat_unread_count():
-    return jsonify({"count": chat_count_unread(g.utente["id"])})
+
+    user = getattr(g, "utente", None)
+
+    if not user:
+        return jsonify({"count": 0})
+
+    return jsonify({
+        "count": chat_count_unread(user["id"])
+    })
 
 @app.route("/chat/<int:other_id>")
 @login_required
@@ -8462,6 +8469,8 @@ def handle_connect():
         )
     except Exception as e:
         print("Errore invio unread count:", e)
+        
+import time
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8479,10 +8488,8 @@ def handle_disconnect():
         if len(online_users[user_id]) == 0:
             socketio.start_background_task(remove_user_later, user_id)
 
-import time
-
 def remove_user_later(user_id):
-    time.sleep(3)
+    socketio.sleep(3)
 
     if user_id in online_users and len(online_users[user_id]) == 0:
         del online_users[user_id]
