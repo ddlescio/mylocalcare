@@ -4990,10 +4990,11 @@ def invia_push(user_id, title, body):
     """), (user_id,))
 
     subs = cur.fetchall()
-    cur.close()
 
     if not subs:
         print(f"Nessuna subscription push per utente {user_id}")
+        cur.close()
+        conn.close()
         return
 
     for sub in subs:
@@ -5016,11 +5017,24 @@ def invia_push(user_id, title, body):
                     "sub": os.getenv("VAPID_CLAIM_EMAIL")
                 }
             )
+
         except WebPushException as e:
             print("Errore push:", e)
 
-    conn.close()
+            # subscription scaduta → rimuoviamo
+            if hasattr(e, "response") and e.response and e.response.status_code in (404, 410):
+                print("Subscription scaduta, la rimuovo")
 
+                cur.execute(sql("""
+                    DELETE FROM push_subscriptions
+                    WHERE endpoint = ?
+                """), (sub["endpoint"],))
+
+                conn.commit()
+
+    cur.close()
+    conn.close()
+    
 @app.route("/service-worker.js")
 def service_worker():
     return app.send_static_file("service-worker.js")
@@ -8653,7 +8667,7 @@ def handle_send_message(data):
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
 
     if chat_aperta != mittente_id:
-    
+
         print(f"🔔 Push inviata a {destinatario_id}")
 
         try:
