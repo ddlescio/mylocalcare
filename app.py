@@ -8705,6 +8705,9 @@ def chat_count_unread(user_id):
 
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
+    from flask import session
+    import traceback
+
     user_id = session.get('utente_id')
     other_id = data.get('other_id')
 
@@ -8712,17 +8715,16 @@ def handle_mark_as_read(data):
         return
 
     try:
-        # Segna i messaggi come letti nel database
         chat_segna_letti(user_id, other_id)
 
-        # 🔵 Aggiorna le spunte nella chat dell'altro utente
+        # aggiorna spunte nell'altra chat
         socketio.emit(
             'messages_read',
             {'from': user_id},
             room=f"user_{other_id}"
         )
 
-        # 🔵 Aggiorna il contatore messaggi non letti nella navbar
+        # 🔥 aggiorna badge utente
         unread_count = chat_count_unread(user_id)
 
         socketio.emit(
@@ -8731,7 +8733,7 @@ def handle_mark_as_read(data):
             room=f"user_{user_id}"
         )
 
-        # 🔵 Aggiorna la lista delle chat
+        # aggiorna lista chat
         socketio.emit(
             'chat_threads_update',
             {'from': other_id},
@@ -8740,10 +8742,10 @@ def handle_mark_as_read(data):
 
         print(f"✅ Messaggi da {other_id} segnati come letti da {user_id}")
 
-    except Exception as e:
+    except Exception:
         print("❌ Errore mark_as_read:")
         traceback.print_exc()
-
+        
 @socketio.on('chat_chiusa')
 def handle_chat_chiusa(data):
     user_id = session.get('utente_id')

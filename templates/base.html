@@ -700,31 +700,31 @@ document.addEventListener("click", function(e) {
     });
 
     // 👉 Funzioni helper per aggiornare badge
-    async function refreshChatCount() {
-      if (!chatBadge) return;
-      if (!canDoBadgeFetch()) return;   // ← AGGIUNGI QUESTA RIGA
-      try {
-        const res = await fetch("/chat/unread_count", { credentials: "same-origin" });
-        const js  = await res.json();
-        const n   = (js && typeof js.count === "number") ? js.count : 0;
-
-        chatBadge.textContent = n > 0 ? n : "";
-        chatBadge.style.display = n > 0 ? "inline-block" : "none";
-        chatBadge.dataset.unread = String(n);
-
-        const onThreadsPage = (window.location.pathname === "/utente/messaggi");
-        const increased = n > lastUnreadChats;
-
-        if (onThreadsPage && increased && !reloading && document.visibilityState === "visible") {
-          reloading = true;
-          setTimeout(() => { window.location.reload(); }, 120);
-        }
-
-        lastUnreadChats = n;
-      } catch (err) {
-        console.error("Errore refreshChatCount:", err);
-      }
-    }
+    // async function refreshChatCount() {
+    //   if (!chatBadge) return;
+    //   if (!canDoBadgeFetch()) return;   // ← AGGIUNGI QUESTA RIGA
+    //   try {
+    //     const res = await fetch("/chat/unread_count", { credentials: "same-origin" });
+    //     const js  = await res.json();
+    //     const n   = (js && typeof js.count === "number") ? js.count : 0;
+    //
+    //     chatBadge.textContent = n > 0 ? n : "";
+    //     chatBadge.style.display = n > 0 ? "inline-block" : "none";
+    //     chatBadge.dataset.unread = String(n);
+    //
+    //     const onThreadsPage = (window.location.pathname === "/utente/messaggi");
+    //     const increased = n > lastUnreadChats;
+    //
+    //     if (onThreadsPage && increased && !reloading && document.visibilityState === "visible") {
+    //       reloading = true;
+    //       setTimeout(() => { window.location.reload(); }, 120);
+    //     }
+    //
+    //     lastUnreadChats = n;
+    //   } catch (err) {
+    //     console.error("Errore refreshChatCount:", err);
+    //   }
+    // }
 
     async function refreshNotifCount() {
       if (!notifBadge) return;
@@ -787,7 +787,7 @@ document.addEventListener("click", function(e) {
       lastUnreadChats = n;
 
     });
-    
+
     // 🔔 Conteggio notifiche non lette
     socket.off("update_notifications");
     socket.on("update_notifications", (data) => {
