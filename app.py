@@ -8730,9 +8730,12 @@ def handle_mark_as_read(data):
         socketio.emit('chat_threads_update', {'from': other_id}, room=f"user_{user_id}")
 
         print(f"✅ Messaggi da {other_id} segnati come letti da {user_id}")
-    except Exception as e:
-        print(f"❌ Errore mark_as_read: {e}")
+    import traceback
 
+    except Exception as e:
+        print("❌ Errore mark_as_read:")
+        traceback.print_exc()
+    
 @socketio.on('chat_chiusa')
 def handle_chat_chiusa(data):
     user_id = session.get('utente_id')

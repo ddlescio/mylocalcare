@@ -435,7 +435,11 @@ function whenSocketReady(callback) {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      const meId = parseInt("{{ g.utente['id'] }}", 10);
+    socket.off('new_message');
+    socket.off('messages_read');
+    socket.off('user_typing');
+
+    const meId = parseInt("{{ g.utente['id'] }}", 10);
     const wrap = document.getElementById('msgWrap');
     const input = document.getElementById('msgInput');
     const form = document.getElementById('composer');
@@ -446,8 +450,7 @@ function whenSocketReady(callback) {
     console.log("🟢 Chat collegata al socket globale", { meId, destId, connected: socket.connected });
 
     function initSocketEvents() {
-      console.log("🟢 Socket pronto → join stanza");
-      socket.emit('join', { user_id: meId });
+      console.log("🟢 Socket pronto");
 
       // 📡 Notifica apertura (UNA SOLA VOLTA)
       socket.emit('chat_aperta', { other_id: destId });
@@ -687,7 +690,11 @@ function whenSocketReady(callback) {
 
       // Se ricevo → segno come letto
       if (m.destinatario_id === meId) {
-        socket.emit('mark_as_read', { other_id: m.mittente_id });
+
+        if (document.visibilityState === "visible") {
+          socket.emit('mark_as_read', { other_id: m.mittente_id });
+        }
+
       }
 
     } catch (err) {
