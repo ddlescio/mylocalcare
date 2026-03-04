@@ -234,7 +234,7 @@ button, input[type="submit"] {
 </head>
 <body data-page="{{ page or '' }}" class="{{ body_class or '' }} {% if pubblico %}pubblico{% endif %}">
 
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" async></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   {% if session.get('ruolo') == 'admin' %}
   <script src="{{ url_for('static', filename='js/admin_counters.js') }}"></script>
@@ -633,7 +633,7 @@ document.addEventListener("click", function(e) {
     }
 
     const socket = window.socket;
-        
+
     window.dispatchEvent(new Event("socket_ready"));
 
     // 📞 CHIAMATA IN ARRIVO
