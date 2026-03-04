@@ -1,6 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g
+from whitenoise import WhiteNoise
 import os
 import sqlite3
 import json
@@ -345,6 +346,8 @@ app.config.update(
     # (opzionale ma utile) evita che ad ogni request ti riscriva/estenda il cookie
     SESSION_REFRESH_EACH_REQUEST=False,
 )
+
+app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
 
 @app.before_request
 def ensure_csrf_token():
