@@ -15,7 +15,7 @@
 
   <title>LocalCare</title>
   {% block head_extra %}{% endblock %}
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://js.stripe.com/v3/"></script>
   <style>
   /* Modalità browser normale */
@@ -234,7 +234,7 @@ button, input[type="submit"] {
 </head>
 <body data-page="{{ page or '' }}" class="{{ body_class or '' }} {% if pubblico %}pubblico{% endif %}">
 
-  <script defer src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" async></script>
 
   {% if session.get('ruolo') == 'admin' %}
   <script src="{{ url_for('static', filename='js/admin_counters.js') }}"></script>
@@ -620,9 +620,12 @@ document.addEventListener("click", function(e) {
 
     // Inizializza socket in modo compatibile con Render
     window.socket = io(window.location.origin, {
-      transports: ["websocket"],   // 🔥 forza solo websocket
+      transports: ["websocket"],
+      upgrade: false,
+      rememberUpgrade: true,
       withCredentials: true
     });
+
     const socket = window.socket;
     window.dispatchEvent(new Event("socket_ready"));
 
