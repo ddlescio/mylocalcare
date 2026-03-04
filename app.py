@@ -376,9 +376,10 @@ socketio = SocketIO(
         "http://127.0.0.1:5050",
         "http://localhost:5050"
     ],
-    async_mode="eventlet"
+    async_mode="eventlet",
+    ping_timeout=20,
+    ping_interval=10
 )
-
 # =====================================================
 # UTENTI ONLINE (socket registry)
 # =====================================================
