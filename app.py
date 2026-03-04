@@ -8669,7 +8669,7 @@ def handle_send_message(data):
     pagina_visibile = pagina_attiva.get(destinatario_id, False)
 
     if chat_aperta != mittente_id and not pagina_visibile:
-    
+
         print(f"🔔 Push inviata a {destinatario_id}")
 
         try:

@@ -416,10 +416,6 @@ body {
 </div>
 
 <script>
-  window.chatAperta = true;
-  window.addEventListener('beforeunload', () => { window.chatAperta = false; });
-</script>
-<script>
 function whenSocketReady(callback) {
   if (window.socket) {
     callback(window.socket);
@@ -456,12 +452,50 @@ function whenSocketReady(callback) {
       socket.emit('chat_aperta', { other_id: destId });
       socket.emit('mark_as_read', { other_id: destId });
     }
+    if (!window.__chatVisibilityHandler) {
+
+      window.__chatVisibilityHandler = true;
+
+      document.addEventListener("visibilitychange", () => {
+
+        if (!window.socket) return;
+
+        const destId = parseInt(document.getElementById('destinatario_id').value, 10);
+
+        if (document.visibilityState === "hidden") {
+            console.log("👁️ Chat nascosta → chat_chiusa");
+            window.socket.emit('chat_chiusa', { other_id: destId });
+        }
+
+        if (document.visibilityState === "visible") {
+            console.log("👁️ Chat visibile → chat_aperta");
+            window.socket.emit('chat_aperta', { other_id: destId });
+            window.socket.emit('mark_as_read', { other_id: destId });
+        }
+
+      });
+
+    }
+
 
     if (socket.connected) initSocketEvents();
     else socket.once('connect', initSocketEvents);
 
-    window.addEventListener('beforeunload', () => socket.emit('chat_chiusa', { other_id: destId }));
-
+    window.addEventListener('beforeunload', () => {
+      try {
+        if (socket && socket.connected) {
+          socket.emit('chat_chiusa', { other_id: destId });
+        }
+      } catch (e) {}
+    });
+    window.addEventListener("pagehide", () => {
+      try {
+        if (socket && socket.connected) {
+          socket.emit('chat_chiusa', { other_id: destId });
+        }
+      } catch (e) {}
+    });
+    
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPopover = document.getElementById('emojiPopover');
@@ -688,13 +722,9 @@ function whenSocketReady(callback) {
         }
       }
 
-      // Se ricevo → segno come letto
-      if (m.destinatario_id === meId) {
-
-        if (document.visibilityState === "visible") {
-          socket.emit('mark_as_read', { other_id: m.mittente_id });
-        }
-
+      // Se ricevo → segno sempre come letto se la chat è aperta
+      if (m.destinatario_id === meId && document.visibilityState === "visible") {
+        socket.emit('mark_as_read', { other_id: m.mittente_id });
       }
 
     } catch (err) {
