@@ -8666,7 +8666,7 @@ def handle_send_message(data):
 
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
 
-    if not is_user_online(destinatario_id) and chat_aperta != mittente_id:
+    if chat_aperta != mittente_id:
 
         print(f"🔔 Push inviata a {destinatario_id}")
 
