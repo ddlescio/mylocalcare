@@ -8639,7 +8639,6 @@ def handle_send_message(data):
         "destinatario_id": destinatario_id
     }, room=f"user_{mittente_id}")
 
-    count_mittente = chat_count_unread(mittente_id)
     count_destinatario = chat_count_unread(destinatario_id)
 
     socketio.emit(
@@ -8694,20 +8693,21 @@ def chat_count_unread(user_id):
     cur = get_cursor(conn)
 
     cur.execute(sql("""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS count
         FROM messaggi_chat
         WHERE destinatario_id = ?
         AND letto = 0
     """), (user_id,))
 
-    count = cur.fetchone()[0]
+    row = cur.fetchone()
 
     cur.close()
     conn.close()
 
-    return count
+    if not row:
+        return 0
 
-import traceback
+    return row["count"]
 
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
@@ -8749,7 +8749,7 @@ def handle_mark_as_read(data):
     except Exception as e:
         print("❌ Errore mark_as_read:")
         traceback.print_exc()
-            
+
 @socketio.on('chat_chiusa')
 def handle_chat_chiusa(data):
     user_id = session.get('utente_id')
