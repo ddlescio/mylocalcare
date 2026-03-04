@@ -7999,7 +7999,7 @@ def chat_conversazione_json(other_id):
     # 🔒 Maschera admin
     if altro and is_admin(altro["id"]):
         other_display_name = "MyLocalCare • Supporto"
-        other_avatar = "img/support.png"
+        other_avatar = "static/img/support.png"
     elif altro:
         other_display_name = f"{altro['nome']} {altro['cognome']}"
         other_avatar = altro["foto_profilo"]
@@ -8075,8 +8075,11 @@ def chat_conversazione_view(other_id):
 
     # 🔹 Segna come letti i messaggi ricevuti
     chat_segna_letti(g.utente["id"], other_id)
-    socketio.emit('update_unread_count', {'for_user': g.utente["id"]}, room=f"user_{g.utente['id']}")
-
+    socketio.emit(
+        'update_unread_count',
+        {'count': chat_count_unread(g.utente["id"])},
+        room=f"user_{g.utente['id']}"
+    )
     return render_template(
         "chat_conversazione.html",
         altro=altro,
