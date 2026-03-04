@@ -13,8 +13,9 @@
   };
   </script>
 
-  <title>LocalCare</title>
+  <title>MyLocalCare</title>
   {% block head_extra %}{% endblock %}
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://js.stripe.com/v3/"></script>
   <style>
@@ -234,7 +235,6 @@ button, input[type="submit"] {
 </head>
 <body data-page="{{ page or '' }}" class="{{ body_class or '' }} {% if pubblico %}pubblico{% endif %}">
 
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   {% if session.get('ruolo') == 'admin' %}
   <script src="{{ url_for('static', filename='js/admin_counters.js') }}"></script>
