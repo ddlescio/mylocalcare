@@ -386,9 +386,6 @@ socketio = SocketIO(
 # =====================================================
 # UTENTI ONLINE (socket registry)
 # =====================================================
-
-ONLINE_USERS = {}
-
 # ==============================
 # TRACKING UTENTI ONLINE
 # ==============================
@@ -8479,9 +8476,17 @@ def handle_disconnect():
     if user_id in online_users:
         online_users[user_id].discard(sid)
 
-        if not online_users[user_id]:
-            del online_users[user_id]
-            print(f"🔴 Utente {user_id} OFFLINE")
+        if len(online_users[user_id]) == 0:
+            socketio.start_background_task(remove_user_later, user_id)
+
+import time
+
+def remove_user_later(user_id):
+    time.sleep(3)
+
+    if user_id in online_users and len(online_users[user_id]) == 0:
+        del online_users[user_id]
+        print(f"🔴 Utente {user_id} OFFLINE")
 
 @socketio.on("video_call_left")
 def handle_video_call_left(data):

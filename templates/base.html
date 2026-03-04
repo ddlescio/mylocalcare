@@ -621,7 +621,7 @@ document.addEventListener("click", function(e) {
     // Inizializza socket in modo compatibile con Render
     if (!window.socket) {
 
-      window.socket = io(window.location.origin, {
+      window.socket = io({
         transports: ["websocket"],
         upgrade: false,
         rememberUpgrade: true,
@@ -768,15 +768,11 @@ document.addEventListener("click", function(e) {
     // 🔌 Connessione
     socket.on("connect", () => {
 
+      console.log("🔌 socket connected:", socket.id);
+
       {% if session.get('utente_id') %}
       socket.emit("join", { user_id: {{ session['utente_id'] }} });
       {% endif %}
-
-      // 🚫 Evita fetch concorrenti quando sei dentro una chat
-    //   if (!isChatPage && canDoBadgeFetch()) {
-    //       refreshChatCount();
-    //       refreshNotifCount();
-    //   }
     });
 
     // 💬 Conteggio chat non letti
