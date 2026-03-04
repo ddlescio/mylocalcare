@@ -7983,11 +7983,6 @@ def chat_conversazione_json(other_id):
     # 🔹 Messaggi
     messaggi = chat_conversazione(user_id, other_id, after_id=after_id)
     chat_segna_letti(user_id, other_id)
-    socketio.emit(
-        'update_unread_count',
-        {'count': chat_count_unread(user_id)},
-        room=f"user_{user_id}"
-    )
 
     # 🔹 Recupero info "altro utente" per nome/avatar
     conn = get_db_connection()
@@ -8041,9 +8036,7 @@ def chat_conversazione_json(other_id):
 @app.route("/chat/unread_count")
 @login_required
 def chat_unread_count():
-    """Ritorna il numero totale di messaggi non letti per l’utente loggato."""
-    from models import count_chat_non_letti
-    return jsonify({"count": count_chat_non_letti(g.utente["id"])})
+    return jsonify({"count": chat_count_unread(g.utente["id"])})
 
 @app.route("/chat/<int:other_id>")
 @login_required
@@ -8745,7 +8738,7 @@ def handle_mark_as_read(data):
     except Exception:
         print("❌ Errore mark_as_read:")
         traceback.print_exc()
-        
+
 @socketio.on('chat_chiusa')
 def handle_chat_chiusa(data):
     user_id = session.get('utente_id')
