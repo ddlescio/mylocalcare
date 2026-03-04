@@ -8507,19 +8507,6 @@ def handle_video_call_rejected(data):
 # 🔴 EVENTI SOCKET.IO — CHAT IN TEMPO REALE
 # ==========================================================
 
-@socketio.on('join')
-def on_join(data=None):
-    from flask import session
-    user_id = None
-    if data and data.get("user_id"):
-        user_id = data["user_id"]
-    elif session.get("utente_id"):
-        user_id = session.get("utente_id")
-    if not user_id:
-        return
-    room = f"user_{user_id}"
-    join_room(room)
-    print(f"🔵 Utente {user_id} entrato nella stanza {room}")
 
 @socketio.on("check_video_status")
 def check_video_status(data):
@@ -8652,15 +8639,18 @@ def handle_send_message(data):
         "destinatario_id": destinatario_id
     }, room=f"user_{mittente_id}")
 
+    count_mittente = chat_count_unread(mittente_id)
+    count_destinatario = chat_count_unread(destinatario_id)
+
     socketio.emit(
         'update_unread_count',
-        {'count': chat_count_unread(mittente_id)},
+        {'count': count_mittente},
         room=f"user_{mittente_id}"
     )
 
     socketio.emit(
         'update_unread_count',
-        {'count': chat_count_unread(destinatario_id)},
+        {'count': count_destinatario},
         room=f"user_{destinatario_id}"
     )
 
@@ -8673,7 +8663,8 @@ def handle_send_message(data):
 
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
 
-    if chat_aperta != mittente_id:
+    if not is_user_online(destinatario_id) and chat_aperta != mittente_id:
+
         print(f"🔔 Push inviata a {destinatario_id}")
 
         try:
@@ -8695,6 +8686,26 @@ def handle_chat_aperta(data):
     if 'CHAT_APERTA_UTENTI' not in app.config:
         app.config['CHAT_APERTA_UTENTI'] = {}
     app.config['CHAT_APERTA_UTENTI'][user_id] = int(other_id)
+
+
+def chat_count_unread(user_id):
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    cur.execute(sql("""
+        SELECT COUNT(*)
+        FROM messaggi_chat
+        WHERE destinatario_id = ?
+        AND letto = 0
+    """), (user_id,))
+
+    count = cur.fetchone()[0]
+
+    cur.close()
+    conn.close()
+
+    return count
 
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
