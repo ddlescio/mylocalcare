@@ -8643,12 +8643,6 @@ def handle_send_message(data):
 
     socketio.emit(
         'update_unread_count',
-        {'count': count_mittente},
-        room=f"user_{mittente_id}"
-    )
-
-    socketio.emit(
-        'update_unread_count',
         {'count': count_destinatario},
         room=f"user_{destinatario_id}"
     )
