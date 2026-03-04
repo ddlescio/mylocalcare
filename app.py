@@ -8666,7 +8666,7 @@ def handle_send_message(data):
     # =====================================
 
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
-    pagina_visibile = pagina_attiva.get(destinatario_id, False)
+    pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
 
     if chat_aperta != mittente_id and not pagina_visibile:
 
@@ -8694,14 +8694,15 @@ def handle_chat_aperta(data):
 
 @socketio.on("page_visible")
 def handle_page_visible(data):
+
     user_id = session.get("utente_id")
-    visible = data.get("visible")
 
     if not user_id:
         return
 
-    pagina_attiva[user_id] = bool(visible)
+    visible = bool(data.get("visible"))
 
+    pagina_attiva[user_id] = visible
 
 def chat_count_unread(user_id):
 
