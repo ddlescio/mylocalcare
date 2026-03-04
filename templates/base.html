@@ -783,8 +783,11 @@ document.addEventListener("click", function(e) {
         chatBadge.dataset.unread = String(n);
       }
 
-    });
+      // 🔥 aggiorna lo stato interno
+      lastUnreadChats = n;
 
+    });
+    
     // 🔔 Conteggio notifiche non lette
     socket.off("update_notifications");
     socket.on("update_notifications", (data) => {
