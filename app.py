@@ -8707,35 +8707,49 @@ def chat_count_unread(user_id):
 
     return count
 
+import traceback
+
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
     user_id = session.get('utente_id')
     other_id = data.get('other_id')
+
     if not user_id or not other_id:
         return
+
     try:
+        # Segna i messaggi come letti nel database
         chat_segna_letti(user_id, other_id)
 
-        # 🔥 AGGIORNA LE SPUNTE NELLA CHAT DELL’ALTRO UTENTE
-        socketio.emit('messages_read', {'from': user_id}, room=f"user_{other_id}")
+        # 🔵 Aggiorna le spunte nella chat dell'altro utente
+        socketio.emit(
+            'messages_read',
+            {'from': user_id},
+            room=f"user_{other_id}"
+        )
 
-        # 🔵 aggiorna contatore per l’utente nella navbar
+        # 🔵 Aggiorna il contatore messaggi non letti nella navbar
+        unread_count = chat_count_unread(user_id)
+
         socketio.emit(
             'update_unread_count',
-            {'count': chat_count_unread(user_id)},
+            {'count': unread_count},
             room=f"user_{user_id}"
         )
 
-        # 🔵 aggiorna anche la lista chat
-        socketio.emit('chat_threads_update', {'from': other_id}, room=f"user_{user_id}")
+        # 🔵 Aggiorna la lista delle chat
+        socketio.emit(
+            'chat_threads_update',
+            {'from': other_id},
+            room=f"user_{user_id}"
+        )
 
         print(f"✅ Messaggi da {other_id} segnati come letti da {user_id}")
-    import traceback
 
     except Exception as e:
         print("❌ Errore mark_as_read:")
         traceback.print_exc()
-    
+            
 @socketio.on('chat_chiusa')
 def handle_chat_chiusa(data):
     user_id = session.get('utente_id')
