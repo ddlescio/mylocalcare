@@ -600,6 +600,9 @@ document.addEventListener("click", function(e) {
 
   <!-- ✅ Socket.IO unificato per badge e chat -->
   <script>
+  (function () {
+  if (window.__socket_bootstrap_done__) return;
+  window.__socket_bootstrap_done__ = true;
   document.addEventListener("DOMContentLoaded", () => {
     const chatBadge  = document.querySelector('#chatBadge');
     const notifBadge = document.querySelector('#notifBadge');
@@ -618,13 +621,7 @@ document.addEventListener("click", function(e) {
     }
 
     // Inizializza socket in modo sicuro (evita duplicati)
-    if (!window.socket || !window.socket.connected) {
-
-      if (window.socket) {
-        try {
-          window.socket.disconnect();
-        } catch(e){}
-      }
+    if (!window.socket) {
 
       window.socket = io({
         transports: ["websocket"],
@@ -657,8 +654,6 @@ document.addEventListener("click", function(e) {
       });
 
     }
-
-    window.dispatchEvent(new Event("socket_ready"));
 
     // 📞 CHIAMATA IN ARRIVO
     socket.off("incoming_call");
@@ -789,14 +784,11 @@ document.addEventListener("click", function(e) {
       if (mount) mount.innerHTML = "";
     });
 
-    // 🔌 Connessione
+    // 🔌 Connessione socket
+    socket.off("connect");
+
     socket.on("connect", () => {
-
       console.log("🔌 socket connected:", socket.id);
-
-      {% if session.get('utente_id') %}
-      socket.emit("join", { user_id: {{ session['utente_id'] }} });
-      {% endif %}
     });
 
     // 💬 Conteggio chat non letti
@@ -856,6 +848,7 @@ document.addEventListener("click", function(e) {
       refreshNotifCount();
     });
   });
+  })();
   </script>
   <script src="{{ url_for('static', filename='js/flash_manager.js') }}"></script>
   <script>
@@ -1925,13 +1918,9 @@ window.addEventListener("beforeunload", () => {
 
   try {
 
-    // chiudi socket globale
-    if (window.socket && window.socket.connected) {
-      console.log("🔌 Chiusura socket prima del cambio pagina");
-      window.socket.disconnect();
-    }
+    // NON chiudere il socket qui
+    // il browser gestisce automaticamente la connessione
 
-    // pulizia scroll categorie
     sessionStorage.removeItem("categorieScrollLeft");
 
   } catch (e) {

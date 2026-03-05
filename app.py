@@ -8526,7 +8526,7 @@ def handle_disconnect():
     if user_id in online_users:
         online_users[user_id].discard(sid)
 
-        if len(online_users[user_id]) == 0:
+        if not online_users[user_id]:
             task = socketio.start_background_task(remove_user_later, user_id)
             disconnect_timers[user_id] = task
 
@@ -8539,7 +8539,7 @@ def remove_user_later(user_id):
         print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
-        
+
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
