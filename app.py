@@ -396,7 +396,7 @@ def is_user_online(user_id):
     return user_id in online_users
 
 disconnect_timers = {}
-
+recently_read_timers = {}
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
@@ -8631,20 +8631,29 @@ def check_video_status(data):
 def clear_recently_read(user_id, delay=None):
     """
     Cancella l'ultima chat letta dopo 'delay' secondi usando eventlet.
+    Evita di creare timer duplicati per lo stesso utente.
     """
+
     if delay is None:
         delay = app.config.get('CHAT_RECENTLY_READ_TTL', 5)
 
-    socketio.start_background_task(_delayed_clear_recently_read, user_id, delay)
+    # 🔒 se esiste già un timer → non crearne un altro
+    if user_id in recently_read_timers:
+        return
 
+    task = socketio.start_background_task(_delayed_clear_recently_read, user_id, delay)
+    recently_read_timers[user_id] = task
 
 def _delayed_clear_recently_read(user_id, delay):
-    # 🔥 Yield cooperativo
+
     socketio.sleep(delay)
 
     if 'CHAT_ULTIMA_LETTA' in app.config:
         app.config['CHAT_ULTIMA_LETTA'].pop(user_id, None)
         print(f"🧹 Pulita ultima chat letta per utente {user_id}")
+
+    # 🔥 rimuove il timer attivo
+    recently_read_timers.pop(user_id, None)
 
 @socketio.on('send_message')
 def handle_send_message(data):
