@@ -239,5 +239,24 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
+<script>
+document.querySelector("form").addEventListener("submit", function(e) {
+
+  const tipo = document.querySelector('input[name="tipo_annuncio"]:checked');
+
+  if (!tipo) {
+    e.preventDefault();
+
+    alert("Devi selezionare se OFFRI o CERCHI il servizio.");
+
+    document.querySelector('[name="tipo_annuncio"]').scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+
+});
+</script>
+
 {% endblock %}
 {% endblock %}

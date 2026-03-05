@@ -15,9 +15,13 @@
 
   <title>MyLocalCare</title>
   {% block head_extra %}{% endblock %}
+
+  {% if session.get('utente_id') and enable_socket %}
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="/static/js/socket_global.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  {% endif %}
+
+  <script src="https://cdn.tailwindcss.com"></script>  
   <style>
   /* Modalità browser normale */
   html.pwa-browser .only-pwa {
