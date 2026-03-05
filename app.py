@@ -8527,7 +8527,7 @@ def handle_disconnect():
 
 def remove_user_later(user_id):
 
-    time.sleep(3)
+    time.sleep(15)
 
     if user_id in online_users and len(online_users[user_id]) == 0:
         del online_users[user_id]

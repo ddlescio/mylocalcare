@@ -1892,6 +1892,27 @@ async function registerPush() {
 
     console.log("Push di test inviata");
 }
+</script>
+<script>
+window.addEventListener("beforeunload", () => {
+
+  try {
+
+    // chiudi socket globale
+    if (window.socket && window.socket.connected) {
+      console.log("🔌 Chiusura socket prima del cambio pagina");
+      window.socket.disconnect();
+    }
+
+    // pulizia scroll categorie
+    sessionStorage.removeItem("categorieScrollLeft");
+
+  } catch (e) {
+    console.warn("Errore cleanup beforeunload:", e);
+  }
+
+});
+</script>
 
 </body>
 </html>
