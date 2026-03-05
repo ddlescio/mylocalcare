@@ -101,27 +101,27 @@
 </div>
 </div>
 <script>
-document.addEventListener("DOMContentLoaded", async () => {
-    let socket;
-    for (let i = 0; i < 20; i++) {
-        if (window.socket && window.socket.connected) { socket = window.socket; break; }
-        await new Promise(r => setTimeout(r, 100));
-    }
-    if (!socket) socket = io({ transports: ['websocket'] });
+  document.addEventListener("DOMContentLoaded", () => {
 
-    socket.on("chat_threads_update", () => {
+    window.whenSocketReady((socket) => {
+
+      socket.on("chat_threads_update", () => {
         location.reload();
+      });
+
     });
-});
 
-// 🔁 Quando rientri su /chat con il tasto indietro, forza un refresh
-window.addEventListener("pageshow", function (e) {
-    const navEntries = performance.getEntriesByType("navigation");
-    const navType = navEntries && navEntries[0] ? navEntries[0].type : null;
+  });
 
-    if (e.persisted || navType === "back_forward") {
-        location.reload();
-    }
-});
+  // 🔁 Quando rientri su /chat con il tasto indietro, forza refresh
+  window.addEventListener("pageshow", function (e) {
+      const navEntries = performance.getEntriesByType("navigation");
+      const navType = navEntries && navEntries[0] ? navEntries[0].type : null;
+
+      if (e.persisted || navType === "back_forward") {
+          location.reload();
+      }
+  });
 </script>
+
 {% endblock %}

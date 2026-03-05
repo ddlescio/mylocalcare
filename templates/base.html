@@ -16,6 +16,7 @@
   <title>MyLocalCare</title>
   {% block head_extra %}{% endblock %}
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="/static/js/socket_global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
   /* Modalità browser normale */
@@ -603,7 +604,9 @@ document.addEventListener("click", function(e) {
   (function () {
   if (window.__socket_bootstrap_done__) return;
   window.__socket_bootstrap_done__ = true;
+  const socket = window.socket;
   document.addEventListener("DOMContentLoaded", () => {
+
     const chatBadge  = document.querySelector('#chatBadge');
     const notifBadge = document.querySelector('#notifBadge');
     const isChatPage = window.location.pathname.startsWith("/chat/");
@@ -620,65 +623,7 @@ document.addEventListener("click", function(e) {
       return !isVisible;
     }
 
-    // ===============================
-    // SOCKET GLOBALE
-    // ===============================
 
-    if (!window.socket) {
-
-      window.socket = io({
-        transports: ["websocket"],
-        upgrade: false,
-        withCredentials: true,
-        reconnection: true
-      });
-
-      console.log("🟢 Socket creato");
-
-    } else {
-
-      console.log("♻️ Socket riutilizzato");
-
-    }
-
-    const socket = window.socket;
-
-
-    // evita doppio listener connect
-    if (!socket._baseConnectListener) {
-
-      socket._baseConnectListener = true;
-
-      socket.on("connect", () => {
-
-        console.log("🔌 socket connected:", socket.id);
-
-        window.dispatchEvent(new Event("socket_ready"));
-
-      });
-
-    }
-
-
-    // ===============================
-    // UTILITY PER SCRIPT DELLE PAGINE
-    // ===============================
-
-    window.whenSocketReady = function(callback) {
-
-      const socket = window.socket;
-
-      if (socket && socket.connected) {
-        callback(socket);
-        return;
-      }
-
-      socket.once("connect", () => {
-        callback(socket);
-      });
-
-    };
-        
     // 📞 CHIAMATA IN ARRIVO
     socket.on("incoming_call", (data) => {
 
