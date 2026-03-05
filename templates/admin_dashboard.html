@@ -1,5 +1,5 @@
 {% extends "layout_admin.html" %}
-
+{% set enable_socket = true %}
 {% block admin_content %}
 
 <!-- 📌 Dashboard Admin -->
@@ -120,7 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
               data.messaggi ?? "0";
 
             document.getElementById("dash-video-minuti").textContent =
-              data.video_minuti ?? "0";              
+              data.video_minuti ?? "0";
         });
 });
 </script>
