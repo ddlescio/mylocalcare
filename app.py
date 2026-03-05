@@ -395,6 +395,8 @@ online_users = {}
 def is_user_online(user_id):
     return user_id in online_users
 
+disconnect_timers = {}
+
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
@@ -8481,6 +8483,10 @@ def handle_connect():
 
     sid = request.sid
 
+    # annulla eventuale timer di disconnessione
+    if user_id in disconnect_timers:
+        disconnect_timers.pop(user_id, None)
+
     if user_id not in online_users:
         online_users[user_id] = set()
 
@@ -8516,14 +8522,18 @@ def handle_disconnect():
         online_users[user_id].discard(sid)
 
         if len(online_users[user_id]) == 0:
-            socketio.start_background_task(remove_user_later, user_id)
+            task = socketio.start_background_task(remove_user_later, user_id)
+            disconnect_timers[user_id] = task
 
 def remove_user_later(user_id):
-    socketio.sleep(3)
+
+    time.sleep(3)
 
     if user_id in online_users and len(online_users[user_id]) == 0:
         del online_users[user_id]
         print(f"🔴 Utente {user_id} OFFLINE")
+
+    disconnect_timers.pop(user_id, None)
 
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
