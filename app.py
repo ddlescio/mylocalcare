@@ -8490,6 +8490,11 @@ def handle_connect():
     if user_id not in online_users:
         online_users[user_id] = set()
 
+    if len(online_users[user_id]) >= 2:
+        print(f"⚠️ Troppi socket per utente {user_id}, blocco connessione")
+        disconnect()
+        return
+    
     online_users[user_id].add(sid)
 
     print(f"🟢 Socket connesso utente {user_id} | socket attivi: {len(online_users[user_id])}")

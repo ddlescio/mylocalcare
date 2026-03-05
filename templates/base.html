@@ -617,19 +617,46 @@ document.addEventListener("click", function(e) {
       return !isVisible;
     }
 
-    // Inizializza socket in modo compatibile con Render
-    if (!window.socket) {
+    // Inizializza socket in modo sicuro (evita duplicati)
+    if (!window.socket || !window.socket.connected) {
+
+      if (window.socket) {
+        try {
+          window.socket.disconnect();
+        } catch(e){}
+      }
 
       window.socket = io({
         transports: ["websocket"],
-        withCredentials: true
+        upgrade: false,
+        withCredentials: true,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
       });
 
       console.log("🟢 Socket creato");
 
+    } else {
+
+      console.log("♻️ Socket riutilizzato");
+
     }
 
     const socket = window.socket;
+
+    function whenSocketReady(callback) {
+
+      if (window.socket && window.socket.connected) {
+        callback(window.socket);
+        return;
+      }
+
+      window.socket.once("connect", () => {
+        callback(window.socket);
+      });
+
+    }
 
     window.dispatchEvent(new Event("socket_ready"));
 
