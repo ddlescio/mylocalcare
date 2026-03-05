@@ -620,14 +620,17 @@ document.addEventListener("click", function(e) {
       return !isVisible;
     }
 
-    // Inizializza socket in modo sicuro (evita duplicati)
+    // ===============================
+    // SOCKET GLOBALE
+    // ===============================
+
     if (!window.socket) {
 
       window.socket = io({
         transports: ["websocket"],
         upgrade: false,
         withCredentials: true,
-        reconnection: true,
+        reconnection: true
       });
 
       console.log("🟢 Socket creato");
@@ -638,29 +641,44 @@ document.addEventListener("click", function(e) {
 
     }
 
-    let socket = window.socket;
+    const socket = window.socket;
 
-    // 🔥 QUI va il segnale per la chat
-    socket.off("connect");   // 🔥 rimuove eventuali listener precedenti
 
-    socket.on("connect", () => {
-      console.log("🔌 socket connected:", socket.id);
+    // evita doppio listener connect
+    if (!socket._baseConnectListener) {
 
-      window.dispatchEvent(new Event("socket_ready"));
-    });
+      socket._baseConnectListener = true;
 
-    function whenSocketReady(callback) {
+      socket.on("connect", () => {
 
-      if (window.socket && window.socket.connected) {
-        callback(window.socket);
-        return;
-      }
+        console.log("🔌 socket connected:", socket.id);
 
-      window.socket.once("connect", () => {
-        callback(window.socket);
+        window.dispatchEvent(new Event("socket_ready"));
+
       });
 
     }
+
+
+    // ===============================
+    // UTILITY PER SCRIPT DELLE PAGINE
+    // ===============================
+
+    window.whenSocketReady = function(callback) {
+
+      const socket = window.socket;
+
+      if (socket && socket.connected) {
+        callback(socket);
+        return;
+      }
+
+      socket.once("connect", () => {
+        callback(socket);
+      });
+
+    };
+        
     // 📞 CHIAMATA IN ARRIVO
     socket.on("incoming_call", (data) => {
 

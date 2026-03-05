@@ -415,17 +415,6 @@ body {
   </form>
 </div>
 
-<script>
-function whenSocketReady(callback) {
-  if (window.socket) {
-    callback(window.socket);
-  } else {
-    window.addEventListener("socket_ready", () => {
-      callback(window.socket);
-    }, { once: true });
-  }
-}
-</script>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
