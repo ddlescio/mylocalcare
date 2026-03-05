@@ -785,12 +785,15 @@ document.addEventListener("click", function(e) {
     });
 
     // 🔌 Connessione socket
-    socket.off("connect");
 
-    socket.on("connect", () => {
-      console.log("🔌 socket connected:", socket.id);
-    });
+    if (!window.__socket_connect_logger_bound__) {
+      window.__socket_connect_logger_bound__ = true;
 
+      socket.on("connect", () => {
+        console.log("🔌 socket connected:", socket.id);
+      });
+    }
+    
     // 💬 Conteggio chat non letti
     socket.off("update_unread_count");
     socket.on("update_unread_count", (data) => {
