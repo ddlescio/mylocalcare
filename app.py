@@ -8478,40 +8478,50 @@ def handle_connect(auth=None):
     if not user_id:
         return
 
-    room = f"user_{user_id}"
-    join_room(room)
-
     sid = request.sid
+    room = f"user_{user_id}"
 
     # annulla eventuale timer di disconnessione
-    if user_id in disconnect_timers:
-        disconnect_timers.pop(user_id, None)
+    task = disconnect_timers.pop(user_id, None)
+    if task:
+        try:
+            task.kill()
+        except:
+            pass
 
     if user_id not in online_users:
         online_users[user_id] = set()
 
+    # se ci sono troppi socket, chiude quelli vecchi
     if len(online_users[user_id]) >= 2:
-        print(f"⚠️ Troppi socket per utente {user_id}, blocco connessione")
-        disconnect()
-        return
+        print(f"⚠️ Troppi socket per utente {user_id}, chiusura socket vecchi")
+
+        for old_sid in list(online_users[user_id]):
+            try:
+                socketio.server.disconnect(old_sid)
+            except:
+                pass
+
+        online_users[user_id].clear()
 
     online_users[user_id].add(sid)
 
+    join_room(room)
+
     print(f"🟢 Socket connesso utente {user_id} | socket attivi: {len(online_users[user_id])}")
 
-    # 🔔 invia subito il contatore reale alla navbar
+    # invia subito il contatore messaggi non letti
     try:
         unread = chat_count_unread(user_id)
 
         socketio.emit(
             "update_unread_count",
             {"count": unread},
-            room=f"user_{user_id}"
+            room=room
         )
     except Exception as e:
         print("Errore invio unread count:", e)
 
-import time
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8526,9 +8536,14 @@ def handle_disconnect():
     if user_id in online_users:
         online_users[user_id].discard(sid)
 
+        # se non restano socket attivi
         if not online_users[user_id]:
-            task = socketio.start_background_task(remove_user_later, user_id)
-            disconnect_timers[user_id] = task
+
+            # evita timer duplicati
+            if user_id not in disconnect_timers:
+                task = socketio.start_background_task(remove_user_later, user_id)
+                disconnect_timers[user_id] = task
+
 
 def remove_user_later(user_id):
 
