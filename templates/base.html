@@ -656,7 +656,6 @@ document.addEventListener("click", function(e) {
     }
 
     // 📞 CHIAMATA IN ARRIVO
-    socket.off("incoming_call");
     socket.on("incoming_call", (data) => {
 
         console.log("📞 Incoming call:", data);
@@ -699,7 +698,6 @@ document.addEventListener("click", function(e) {
     });
 
     // 📛 CHIAMATA RIFIUTATA (arriva SOLO al chiamante)
-    socket.off("video_call_rejected");
     socket.on("video_call_rejected", (data) => {
 
       console.log("📛 video_call_rejected ricevuto:", data);
@@ -772,7 +770,6 @@ document.addEventListener("click", function(e) {
       }
     }
 
-    socket.off("force_call_end");
     socket.on("force_call_end", (data) => {
       console.log("🛑 force_call_end ricevuto:", data);
 
@@ -793,9 +790,8 @@ document.addEventListener("click", function(e) {
         console.log("🔌 socket connected:", socket.id);
       });
     }
-    
+
     // 💬 Conteggio chat non letti
-    socket.off("update_unread_count");
     socket.on("update_unread_count", (data) => {
 
       if (!data || typeof data.count !== "number") return;
@@ -814,7 +810,6 @@ document.addEventListener("click", function(e) {
     });
 
     // 🔔 Conteggio notifiche non lette
-    socket.off("update_notifications");
     socket.on("update_notifications", (data) => {
       if (!canDoBadgeFetch()) return;
       if (isChatPage) return;
@@ -835,7 +830,6 @@ document.addEventListener("click", function(e) {
       refreshNotifCount();
     });
     // ⬇️ AGGIUNGI SUBITO QUI
-    socket.off("nuova_notifica");
     socket.on("nuova_notifica", (data) => {
       if (!canDoBadgeFetch()) return;
       if (data && typeof data.count === "number") {
