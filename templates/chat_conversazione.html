@@ -557,7 +557,6 @@ function whenSocketReady(callback) {
       try {
         if (socket && socket.connected) {
           socket.emit('chat_chiusa', { other_id: destId });
-          socket.disconnect(); // ← AGGIUNGI QUESTA RIGA
         }
       } catch (e) {}
     });

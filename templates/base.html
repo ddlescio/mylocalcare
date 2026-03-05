@@ -642,6 +642,15 @@ document.addEventListener("click", function(e) {
 
     const socket = window.socket;
 
+    // 🔥 QUI va il segnale per la chat
+    socket.on("connect", () => {
+      console.log("🔌 socket connected:", socket.id);
+
+      // avvisa la chat che il socket è pronto
+      window.dispatchEvent(new Event("socket_ready"));
+    });
+
+
     function whenSocketReady(callback) {
 
       if (window.socket && window.socket.connected) {
@@ -654,7 +663,6 @@ document.addEventListener("click", function(e) {
       });
 
     }
-
     // 📞 CHIAMATA IN ARRIVO
     socket.on("incoming_call", (data) => {
 
