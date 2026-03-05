@@ -7,7 +7,7 @@ import sqlite3
 import json
 import uuid
 from flask_mail import Mail, Message
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv  # ✅ serve per leggere il file .env
 # 🔐 Crittografia
@@ -8471,7 +8471,7 @@ def video_ping():
 # =====================================================
 
 @socketio.on("connect")
-def handle_connect():
+def handle_connect(auth=None):
     from flask import session, request
 
     user_id = session.get("utente_id")
@@ -8494,7 +8494,7 @@ def handle_connect():
         print(f"⚠️ Troppi socket per utente {user_id}, blocco connessione")
         disconnect()
         return
-    
+
     online_users[user_id].add(sid)
 
     print(f"🟢 Socket connesso utente {user_id} | socket attivi: {len(online_users[user_id])}")
@@ -8532,14 +8532,14 @@ def handle_disconnect():
 
 def remove_user_later(user_id):
 
-    time.sleep(15)
+    socketio.sleep(15)
 
     if user_id in online_users and len(online_users[user_id]) == 0:
-        del online_users[user_id]
+        online_users.pop(user_id, None)
         print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
-
+        
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
