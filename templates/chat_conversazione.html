@@ -423,7 +423,7 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      socket.off('new_message.chat');
+      socket.off('new_message');
       socket.off('messages_read.chat');
       socket.off('user_typing.chat');
 
@@ -845,19 +845,6 @@ body {
     const testo = input.value.trim();
     if (!testo) return;
     socket.emit('send_message', { destinatario_id: destId, testo });
-    wrap.appendChild(
-      bubble({
-        id: "tmp_" + Date.now(),
-        mittente_id: meId,
-        testo,
-        created_at: new Date().toISOString(),
-        consegnato: false,
-        letto: false,
-        me_id: meId
-      })
-    );
-
-scrollBottom(true);
     input.value = '';
     toggleEmoji(false);
   });
