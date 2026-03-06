@@ -421,9 +421,9 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-    socket.off('new_message');
-    socket.off('messages_read');
-    socket.off('user_typing');
+      socket.off('new_message.chat');
+      socket.off('messages_read.chat');
+      socket.off('user_typing.chat');
 
     const meId = parseInt("{{ g.utente['id'] }}", 10);
     const wrap = document.getElementById('msgWrap');
@@ -655,7 +655,7 @@ body {
     }, 2000); // puoi abbassare a 1000ms se vuoi più reattività
   });
 
-  socket.on('user_typing', data => {
+  socket.on('user_typing.chat', data => {
     if (data.from !== destId) return;
     if (data.typing) {
       typingIndicator.classList.remove('hidden');
@@ -738,7 +738,7 @@ body {
     });
   });
   // 💬 Ricezione messaggi (versione blindata)
-  socket.on('new_message', (m) => {
+  socket.on('new_message.chat', (m) => {
 
     try {
 
@@ -759,8 +759,14 @@ body {
         newDateInserted = after > before;
       }
 
-      const bolla = bubble({ ...m, me_id: meId });
-      wrap.appendChild(bolla);
+      let bolla = document.querySelector(`[data-mid="${m.id}"]`);
+
+      if (!bolla) {
+        const node = bubble({ ...m, me_id: meId });
+        wrap.appendChild(node);
+        bolla = node.querySelector('.bubble');
+      }
+      
       if (!oldestMessageId) {
         oldestMessageId = m.id;
       }
@@ -801,7 +807,7 @@ body {
   });
 
   // 🔵 Aggiornamento spunte
-  socket.on('messages_read', data => {
+  socket.on('messages_read.chat', data => {
     if (data.from !== destId) return;
 
     // aggiorna SOLO i messaggi inviati da me e NON aggiornati
@@ -817,6 +823,19 @@ body {
     const testo = input.value.trim();
     if (!testo) return;
     socket.emit('send_message', { destinatario_id: destId, testo });
+    wrap.appendChild(
+      bubble({
+        id: "tmp_" + Date.now(),
+        mittente_id: meId,
+        testo,
+        created_at: new Date().toISOString(),
+        consegnato: false,
+        letto: false,
+        me_id: meId
+      })
+    );
+
+scrollBottom(true);
     input.value = '';
     toggleEmoji(false);
   });
