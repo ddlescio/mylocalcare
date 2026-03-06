@@ -4638,7 +4638,7 @@ def utente_update_galleria():
 
     # --- Aggiungi nuove immagini ---
     uploaded_files = request.files.getlist("foto_galleria")
-    upload_dir = os.path.join(app.root_path, "static", "uploads", "profili", "galleria")
+    upload_dir = os.path.join("/uploads", "profili", "galleria")
     os.makedirs(upload_dir, exist_ok=True)
 
     for file in uploaded_files:
@@ -4778,7 +4778,7 @@ def rimuovi_copertina():
     row = cur.fetchone()
 
     if row and row['copertina']:
-        path = os.path.join(app.root_path, 'static', row['copertina'])
+        path = os.path.join("/uploads", row['copertina'].replace("uploads/", ""))
         if os.path.exists(path):
             try:
                 os.remove(path)
