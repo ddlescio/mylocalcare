@@ -394,10 +394,8 @@ socketio = SocketIO(
 # TRACKING UTENTI ONLINE
 # ==============================
 
-online_users = {}
-
 def is_user_online(user_id):
-    return user_id in online_users
+    return redis_client.sismember("online_users", str(user_id))
 
 disconnect_timers = {}
 recently_read_timers = {}
@@ -631,6 +629,7 @@ app.config.setdefault('CHAT_RECENTLY_READ_TTL', 5)
 
 import redis
 from flask_session import Session
+redis_client = redis.from_url(os.environ["REDIS_URL"])
 from datetime import timedelta
 
 app.config['SESSION_TYPE'] = 'redis'
@@ -8478,14 +8477,13 @@ def handle_connect(auth=None):
         except Exception:
             pass
 
-    if user_id not in online_users:
-        online_users[user_id] = set()
-
-    online_users[user_id].add(sid)
+    redis_client.sadd("online_users", str(user_id))
+    redis_client.sadd(f"user_sockets:{user_id}", sid)
 
     join_room(room)
 
-    print(f"🟢 Socket connesso utente {user_id} | socket attivi: {len(online_users[user_id])}")
+    count = redis_client.scard(f"user_sockets:{user_id}")
+    print(f"🟢 Socket connesso utente {user_id} | socket attivi: {count}")
 
     # invia subito il contatore messaggi non letti
     try:
@@ -8503,21 +8501,17 @@ def handle_disconnect():
     from flask import session, request
 
     user_id = session.get("utente_id")
-    sid = request.sid
-
     if not user_id:
         return
 
-    if user_id in online_users:
-        online_users[user_id].discard(sid)
+    sid = request.sid
 
-        # pulizia set vuoto
-    if len(online_users[user_id]) == 0:
+    redis_client.srem(f"user_sockets:{user_id}", sid)
 
-        # pulizia set vuoto
-        online_users.pop(user_id, None)
+    if redis_client.scard(f"user_sockets:{user_id}") == 0:
 
-        # evita timer duplicati
+        redis_client.srem("online_users", str(user_id))
+
         if user_id not in disconnect_timers:
             task = socketio.start_background_task(remove_user_later, user_id)
             disconnect_timers[user_id] = task
@@ -8525,8 +8519,8 @@ def handle_disconnect():
 def remove_user_later(user_id):
     socketio.sleep(30)
 
-    if user_id not in online_users or len(online_users[user_id]) == 0:
-        online_users.pop(user_id, None)
+    if redis_client.scard(f"user_sockets:{user_id}") == 0:
+        redis_client.srem("online_users", str(user_id))
         print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
