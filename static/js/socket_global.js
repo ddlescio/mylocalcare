@@ -1,3 +1,10 @@
+// evita esecuzione multipla dello script
+if (window.__socket_bootstrap_done__) {
+  console.log("♻️ socket bootstrap già eseguito");
+} else {
+
+window.__socket_bootstrap_done__ = true;
+
 // ===============================
 // SOCKET GLOBALE
 // ===============================
@@ -56,3 +63,5 @@ window.whenSocketReady = function(callback) {
   });
 
 };
+
+}

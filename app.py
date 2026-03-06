@@ -8476,7 +8476,7 @@ def handle_connect(auth=None):
 
     user_id = session.get("utente_id")
     if not user_id:
-        return
+        return False
 
     sid = request.sid
     room = f"user_{user_id}"
@@ -8486,23 +8486,11 @@ def handle_connect(auth=None):
     if task:
         try:
             task.kill()
-        except:
+        except Exception:
             pass
 
     if user_id not in online_users:
         online_users[user_id] = set()
-
-    # se ci sono troppi socket, chiude quelli vecchi
-    if len(online_users[user_id]) >= 2:
-        print(f"⚠️ Troppi socket per utente {user_id}, chiusura socket vecchi")
-
-        for old_sid in list(online_users[user_id]):
-            try:
-                socketio.server.disconnect(old_sid)
-            except:
-                pass
-
-        online_users[user_id].clear()
 
     online_users[user_id].add(sid)
 
@@ -8513,7 +8501,6 @@ def handle_connect(auth=None):
     # invia subito il contatore messaggi non letti
     try:
         unread = chat_count_unread(user_id)
-
         socketio.emit(
             "update_unread_count",
             {"count": unread},
@@ -8521,7 +8508,6 @@ def handle_connect(auth=None):
         )
     except Exception as e:
         print("Errore invio unread count:", e)
-
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8536,20 +8522,21 @@ def handle_disconnect():
     if user_id in online_users:
         online_users[user_id].discard(sid)
 
-        # se non restano socket attivi
-        if not online_users[user_id]:
+        # pulizia set vuoto
+    if len(online_users[user_id]) == 0:
 
-            # evita timer duplicati
-            if user_id not in disconnect_timers:
-                task = socketio.start_background_task(remove_user_later, user_id)
-                disconnect_timers[user_id] = task
+        # pulizia set vuoto
+        online_users.pop(user_id, None)
 
+        # evita timer duplicati
+        if user_id not in disconnect_timers:
+            task = socketio.start_background_task(remove_user_later, user_id)
+            disconnect_timers[user_id] = task
 
 def remove_user_later(user_id):
+    socketio.sleep(30)
 
-    socketio.sleep(15)
-
-    if user_id in online_users and len(online_users[user_id]) == 0:
+    if user_id not in online_users or len(online_users[user_id]) == 0:
         online_users.pop(user_id, None)
         print(f"🔴 Utente {user_id} OFFLINE")
 
