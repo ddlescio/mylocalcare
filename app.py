@@ -380,9 +380,13 @@ socketio = SocketIO(
         "http://localhost:5050"
     ],
     async_mode="eventlet",
+    message_queue=os.getenv("REDIS_URL"),
     ping_timeout=20,
-    ping_interval=10
+    ping_interval=10,
+    logger=True,
+    engineio_logger=True
 )
+
 # =====================================================
 # UTENTI ONLINE (socket registry)
 # =====================================================
@@ -631,7 +635,14 @@ from datetime import timedelta
 
 app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_REDIS'] = redis.from_url(os.environ['REDIS_URL'])
+print("REDIS_URL:", os.environ.get("REDIS_URL"))
 
+try:
+    r = redis.from_url(os.environ["REDIS_URL"])
+    r.ping()
+    print("✅ Redis connesso correttamente")
+except Exception as e:
+    print("❌ Redis NON connesso:", e)
 # sessione persistente 30 giorni
 app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
@@ -8739,7 +8750,7 @@ def handle_send_message(data):
             "Nuovo messaggio su LocalCare",
             testo[:100]
         )
-    
+
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
     """Registra quale chat è attualmente aperta da ciascun utente."""
