@@ -8476,6 +8476,10 @@ def handle_connect(auth=None):
             pass
 
     redis_client.sadd("online_users", str(user_id))
+    # elimina eventuali socket vecchie
+    redis_client.delete(f"user_sockets:{user_id}")
+
+    # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
 
     join_room(room)
