@@ -1,6 +1,6 @@
 import eventlet
 eventlet.monkey_patch()
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory
 from whitenoise import WhiteNoise
 import os
 import sqlite3
@@ -4687,9 +4687,10 @@ def elimina_annuncio(id):
 import werkzeug
 from werkzeug.utils import secure_filename
 
-# --- Configurazione cartella upload ---
-UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads', 'profili')
+# --- Configurazione cartella upload (Render Persistent Disk) ---
+UPLOAD_FOLDER = os.path.join("/uploads", "profili")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -4749,7 +4750,7 @@ def upload_copertina():
         flash("Formato non valido. Usa JPG, PNG o WEBP.")
         return redirect(request.referrer or url_for('dashboard'))
 
-    upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'profili', 'copertine')
+    upload_dir = os.path.join("/uploads", "profili", "copertine")
     os.makedirs(upload_dir, exist_ok=True)
 
     filename = f"copertina_{g.utente['id']}.{estensione}"
@@ -8912,6 +8913,10 @@ def webhook_stripe():
         gestisci_pagamento_confermato(payment_intent)
 
     return "ok", 200
+
+@app.route("/uploads/<path:filename>")
+def uploaded_files(filename):
+    return send_from_directory("/uploads", filename)
 
 # =====================================================
 # 🧹 AUTO CLEANUP VIDEO CALL FANTASMA
