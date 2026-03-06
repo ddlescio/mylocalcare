@@ -629,33 +629,30 @@ app.config.setdefault('CHAT_RECENTLY_READ_TTL', 5)
 
 import redis
 from flask_session import Session
-redis_client = redis.from_url(os.environ["REDIS_URL"])
 from datetime import timedelta
 
+redis_client = redis.from_url(os.environ["REDIS_URL"])
+
 app.config['SESSION_TYPE'] = 'redis'
-app.config['SESSION_REDIS'] = redis.from_url(os.environ['REDIS_URL'])
+app.config['SESSION_REDIS'] = redis_client
+
 print("REDIS_URL:", os.environ.get("REDIS_URL"))
 
 try:
-    r = redis.from_url(os.environ["REDIS_URL"])
-    r.ping()
+    redis_client.ping()
     print("✅ Redis connesso correttamente")
 except Exception as e:
     print("❌ Redis NON connesso:", e)
-# sessione persistente 30 giorni
+
 app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
-# sicurezza cookie
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
 
 Session(app)
-
-print("Percorso database usato:", os.path.abspath('database.db'))
-
 
 @app.template_filter('safe_strip')
 def safe_strip(value):
