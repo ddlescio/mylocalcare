@@ -4934,52 +4934,15 @@ def push_subscribe():
     return jsonify({"success": True})
 
 
-@app.route("/push/test")
-@login_required
-def push_test():
-
-    conn = get_db_connection()
-    cur = get_cursor(conn)
-
-    cur.execute(sql("""
-        SELECT endpoint, p256dh, auth
-        FROM push_subscriptions
-        WHERE utente_id = ?
-    """), (g.utente["id"],))
-
-    subs = cur.fetchall()
-    cur.close()
-
-    if not subs:
-        return "Nessuna subscription trovata"
-
-    for sub in subs:
-        try:
-            webpush(
-                subscription_info={
-                    "endpoint": sub["endpoint"],
-                    "keys": {
-                        "p256dh": sub["p256dh"],
-                        "auth": sub["auth"],
-                    },
-                },
-                data=json.dumps({
-                    "title": "Test Push LocalCare",
-                    "body": "Push funzionante 🎉"
-                }),
-                vapid_private_key=os.getenv("VAPID_PRIVATE_KEY"),
-                vapid_claims={
-                    "sub": "mailto:lescio@gmail.com"
-                }
-            )
-        except WebPushException as e:
-            print("Errore push:", e)
-
-    return "Push inviata"
 
 # =========================================================
 # 🔔 INVIO PUSH GENERICA (SERVER-SIDE)
 # =========================================================
+
+from pywebpush import webpush, WebPushException
+import requests
+import json
+import os
 
 def invia_push(user_id, title, body):
 
@@ -5001,7 +4964,9 @@ def invia_push(user_id, title, body):
         return
 
     for sub in subs:
+
         try:
+
             webpush(
                 subscription_info={
                     "endpoint": sub["endpoint"],
@@ -5018,15 +4983,20 @@ def invia_push(user_id, title, body):
                 vapid_private_key=os.getenv("VAPID_PRIVATE_KEY"),
                 vapid_claims={
                     "sub": os.getenv("VAPID_CLAIM_EMAIL")
-                }
+                },
+                timeout=3   # ⚠️ evita blocchi del server
             )
 
+            print(f"🔔 Push inviata a {user_id}")
+
         except WebPushException as e:
+
             print("Errore push:", e)
 
             # subscription scaduta → rimuoviamo
             if hasattr(e, "response") and e.response and e.response.status_code in (404, 410):
-                print("Subscription scaduta, la rimuovo")
+
+                print("🧹 Subscription scaduta, la rimuovo")
 
                 cur.execute(sql("""
                     DELETE FROM push_subscriptions
@@ -5034,6 +5004,14 @@ def invia_push(user_id, title, body):
                 """), (sub["endpoint"],))
 
                 conn.commit()
+
+        except requests.exceptions.Timeout:
+
+            print("⚠️ Timeout push evitato")
+
+        except Exception as e:
+
+            print("Errore push generico:", e)
 
     cur.close()
     conn.close()
@@ -8753,17 +8731,15 @@ def handle_send_message(data):
 
     if chat_aperta != mittente_id and not pagina_visibile:
 
-        print(f"🔔 Push inviata a {destinatario_id}")
+        print(f"🔔 Push programmata per {destinatario_id}")
 
-        try:
-            invia_push(
-                destinatario_id,
-                title="Nuovo messaggio su LocalCare",
-                body=testo[:100]
-            )
-        except Exception as e:
-            print("Errore invio push:", e)
-
+        socketio.start_background_task(
+            invia_push,
+            destinatario_id,
+            "Nuovo messaggio su LocalCare",
+            testo[:100]
+        )
+    
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
     """Registra quale chat è attualmente aperta da ciascun utente."""
