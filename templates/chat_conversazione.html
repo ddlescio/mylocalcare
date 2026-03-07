@@ -423,9 +423,9 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      socket.off('new_message.chat');
-      socket.off('messages_read.chat');
-      socket.off('user_typing.chat');
+      socket.off('new_message');
+      socket.off('messages_read');
+      socket.off('user_typing');
 
       const meId = parseInt("{{ g.utente['id'] }}", 10);
       const wrap = document.getElementById('msgWrap');
@@ -661,7 +661,7 @@ body {
     }, 2000); // puoi abbassare a 1000ms se vuoi più reattività
   });
 
-  socket.on('user_typing.chat', data => {
+  socket.on('user_typing', data => {
     if (data.from !== destId) return;
     if (data.typing) {
       typingIndicator.classList.remove('hidden');
@@ -744,7 +744,7 @@ body {
     });
   });
   // 💬 Ricezione messaggi (versione blindata)
-  socket.on('new_message.chat', (m) => {
+  socket.on('new_message', (m) => {
 
     try {
 
@@ -820,7 +820,7 @@ body {
   });
 
   // 🔵 Aggiornamento spunte
-  socket.on('messages_read', data => {
+  socket.on('messages_read', (data) => {
 
     if (data.from !== destId) return;
 
