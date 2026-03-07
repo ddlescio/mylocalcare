@@ -8709,8 +8709,8 @@ def handle_send_message(data):
     }
 
     # 🔵 Invio realtime
-    emit('new_message', messaggio, room=f"user_{mittente_id}")
-    emit('new_message', messaggio, room=f"user_{destinatario_id}")
+    socketio.emit('new_message', messaggio, room=f"user_{mittente_id}")
+    socketio.emit('new_message', messaggio, room=f"user_{destinatario_id}")
 
     socketio.emit("message_delivered", {
         "id": msg_id,
