@@ -423,7 +423,7 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      socket.off('new_message');
+      socket.off('new_message.chat');
       socket.off('messages_read.chat');
       socket.off('user_typing.chat');
 
@@ -744,7 +744,7 @@ body {
     });
   });
   // 💬 Ricezione messaggi (versione blindata)
-  socket.on('new_message', (m) => {
+  socket.on('new_message.chat', (m) => {
 
     try {
 
