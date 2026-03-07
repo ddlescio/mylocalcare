@@ -21,7 +21,7 @@
   <script src="/static/js/socket_global.js"></script>
   {% endif %}
 
-  <script src="https://cdn.tailwindcss.com"></script>  
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
   /* Modalità browser normale */
   html.pwa-browser .only-pwa {
@@ -606,9 +606,10 @@ document.addEventListener("click", function(e) {
   <!-- ✅ Socket.IO unificato per badge e chat -->
   <script>
   (function () {
-  if (window.__socket_bootstrap_done__) return;
-  window.__socket_bootstrap_done__ = true;
-  const socket = window.socket;
+    if (window.__socket_ui_bootstrap__) return;
+    window.__socket_ui_bootstrap__ = true;
+    const socket = window.socket;
+    if (!socket) return;
   document.addEventListener("DOMContentLoaded", () => {
 
     const chatBadge  = document.querySelector('#chatBadge');
