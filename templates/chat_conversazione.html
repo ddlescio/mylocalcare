@@ -423,10 +423,9 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      socket.off('new_message');
-      socket.off('messages_read');
-      socket.off('user_typing');
-
+      if (window.__chat_socket_initialized) return;
+      window.__chat_socket_initialized = true;
+      
       const meId = parseInt("{{ g.utente['id'] }}", 10);
       const wrap = document.getElementById('msgWrap');
 
