@@ -746,7 +746,6 @@ body {
   // 💬 Ricezione messaggi (versione blindata)
   socket.off('new_message');
   socket.off('messages_read');
-  socket.off('user_typing');
 
   socket.on('new_message', (m) => {
     try {

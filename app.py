@@ -8482,7 +8482,11 @@ def handle_connect(auth=None):
     # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
 
+    # 🔥 garantisce sempre la room corretta
     join_room(room)
+
+    # 🔥 rejoin sicurezza (fix reconnect)
+    socketio.enter_room(request.sid, room)
 
     count = redis_client.scard(f"user_sockets:{user_id}")
     print(f"🟢 Socket connesso utente {user_id} | socket attivi: {count}")
@@ -8507,6 +8511,9 @@ def handle_disconnect():
         return
 
     sid = request.sid
+    room = f"user_{user_id}"
+
+    leave_room(room)
 
     redis_client.srem(f"user_sockets:{user_id}", sid)
 
