@@ -423,9 +423,10 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      if (window.__chat_socket_initialized) return;
+      console.log("🟢 Init chat socket listeners");
       window.__chat_socket_initialized = true;
-      
+      console.log("🟢 Init chat socket listeners");
+
       const meId = parseInt("{{ g.utente['id'] }}", 10);
       const wrap = document.getElementById('msgWrap');
 
@@ -743,15 +744,20 @@ body {
     });
   });
   // 💬 Ricezione messaggi (versione blindata)
-  socket.on('new_message', (m) => {
+  socket.off('new_message');
+  socket.off('messages_read');
+  socket.off('user_typing');
 
+  socket.on('new_message', (m) => {
     try {
 
-      const sameChat =
-        (m.mittente_id === meId && m.destinatario_id === destId) ||
-        (m.destinatario_id === meId && m.mittente_id === destId);
-
-      if (!sameChat) return;
+      if (
+        (m.mittente_id !== destId) &&
+        (m.destinatario_id !== destId) &&
+        (m.mittente_id !== meId)
+      ) {
+        return;
+      }
 
       const alreadyBottom = isAtBottom();
 
