@@ -423,9 +423,9 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      if (window.__chat_socket_initialized) {
-        console.log("♻️ Chat socket già inizializzato");
-        return;
+      if (!window.__chat_socket_initialized) {
+        console.log("🟢 Init chat socket listeners");
+        window.__chat_socket_initialized = true;
       }
 
       window.__chat_socket_initialized = true;

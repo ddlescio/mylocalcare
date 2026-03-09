@@ -8521,7 +8521,6 @@ def handle_connect(auth=None):
     redis_client.sadd("online_users", str(user_id))
 
     # 🔥 PULISCE SOCKET VECCHIE (fix reconnect)
-    redis_client.delete(f"user_sockets:{user_id}")
 
     # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
