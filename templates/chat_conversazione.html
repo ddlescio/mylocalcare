@@ -424,7 +424,7 @@ body {
     whenSocketReady((socket) => {
 
       console.log("🟢 Init chat socket listeners");
-      
+
       const meId = parseInt("{{ g.utente['id'] }}", 10);
       const wrap = document.getElementById('msgWrap');
 
@@ -788,8 +788,10 @@ body {
 
   window.__chatHandlers.newMessage = function(m) {
 
-    if (window.__activeChat && window.__activeChat !== destId) return;
+    const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
+    if (window.__activeChat && window.__activeChat !== currentChat) return;
+    
     try {
       const belongsToThisChat =
         (m.mittente_id === meId && m.destinatario_id === destId) ||
