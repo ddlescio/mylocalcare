@@ -669,7 +669,7 @@ body {
 
   socket.on('user_typing', data => {
 
-    if (window.__activeChat && window.__activeChat !== destId) return;    
+    if (window.__activeChat && window.__activeChat !== destId) return;
     if (data.from !== destId) return;
     if (data.typing) {
       typingIndicator.classList.remove('hidden');
@@ -1080,33 +1080,82 @@ async function initVideoSystem() {
     // ==============================
     // EVENTI SOCKET
     // ==============================
-    socket.off("video_call_rejected");
-    socket.off("video_call_left");
+    // ==============================
+    // EVENTI SOCKET VIDEO
+    // ==============================
 
-    socket.on("video_call_rejected", async (data) => {
+    if (!window.__videoHandlers) {
+        window.__videoHandlers = {};
+    }
+
+    // rimuove SOLO i listener video precedenti
+    if (window.__videoHandlers.videoRejected) {
+        socket.off("video_call_rejected", window.__videoHandlers.videoRejected);
+    }
+
+    if (window.__videoHandlers.videoLeft) {
+        socket.off("video_call_left", window.__videoHandlers.videoLeft);
+    }
+
+    if (window.__videoHandlers.videoEnded) {
+        socket.off("video_call_ended", window.__videoHandlers.videoEnded);
+    }
+
+
+    // ==============================
+    // VIDEO CALL REJECTED
+    // ==============================
+
+    window.__videoHandlers.videoRejected = async function(data) {
+
         if (!currentRoomName) return;
+
         if (data.room === currentRoomName) {
             alert("L'utente ha rifiutato la chiamata.");
             await endCall();
         }
-    });
 
-    socket.on("video_call_left", async (data) => {
+    };
+
+
+    // ==============================
+    // VIDEO CALL LEFT
+    // ==============================
+
+    window.__videoHandlers.videoLeft = async function(data) {
+
         if (!currentRoomName) return;
+
         if (data.room === currentRoomName) {
             await endCall();
         }
-    });
 
-    socket.off("video_call_ended");
+    };
 
-    socket.on("video_call_ended", async (data) => {
+
+    // ==============================
+    // VIDEO CALL ENDED (SYNC HARD)
+    // ==============================
+
+    window.__videoHandlers.videoEnded = async function(data) {
+
         if (!currentRoomName) return;
+
         if (data.room === currentRoomName) {
             console.log("🛑 Sync hard end");
             await endCall();
         }
-    });
+
+    };
+
+
+    // ==============================
+    // ATTIVA LISTENER
+    // ==============================
+
+    socket.on("video_call_rejected", window.__videoHandlers.videoRejected);
+    socket.on("video_call_left", window.__videoHandlers.videoLeft);
+    socket.on("video_call_ended", window.__videoHandlers.videoEnded);
 
     // ==============================
     // CLICK VIDEO
@@ -1342,27 +1391,58 @@ document.addEventListener("DOMContentLoaded", () => {
         // =========================
         // 🔴 REALTIME BUSY UPDATE
         // =========================
-        socket.off("video_busy");
-        socket.on("video_busy", (data) => {
+
+        if (!window.__videoHandlers) {
+            window.__videoHandlers = {};
+        }
+
+        if (window.__videoHandlers.videoBusy) {
+            socket.off("video_busy", window.__videoHandlers.videoBusy);
+        }
+
+        window.__videoHandlers.videoBusy = function(data) {
 
             if (!data) return;
 
             if (data.user_id === destId) {
 
                 if (data.busy) {
+
                     videoBtn.disabled = true;
                     videoBtn.innerText = "🔴 In chiamata";
-                    videoBtn.classList.remove("bg-green-100","text-green-700");
-                    videoBtn.classList.add("bg-gray-200","text-gray-500");
+
+                    videoBtn.classList.remove(
+                        "bg-green-100",
+                        "text-green-700"
+                    );
+
+                    videoBtn.classList.add(
+                        "bg-gray-200",
+                        "text-gray-500"
+                    );
+
                 } else {
+
                     videoBtn.disabled = false;
                     videoBtn.innerText = "🎥 Video";
-                    videoBtn.classList.add("bg-green-100","text-green-700");
-                    videoBtn.classList.remove("bg-gray-200","text-gray-500");
+
+                    videoBtn.classList.add(
+                        "bg-green-100",
+                        "text-green-700"
+                    );
+
+                    videoBtn.classList.remove(
+                        "bg-gray-200",
+                        "text-gray-500"
+                    );
+
                 }
 
             }
-        });
+
+        };
+
+        socket.on("video_busy", window.__videoHandlers.videoBusy);        
 
     }); // fine whenSocketReady
 
