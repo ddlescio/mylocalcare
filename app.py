@@ -8520,31 +8520,51 @@ def handle_connect(auth=None):
 
     redis_client.sadd("online_users", str(user_id))
 
-    # 🔥 PULISCE SOCKET VECCHIE (fix reconnect)
+    # ------------------------------
+    # 🔥 PULIZIA SOCKET ZOMBIE
+    # ------------------------------
+
+    existing_sockets = redis_client.smembers(f"user_sockets:{user_id}")
+
+    for old_sid in existing_sockets:
+        old_sid = old_sid.decode() if isinstance(old_sid, bytes) else old_sid
+
+        if old_sid != sid:
+            try:
+                leave_room(f"user_{user_id}", sid=old_sid)
+            except Exception:
+                pass
 
     # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
 
-    # 🔥 garantisce sempre la room corretta
-    room = f"user_{user_id}"
+    # ------------------------------
+    # 🔥 GARANTISCE ROOM CORRETTA
+    # ------------------------------
+
+    try:
+        leave_room(room)
+    except Exception:
+        pass
 
     join_room(room)
 
-    # 🔥 rejoin sicurezza (fix reconnect)
-
     count = redis_client.scard(f"user_sockets:{user_id}")
-    print(f"🟢 Socket connesso utente {user_id} | socket attivi: {count}")
+    print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
 
     # invia subito il contatore messaggi non letti
     try:
         unread = chat_count_unread(user_id)
+
         socketio.emit(
             "update_unread_count",
             {"count": unread},
             room=room
         )
+
     except Exception as e:
         print("Errore invio unread count:", e)
+
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8557,11 +8577,15 @@ def handle_disconnect():
     sid = request.sid
     room = f"user_{user_id}"
 
-    leave_room(room)
+    try:
+        leave_room(room)
+    except Exception:
+        pass
 
     redis_client.srem(f"user_sockets:{user_id}", sid)
+
     count = redis_client.scard(f"user_sockets:{user_id}")
-    print(f"🔌 Socket chiusa utente {user_id} | rimaste: {count}")
+    print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {count}")
 
     if count == 0:
 
@@ -8571,15 +8595,18 @@ def handle_disconnect():
             task = socketio.start_background_task(remove_user_later, user_id)
             disconnect_timers[user_id] = task
 
+
 def remove_user_later(user_id):
+
     socketio.sleep(30)
 
     if redis_client.scard(f"user_sockets:{user_id}") == 0:
+
         redis_client.srem("online_users", str(user_id))
         print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
-
+    
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
