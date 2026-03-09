@@ -8,6 +8,7 @@ import json
 import uuid
 from flask_mail import Mail, Message
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
+from socketio import RedisManager
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv  # ✅ serve per leggere il file .env
 # 🔐 Crittografia
