@@ -665,18 +665,38 @@ body {
     }, 2000); // puoi abbassare a 1000ms se vuoi più reattività
   });
 
-  socket.off('user_typing');
+  if (!window.__chatHandlers) {
+      window.__chatHandlers = {};
+  }
 
-  socket.on('user_typing', data => {
+  if (window.__chatHandlers.userTyping) {
+      socket.off('user_typing', window.__chatHandlers.userTyping);
+  }
 
-    if (window.__activeChat !== destId) return;
-    if (data.from !== destId) return;
-    if (data.typing) {
-      typingIndicator.classList.remove('hidden');
-      clearTimeout(typingIndicator._hide);
-      typingIndicator._hide = setTimeout(() => typingIndicator.classList.add('hidden'), 2000);
-    } else typingIndicator.classList.add('hidden');
-  });
+  window.__chatHandlers.userTyping = function(data) {
+
+      if (window.__activeChat && window.__activeChat !== destId) return;
+      if (data.from !== destId) return;
+
+      if (data.typing) {
+
+          typingIndicator.classList.remove('hidden');
+
+          clearTimeout(typingIndicator._hide);
+
+          typingIndicator._hide = setTimeout(() => {
+              typingIndicator.classList.add('hidden');
+          }, 2000);
+
+      } else {
+
+          typingIndicator.classList.add('hidden');
+
+      }
+
+  };
+
+  socket.on('user_typing', window.__chatHandlers.userTyping);
 
   // 🗓️ Gestione intestazioni data (solo sopra il primo messaggio di ogni giorno)
   function formatDateIT(datetimeStr) {
@@ -774,7 +794,7 @@ body {
 
   window.__chatHandlers.newMessage = function(m) {
 
-    if (window.__activeChat !== destId) return;
+    if (window.__activeChat && window.__activeChat !== destId) return;
 
     try {
       const belongsToThisChat =
@@ -1378,15 +1398,36 @@ document.addEventListener("DOMContentLoaded", () => {
         // =========================
         socket.emit("check_video_status", { user_id: destId });
 
-        socket.off("video_status_result");
-        socket.on("video_status_result", (data) => {
+        if (!window.__videoHandlers) {
+            window.__videoHandlers = {};
+        }
+
+        if (window.__videoHandlers.videoStatusResult) {
+            socket.off("video_status_result", window.__videoHandlers.videoStatusResult);
+        }
+
+        window.__videoHandlers.videoStatusResult = function(data) {
+
             if (data.busy) {
+
                 videoBtn.disabled = true;
                 videoBtn.innerText = "🔴 In chiamata";
-                videoBtn.classList.remove("bg-green-100","text-green-700");
-                videoBtn.classList.add("bg-gray-200","text-gray-500");
+
+                videoBtn.classList.remove(
+                    "bg-green-100",
+                    "text-green-700"
+                );
+
+                videoBtn.classList.add(
+                    "bg-gray-200",
+                    "text-gray-500"
+                );
+
             }
-        });
+
+        };
+
+        socket.on("video_status_result", window.__videoHandlers.videoStatusResult);
 
         // =========================
         // 🔴 REALTIME BUSY UPDATE
