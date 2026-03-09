@@ -371,16 +371,18 @@ def verify_csrf():
 
 import os
 
+redis_url = os.getenv("REDIS_URL")
+
 socketio = SocketIO(
     app,
+    async_mode="eventlet",
     cors_allowed_origins=[
         "https://mylocalcare.it",
         "https://www.mylocalcare.it",
         "http://127.0.0.1:5050",
         "http://localhost:5050"
     ],
-    async_mode="eventlet",
-    message_queue=os.getenv("REDIS_URL"),
+    client_manager=RedisManager(redis_url),
     ping_timeout=20,
     ping_interval=10,
     logger=True,
