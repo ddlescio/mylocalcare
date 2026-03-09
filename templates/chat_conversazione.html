@@ -423,7 +423,11 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      console.log("🟢 Init chat socket listeners");
+      if (window.__chat_socket_initialized) {
+        console.log("♻️ Chat socket già inizializzato");
+        return;
+      }
+
       window.__chat_socket_initialized = true;
       console.log("🟢 Init chat socket listeners");
 
@@ -743,36 +747,27 @@ body {
       scrollBottom(false);
     });
   });
-  // 💬 Ricezione messaggi (versione blindata)
+
   // 💬 Ricezione messaggi
+  socket.off('new_message');
+  socket.off('messages_read');
 
-  socket.off('new_message.chat');
-  socket.off('messages_read.chat');
-
-  socket.on('new_message.chat', (m) => {
-
+  socket.on('new_message', (m) => {
     try {
+      const belongsToThisChat =
+        (m.mittente_id === meId && m.destinatario_id === destId) ||
+        (m.mittente_id === destId && m.destinatario_id === meId);
 
-      if (
-        (m.mittente_id !== destId) &&
-        (m.destinatario_id !== destId) &&
-        (m.mittente_id !== meId)
-      ) {
-        return;
-      }
+      if (!belongsToThisChat) return;
 
       const alreadyBottom = isAtBottom();
 
-      let newDateInserted = false;
-
       if (m.created_at) {
-        const before = document.querySelectorAll('#msgWrap .date-header').length;
         ensureDateHeaderFor(m.created_at);
-        const after = document.querySelectorAll('#msgWrap .date-header').length;
-        newDateInserted = after > before;
+        cleanDuplicateDates();
       }
 
-      let bolla = document.querySelector(`[data-mid="${m.id}"]`);
+      let bolla = document.querySelector(`.bubble[data-mid="${m.id}"]`);
 
       if (!bolla) {
         const node = bubble({ ...m, me_id: meId });
@@ -784,80 +779,67 @@ body {
         oldestMessageId = m.id;
       }
 
-      if (newDateInserted) {
-        cleanDuplicateDates();
-      }
-
-      if (alreadyBottom) {
-        setTimeout(() => scrollBottom(true), 80);
-      }
-
-      // ⭐ aggiorna spunte solo se è mio
+      // aggiorna spunte se il messaggio è mio
       if (m.mittente_id === meId) {
         const spunte = bolla.querySelector('.spunte');
         if (spunte) {
           if (m.letto) {
             spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
           } else if (m.consegnato) {
-            spunte.innerHTML = '<span class="text-gray-400">✔</span>';
+            spunte.innerHTML = '<span class="text-gray-400">✅</span>';
           } else {
             spunte.innerHTML = '<span class="text-gray-400">⏳</span>';
           }
         }
       }
 
-      // Se ricevo → segno sempre come letto se la chat è aperta
+      // se ricevo un messaggio e la chat è visibile → segna come letto
       if (m.destinatario_id === meId && document.visibilityState === "visible") {
-
-        /* evita spam di eventi */
         clearTimeout(markReadTimer);
-
         markReadTimer = setTimeout(() => {
           socket.emit('mark_as_read', { other_id: m.mittente_id });
         }, 300);
+      }
 
+      if (alreadyBottom || m.mittente_id === meId) {
+        setTimeout(() => scrollBottom(true), 80);
       }
 
     } catch (err) {
-
       console.error("🔥 Errore in new_message:", err, m);
-
     }
-
   });
 
-  // 🔵 Aggiornamento spunte
-  socket.off('new_message.chat');
-  socket.off('messages_read.chat');
-  socket.on('messages_read.chat', (data) => {
-
+  socket.on('messages_read', (data) => {
     if (data.from !== destId) return;
 
-    document.querySelectorAll('.bubble-me .spunte').forEach(spunte => {
-
-      if (!spunte.dataset.read) {
-
-        spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
-
-        /* segna come già aggiornato */
-        spunte.dataset.read = "1";
-
-      }
-
+    document.querySelectorAll('.bubble-me .spunte').forEach((spunte) => {
+      spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
+      spunte.dataset.read = "1";
     });
-
   });
-});
-}
 
   // 📨 Invio messaggio
+  let sending = false;
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+
+    if (sending) return;
+
     const testo = input.value.trim();
     if (!testo) return;
+
+    sending = true;
+
     socket.emit('send_message', { destinatario_id: destId, testo });
+
     input.value = '';
     toggleEmoji(false);
+
+    setTimeout(() => {
+      sending = false;
+    }, 250);
   });
   });
 });
