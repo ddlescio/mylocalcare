@@ -8324,7 +8324,7 @@ def video_start():
         "room_name": room_name,
         "room_url": room_url
     })
-    
+
 @app.route("/video/verifica-maggiorenne", methods=["POST"])
 @login_required
 def verifica_maggiorenne():
@@ -8519,8 +8519,9 @@ def handle_connect(auth=None):
     # elimina eventuali socket vecchie
 
     # registra la nuova socket
+    redis_client.srem(f"user_sockets:{user_id}", sid)
     redis_client.sadd(f"user_sockets:{user_id}", sid)
-
+    
     # 🔥 garantisce sempre la room corretta
     join_room(room)
 
@@ -8593,6 +8594,27 @@ def handle_join_video_room(data):
     if not room_name:
         return
     join_room(room_name)
+
+@socketio.on("video_busy")
+def handle_video_busy(data):
+
+    from flask import session
+
+    user_id = session.get("utente_id")
+    busy = bool(data.get("busy"))
+
+    if not user_id:
+        return
+
+    socketio.emit(
+        "video_busy",
+        {
+            "user_id": user_id,
+            "busy": busy
+        },
+        broadcast=True,
+        include_self=False
+    )
 
 @socketio.on("video_call_rejected")
 def handle_video_call_rejected(data):
