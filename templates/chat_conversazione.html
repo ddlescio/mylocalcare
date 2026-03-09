@@ -744,10 +744,14 @@ body {
     });
   });
   // 💬 Ricezione messaggi (versione blindata)
-  socket.off('new_message');
-  socket.off('messages_read');
+  // 💬 Ricezione messaggi
 
-  socket.on('new_message', (m) => {
+  if (!window.__chatListenersRegistered) {
+
+    window.__chatListenersRegistered = true;
+
+    socket.on('new_message.chat', (m) => {
+
     try {
 
       if (
@@ -824,7 +828,9 @@ body {
   });
 
   // 🔵 Aggiornamento spunte
-  socket.on('messages_read', (data) => {
+  socket.off('new_message.chat');
+  socket.off('messages_read.chat');  
+  socket.on('messages_read.chat', (data) => {
 
     if (data.from !== destId) return;
 
@@ -842,6 +848,8 @@ body {
     });
 
   });
+});
+}
 
   // 📨 Invio messaggio
   form.addEventListener('submit', (e) => {
