@@ -441,7 +441,7 @@ body {
       let markReadTimer = null;
 
     const destId = parseInt(document.getElementById('destinatario_id').value, 10);
-
+    window.__activeChat = destId;
     // -----------------------------
     // 🚀 CARICAMENTO MESSAGGI VECCHI
     // -----------------------------
@@ -668,6 +668,8 @@ body {
   socket.off('user_typing');
 
   socket.on('user_typing', data => {
+
+    if (window.__activeChat !== destId) return;
     if (data.from !== destId) return;
     if (data.typing) {
       typingIndicator.classList.remove('hidden');
@@ -772,8 +774,9 @@ body {
 
   window.__chatHandlers.newMessage = function(m) {
 
-    try {
+    if (window.__activeChat !== destId) return;
 
+    try {
       const belongsToThisChat =
         (m.mittente_id === meId && m.destinatario_id === destId) ||
         (m.mittente_id === destId && m.destinatario_id === meId);
@@ -914,6 +917,9 @@ document.addEventListener("DOMContentLoaded", () => {
   back.addEventListener("click", (e) => {
     e.preventDefault();
 
+    // 🔴 segna che non c'è più una chat attiva
+    window.__activeChat = null;
+
     // 1️⃣ Segnala la chiusura della chat
     try {
       const destId = parseInt(document.getElementById("destinatario_id")?.value || "0", 10);
@@ -938,11 +944,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!link || !destIdEl) return;
 
   link.addEventListener("click", () => {
+
+    window.__activeChat = null;
+
     const destId = parseInt(destIdEl.value || "0", 10);
     try {
       if (window.socket && destId) window.socket.emit("chat_chiusa", { other_id: destId });
     } catch(_) {}
-  });
+  });  
 });
 </script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
