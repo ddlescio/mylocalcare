@@ -669,7 +669,7 @@ body {
 
   socket.on('user_typing', data => {
 
-    if (window.__activeChat !== destId) return;
+    if (window.__activeChat && window.__activeChat !== destId) return;    
     if (data.from !== destId) return;
     if (data.typing) {
       typingIndicator.classList.remove('hidden');
@@ -774,7 +774,7 @@ body {
 
   window.__chatHandlers.newMessage = function(m) {
 
-    if (window.__activeChat !== destId) return;
+    if (window.__activeChat && window.__activeChat !== destId) return;
 
     try {
       const belongsToThisChat =
@@ -951,7 +951,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       if (window.socket && destId) window.socket.emit("chat_chiusa", { other_id: destId });
     } catch(_) {}
-  });  
+  });
 });
 </script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
