@@ -1668,41 +1668,59 @@ body[data-chat="true"] #mobile-search-container {
 </div>
 <script>
 /**
+/**
  * ✅ Cleanup unico chiamata/video overlay
- * Usalo per: ✖ Chiudi, Rifiuta remoto, reset stati
+ * Usalo per: ✖ Chiudi, rifiuto remoto, fine chiamata
  */
-window.endCallCleanup = function(reason = "") {
+ window.endCallCleanup = function(reason = "") {
 
-  console.log("🧹 endCallCleanup:", reason);
+   console.log("🧹 endCallCleanup:", reason);
 
-  // 1) Chiudi overlay video
-  const overlay = document.getElementById("videoOverlay");
-  if (overlay) {
-    overlay.classList.add("hidden");
-    overlay.classList.remove("flex");
-  }
+   const socket = window.socket;
 
-  // 2) Svuota mount (IMPORTANTISSIMO: stoppa la video-call davvero)
-  const mount = document.getElementById("videoMount");
-  if (mount) mount.innerHTML = "";
+   // 🔵 comunica al server che non siamo più occupati
+   if (socket) {
+     try {
+       socket.emit("video_busy", { busy:false });
+     } catch (err) {
+       console.warn("Errore reset video_busy:", err);
+     }
+   }
 
-  // 3) Reset stati globali (quelli che usi già)
-  window.inCall = false;
-  window.callRoom = null;
-  window.pendingIncomingCall = null;
-  window.chatAperta = false;
+   // 1️⃣ Chiudi overlay video
+   const overlay = document.getElementById("videoOverlay");
+   if (overlay) {
+     overlay.classList.add("hidden");
+     overlay.classList.remove("flex");
+   }
 
-  // 4) Se hai suoneria globale
-  if (window.callRingtone) {
-    try {
-      window.callRingtone.pause();
-      window.callRingtone.currentTime = 0;
-    } catch(e) {}
-  }
+   // 2️⃣ Svuota mount (ferma davvero la video-call)
+   const mount = document.getElementById("videoMount");
+   if (mount) {
+     mount.innerHTML = "";
+   }
 
-  // 5) Rimuovi stato modale se per caso era attivo
-  document.body.classList.remove("modal-open");
-};
+   // 3️⃣ Reset stati globali
+   window.inCall = false;
+   window.callRoom = null;
+   window.pendingIncomingCall = null;
+
+   // 4️⃣ Ferma suoneria se attiva
+   if (window.callRingtone) {
+     try {
+       window.callRingtone.pause();
+       window.callRingtone.currentTime = 0;
+     } catch (e) {}
+   }
+
+   // 5️⃣ Rimuovi stato modale
+   document.body.classList.remove("modal-open");
+
+ };
+
+window.addEventListener("beforeunload", () => {
+  if (window.socket) socket.emit("video_busy", { busy:false });
+});
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -1915,8 +1933,9 @@ window.addEventListener("beforeunload", () => {
 
   try {
 
-    // NON chiudere il socket qui
-    // il browser gestisce automaticamente la connessione
+    if (window.socket) {
+      window.socket.emit("video_busy", { busy:false });
+    }
 
     sessionStorage.removeItem("categorieScrollLeft");
 
