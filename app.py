@@ -8527,7 +8527,6 @@ def handle_connect(auth=None):
 
     join_room(room)
 
-    socketio.enter_room(request.sid, room)
     # 🔥 rejoin sicurezza (fix reconnect)
 
     count = redis_client.scard(f"user_sockets:{user_id}")
