@@ -746,11 +746,10 @@ body {
   // 💬 Ricezione messaggi (versione blindata)
   // 💬 Ricezione messaggi
 
-  if (!window.__chatListenersRegistered) {
+  socket.off('new_message.chat');
+  socket.off('messages_read.chat');
 
-    window.__chatListenersRegistered = true;
-
-    socket.on('new_message.chat', (m) => {
+  socket.on('new_message.chat', (m) => {
 
     try {
 
@@ -829,7 +828,7 @@ body {
 
   // 🔵 Aggiornamento spunte
   socket.off('new_message.chat');
-  socket.off('messages_read.chat');  
+  socket.off('messages_read.chat');
   socket.on('messages_read.chat', (data) => {
 
     if (data.from !== destId) return;
