@@ -763,7 +763,13 @@ document.addEventListener("click", function(e) {
       window.__socket_connect_logger_bound__ = true;
 
       socket.on("connect", () => {
+
         console.log("🔌 socket connected:", socket.id);
+
+        // 🔥 segnala che la socket è pronta
+        window.socketReady = true;
+        window.dispatchEvent(new Event("socket_ready"));
+
       });
     }
 
@@ -818,10 +824,6 @@ document.addEventListener("click", function(e) {
 
     });
 
-    socket.on("connect", () => {
-      console.log("🔌 socket connected:", socket.id);
-    });
-    
     // 🔔 Conteggio notifiche non lette
     socket.on("update_notifications", (data) => {
       if (!canDoBadgeFetch()) return;

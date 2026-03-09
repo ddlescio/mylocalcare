@@ -8521,10 +8521,13 @@ def handle_connect(auth=None):
     # registra la nuova socket
     redis_client.srem(f"user_sockets:{user_id}", sid)
     redis_client.sadd(f"user_sockets:{user_id}", sid)
-    
+
     # 🔥 garantisce sempre la room corretta
+    room = f"user_{user_id}"
+
     join_room(room)
 
+    socketio.enter_room(request.sid, room)
     # 🔥 rejoin sicurezza (fix reconnect)
 
     count = redis_client.scard(f"user_sockets:{user_id}")
