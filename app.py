@@ -8519,7 +8519,6 @@ def handle_connect(auth=None):
     # elimina eventuali socket vecchie
 
     # registra la nuova socket
-    redis_client.srem(f"user_sockets:{user_id}", sid)
     redis_client.sadd(f"user_sockets:{user_id}", sid)
 
     # 🔥 garantisce sempre la room corretta
@@ -8557,6 +8556,8 @@ def handle_disconnect():
     leave_room(room)
 
     redis_client.srem(f"user_sockets:{user_id}", sid)
+    count = redis_client.scard(f"user_sockets:{user_id}")
+    print(f"🔌 Socket chiusa utente {user_id} | rimaste: {count}")
 
     if redis_client.scard(f"user_sockets:{user_id}") == 0:
 
