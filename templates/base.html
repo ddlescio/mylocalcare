@@ -635,7 +635,7 @@ document.addEventListener("click", function(e) {
         window.pendingIncomingCall = null;
 
         console.log("📞 Incoming call:", data);
-        
+
         // ✅ Se siamo già in chat
         if (window.chatAperta === true) {
 
@@ -1708,10 +1708,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ✖ Chiudi → cleanup
   const closeBtn = document.getElementById("closeVideo");
+
   if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
+
+    closeBtn.addEventListener("click", async () => {
+
+      const room = window.callRoom;
+
+      try {
+
+        if (room) {
+
+          await fetch("/video/end", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ room_name: room })
+          });
+
+        }
+
+      } catch (err) {
+        console.warn("Errore chiusura video:", err);
+      }
+
       window.endCallCleanup("close_button");
+
     });
+
   }
 
   // (opzionale) ESC → cleanup
