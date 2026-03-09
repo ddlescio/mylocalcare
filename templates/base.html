@@ -793,36 +793,41 @@ document.addEventListener("click", function(e) {
 
 
     // 🎥 Aggiornamento stato video (utente occupato/libero)
-    socket.on("video_busy", (data) => {
+      socket.on("video_busy", (data) => {
 
-      if (!data) return;
+        if (!data) return;
 
-      console.log("📡 video_busy:", data);
+        console.log("📡 video_busy:", data);
 
-      const userId = parseInt(data.user_id || 0, 10);
-      const busy = !!data.busy;
+        const userId = parseInt(data.user_id || 0, 10);
+        const busy = !!data.busy;
 
-      const destId = parseInt(
-        document.getElementById("destinatario_id")?.value || "0",
-        10
-      );
+        const destId = parseInt(
+          document.getElementById("destinatario_id")?.value || "0",
+          10
+        );
 
-      if (!destId) return;
-
-      // Se riguarda l'utente della chat aperta
-      if (userId === destId) {
-
-        window.userBusy = busy;
-
-        if (busy) {
-          console.log("🔴 utente occupato");
-        } else {
-          console.log("🟢 utente libero");
+        // 🔥 aggiorna stato globale se riguarda noi
+        if (window.currentUserId && userId === window.currentUserId) {
+          window.inCall = busy;
         }
 
-      }
+        // se non siamo nella chat non serve altro
+        if (!destId) return;
 
-    });
+        if (userId === destId) {
+
+          window.userBusy = busy;
+
+          if (busy) {
+            console.log("🔴 utente occupato");
+          } else {
+            console.log("🟢 utente libero");
+          }
+
+        }
+
+      });
 
     // 🔔 Conteggio notifiche non lette
     socket.on("update_notifications", (data) => {
@@ -863,6 +868,29 @@ document.addEventListener("click", function(e) {
   })();
   </script>
   <script src="{{ url_for('static', filename='js/flash_manager.js') }}"></script>
+  <script>
+
+  document.addEventListener("visibilitychange", () => {
+
+    if (document.visibilityState === "visible" && window.socket) {
+
+      if (!window.socket.connected) {
+
+        console.log("🔁 reconnect socket");
+
+        try {
+          window.socket.connect();
+        } catch(e) {
+          console.warn("Errore reconnect socket:", e);
+        }
+
+      }
+
+    }
+
+  });
+
+  </script>
   <script>
 document.addEventListener("DOMContentLoaded", () => {
   const toggleBtn = document.getElementById("toggle-search");
@@ -1756,10 +1784,6 @@ body[data-chat="true"] #mobile-search-container {
    document.body.classList.remove("modal-open");
 
  };
-
-window.addEventListener("beforeunload", () => {
-  if (window.socket) socket.emit("video_busy", { busy:false });
-});
 
 document.addEventListener("DOMContentLoaded", () => {
 
