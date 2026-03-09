@@ -8518,6 +8518,9 @@ def handle_connect(auth=None):
     redis_client.sadd("online_users", str(user_id))
     # elimina eventuali socket vecchie
 
+    # 🔥 rimuove eventuale SID duplicata
+    redis_client.srem(f"user_sockets:{user_id}", sid)
+
     # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
 
@@ -8559,7 +8562,7 @@ def handle_disconnect():
     count = redis_client.scard(f"user_sockets:{user_id}")
     print(f"🔌 Socket chiusa utente {user_id} | rimaste: {count}")
 
-    if redis_client.scard(f"user_sockets:{user_id}") == 0:
+    if count == 0:
 
         redis_client.srem("online_users", str(user_id))
 
