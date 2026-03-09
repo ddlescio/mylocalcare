@@ -8149,6 +8149,32 @@ def chiudi_chat(other_id):
     flash("Chat chiusa correttamente.", "success")
     return redirect(url_for("utente_messaggi"))
 
+def emit_incoming_call_later(caller_id, destinatario_id, room_name, room_url, delay=0.6):
+    """
+    Invia la chiamata con un piccolo ritardo per dare tempo
+    alla socket del destinatario di riconnettersi/entrare nella room user_X.
+    """
+    socketio.sleep(delay)
+
+    socketio.emit(
+        "incoming_call",
+        {
+            "from": caller_id,
+            "room_name": room_name,
+            "room_url": room_url
+        },
+        room=f"user_{destinatario_id}"
+    )
+
+    socketio.emit(
+        "video_busy",
+        {
+            "user_id": caller_id,
+            "busy": True
+        },
+        room=f"user_{destinatario_id}"
+    )
+
 @app.route("/video/start", methods=["POST"])
 @login_required
 def video_start():
@@ -8163,128 +8189,142 @@ def video_start():
     import time
     import requests
 
-
     conn = get_db_connection()
     cur = get_cursor(conn)
 
-    # 🚫 BLOCCO SE UTENTE GIÀ IN CHIAMATA ATTIVA (con timeout 60s)
-    cur.execute(sql(f"""
-        SELECT id
-        FROM video_call_log
-        WHERE in_corso = 1
-          AND (utente_1 = ? OR utente_2 = ?)
-          AND last_ping IS NOT NULL
-          AND last_ping >= {sql_now_minus_seconds(60)}
-        LIMIT 1
-    """), (g.utente["id"], g.utente["id"]))
+    try:
+        # 🚫 BLOCCO SE CHIAMANTE GIÀ IN CHIAMATA ATTIVA
+        cur.execute(sql(f"""
+            SELECT id
+            FROM video_call_log
+            WHERE in_corso = 1
+              AND (utente_1 = ? OR utente_2 = ?)
+              AND last_ping IS NOT NULL
+              AND last_ping >= {sql_now_minus_seconds(60)}
+            LIMIT 1
+        """), (g.utente["id"], g.utente["id"]))
 
-    call_in_corso = cur.fetchone()
+        call_in_corso = cur.fetchone()
 
-    if call_in_corso:
-        cur.close()
-        return jsonify({
-            "error": "Sei già in una videochiamata in corso."
-        }), 409
+        if call_in_corso:
+            return jsonify({
+                "error": "Sei già in una videochiamata in corso."
+            }), 409
 
-    # 🔹 Recupero utenti
-    me = cur.execute(
-        "SELECT maggiorenne_verificato FROM utenti WHERE id = ?",
-        (g.utente["id"],)
-    ).fetchone()
+        # 🚫 BLOCCO SE ANCHE IL DESTINATARIO È GIÀ IN CHIAMATA ATTIVA
+        cur.execute(sql(f"""
+            SELECT id
+            FROM video_call_log
+            WHERE in_corso = 1
+              AND (utente_1 = ? OR utente_2 = ?)
+              AND last_ping IS NOT NULL
+              AND last_ping >= {sql_now_minus_seconds(60)}
+            LIMIT 1
+        """), (altro_id, altro_id))
 
-    altro = cur.execute(
-        "SELECT maggiorenne_verificato FROM utenti WHERE id = ?",
-        (altro_id,)
-    ).fetchone()
+        altro_in_chiamata = cur.fetchone()
 
-    if not altro:
-        cur.close()
-        return jsonify({"error": "Utente non trovato"}), 404
+        if altro_in_chiamata:
+            return jsonify({
+                "error": "L'utente è già in una videochiamata in corso."
+            }), 409
 
-    # 🔒 CONTROLLO BUDGET
-    mese_corrente = datetime.now().strftime("%Y-%m")
+        # 🔹 Recupero utenti
+        me = cur.execute(
+            "SELECT maggiorenne_verificato FROM utenti WHERE id = ?",
+            (g.utente["id"],)
+        ).fetchone()
 
-    limite = cur.execute(sql("""
-        SELECT bloccato
-        FROM video_limiti_mensili
-        WHERE mese = ?
-    """), (mese_corrente,)).fetchone()
+        altro = cur.execute(
+            "SELECT maggiorenne_verificato FROM utenti WHERE id = ?",
+            (altro_id,)
+        ).fetchone()
 
-    if limite and limite["bloccato"] == 1:
-        cur.close()
-        return jsonify({
-            "error": "Il servizio video è temporaneamente sospeso per questo mese."
-        }), 403
+        if not altro:
+            return jsonify({"error": "Utente non trovato"}), 404
 
-    # 🔞 VERIFICA MAGGIORENNE
-    if me["maggiorenne_verificato"] != 1:
-        cur.close()
-        return jsonify({"need_verifica": True}), 200
+        # 🔒 CONTROLLO BUDGET
+        mese_corrente = datetime.now().strftime("%Y-%m")
 
-    # 🎥 CREAZIONE ROOM
-    room_name = f"lc_{g.utente['id']}_{altro_id}_{int(time.time())}"
+        limite = cur.execute(sql("""
+            SELECT bloccato
+            FROM video_limiti_mensili
+            WHERE mese = ?
+        """), (mese_corrente,)).fetchone()
 
-    headers = {
-        "Authorization": f"Bearer {os.getenv('DAILY_API_KEY')}",
-        "Content-Type": "application/json"
-    }
+        if limite and limite["bloccato"] == 1:
+            return jsonify({
+                "error": "Il servizio video è temporaneamente sospeso per questo mese."
+            }), 403
 
-    payload = {
-        "name": room_name,
-        "properties": {"max_participants": 2}
-    }
+        # 🔞 VERIFICA MAGGIORENNE
+        if me["maggiorenne_verificato"] != 1:
+            return jsonify({"need_verifica": True}), 200
 
-    r = requests.post(
-        "https://api.daily.co/v1/rooms",
-        headers=headers,
-        json=payload,
-        timeout=5   # 🔥 fondamentale
-    )
+        # 🎥 CREAZIONE ROOM
+        room_name = f"lc_{g.utente['id']}_{altro_id}_{int(time.time())}"
 
-    if r.status_code != 200:
-        cur.close()
-        return jsonify({"error": "Errore creazione room Daily"}), 500
+        headers = {
+            "Authorization": f"Bearer {os.getenv('DAILY_API_KEY')}",
+            "Content-Type": "application/json"
+        }
 
-    room_url = r.json()["url"]
+        payload = {
+            "name": room_name,
+            "properties": {"max_participants": 2}
+        }
 
-    # 📝 LOG CHIAMATA
-    cur.execute(sql(f"""
-        INSERT INTO video_call_log (
-            room_name,
-            utente_1,
-            utente_2,
-            in_corso,
-            last_ping
+        r = requests.post(
+            "https://api.daily.co/v1/rooms",
+            headers=headers,
+            json=payload,
+            timeout=5
         )
-        VALUES (?, ?, ?, 1, {now_sql()})
-    """), (room_name, g.utente["id"], altro_id))
 
-    conn.commit()
-    cur.close()
+        if r.status_code != 200:
+            return jsonify({"error": "Errore creazione room Daily"}), 500
 
-    # 📞 NOTIFICA CHIAMATA
-    socketio.emit(
-        "incoming_call",
-        {
-            "from": g.utente["id"],
-            "room_name": room_name,
-            "room_url": room_url
-        },
-        room=f"user_{altro_id}"
-    )
+        room_url = r.json()["url"]
 
-    # 🔴 NOTIFICA UTENTE OCCUPATO
-    socketio.emit(
-        "video_busy",
-        {"user_id": g.utente["id"], "busy": True},
-        room=f"user_{altro_id}"
+        # 📝 LOG CHIAMATA
+        cur.execute(sql(f"""
+            INSERT INTO video_call_log (
+                room_name,
+                utente_1,
+                utente_2,
+                in_corso,
+                last_ping
+            )
+            VALUES (?, ?, ?, 1, {now_sql()})
+        """), (room_name, g.utente["id"], altro_id))
+
+        conn.commit()
+
+    finally:
+        try:
+            cur.close()
+        except:
+            pass
+        try:
+            conn.close()
+        except:
+            pass
+
+    # 📞 NOTIFICA CHIAMATA CON PICCOLO RITARDO
+    socketio.start_background_task(
+        emit_incoming_call_later,
+        g.utente["id"],
+        altro_id,
+        room_name,
+        room_url,
+        0.6
     )
 
     return jsonify({
         "room_name": room_name,
         "room_url": room_url
     })
-
+    
 @app.route("/video/verifica-maggiorenne", methods=["POST"])
 @login_required
 def verifica_maggiorenne():
