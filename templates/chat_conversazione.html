@@ -665,6 +665,8 @@ body {
     }, 2000); // puoi abbassare a 1000ms se vuoi più reattività
   });
 
+  socket.off('user_typing');
+
   socket.on('user_typing', data => {
     if (data.from !== destId) return;
     if (data.typing) {
@@ -749,11 +751,29 @@ body {
   });
 
   // 💬 Ricezione messaggi
-  socket.off('new_message');
-  socket.off('messages_read');
 
-  socket.on('new_message', (m) => {
+  if (!window.__chatHandlers) {
+    window.__chatHandlers = {};
+  }
+
+  // rimuove SOLO i listener della chat se già esistono
+  if (window.__chatHandlers.newMessage) {
+    socket.off('new_message', window.__chatHandlers.newMessage);
+  }
+
+  if (window.__chatHandlers.messagesRead) {
+    socket.off('messages_read', window.__chatHandlers.messagesRead);
+  }
+
+
+  // ===============================
+  // NEW MESSAGE
+  // ===============================
+
+  window.__chatHandlers.newMessage = function(m) {
+
     try {
+
       const belongsToThisChat =
         (m.mittente_id === meId && m.destinatario_id === destId) ||
         (m.mittente_id === destId && m.destinatario_id === meId);
@@ -767,12 +787,15 @@ body {
         cleanDuplicateDates();
       }
 
-      let bolla = document.querySelector(`.bubble[data-mid="${m.id}"]`);
+      let bolla = document.querySelector(`[data-mid="${m.id}"]`);
 
       if (!bolla) {
+
         const node = bubble({ ...m, me_id: meId });
         wrap.appendChild(node);
+
         bolla = node.querySelector('.bubble');
+
       }
 
       if (!oldestMessageId) {
@@ -781,43 +804,82 @@ body {
 
       // aggiorna spunte se il messaggio è mio
       if (m.mittente_id === meId) {
+
         const spunte = bolla.querySelector('.spunte');
+
         if (spunte) {
+
           if (m.letto) {
             spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
-          } else if (m.consegnato) {
+          }
+          else if (m.consegnato) {
             spunte.innerHTML = '<span class="text-gray-400">✅</span>';
-          } else {
+          }
+          else {
             spunte.innerHTML = '<span class="text-gray-400">⏳</span>';
           }
+
         }
+
       }
 
-      // se ricevo un messaggio e la chat è visibile → segna come letto
+      // se ricevo messaggio → segna come letto
       if (m.destinatario_id === meId && document.visibilityState === "visible") {
+
         clearTimeout(markReadTimer);
+
         markReadTimer = setTimeout(() => {
-          socket.emit('mark_as_read', { other_id: m.mittente_id });
+
+          socket.emit('mark_as_read', {
+            other_id: m.mittente_id
+          });
+
         }, 300);
+
       }
 
       if (alreadyBottom || m.mittente_id === meId) {
-        setTimeout(() => scrollBottom(true), 80);
+
+        setTimeout(() => {
+          scrollBottom(true);
+        }, 80);
+
       }
 
-    } catch (err) {
-      console.error("🔥 Errore in new_message:", err, m);
     }
-  });
+    catch (err) {
 
-  socket.on('messages_read', (data) => {
+      console.error("🔥 Errore in new_message:", err, m);
+
+    }
+
+  };
+
+
+  // ===============================
+  // MESSAGES READ
+  // ===============================
+
+  window.__chatHandlers.messagesRead = function(data) {
+
     if (data.from !== destId) return;
 
     document.querySelectorAll('.bubble-me .spunte').forEach((spunte) => {
+
       spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
       spunte.dataset.read = "1";
+
     });
-  });
+
+  };
+
+
+  // ===============================
+  // ATTIVA LISTENER
+  // ===============================
+
+  socket.on('new_message', window.__chatHandlers.newMessage);
+  socket.on('messages_read', window.__chatHandlers.messagesRead);
 
   // 📨 Invio messaggio
   let sending = false;
