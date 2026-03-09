@@ -632,8 +632,10 @@ document.addEventListener("click", function(e) {
     // 📞 CHIAMATA IN ARRIVO
     socket.on("incoming_call", (data) => {
 
-        console.log("📞 Incoming call:", data);
+        window.pendingIncomingCall = null;
 
+        console.log("📞 Incoming call:", data);
+        
         // ✅ Se siamo già in chat
         if (window.chatAperta === true) {
 
@@ -1688,6 +1690,7 @@ window.endCallCleanup = function(reason = "") {
   window.inCall = false;
   window.callRoom = null;
   window.pendingIncomingCall = null;
+  window.chatAperta = false;
 
   // 4) Se hai suoneria globale
   if (window.callRingtone) {
