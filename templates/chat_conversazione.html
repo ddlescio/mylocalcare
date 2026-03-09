@@ -435,7 +435,8 @@ body {
       let markReadTimer = null;
 
     const destId = parseInt(document.getElementById('destinatario_id').value, 10);
-    window.__activeChat = destId;
+    window.__activeChat = parseInt(document.getElementById('destinatario_id').value, 10);
+
     // -----------------------------
     // 🚀 CARICAMENTO MESSAGGI VECCHI
     // -----------------------------
@@ -669,8 +670,10 @@ body {
 
   window.__chatHandlers.userTyping = function(data) {
 
-      if (window.__activeChat && window.__activeChat !== destId) return;
-      if (data.from !== destId) return;
+      const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
+
+      if (window.__activeChat && window.__activeChat !== currentChat) return;
+      if (data.from !== currentChat) return;
 
       if (data.typing) {
 
@@ -768,10 +771,6 @@ body {
 
   // 💬 Ricezione messaggi
 
-  if (!window.__chatHandlers) {
-    window.__chatHandlers = {};
-  }
-
   // rimuove SOLO i listener della chat se già esistono
   if (window.__chatHandlers.newMessage) {
     socket.off('new_message', window.__chatHandlers.newMessage);
@@ -791,11 +790,11 @@ body {
     const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
     if (window.__activeChat && window.__activeChat !== currentChat) return;
-    
+
     try {
       const belongsToThisChat =
-        (m.mittente_id === meId && m.destinatario_id === destId) ||
-        (m.mittente_id === destId && m.destinatario_id === meId);
+        (m.mittente_id === meId && m.destinatario_id === currentChat) ||
+        (m.mittente_id === currentChat && m.destinatario_id === meId);
 
       if (!belongsToThisChat) return;
 
@@ -881,9 +880,11 @@ body {
 
   window.__chatHandlers.messagesRead = function(data) {
 
-    if (data.from !== destId) return;
+    const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
-    document.querySelectorAll('.bubble-me .spunte').forEach((spunte) => {
+    if (data.from !== currentChat) return;
+
+    document.querySelectorAll('#msgWrap .bubble-me .spunte').forEach((spunte) => {
 
       spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
       spunte.dataset.read = "1";
