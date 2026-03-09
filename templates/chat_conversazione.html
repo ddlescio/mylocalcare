@@ -423,14 +423,8 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
     whenSocketReady((socket) => {
 
-      if (!window.__chat_socket_initialized) {
-        console.log("🟢 Init chat socket listeners");
-        window.__chat_socket_initialized = true;
-      }
-
-      window.__chat_socket_initialized = true;
       console.log("🟢 Init chat socket listeners");
-
+      
       const meId = parseInt("{{ g.utente['id'] }}", 10);
       const wrap = document.getElementById('msgWrap');
 
