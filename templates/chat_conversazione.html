@@ -745,6 +745,12 @@ body {
       try {
         if (!e.persisted) return;
 
+        console.log("♻️ Pagina ripristinata da cache → rebind chat socket");
+
+        if (window.socket) {
+          bindChatSocket(window.socket);
+        }
+
         const reopen = () => emitChatOpened();
 
         if (socket && socket.connected) {
@@ -752,9 +758,12 @@ body {
         } else if (socket) {
           socket.once("connect", reopen);
         }
-      } catch (e) {}
-    };
 
+      } catch (e) {
+        console.error("Errore pageshow:", e);
+      }
+    };
+    
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
     window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
     window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
