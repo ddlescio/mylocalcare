@@ -972,22 +972,6 @@ body {
   boundSocket = null;              // ← AGGIUNGI QUESTA RIGA
   bindChatSocket(window.socket);
 
-  // evita duplicati se la pagina torna da cache
-  if (window.__chatSocketWatcher) {
-    clearInterval(window.__chatSocketWatcher);
-  }
-
-  window.__chatSocketWatcher = setInterval(() => {
-
-    if (window.socket && window.socket !== boundSocket) {
-
-      console.log("🔁 Socket cambiata → rebind chat");
-
-      bindChatSocket(window.socket);
-
-    }
-
-  }, 500);
 
 });
 </script>
