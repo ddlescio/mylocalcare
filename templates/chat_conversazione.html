@@ -421,10 +421,14 @@ body {
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    whenSocketReady((socket) => {
+      const socket = window.socket;
+
+      if (!socket) {
+        console.error("Socket non disponibile");
+        return;
+      }
 
       console.log("🟢 Init chat socket listeners");
-
       const meId = parseInt("{{ g.utente['id'] }}", 10);
       const wrap = document.getElementById('msgWrap');
 
@@ -973,7 +977,6 @@ body {
       sending = false;
     }, 250);
   });
-  });
 });
 </script>
 <script>
@@ -1142,9 +1145,7 @@ async function initVideoSystem() {
     // EVENTI SOCKET VIDEO
     // ==============================
 
-    if (!window.__videoHandlers) {
-        window.__videoHandlers = {};
-    }
+    window.__videoHandlers = window.__videoHandlers || {};
 
     // rimuove SOLO i listener video precedenti
     if (window.__videoHandlers.videoRejected) {
@@ -1436,9 +1437,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // =========================
         socket.emit("check_video_status", { user_id: destId });
 
-        if (!window.__videoHandlers) {
-            window.__videoHandlers = {};
-        }
+        window.__videoHandlers = window.__videoHandlers || {};
 
         if (window.__videoHandlers.videoStatusResult) {
             socket.off("video_status_result", window.__videoHandlers.videoStatusResult);
@@ -1471,9 +1470,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // 🔴 REALTIME BUSY UPDATE
         // =========================
 
-        if (!window.__videoHandlers) {
-            window.__videoHandlers = {};
-        }
+        window.__videoHandlers = window.__videoHandlers || {};
 
         if (window.__videoHandlers.videoBusy) {
             socket.off("video_busy", window.__videoHandlers.videoBusy);
