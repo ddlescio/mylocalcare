@@ -8525,27 +8525,44 @@ def handle_connect(auth=None):
         except Exception:
             pass
 
+    # segna utente online
     redis_client.sadd("online_users", str(user_id))
 
-    # registra la socket
-    redis_client.sadd(f"user_sockets:{user_id}", sid)
+    # -------------------------------------------------
+    # 🔥 pulizia eventuali socket zombie per sicurezza
+    # -------------------------------------------------
+    existing_sockets = redis_client.smembers(f"user_sockets:{user_id}")
 
-    # join room
-    join_room(room)
+    for old_sid in existing_sockets:
+        old_sid = old_sid.decode() if isinstance(old_sid, bytes) else old_sid
 
+        # evita di rimuovere la socket appena aperta
+        if old_sid != sid:
+            try:
+                leave_room(room, sid=old_sid)
+            except Exception:
+                pass
+
+            redis_client.srem(f"user_sockets:{user_id}", old_sid)
+
+    # -------------------------------------------------
     # registra la nuova socket
+    # -------------------------------------------------
     redis_client.sadd(f"user_sockets:{user_id}", sid)
 
-    # ------------------------------
-    # 🔥 JOIN ROOM CORRETTO
-    # ------------------------------
+    # -------------------------------------------------
+    # join room utente
+    # -------------------------------------------------
     join_room(room, sid=sid)
 
+    # conteggio socket attive
     count = redis_client.scard(f"user_sockets:{user_id}")
 
     print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
 
-    # invia contatore unread
+    # -------------------------------------------------
+    # invio contatore messaggi non letti
+    # -------------------------------------------------
     try:
         unread = chat_count_unread(user_id)
 
@@ -8557,8 +8574,7 @@ def handle_connect(auth=None):
 
     except Exception as e:
         print("Errore invio unread count:", e)
-
-
+        
 
 @socketio.on("disconnect")
 def handle_disconnect():

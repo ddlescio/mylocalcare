@@ -745,6 +745,10 @@ body {
       try {
         if (!e.persisted) return;
 
+        // 🔥 forza il rebind dei listener quando la pagina torna dal bfcache
+        boundSocket = null;
+        bindChatSocket(window.socket);
+
         const reopen = () => emitChatOpened();
 
         if (socket && socket.connected) {
