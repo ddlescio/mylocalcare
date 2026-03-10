@@ -539,12 +539,14 @@ body {
       emitChatOpened();
     }
 
+    window.__chatHandlers = window.__chatHandlers || {};
+
     if (window.__chatHandlers.connectInit) {
       socket.off('connect', window.__chatHandlers.connectInit);
     }
 
     window.__chatHandlers.connectInit = initSocketEvents;
-
+    
     if (socket.connected) {
       initSocketEvents();
     } else {
