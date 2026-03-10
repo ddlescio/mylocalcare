@@ -491,10 +491,10 @@ body {
 
         msgs.forEach(m => {
 
-          const bolla = bubble({ ...m, me_id: meId });
+          const bubbleEl = bubble({ ...m, me_id: meId });
 
           const first = wrap.firstChild;
-          wrap.insertBefore(bolla, first);
+          wrap.insertBefore(bubbleEl, first);
 
           if (m.created_at) ensureDateHeaderFor(m.created_at);
 
@@ -604,12 +604,12 @@ body {
             cleanDuplicateDates();
           }
 
-          let bolla = document.querySelector(`[data-mid="${m.id}"]`);
+          let bubbleEl = document.querySelector(`#msgWrap [data-mid="${m.id}"]`);
 
-          if (!bolla) {
+          if (!bubbleEl) {
             const node = bubble({ ...m, me_id: meId });
             wrap.appendChild(node);
-            bolla = node.querySelector('.bubble');
+            bubbleEl = node.querySelector('[data-mid]');
           }
 
           if (!oldestMessageId) {
@@ -617,7 +617,7 @@ body {
           }
 
           if (m.mittente_id === meId) {
-            const spunte = bolla.querySelector('.spunte');
+            const spunte = bubbleEl.querySelector('.spunte');
 
             if (spunte) {
               if (m.letto) {
@@ -806,7 +806,7 @@ body {
       return `${hh}:${mm}`;
   }
 
-  // 🧱 Genera bolla messaggio
+  // 🧱 Genera bubbleEl messaggio
   function bubble({ id, mittente_id, testo, created_at, consegnato, letto, me_id }) {
     const isMe = mittente_id === me_id;
     const outer = document.createElement('div');
