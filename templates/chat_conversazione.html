@@ -541,9 +541,9 @@ body {
 
     if (socket.connected) {
       initSocketEvents();
-    } else {
-      socket.once('connect', initSocketEvents);
     }
+
+    socket.on('connect', initSocketEvents);
 
     // pulizia vecchi handler lifecycle
     if (window.__chatBeforeUnloadHandlerRef) {
@@ -702,7 +702,7 @@ body {
 
       const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
-      if (window.__activeChat && window.__activeChat !== currentChat) return;
+      if (window.__activeChat !== currentChat) return;
       if (data.from !== currentChat) return;
 
       if (data.typing) {
@@ -819,7 +819,7 @@ body {
 
     const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
-    if (window.__activeChat && window.__activeChat !== currentChat) return;
+    if (window.__activeChat !== currentChat) return;
 
     try {
       const belongsToThisChat =
