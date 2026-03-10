@@ -8523,7 +8523,6 @@ def handle_connect(auth=None):
     # ------------------------------
     # 🔥 PULIZIA SOCKET ZOMBIE
     # ------------------------------
-
     existing_sockets = redis_client.smembers(f"user_sockets:{user_id}")
 
     for old_sid in existing_sockets:
@@ -8533,31 +8532,25 @@ def handle_connect(auth=None):
         if old_sid != sid:
 
             try:
-                leave_room(f"user_{user_id}", sid=old_sid)
+                leave_room(room, sid=old_sid)
             except Exception:
                 pass
 
-            # 🔥 rimuove definitivamente la socket zombie
             redis_client.srem(f"user_sockets:{user_id}", old_sid)
 
-    # registra la nuova socket attiva
+    # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
-    
-    # ------------------------------
-    # 🔥 GARANTISCE ROOM CORRETTA
-    # ------------------------------
 
-    try:
-        leave_room(room)
-    except Exception:
-        pass
-
-    join_room(room)
+    # ------------------------------
+    # 🔥 JOIN ROOM CORRETTO
+    # ------------------------------
+    join_room(room, sid=sid)
 
     count = redis_client.scard(f"user_sockets:{user_id}")
+
     print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
 
-    # invia subito il contatore messaggi non letti
+    # invia contatore unread
     try:
         unread = chat_count_unread(user_id)
 
@@ -8569,6 +8562,7 @@ def handle_connect(auth=None):
 
     except Exception as e:
         print("Errore invio unread count:", e)
+
 
 
 @socketio.on("disconnect")
@@ -8583,13 +8577,14 @@ def handle_disconnect():
     room = f"user_{user_id}"
 
     try:
-        leave_room(room)
+        leave_room(room, sid=sid)
     except Exception:
         pass
 
     redis_client.srem(f"user_sockets:{user_id}", sid)
 
     count = redis_client.scard(f"user_sockets:{user_id}")
+
     print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {count}")
 
     if count == 0:
