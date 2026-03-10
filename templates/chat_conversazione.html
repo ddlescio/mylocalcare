@@ -707,7 +707,7 @@ body {
 
   window.__chatHandlers.userTyping = function(data) {
 
-      const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
+      const currentChat = destId;
 
       if (data.from !== currentChat) return;
 
@@ -823,7 +823,7 @@ body {
 
   window.__chatHandlers.newMessage = function(m) {
 
-    const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
+    const currentChat = destId;
 
 
     try {
@@ -915,7 +915,7 @@ body {
 
   window.__chatHandlers.messagesRead = function(data) {
 
-    const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
+    const currentChat = destId;
 
     if (data.from !== currentChat) return;
 
