@@ -437,6 +437,31 @@ body {
     const destId = parseInt(document.getElementById('destinatario_id').value, 10);
     window.__activeChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
+    let chatClosedEmitted = false;
+
+    function emitChatOpened() {
+      chatClosedEmitted = false;
+      window.__activeChat = destId;
+
+      if (socket && socket.connected && destId) {
+        socket.emit('chat_aperta', { other_id: destId });
+        socket.emit('mark_as_read', { other_id: destId });
+      }
+    }
+
+    function emitChatClosedOnce() {
+      if (chatClosedEmitted) return;
+
+      chatClosedEmitted = true;
+      window.__activeChat = null;
+
+      if (socket && socket.connected && destId) {
+        socket.emit('chat_chiusa', { other_id: destId });
+      }
+    }
+
+    window.__emitChatClosedOnce = emitChatClosedOnce;
+
     // -----------------------------
     // 🚀 CARICAMENTO MESSAGGI VECCHI
     // -----------------------------
@@ -507,10 +532,7 @@ body {
 
     function initSocketEvents() {
       console.log("🟢 Socket pronto");
-      window.__activeChat = parseInt(document.getElementById('destinatario_id').value, 10);
-
-      socket.emit('chat_aperta', { other_id: destId });
-      socket.emit('mark_as_read', { other_id: destId });
+      emitChatOpened();
     }
 
     if (socket.connected) {
@@ -526,32 +548,39 @@ body {
     if (window.__chatPagehideHandlerRef) {
       window.removeEventListener("pagehide", window.__chatPagehideHandlerRef);
     }
+    if (window.__chatPageshowHandlerRef) {
+      window.removeEventListener("pageshow", window.__chatPageshowHandlerRef);
+    }
 
-    // chiusura chat solo quando lasci DAVVERO la pagina
+    // chiusura chat UNA SOLA VOLTA quando lasci la pagina
     window.__chatBeforeUnloadHandlerRef = function () {
       try {
-        const currentChat = parseInt(document.getElementById('destinatario_id')?.value || "0", 10);
-        window.__activeChat = null;
-
-        if (socket && socket.connected && currentChat) {
-          socket.emit('chat_chiusa', { other_id: currentChat });
-        }
+        emitChatClosedOnce();
       } catch (e) {}
     };
 
     window.__chatPagehideHandlerRef = function () {
       try {
-        const currentChat = parseInt(document.getElementById('destinatario_id')?.value || "0", 10);
-        window.__activeChat = null;
+        emitChatClosedOnce();
+      } catch (e) {}
+    };
 
-        if (socket && socket.connected && currentChat) {
-          socket.emit('chat_chiusa', { other_id: currentChat });
+    // riapertura chat quando torni alla pagina
+    window.__chatPageshowHandlerRef = function () {
+      try {
+        const reopen = () => emitChatOpened();
+
+        if (socket && socket.connected) {
+          reopen();
+        } else if (socket) {
+          socket.once("connect", reopen);
         }
       } catch (e) {}
     };
 
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
     window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
+    window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
 
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
@@ -955,13 +984,8 @@ document.addEventListener("DOMContentLoaded", () => {
   back.addEventListener("click", (e) => {
     e.preventDefault();
 
-    // 🔴 segna che non c'è più una chat attiva
-    window.__activeChat = null;
-
-    // 1️⃣ Segnala la chiusura della chat
     try {
-      const destId = parseInt(document.getElementById("destinatario_id")?.value || "0", 10);
-      if (window.socket && destId) window.socket.emit("chat_chiusa", { other_id: destId });
+      window.__emitChatClosedOnce?.();
     } catch (_) {}
 
     // 2️⃣ Torna alla pagina precedente se esiste
@@ -982,12 +1006,8 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!link || !destIdEl) return;
 
   link.addEventListener("click", () => {
-
-    window.__activeChat = null;
-
-    const destId = parseInt(destIdEl.value || "0", 10);
     try {
-      if (window.socket && destId) window.socket.emit("chat_chiusa", { other_id: destId });
+      window.__emitChatClosedOnce?.();
     } catch(_) {}
   });
 });
