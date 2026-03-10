@@ -507,44 +507,27 @@ body {
 
     function initSocketEvents() {
       console.log("🟢 Socket pronto");
+      window.__activeChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
-      // 📡 Notifica apertura (UNA SOLA VOLTA)
       socket.emit('chat_aperta', { other_id: destId });
       socket.emit('mark_as_read', { other_id: destId });
     }
-    if (window.__chatVisibilityHandlerRef) {
-      document.removeEventListener("visibilitychange", window.__chatVisibilityHandlerRef);
+
+    if (socket.connected) {
+      initSocketEvents();
+    } else {
+      socket.once('connect', initSocketEvents);
     }
 
-    window.__chatVisibilityHandlerRef = function () {
-      if (!window.socket) return;
-
-      const currentChat = parseInt(document.getElementById('destinatario_id')?.value || "0", 10);
-      if (!currentChat) return;
-
-      if (document.visibilityState === "hidden") {
-        console.log("👁️ Chat nascosta → chat_chiusa");
-        window.__activeChat = null;
-        window.socket.emit('chat_chiusa', { other_id: currentChat });
-      }
-
-      if (document.visibilityState === "visible") {
-        console.log("👁️ Chat visibile → chat_aperta");
-        window.__activeChat = currentChat;
-        window.socket.emit('chat_aperta', { other_id: currentChat });
-        window.socket.emit('mark_as_read', { other_id: currentChat });
-      }
-    };
-
-    document.addEventListener("visibilitychange", window.__chatVisibilityHandlerRef);
-
-    if (socket.connected) initSocketEvents();
-    else socket.once('connect', initSocketEvents);
-
+    // pulizia vecchi handler lifecycle
     if (window.__chatBeforeUnloadHandlerRef) {
       window.removeEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
     }
+    if (window.__chatPagehideHandlerRef) {
+      window.removeEventListener("pagehide", window.__chatPagehideHandlerRef);
+    }
 
+    // chiusura chat solo quando lasci DAVVERO la pagina
     window.__chatBeforeUnloadHandlerRef = function () {
       try {
         const currentChat = parseInt(document.getElementById('destinatario_id')?.value || "0", 10);
@@ -555,13 +538,6 @@ body {
         }
       } catch (e) {}
     };
-
-    window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
-
-
-    if (window.__chatPagehideHandlerRef) {
-      window.removeEventListener("pagehide", window.__chatPagehideHandlerRef);
-    }
 
     window.__chatPagehideHandlerRef = function () {
       try {
@@ -574,38 +550,8 @@ body {
       } catch (e) {}
     };
 
+    window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
     window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
-
-    if (window.__chatPageshowHandlerRef) {
-      window.removeEventListener("pageshow", window.__chatPageshowHandlerRef);
-    }
-
-    window.__chatPageshowHandlerRef = function () {
-
-      try {
-
-        const currentChat = parseInt(document.getElementById('destinatario_id')?.value || "0", 10);
-        if (!currentChat) return;
-
-        window.__activeChat = currentChat;
-
-        const sendOpen = () => {
-          console.log("📄 pageshow → riallineo chat");
-          socket.emit('chat_aperta', { other_id: currentChat });
-          socket.emit('mark_as_read', { other_id: currentChat });
-        };
-
-        if (socket && socket.connected) {
-          sendOpen();
-        } else if (socket) {
-          socket.once("connect", sendOpen);
-        }
-
-      } catch (e) {}
-
-    };
-    
-    window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
 
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
@@ -944,6 +890,29 @@ body {
 
   };
 
+  // ===============================
+  // MESSAGE DELIVERED
+  // ===============================
+
+  if (window.__chatHandlers.messageDelivered) {
+    socket.off('message_delivered', window.__chatHandlers.messageDelivered);
+  }
+
+  window.__chatHandlers.messageDelivered = function(data) {
+
+    const bubbleEl = document.querySelector(`#msgWrap [data-mid="${data.id}"]`);
+    if (!bubbleEl) return;
+
+    const spunte = bubbleEl.querySelector('.spunte');
+    if (!spunte) return;
+
+    // aggiorna a messaggio consegnato (1 spunta)
+    if (!spunte.dataset.read) {
+      spunte.innerHTML = '<span class="text-gray-400">✅</span>';
+    }
+
+  };
+
 
   // ===============================
   // ATTIVA LISTENER
@@ -951,6 +920,7 @@ body {
 
   socket.on('new_message', window.__chatHandlers.newMessage);
   socket.on('messages_read', window.__chatHandlers.messagesRead);
+  socket.on('message_delivered', window.__chatHandlers.messageDelivered);
 
   // 📨 Invio messaggio
   let sending = false;
