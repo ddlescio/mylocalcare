@@ -702,7 +702,6 @@ body {
 
       const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
-      if (window.__activeChat !== null && window.__activeChat !== currentChat) return;
       if (data.from !== currentChat) return;
 
       if (data.typing) {
@@ -819,7 +818,6 @@ body {
 
     const currentChat = parseInt(document.getElementById('destinatario_id').value, 10);
 
-    if (window.__activeChat !== null && window.__activeChat !== currentChat) return;
 
     try {
       const belongsToThisChat =
