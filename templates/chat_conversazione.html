@@ -539,11 +539,17 @@ body {
       emitChatOpened();
     }
 
-    if (socket.connected) {
-      initSocketEvents();
+    if (window.__chatHandlers.connectInit) {
+      socket.off('connect', window.__chatHandlers.connectInit);
     }
 
-    socket.on('connect', initSocketEvents);
+    window.__chatHandlers.connectInit = initSocketEvents;
+
+    if (socket.connected) {
+      initSocketEvents();
+    } else {
+      socket.once('connect', initSocketEvents);
+    }
 
     // pulizia vecchi handler lifecycle
     if (window.__chatBeforeUnloadHandlerRef) {
@@ -570,8 +576,10 @@ body {
     };
 
     // riapertura chat quando torni alla pagina
-    window.__chatPageshowHandlerRef = function () {
+    window.__chatPageshowHandlerRef = function (e) {
       try {
+        if (!e.persisted) return;
+
         const reopen = () => emitChatOpened();
 
         if (socket && socket.connected) {
@@ -581,7 +589,7 @@ body {
         }
       } catch (e) {}
     };
-
+    
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
     window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
     window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
