@@ -578,7 +578,7 @@ body {
       if (socket.connected) {
         initSocketEvents();
       } else {
-        socket.once('connect', initSocketEvents);
+        socket.on('connect', initSocketEvents);
       }
 
 
@@ -745,12 +745,6 @@ body {
       try {
         if (!e.persisted) return;
 
-        console.log("♻️ Pagina ripristinata da cache → rebind chat socket");
-
-        if (window.socket) {
-          bindChatSocket(window.socket);
-        }
-
         const reopen = () => emitChatOpened();
 
         if (socket && socket.connected) {
@@ -758,12 +752,9 @@ body {
         } else if (socket) {
           socket.once("connect", reopen);
         }
-
-      } catch (e) {
-        console.error("Errore pageshow:", e);
-      }
+      } catch (e) {}
     };
-    
+
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
     window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
     window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
@@ -974,6 +965,7 @@ body {
   // 🔁 ATTIVA BIND SOCKET + WATCHER CAMBIO SOCKET
   // --------------------------------------------------
 
+  boundSocket = null;              // ← AGGIUNGI QUESTA RIGA
   bindChatSocket(window.socket);
 
   // evita duplicati se la pagina torna da cache
