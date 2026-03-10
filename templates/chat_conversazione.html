@@ -422,6 +422,7 @@ body {
 <script>
   document.addEventListener("DOMContentLoaded", () => {
       const socket = window.socket;
+      window.__chatHandlers = window.__chatHandlers || {};
 
       if (!socket) {
         console.error("Socket non disponibile");
@@ -546,7 +547,7 @@ body {
     }
 
     window.__chatHandlers.connectInit = initSocketEvents;
-    
+
     if (socket.connected) {
       initSocketEvents();
     } else {
@@ -699,10 +700,6 @@ body {
       socket.emit("typing", { to: destId, typing: false });
     }, 2000); // puoi abbassare a 1000ms se vuoi più reattività
   });
-
-  if (!window.__chatHandlers) {
-      window.__chatHandlers = {};
-  }
 
   if (window.__chatHandlers.userTyping) {
       socket.off('user_typing', window.__chatHandlers.userTyping);
@@ -958,6 +955,17 @@ body {
   // ===============================
   // ATTIVA LISTENER
   // ===============================
+  if (window.__chatHandlers.newMessage) {
+    socket.off('new_message', window.__chatHandlers.newMessage);
+  }
+
+  if (window.__chatHandlers.messagesRead) {
+    socket.off('messages_read', window.__chatHandlers.messagesRead);
+  }
+
+  if (window.__chatHandlers.messageDelivered) {
+    socket.off('message_delivered', window.__chatHandlers.messageDelivered);
+  }
 
   socket.on('new_message', window.__chatHandlers.newMessage);
   socket.on('messages_read', window.__chatHandlers.messagesRead);
