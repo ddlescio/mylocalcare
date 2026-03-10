@@ -589,7 +589,7 @@ body {
         }
       } catch (e) {}
     };
-    
+
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
     window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
     window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
@@ -1422,17 +1422,28 @@ async function initVideoSystem() {
 </script>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    whenSocketReady(() => {
-        initVideoSystem();
-    });
-});
+  document.addEventListener("DOMContentLoaded", () => {
+
+      const run = () => initVideoSystem();
+
+      if (window.whenSocketReady) {
+          whenSocketReady(run);
+      } else if (window.socket) {
+
+          if (window.socket.connected) {
+              run();
+          } else {
+              window.socket.once("connect", run);
+          }
+
+      }
+
+  });
 </script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", () => {
 
-    whenSocketReady((socket) => {
-
+      const start = (socket) => {
         const videoBtn = document.getElementById("videoBtn");
         if (!videoBtn) return;
 
@@ -1526,9 +1537,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
         socket.on("video_busy", window.__videoHandlers.videoBusy);
 
-    }); // fine whenSocketReady
+      };
 
-});
+      if (window.whenSocketReady) {
+          whenSocketReady(start);
+      } else if (window.socket) {
+
+          if (window.socket.connected) {
+              start(window.socket);
+          } else {
+              window.socket.once("connect", () => start(window.socket));
+          }
+
+      }
+
+  });
 </script>
 </div>
 {% endblock %}
