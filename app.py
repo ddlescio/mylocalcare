@@ -8527,23 +8527,11 @@ def handle_connect(auth=None):
 
     redis_client.sadd("online_users", str(user_id))
 
-    # ------------------------------
-    # 🔥 PULIZIA SOCKET ZOMBIE
-    # ------------------------------
-    existing_sockets = redis_client.smembers(f"user_sockets:{user_id}")
+    # registra la socket
+    redis_client.sadd(f"user_sockets:{user_id}", sid)
 
-    for old_sid in existing_sockets:
-
-        old_sid = old_sid.decode() if isinstance(old_sid, bytes) else old_sid
-
-        if old_sid != sid:
-
-            try:
-                leave_room(room, sid=old_sid)
-            except Exception:
-                pass
-
-            redis_client.srem(f"user_sockets:{user_id}", old_sid)
+    # join room
+    join_room(room)
 
     # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
