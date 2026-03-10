@@ -8527,17 +8527,22 @@ def handle_connect(auth=None):
     existing_sockets = redis_client.smembers(f"user_sockets:{user_id}")
 
     for old_sid in existing_sockets:
+
         old_sid = old_sid.decode() if isinstance(old_sid, bytes) else old_sid
 
         if old_sid != sid:
+
             try:
                 leave_room(f"user_{user_id}", sid=old_sid)
             except Exception:
                 pass
 
-    # registra la nuova socket
-    redis_client.sadd(f"user_sockets:{user_id}", sid)
+            # 🔥 rimuove definitivamente la socket zombie
+            redis_client.srem(f"user_sockets:{user_id}", old_sid)
 
+    # registra la nuova socket attiva
+    redis_client.sadd(f"user_sockets:{user_id}", sid)
+    
     # ------------------------------
     # 🔥 GARANTISCE ROOM CORRETTA
     # ------------------------------
@@ -8606,7 +8611,7 @@ def remove_user_later(user_id):
         print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
-    
+
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
@@ -8646,7 +8651,6 @@ def handle_video_busy(data):
             "user_id": user_id,
             "busy": busy
         },
-        broadcast=True,
         include_self=False
     )
 
