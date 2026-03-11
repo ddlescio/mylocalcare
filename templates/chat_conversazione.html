@@ -636,7 +636,7 @@ body {
             clearTimeout(markReadTimer);
 
             markReadTimer = setTimeout(() => {
-              socket.emit('mark_as_read', {
+              window.socket.emit('mark_as_read', {
                 other_id: m.mittente_id
               });
             }, 300);
@@ -859,7 +859,7 @@ body {
     // invia typing:true solo la prima volta
     if (!wasTyping) {
       wasTyping = true;
-      socket.emit("typing", { to: destId, typing: true });
+      window.socket.emit("typing", { to: destId, typing: true });
     }
 
     // reset timeout
@@ -867,7 +867,7 @@ body {
 
     typingTimeout = setTimeout(() => {
       wasTyping = false;
-      socket.emit("typing", { to: destId, typing: false });
+      window.socket.emit("typing", { to: destId, typing: false });
     }, 2000); // puoi abbassare a 1000ms se vuoi più reattività
   });
 
@@ -960,7 +960,7 @@ body {
 
     sending = true;
 
-    socket.emit('send_message', { destinatario_id: destId, testo });
+    window.socket.emit('send_message', { destinatario_id: destId, testo });
 
     input.value = '';
     toggleEmoji(false);
