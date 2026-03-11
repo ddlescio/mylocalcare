@@ -575,14 +575,30 @@ body {
         socket.off('connect', window.__chatHandlers.connectInit);
       }
 
+      if (window.__chatHandlers.reconnectInit) {
+        socket.off('reconnect', window.__chatHandlers.reconnectInit);
+      }
+
       window.__chatHandlers.connectInit = initSocketEvents;
 
+      window.__chatHandlers.reconnectInit = () => {
+        console.log("🔄 socket reconnected → rebinding chat");
+
+        boundSocket = null;
+
+        bindChatSocket(socket);
+      };
+
+
+      // se la socket è già connessa inizializza subito
       if (socket.connected) {
         initSocketEvents();
       } else {
-        socket.on('connect', initSocketEvents);
+        socket.on('connect', window.__chatHandlers.connectInit);
       }
 
+      // listener reconnect
+      socket.on('reconnect', window.__chatHandlers.reconnectInit);
 
       // 5) new_message
       if (window.__chatHandlers.newMessage) {
