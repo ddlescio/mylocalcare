@@ -8528,13 +8528,9 @@ def handle_connect(auth=None):
     # segna utente online
     redis_client.sadd("online_users", str(user_id))
 
-    # -------------------------------------------------
-    # JOIN ROOM SUBITO (evita race condition)
-    # -------------------------------------------------
-    join_room(room, sid=sid)
 
     # -------------------------------------------------
-    # gestisci socket esistenti
+    # chiude eventuali socket precedenti dell'utente
     # -------------------------------------------------
     existing = redis_client.smembers(f"user_sockets:{user_id}")
 
@@ -8552,6 +8548,11 @@ def handle_connect(auth=None):
 
     # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
+
+    # -------------------------------------------------
+    # join room utente
+    # -------------------------------------------------
+    join_room(room, sid=sid)
 
     # conteggio socket attive
     count = redis_client.scard(f"user_sockets:{user_id}")
@@ -8572,6 +8573,7 @@ def handle_connect(auth=None):
 
     except Exception as e:
         print("Errore invio unread count:", e)
+
 
 @socketio.on("disconnect")
 def handle_disconnect():
