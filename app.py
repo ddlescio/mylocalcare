@@ -377,10 +377,6 @@ redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     raise RuntimeError("❌ REDIS_URL non configurata su Render")
 
-from socketio import RedisManager
-
-mgr = RedisManager(redis_url)
-
 socketio = SocketIO(
     app,
     async_mode="eventlet",
@@ -390,13 +386,12 @@ socketio = SocketIO(
         "http://127.0.0.1:5050",
         "http://localhost:5050"
     ],
-    client_manager=mgr,
+    message_queue=redis_url,
     ping_timeout=20,
     ping_interval=10,
     logger=True,
     engineio_logger=True
 )
-
 # =====================================================
 # UTENTI ONLINE (socket registry)
 # =====================================================
