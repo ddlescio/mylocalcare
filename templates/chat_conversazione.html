@@ -970,11 +970,16 @@ body {
     }, 250);
   });
   // --------------------------------------------------
-  // 🔁 ATTIVA BIND SOCKET + WATCHER CAMBIO SOCKET
+  // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
 
-  bindChatSocket(window.socket);
-
+  if (window.whenSocketReady) {
+    window.whenSocketReady((s) => {
+      bindChatSocket(s);
+    });
+  } else {
+    bindChatSocket(window.socket);
+  }
 
 });
 </script>
