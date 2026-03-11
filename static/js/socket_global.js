@@ -15,13 +15,11 @@ if (!window.socket) {
     transports: ["websocket"],
     upgrade: false,
     withCredentials: true,
-
-    // reconnessione robusta (rete ballerina tipo treno)
     reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 500,
-    reconnectionDelayMax: 3000,
-    timeout: 20000
+
+    // miglioramento rete instabile
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000
   });
 
   console.log("🟢 Socket creato");
@@ -46,11 +44,6 @@ if (!socket._baseConnectListener) {
 
     window.dispatchEvent(new Event("socket_ready"));
 
-  });
-
-  // solo log di debug, non cambia comportamento
-  socket.on("disconnect", (reason) => {
-    console.log("⚠️ socket disconnected:", reason);
   });
 
 }
