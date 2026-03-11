@@ -545,9 +545,8 @@ body {
 
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
-      if (boundSocket && boundSocket.id === newSocket.id) return;
 
-      // 1) sgancia eventuali listener dalla socket precedente
+      // 1) sgancia sempre i listener precedenti
       if (boundSocket) {
         if (window.__chatHandlers.connectInit) {
           boundSocket.off('connect', window.__chatHandlers.connectInit);
@@ -566,29 +565,38 @@ body {
         }
       }
 
-      // 2) aggiorna i riferimenti
+      // 2) aggiorna riferimenti
       socket = newSocket;
       boundSocket = newSocket;
 
-      // 3) connect / reconnect
-      if (window.__chatHandlers.connectInit) {
-        socket.off('connect', window.__chatHandlers.connectInit);
-      }
+      console.log("🔗 bindChatSocket su socket id:", socket.id);
 
+      // 3) connect / reconnect
       window.__chatHandlers.connectInit = initSocketEvents;
+
+      socket.off('connect', window.__chatHandlers.connectInit);
+      socket.on('connect', window.__chatHandlers.connectInit);
 
       if (socket.connected) {
         initSocketEvents();
-      } else {
-        socket.on('connect', initSocketEvents);
       }
 
+      // 4) user_typing
+      window.__chatHandlers.userTyping = function(data) {
+        const currentChat = destId;
+        if (data.from !== currentChat) return;
+
+        if (data.typing) {
+          typingIndicator.classList.remove('hidden');
+        } else {
+          typingIndicator.classList.add('hidden');
+        }
+      };
+
+      socket.off('user_typing', window.__chatHandlers.userTyping);
+      socket.on('user_typing', window.__chatHandlers.userTyping);
 
       // 5) new_message
-      if (window.__chatHandlers.newMessage) {
-        socket.off('new_message', window.__chatHandlers.newMessage);
-      }
-
       window.__chatHandlers.newMessage = function(m) {
         const currentChat = destId;
 
@@ -653,38 +661,10 @@ body {
         }
       };
 
+      socket.off('new_message', window.__chatHandlers.newMessage);
       socket.on('new_message', window.__chatHandlers.newMessage);
 
-      // 4) user_typing
-      if (window.__chatHandlers.userTyping) {
-        socket.off('user_typing', window.__chatHandlers.userTyping);
-      }
-
-      window.__chatHandlers.userTyping = function(data) {
-
-        const currentChat = destId;
-
-        if (data.from !== currentChat) return;
-
-        if (data.typing) {
-
-          typingIndicator.classList.remove('hidden');
-
-        } else {
-
-          typingIndicator.classList.add('hidden');
-
-        }
-
-      };
-
-      socket.on('user_typing', window.__chatHandlers.userTyping);
-
       // 6) messages_read
-      if (window.__chatHandlers.messagesRead) {
-        socket.off('messages_read', window.__chatHandlers.messagesRead);
-      }
-
       window.__chatHandlers.messagesRead = function(data) {
         const currentChat = destId;
         if (data.from !== currentChat) return;
@@ -695,13 +675,10 @@ body {
         });
       };
 
+      socket.off('messages_read', window.__chatHandlers.messagesRead);
       socket.on('messages_read', window.__chatHandlers.messagesRead);
 
       // 7) message_delivered
-      if (window.__chatHandlers.messageDelivered) {
-        socket.off('message_delivered', window.__chatHandlers.messageDelivered);
-      }
-
       window.__chatHandlers.messageDelivered = function(data) {
         const bubbleEl = document.querySelector(`#msgWrap [data-mid="${data.id}"]`);
         if (!bubbleEl) return;
@@ -714,9 +691,9 @@ body {
         }
       };
 
+      socket.off('message_delivered', window.__chatHandlers.messageDelivered);
       socket.on('message_delivered', window.__chatHandlers.messageDelivered);
     }
-
 
     // pulizia vecchi handler lifecycle
     if (window.__chatBeforeUnloadHandlerRef) {
@@ -743,24 +720,22 @@ body {
     };
 
     // riapertura chat quando torni alla pagina
-    window.__chatPageshowHandlerRef = function (e) {
+    window.__chatPageshowHandlerRef = function () {
       try {
-        if (!e.persisted) return;
+        if (!window.socket) return;
 
-        // 🔥 forza il rebind dei listener quando la pagina torna dal bfcache
-        if (window.socket) {
-          boundSocket = null;
-          bindChatSocket(window.socket);
-        }
+        bindChatSocket(window.socket);
 
         const reopen = () => emitChatOpened();
 
-        if (socket && socket.connected) {
+        if (window.socket.connected) {
           reopen();
-        } else if (socket) {
-          socket.once("connect", reopen);
+        } else {
+          window.socket.once("connect", reopen);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error("Errore pageshow chat:", e);
+      }
     };
 
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
