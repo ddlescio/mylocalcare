@@ -745,7 +745,6 @@ body {
     // riapertura chat quando torni alla pagina
     window.__chatPageshowHandlerRef = function (e) {
       try {
-        if (!e.persisted) return;
 
         // 🔥 forza il rebind dei listener quando la pagina torna dal bfcache
         if (window.socket) {

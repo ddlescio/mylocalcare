@@ -9,28 +9,20 @@ window.__socket_bootstrap_done__ = true;
 // SOCKET GLOBALE
 // ===============================
 
-if (!window.socket || window.socket.disconnected) {
-
-  if (window.socket) {
-    try {
-      window.socket.close();
-    } catch(e) {}
-  }
+if (!window.socket) {
 
   window.socket = io({
     transports: ["websocket"],
     upgrade: false,
     withCredentials: true,
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 2000
+    reconnection: true
   });
 
-  console.log("🟢 Socket creata");
+  console.log("🟢 Socket creato");
 
 } else {
 
-  console.log("♻️ Socket riutilizzata");
+  console.log("♻️ Socket riutilizzato");
 
 }
 
