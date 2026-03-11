@@ -5,6 +5,10 @@ if (window.__socket_bootstrap_done__) {
 
 window.__socket_bootstrap_done__ = true;
 
+// ===============================
+// SOCKET GLOBALE
+// ===============================
+
 if (!window.socket) {
 
   window.socket = io({
@@ -24,6 +28,8 @@ if (!window.socket) {
 
 const socket = window.socket;
 
+
+// evita doppio listener connect
 if (!socket._baseConnectListener) {
 
   socket._baseConnectListener = true;
@@ -37,6 +43,11 @@ if (!socket._baseConnectListener) {
   });
 
 }
+
+
+// ===============================
+// UTILITY
+// ===============================
 
 window.whenSocketReady = function(callback) {
 
