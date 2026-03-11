@@ -15,7 +15,13 @@ if (!window.socket) {
     transports: ["websocket"],
     upgrade: false,
     withCredentials: true,
-    reconnection: true
+
+    // resilienza connessione
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 3000,
+    timeout: 20000
   });
 
   console.log("🟢 Socket creato");
@@ -29,7 +35,10 @@ if (!window.socket) {
 const socket = window.socket;
 
 
-// evita doppio listener connect
+// ===============================
+// LISTENER BASE SOCKET
+// ===============================
+
 if (!socket._baseConnectListener) {
 
   socket._baseConnectListener = true;
@@ -38,7 +47,25 @@ if (!socket._baseConnectListener) {
 
     console.log("🔌 socket connected:", socket.id);
 
+    // notifica alle pagine che la socket è pronta
     window.dispatchEvent(new Event("socket_ready"));
+
+  });
+
+  // 🔁 FIX CONNESSIONI BALLERINE
+  socket.on("reconnect", (attempt) => {
+
+    console.log("🔄 socket reconnect:", attempt);
+
+    // forza ri-bind listener delle pagine
+    window.dispatchEvent(new Event("socket_ready"));
+
+  });
+
+  // utile per debug reti instabili
+  socket.on("disconnect", (reason) => {
+
+    console.log("⚠️ socket disconnected:", reason);
 
   });
 
