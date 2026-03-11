@@ -42,27 +42,6 @@ if (!socket._baseConnectListener) {
 
   });
 
-
-  // ===============================
-  // FIX rete ballerina (treno)
-  // ===============================
-
-  socket.on("disconnect", (reason) => {
-
-    console.log("⚠️ socket disconnected:", reason);
-
-    // se cade la rete proviamo a riconnettere
-    if (reason === "ping timeout" || reason === "transport close") {
-
-      setTimeout(() => {
-        console.log("🔄 retry reconnect");
-        socket.connect();
-      }, 1500);
-
-    }
-
-  });
-
 }
 
 
