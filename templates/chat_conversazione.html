@@ -569,7 +569,8 @@ body {
       // 2) aggiorna i riferimenti
       socket = newSocket;
       boundSocket = newSocket;
-
+      window.socket = newSocket;
+      
       // 3) connect / reconnect
       if (window.__chatHandlers.connectInit) {
         socket.off('connect', window.__chatHandlers.connectInit);
