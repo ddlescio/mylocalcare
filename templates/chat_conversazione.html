@@ -972,10 +972,12 @@ body {
   // --------------------------------------------------
   // 🔁 ATTIVA BIND SOCKET + WATCHER CAMBIO SOCKET
   // --------------------------------------------------
+
   boundSocket = null;
 
-  bindChatSocket(window.socket);
-
+  window.whenSocketReady((socket) => {
+    bindChatSocket(socket);
+  });
 
 });
 </script>
