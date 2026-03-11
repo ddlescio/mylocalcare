@@ -16,8 +16,6 @@ if (!window.socket) {
     upgrade: false,
     withCredentials: true,
     reconnection: true,
-
-    // miglioramento rete instabile
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000
   });
@@ -31,6 +29,13 @@ if (!window.socket) {
 }
 
 const socket = window.socket;
+
+
+// FIX Safari iOS / cambio pagina
+if (!socket.connected) {
+  console.log("🔄 forcing socket reconnect");
+  socket.connect();
+}
 
 
 // evita doppio listener connect
