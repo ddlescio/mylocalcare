@@ -8574,7 +8574,7 @@ def handle_connect(auth=None):
 
     except Exception as e:
         print("Errore invio unread count:", e)
-        
+
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8600,8 +8600,6 @@ def handle_disconnect():
 
     if count == 0:
 
-        redis_client.srem("online_users", str(user_id))
-
         if user_id not in disconnect_timers:
             task = socketio.start_background_task(remove_user_later, user_id)
             disconnect_timers[user_id] = task
@@ -8617,7 +8615,7 @@ def remove_user_later(user_id):
         print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
-
+    
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
