@@ -425,6 +425,8 @@ body {
       let boundSocket = null;
       window.__chatHandlers = window.__chatHandlers || {};
 
+      socket = window.socket;
+
       if (!window.socket) {
         console.error("Socket non disponibile");
         return;
@@ -746,8 +748,10 @@ body {
         if (!e.persisted) return;
 
         // 🔥 forza il rebind dei listener quando la pagina torna dal bfcache
-        boundSocket = null;
-        bindChatSocket(window.socket);
+        if (window.socket) {
+          boundSocket = null;
+          bindChatSocket(window.socket);
+        }
 
         const reopen = () => emitChatOpened();
 
@@ -969,7 +973,6 @@ body {
   // 🔁 ATTIVA BIND SOCKET + WATCHER CAMBIO SOCKET
   // --------------------------------------------------
 
-  boundSocket = null;              // ← AGGIUNGI QUESTA RIGA
   bindChatSocket(window.socket);
 
 
