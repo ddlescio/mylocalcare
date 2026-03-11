@@ -15,9 +15,7 @@ if (!window.socket) {
     transports: ["websocket"],
     upgrade: false,
     withCredentials: true,
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000
+    reconnection: true
   });
 
   console.log("🟢 Socket creato");
@@ -31,13 +29,6 @@ if (!window.socket) {
 const socket = window.socket;
 
 
-// FIX Safari iOS / cambio pagina
-if (!socket.connected) {
-  console.log("🔄 forcing socket reconnect");
-  socket.connect();
-}
-
-
 // evita doppio listener connect
 if (!socket._baseConnectListener) {
 
@@ -48,6 +39,27 @@ if (!socket._baseConnectListener) {
     console.log("🔌 socket connected:", socket.id);
 
     window.dispatchEvent(new Event("socket_ready"));
+
+  });
+
+
+  // ===============================
+  // FIX rete ballerina (treno)
+  // ===============================
+
+  socket.on("disconnect", (reason) => {
+
+    console.log("⚠️ socket disconnected:", reason);
+
+    // se cade la rete proviamo a riconnettere
+    if (reason === "ping timeout" || reason === "transport close") {
+
+      setTimeout(() => {
+        console.log("🔄 retry reconnect");
+        socket.connect();
+      }, 1500);
+
+    }
 
   });
 
