@@ -16,7 +16,7 @@ if (!window.socket) {
     upgrade: false,
     withCredentials: true,
 
-    // resilienza connessione
+    // reconnessione robusta (rete ballerina tipo treno)
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 500,
@@ -35,10 +35,7 @@ if (!window.socket) {
 const socket = window.socket;
 
 
-// ===============================
-// LISTENER BASE SOCKET
-// ===============================
-
+// evita doppio listener connect
 if (!socket._baseConnectListener) {
 
   socket._baseConnectListener = true;
@@ -47,26 +44,13 @@ if (!socket._baseConnectListener) {
 
     console.log("🔌 socket connected:", socket.id);
 
-    // notifica alle pagine che la socket è pronta
     window.dispatchEvent(new Event("socket_ready"));
 
   });
 
-  // 🔁 FIX CONNESSIONI BALLERINE
-  socket.on("reconnect", (attempt) => {
-
-    console.log("🔄 socket reconnect:", attempt);
-
-    // forza ri-bind listener delle pagine
-    window.dispatchEvent(new Event("socket_ready"));
-
-  });
-
-  // utile per debug reti instabili
+  // solo log di debug, non cambia comportamento
   socket.on("disconnect", (reason) => {
-
     console.log("⚠️ socket disconnected:", reason);
-
   });
 
 }
