@@ -8528,22 +8528,6 @@ def handle_connect(auth=None):
     # segna utente online
     redis_client.sadd("online_users", str(user_id))
 
-    # -------------------------------------------------
-    # 🔥 pulizia eventuali socket zombie per sicurezza
-    # -------------------------------------------------
-    existing_sockets = redis_client.smembers(f"user_sockets:{user_id}")
-
-    for old_sid in existing_sockets:
-        old_sid = old_sid.decode() if isinstance(old_sid, bytes) else old_sid
-
-        # evita di rimuovere la socket appena aperta
-        if old_sid != sid:
-            try:
-                leave_room(room, sid=old_sid)
-            except Exception:
-                pass
-
-            redis_client.srem(f"user_sockets:{user_id}", old_sid)
 
     # -------------------------------------------------
     # registra la nuova socket
