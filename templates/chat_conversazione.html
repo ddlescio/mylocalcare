@@ -580,9 +580,8 @@ body {
       if (socket.connected) {
         initSocketEvents();
       } else {
-        socket.on('connect', initSocketEvents);
+        socket.once('connect', initSocketEvents);
       }
-
 
       // 5) new_message
       if (window.__chatHandlers.newMessage) {
@@ -745,8 +744,9 @@ body {
     // riapertura chat quando torni alla pagina
     window.__chatPageshowHandlerRef = function (e) {
       try {
+        if (!e.persisted) return;
 
-        // 🔥 forza il rebind dei listener quando la pagina torna dal bfcache
+        // solo se la pagina torna davvero dal bfcache
         if (window.socket) {
           boundSocket = null;
           bindChatSocket(window.socket);
@@ -974,8 +974,19 @@ body {
 
   bindChatSocket(window.socket);
 
+  // evita duplicati se lo script viene ricaricato / pagina da cache
+  if (window.__chatSocketWatcher) {
+    clearInterval(window.__chatSocketWatcher);
+  }
 
-});
+  window.__chatSocketWatcher = setInterval(() => {
+    if (window.socket && window.socket !== boundSocket) {
+      console.log("🔁 Socket cambiata → rebind chat");
+      bindChatSocket(window.socket);
+    }
+  }, 500);
+
+  });
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
