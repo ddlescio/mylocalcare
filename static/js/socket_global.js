@@ -75,6 +75,9 @@ document.addEventListener("pointerdown", async () => {
   try {
 
     if (!("Notification" in window)) return;
+    if (!("serviceWorker" in navigator)) return;
+
+    const reg = await navigator.serviceWorker.ready;
 
     if (Notification.permission === "default") {
 
@@ -85,7 +88,7 @@ document.addEventListener("pointerdown", async () => {
       if (perm === "granted") {
 
         if (typeof registerPush === "function") {
-          registerPush();
+          registerPush(reg);
         }
 
       }
