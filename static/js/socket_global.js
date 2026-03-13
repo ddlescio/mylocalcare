@@ -42,6 +42,20 @@ if (!socket._baseConnectListener) {
 
   });
 
+
+  // ===============================
+  // FIX connessione ballerina
+  // ===============================
+
+  socket.on("disconnect", (reason) => {
+
+    console.log("⚠️ socket disconnected:", reason);
+
+    // solo log, lasciamo fare alla reconnessione nativa
+    // niente reconnect manuale per non rompere lifecycle
+
+  });
+
 }
 
 
