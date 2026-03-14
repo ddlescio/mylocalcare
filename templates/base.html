@@ -1832,25 +1832,36 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 <script>
 if ('serviceWorker' in navigator) {
+
   window.addEventListener('load', async () => {
+
     try {
-      // 1) Controlla se esiste già una registrazione
+
+      // 🔎 controlla se esiste già una registrazione
       const existingReg = await navigator.serviceWorker.getRegistration();
 
-      // 2) Se non esiste, registra
       if (!existingReg) {
+
+        // 🟢 registra il service worker
         const reg = await navigator.serviceWorker.register('/service-worker.js');
-        console.log('ServiceWorker registrato:', reg.scope);
-        return;
+
+        console.log('🟢 ServiceWorker registrato:', reg.scope);
+
+      } else {
+
+        // ♻️ già presente → nessuna nuova registrazione
+        console.log('♻️ ServiceWorker già registrato:', existingReg.scope);
+
       }
 
-      // 3) Se esiste già, non rifare register (evita lavoro inutile)
-      console.log('ServiceWorker già registrato:', existingReg.scope);
-
     } catch (error) {
-      console.error('Errore ServiceWorker:', error);
+
+      console.error('❌ Errore ServiceWorker:', error);
+
     }
+
   });
+
 }
 </script>
 <script>
