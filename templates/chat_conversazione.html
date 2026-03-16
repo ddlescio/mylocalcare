@@ -973,13 +973,23 @@ body {
   // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
 
-  if (window.whenSocketReady) {
-    window.whenSocketReady((s) => {
+  function startChatSocketBinding() {
+    if (!window.socket) {
+      console.warn("Socket non ancora disponibile, riprovo...");
+      setTimeout(startChatSocketBinding, 50);
+      return;
+    }
+
+    const s = window.socket;
+
+    if (s.connected) {
       bindChatSocket(s);
-    });
-  } else {
-    bindChatSocket(window.socket);
+    } else {
+      s.once("connect", () => bindChatSocket(s));
+    }
   }
+
+  startChatSocketBinding();
 
 });
 </script>
