@@ -545,51 +545,52 @@ body {
 
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
-      if (boundSocket === newSocket) return;
 
-      // 1) sgancia eventuali listener dalla socket precedente
-      if (boundSocket) {
+      // 1) sgancia SEMPRE i listener vecchi dalla socket precedente
+      if (boundSocket && boundSocket !== newSocket) {
         if (window.__chatHandlers.connectInit) {
-          boundSocket.off('connect', window.__chatHandlers.connectInit);
+          boundSocket.off("connect", window.__chatHandlers.connectInit);
         }
         if (window.__chatHandlers.userTyping) {
-          boundSocket.off('user_typing', window.__chatHandlers.userTyping);
+          boundSocket.off("user_typing", window.__chatHandlers.userTyping);
         }
         if (window.__chatHandlers.newMessage) {
-          boundSocket.off('new_message', window.__chatHandlers.newMessage);
+          boundSocket.off("new_message", window.__chatHandlers.newMessage);
         }
         if (window.__chatHandlers.messagesRead) {
-          boundSocket.off('messages_read', window.__chatHandlers.messagesRead);
+          boundSocket.off("messages_read", window.__chatHandlers.messagesRead);
         }
         if (window.__chatHandlers.messageDelivered) {
-          boundSocket.off('message_delivered', window.__chatHandlers.messageDelivered);
+          boundSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
         }
       }
 
-      // 2) aggiorna i riferimenti
+      // 2) aggiorna riferimenti
       socket = newSocket;
       boundSocket = newSocket;
 
-      // 3) connect / reconnect
+      // 3) CONNECT / RECONNECT
       if (window.__chatHandlers.connectInit) {
-        socket.off('connect', window.__chatHandlers.connectInit);
+        socket.off("connect", window.__chatHandlers.connectInit);
       }
 
-      window.__chatHandlers.connectInit = initSocketEvents;
+      window.__chatHandlers.connectInit = function () {
+        console.log("🟢 Socket pronto / reconnect chat");
+        emitChatOpened();
+      };
+
+      socket.on("connect", window.__chatHandlers.connectInit);
 
       if (socket.connected) {
-        initSocketEvents();
-      } else {
-        socket.on('connect', initSocketEvents);
+        window.__chatHandlers.connectInit();
       }
 
-
-      // 5) new_message
+      // 4) NEW MESSAGE
       if (window.__chatHandlers.newMessage) {
-        socket.off('new_message', window.__chatHandlers.newMessage);
+        socket.off("new_message", window.__chatHandlers.newMessage);
       }
 
-      window.__chatHandlers.newMessage = function(m) {
+      window.__chatHandlers.newMessage = function (m) {
         const currentChat = destId;
 
         try {
@@ -611,7 +612,7 @@ body {
           if (!bubbleEl) {
             const node = bubble({ ...m, me_id: meId });
             wrap.appendChild(node);
-            bubbleEl = node.querySelector('[data-mid]');
+            bubbleEl = node.querySelector("[data-mid]");
           }
 
           if (!oldestMessageId) {
@@ -619,7 +620,7 @@ body {
           }
 
           if (m.mittente_id === meId) {
-            const spunte = bubbleEl.querySelector('.spunte');
+            const spunte = bubbleEl.querySelector(".spunte");
 
             if (spunte) {
               if (m.letto) {
@@ -636,7 +637,7 @@ body {
             clearTimeout(markReadTimer);
 
             markReadTimer = setTimeout(() => {
-              window.socket.emit('mark_as_read', {
+              socket.emit("mark_as_read", {
                 other_id: m.mittente_id
               });
             }, 300);
@@ -653,39 +654,32 @@ body {
         }
       };
 
-      socket.on('new_message', window.__chatHandlers.newMessage);
+      socket.on("new_message", window.__chatHandlers.newMessage);
 
-      // 4) user_typing
+      // 5) USER TYPING
       if (window.__chatHandlers.userTyping) {
-        socket.off('user_typing', window.__chatHandlers.userTyping);
+        socket.off("user_typing", window.__chatHandlers.userTyping);
       }
 
-      window.__chatHandlers.userTyping = function(data) {
-
+      window.__chatHandlers.userTyping = function (data) {
         const currentChat = destId;
-
         if (data.from !== currentChat) return;
 
         if (data.typing) {
-
-          typingIndicator.classList.remove('hidden');
-
+          typingIndicator.classList.remove("hidden");
         } else {
-
-          typingIndicator.classList.add('hidden');
-
+          typingIndicator.classList.add("hidden");
         }
-
       };
 
-      socket.on('user_typing', window.__chatHandlers.userTyping);
+      socket.on("user_typing", window.__chatHandlers.userTyping);
 
-      // 6) messages_read
+      // 6) MESSAGES READ
       if (window.__chatHandlers.messagesRead) {
-        socket.off('messages_read', window.__chatHandlers.messagesRead);
+        socket.off("messages_read", window.__chatHandlers.messagesRead);
       }
 
-      window.__chatHandlers.messagesRead = function(data) {
+      window.__chatHandlers.messagesRead = function (data) {
         const currentChat = destId;
         if (data.from !== currentChat) return;
 
@@ -695,18 +689,18 @@ body {
         });
       };
 
-      socket.on('messages_read', window.__chatHandlers.messagesRead);
+      socket.on("messages_read", window.__chatHandlers.messagesRead);
 
-      // 7) message_delivered
+      // 7) MESSAGE DELIVERED
       if (window.__chatHandlers.messageDelivered) {
-        socket.off('message_delivered', window.__chatHandlers.messageDelivered);
+        socket.off("message_delivered", window.__chatHandlers.messageDelivered);
       }
 
-      window.__chatHandlers.messageDelivered = function(data) {
+      window.__chatHandlers.messageDelivered = function (data) {
         const bubbleEl = document.querySelector(`#msgWrap [data-mid="${data.id}"]`);
         if (!bubbleEl) return;
 
-        const spunte = bubbleEl.querySelector('.spunte');
+        const spunte = bubbleEl.querySelector(".spunte");
         if (!spunte) return;
 
         if (!spunte.dataset.read) {
@@ -714,9 +708,8 @@ body {
         }
       };
 
-      socket.on('message_delivered', window.__chatHandlers.messageDelivered);
+      socket.on("message_delivered", window.__chatHandlers.messageDelivered);
     }
-
 
     // pulizia vecchi handler lifecycle
     if (window.__chatBeforeUnloadHandlerRef) {
@@ -975,28 +968,30 @@ body {
 
   // 🔥 BIND SICURO (fix iOS PWA lifecycle)
 
-  function safeBind() {
+  function forceBindCurrentChat() {
     if (!window.socket) {
-      setTimeout(safeBind, 50);
+      console.warn("⚠️ window.socket non disponibile");
       return;
     }
 
-    const s = window.socket;
-
-    if (s.connected) {
-      console.log("🔗 socket già connessa → bind immediato");
-      bindChatSocket(s);
-    } else {
-      console.log("⏳ attendo connect per bind");
-      s.once("connect", () => {
-        console.log("🔗 bind dopo connect");
-        bindChatSocket(s);
-      });
-    }
+    console.log("🔁 forceBindCurrentChat");
+    bindChatSocket(window.socket);
   }
 
-  // 🔥 piccolo delay per evitare race condition iOS
-  setTimeout(safeBind, 50);
+  // bind immediato alla socket corrente
+  forceBindCurrentChat();
+
+  // rebind ad ogni reconnect
+  if (window.__chatReconnectHandlerRef) {
+    window.socket.off("connect", window.__chatReconnectHandlerRef);
+  }
+
+  window.__chatReconnectHandlerRef = function () {
+    console.log("♻️ reconnect rilevato → rebind chat");
+    bindChatSocket(window.socket);
+  };
+
+  window.socket.on("connect", window.__chatReconnectHandlerRef);
 });
 </script>
 <script>
