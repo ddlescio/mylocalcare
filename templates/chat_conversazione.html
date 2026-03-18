@@ -988,8 +988,10 @@ body {
   }
 
   // bind immediato alla socket corrente
-  forceBindCurrentChat();
-
+  window.whenSocketReady(function(socket) {
+    console.log("🟢 socket pronta → bind chat");
+    bindChatSocket(socket);
+  });
 
 });
 </script>
