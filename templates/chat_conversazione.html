@@ -545,10 +545,7 @@ body {
 
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
-      if (boundSocket === newSocket && newSocket.connected) {
-        console.log("⚠️ stesso socket già bindato");
-        return;
-      }
+      if (boundSocket === newSocket) return;
 
       // 1) sgancia eventuali listener dalla socket precedente
       if (boundSocket) {
@@ -593,7 +590,6 @@ body {
       }
 
       window.__chatHandlers.newMessage = function(m) {
-        console.log("📩 new_message ricevuto", m);
         const currentChat = destId;
 
         try {
@@ -977,43 +973,13 @@ body {
   // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
 
-  function startChatSocketBinding() {
-
-    function attach() {
-
-      if (!window.socket) {
-        console.warn("Socket non ancora disponibile, riprovo...");
-        setTimeout(attach, 50);
-        return;
-      }
-
-      const s = window.socket;
-
-      // 🔥 SE CAMBIA SOCKET → REBIND
-      if (boundSocket !== s) {
-        console.log("🔁 Nuova socket → rebind completo");
-        boundSocket = null;
-        bindChatSocket(s);
-      }
-
-      // 🔥 SU OGNI RECONNECT → REBIND FORZATO
-      if (window.__forceRebind) {
-        s.off("connect", window.__forceRebind);
-      }
-
-      window.__forceRebind = () => {
-        console.log("♻️ reconnect → rebind listener");
-        boundSocket = null;
-        bindChatSocket(s);
-      };
-
-      s.on("connect", window.__forceRebind);
-
-    }
-
-    attach();
+  if (window.whenSocketReady) {
+    window.whenSocketReady((s) => {
+      bindChatSocket(s);
+    });
+  } else {
+    bindChatSocket(window.socket);
   }
-  startChatSocketBinding();
 
 });
 </script>

@@ -8528,9 +8528,25 @@ def handle_connect(auth=None):
     # segna utente online
     redis_client.sadd("online_users", str(user_id))
 
+
     # -------------------------------------------------
-    # registra la nuova socket SENZA chiudere le precedenti
+    # chiude eventuali socket precedenti dell'utente
     # -------------------------------------------------
+    existing = redis_client.smembers(f"user_sockets:{user_id}")
+
+    for old_sid in existing:
+        old_sid = old_sid.decode()
+
+        if old_sid != sid:
+            try:
+                socketio.server.disconnect(old_sid)
+            except Exception:
+                pass
+
+    # reset lista socket utente
+    redis_client.delete(f"user_sockets:{user_id}")
+
+    # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
 
     # -------------------------------------------------
@@ -8557,6 +8573,7 @@ def handle_connect(auth=None):
 
     except Exception as e:
         print("Errore invio unread count:", e)
+
 
 @socketio.on("disconnect")
 def handle_disconnect():
