@@ -8533,8 +8533,11 @@ def handle_connect(auth=None):
     # NON chiudere socket precedenti (iOS PWA FIX)
     # -------------------------------------------------
 
-    redis_client.sadd(f"user_sockets:{user_id}", sid)
+    key = f"user_sockets:{user_id}"
 
+    # 🔥 safety: evita duplicati sporchi
+    redis_client.srem(key, sid)
+    redis_client.sadd(key, sid)
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
@@ -8570,25 +8573,30 @@ def handle_disconnect():
         return
 
     sid = request.sid
-    room = f"user_{user_id}"
+    key = f"user_sockets:{user_id}"
 
     try:
-        leave_room(room, sid=sid)
+        leave_room(f"user_{user_id}", sid=sid)
     except Exception:
         pass
 
-    redis_client.srem(f"user_sockets:{user_id}", sid)
+    try:
+        # rimuovi SID
+        redis_client.srem(key, sid)
 
-    count = redis_client.scard(f"user_sockets:{user_id}")
+        remaining = redis_client.scard(key)
 
-    print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {count}")
+        print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
 
-    if count == 0:
+        # 🔥 FIX FONDAMENTALE: pulizia immediata
+        if remaining == 0:
+            redis_client.delete(key)  # ← QUESTA È LA CHIAVE DEL PROBLEMA
+            redis_client.srem("online_users", str(user_id))
 
-        if user_id not in disconnect_timers:
-            task = socketio.start_background_task(remove_user_later, user_id)
-            disconnect_timers[user_id] = task
+            print(f"🔴 Utente {user_id} OFFLINE")
 
+    except Exception as e:
+        print("Errore disconnect:", e)
 
 def remove_user_later(user_id):
 
