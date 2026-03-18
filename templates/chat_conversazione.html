@@ -458,14 +458,27 @@ body {
     }
 
     function emitChatClosedOnce() {
+
+      // 🚫 BLOCCA chiusura se socket NON è stabile
+      if (!socket || !socket.connected) {
+        console.log("⛔ skip chat_chiusa (socket non stabile)");
+        return;
+      }
+
+      // 🚫 BLOCCA chiusura durante reconnect
+      if (socket.disconnected) {
+        console.log("⛔ skip chat_chiusa (socket in reconnect)");
+        return;
+      }
+
       if (chatClosedEmitted) return;
 
       chatClosedEmitted = true;
       window.__activeChat = null;
 
-      if (socket && socket.connected && destId) {
-        socket.emit('chat_chiusa', { other_id: destId });
-      }
+      console.log("📤 emit chat_chiusa");
+
+      socket.emit('chat_chiusa', { other_id: destId });
     }
 
     window.__emitChatClosedOnce = emitChatClosedOnce;
