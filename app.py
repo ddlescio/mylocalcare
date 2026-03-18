@@ -8530,21 +8530,53 @@ def handle_connect(auth=None):
 
 
     # -------------------------------------------------
-    # NON chiudere socket precedenti (iOS PWA FIX)
+    # gestione multi-socket con limite (ANTI-ZOMBIE)
     # -------------------------------------------------
 
     key = f"user_sockets:{user_id}"
 
-    # 🔥 safety: evita duplicati sporchi
+    # safety: evita duplicati sporchi
     redis_client.srem(key, sid)
     redis_client.sadd(key, sid)
+
+    # recupera tutte le socket note per l'utente
+    all_sockets = redis_client.smembers(key)
+    all_sockets = [
+        s.decode() if isinstance(s, bytes) else s
+        for s in all_sockets
+    ]
+
+    MAX_SOCKETS = 3  # desktop + pwa + eventuale transizione
+
+    if len(all_sockets) > MAX_SOCKETS:
+        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
+
+        # chiudi solo le socket in eccesso, preservando quella corrente
+        sockets_to_close = [old_sid for old_sid in all_sockets if old_sid != sid]
+
+        # quante ne devo chiudere davvero
+        excess = len(all_sockets) - MAX_SOCKETS
+        sockets_to_close = sockets_to_close[:excess]
+
+        for old_sid in sockets_to_close:
+            try:
+                socketio.server.disconnect(old_sid, namespace="/")
+                print(f"🧹 Chiusa socket zombie {old_sid}")
+            except Exception as e:
+                print(f"Errore disconnect socket zombie {old_sid}: {e}")
+            finally:
+                try:
+                    redis_client.srem(key, old_sid)
+                except Exception:
+                    pass
+
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
     join_room(room, sid=sid)
 
     # conteggio socket attive
-    count = redis_client.scard(f"user_sockets:{user_id}")
+    count = redis_client.scard(key)
 
     print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
 
