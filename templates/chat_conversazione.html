@@ -546,11 +546,13 @@ body {
     function bindChatSocket(newSocket) {
 
       // 🛑 BLOCCO ANTI-DOPPIO-BIND
-      if (window.__chatSocketBound === newSocket) {
-        console.log("⛔ bindChatSocket già eseguito su questa socket");
+      // 🔥 FIX: rimuoviamo blocco rigido, permettiamo rebind sicuro
+      if (window.__chatSocketBound === newSocket && newSocket.connected) {
+        console.log("♻️ già bindata e connessa → skip");
         return;
       }
 
+      // aggiorniamo riferimento SOLO DOPO
       window.__chatSocketBound = newSocket;
 
       if (!newSocket) return;
@@ -986,6 +988,7 @@ body {
     console.log("🔁 forceBindCurrentChat");
     bindChatSocket(window.socket);
   }
+  forceBindCurrentChat();
 
   // bind immediato alla socket corrente
   window.whenSocketReady(function(socket) {

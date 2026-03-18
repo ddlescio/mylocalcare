@@ -10,9 +10,6 @@ if (window.__socket_bootstrap_done__) {
   // SOCKET GLOBALE
   // ===============================
 
-  // Se esiste già una socket nello stesso contesto JS:
-  // - se è viva la riusiamo
-  // - se è morta / zombie la eliminiamo e la ricreiamo
   if (window.socket) {
     if (window.socket.connected) {
       console.log("♻️ Socket già attiva → riutilizzo");
@@ -55,6 +52,8 @@ if (window.__socket_bootstrap_done__) {
 
     socket.on("connect", () => {
       console.log("🔌 socket connected:", socket.id);
+
+      // 🔥 fondamentale: riattiva tutto ogni volta
       window.dispatchEvent(new Event("socket_ready"));
     });
 
@@ -87,11 +86,8 @@ if (window.__socket_bootstrap_done__) {
   };
 
   // ===============================
-  // FIX iOS / PWA RESUME
+  // FIX iOS / PWA RESUME (CORRETTO)
   // ===============================
-  // Quando la PWA torna visibile, iOS a volte lascia
-  // una websocket "apparentemente viva" ma in realtà morta.
-  // Qui forziamo sempre un refresh della connessione.
 
   if (!window.__socket_visibility_fix_bound__) {
     window.__socket_visibility_fix_bound__ = true;
@@ -101,17 +97,18 @@ if (window.__socket_bootstrap_done__) {
       if (!s) return;
 
       if (document.visibilityState === "visible") {
-        console.log("👀 App tornata visibile → refresh socket");
+        console.log("👀 App tornata visibile");
 
-        try {
-          s.disconnect();
-        } catch (e) {}
+        // 🔥 FIX: NON forzare disconnect
+        if (!s.connected) {
+          console.log("🛠️ socket non connessa → reconnect");
 
-        setTimeout(() => {
           try {
             s.connect();
           } catch (e) {}
-        }, 120);
+        } else {
+          console.log("♻️ socket ancora viva → nessuna azione");
+        }
       }
     });
   }
@@ -119,8 +116,6 @@ if (window.__socket_bootstrap_done__) {
   // ===============================
   // FIX BFCache / ritorno pagina
   // ===============================
-  // Safari/iOS può ripristinare la pagina da cache interna.
-  // In quel caso la socket spesso non è più affidabile.
 
   if (!window.__socket_pageshow_fix_bound__) {
     window.__socket_pageshow_fix_bound__ = true;
@@ -132,15 +127,12 @@ if (window.__socket_bootstrap_done__) {
       if (event.persisted) {
         console.log("📄 pageshow da bfcache → reconnect socket");
 
-        try {
-          s.disconnect();
-        } catch (e) {}
-
-        setTimeout(() => {
+        // 🔥 QUI lasciamo reconnect leggero
+        if (!s.connected) {
           try {
             s.connect();
           } catch (e) {}
-        }, 120);
+        }
       }
     });
   }
@@ -148,8 +140,6 @@ if (window.__socket_bootstrap_done__) {
   // ===============================
   // FAILSAFE PERIODICO
   // ===============================
-  // Se per qualche motivo la socket resta giù, proviamo
-  // a rialzarla quando la pagina è visibile.
 
   if (!window.__socket_failsafe_interval__) {
     window.__socket_failsafe_interval__ = setInterval(() => {
