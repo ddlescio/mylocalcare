@@ -8530,23 +8530,9 @@ def handle_connect(auth=None):
 
 
     # -------------------------------------------------
-    # chiude eventuali socket precedenti dell'utente
+    # NON chiudere socket precedenti (iOS PWA FIX)
     # -------------------------------------------------
-    existing = redis_client.smembers(f"user_sockets:{user_id}")
 
-    for old_sid in existing:
-        old_sid = old_sid.decode()
-
-        if old_sid != sid:
-            try:
-                socketio.server.disconnect(old_sid)
-            except Exception:
-                pass
-
-    # reset lista socket utente
-    redis_client.delete(f"user_sockets:{user_id}")
-
-    # registra la nuova socket
     redis_client.sadd(f"user_sockets:{user_id}", sid)
 
     # -------------------------------------------------
