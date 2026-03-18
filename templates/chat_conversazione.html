@@ -977,20 +977,6 @@ body {
   // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
 
-  // 🔥 BIND SICURO (fix iOS PWA lifecycle)
-
-  function forceBindCurrentChat() {
-    if (!window.socket) {
-      console.warn("⚠️ window.socket non disponibile");
-      return;
-    }
-
-    console.log("🔁 forceBindCurrentChat");
-    bindChatSocket(window.socket);
-  }
-  forceBindCurrentChat();
-
-  // bind immediato alla socket corrente
   window.whenSocketReady(function(socket) {
     console.log("🟢 socket pronta → bind chat");
     bindChatSocket(socket);
