@@ -990,17 +990,7 @@ body {
   // bind immediato alla socket corrente
   forceBindCurrentChat();
 
-  // rebind ad ogni reconnect
-  if (window.__chatReconnectHandlerRef) {
-    window.socket.off("connect", window.__chatReconnectHandlerRef);
-  }
 
-  window.__chatReconnectHandlerRef = function () {
-    console.log("♻️ reconnect rilevato → rebind chat");
-    bindChatSocket(window.socket);
-  };
-
-  window.socket.on("connect", window.__chatReconnectHandlerRef);
 });
 </script>
 <script>
