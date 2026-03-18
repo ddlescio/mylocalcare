@@ -544,6 +544,15 @@ body {
     }
 
     function bindChatSocket(newSocket) {
+
+      // 🛑 BLOCCO ANTI-DOPPIO-BIND
+      if (window.__chatSocketBound === newSocket) {
+        console.log("⛔ bindChatSocket già eseguito su questa socket");
+        return;
+      }
+
+      window.__chatSocketBound = newSocket;
+
       if (!newSocket) return;
 
       // 1) sgancia SEMPRE i listener vecchi dalla socket precedente
