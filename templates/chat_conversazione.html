@@ -973,14 +973,30 @@ body {
   // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
 
-  if (window.whenSocketReady) {
-    window.whenSocketReady((s) => {
+  // 🔥 BIND SICURO (fix iOS PWA lifecycle)
+
+  function safeBind() {
+    if (!window.socket) {
+      setTimeout(safeBind, 50);
+      return;
+    }
+
+    const s = window.socket;
+
+    if (s.connected) {
+      console.log("🔗 socket già connessa → bind immediato");
       bindChatSocket(s);
-    });
-  } else {
-    bindChatSocket(window.socket);
+    } else {
+      console.log("⏳ attendo connect per bind");
+      s.once("connect", () => {
+        console.log("🔗 bind dopo connect");
+        bindChatSocket(s);
+      });
+    }
   }
 
+  // 🔥 piccolo delay per evitare race condition iOS
+  setTimeout(safeBind, 50);
 });
 </script>
 <script>
