@@ -733,43 +733,18 @@ body {
       window.removeEventListener("pageshow", window.__chatPageshowHandlerRef);
     }
 
-    // chiusura chat UNA SOLA VOLTA quando lasci la pagina
+    // ✅ manteniamo SOLO beforeunload
     window.__chatBeforeUnloadHandlerRef = function () {
       try {
         emitChatClosedOnce();
       } catch (e) {}
     };
 
-    window.__chatPagehideHandlerRef = function () {
-      try {
-        emitChatClosedOnce();
-      } catch (e) {}
-    };
-
-    // riapertura chat quando torni alla pagina
-    window.__chatPageshowHandlerRef = function (e) {
-      try {
-        if (!e.persisted) return;
-
-        // 🔥 forza il rebind dei listener quando la pagina torna dal bfcache
-        if (window.socket) {
-          boundSocket = null;
-          bindChatSocket(window.socket);
-        }
-
-        const reopen = () => emitChatOpened();
-
-        if (socket && socket.connected) {
-          reopen();
-        } else if (socket) {
-          socket.once("connect", reopen);
-        }
-      } catch (e) {}
-    };
+    // ✅ disattivati: su Safari/iOS stanno chiudendo la chat appena aperta
+    window.__chatPagehideHandlerRef = null;
+    window.__chatPageshowHandlerRef = null;
 
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
-    window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
-    window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
 
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
@@ -977,11 +952,31 @@ body {
   // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
 
-  window.whenSocketReady(function(socket) {
-    console.log("🟢 socket pronta → bind chat");
-    bindChatSocket(socket);
-  });
+  // 🔥 FIX DEFINITIVO: bind immediato + sicurezza reconnect
 
+  function initChatBinding() {
+    const s = window.socket;
+    if (!s) {
+      console.warn("⚠️ socket non disponibile per bind");
+      return;
+    }
+
+    console.log("🟢 bind immediato chat socket");
+    bindChatSocket(s);
+
+    // 🔁 sicurezza: se si riconnette, ribind
+    s.off("connect", window.__chatReconnectHandler);
+
+    window.__chatReconnectHandler = function () {
+      console.log("🔁 reconnect → rebind chat");
+      bindChatSocket(s);
+    };
+
+    s.on("connect", window.__chatReconnectHandler);
+  }
+
+  // esegui SUBITO (non aspettare eventi)
+  initChatBinding();
 });
 </script>
 <script>
