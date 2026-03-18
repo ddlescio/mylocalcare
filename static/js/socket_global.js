@@ -9,20 +9,38 @@ window.__socket_bootstrap_done__ = true;
 // SOCKET GLOBALE
 // ===============================
 
+// 🔥 FIX iOS: evita socket zombie ma non rompe multi-contesto
+if (window.socket) {
+
+  if (window.socket.connected) {
+
+    console.log("♻️ Socket già attiva → riutilizzo");
+
+  } else {
+
+    console.log("🧹 Socket esistente ma NON connessa → la resetto");
+
+    try {
+      window.socket.disconnect();
+    } catch (e) {}
+
+    window.socket = null;
+  }
+
+}
+
 if (!window.socket) {
 
   window.socket = io({
     transports: ["websocket"],
     upgrade: false,
     withCredentials: true,
-    reconnection: true
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000
   });
 
-  console.log("🟢 Socket creato");
-
-} else {
-
-  console.log("♻️ Socket riutilizzato");
+  console.log("🟢 Nuova socket creata");
 
 }
 
