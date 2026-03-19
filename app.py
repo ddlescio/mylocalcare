@@ -8571,7 +8571,7 @@ def handle_connect(auth=None):
                 closed += 1
             except Exception as e:
                 print(f"Errore disconnect socket zombie {old_sid}: {e}")
-            
+
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
@@ -8615,22 +8615,26 @@ def handle_disconnect():
         pass
 
     try:
-        # rimuovi SID
+        all_sockets = redis_client.smembers(key)
+
+        # 🔥 evita race condition
+        if sid not in all_sockets:
+            print(f"⚠️ Disconnect ignorato (socket già rimossa): {sid}")
+            return
+
         redis_client.srem(key, sid)
 
         remaining = redis_client.scard(key)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
 
-        # 🔥 FIX FONDAMENTALE: pulizia immediata
         if remaining == 0:
-            redis_client.delete(key)  # ← QUESTA È LA CHIAVE DEL PROBLEMA
+            # 🔥 NON cancellare la key
             redis_client.srem("online_users", str(user_id))
-
             print(f"🔴 Utente {user_id} OFFLINE")
 
     except Exception as e:
-        print("Errore disconnect:", e)
+        print("Errore disconnect:", e)        
 
 def remove_user_later(user_id):
 
