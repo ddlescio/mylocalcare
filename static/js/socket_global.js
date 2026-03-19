@@ -1,29 +1,14 @@
 // static/js/socket_global.js
 
-// evita esecuzione multipla dello script nello stesso contesto pagina
+// evita esecuzione multipla nello stesso contesto
 if (window.__socket_bootstrap_done__) {
   console.log("♻️ socket bootstrap già eseguito");
 } else {
   window.__socket_bootstrap_done__ = true;
 
   // ===============================
-  // SOCKET GLOBALE
+  // SOCKET GLOBALE (STABILE)
   // ===============================
-
-  // 🔥 FIX: NON fidarti di .connected
-  if (window.socket) {
-    console.log("🧹 Reset socket forzato");
-
-    try {
-      window.socket.removeAllListeners();
-    } catch (e) {}
-
-    try {
-      window.socket.disconnect();
-    } catch (e) {}
-
-    window.socket = null;
-  }
 
   if (!window.socket) {
     window.socket = io({
@@ -36,41 +21,29 @@ if (window.__socket_bootstrap_done__) {
     });
 
     console.log("🟢 Nuova socket creata");
+  } else {
+    console.log("♻️ Riutilizzo socket esistente");
   }
 
   const socket = window.socket;
 
   // ===============================
-  // BASE LISTENERS (una sola volta)
+  // BASE LISTENERS (UNA SOLA VOLTA)
   // ===============================
 
   if (!socket._baseListenersBound) {
     socket._baseListenersBound = true;
 
     socket.on("connect", () => {
-
       console.log("🔌 socket connected:", socket.id);
 
-      // 🔥 AGGIUNGI QUESTO
       window.__current_socket_id = socket.id;
 
       window.dispatchEvent(new Event("socket_ready"));
-
     });
 
-    // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
     socket.on("disconnect", (reason) => {
-
       console.log("🔴 socket disconnect:", reason);
-
-      // ⚠️ forza reset globale
-      window.socket = null;
-      window.__socket_bootstrap_done__ = false;
-
-    });
-
-    socket.on("disconnect", (reason) => {
-      console.log("🔌 socket disconnected:", reason);
     });
 
     socket.on("connect_error", (err) => {
@@ -84,21 +57,19 @@ if (window.__socket_bootstrap_done__) {
 
   window.whenSocketReady = function(callback) {
     const s = window.socket;
-
     if (!s) return;
 
     if (s.connected) {
       callback(s);
-      return;
+    } else {
+      s.once("connect", () => {
+        callback(s);
+      });
     }
-
-    s.once("connect", () => {
-      callback(s);
-    });
   };
 
   // ===============================
-  // FIX iOS / PWA RESUME (CORRETTO)
+  // FIX VISIBILITY (iOS / Safari)
   // ===============================
 
   if (!window.__socket_visibility_fix_bound__) {
@@ -109,24 +80,20 @@ if (window.__socket_bootstrap_done__) {
       if (!s) return;
 
       if (document.visibilityState === "visible") {
-        console.log("👀 App tornata visibile");
+        console.log("👀 App visibile");
 
-        // 🔥 FIX: NON forzare disconnect
         if (!s.connected) {
-          console.log("🛠️ socket non connessa → reconnect");
-
+          console.log("🛠️ reconnect socket");
           try {
             s.connect();
           } catch (e) {}
-        } else {
-          console.log("♻️ socket ancora viva → nessuna azione");
         }
       }
     });
   }
 
   // ===============================
-  // FIX BFCache / ritorno pagina
+  // FIX BFCache
   // ===============================
 
   if (!window.__socket_pageshow_fix_bound__) {
@@ -136,21 +103,17 @@ if (window.__socket_bootstrap_done__) {
       const s = window.socket;
       if (!s) return;
 
-      if (event.persisted) {
-        console.log("📄 pageshow da bfcache → reconnect socket");
-
-        // 🔥 QUI lasciamo reconnect leggero
-        if (!s.connected) {
-          try {
-            s.connect();
-          } catch (e) {}
-        }
+      if (event.persisted && !s.connected) {
+        console.log("📄 pageshow → reconnect socket");
+        try {
+          s.connect();
+        } catch (e) {}
       }
     });
   }
 
   // ===============================
-  // FAILSAFE PERIODICO
+  // FAILSAFE
   // ===============================
 
   if (!window.__socket_failsafe_interval__) {
@@ -161,7 +124,7 @@ if (window.__socket_bootstrap_done__) {
       if (document.visibilityState !== "visible") return;
 
       if (!s.connected) {
-        console.log("🛠️ failsafe reconnect socket");
+        console.log("🛠️ failsafe reconnect");
         try {
           s.connect();
         } catch (e) {}
