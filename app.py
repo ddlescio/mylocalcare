@@ -8555,22 +8555,22 @@ def handle_connect(auth=None):
 
         closed = 0
 
-        for old_sid in all_sockets:
+    # 🔥 ordina per sicurezza (mantieni ultime connessioni)
+    all_sockets_sorted = list(all_sockets)
 
-            # 🔥 NON chiudere MAI quella appena connessa
-            if old_sid == sid:
-                continue
+    # NON toccare l'ultima (appena connessa)
+    safe_sockets = [s for s in all_sockets_sorted if s != sid]
 
-            if closed >= excess:
-                break
+    # chiudi solo le più vecchie
+    to_close = safe_sockets[:excess]
 
-            try:
-                socketio.server.disconnect(old_sid, namespace="/")
-                print(f"🧹 Chiusa socket zombie {old_sid}")
-                redis_client.srem(key, old_sid)
-                closed += 1
-            except Exception as e:
-                print(f"Errore disconnect socket zombie {old_sid}: {e}")
+    for old_sid in to_close:
+        try:
+            socketio.server.disconnect(old_sid, namespace="/")
+            print(f"🧹 Chiusa socket zombie {old_sid}")
+            redis_client.srem(key, old_sid)
+        except Exception as e:
+            print(f"Errore disconnect socket zombie {old_sid}: {e}")
 
     # -------------------------------------------------
     # join room utente
@@ -8609,27 +8609,38 @@ def handle_disconnect():
     sid = request.sid
     key = f"user_sockets:{user_id}"
 
+    # ------------------------------
+    # lascia la room
+    # ------------------------------
     try:
         leave_room(f"user_{user_id}", sid=sid)
     except Exception:
         pass
 
+    # ------------------------------
+    # gestione redis (ANTI-DOPPIO DISCONNECT)
+    # ------------------------------
     try:
-        # 🔥 RIMUOVI SEMPRE, anche se Redis è desincronizzato
+        # 🔥 FIX: controlla se esiste davvero prima di rimuovere
+        if not redis_client.sismember(key, sid):
+            print(f"⚠️ Disconnect ignorato (già rimossa): {sid}")
+            return
+
+        # rimuovi socket
         redis_client.srem(key, sid)
 
         remaining = redis_client.scard(key)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
 
+        # se non ci sono più socket → offline
         if remaining == 0:
-            # 🔥 NON cancellare la key
             redis_client.srem("online_users", str(user_id))
             print(f"🔴 Utente {user_id} OFFLINE")
 
     except Exception as e:
         print("Errore disconnect:", e)
-
+        
 def remove_user_later(user_id):
 
     socketio.sleep(30)
