@@ -947,12 +947,39 @@ body {
       return;
     }
 
-    // bind una sola volta sulla socket corrente
-    bindChatSocket(s);
+    if (s.connected) {
+      bindChatSocket(s);
+    } else {
+      s.once("connect", () => {
+        bindChatSocket(s);
+      });
+    }
   }
 
-  // esegui SUBITO (non aspettare eventi)
   initChatBinding();
+
+  // 🔥 NOTIFICA VISIBILITÀ (FIX CORRETTO)
+  function sendVisibility() {
+    if (window.socket && window.socket.connected) {
+      window.socket.emit("page_visible", {
+        visible: document.visibilityState === "visible"
+      });
+    }
+  }
+
+  // 👉 INVIA SOLO QUANDO SOCKET È PRONTA
+  if (window.socket) {
+    if (window.socket.connected) {
+      sendVisibility();
+    } else {
+      window.socket.once("connect", () => {
+        sendVisibility();
+      });
+    }
+  }
+
+  // 👉 continua a gestire cambi visibilità
+  document.addEventListener("visibilitychange", sendVisibility);
 });
 </script>
 <script>
@@ -1010,6 +1037,13 @@ async function initVideoSystem() {
         console.error("❌ Socket non disponibile");
         return;
     }
+
+    // 🔥 heartbeat ogni 20 secondi
+    setInterval(() => {
+      if (socket && socket.connected) {
+        socket.emit("heartbeat");
+      }
+    }, 20000);
 
     const meId = parseInt("{{ g.utente['id'] }}", 10);
 

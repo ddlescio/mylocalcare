@@ -8536,14 +8536,45 @@ def handle_connect(auth=None):
     key = f"user_sockets:{user_id}"
 
     # safety: evita duplicati sporchi
-    redis_client.srem(key, sid)
-    redis_client.sadd(key, sid)
+    import time
+
+    now = int(time.time())
+
+    # salva socket con timestamp
+    redis_client.hset(key, sid, now)
 
     # recupera tutte le socket note per l'utente
-    all_sockets = redis_client.smembers(key)
+    import time
+
+    STALE_TIMEOUT = 60  # secondi → socket morta se non aggiornata
+
+    raw = redis_client.hgetall(key)
+
+    now = int(time.time())
+
+    all_sockets = []
+    stale_sockets = []
+
+    for sid_bytes, ts_bytes in raw.items():
+        s = sid_bytes.decode() if isinstance(sid_bytes, bytes) else sid_bytes
+        ts = int(ts_bytes)
+
+        if now - ts > STALE_TIMEOUT:
+            stale_sockets.append(s)
+        else:
+            all_sockets.append(s)
+
+    # 🔥 PULIZIA SOCKET MORTE (PC spento / telefono morto)
+    for old_sid in stale_sockets:
+        print(f"💀 socket stale rimossa: {old_sid}")
+        redis_client.hdel(key, old_sid)
+
+    # 🔥 RICALCOLO SOCKET DOPO CLEANUP
+    raw = redis_client.hgetall(key)
+
     all_sockets = [
         s.decode() if isinstance(s, bytes) else s
-        for s in all_sockets
+        for s in raw.keys()
     ]
 
     MAX_SOCKETS = 3  # desktop + pwa + eventuale transizione
@@ -8567,18 +8598,18 @@ def handle_connect(auth=None):
             try:
                 socketio.server.disconnect(old_sid, namespace="/")
                 print(f"🧹 Chiusa socket zombie {old_sid}")
-                redis_client.srem(key, old_sid)
+                redis_client.hdel(key, old_sid)
                 closed += 1
             except Exception as e:
                 print(f"Errore disconnect socket zombie {old_sid}: {e}")
-            
+
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
     join_room(room, sid=sid)
 
     # conteggio socket attive
-    count = redis_client.scard(key)
+    count = redis_client.hlen(key)
 
     print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
 
@@ -8596,6 +8627,10 @@ def handle_connect(auth=None):
 
     except Exception as e:
         print("Errore invio unread count:", e)
+
+def touch_socket(user_id, sid):
+    import time
+    redis_client.hset(f"user_sockets:{user_id}", sid, int(time.time()))
 
 
 @socketio.on("disconnect")
@@ -8616,15 +8651,14 @@ def handle_disconnect():
 
     try:
         # rimuovi SID
-        redis_client.srem(key, sid)
-
-        remaining = redis_client.scard(key)
+        redis_client.hdel(key, sid)
+        remaining = redis_client.hlen(key)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
 
         # 🔥 FIX FONDAMENTALE: pulizia immediata
         if remaining == 0:
-            redis_client.delete(key)  # ← QUESTA È LA CHIAVE DEL PROBLEMA
+            redis_client.delete(key)
             redis_client.srem("online_users", str(user_id))
 
             print(f"🔴 Utente {user_id} OFFLINE")
@@ -8636,7 +8670,7 @@ def remove_user_later(user_id):
 
     socketio.sleep(30)
 
-    if redis_client.scard(f"user_sockets:{user_id}") == 0:
+    if redis_client.hlen(f"user_sockets:{user_id}") == 0:
 
         redis_client.srem("online_users", str(user_id))
         print(f"🔴 Utente {user_id} OFFLINE")
@@ -8780,6 +8814,10 @@ def _delayed_clear_recently_read(user_id, delay):
 
 @socketio.on('send_message')
 def handle_send_message(data):
+
+    from flask import session, request
+    touch_socket(session.get("utente_id"), request.sid)
+
     mittente_id = session.get('utente_id')
 
     try:
@@ -8885,6 +8923,10 @@ def handle_send_message(data):
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
+
+    from flask import session, request
+    touch_socket(session.get("utente_id"), request.sid)
+
     """Registra quale chat è attualmente aperta da ciascun utente."""
     user_id = session.get('utente_id')
     other_id = data.get('other_id')
@@ -8897,14 +8939,26 @@ def handle_chat_aperta(data):
 @socketio.on("page_visible")
 def handle_page_visible(data):
 
+    from flask import session, request
+
     user_id = session.get("utente_id")
 
     if not user_id:
         return
 
+    # 🔥 aggiorna timestamp socket
+    touch_socket(user_id, request.sid)
+
     visible = bool(data.get("visible"))
 
     pagina_attiva[user_id] = visible
+
+@socketio.on("heartbeat")
+def handle_heartbeat():
+    from flask import session, request
+    user_id = session.get("utente_id")
+    if user_id:
+        touch_socket(user_id, request.sid)
 
 def chat_count_unread(user_id):
 
@@ -8930,7 +8984,8 @@ def chat_count_unread(user_id):
 
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
-    from flask import session
+    from flask import session, request
+    touch_socket(session.get("utente_id"), request.sid)
     import traceback
 
     user_id = session.get('utente_id')
@@ -9000,6 +9055,10 @@ def handle_refresh_threads(data):
 
 @socketio.on('typing')
 def handle_typing(data):
+
+    from flask import session, request
+    touch_socket(session.get("utente_id"), request.sid)
+
     """
     Gestisce l'indicatore 'sta scrivendo'
     """
