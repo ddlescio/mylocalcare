@@ -8551,25 +8551,27 @@ def handle_connect(auth=None):
     if len(all_sockets) > MAX_SOCKETS:
         print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
 
-        # chiudi solo le socket in eccesso, preservando quella corrente
-        sockets_to_close = [old_sid for old_sid in all_sockets if old_sid != sid]
-
-        # quante ne devo chiudere davvero
         excess = len(all_sockets) - MAX_SOCKETS
-        sockets_to_close = sockets_to_close[:excess]
 
-        for old_sid in sockets_to_close:
+        closed = 0
+
+        for old_sid in all_sockets:
+
+            # 🔥 NON chiudere MAI quella appena connessa
+            if old_sid == sid:
+                continue
+
+            if closed >= excess:
+                break
+
             try:
                 socketio.server.disconnect(old_sid, namespace="/")
                 print(f"🧹 Chiusa socket zombie {old_sid}")
+                redis_client.srem(key, old_sid)
+                closed += 1
             except Exception as e:
                 print(f"Errore disconnect socket zombie {old_sid}: {e}")
-            finally:
-                try:
-                    redis_client.srem(key, old_sid)
-                except Exception:
-                    pass
-
+            
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
