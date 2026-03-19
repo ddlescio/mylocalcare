@@ -8535,6 +8535,14 @@ def handle_connect(auth=None):
 
     key = f"user_sockets:{user_id}"
 
+    key_type = redis_client.type(key)
+    if isinstance(key_type, bytes):
+        key_type = key_type.decode()
+
+    if key_type not in ("none", "hash"):
+        print(f"⚠️ Redis key {key} era di tipo {key_type}, la resetto")
+        redis_client.delete(key)
+
     # safety: evita duplicati sporchi
     import time
 
