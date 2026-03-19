@@ -649,7 +649,7 @@ body {
             clearTimeout(markReadTimer);
 
             markReadTimer = setTimeout(() => {
-              window.socket.emit("mark_as_read", {
+              newSocket.emit("mark_as_read", {
                 other_id: m.mittente_id
               });
             }, 300);
