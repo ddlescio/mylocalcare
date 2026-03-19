@@ -1,147 +1,174 @@
-// ===============================
-// RESET SOCKET (SE ESISTE)
-// ===============================
+// static/js/socket_global.js
 
-if (window.socket) {
-  console.log("🧹 Reset socket forzato");
+// evita esecuzione multipla dello script nello stesso contesto pagina
+if (window.__socket_bootstrap_done__) {
+  console.log("♻️ socket bootstrap già eseguito");
+} else {
+  window.__socket_bootstrap_done__ = true;
 
-  try {
-    window.socket.removeAllListeners();
-  } catch (e) {}
+  // ===============================
+  // SOCKET GLOBALE
+  // ===============================
 
-  try {
-    window.socket.disconnect();
-  } catch (e) {}
+  if (window.socket) {
+    if (window.socket.connected) {
+      console.log("♻️ Socket già attiva → riutilizzo");
+    } else {
+      console.log("🧹 Socket esistente ma NON connessa → reset");
 
-  window.socket = null;
-}
+      try {
+        window.socket.removeAllListeners();
+      } catch (e) {}
 
-// ===============================
-// CREA SOCKET SEMPRE NUOVA
-// ===============================
+      try {
+        window.socket.disconnect();
+      } catch (e) {}
 
-window.socket = io({
-  transports: ["websocket"],
-  upgrade: false,
-  withCredentials: true,
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000
-});
+      window.socket = null;
+    }
+  }
 
-console.log("🟢 Nuova socket creata");
+  if (!window.socket) {
+    window.socket = io({
+      transports: ["websocket"],
+      upgrade: false,
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    });
 
-const socket = window.socket;
+    console.log("🟢 Nuova socket creata");
+  }
 
+  const socket = window.socket;
 
-// ===============================
-// BASE LISTENERS (UNA SOLA VOLTA)
-// ===============================
+  // ===============================
+  // BASE LISTENERS (una sola volta)
+  // ===============================
 
-socket.on("connect", () => {
-  console.log("🔌 socket connected:", socket.id);
+  if (!socket._baseListenersBound) {
+    socket._baseListenersBound = true;
 
-  window.__current_socket_id = socket.id;
+    socket.on("connect", () => {
 
-  window.dispatchEvent(new Event("socket_ready"));
-});
+      console.log("🔌 socket connected:", socket.id);
 
-socket.on("disconnect", (reason) => {
-  console.log("🔴 socket disconnect:", reason);
-});
+      // 🔥 AGGIUNGI QUESTO
+      window.__current_socket_id = socket.id;
 
-socket.on("connect_error", (err) => {
-  console.warn("⚠️ socket connect_error:", err?.message || err);
-});
+      window.dispatchEvent(new Event("socket_ready"));
 
+    });
 
-// ===============================
-// UTILITY
-// ===============================
+    // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
+    socket.on("disconnect", (reason) => {
 
-window.whenSocketReady = function(callback) {
-  const s = window.socket;
-  if (!s) return;
+      console.log("🔴 socket disconnect:", reason);
 
-  if (s.connected) {
-    callback(s);
-  } else {
+      // ⚠️ forza reset globale
+      window.socket = null;
+      window.__socket_bootstrap_done__ = false;
+
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("🔌 socket disconnected:", reason);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.warn("⚠️ socket connect_error:", err?.message || err);
+    });
+  }
+
+  // ===============================
+  // UTILITY
+  // ===============================
+
+  window.whenSocketReady = function(callback) {
+    const s = window.socket;
+
+    if (!s) return;
+
+    if (s.connected) {
+      callback(s);
+      return;
+    }
+
     s.once("connect", () => {
       callback(s);
     });
+  };
+
+  // ===============================
+  // FIX iOS / PWA RESUME (CORRETTO)
+  // ===============================
+
+  if (!window.__socket_visibility_fix_bound__) {
+    window.__socket_visibility_fix_bound__ = true;
+
+    document.addEventListener("visibilitychange", () => {
+      const s = window.socket;
+      if (!s) return;
+
+      if (document.visibilityState === "visible") {
+        console.log("👀 App tornata visibile");
+
+        // 🔥 FIX: NON forzare disconnect
+        if (!s.connected) {
+          console.log("🛠️ socket non connessa → reconnect");
+
+          try {
+            s.connect();
+          } catch (e) {}
+        } else {
+          console.log("♻️ socket ancora viva → nessuna azione");
+        }
+      }
+    });
   }
-};
 
+  // ===============================
+  // FIX BFCache / ritorno pagina
+  // ===============================
 
-// ===============================
-// FIX VISIBILITY (Safari / iOS)
-// ===============================
+  if (!window.__socket_pageshow_fix_bound__) {
+    window.__socket_pageshow_fix_bound__ = true;
 
-if (!window.__socket_visibility_fix_bound__) {
-  window.__socket_visibility_fix_bound__ = true;
+    window.addEventListener("pageshow", (event) => {
+      const s = window.socket;
+      if (!s) return;
 
-  document.addEventListener("visibilitychange", () => {
-    const s = window.socket;
-    if (!s) return;
+      if (event.persisted) {
+        console.log("📄 pageshow da bfcache → reconnect socket");
 
-    if (document.visibilityState === "visible") {
-      console.log("👀 App visibile");
+        // 🔥 QUI lasciamo reconnect leggero
+        if (!s.connected) {
+          try {
+            s.connect();
+          } catch (e) {}
+        }
+      }
+    });
+  }
+
+  // ===============================
+  // FAILSAFE PERIODICO
+  // ===============================
+
+  if (!window.__socket_failsafe_interval__) {
+    window.__socket_failsafe_interval__ = setInterval(() => {
+      const s = window.socket;
+      if (!s) return;
+
+      if (document.visibilityState !== "visible") return;
 
       if (!s.connected) {
-        console.log("🛠️ reconnect socket");
-
+        console.log("🛠️ failsafe reconnect socket");
         try {
           s.connect();
         } catch (e) {}
       }
-    }
-  });
-}
-
-
-// ===============================
-// FIX BFCache (Safari)
-// ===============================
-
-if (!window.__socket_pageshow_fix_bound__) {
-  window.__socket_pageshow_fix_bound__ = true;
-
-  window.addEventListener("pageshow", (event) => {
-    const s = window.socket;
-    if (!s) return;
-
-    if (event.persisted) {
-      console.log("📄 pageshow da cache");
-
-      if (!s.connected) {
-        console.log("🛠️ reconnect socket (bfcache)");
-
-        try {
-          s.connect();
-        } catch (e) {}
-      }
-    }
-  });
-}
-
-
-// ===============================
-// FAILSAFE PERIODICO
-// ===============================
-
-if (!window.__socket_failsafe_interval__) {
-  window.__socket_failsafe_interval__ = setInterval(() => {
-    const s = window.socket;
-    if (!s) return;
-
-    if (document.visibilityState !== "visible") return;
-
-    if (!s.connected) {
-      console.log("🛠️ failsafe reconnect");
-
-      try {
-        s.connect();
-      } catch (e) {}
-    }
-  }, 15000);
+    }, 15000);
+  }
 }
