@@ -8634,19 +8634,22 @@ def handle_disconnect():
             print(f"🔴 Utente {user_id} OFFLINE")
 
     except Exception as e:
-        print("Errore disconnect:", e)        
+        print("Errore disconnect:", e)
 
 def remove_user_later(user_id):
 
     socketio.sleep(30)
 
-    if redis_client.scard(f"user_sockets:{user_id}") == 0:
+    key = f"user_sockets:{user_id}"
+    sockets = redis_client.smembers(key)
 
+    # 🔥 FIX: verifica reale esistenza socket
+    if not sockets or len(sockets) == 0:
         redis_client.srem("online_users", str(user_id))
-        print(f"🔴 Utente {user_id} OFFLINE")
+        print(f"🔴 Utente {user_id} OFFLINE (delayed)")
 
     disconnect_timers.pop(user_id, None)
-
+    
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
