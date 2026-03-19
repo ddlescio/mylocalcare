@@ -8548,21 +8548,21 @@ def handle_connect(auth=None):
 
     MAX_SOCKETS = 3  # desktop + pwa + eventuale transizione
 
-    if len(all_sockets) > MAX_SOCKETS:
-        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
-
-        excess = len(all_sockets) - MAX_SOCKETS
-
-        closed = 0
-
     # 🔥 ordina per sicurezza (mantieni ultime connessioni)
     all_sockets_sorted = list(all_sockets)
 
     # NON toccare l'ultima (appena connessa)
     safe_sockets = [s for s in all_sockets_sorted if s != sid]
 
-    # chiudi solo le più vecchie
-    to_close = safe_sockets[:excess]
+    to_close = []
+
+    if len(all_sockets) > MAX_SOCKETS:
+        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
+
+        excess = len(all_sockets) - MAX_SOCKETS
+
+        # chiudi solo le più vecchie
+        to_close = safe_sockets[:excess]
 
     for old_sid in to_close:
         try:
@@ -8640,7 +8640,7 @@ def handle_disconnect():
 
     except Exception as e:
         print("Errore disconnect:", e)
-        
+
 def remove_user_later(user_id):
 
     socketio.sleep(30)
