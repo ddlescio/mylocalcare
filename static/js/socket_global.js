@@ -51,10 +51,25 @@ if (window.__socket_bootstrap_done__) {
     socket._baseListenersBound = true;
 
     socket.on("connect", () => {
+
       console.log("🔌 socket connected:", socket.id);
 
-      // 🔥 fondamentale: riattiva tutto ogni volta
+      // 🔥 AGGIUNGI QUESTO
+      window.__current_socket_id = socket.id;
+
       window.dispatchEvent(new Event("socket_ready"));
+
+    });
+
+    // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
+    socket.on("disconnect", (reason) => {
+
+      console.log("🔴 socket disconnect:", reason);
+
+      // ⚠️ forza reset globale
+      window.socket = null;
+      window.__socket_bootstrap_done__ = false;
+
     });
 
     socket.on("disconnect", (reason) => {

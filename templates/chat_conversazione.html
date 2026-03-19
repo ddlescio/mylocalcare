@@ -968,24 +968,45 @@ body {
   // 🔥 FIX DEFINITIVO: bind immediato + sicurezza reconnect
 
   function initChatBinding() {
-    const s = window.socket;
-    if (!s) {
-      console.warn("⚠️ socket non disponibile per bind");
-      return;
+
+    console.log("🟢 initChatBinding start");
+
+    function bindWithCurrentSocket() {
+      const s = window.socket;
+
+      if (!s) {
+        console.warn("⚠️ socket non disponibile");
+        return;
+      }
+
+      // 🔥 SOLO se è cambiata socket → rebind
+      if (window.__chat_socket_id !== s.id) {
+        console.log("🔁 socket cambiata → rebinding", s.id);
+
+        window.__chat_socket_id = s.id;
+
+        bindChatSocket(s);
+      } else {
+        console.log("♻️ stessa socket → skip bind");
+      }
     }
 
-    console.log("🟢 bind immediato chat socket");
-    bindChatSocket(s);
+    // 🔥 bind immediato
+    bindWithCurrentSocket();
 
-    // 🔁 sicurezza: se si riconnette, ribind
-    s.off("connect", window.__chatReconnectHandler);
+    // 🔥 ascolta SEMPRE reconnect sulla socket CORRENTE
+    if (window.socket) {
 
-    window.__chatReconnectHandler = function () {
-      console.log("🔁 reconnect → rebind chat");
-      bindChatSocket(s);
-    };
+      window.socket.off("connect", window.__chatReconnectHandler);
 
-    s.on("connect", window.__chatReconnectHandler);
+      window.__chatReconnectHandler = function () {
+        console.log("🔁 reconnect globale");
+        bindWithCurrentSocket();
+      };
+
+      window.socket.on("connect", window.__chatReconnectHandler);
+    }
+
   }
 
   // esegui SUBITO (non aspettare eventi)
