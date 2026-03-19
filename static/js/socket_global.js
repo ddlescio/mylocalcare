@@ -11,21 +11,7 @@ if (window.__socket_bootstrap_done__) {
   // ===============================
 
   if (window.socket) {
-    if (window.socket.connected) {
-      console.log("♻️ Socket già attiva → riutilizzo");
-    } else {
-      console.log("🧹 Socket esistente ma NON connessa → reset");
-
-      try {
-        window.socket.removeAllListeners();
-      } catch (e) {}
-
-      try {
-        window.socket.disconnect();
-      } catch (e) {}
-
-      window.socket = null;
-    }
+    console.log("♻️ Riutilizzo socket esistente");
   }
 
   if (!window.socket) {
@@ -65,10 +51,6 @@ if (window.__socket_bootstrap_done__) {
     socket.on("disconnect", (reason) => {
 
       console.log("🔴 socket disconnect:", reason);
-
-      // ⚠️ forza reset globale
-      window.socket = null;
-      window.__socket_bootstrap_done__ = false;
 
     });
 
