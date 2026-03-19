@@ -703,6 +703,13 @@ body {
       };
       newSocket.on("message_delivered", window.__chatHandlers.messageDelivered);
 
+      // 🔥 FIX: se la socket è già connessa quando apro la pagina,
+      // devo inizializzare subito la chat senza aspettare un nuovo connect
+      if (newSocket.connected) {
+        console.log("🟢 bindChatSocket completato su socket già connessa");
+        emitChatOpened();
+      }
+
     }
 
     // pulizia vecchi handler lifecycle
