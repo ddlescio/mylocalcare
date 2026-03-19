@@ -8615,13 +8615,7 @@ def handle_disconnect():
         pass
 
     try:
-        all_sockets = redis_client.smembers(key)
-
-        # 🔥 evita race condition
-        if sid not in all_sockets:
-            print(f"⚠️ Disconnect ignorato (socket già rimossa): {sid}")
-            return
-
+        # 🔥 RIMUOVI SEMPRE, anche se Redis è desincronizzato
         redis_client.srem(key, sid)
 
         remaining = redis_client.scard(key)
@@ -8649,7 +8643,7 @@ def remove_user_later(user_id):
         print(f"🔴 Utente {user_id} OFFLINE (delayed)")
 
     disconnect_timers.pop(user_id, None)
-    
+
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
