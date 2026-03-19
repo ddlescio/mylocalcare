@@ -10,22 +10,19 @@ if (window.__socket_bootstrap_done__) {
   // SOCKET GLOBALE
   // ===============================
 
+  // 🔥 FIX: NON fidarti di .connected
   if (window.socket) {
-    if (window.socket.connected) {
-      console.log("♻️ Socket già attiva → riutilizzo");
-    } else {
-      console.log("🧹 Socket esistente ma NON connessa → reset");
+    console.log("🧹 Reset socket forzato");
 
-      try {
-        window.socket.removeAllListeners();
-      } catch (e) {}
+    try {
+      window.socket.removeAllListeners();
+    } catch (e) {}
 
-      try {
-        window.socket.disconnect();
-      } catch (e) {}
+    try {
+      window.socket.disconnect();
+    } catch (e) {}
 
-      window.socket = null;
-    }
+    window.socket = null;
   }
 
   if (!window.socket) {
