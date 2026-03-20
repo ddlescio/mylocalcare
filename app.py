@@ -409,6 +409,7 @@ def is_user_online(user_id):
 
 disconnect_timers = {}
 recently_read_timers = {}
+sid_to_user = {}
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
@@ -8515,6 +8516,10 @@ def handle_connect(auth=None):
         return False
 
     sid = request.sid
+
+    # 🔥 AGGIUNGI QUESTA RIGA
+    sid_to_user[sid] = user_id
+
     room = f"user_{user_id}"
 
     # annulla eventuale timer di disconnessione
@@ -8657,6 +8662,10 @@ def handle_disconnect():
         return
 
     sid = request.sid
+
+    # 🔥 USA LA MAPPATURA CORRETTA
+    user_id = sid_to_user.pop(sid, user_id)
+
     key = f"user_sockets:{user_id}"
 
     try:
@@ -8980,20 +8989,21 @@ def handle_page_visible(data):
 
 @socketio.on("heartbeat")
 def handle_heartbeat():
-    from flask import session, request
-
-    user_id = session.get("utente_id")
-    if not user_id:
-        return
+    from flask import request
 
     sid = request.sid
 
-    # 🔥 QUESTA È LA RIGA FONDAMENTALE
+    # 🔥 PRENDI USER DAL SID (NON DA SESSION)
+    user_id = sid_to_user.get(sid)
+
+    if not user_id:
+        print(f"⚠️ heartbeat senza user per SID {sid}")
+        return
+
     touch_socket(user_id, sid)
 
-    # DEBUG (opzionale ma utile ora)
-    print(f"💓 heartbeat ricevuto da {user_id} SID {sid}")
-    
+    print(f"💓 heartbeat OK user {user_id} SID {sid}")
+
 def chat_count_unread(user_id):
 
     conn = get_db_connection()
