@@ -8578,12 +8578,44 @@ def handle_connect(auth=None):
         redis_client.hdel(key, old_sid)
 
     # 🔥 RICALCOLO SOCKET DOPO CLEANUP
-    raw = redis_client.hgetall(key)
+raw = redis_client.hgetall(key)
 
-    all_sockets = [
-        s.decode() if isinstance(s, bytes) else s
-        for s in raw.keys()
-    ]
+# costruisci lista (sid, timestamp)
+sockets_with_ts = []
+
+for sid_bytes, ts_bytes in raw.items():
+    s = sid_bytes.decode() if isinstance(sid_bytes, bytes) else sid_bytes
+    ts = int(ts_bytes)
+    sockets_with_ts.append((s, ts))
+
+# ordina per timestamp (più vecchie prima)
+sockets_with_ts.sort(key=lambda x: x[1])
+
+MAX_SOCKETS = 3
+
+if len(sockets_with_ts) > MAX_SOCKETS:
+    print(f"⚠️ Troppe socket per utente {user_id}: {len(sockets_with_ts)} -> cleanup")
+
+    excess = len(sockets_with_ts) - MAX_SOCKETS
+
+    closed = 0
+
+    for old_sid, _ in sockets_with_ts:
+
+        # 🔥 NON chiudere quella appena connessa
+        if old_sid == sid:
+            continue
+
+        if closed >= excess:
+            break
+
+        try:
+            socketio.server.disconnect(old_sid, namespace="/")
+            redis_client.hdel(key, old_sid)
+            print(f"🧹 Chiusa socket vecchia {old_sid}")
+            closed += 1
+        except Exception as e:
+            print(f"Errore disconnect socket {old_sid}: {e}")
 
     MAX_SOCKETS = 3  # desktop + pwa + eventuale transizione
 
