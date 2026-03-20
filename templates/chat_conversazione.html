@@ -556,11 +556,6 @@ body {
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
 
-      if (window.__chatSocketBound === newSocket) {
-        console.log("⛔ bind già fatto su questa socket");
-        return;
-      }
-
       window.__chatSocketBound = newSocket;
 
       const oldSocket = boundSocket;
