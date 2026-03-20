@@ -10,24 +10,8 @@ if (window.__socket_bootstrap_done__) {
   // SOCKET GLOBALE
   // ===============================
 
-  if (window.socket && window.socket.connected) {
+  if (window.socket) {
     console.log("♻️ Riutilizzo socket esistente");
-  } else if (window.socket && !window.socket.connected) {
-    console.log("🔄 Socket esistente ma disconnessa → reconnect");
-    try {
-      window.socket.connect();
-    } catch (e) {}
-  } else {
-    window.socket = io({
-      transports: ["websocket"],
-      upgrade: false,
-      withCredentials: true,
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000
-    });
-
-    console.log("🟢 Nuova socket creata");
   }
 
   if (!window.socket) {
@@ -36,7 +20,7 @@ if (window.__socket_bootstrap_done__) {
       upgrade: false,
       withCredentials: true,
       reconnection: true,
-      reconnectionAttempts: Infinity,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000
     });
 
@@ -66,17 +50,12 @@ if (window.__socket_bootstrap_done__) {
     // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
     socket.on("disconnect", (reason) => {
 
-      console.log("🔴 socket disconnessa:", reason);
+      console.log("🔴 socket disconnect:", reason);
 
-      // 🔥 forza reconnessione pulita se cade davvero
-      if (reason === "transport close" || reason === "ping timeout") {
-        console.log("🛠️ reconnect forzato dopo perdita connessione");
+    });
 
-        try {
-          socket.connect();
-        } catch (e) {}
-      }
-
+    socket.on("disconnect", (reason) => {
+      console.log("🔌 socket disconnected:", reason);
     });
 
     socket.on("connect_error", (err) => {
@@ -174,23 +153,4 @@ if (window.__socket_bootstrap_done__) {
       }
     }, 15000);
   }
-  // ===============================
-  // 💓 HEARTBEAT GLOBALE (FONDAMENTALE)
-  // ===============================
-
-  if (!window.__socket_heartbeat__) {
-    window.__socket_heartbeat__ = setInterval(() => {
-
-      const s = window.socket;
-      if (!s) return;
-
-      // invia solo se connesso e pagina visibile
-      if (s.connected && document.visibilityState === "visible") {
-        console.log("💓 heartbeat");
-        s.emit("heartbeat");
-      }
-
-    }, 25000); // ogni 25s (meno del timeout backend = 120s)
-  }
-
 }

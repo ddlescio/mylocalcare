@@ -556,8 +556,6 @@ body {
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
 
-      window.__chatSocketBound = newSocket;
-
       const oldSocket = boundSocket;
 
       // sgancia i listener dalla socket precedente
@@ -580,23 +578,20 @@ body {
       }
 
       // se è la stessa socket della pagina corrente, pulisci comunque i listener prima di ribindare
-      // 🔥 RIMUOVI SOLO se già bindata QUESTA socket
-      if (boundSocket === newSocket) {
-        if (window.__chatHandlers.connectInit) {
-          newSocket.off("connect", window.__chatHandlers.connectInit);
-        }
-        if (window.__chatHandlers.userTyping) {
-          newSocket.off("user_typing", window.__chatHandlers.userTyping);
-        }
-        if (window.__chatHandlers.newMessage) {
-          newSocket.off("new_message", window.__chatHandlers.newMessage);
-        }
-        if (window.__chatHandlers.messagesRead) {
-          newSocket.off("messages_read", window.__chatHandlers.messagesRead);
-        }
-        if (window.__chatHandlers.messageDelivered) {
-          newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
-        }
+      if (window.__chatHandlers.connectInit) {
+        newSocket.off("connect", window.__chatHandlers.connectInit);
+      }
+      if (window.__chatHandlers.userTyping) {
+        newSocket.off("user_typing", window.__chatHandlers.userTyping);
+      }
+      if (window.__chatHandlers.newMessage) {
+        newSocket.off("new_message", window.__chatHandlers.newMessage);
+      }
+      if (window.__chatHandlers.messagesRead) {
+        newSocket.off("messages_read", window.__chatHandlers.messagesRead);
+      }
+      if (window.__chatHandlers.messageDelivered) {
+        newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
       }
 
       boundSocket = newSocket;
@@ -707,13 +702,6 @@ body {
         }
       };
       newSocket.on("message_delivered", window.__chatHandlers.messageDelivered);
-
-      // 🔥 FIX: se la socket è già connessa quando apro la pagina,
-      // devo inizializzare subito la chat senza aspettare un nuovo connect
-      if (newSocket.connected) {
-        console.log("🟢 bindChatSocket completato su socket già connessa");
-        emitChatOpened();
-      }
 
     }
 
@@ -952,85 +940,19 @@ body {
   function initChatBinding() {
     console.log("🟢 initChatBinding start");
 
-    function attach(socketInstance) {
-      if (!socketInstance) return;
+    const s = window.socket;
 
-      console.log("🔗 bindChatSocket su socket", socketInstance.id);
-
-      bindChatSocket(socketInstance);
-
-      // 🔥 IMPORTANTISSIMO: se la socket cambia, ribinda
-    }
-
-    // 🔥 CASO 1: sistema globale pronto
-    if (window.whenSocketReady) {
-      whenSocketReady((socketInstance) => {
-        attach(socketInstance);
-      });
-
-    } else if (window.socket) {
-
-      attach(window.socket);
-
-    } else {
+    if (!s) {
       console.warn("⚠️ socket non disponibile");
+      return;
     }
+
+    // bind una sola volta sulla socket corrente
+    bindChatSocket(s);
   }
 
+  // esegui SUBITO (non aspettare eventi)
   initChatBinding();
-
-  // 🔥 NOTIFICA VISIBILITÀ (FIX CORRETTO)
-  function sendVisibility() {
-    if (window.socket && window.socket.connected) {
-      window.socket.emit("page_visible", {
-        visible: document.visibilityState === "visible"
-      });
-    }
-  }
-
-  // 👉 INVIA SOLO QUANDO SOCKET È PRONTA
-  if (window.socket) {
-    if (window.socket.connected) {
-      sendVisibility();
-    } else {
-      window.socket.once("connect", () => {
-        sendVisibility();
-      });
-    }
-  }
-
-  // 👉 continua a gestire cambi visibilità
-  document.addEventListener("visibilitychange", () => {
-
-    const isVisible = document.visibilityState === "visible";
-
-    if (!window.socket) return;
-
-    // invia stato visibilità
-    if (window.socket.connected) {
-      window.socket.emit("page_visible", { visible: isVisible });
-    }
-
-    // 🔥 FIX CRITICO iOS: forzo reconnect quando torno visibile
-    if (isVisible) {
-      console.log("🔄 visibility → check socket");
-
-      if (!window.socket.connected) {
-
-        console.log("🔌 reconnect necessario");
-
-        window.socket.connect();
-
-        window.socket.once("connect", () => {
-          console.log("♻️ bind dopo reconnect");
-          bindChatSocket(window.socket);
-        });
-
-      } else {
-        console.log("🟢 socket già attiva → NON faccio nulla");
-      }
-    }
-  });
 });
 </script>
 <script>
@@ -1088,7 +1010,6 @@ async function initVideoSystem() {
         console.error("❌ Socket non disponibile");
         return;
     }
-
 
     const meId = parseInt("{{ g.utente['id'] }}", 10);
 

@@ -8515,10 +8515,6 @@ def handle_connect(auth=None):
         return False
 
     sid = request.sid
-
-    # 🔥 AGGIUNGI QUESTA RIGA
-    redis_client.set(f"sid_user:{sid}", user_id, ex=3600)
-
     room = f"user_{user_id}"
 
     # annulla eventuale timer di disconnessione
@@ -8539,95 +8535,50 @@ def handle_connect(auth=None):
 
     key = f"user_sockets:{user_id}"
 
-    key_type = redis_client.type(key)
-    if isinstance(key_type, bytes):
-        key_type = key_type.decode()
-
-    if key_type not in ("none", "hash"):
-        print(f"⚠️ Redis key {key} era di tipo {key_type}, la resetto")
-        redis_client.delete(key)
-
     # safety: evita duplicati sporchi
-    import time
-
-    now = int(time.time())
-
-    # salva socket con timestamp
-    redis_client.hset(key, sid, now)
-    redis_client.expire(key, 300)  # 🔥 evita zombie sockets
+    redis_client.srem(key, sid)
+    redis_client.sadd(key, sid)
 
     # recupera tutte le socket note per l'utente
-    import time
+    all_sockets = redis_client.smembers(key)
+    all_sockets = [
+        s.decode() if isinstance(s, bytes) else s
+        for s in all_sockets
+    ]
 
-    STALE_TIMEOUT = 120  # secondi → socket morta se non aggiornata
+    MAX_SOCKETS = 3  # desktop + pwa + eventuale transizione
 
-    raw = redis_client.hgetall(key)
+    if len(all_sockets) > MAX_SOCKETS:
+        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
 
-    now = int(time.time())
+        excess = len(all_sockets) - MAX_SOCKETS
 
-    all_sockets = []
-    stale_sockets = []
+        closed = 0
 
-    for sid_bytes, ts_bytes in raw.items():
-        s = sid_bytes.decode() if isinstance(sid_bytes, bytes) else sid_bytes
-        ts = int(ts_bytes)
+        for old_sid in all_sockets:
 
-        if now - ts > STALE_TIMEOUT:
-            stale_sockets.append(s)
-        else:
-            all_sockets.append(s)
-
-    # 🔥 PULIZIA SOCKET MORTE (PC spento / telefono morto)
-    for old_sid in stale_sockets:
-        print(f"💀 socket stale rimossa: {old_sid}")
-        redis_client.hdel(key, old_sid)
-
-    # 🔥 RICALCOLO SOCKET DOPO CLEANUP
-    raw = redis_client.hgetall(key)
-
-    # costruisci lista (sid, timestamp)
-    sockets_with_ts = []
-
-    for sid_bytes, ts_bytes in raw.items():
-        s = sid_bytes.decode() if isinstance(sid_bytes, bytes) else sid_bytes
-        ts = int(ts_bytes)
-        sockets_with_ts.append((s, ts))
-
-    # ordina per timestamp (più vecchie prima)
-    sockets_with_ts.sort(key=lambda x: x[1])
-
-    MAX_SOCKETS = 3
-
-    # 🔥 NON chiudere più socket attive → SOLO cleanup Redis
-    if len(sockets_with_ts) > MAX_SOCKETS:
-        print(f"⚠️ Troppe socket per utente {user_id}: {len(sockets_with_ts)} (solo cleanup Redis)")
-
-        excess = len(sockets_with_ts) - MAX_SOCKETS
-
-        removed = 0
-
-        for old_sid, _ in sockets_with_ts:
-
+            # 🔥 NON chiudere MAI quella appena connessa
             if old_sid == sid:
                 continue
 
-            if removed >= excess:
+            if closed >= excess:
                 break
 
             try:
-                redis_client.hdel(key, old_sid)
-                print(f"🧹 Rimossa socket Redis {old_sid}")
-                removed += 1
+                socketio.server.disconnect(old_sid, namespace="/")
+                print(f"🧹 Chiusa socket zombie {old_sid}")
+                redis_client.srem(key, old_sid)
+                closed += 1
             except Exception as e:
-                print(f"Errore cleanup socket {old_sid}: {e}")
-
+                print(f"Errore disconnect socket zombie {old_sid}: {e}")
+            
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
     join_room(room, sid=sid)
 
     # conteggio socket attive
-    count = redis_client.hlen(key)
+    count = redis_client.scard(key)
 
     print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
 
@@ -8646,11 +8597,6 @@ def handle_connect(auth=None):
     except Exception as e:
         print("Errore invio unread count:", e)
 
-def touch_socket(user_id, sid):
-    import time
-    key = f"user_sockets:{user_id}"
-    redis_client.hset(key, sid, int(time.time()))
-    redis_client.expire(key, 300)
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8661,13 +8607,6 @@ def handle_disconnect():
         return
 
     sid = request.sid
-
-    # 🔥 USA LA MAPPATURA CORRETTA
-    uid = redis_client.get(f"sid_user:{sid}")
-    if uid:
-        user_id = int(uid)
-        redis_client.delete(f"sid_user:{sid}")
-
     key = f"user_sockets:{user_id}"
 
     try:
@@ -8677,39 +8616,30 @@ def handle_disconnect():
 
     try:
         # rimuovi SID
-        redis_client.hdel(key, sid)
+        redis_client.srem(key, sid)
 
-        # 🔥 FIX RACE CONDITION (OBBLIGATORIO)
-        socketio.sleep(0.5)
-
-        remaining = redis_client.hlen(key)
+        remaining = redis_client.scard(key)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
 
         # 🔥 FIX FONDAMENTALE: pulizia immediata
         if remaining == 0:
-            print(f"⏳ Nessuna socket attiva per {user_id}, avvio timer")
+            redis_client.delete(key)  # ← QUESTA È LA CHIAVE DEL PROBLEMA
+            redis_client.srem("online_users", str(user_id))
 
-            # avvia timer ritardato (anti-race condition)
-            if user_id not in disconnect_timers:
-                disconnect_timers[user_id] = socketio.start_background_task(
-                    remove_user_later, user_id
-                )
+            print(f"🔴 Utente {user_id} OFFLINE")
 
     except Exception as e:
         print("Errore disconnect:", e)
 
 def remove_user_later(user_id):
-    socketio.sleep(5)  # ⬅️ IMPORTANTISSIMO (prima avevi 30)
 
-    key = f"user_sockets:{user_id}"
+    socketio.sleep(30)
 
-    if redis_client.hlen(key) == 0:
-        redis_client.delete(key)
+    if redis_client.scard(f"user_sockets:{user_id}") == 0:
+
         redis_client.srem("online_users", str(user_id))
-        print(f"🔴 Utente {user_id} OFFLINE (ritardato)")
-    else:
-        print(f"🟢 Utente {user_id} ancora attivo, annullo offline")
+        print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
 
@@ -8850,10 +8780,6 @@ def _delayed_clear_recently_read(user_id, delay):
 
 @socketio.on('send_message')
 def handle_send_message(data):
-
-    from flask import session, request
-    touch_socket(session.get("utente_id"), request.sid)
-
     mittente_id = session.get('utente_id')
 
     try:
@@ -8959,10 +8885,6 @@ def handle_send_message(data):
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
-
-    from flask import session, request
-    touch_socket(session.get("utente_id"), request.sid)
-
     """Registra quale chat è attualmente aperta da ciascun utente."""
     user_id = session.get('utente_id')
     other_id = data.get('other_id')
@@ -8975,42 +8897,14 @@ def handle_chat_aperta(data):
 @socketio.on("page_visible")
 def handle_page_visible(data):
 
-    from flask import session, request
-
     user_id = session.get("utente_id")
 
     if not user_id:
         return
 
-    # 🔥 aggiorna timestamp socket
-    touch_socket(user_id, request.sid)
-
     visible = bool(data.get("visible"))
 
     pagina_attiva[user_id] = visible
-
-@socketio.on("heartbeat")
-def handle_heartbeat():
-    from flask import request
-
-    sid = request.sid
-
-    # 🔥 PRENDI USER DAL SID (NON DA SESSION)
-    uid = redis_client.get(f"sid_user:{sid}")
-
-    if not uid:
-        print(f"⚠️ heartbeat senza user per SID {sid}")
-        return
-
-    user_id = int(uid)
-
-    if not user_id:
-        print(f"⚠️ heartbeat senza user per SID {sid}")
-        return
-
-    touch_socket(user_id, sid)
-
-    print(f"💓 heartbeat OK user {user_id} SID {sid}")
 
 def chat_count_unread(user_id):
 
@@ -9036,8 +8930,7 @@ def chat_count_unread(user_id):
 
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
-    from flask import session, request
-    touch_socket(session.get("utente_id"), request.sid)
+    from flask import session
     import traceback
 
     user_id = session.get('utente_id')
@@ -9107,10 +9000,6 @@ def handle_refresh_threads(data):
 
 @socketio.on('typing')
 def handle_typing(data):
-
-    from flask import session, request
-    touch_socket(session.get("utente_id"), request.sid)
-
     """
     Gestisce l'indicatore 'sta scrivendo'
     """
