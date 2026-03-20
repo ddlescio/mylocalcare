@@ -8672,22 +8672,28 @@ def handle_disconnect():
 
         # 🔥 FIX FONDAMENTALE: pulizia immediata
         if remaining == 0:
-            redis_client.delete(key)
-            redis_client.srem("online_users", str(user_id))
+            print(f"⏳ Nessuna socket attiva per {user_id}, avvio timer")
 
-            print(f"🔴 Utente {user_id} OFFLINE")
+            # avvia timer ritardato (anti-race condition)
+            if user_id not in disconnect_timers:
+                disconnect_timers[user_id] = socketio.start_background_task(
+                    remove_user_later, user_id
+                )
 
     except Exception as e:
         print("Errore disconnect:", e)
 
 def remove_user_later(user_id):
+    socketio.sleep(5)  # ⬅️ IMPORTANTISSIMO (prima avevi 30)
 
-    socketio.sleep(30)
+    key = f"user_sockets:{user_id}"
 
-    if redis_client.hlen(f"user_sockets:{user_id}") == 0:
-
+    if redis_client.hlen(key) == 0:
+        redis_client.delete(key)
         redis_client.srem("online_users", str(user_id))
-        print(f"🔴 Utente {user_id} OFFLINE")
+        print(f"🔴 Utente {user_id} OFFLINE (ritardato)")
+    else:
+        print(f"🟢 Utente {user_id} ancora attivo, annullo offline")
 
     disconnect_timers.pop(user_id, None)
 
