@@ -27,6 +27,32 @@ if (window.__socket_bootstrap_done__) {
     console.log("🟢 Nuova socket creata");
   }
 
+  // ===============================
+// 🔥 AUTO-CLOSE SOCKET FUORI CHAT
+// ===============================
+
+if (!window.__socket_auto_close_bound__) {
+  window.__socket_auto_close_bound__ = true;
+
+  window.addEventListener("pagehide", () => {
+    const s = window.socket;
+    if (!s) return;
+
+    const isChatPage = document.body.dataset.chat === "true";
+
+    if (!isChatPage) {
+      console.log("🛑 Chiudo socket (uscita da chat)");
+
+      try {
+        s.disconnect();
+      } catch (e) {}
+
+      window.socket = null;
+      window.__socket_bootstrap_done__ = false;
+    }
+  });
+}
+
   const socket = window.socket;
 
   // ===============================
