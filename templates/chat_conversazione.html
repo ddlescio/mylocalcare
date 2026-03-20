@@ -1008,7 +1008,6 @@ body {
     if (isVisible) {
       console.log("🔄 visibility → check socket");
 
-      // 🔥 NON disconnettere più
       if (!window.socket.connected) {
 
         console.log("🔌 reconnect necessario");
@@ -1016,16 +1015,14 @@ body {
         window.socket.connect();
 
         window.socket.once("connect", () => {
-          console.log("♻️ REBIND CHAT SOCKET");
+          console.log("♻️ bind dopo reconnect");
           bindChatSocket(window.socket);
         });
 
       } else {
-        // 🔥 se già connessa → solo rebind sicurezza
-        console.log("♻️ socket già attiva → rebind");
-        bindChatSocket(window.socket);
+        console.log("🟢 socket già attiva → NON faccio nulla");
       }
-    }
+    }    
   });
 });
 </script>
