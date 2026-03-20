@@ -8550,11 +8550,12 @@ def handle_connect(auth=None):
 
     # salva socket con timestamp
     redis_client.hset(key, sid, now)
+    redis_client.expire(key, 300)  # 🔥 evita zombie sockets
 
     # recupera tutte le socket note per l'utente
     import time
 
-    STALE_TIMEOUT = 60  # secondi → socket morta se non aggiornata
+    STALE_TIMEOUT = 120  # secondi → socket morta se non aggiornata
 
     raw = redis_client.hgetall(key)
 
@@ -8644,8 +8645,9 @@ def handle_connect(auth=None):
 
 def touch_socket(user_id, sid):
     import time
-    redis_client.hset(f"user_sockets:{user_id}", sid, int(time.time()))
-
+    key = f"user_sockets:{user_id}"
+    redis_client.hset(key, sid, int(time.time()))
+    redis_client.expire(key, 300)
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8666,6 +8668,10 @@ def handle_disconnect():
     try:
         # rimuovi SID
         redis_client.hdel(key, sid)
+
+        # 🔥 FIX RACE CONDITION (OBBLIGATORIO)
+        socketio.sleep(0.5)
+
         remaining = redis_client.hlen(key)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
