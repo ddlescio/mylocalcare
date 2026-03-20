@@ -11,9 +11,15 @@ if (window.__socket_bootstrap_done__) {
   // ===============================
 
   if (window.socket) {
-    console.log("♻️ Riutilizzo socket esistente");
-  }
+    console.log("🧹 Chiudo vecchia socket prima di crearne una nuova");
 
+    try {
+      window.socket.disconnect();
+    } catch (e) {}
+
+    window.socket = null;
+  }
+  
   if (!window.socket) {
     window.socket = io({
       transports: ["websocket"],
