@@ -20,7 +20,7 @@ if (window.__socket_bootstrap_done__) {
       upgrade: false,
       withCredentials: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000
     });
 
@@ -50,12 +50,17 @@ if (window.__socket_bootstrap_done__) {
     // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
     socket.on("disconnect", (reason) => {
 
-      console.log("🔴 socket disconnect:", reason);
+      console.log("🔴 socket disconnessa:", reason);
 
-    });
+      // 🔥 forza reconnessione pulita se cade davvero
+      if (reason === "transport close" || reason === "ping timeout") {
+        console.log("🛠️ reconnect forzato dopo perdita connessione");
 
-    socket.on("disconnect", (reason) => {
-      console.log("🔌 socket disconnected:", reason);
+        try {
+          socket.connect();
+        } catch (e) {}
+      }
+
     });
 
     socket.on("connect_error", (err) => {
