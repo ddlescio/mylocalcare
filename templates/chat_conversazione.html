@@ -580,22 +580,25 @@ body {
       }
 
       // se è la stessa socket della pagina corrente, pulisci comunque i listener prima di ribindare
-      if (window.__chatHandlers.connectInit) {
-        newSocket.off("connect", window.__chatHandlers.connectInit);
+      // 🔥 RIMUOVI SOLO se già bindata QUESTA socket
+      if (boundSocket === newSocket) {
+        if (window.__chatHandlers.connectInit) {
+          newSocket.off("connect", window.__chatHandlers.connectInit);
+        }
+        if (window.__chatHandlers.userTyping) {
+          newSocket.off("user_typing", window.__chatHandlers.userTyping);
+        }
+        if (window.__chatHandlers.newMessage) {
+          newSocket.off("new_message", window.__chatHandlers.newMessage);
+        }
+        if (window.__chatHandlers.messagesRead) {
+          newSocket.off("messages_read", window.__chatHandlers.messagesRead);
+        }
+        if (window.__chatHandlers.messageDelivered) {
+          newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
+        }
       }
-      if (window.__chatHandlers.userTyping) {
-        newSocket.off("user_typing", window.__chatHandlers.userTyping);
-      }
-      if (window.__chatHandlers.newMessage) {
-        newSocket.off("new_message", window.__chatHandlers.newMessage);
-      }
-      if (window.__chatHandlers.messagesRead) {
-        newSocket.off("messages_read", window.__chatHandlers.messagesRead);
-      }
-      if (window.__chatHandlers.messageDelivered) {
-        newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
-      }
-
+      
       boundSocket = newSocket;
 
       window.__chatHandlers.connectInit = function () {
@@ -979,7 +982,7 @@ body {
   }
 
   initChatBinding();
-  
+
   // 🔥 NOTIFICA VISIBILITÀ (FIX CORRETTO)
   function sendVisibility() {
     if (window.socket && window.socket.connected) {
