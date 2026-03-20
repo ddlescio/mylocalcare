@@ -8594,29 +8594,28 @@ def handle_connect(auth=None):
 
     MAX_SOCKETS = 3
 
+    # 🔥 NON chiudere più socket attive → SOLO cleanup Redis
     if len(sockets_with_ts) > MAX_SOCKETS:
-        print(f"⚠️ Troppe socket per utente {user_id}: {len(sockets_with_ts)} -> cleanup")
+        print(f"⚠️ Troppe socket per utente {user_id}: {len(sockets_with_ts)} (solo cleanup Redis)")
 
         excess = len(sockets_with_ts) - MAX_SOCKETS
 
-        closed = 0
+        removed = 0
 
         for old_sid, _ in sockets_with_ts:
 
-            # 🔥 NON chiudere quella appena connessa
             if old_sid == sid:
                 continue
 
-            if closed >= excess:
+            if removed >= excess:
                 break
 
             try:
-                socketio.server.disconnect(old_sid, namespace="/")
                 redis_client.hdel(key, old_sid)
-                print(f"🧹 Chiusa socket vecchia {old_sid}")
-                closed += 1
+                print(f"🧹 Rimossa socket Redis {old_sid}")
+                removed += 1
             except Exception as e:
-                print(f"Errore disconnect socket {old_sid}: {e}")
+                print(f"Errore cleanup socket {old_sid}: {e}")
 
     # -------------------------------------------------
     # join room utente

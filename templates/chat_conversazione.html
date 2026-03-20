@@ -1022,7 +1022,7 @@ body {
       } else {
         console.log("🟢 socket già attiva → NON faccio nulla");
       }
-    }    
+    }
   });
 });
 </script>
@@ -1082,12 +1082,6 @@ async function initVideoSystem() {
         return;
     }
 
-    // 🔥 heartbeat ogni 20 secondi
-    setInterval(() => {
-      if (socket && socket.connected) {
-        socket.emit("heartbeat");
-      }
-    }, 20000);
 
     const meId = parseInt("{{ g.utente['id'] }}", 10);
 
