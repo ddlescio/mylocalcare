@@ -10,16 +10,26 @@ if (window.__socket_bootstrap_done__) {
   // SOCKET GLOBALE
   // ===============================
 
-  if (window.socket) {
-    console.log("🧹 Chiudo vecchia socket prima di crearne una nuova");
-
+  if (window.socket && window.socket.connected) {
+    console.log("♻️ Riutilizzo socket esistente");
+  } else if (window.socket && !window.socket.connected) {
+    console.log("🔄 Socket esistente ma disconnessa → reconnect");
     try {
-      window.socket.disconnect();
+      window.socket.connect();
     } catch (e) {}
+  } else {
+    window.socket = io({
+      transports: ["websocket"],
+      upgrade: false,
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000
+    });
 
-    window.socket = null;
+    console.log("🟢 Nuova socket creata");
   }
-  
+
   if (!window.socket) {
     window.socket = io({
       transports: ["websocket"],
