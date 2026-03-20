@@ -986,7 +986,41 @@ body {
   }
 
   // 👉 continua a gestire cambi visibilità
-  document.addEventListener("visibilitychange", sendVisibility);
+  document.addEventListener("visibilitychange", () => {
+
+    const isVisible = document.visibilityState === "visible";
+
+    if (!window.socket) return;
+
+    // invia stato visibilità
+    if (window.socket.connected) {
+      window.socket.emit("page_visible", { visible: isVisible });
+    }
+
+    // 🔥 FIX CRITICO iOS: forzo reconnect quando torno visibile
+    if (isVisible) {
+      console.log("🔄 forcing socket reconnect (visibility)");
+
+      try {
+        window.socket.disconnect();
+      } catch(e) {}
+
+      setTimeout(() => {
+
+        window.socket.connect();
+
+        // 🔥 FIX FONDAMENTALE
+        window.socket.once("connect", () => {
+          console.log("♻️ REBIND CHAT SOCKET");
+
+          // 🔴 QUESTA FUNZIONE ESISTE GIÀ NEL TUO CODICE
+          bindChatSocket(window.socket);
+        });
+
+      }, 100);      
+    }
+
+  });
 });
 </script>
 <script>
