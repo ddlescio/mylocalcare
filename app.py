@@ -409,7 +409,6 @@ def is_user_online(user_id):
 
 disconnect_timers = {}
 recently_read_timers = {}
-sid_to_user = {}
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
@@ -8518,7 +8517,7 @@ def handle_connect(auth=None):
     sid = request.sid
 
     # 🔥 AGGIUNGI QUESTA RIGA
-    sid_to_user[sid] = user_id
+    redis_client.set(f"sid_user:{sid}", user_id, ex=3600)
 
     room = f"user_{user_id}"
 
@@ -8664,7 +8663,10 @@ def handle_disconnect():
     sid = request.sid
 
     # 🔥 USA LA MAPPATURA CORRETTA
-    user_id = sid_to_user.pop(sid, user_id)
+    uid = redis_client.get(f"sid_user:{sid}")
+    if uid:
+        user_id = int(uid)
+        redis_client.delete(f"sid_user:{sid}")
 
     key = f"user_sockets:{user_id}"
 
@@ -8994,7 +8996,13 @@ def handle_heartbeat():
     sid = request.sid
 
     # 🔥 PRENDI USER DAL SID (NON DA SESSION)
-    user_id = sid_to_user.get(sid)
+    uid = redis_client.get(f"sid_user:{sid}")
+
+    if not uid:
+        print(f"⚠️ heartbeat senza user per SID {sid}")
+        return
+
+    user_id = int(uid)
 
     if not user_id:
         print(f"⚠️ heartbeat senza user per SID {sid}")
