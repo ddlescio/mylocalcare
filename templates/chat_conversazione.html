@@ -999,27 +999,26 @@ body {
 
     // 🔥 FIX CRITICO iOS: forzo reconnect quando torno visibile
     if (isVisible) {
-      console.log("🔄 forcing socket reconnect (visibility)");
+      console.log("🔄 visibility → check socket");
 
-      try {
-        window.socket.disconnect();
-      } catch(e) {}
+      // 🔥 NON disconnettere più
+      if (!window.socket.connected) {
 
-      setTimeout(() => {
+        console.log("🔌 reconnect necessario");
 
         window.socket.connect();
 
-        // 🔥 FIX FONDAMENTALE
         window.socket.once("connect", () => {
           console.log("♻️ REBIND CHAT SOCKET");
-
-          // 🔴 QUESTA FUNZIONE ESISTE GIÀ NEL TUO CODICE
           bindChatSocket(window.socket);
         });
 
-      }, 100);      
+      } else {
+        // 🔥 se già connessa → solo rebind sicurezza
+        console.log("♻️ socket già attiva → rebind");
+        bindChatSocket(window.socket);
+      }
     }
-
   });
 });
 </script>
