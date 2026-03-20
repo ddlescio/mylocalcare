@@ -949,24 +949,37 @@ body {
   function initChatBinding() {
     console.log("🟢 initChatBinding start");
 
-    const s = window.socket;
+    function attach(socketInstance) {
+      if (!socketInstance) return;
 
-    if (!s) {
-      console.warn("⚠️ socket non disponibile");
-      return;
+      console.log("🔗 bindChatSocket su socket", socketInstance.id);
+
+      bindChatSocket(socketInstance);
+
+      // 🔥 IMPORTANTISSIMO: se la socket cambia, ribinda
+      socketInstance.on("connect", () => {
+        console.log("♻️ reconnect → ribind");
+        bindChatSocket(socketInstance);
+      });
     }
 
-    if (s.connected) {
-      bindChatSocket(s);
-    } else {
-      s.once("connect", () => {
-        bindChatSocket(s);
+    // 🔥 CASO 1: sistema globale pronto
+    if (window.whenSocketReady) {
+      whenSocketReady((socketInstance) => {
+        attach(socketInstance);
       });
+
+    } else if (window.socket) {
+
+      attach(window.socket);
+
+    } else {
+      console.warn("⚠️ socket non disponibile");
     }
   }
 
   initChatBinding();
-
+  
   // 🔥 NOTIFICA VISIBILITÀ (FIX CORRETTO)
   function sendVisibility() {
     if (window.socket && window.socket.connected) {
