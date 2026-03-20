@@ -8981,10 +8981,19 @@ def handle_page_visible(data):
 @socketio.on("heartbeat")
 def handle_heartbeat():
     from flask import session, request
-    user_id = session.get("utente_id")
-    if user_id:
-        touch_socket(user_id, request.sid)
 
+    user_id = session.get("utente_id")
+    if not user_id:
+        return
+
+    sid = request.sid
+
+    # 🔥 QUESTA È LA RIGA FONDAMENTALE
+    touch_socket(user_id, sid)
+
+    # DEBUG (opzionale ma utile ora)
+    print(f"💓 heartbeat ricevuto da {user_id} SID {sid}")
+    
 def chat_count_unread(user_id):
 
     conn = get_db_connection()
