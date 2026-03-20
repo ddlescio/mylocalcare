@@ -598,7 +598,7 @@ body {
           newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
         }
       }
-      
+
       boundSocket = newSocket;
 
       window.__chatHandlers.connectInit = function () {
@@ -960,10 +960,6 @@ body {
       bindChatSocket(socketInstance);
 
       // 🔥 IMPORTANTISSIMO: se la socket cambia, ribinda
-      socketInstance.on("connect", () => {
-        console.log("♻️ reconnect → ribind");
-        bindChatSocket(socketInstance);
-      });
     }
 
     // 🔥 CASO 1: sistema globale pronto
