@@ -153,4 +153,23 @@ if (window.__socket_bootstrap_done__) {
       }
     }, 15000);
   }
+  // ===============================
+  // 💓 HEARTBEAT GLOBALE (FONDAMENTALE)
+  // ===============================
+
+  if (!window.__socket_heartbeat__) {
+    window.__socket_heartbeat__ = setInterval(() => {
+
+      const s = window.socket;
+      if (!s) return;
+
+      // invia solo se connesso e pagina visibile
+      if (s.connected && document.visibilityState === "visible") {
+        console.log("💓 heartbeat");
+        s.emit("heartbeat");
+      }
+
+    }, 25000); // ogni 25s (meno del timeout backend = 120s)
+  }
+
 }
