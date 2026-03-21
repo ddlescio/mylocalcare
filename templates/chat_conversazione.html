@@ -953,15 +953,30 @@ body {
 
   // 🔥 bind SOLO quando la socket è realmente pronta
 
-  window.whenSocketReady(() => {
-
+  function bindCurrentSocket() {
     const realSocket = window.__active_socket || window.socket;
 
-    console.log("🟢 socket READY → bind chat su", realSocket?.id);
+    if (!realSocket) return;
+
+    console.log("🔁 bind chat su socket", realSocket.id);
 
     bindChatSocket(realSocket);
+  }
 
-  });  
+  // 1️⃣ bind iniziale
+  window.whenSocketReady(() => {
+    bindCurrentSocket();
+  });
+
+  // 2️⃣ 🔥 CRITICO: rebinding automatico ad ogni reconnect
+  if (!window.__chat_rebind_on_connect__) {
+    window.__chat_rebind_on_connect__ = true;
+
+    window.addEventListener("socket_ready", () => {
+      console.log("🔄 socket_ready → rebinding chat");
+      bindCurrentSocket();
+    });
+  }
 });
 </script>
 <script>
