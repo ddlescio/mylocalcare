@@ -953,9 +953,14 @@ body {
 
   // 🔥 bind SOLO quando la socket è realmente pronta
 
-  window.whenSocketReady((s) => {
-    console.log("🟢 socket READY → bind chat");
-    bindChatSocket(s);
+  window.whenSocketReady(() => {
+
+    const realSocket = window.__active_socket || window.socket;
+
+    console.log("🟢 socket READY → bind chat su", realSocket?.id);
+
+    bindChatSocket(realSocket);
+
   });  
 });
 </script>

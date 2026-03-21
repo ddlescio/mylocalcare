@@ -66,13 +66,15 @@ if (!window.__socket_auto_close_bound__) {
 
       console.log("🔌 socket connected:", socket.id);
 
-      // 🔥 AGGIUNGI QUESTO
+      // 🔥 SALVA SOCKET ATTUALE REALE
+      window.__active_socket = socket;
+
       window.__current_socket_id = socket.id;
 
       window.dispatchEvent(new Event("socket_ready"));
 
     });
-
+    
     // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
     socket.on("disconnect", (reason) => {
 
