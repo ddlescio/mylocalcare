@@ -951,8 +951,12 @@ body {
     bindChatSocket(s);
   }
 
-  // esegui SUBITO (non aspettare eventi)
-  initChatBinding();
+  // 🔥 bind SOLO quando la socket è realmente pronta
+
+  window.whenSocketReady((s) => {
+    console.log("🟢 socket READY → bind chat");
+    bindChatSocket(s);
+  });  
 });
 </script>
 <script>
