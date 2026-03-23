@@ -583,7 +583,7 @@ body {
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
       console.log("🧠 bindChatSocket chiamata con socket:", newSocket.id);
-      
+
       const oldSocket = boundSocket;
 
       if (boundSocket && boundSocket !== newSocket) {
@@ -1002,9 +1002,9 @@ body {
 
   // bind iniziale
   if (window.whenSocketReady) {
-    window.whenSocketReady((socket) => {
-      console.log("🟢 whenSocketReady → bind chat", socket.id);
-      bindChatSocket(socket);
+    window.whenSocketReady(() => {
+      console.log("🟢 whenSocketReady → bind chat");
+      bindChatOnCurrentSocket();
     });
   } else {
     bindChatOnCurrentSocket();
@@ -1014,7 +1014,7 @@ body {
   window.addEventListener("socket_ready", () => {
     console.log("♻️ evento socket_ready ricevuto");
     bindChatOnCurrentSocket();
-  });
+  });  
 });
 </script>
 <script>
