@@ -422,10 +422,7 @@ body {
 <script>
   document.addEventListener("DOMContentLoaded", () => {
 
-    let CHAT_SOCKET = null;
-
-    function getSocket() {
-
+    function getCurrentSocket() {
       const s = window.__active_socket || window.socket;
 
       if (!s) {
@@ -435,9 +432,19 @@ body {
 
       return s;
     }
-    
-      let boundSocket = null;
-      window.__chatHandlers = window.__chatHandlers || {};
+
+    let boundSocket = null;
+
+    function getSocket() {
+      if (boundSocket && boundSocket.connected) {
+        return boundSocket;
+      }
+
+      console.warn("❌ Socket chat non bindata o non connessa");
+      return null;
+    }
+
+    window.__chatHandlers = window.__chatHandlers || {};
 
       if (!getSocket()) {
         console.warn("Socket non ancora pronta, continuo comunque...");
@@ -629,9 +636,8 @@ body {
       }
 
       boundSocket = newSocket;
-      CHAT_SOCKET = newSocket;
 
-      console.log("🔒 CHAT_SOCKET fissata su:", newSocket.id);
+      console.log("🔒 Chat bindata su socket:", newSocket.id);
 
       window.__chatHandlers.connectInit = function () {
         console.log("🟢 Socket pronta / reconnect chat");
@@ -1026,20 +1032,16 @@ body {
   // rebinding quando socket_global sostituisce la socket attiva
   window.addEventListener("socket_ready", () => {
 
-    const newSocket = window.__active_socket || window.socket;
+    const newSocket = getCurrentSocket();
 
     if (!newSocket) return;
 
-    // ✅ se è la stessa socket → skip
-    if (CHAT_SOCKET && CHAT_SOCKET.id === newSocket.id) {
+    if (boundSocket && boundSocket.id === newSocket.id) {
       console.log("⏭️ stessa socket → skip");
       return;
     }
 
     console.log("♻️ NUOVA SOCKET rilevata → rebind chat", newSocket.id);
-
-    // 🔥 IMPORTANTISSIMO: aggiorna reference
-    CHAT_SOCKET = null;
 
     bindChatSocket(newSocket);
   });
