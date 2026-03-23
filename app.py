@@ -8549,29 +8549,19 @@ def handle_connect(auth=None):
     MAX_SOCKETS = 3  # desktop + pwa + eventuale transizione
 
     if len(all_sockets) > MAX_SOCKETS:
-        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
+        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup soft")
 
-        excess = len(all_sockets) - MAX_SOCKETS
+        # 🔥 NON disconnettere → solo pulizia Redis
+        # mantieni SOLO le ultime N socket
 
-        closed = 0
+        # ordina e tieni le più recenti (approssimazione)
+        sockets_to_keep = all_sockets[-MAX_SOCKETS:]
 
         for old_sid in all_sockets:
-
-            # 🔥 NON chiudere MAI quella appena connessa
-            if old_sid == sid:
-                continue
-
-            if closed >= excess:
-                break
-
-            try:
-                socketio.server.disconnect(old_sid, namespace="/")
-                print(f"🧹 Chiusa socket zombie {old_sid}")
+            if old_sid not in sockets_to_keep:
                 redis_client.srem(key, old_sid)
-                closed += 1
-            except Exception as e:
-                print(f"Errore disconnect socket zombie {old_sid}: {e}")
-            
+                print(f"🧹 Rimossa socket da Redis (no disconnect): {old_sid}")
+                        
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
