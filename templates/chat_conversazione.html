@@ -426,9 +426,10 @@ body {
 
     function getSocket() {
 
-      // 👉 se già agganciata, usa sempre quella
+      // ✅ se la chat è già stata bindata a una socket valida, usa sempre quella
       if (CHAT_SOCKET) return CHAT_SOCKET;
 
+      // ✅ altrimenti restituisci la socket attuale SENZA bloccarla ancora
       const s = window.__active_socket || window.socket;
 
       if (!s) {
@@ -436,11 +437,7 @@ body {
         return null;
       }
 
-      CHAT_SOCKET = s; // 🔒 BLOCCA QUESTA SOCKET PER LA CHAT
-
-      console.log("🔒 Chat agganciata a socket:", s.id);
-
-      return CHAT_SOCKET;
+      return s;
     }
 
       let boundSocket = null;
@@ -636,6 +633,9 @@ body {
       }
 
       boundSocket = newSocket;
+      CHAT_SOCKET = newSocket;
+
+      console.log("🔒 CHAT_SOCKET fissata su:", newSocket.id);
 
       window.__chatHandlers.connectInit = function () {
         console.log("🟢 Socket pronta / reconnect chat");
