@@ -422,15 +422,25 @@ body {
 <script>
   document.addEventListener("DOMContentLoaded", () => {
 
+    let CHAT_SOCKET = null;
+
     function getSocket() {
+
+      // 👉 se già agganciata, usa sempre quella
+      if (CHAT_SOCKET) return CHAT_SOCKET;
+
       const s = window.__active_socket || window.socket;
 
-      if (!s || !s.connected) {
-        console.warn("❌ Socket NON pronta");
+      if (!s) {
+        console.warn("❌ Socket non disponibile");
         return null;
       }
 
-      return s;
+      CHAT_SOCKET = s; // 🔒 BLOCCA QUESTA SOCKET PER LA CHAT
+
+      console.log("🔒 Chat agganciata a socket:", s.id);
+
+      return CHAT_SOCKET;
     }
 
       let boundSocket = null;
@@ -982,7 +992,7 @@ body {
       sending = false;
     }, 250);
   });
-    
+
   // --------------------------------------------------
   // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
@@ -996,7 +1006,7 @@ body {
   // --------------------------------------------------
 
   function bindChatOnCurrentSocket() {
-    const s = window.__active_socket || window.socket;
+    const s = getSocket();
 
     if (!s) {
       console.error("❌ Nessuna socket disponibile per bind chat");
@@ -1019,6 +1029,12 @@ body {
 
   // rebinding quando socket_global sostituisce la socket attiva
   window.addEventListener("socket_ready", () => {
+
+    if (CHAT_SOCKET) {
+      console.log("⛔ socket_ready ignorato (chat già agganciata)");
+      return;
+    }
+
     console.log("♻️ evento socket_ready ricevuto");
     bindChatOnCurrentSocket();
   });
