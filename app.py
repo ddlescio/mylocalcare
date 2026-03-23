@@ -377,6 +377,10 @@ redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     raise RuntimeError("❌ REDIS_URL non configurata su Render")
 
+from socketio import RedisManager
+
+mgr = RedisManager(redis_url)
+
 socketio = SocketIO(
     app,
     async_mode="eventlet",
@@ -386,12 +390,13 @@ socketio = SocketIO(
         "http://127.0.0.1:5050",
         "http://localhost:5050"
     ],
-    message_queue=redis_url,
+    client_manager=mgr,
     ping_timeout=20,
     ping_interval=10,
     logger=True,
     engineio_logger=True
 )
+
 # =====================================================
 # UTENTI ONLINE (socket registry)
 # =====================================================
@@ -8544,19 +8549,29 @@ def handle_connect(auth=None):
     MAX_SOCKETS = 3  # desktop + pwa + eventuale transizione
 
     if len(all_sockets) > MAX_SOCKETS:
-        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup soft")
+        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
 
-        # 🔥 NON disconnettere → solo pulizia Redis
-        # mantieni SOLO le ultime N socket
+        excess = len(all_sockets) - MAX_SOCKETS
 
-        # ordina e tieni le più recenti (approssimazione)
-        sockets_to_keep = all_sockets[-MAX_SOCKETS:]
+        closed = 0
 
         for old_sid in all_sockets:
-            if old_sid not in sockets_to_keep:
-                redis_client.srem(key, old_sid)
-                print(f"🧹 Rimossa socket da Redis (no disconnect): {old_sid}")
 
+            # 🔥 NON chiudere MAI quella appena connessa
+            if old_sid == sid:
+                continue
+
+            if closed >= excess:
+                break
+
+            try:
+                socketio.server.disconnect(old_sid, namespace="/")
+                print(f"🧹 Chiusa socket zombie {old_sid}")
+                redis_client.srem(key, old_sid)
+                closed += 1
+            except Exception as e:
+                print(f"Errore disconnect socket zombie {old_sid}: {e}")
+            
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
