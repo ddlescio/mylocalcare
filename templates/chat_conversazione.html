@@ -1030,14 +1030,23 @@ body {
   // rebinding quando socket_global sostituisce la socket attiva
   window.addEventListener("socket_ready", () => {
 
-    if (CHAT_SOCKET) {
-      console.log("⛔ socket_ready ignorato (chat già agganciata)");
+    const newSocket = window.__active_socket || window.socket;
+
+    if (!newSocket) return;
+
+    // ✅ se è la stessa socket → skip
+    if (CHAT_SOCKET && CHAT_SOCKET.id === newSocket.id) {
+      console.log("⏭️ stessa socket → skip");
       return;
     }
 
-    console.log("♻️ evento socket_ready ricevuto");
-    bindChatOnCurrentSocket();
-  });
+    console.log("♻️ NUOVA SOCKET rilevata → rebind chat", newSocket.id);
+
+    // 🔥 IMPORTANTISSIMO: aggiorna reference
+    CHAT_SOCKET = null;
+
+    bindChatSocket(newSocket);
+  });  
 });
 </script>
 <script>
