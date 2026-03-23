@@ -34,22 +34,19 @@ if (window.__socket_bootstrap_done__) {
 if (!window.__socket_auto_close_bound__) {
   window.__socket_auto_close_bound__ = true;
 
-  window.addEventListener("pagehide", () => {
+  // 🔥 CHIUSURA SOCKET SOLO SU NAVIGAZIONE REALE (NO Safari BUG)
+  window.addEventListener("beforeunload", () => {
     const s = window.socket;
     if (!s) return;
 
-    const isChatPage = document.body.dataset.chat === "true";
+    console.log("🛑 beforeunload → chiudo socket");
 
-    if (!isChatPage) {
-      console.log("🛑 Chiudo socket (uscita da chat)");
+    try {
+      s.disconnect();
+    } catch (e) {}
 
-      try {
-        s.disconnect();
-      } catch (e) {}
-
-      window.socket = null;
-      window.__socket_bootstrap_done__ = false;
-    }
+    window.socket = null;
+    window.__socket_bootstrap_done__ = false;
   });
 }
 
@@ -66,15 +63,15 @@ if (!window.__socket_auto_close_bound__) {
 
       console.log("🔌 socket connected:", socket.id);
 
-      // 🔥 SALVA SOCKET ATTUALE REALE
+      // 🔥 SEMPRE aggiorna socket attiva
       window.__active_socket = socket;
+      window.socket = socket;
 
       window.__current_socket_id = socket.id;
 
       window.dispatchEvent(new Event("socket_ready"));
+    });    
 
-    });
-    
     // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
     socket.on("disconnect", (reason) => {
 
