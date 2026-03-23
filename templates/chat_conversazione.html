@@ -615,7 +615,17 @@ body {
       };
       newSocket.on("connect", window.__chatHandlers.connectInit);
 
+      /* 🔥 FIX FONDAMENTALE:
+         se la socket è già connessa quando bindiamo,
+         il listener "connect" non scatterà più da solo.
+         Quindi dobbiamo aprire la chat SUBITO. */
+      if (newSocket.connected) {
+        console.log("🟢 Socket già connessa al bind → emitChatOpened immediato");
+        emitChatOpened();
+      }
+
       window.__chatHandlers.newMessage = function (m) {
+
         const currentChat = destId;
 
         try {
