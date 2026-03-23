@@ -430,8 +430,7 @@ body {
       window.__chatHandlers = window.__chatHandlers || {};
 
       if (!getSocket()) {
-        console.error("Socket non disponibile");
-        return;
+        console.warn("Socket non ancora pronta, continuo comunque...");
       }
 
       console.log("🟢 Init chat socket listeners");
@@ -459,7 +458,6 @@ body {
       }
 
       chatOpenedOnce = true;
-
       chatClosedEmitted = false;
       window.__activeChat = destId;
 
@@ -467,9 +465,8 @@ body {
 
       if (s && s.connected && destId) {
         console.log("📤 emit chat_aperta");
-        s.emit('chat_aperta', { other_id: destId });
 
-        console.log("📤 emit mark_as_read");
+        s.emit('chat_aperta', { other_id: destId });
         s.emit('mark_as_read', { other_id: destId });
       }
     }
