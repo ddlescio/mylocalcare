@@ -581,9 +581,9 @@ body {
     }
 
     function bindChatSocket(newSocket) {
-      console.log("🧠 bindChatSocket chiamata con socket:", newSocket.id);
       if (!newSocket) return;
-
+      console.log("🧠 bindChatSocket chiamata con socket:", newSocket.id);
+      
       const oldSocket = boundSocket;
 
       if (boundSocket && boundSocket !== newSocket) {
@@ -985,29 +985,36 @@ body {
   /* 🔥 UN SOLO BIND PULITO */
 
   // --------------------------------------------------
-  // 🔁 BIND SOCKET SOLO QUANDO È PRONTA (FIX DEFINITIVO)
+  // 🔁 BIND CHAT SU SOCKET ATTUALE + REBIND SE CAMBIA
   // --------------------------------------------------
 
-  if (window.whenSocketReady) {
+  function bindChatOnCurrentSocket() {
+    const s = window.__active_socket || window.socket;
 
-    whenSocketReady((socket) => {
+    if (!s) {
+      console.error("❌ Nessuna socket disponibile per bind chat");
+      return;
+    }
+
+    console.log("🔗 bindChatOnCurrentSocket ->", s.id);
+    bindChatSocket(s);
+  }
+
+  // bind iniziale
+  if (window.whenSocketReady) {
+    window.whenSocketReady((socket) => {
       console.log("🟢 whenSocketReady → bind chat", socket.id);
       bindChatSocket(socket);
     });
-
   } else {
-
-    // fallback sicurezza
-    const s = window.__active_socket || window.socket;
-
-    if (s) {
-      console.log("⚠️ fallback bind", s.id);
-      bindChatSocket(s);
-    } else {
-      console.error("❌ Nessuna socket disponibile");
-    }
-
+    bindChatOnCurrentSocket();
   }
+
+  // rebinding quando socket_global sostituisce la socket attiva
+  window.addEventListener("socket_ready", () => {
+    console.log("♻️ evento socket_ready ricevuto");
+    bindChatOnCurrentSocket();
+  });
 });
 </script>
 <script>
