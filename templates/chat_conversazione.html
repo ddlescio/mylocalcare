@@ -426,10 +426,6 @@ body {
 
     function getSocket() {
 
-      // ✅ se la chat è già stata bindata a una socket valida, usa sempre quella
-      if (CHAT_SOCKET) return CHAT_SOCKET;
-
-      // ✅ altrimenti restituisci la socket attuale SENZA bloccarla ancora
       const s = window.__active_socket || window.socket;
 
       if (!s) {
@@ -439,7 +435,7 @@ body {
 
       return s;
     }
-
+    
       let boundSocket = null;
       window.__chatHandlers = window.__chatHandlers || {};
 
@@ -1046,7 +1042,7 @@ body {
     CHAT_SOCKET = null;
 
     bindChatSocket(newSocket);
-  });  
+  });
 });
 </script>
 <script>
