@@ -429,7 +429,7 @@ body {
       let boundSocket = null;
       window.__chatHandlers = window.__chatHandlers || {};
 
-      if (!window.socket) {
+      if (!getSocket()) {
         console.error("Socket non disponibile");
         return;
       }
@@ -988,11 +988,12 @@ body {
       return;
     }
 
-    if (boundSocket === s) {
-      console.log("⏭️ Socket già bindata, skip");
-      return;
+    // 🔥 FIX: se cambia socket → FORZA rebind
+    if (boundSocket && boundSocket !== s) {
+      console.log("♻️ Socket cambiata → rebinding forzato");
     }
 
+    // 🔥 SEMPRE bind (no skip)
     console.log("🔗 Binding chat su socket:", s.id);
 
     bindChatSocket(s);
