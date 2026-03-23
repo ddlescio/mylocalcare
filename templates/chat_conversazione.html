@@ -422,9 +422,17 @@ body {
 <script>
   document.addEventListener("DOMContentLoaded", () => {
 
-      function getSocket() {
-        return window.__active_socket || window.socket;
+    function getSocket() {
+      const s = window.__active_socket || window.socket;
+
+      if (!s) {
+        console.warn("❌ getSocket: socket non disponibile");
+      } else {
+        console.log("🔌 getSocket usa:", s.id);
       }
+
+      return s;
+    }
 
       let boundSocket = null;
       window.__chatHandlers = window.__chatHandlers || {};
@@ -573,6 +581,7 @@ body {
     }
 
     function bindChatSocket(newSocket) {
+      console.log("🧠 bindChatSocket chiamata con socket:", newSocket.id);
       if (!newSocket) return;
 
       const oldSocket = boundSocket;
@@ -973,65 +982,24 @@ body {
 
   // 🔥 FIX DEFINITIVO: bind immediato + sicurezza reconnect
 
-  function initChatBinding() {
-    console.log("🟢 initChatBinding start");
+  /* 🔥 UN SOLO BIND PULITO */
 
-    const s = window.socket;
-
-    if (!s) {
-      console.warn("⚠️ socket non disponibile");
-      return;
-    }
-
-    // bind una sola volta sulla socket corrente
-    bindChatSocket(s);
-  }
-
-  // 🔥 bind SOLO quando la socket è realmente pronta
-
-  function bindCurrentSocket() {
-    const realSocket = window.__active_socket || window.socket;
-
-    if (!realSocket) return;
-
-    console.log("🔁 bind chat su socket", realSocket.id);
-
-    bindChatSocket(realSocket);
-  }
-
-  // 1️⃣ bind iniziale
-  function attachSocketListeners() {
+  function waitForSocketAndBind() {
     const s = window.__active_socket || window.socket;
 
     if (!s) {
-      console.warn("⚠️ Nessuna socket disponibile per bind");
+      console.log("⏳ attendo socket...");
+      setTimeout(waitForSocketAndBind, 200);
       return;
     }
 
-    // 🔥 FIX: se cambia socket → FORZA rebind
-    if (boundSocket && boundSocket !== s) {
-      console.log("♻️ Socket cambiata → rebinding forzato");
-    }
-
-    // 🔥 SEMPRE bind (no skip)
-    console.log("🔗 Binding chat su socket:", s.id);
+    console.log("🔗 bind definitivo socket:", s.id);
 
     bindChatSocket(s);
   }
-  /* 🔥 UN SOLO BIND PULITO */
 
-function initSocketOnce() {
-  const s = window.__active_socket || window.socket;
-  if (!s) return;
-
-  bindChatSocket(s);
-}
-
-// bind iniziale
-initSocketOnce();
-
-// rebinding SOLO se cambia socket (evento custom tuo)
-window.addEventListener("socket_ready", initSocketOnce);
+  // AVVIO
+  waitForSocketAndBind();
 
 });
 </script>
