@@ -436,14 +436,14 @@ body {
     let boundSocket = null;
 
     function getSocket() {
-      if (boundSocket && boundSocket.connected) {
+      if (boundSocket) {
         return boundSocket;
       }
 
-      console.warn("❌ Socket chat non bindata o non connessa");
+      console.warn("❌ Socket chat non bindata");
       return null;
     }
-
+    
     window.__chatHandlers = window.__chatHandlers || {};
 
       if (!getSocket()) {
