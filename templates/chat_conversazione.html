@@ -421,9 +421,14 @@ body {
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+
+      function getSocket() {
+        return window.__active_socket || window.socket;
+      }
+
       let boundSocket = null;
       window.__chatHandlers = window.__chatHandlers || {};
-
+    
       if (!window.socket) {
         console.error("Socket non disponibile");
         return;
@@ -449,8 +454,9 @@ body {
       window.__activeChat = destId;
 
       if (window.socket && window.socket.connected && destId) {
-        window.socket.emit('chat_aperta', { other_id: destId });
-        window.socket.emit('mark_as_read', { other_id: destId });
+        const s = getSocket();
+        s.emit('chat_aperta', { other_id: destId });
+        s.emit('mark_as_read', { other_id: destId });
       }
     }
 
@@ -475,7 +481,7 @@ body {
 
       console.log("📤 emit chat_chiusa");
 
-      window.socket.emit('chat_chiusa', { other_id: destId });
+      getSocket().emit('chat_chiusa', { other_id: destId });
     }
 
     window.__emitChatClosedOnce = emitChatClosedOnce;
@@ -821,7 +827,7 @@ body {
     // invia typing:true solo la prima volta
     if (!wasTyping) {
       wasTyping = true;
-      window.socket.emit("typing", { to: destId, typing: true });
+      getSocket().emit("typing", { to: destId, typing: true });
     }
 
     // reset timeout
@@ -829,7 +835,7 @@ body {
 
     typingTimeout = setTimeout(() => {
       wasTyping = false;
-      window.socket.emit("typing", { to: destId, typing: false });
+      getSocket().emit("typing", { to: destId, typing: false });
     }, 2000); // puoi abbassare a 1000ms se vuoi più reattività
   });
 
@@ -922,7 +928,7 @@ body {
 
     sending = true;
 
-    window.socket.emit('send_message', { destinatario_id: destId, testo });
+    getSocket().emit('send_message', { destinatario_id: destId, testo });
 
     input.value = '';
     toggleEmoji(false);
