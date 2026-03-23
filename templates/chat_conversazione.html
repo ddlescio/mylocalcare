@@ -984,23 +984,30 @@ body {
 
   /* 🔥 UN SOLO BIND PULITO */
 
-  function waitForSocketAndBind() {
+  // --------------------------------------------------
+  // 🔁 BIND SOCKET SOLO QUANDO È PRONTA (FIX DEFINITIVO)
+  // --------------------------------------------------
+
+  if (window.whenSocketReady) {
+
+    whenSocketReady((socket) => {
+      console.log("🟢 whenSocketReady → bind chat", socket.id);
+      bindChatSocket(socket);
+    });
+
+  } else {
+
+    // fallback sicurezza
     const s = window.__active_socket || window.socket;
 
-    if (!s) {
-      console.log("⏳ attendo socket...");
-      setTimeout(waitForSocketAndBind, 200);
-      return;
+    if (s) {
+      console.log("⚠️ fallback bind", s.id);
+      bindChatSocket(s);
+    } else {
+      console.error("❌ Nessuna socket disponibile");
     }
 
-    console.log("🔗 bind definitivo socket:", s.id);
-
-    bindChatSocket(s);
   }
-
-  // AVVIO
-  waitForSocketAndBind();
-
 });
 </script>
 <script>
