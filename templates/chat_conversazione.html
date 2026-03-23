@@ -436,14 +436,16 @@ body {
     let boundSocket = null;
 
     function getSocket() {
-      if (boundSocket) {
-        return boundSocket;
+      const s = boundSocket || window.__active_socket || window.socket;
+
+      if (!s) {
+        console.warn("❌ Nessuna socket disponibile");
+        return null;
       }
 
-      console.warn("❌ Socket chat non bindata");
-      return null;
+      return s;
     }
-    
+
     window.__chatHandlers = window.__chatHandlers || {};
 
       if (!getSocket()) {
