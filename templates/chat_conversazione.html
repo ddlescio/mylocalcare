@@ -425,10 +425,9 @@ body {
     function getSocket() {
       const s = window.__active_socket || window.socket;
 
-      if (!s) {
-        console.warn("❌ getSocket: socket non disponibile");
-      } else {
-        console.log("🔌 getSocket usa:", s.id);
+      if (!s || !s.connected) {
+        console.warn("❌ Socket NON pronta");
+        return null;
       }
 
       return s;
@@ -965,9 +964,16 @@ body {
     const testo = input.value.trim();
     if (!testo) return;
 
+    const s = getSocket();
+
+    if (!s) {
+      console.warn("❌ Socket non pronta → invio annullato");
+      return;
+    }
+
     sending = true;
 
-    getSocket().emit('send_message', { destinatario_id: destId, testo });
+    s.emit('send_message', { destinatario_id: destId, testo });
 
     input.value = '';
     toggleEmoji(false);
@@ -976,6 +982,7 @@ body {
       sending = false;
     }, 250);
   });
+    
   // --------------------------------------------------
   // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
@@ -1014,7 +1021,7 @@ body {
   window.addEventListener("socket_ready", () => {
     console.log("♻️ evento socket_ready ricevuto");
     bindChatOnCurrentSocket();
-  });  
+  });
 });
 </script>
 <script>
