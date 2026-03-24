@@ -1035,10 +1035,15 @@ body {
 
     if (!newSocket) return;
 
-    console.log("♻️ socket_ready → FORZO rebind chat", newSocket.id);
+    if (boundSocket && boundSocket.id === newSocket.id) {
+      console.log("⏭️ stessa socket → skip rebind");
+      return;
+    }
+
+    console.log("♻️ NUOVA socket → rebind chat", newSocket.id);
 
     bindChatSocket(newSocket);
-  });
+  });  
 });
 </script>
 <script>
