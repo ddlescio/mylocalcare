@@ -391,6 +391,9 @@ socketio = SocketIO(
         "http://localhost:5050"
     ],
     client_manager=mgr,
+
+    allow_upgrades=False,   # 🔥 AGGIUNGI QUESTA RIGA
+
     ping_timeout=20,
     ping_interval=10,
     logger=True,

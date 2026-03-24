@@ -35,10 +35,28 @@ if (window.__socket_bootstrap_done__) {
   }
 
   if (!window.socket) {
+
     window.socket = io({
-      transports: ["polling", "websocket"],
-      upgrade: true,
-      rememberUpgrade: true,      
+      transports: ["websocket"],
+      upgrade: false,
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+
+      auth: {
+        device_type: detectDeviceType()
+      }
+    });
+
+    console.log("🟢 Nuova socket creata");
+
+  } else {
+    console.log("♻️ Riutilizzo socket esistente");
+  }
+
+      transports: ["websocket"],
+      upgrade: false,
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
@@ -121,10 +139,19 @@ if (window.__socket_bootstrap_done__) {
         console.log("👀 App tornata visibile");
 
         if (!s.connected) {
-          console.log("🛠️ socket non connessa → reconnect");
+          console.log("🛠️ socket non connessa → reconnect forzato");
+
           try {
-            s.connect();
+            if (s.connected) {
+              console.log("♻️ già connessa → skip");
+            } else {
+              s.disconnect();   // 🔥 RESET FORZATO
+              setTimeout(() => {
+                s.connect();
+              }, 200);
+            }
           } catch (e) {
+
             console.warn("Errore reconnect visibilitychange:", e);
           }
         } else {
@@ -149,9 +176,17 @@ if (window.__socket_bootstrap_done__) {
         console.log("📄 pageshow da bfcache → reconnect socket");
 
         if (!s.connected) {
+          console.log("🛠️ reconnect forzato pageshow");
+
           try {
-            s.connect();
+            s.disconnect();
+            setTimeout(() => {
+              s.connect();
+            }, 200);
           } catch (e) {
+            console.warn("Errore reconnect pageshow:", e);
+          }
+        }
             console.warn("Errore reconnect pageshow:", e);
           }
         }
@@ -170,10 +205,17 @@ if (window.__socket_bootstrap_done__) {
       if (document.visibilityState !== "visible") return;
 
       if (!s.connected) {
-        console.log("🛠️ failsafe reconnect socket");
+        console.log("🛠️ failsafe reconnect forzato");
+
         try {
-          s.connect();
+          s.disconnect();
+          setTimeout(() => {
+            s.connect();
+          }, 200);
         } catch (e) {
+          console.warn("Errore failsafe reconnect:", e);
+        }
+      }
           console.warn("Errore failsafe reconnect:", e);
         }
       }
