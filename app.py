@@ -8551,17 +8551,23 @@ def handle_connect(auth=None):
     if len(all_sockets) > MAX_SOCKETS:
         print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
 
-        for old_sid in all_sockets:
+    for old_sid in all_sockets:
 
-            if old_sid == sid:
-                continue
+        if old_sid == sid:
+            continue
 
-            try:
-                print(f"🧹 Rimozione soft socket {old_sid}")
-                redis_client.srem(key, old_sid)
+        try:
+            print(f"🧹 Forzo disconnect socket {old_sid}")
 
-            except Exception as e:
-                print(f"Errore cleanup socket {old_sid}: {e}")
+            # 🔥 CHIUDI DAVVERO LA SOCKET
+            socketio.server.disconnect(old_sid, namespace="/")
+
+            # poi pulizia redis
+            redis_client.srem(key, old_sid)
+
+        except Exception as e:
+            print(f"Errore cleanup socket {old_sid}: {e}")
+
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
@@ -8639,7 +8645,7 @@ def remove_user_later(user_id):
         print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
-    
+
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
