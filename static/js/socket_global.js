@@ -163,3 +163,47 @@ if (window.__socket_bootstrap_done__) {
     console.log("📄 beforeunload → socket lasciata viva");
   });
 }
+
+// ===============================
+// 🔥 TRACK VISIBILITÀ (FONDAMENTALE PER PUSH)
+// ===============================
+if (!window.__page_visibility_tracking__) {
+  window.__page_visibility_tracking__ = true;
+
+  document.addEventListener("visibilitychange", () => {
+    const s = window.socket;
+    if (!s || !s.connected) return;
+
+    const visible = !document.hidden;
+
+    console.log("👁️ page_visible:", visible);
+
+    s.emit("page_visible", {
+      visible: visible
+    });
+  });
+
+  // 🔥 iOS PWA (CRITICO)
+  window.addEventListener("pagehide", () => {
+    const s = window.socket;
+    if (!s || !s.connected) return;
+
+    console.log("📴 pagehide → visible false");
+
+    s.emit("page_visible", {
+      visible: false
+    });
+  });
+
+  // 🔥 fallback ulteriore
+  window.addEventListener("blur", () => {
+    const s = window.socket;
+    if (!s || !s.connected) return;
+
+    console.log("💤 blur → visible false");
+
+    s.emit("page_visible", {
+      visible: false
+    });
+  });
+}

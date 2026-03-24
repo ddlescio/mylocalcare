@@ -8840,7 +8840,7 @@ def handle_send_message(data):
     # =====================================
 
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
-    pagina_visibile = destinatario_id in pagina_attiva
+    pagina_visibile = pagina_attiva.get(destinatario_id, False)
 
     print("DEBUG PUSH:", {
         "chat_aperta": chat_aperta,
