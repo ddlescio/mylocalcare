@@ -8582,31 +8582,6 @@ def handle_connect(auth=None):
     except Exception as e:
         print("Errore invio unread count:", e)
 
-    # -------------------------------------------------
-    # join room utente
-    # -------------------------------------------------
-    join_room(room, sid=sid)
-
-    # conteggio socket attive
-    count = redis_client.scard(key)
-
-    print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
-
-    # -------------------------------------------------
-    # invio contatore messaggi non letti
-    # -------------------------------------------------
-    try:
-        unread = chat_count_unread(user_id)
-
-        socketio.emit(
-            "update_unread_count",
-            {"count": unread},
-            room=room
-        )
-
-    except Exception as e:
-        print("Errore invio unread count:", e)
-
 
 @socketio.on("disconnect")
 def handle_disconnect():
