@@ -28,13 +28,12 @@ if (window.__socket_bootstrap_done__) {
   }
 
   // ===============================
-// 🔥 AUTO-CLOSE SOCKET FUORI CHAT
-// ===============================
+  // SOCKET PERSISTENTE
+  // ===============================
 
-window.addEventListener("beforeunload", () => {
-  console.log("📄 beforeunload → NON chiudo socket (persistente)");
-});  
-}
+  window.addEventListener("beforeunload", () => {
+    console.log("📄 beforeunload → NON chiudo socket (persistente)");
+  });
 
   const socket = window.socket;
 
@@ -46,23 +45,13 @@ window.addEventListener("beforeunload", () => {
     socket._baseListenersBound = true;
 
     socket.on("connect", () => {
-
       console.log("🔌 socket connected:", socket.id);
 
-      // 🔥 SEMPRE aggiorna socket attiva
       window.__active_socket = socket;
       window.socket = socket;
-
       window.__current_socket_id = socket.id;
 
       window.dispatchEvent(new Event("socket_ready"));
-    });
-
-    // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
-    socket.on("disconnect", (reason) => {
-
-      console.log("🔴 socket disconnect:", reason);
-
     });
 
     socket.on("disconnect", (reason) => {
@@ -78,9 +67,8 @@ window.addEventListener("beforeunload", () => {
   // UTILITY
   // ===============================
 
-  window.whenSocketReady = function(callback) {
+  window.whenSocketReady = function (callback) {
     const s = window.socket;
-
     if (!s) return;
 
     if (s.connected) {
@@ -94,7 +82,7 @@ window.addEventListener("beforeunload", () => {
   };
 
   // ===============================
-  // FIX iOS / PWA RESUME (CORRETTO)
+  // FIX iOS / PWA RESUME
   // ===============================
 
   if (!window.__socket_visibility_fix_bound__) {
@@ -107,13 +95,13 @@ window.addEventListener("beforeunload", () => {
       if (document.visibilityState === "visible") {
         console.log("👀 App tornata visibile");
 
-        // 🔥 FIX: NON forzare disconnect
         if (!s.connected) {
           console.log("🛠️ socket non connessa → reconnect");
-
           try {
             s.connect();
-          } catch (e) {}
+          } catch (e) {
+            console.warn("Errore reconnect visibilitychange:", e);
+          }
         } else {
           console.log("♻️ socket ancora viva → nessuna azione");
         }
@@ -135,11 +123,12 @@ window.addEventListener("beforeunload", () => {
       if (event.persisted) {
         console.log("📄 pageshow da bfcache → reconnect socket");
 
-        // 🔥 QUI lasciamo reconnect leggero
         if (!s.connected) {
           try {
             s.connect();
-          } catch (e) {}
+          } catch (e) {
+            console.warn("Errore reconnect pageshow:", e);
+          }
         }
       }
     });
@@ -153,14 +142,15 @@ window.addEventListener("beforeunload", () => {
     window.__socket_failsafe_interval__ = setInterval(() => {
       const s = window.socket;
       if (!s) return;
-
       if (document.visibilityState !== "visible") return;
 
       if (!s.connected) {
         console.log("🛠️ failsafe reconnect socket");
         try {
           s.connect();
-        } catch (e) {}
+        } catch (e) {
+          console.warn("Errore failsafe reconnect:", e);
+        }
       }
     }, 15000);
   }
