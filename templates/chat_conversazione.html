@@ -1030,7 +1030,7 @@ body {
   // rebinding quando socket_global sostituisce la socket attiva
   window.addEventListener("socket_ready", () => {
 
-    const newSocket = getCurrentSocket();
+    const newSocket = getSocket();
 
     if (!newSocket) return;
 
