@@ -101,7 +101,8 @@ if (window.__socket_bootstrap_done__) {
           console.log("🛠️ reconnect visibility");
 
           try {
-            s.connect();
+            s.disconnect();
+            setTimeout(() => s.connect(), 200);
           } catch (e) {
             console.warn("Errore reconnect visibilitychange:", e);
           }
@@ -124,7 +125,8 @@ if (window.__socket_bootstrap_done__) {
         console.log("📄 pageshow → reconnect");
 
         try {
-          s.connect();
+          s.disconnect();
+          setTimeout(() => s.connect(), 200);
         } catch (e) {
           console.warn("Errore reconnect pageshow:", e);
         }
@@ -145,7 +147,8 @@ if (window.__socket_bootstrap_done__) {
         console.log("🛠️ failsafe reconnect");
 
         try {
-          s.connect();
+          s.disconnect();
+          setTimeout(() => s.connect(), 200);
         } catch (e) {
           console.warn("Errore failsafe:", e);
         }
@@ -158,49 +161,5 @@ if (window.__socket_bootstrap_done__) {
   // ===============================
   window.addEventListener("beforeunload", () => {
     console.log("📄 beforeunload → socket lasciata viva");
-  });
-}
-
-// ===============================
-// 🔥 TRACK VISIBILITÀ (FONDAMENTALE PER PUSH)
-// ===============================
-if (!window.__page_visibility_tracking__) {
-  window.__page_visibility_tracking__ = true;
-
-  document.addEventListener("visibilitychange", () => {
-    const s = window.socket;
-    if (!s || !s.connected) return;
-
-    const visible = !document.hidden;
-
-    console.log("👁️ page_visible:", visible);
-
-    s.emit("page_visible", {
-      visible: visible
-    });
-  });
-
-  // 🔥 iOS PWA (CRITICO)
-  window.addEventListener("pagehide", () => {
-    const s = window.socket;
-    if (!s || !s.connected) return;
-
-    console.log("📴 pagehide → visible false");
-
-    s.emit("page_visible", {
-      visible: false
-    });
-  });
-
-  // 🔥 fallback ulteriore
-  window.addEventListener("blur", () => {
-    const s = window.socket;
-    if (!s || !s.connected) return;
-
-    console.log("💤 blur → visible false");
-
-    s.emit("page_visible", {
-      visible: false
-    });
   });
 }

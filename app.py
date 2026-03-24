@@ -8840,14 +8840,7 @@ def handle_send_message(data):
     # =====================================
 
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
-    pagina_visibile = pagina_attiva.get(destinatario_id, False)
-
-    print("DEBUG PUSH:", {
-        "chat_aperta": chat_aperta,
-        "mittente": mittente_id,
-        "pagina_visibile": pagina_visibile,
-        "condizione": chat_aperta != mittente_id and not pagina_visibile
-    })
+    pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
 
     if chat_aperta != mittente_id and not pagina_visibile:
 
@@ -8881,10 +8874,7 @@ def handle_page_visible(data):
 
     visible = bool(data.get("visible"))
 
-    if visible:
-        pagina_attiva[user_id] = True
-    else:
-        pagina_attiva.pop(user_id, None)
+    pagina_attiva[user_id] = visible
 
 def chat_count_unread(user_id):
 
