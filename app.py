@@ -8840,7 +8840,14 @@ def handle_send_message(data):
     # =====================================
 
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
-    ppagina_visibile = destinatario_id in pagina_attiva
+    pagina_visibile = destinatario_id in pagina_attiva
+
+    print("DEBUG PUSH:", {
+        "chat_aperta": chat_aperta,
+        "mittente": mittente_id,
+        "pagina_visibile": pagina_visibile,
+        "condizione": chat_aperta != mittente_id and not pagina_visibile
+    })
 
     if chat_aperta != mittente_id and not pagina_visibile:
 
