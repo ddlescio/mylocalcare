@@ -8519,6 +8519,7 @@ def handle_connect(auth=None):
 
     sid = request.sid
     room = f"user_{user_id}"
+    key = f"user_sockets:{user_id}"
 
     # annulla eventuale timer di disconnessione
     task = disconnect_timers.pop(user_id, None)
@@ -8531,45 +8532,55 @@ def handle_connect(auth=None):
     # segna utente online
     redis_client.sadd("online_users", str(user_id))
 
-
-    # -------------------------------------------------
-    # gestione multi-socket con limite (ANTI-ZOMBIE)
-    # -------------------------------------------------
-
-    key = f"user_sockets:{user_id}"
-
-    # safety: evita duplicati sporchi
-    redis_client.srem(key, sid)
+    # registra questa socket
     redis_client.sadd(key, sid)
 
-    # recupera tutte le socket note per l'utente
-    all_sockets = redis_client.smembers(key)
-    all_sockets = [
-        s.decode() if isinstance(s, bytes) else s
-        for s in all_sockets
-    ]
+    # -------------------------------------------------
+    # cleanup SOLO socket zombie realmente inesistenti
+    # -------------------------------------------------
+    valid_sockets = []
 
-    MAX_SOCKETS = 3  # desktop + mobile + transizione
+    try:
+        namespace_rooms = socketio.server.manager.rooms.get("/", {})
 
-    if len(all_sockets) > MAX_SOCKETS:
-        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
+        for raw_sid in redis_client.smembers(key):
+            saved_sid = raw_sid.decode() if isinstance(raw_sid, bytes) else raw_sid
 
-        # ordina per mantenere le più recenti (approssimazione: tieni le ultime)
-        sockets_to_remove = all_sockets[:-MAX_SOCKETS]
+            # ogni sid viva ha la sua "private room" col proprio nome
+            if saved_sid in namespace_rooms:
+                valid_sockets.append(saved_sid)
+            else:
+                redis_client.srem(key, saved_sid)
+                print(f"🧹 Rimossa socket zombie {saved_sid}")
 
-        for old_sid in sockets_to_remove:
+    except Exception as e:
+        print(f"Errore cleanup socket registry utente {user_id}: {e}")
 
-            if old_sid == sid:
-                continue
+        # fallback prudente: ricalcola dalla chiave redis senza cancellazioni aggressive
+        valid_sockets = [
+            s.decode() if isinstance(s, bytes) else s
+            for s in redis_client.smembers(key)
+        ]
 
-            try:
-                print(f"🧹 Rimuovo socket vecchia {old_sid}")
+    # join room utente
+    join_room(room, sid=sid)
 
-                # ✅ NON disconnettere brutalmente → solo pulizia redis
-                redis_client.srem(key, old_sid)
+    count = len(valid_sockets)
 
-            except Exception as e:
-                print(f"Errore cleanup socket {old_sid}: {e}")
+    print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
+
+    # invio contatore messaggi non letti
+    try:
+        unread = chat_count_unread(user_id)
+
+        socketio.emit(
+            "update_unread_count",
+            {"count": unread},
+            room=room
+        )
+
+    except Exception as e:
+        print("Errore invio unread count:", e)
 
     # -------------------------------------------------
     # join room utente
