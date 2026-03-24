@@ -8555,20 +8555,23 @@ def handle_connect(auth=None):
 
         closed = 0
 
+    if len(all_sockets) > MAX_SOCKETS:
+        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
+
+        excess = len(all_sockets) - MAX_SOCKETS
+
+        closed = 0
+
     for old_sid in all_sockets:
 
         if old_sid == sid:
             continue
-
-        # 🔥 NON chiudere più socket lato server
-        # puliamo SOLO Redis (soft cleanup)
 
         print(f"🧹 Rimozione soft socket {old_sid}")
         redis_client.srem(key, old_sid)
 
             except Exception as e:
                 print(f"Errore disconnect socket zombie {old_sid}: {e}")
-
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
