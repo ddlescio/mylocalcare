@@ -433,7 +433,7 @@ body {
 
       return s;
     }
-    
+
     let boundSocket = null;
 
     window.__chatHandlers = window.__chatHandlers || {};
@@ -1035,12 +1035,7 @@ body {
 
     if (!newSocket) return;
 
-    if (boundSocket && boundSocket.id === newSocket.id) {
-      console.log("⏭️ stessa socket → skip");
-      return;
-    }
-
-    console.log("♻️ NUOVA SOCKET rilevata → rebind chat", newSocket.id);
+    console.log("♻️ socket_ready → FORZO rebind chat", newSocket.id);
 
     bindChatSocket(newSocket);
   });
