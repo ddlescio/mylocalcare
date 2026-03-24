@@ -36,8 +36,9 @@ if (window.__socket_bootstrap_done__) {
 
   if (!window.socket) {
     window.socket = io({
-      transports: ["websocket"],
-      upgrade: false,
+      transports: ["polling", "websocket"],
+      upgrade: true,
+      rememberUpgrade: true,      
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
