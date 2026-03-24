@@ -8546,27 +8546,27 @@ def handle_connect(auth=None):
         for s in all_sockets
     ]
 
-    MAX_SOCKETS = 10  # desktop + pwa + eventuale transizione
+    MAX_SOCKETS = 3  # desktop + mobile + transizione
 
     if len(all_sockets) > MAX_SOCKETS:
         print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
 
-    for old_sid in all_sockets:
+        # ordina per mantenere le più recenti (approssimazione: tieni le ultime)
+        sockets_to_remove = all_sockets[:-MAX_SOCKETS]
 
-        if old_sid == sid:
-            continue
+        for old_sid in sockets_to_remove:
 
-        try:
-            print(f"🧹 Forzo disconnect socket {old_sid}")
+            if old_sid == sid:
+                continue
 
-            # 🔥 CHIUDI DAVVERO LA SOCKET
-            socketio.server.disconnect(old_sid, namespace="/")
+            try:
+                print(f"🧹 Rimuovo socket vecchia {old_sid}")
 
-            # poi pulizia redis
-            redis_client.srem(key, old_sid)
+                # ✅ NON disconnettere brutalmente → solo pulizia redis
+                redis_client.srem(key, old_sid)
 
-        except Exception as e:
-            print(f"Errore cleanup socket {old_sid}: {e}")
+            except Exception as e:
+                print(f"Errore cleanup socket {old_sid}: {e}")
 
     # -------------------------------------------------
     # join room utente
