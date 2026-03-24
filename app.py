@@ -8535,32 +8535,11 @@ def handle_connect(auth=None):
     # registra questa socket
     redis_client.sadd(key, sid)
 
-    # -------------------------------------------------
-    # cleanup SOLO socket zombie realmente inesistenti
-    # -------------------------------------------------
-    valid_sockets = []
-
-    try:
-        namespace_rooms = socketio.server.manager.rooms.get("/", {})
-
-        for raw_sid in redis_client.smembers(key):
-            saved_sid = raw_sid.decode() if isinstance(raw_sid, bytes) else raw_sid
-
-            # ogni sid viva ha la sua "private room" col proprio nome
-            if saved_sid in namespace_rooms:
-                valid_sockets.append(saved_sid)
-            else:
-                redis_client.srem(key, saved_sid)
-                print(f"🧹 Rimossa socket zombie {saved_sid}")
-
-    except Exception as e:
-        print(f"Errore cleanup socket registry utente {user_id}: {e}")
-
-        # fallback prudente: ricalcola dalla chiave redis senza cancellazioni aggressive
-        valid_sockets = [
-            s.decode() if isinstance(s, bytes) else s
-            for s in redis_client.smembers(key)
-        ]
+    # 🔥 lista socket attive (SENZA cleanup aggressivo)
+    valid_sockets = [
+        s.decode() if isinstance(s, bytes) else s
+        for s in redis_client.smembers(key)
+    ]
 
     # join room utente
     join_room(room, sid=sid)
@@ -8581,7 +8560,6 @@ def handle_connect(auth=None):
 
     except Exception as e:
         print("Errore invio unread count:", e)
-
 
 @socketio.on("disconnect")
 def handle_disconnect():
