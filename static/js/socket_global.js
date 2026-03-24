@@ -31,23 +31,9 @@ if (window.__socket_bootstrap_done__) {
 // 🔥 AUTO-CLOSE SOCKET FUORI CHAT
 // ===============================
 
-if (!window.__socket_auto_close_bound__) {
-  window.__socket_auto_close_bound__ = true;
-
-  // 🔥 CHIUSURA SOCKET SOLO SU NAVIGAZIONE REALE (NO Safari BUG)
-  window.addEventListener("beforeunload", () => {
-    const s = window.socket;
-    if (!s) return;
-
-    console.log("🛑 beforeunload → chiudo socket");
-
-    try {
-      s.disconnect();
-    } catch (e) {}
-
-    window.socket = null;
-    window.__socket_bootstrap_done__ = false;
-  });
+window.addEventListener("beforeunload", () => {
+  console.log("📄 beforeunload → NON chiudo socket (persistente)");
+});  
 }
 
   const socket = window.socket;
@@ -70,7 +56,7 @@ if (!window.__socket_auto_close_bound__) {
       window.__current_socket_id = socket.id;
 
       window.dispatchEvent(new Event("socket_ready"));
-    });    
+    });
 
     // 🔥 RILEVA SOCKET MORTE O SOSTITUITE
     socket.on("disconnect", (reason) => {
