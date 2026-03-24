@@ -101,8 +101,7 @@ if (window.__socket_bootstrap_done__) {
           console.log("🛠️ reconnect visibility");
 
           try {
-            s.disconnect();
-            setTimeout(() => s.connect(), 200);
+            s.connect();
           } catch (e) {
             console.warn("Errore reconnect visibilitychange:", e);
           }
@@ -125,8 +124,7 @@ if (window.__socket_bootstrap_done__) {
         console.log("📄 pageshow → reconnect");
 
         try {
-          s.disconnect();
-          setTimeout(() => s.connect(), 200);
+          s.connect();
         } catch (e) {
           console.warn("Errore reconnect pageshow:", e);
         }
@@ -147,8 +145,7 @@ if (window.__socket_bootstrap_done__) {
         console.log("🛠️ failsafe reconnect");
 
         try {
-          s.disconnect();
-          setTimeout(() => s.connect(), 200);
+          s.connect();
         } catch (e) {
           console.warn("Errore failsafe:", e);
         }
