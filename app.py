@@ -8546,7 +8546,7 @@ def handle_connect(auth=None):
         for s in all_sockets
     ]
 
-    MAX_SOCKETS = 3  # desktop + pwa + eventuale transizione
+    MAX_SOCKETS = 10  # desktop + pwa + eventuale transizione
 
     if len(all_sockets) > MAX_SOCKETS:
         print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
@@ -8555,20 +8555,17 @@ def handle_connect(auth=None):
 
         closed = 0
 
-        for old_sid in all_sockets:
+    for old_sid in all_sockets:
 
-            # 🔥 NON chiudere MAI quella appena connessa
-            if old_sid == sid:
-                continue
+        if old_sid == sid:
+            continue
 
-            if closed >= excess:
-                break
+        # 🔥 NON chiudere più socket lato server
+        # puliamo SOLO Redis (soft cleanup)
 
-            try:
-                #socketio.server.disconnect(old_sid, namespace="/")
-                print(f"🧹 Chiusa socket zombie {old_sid}")
-                redis_client.srem(key, old_sid)
-                closed += 1
+        print(f"🧹 Rimozione soft socket {old_sid}")
+        redis_client.srem(key, old_sid)
+
             except Exception as e:
                 print(f"Errore disconnect socket zombie {old_sid}: {e}")
 
