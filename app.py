@@ -8546,22 +8546,22 @@ def handle_connect(auth=None):
         for s in all_sockets
     ]
 
-MAX_SOCKETS = 10  # desktop + pwa + eventuale transizione
+    MAX_SOCKETS = 10  # desktop + pwa + eventuale transizione
 
-if len(all_sockets) > MAX_SOCKETS:
-    print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
+    if len(all_sockets) > MAX_SOCKETS:
+        print(f"⚠️ Troppe socket per utente {user_id}: {len(all_sockets)} -> cleanup")
 
-    for old_sid in all_sockets:
+        for old_sid in all_sockets:
 
-        if old_sid == sid:
-            continue
+            if old_sid == sid:
+                continue
 
-        try:
-            print(f"🧹 Rimozione soft socket {old_sid}")
-            redis_client.srem(key, old_sid)
+            try:
+                print(f"🧹 Rimozione soft socket {old_sid}")
+                redis_client.srem(key, old_sid)
 
-        except Exception as e:
-            print(f"Errore cleanup socket {old_sid}: {e}")                
+            except Exception as e:
+                print(f"Errore cleanup socket {old_sid}: {e}")
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
