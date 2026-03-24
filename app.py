@@ -8614,8 +8614,11 @@ def handle_disconnect():
 
         # 🔥 FIX FONDAMENTALE: pulizia immediata
         if remaining == 0:
-            redis_client.delete(key)  # ← QUESTA È LA CHIAVE DEL PROBLEMA
-            redis_client.srem("online_users", str(user_id))
+            print(f"🕐 Utente {user_id} senza socket → delay check")
+
+            disconnect_timers[user_id] = socketio.start_background_task(
+                remove_user_later, user_id
+            )
 
             print(f"🔴 Utente {user_id} OFFLINE")
 
@@ -8626,13 +8629,17 @@ def remove_user_later(user_id):
 
     socketio.sleep(30)
 
-    if redis_client.scard(f"user_sockets:{user_id}") == 0:
+    key = f"user_sockets:{user_id}"
 
+    if redis_client.scard(key) == 0:
+
+        redis_client.delete(key)   # 🔥 AGGIUNGI QUESTO
         redis_client.srem("online_users", str(user_id))
+
         print(f"🔴 Utente {user_id} OFFLINE")
 
     disconnect_timers.pop(user_id, None)
-
+    
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
