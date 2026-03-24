@@ -422,21 +422,9 @@ body {
 <script>
   document.addEventListener("DOMContentLoaded", () => {
 
-    function getCurrentSocket() {
-      const s = window.__active_socket || window.socket;
-
-      if (!s) {
-        console.warn("❌ Socket non disponibile");
-        return null;
-      }
-
-      return s;
-    }
-
-    let boundSocket = null;
-
     function getSocket() {
-      const s = boundSocket || window.__active_socket || window.socket;
+
+      const s = window.__active_socket || window.socket;
 
       if (!s) {
         console.warn("❌ Nessuna socket disponibile");
@@ -445,6 +433,7 @@ body {
 
       return s;
     }
+
 
     window.__chatHandlers = window.__chatHandlers || {};
 
@@ -637,7 +626,8 @@ body {
         newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
       }
 
-      boundSocket = newSocket;
+      window.__active_socket = newSocket;
+      boundSocket = newSocket; // puoi anche lasciarlo, ma NON deve essere usato da getSocket
 
       console.log("🔒 Chat bindata su socket:", newSocket.id);
 
@@ -879,7 +869,10 @@ body {
     // invia typing:true solo la prima volta
     if (!wasTyping) {
       wasTyping = true;
-      getSocket().emit("typing", { to: destId, typing: true });
+      const s = getSocket();
+      if (s && s.connected) {
+        s.emit("typing", { to: destId, typing: true });
+      }
     }
 
     // reset timeout
@@ -887,7 +880,10 @@ body {
 
     typingTimeout = setTimeout(() => {
       wasTyping = false;
-      getSocket().emit("typing", { to: destId, typing: false });
+      const s = getSocket();
+    if (s && s.connected) {
+      s.emit("typing", { to: destId, typing: false });
+    }
     }, 2000); // puoi abbassare a 1000ms se vuoi più reattività
   });
 
@@ -980,7 +976,7 @@ body {
 
     const s = getSocket();
 
-    if (!s) {
+    if (!s || !s.connected) {
       console.warn("❌ Socket non pronta → invio annullato");
       return;
     }

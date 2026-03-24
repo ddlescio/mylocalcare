@@ -8565,13 +8565,13 @@ def handle_connect(auth=None):
                 break
 
             try:
-                socketio.server.disconnect(old_sid, namespace="/")
+                #socketio.server.disconnect(old_sid, namespace="/")
                 print(f"🧹 Chiusa socket zombie {old_sid}")
                 redis_client.srem(key, old_sid)
                 closed += 1
             except Exception as e:
                 print(f"Errore disconnect socket zombie {old_sid}: {e}")
-            
+
     # -------------------------------------------------
     # join room utente
     # -------------------------------------------------
