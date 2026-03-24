@@ -14,6 +14,26 @@ if (window.__socket_bootstrap_done__) {
     console.log("♻️ Riutilizzo socket esistente");
   }
 
+  function detectDeviceType() {
+    try {
+      // PWA installata
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        return "pwa";
+      }
+
+      // Mobile browser
+      if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        return "mobile";
+      }
+
+      // Default desktop
+      return "desktop";
+
+    } catch (e) {
+      return "unknown";
+    }
+  }
+
   if (!window.socket) {
     window.socket = io({
       transports: ["websocket"],
@@ -21,7 +41,11 @@ if (window.__socket_bootstrap_done__) {
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
+
+      auth: {
+        device_type: detectDeviceType()
+      }
     });
 
     console.log("🟢 Nuova socket creata");
