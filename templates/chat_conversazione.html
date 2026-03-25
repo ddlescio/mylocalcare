@@ -424,7 +424,7 @@ body {
 
     function getSocket() {
 
-      const s = window.__active_socket || window.socket;
+      const s = window.socket; // 🔥 SEMPRE LA SOCKET REALE
 
       if (!s) {
         console.warn("❌ Nessuna socket disponibile");
@@ -433,7 +433,7 @@ body {
 
       return s;
     }
-
+    
     let boundSocket = null;
 
     window.__chatHandlers = window.__chatHandlers || {};
@@ -791,7 +791,7 @@ body {
         emitChatClosedOnce();
       } catch (e) {}
     };
-    
+
     // chiusura su navigazione interna tramite link
     window.__chatInternalNavHandlerRef = function (e) {
       const a = e.target.closest("a");
