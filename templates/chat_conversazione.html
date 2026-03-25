@@ -433,7 +433,7 @@ body {
 
       return s;
     }
-    
+
     let boundSocket = null;
 
     window.__chatHandlers = window.__chatHandlers || {};
@@ -1614,5 +1614,38 @@ async function initVideoSystem() {
 
   });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  function getSocket() {
+    return window.__active_socket || window.socket;
+  }
+
+  function sendVisibility() {
+    const s = getSocket();
+    if (!s || !s.connected) return;
+
+    const visible = document.visibilityState === "visible";
+
+    console.log("👁️ page_visible:", visible);
+
+    s.emit("page_visible", {
+      visible: visible
+    });
+  }
+
+  // 🔥 INVIA SUBITO
+  sendVisibility();
+
+  // 🔁 ogni cambio tab / app / PWA
+  document.addEventListener("visibilitychange", sendVisibility);
+
+  // 🔥 iOS FIX (fondamentale)
+  window.addEventListener("focus", sendVisibility);
+  window.addEventListener("blur", sendVisibility);
+
+});
+</script>
+
 </div>
 {% endblock %}
