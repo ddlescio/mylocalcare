@@ -773,12 +773,25 @@ body {
     };
 
     // chiusura su pagehide (fondamentale per PWA iOS/Android quando esci dalla pagina)
-    window.__chatPagehideHandlerRef = function () {
+    window.__chatPagehideHandlerRef = function (event) {
+
+      // 🔥 IGNORA bfcache (iOS PWA torna da cache)
+      if (event && event.persisted) {
+        console.log("⏭️ pagehide ignorato (bfcache)");
+        return;
+      }
+
+      // 🔥 IGNORA se la pagina NON sta davvero cambiando
+      if (document.visibilityState === "visible") {
+        console.log("⏭️ pagehide ignorato (pagina ancora visibile)");
+        return;
+      }
+
       try {
         emitChatClosedOnce();
       } catch (e) {}
     };
-
+    
     // chiusura su navigazione interna tramite link
     window.__chatInternalNavHandlerRef = function (e) {
       const a = e.target.closest("a");
