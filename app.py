@@ -8839,14 +8839,12 @@ def handle_send_message(data):
     # 🔔 PUSH SE LA CHAT NON È APERTA E PAGINA NON VISIBILE
     # =====================================
 
-    chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
-
-    # 🔥 fallback sicurezza: se utente NON ha socket attive → NON è in chat
+    # 🔥 controllo socket attive destinatario
     socket_key = f"user_sockets:{destinatario_id}"
     ha_socket = redis_client.scard(socket_key) > 0
 
-    # 🔥 push condition robusta
-    if chat_aperta != mittente_id or not ha_socket:
+    # 🔥 push SOLO se utente completamente offline
+    if not ha_socket:
 
         print(f"🔔 Push programmata per {destinatario_id}")
 
@@ -8856,7 +8854,7 @@ def handle_send_message(data):
             "Nuovo messaggio su LocalCare",
             testo[:100]
         )
-
+    
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
     """Registra quale chat è attualmente aperta da ciascun utente."""
