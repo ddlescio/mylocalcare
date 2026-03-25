@@ -8536,11 +8536,18 @@ def handle_connect(auth=None):
     redis_client.sadd(key, sid)
 
     # 🔥 lista socket attive (SENZA cleanup aggressivo)
-    valid_sockets = [
-        s.decode() if isinstance(s, bytes) else s
-        for s in redis_client.smembers(key)
-    ]
+    valid_sockets = []
 
+    for s in redis_client.smembers(key):
+        sid_str = s.decode() if isinstance(s, bytes) else s
+
+        # 🔥 verifica che la socket esista davvero
+        if sid_str in socketio.server.manager.rooms.get('/', {}):
+            valid_sockets.append(sid_str)
+        else:
+            print(f"🧹 socket zombie rimossa: {sid_str}")
+            redis_client.srem(key, sid_str)
+        
     # join room utente
     join_room(room, sid=sid)
 
@@ -8854,7 +8861,7 @@ def handle_send_message(data):
             "Nuovo messaggio su LocalCare",
             testo[:100]
         )
-        
+
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
     """Registra quale chat è attualmente aperta da ciascun utente."""
