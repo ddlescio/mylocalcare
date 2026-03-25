@@ -8840,9 +8840,13 @@ def handle_send_message(data):
     # =====================================
 
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
-    pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
 
-    if chat_aperta != mittente_id and not pagina_visibile:
+    # 🔥 fallback sicurezza: se utente NON ha socket attive → NON è in chat
+    socket_key = f"user_sockets:{destinatario_id}"
+    ha_socket = redis_client.scard(socket_key) > 0
+
+    # 🔥 push condition robusta
+    if chat_aperta != mittente_id or not ha_socket:
 
         print(f"🔔 Push programmata per {destinatario_id}")
 
