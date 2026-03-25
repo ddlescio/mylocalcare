@@ -8536,18 +8536,11 @@ def handle_connect(auth=None):
     redis_client.sadd(key, sid)
 
     # 🔥 lista socket attive (SENZA cleanup aggressivo)
-    valid_sockets = []
+    valid_sockets = [
+        s.decode() if isinstance(s, bytes) else s
+        for s in redis_client.smembers(key)
+    ]
 
-    for s in redis_client.smembers(key):
-        sid_str = s.decode() if isinstance(s, bytes) else s
-
-        # 🔥 verifica che la socket esista davvero
-        if sid_str in socketio.server.manager.rooms.get('/', {}):
-            valid_sockets.append(sid_str)
-        else:
-            print(f"🧹 socket zombie rimossa: {sid_str}")
-            redis_client.srem(key, sid_str)
-        
     # join room utente
     join_room(room, sid=sid)
 
@@ -8846,12 +8839,10 @@ def handle_send_message(data):
     # 🔔 PUSH SE LA CHAT NON È APERTA E PAGINA NON VISIBILE
     # =====================================
 
-    # 🔥 stato reale utente
     chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
-    pagina_visibile = pagina_attiva.get(destinatario_id, False)
+    pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
 
-    # 🔥 push SOLO se NON sta guardando la chat
-    if not pagina_visibile or chat_aperta != mittente_id:
+    if chat_aperta != mittente_id and not pagina_visibile:
 
         print(f"🔔 Push programmata per {destinatario_id}")
 

@@ -761,22 +761,50 @@ body {
     if (window.__chatPagehideHandlerRef) {
       window.removeEventListener("pagehide", window.__chatPagehideHandlerRef);
     }
-    if (window.__chatPageshowHandlerRef) {
-      window.removeEventListener("pageshow", window.__chatPageshowHandlerRef);
+    if (window.__chatInternalNavHandlerRef) {
+      document.removeEventListener("click", window.__chatInternalNavHandlerRef, true);
     }
 
-    // ✅ manteniamo SOLO beforeunload
+    // chiusura su unload classico
     window.__chatBeforeUnloadHandlerRef = function () {
       try {
         emitChatClosedOnce();
       } catch (e) {}
     };
 
-    // ✅ disattivati: su Safari/iOS stanno chiudendo la chat appena aperta
-    window.__chatPagehideHandlerRef = null;
-    window.__chatPageshowHandlerRef = null;
+    // chiusura su pagehide (fondamentale per PWA iOS/Android quando esci dalla pagina)
+    window.__chatPagehideHandlerRef = function () {
+      try {
+        emitChatClosedOnce();
+      } catch (e) {}
+    };
+
+    // chiusura su navigazione interna tramite link
+    window.__chatInternalNavHandlerRef = function (e) {
+      const a = e.target.closest("a");
+      if (!a) return;
+
+      const href = a.getAttribute("href");
+      if (!href) return;
+
+      // ignora anchor locali, javascript, target blank e link esterni
+      if (
+        href.startsWith("#") ||
+        href.startsWith("javascript:") ||
+        a.target === "_blank" ||
+        (a.origin && a.origin !== window.location.origin)
+      ) {
+        return;
+      }
+
+      try {
+        emitChatClosedOnce();
+      } catch (e) {}
+    };
 
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
+    window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
+    document.addEventListener("click", window.__chatInternalNavHandlerRef, true);
 
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
@@ -1614,38 +1642,5 @@ async function initVideoSystem() {
 
   });
 </script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-
-  function getSocket() {
-    return window.__active_socket || window.socket;
-  }
-
-  function sendVisibility() {
-    const s = getSocket();
-    if (!s || !s.connected) return;
-
-    const visible = document.visibilityState === "visible";
-
-    console.log("👁️ page_visible:", visible);
-
-    s.emit("page_visible", {
-      visible: visible
-    });
-  }
-
-  // 🔥 INVIA SUBITO
-  sendVisibility();
-
-  // 🔁 ogni cambio tab / app / PWA
-  document.addEventListener("visibilitychange", sendVisibility);
-
-  // 🔥 iOS FIX (fondamentale)
-  window.addEventListener("focus", sendVisibility);
-  window.addEventListener("blur", sendVisibility);
-
-});
-</script>
-
 </div>
 {% endblock %}
