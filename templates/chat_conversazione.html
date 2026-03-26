@@ -433,7 +433,7 @@ body {
 
       return s;
     }
-    
+
     let boundSocket = null;
 
     window.__chatHandlers = window.__chatHandlers || {};
@@ -1018,9 +1018,14 @@ body {
 
     const s = getSocket();
 
-    if (!s || !s.connected) {
-      console.warn("❌ Socket non pronta → invio annullato");
+    if (!s) {
+      console.warn("❌ Socket non disponibile");
       return;
+    }
+
+    // ⚠️ NON bloccare più l'invio
+    if (!s.connected) {
+      console.warn("⚠️ Socket non connessa (probabile reconnect) → invio comunque");
     }
 
     sending = true;
