@@ -51,11 +51,27 @@ if (window.__socket_bootstrap_done__) {
   if (!socket._baseListenersBound) {
     socket._baseListenersBound = true;
 
+    const emitHeartbeat = () => {
+      const s = window.socket;
+      if (!s || !s.connected) return;
+
+      try {
+        s.emit("socket_heartbeat");
+      } catch (e) {
+        console.warn("Errore emit socket_heartbeat:", e);
+      }
+    };
+
+    window.__emitSocketHeartbeat = emitHeartbeat;
+
     socket.on("connect", () => {
       console.log("🔌 socket connected:", socket.id);
 
       window.__active_socket = socket;
       window.__current_socket_id = socket.id;
+
+      // 🔥 heartbeat immediato all'aggancio
+      emitHeartbeat();
 
       window.dispatchEvent(new Event("socket_ready"));
     });
@@ -83,6 +99,17 @@ if (window.__socket_bootstrap_done__) {
 
     s.once("connect", () => callback(s));
   };
+
+  // ===============================
+// HEARTBEAT REDIS MULTI-WORKER
+// ===============================
+if (!window.__socket_heartbeat_interval__) {
+  window.__socket_heartbeat_interval__ = setInterval(() => {
+    if (typeof window.__emitSocketHeartbeat === "function") {
+      window.__emitSocketHeartbeat();
+    }
+  }, 20000);
+}
 
   // ===============================
   // FIX iOS / PWA RESUME

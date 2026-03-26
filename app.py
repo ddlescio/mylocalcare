@@ -8508,6 +8508,86 @@ def video_ping():
 # =====================================================
 # 📞 CHIAMATA IN ARRIVO
 # =====================================================
+# ==========================================================
+# 🔌 SOCKET TRACKING REDIS MULTI-WORKER
+# ==========================================================
+
+SOCKET_TTL_SECONDS = 75   # heartbeat ogni 20s -> TTL largo e sicuro
+
+
+def _socket_user_set_key(user_id):
+    return f"user_sockets:{user_id}"
+
+
+def _socket_sid_key(sid):
+    return f"socket_sid:{sid}"
+
+
+def _decode_redis_value(value):
+    if isinstance(value, bytes):
+        return value.decode()
+    return value
+
+
+def _get_user_id_from_sid(sid):
+    raw = redis_client.hget(_socket_sid_key(sid), "user_id")
+    if not raw:
+        return None
+    try:
+        return int(_decode_redis_value(raw))
+    except Exception:
+        return None
+
+
+def _touch_socket_sid(user_id, sid):
+    """
+    Registra/aggiorna il SID nel set utente
+    e aggiorna la chiave Redis del SID con TTL.
+    """
+    now_ts = int(time.time())
+
+    pipe = redis_client.pipeline()
+    pipe.sadd(_socket_user_set_key(user_id), sid)
+    pipe.hset(_socket_sid_key(sid), mapping={
+        "user_id": str(user_id),
+        "last_seen": str(now_ts)
+    })
+    pipe.expire(_socket_sid_key(sid), SOCKET_TTL_SECONDS)
+    pipe.execute()
+
+
+def _remove_socket_sid(user_id, sid):
+    """
+    Rimuove un SID sia dal set utente sia dalla chiave singola SID.
+    """
+    pipe = redis_client.pipeline()
+    pipe.srem(_socket_user_set_key(user_id), sid)
+    pipe.delete(_socket_sid_key(sid))
+    pipe.execute()
+
+
+def _cleanup_user_socket_set(user_id):
+    """
+    Pulisce dal set utente tutti i SID che non hanno più
+    la relativa chiave Redis socket_sid:{sid}.
+    Ritorna il numero reale di SID vivi.
+    """
+    key = _socket_user_set_key(user_id)
+    raw_sids = redis_client.smembers(key)
+
+    alive = 0
+
+    for raw_sid in raw_sids:
+        sid = _decode_redis_value(raw_sid)
+
+        if redis_client.exists(_socket_sid_key(sid)):
+            alive += 1
+        else:
+            redis_client.srem(key, sid)
+            print(f"🧹 Rimosso SID zombie {sid} da utente {user_id}")
+
+    return alive
+
 
 @socketio.on("connect")
 def handle_connect(auth=None):
@@ -8519,7 +8599,6 @@ def handle_connect(auth=None):
 
     sid = request.sid
     room = f"user_{user_id}"
-    key = f"user_sockets:{user_id}"
 
     # 🔥 annulla eventuale timer di disconnessione
     task = disconnect_timers.pop(user_id, None)
@@ -8532,16 +8611,16 @@ def handle_connect(auth=None):
     # segna utente online
     redis_client.sadd("online_users", str(user_id))
 
-    # registra questa socket
-    redis_client.sadd(key, sid)
+    # registra/aggiorna SID con TTL
+    _touch_socket_sid(user_id, sid)
 
     # join room utente
     join_room(room, sid=sid)
 
-    # conta socket (senza cleanup!)
-    count = redis_client.scard(key)
+    # cleanup zombie basato su Redis condiviso
+    count = _cleanup_user_socket_set(user_id)
 
-    print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
+    print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi reali: {count}")
 
     # invio contatore messaggi non letti
     try:
@@ -8556,17 +8635,28 @@ def handle_connect(auth=None):
     except Exception as e:
         print("Errore invio unread count:", e)
 
+@socketio.on("socket_heartbeat")
+def handle_socket_heartbeat():
+    from flask import session, request
+
+    user_id = session.get("utente_id")
+    sid = request.sid
+
+    if not user_id or not sid:
+        return
+
+    _touch_socket_sid(user_id, sid)
 
 @socketio.on("disconnect")
 def handle_disconnect():
     from flask import session, request
 
-    user_id = session.get("utente_id")
-    if not user_id:
-        return
-
     sid = request.sid
-    key = f"user_sockets:{user_id}"
+    user_id = session.get("utente_id") or _get_user_id_from_sid(sid)
+
+    if not user_id:
+        print(f"⚠️ Disconnect senza user_id per SID {sid}")
+        return
 
     try:
         leave_room(f"user_{user_id}", sid=sid)
@@ -8574,16 +8664,24 @@ def handle_disconnect():
         pass
 
     try:
-        # 🔥 rimuovi SOLO questa socket
-        redis_client.srem(key, sid)
+        # rimuove SOLO questa socket
+        _remove_socket_sid(user_id, sid)
 
-        remaining = redis_client.scard(key)
+        # cleanup zombie basato su chiavi SID con TTL
+        remaining = _cleanup_user_socket_set(user_id)
 
-        print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
+        print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
 
         # se nessuna socket → delay
         if remaining == 0:
             print(f"🕐 Utente {user_id} senza socket → delay check")
+
+            old_task = disconnect_timers.pop(user_id, None)
+            if old_task:
+                try:
+                    old_task.kill()
+                except Exception:
+                    pass
 
             disconnect_timers[user_id] = socketio.start_background_task(
                 remove_user_later, user_id
@@ -8592,25 +8690,23 @@ def handle_disconnect():
     except Exception as e:
         print("Errore disconnect:", e)
 
-
 def remove_user_later(user_id):
 
     socketio.sleep(30)
 
-    key = f"user_sockets:{user_id}"
-
-    remaining = redis_client.scard(key)
+    # cleanup zombie prima del check finale
+    remaining = _cleanup_user_socket_set(user_id)
 
     if remaining == 0:
-        redis_client.delete(key)
+        redis_client.delete(_socket_user_set_key(user_id))
         redis_client.srem("online_users", str(user_id))
 
         print(f"🔴 Utente {user_id} OFFLINE (cleanup delayed)")
     else:
-        print(f"⏭️ Utente {user_id} ancora attivo ({remaining} socket)")
+        print(f"⏭️ Utente {user_id} ancora attivo ({remaining} socket reali)")
 
     disconnect_timers.pop(user_id, None)
-    
+        
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
