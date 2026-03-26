@@ -24,12 +24,14 @@ if (window.__socket_bootstrap_done__) {
   if (!window.socket) {
 
     window.socket = io({
-      transports: ["websocket"],   // 🔥 SOLO websocket
-      upgrade: false,              // 🔥 NO upgrade polling
+      transports: ["websocket", "polling"],
+      upgrade: true,
       withCredentials: true,
 
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
       reconnectionDelay: 1000,
 
       auth: {
@@ -78,6 +80,24 @@ if (window.__socket_bootstrap_done__) {
 
     socket.on("disconnect", (reason) => {
       console.log("🔌 socket disconnected:", reason);
+
+      if (
+        reason === "transport close" ||
+        reason === "ping timeout" ||
+        reason === "transport error"
+      ) {
+        console.log("🛠️ reconnect forzato post-disconnect");
+
+        setTimeout(() => {
+          if (!socket.connected && socket.active !== false) {
+            try {
+              socket.connect();
+            } catch (e) {
+              console.warn("Errore reconnect:", e);
+            }
+          }
+        }, 1000);
+      }
     });
 
     socket.on("connect_error", (err) => {
