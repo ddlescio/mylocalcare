@@ -424,16 +424,16 @@ body {
 
     function getSocket() {
 
-      const s = window.socket; // 🔥 SEMPRE LA SOCKET REALE
+      // 🔥 PRIORITÀ alla socket realmente attiva
+      const s = window.__active_socket || window.socket;
 
-      if (!s) {
-        console.warn("❌ Nessuna socket disponibile");
+      if (!s || !s.connected) {
         return null;
       }
 
       return s;
     }
-
+    
     let boundSocket = null;
 
     window.__chatHandlers = window.__chatHandlers || {};
@@ -466,7 +466,7 @@ body {
       let chatClosedEmitted = false;
       let chatOpenedOnce = false;
 
-      waitSocket();   // 🔥 QUI, NON SOPRA      
+      waitSocket();   // 🔥 QUI, NON SOPRA
 
     function emitChatOpened() {
 
