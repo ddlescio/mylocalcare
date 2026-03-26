@@ -438,17 +438,6 @@ body {
 
     window.__chatHandlers = window.__chatHandlers || {};
 
-    const waitSocket = () => {
-      const s = getSocket();
-
-      if (s) {
-        console.log("🟢 Socket disponibile → init chat");
-        initSocketEvents();
-        return;
-      }
-
-      setTimeout(waitSocket, 50);
-    };
 
       console.log("🟢 Init chat socket listeners");
       const meId = parseInt("{{ g.utente['id'] }}", 10);
@@ -466,7 +455,6 @@ body {
       let chatClosedEmitted = false;
       let chatOpenedOnce = false;
 
-      waitSocket();   // 🔥 QUI, NON SOPRA
 
     function emitChatOpened() {
 
@@ -585,10 +573,6 @@ body {
 
     console.log("🟢 Chat inizializzata", { meId, destId });
 
-    function initSocketEvents() {
-      console.log("🟢 Socket pronto");
-      emitChatOpened();
-    }
 
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
