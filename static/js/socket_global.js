@@ -27,16 +27,13 @@ if (!window.__socket_bootstrap_done__) {
   // ===============================
   // SOCKET CREAZIONE / RIUSO
   // ===============================
-  if (!window.socket || window.socket.disconnected) {
+  if (!window.socket) {
 
     // 🔥 blocco creazione doppia socket
     if (window.__socket_creating__) {
       console.log("🚫 socket già in creazione → skip");
     } else {
       window.__socket_creating__ = true;
-
-      // 🔥 reset socket zombie (fondamentale Safari/PWA)
-      window.socket = null;
 
       window.socket = io({
         transports: ["websocket", "polling"],
@@ -158,7 +155,7 @@ if (!window.__socket_bootstrap_done__) {
             }, 1000);
           }
         });
-        
+
         socket.on("connect_error", (err) => {
           console.warn("⚠️ socket connect_error:", err?.message || err);
         });
