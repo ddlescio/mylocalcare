@@ -8535,7 +8535,6 @@ def handle_connect(auth=None):
     # registra questa socket
     redis_client.sadd(key, sid)
 
-    # 🔥 lista socket attive (SENZA cleanup aggressivo)
     # 🔥 CLEANUP SOCKET MORTE
     raw_sockets = redis_client.smembers(key)
 
@@ -8544,8 +8543,12 @@ def handle_connect(auth=None):
     for s in raw_sockets:
         sid_check = s.decode() if isinstance(s, bytes) else s
 
-        # verifica se la socket esiste ancora
-        if sid_check in socketio.server.manager.rooms.get('/', {}):
+        try:
+            is_alive = socketio.server.manager.is_connected(sid_check, '/')
+        except Exception:
+            is_alive = False
+
+        if is_alive:
             valid_sockets.append(sid_check)
         else:
             print(f"🧹 Rimuovo socket zombie: {sid_check}")
@@ -8597,13 +8600,20 @@ def handle_disconnect():
 
         for s in raw_sockets:
             sid_check = s.decode() if isinstance(s, bytes) else s
-            if sid_check in socketio.server.manager.rooms.get('/', {}):
+
+            try:
+                is_alive = socketio.server.manager.is_connected(sid_check, '/')
+            except Exception:
+                is_alive = False
+
+            if is_alive:
                 alive += 1
             else:
+                print(f"🧹 Rimuovo socket zombie in disconnect: {sid_check}")
                 redis_client.srem(key, sid_check)
 
         remaining = alive
-
+        
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
 
         # 🔥 FIX FONDAMENTALE: pulizia immediata
