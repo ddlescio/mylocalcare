@@ -33,8 +33,7 @@ if (window.__socket_bootstrap_done__) {
       // 🔥 blocco creazione doppia socket
       if (window.__socket_creating__) {
         console.log("🚫 socket già in creazione → skip");
-        return;
-      }
+      } else {
 
       window.__socket_creating__ = true;
 
@@ -61,7 +60,8 @@ if (window.__socket_bootstrap_done__) {
     console.log("🟢 Nuova socket creata");
     window.__socket_creating__ = false;
     }
-    
+  }
+
   } else {
     console.log("♻️ Riutilizzo socket esistente");
 
