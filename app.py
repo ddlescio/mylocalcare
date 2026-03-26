@@ -8667,7 +8667,13 @@ def handle_disconnect():
     from flask import session, request
 
     sid = request.sid
-    user_id = session.get("utente_id") or _get_user_id_from_sid(sid)
+
+    # 🔥 PRIMA recupera SEMPRE da Redis (fonte reale)
+    user_id = _get_user_id_from_sid(sid)
+
+    # fallback session solo se serve
+    if not user_id:
+        user_id = session.get("utente_id")
 
     if not user_id:
         print(f"⚠️ Disconnect senza user_id per SID {sid}")
@@ -8679,15 +8685,26 @@ def handle_disconnect():
         pass
 
     try:
-        # rimuove SOLO questa socket
-        _remove_socket_sid(user_id, sid)
+        # ===============================
+        # 🔥 FIX CRITICO: NON cancellare subito il SID
+        # ===============================
 
-        # cleanup zombie basato su chiavi SID con TTL
+        # rimuovi dal set utente
+        redis_client.srem(_socket_user_set_key(user_id), sid)
+
+        # NON cancellare subito → lascia TTL
+        redis_client.expire(_socket_sid_key(sid), 5)
+
+        # ===============================
+        # cleanup zombie basato su Redis
+        # ===============================
         remaining = _cleanup_user_socket_set(user_id)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
 
-        # se nessuna socket → schedula controllo delayed con token Redis condiviso
+        # ===============================
+        # delay offline check
+        # ===============================
         if remaining == 0:
             print(f"🕐 Utente {user_id} senza socket → delay check")
 
@@ -8699,7 +8716,7 @@ def handle_disconnect():
 
     except Exception as e:
         print("Errore disconnect:", e)
-
+        
 def remove_user_later(user_id, offline_token):
 
     socketio.sleep(30)
@@ -8728,7 +8745,7 @@ def remove_user_later(user_id, offline_token):
         print(f"🔴 Utente {user_id} OFFLINE (cleanup delayed)")
     else:
         print(f"⏭️ Utente {user_id} ancora attivo ({remaining} socket reali)")
-                
+
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
