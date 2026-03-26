@@ -60,15 +60,26 @@ if (window.__socket_bootstrap_done__) {
 
     console.log("🟢 Nuova socket creata");
     window.__socket_creating__ = false;
-
+    }
+    
   } else {
     console.log("♻️ Riutilizzo socket esistente");
 
     // 🔥 evita reconnect mentre sta già creando
     if (window.__socket_creating__) {
-      console.log("🚫 skip reconnect: socket in creazione");
-      return;
-    }
+      console.log("🚫 socket già in creazione → skip CREAZIONE ma continuo init");
+
+      // 🔥 NON uscire dal file → aspetta la socket esistente
+      const waitForSocket = () => {
+        if (window.socket) {
+          console.log("⏳ socket disponibile dopo creazione");
+          return;
+        }
+        setTimeout(waitForSocket, 50);
+      };
+
+      waitForSocket();
+    } else {
 
     if (!window.socket.connected && !window.socket.connecting) {
       try {
