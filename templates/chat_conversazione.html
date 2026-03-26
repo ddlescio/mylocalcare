@@ -465,10 +465,9 @@ body {
       const destId = parseInt(document.getElementById('destinatario_id').value, 10);
       window.__activeChat = destId;
 
-    let chatClosedEmitted = false;
-
-    let chatOpenedOnce = false;
-
+      let chatClosedEmitted = false;
+      let chatOpenedOnce = false;
+      
     function emitChatOpened() {
 
       if (chatOpenedOnce) {
