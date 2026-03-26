@@ -93,7 +93,7 @@ if (window.__socket_bootstrap_done__) {
     } // ← CHIUDE l'else interno (window.__socket_creating__)
 
     const socket = window.socket;
-    
+
   // 🔥 evita duplicazione init su pagine diverse
   if (socket.__initialized__) {
     console.log("⚠️ socket già inizializzata (skip listeners)");
@@ -262,5 +262,6 @@ if (!window.__socket_heartbeat_interval__) {
   window.addEventListener("beforeunload", () => {
     console.log("📄 beforeunload → socket lasciata viva");
   });
-}
-}
+
+    } // chiude socket.__initialized__
+  } // chiude ELSE principale (bootstrap)
