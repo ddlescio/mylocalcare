@@ -6,6 +6,13 @@ if (window.__socket_bootstrap_done__) {
   window.__socket_bootstrap_done__ = true;
 
   // ===============================
+  // CLIENT ID STABILE (FIX iOS PWA)
+  // ===============================
+  if (!localStorage.getItem("client_id")) {
+    localStorage.setItem("client_id", crypto.randomUUID());
+  }
+
+  // ===============================
   // DEVICE TYPE
   // ===============================
   function detectDeviceType() {
@@ -39,7 +46,8 @@ if (window.__socket_bootstrap_done__) {
         reconnectionDelay: 1000,
 
         auth: {
-          device_type: detectDeviceType()
+          device_type: detectDeviceType(),
+          client_id: localStorage.getItem("client_id")
         }
       });
 

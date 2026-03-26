@@ -8522,6 +8522,26 @@ def _socket_user_set_key(user_id):
 def _socket_sid_key(sid):
     return f"socket_sid:{sid}"
 
+def _socket_offline_token_key(user_id):
+    return f"user_offline_token:{user_id}"
+
+
+def _bump_offline_token(user_id):
+    """
+    Incrementa un token Redis condiviso tra worker.
+    Serve a invalidare i vecchi task delayed creati da altri worker.
+    """
+    return int(redis_client.incr(_socket_offline_token_key(user_id)))
+
+
+def _get_offline_token(user_id):
+    raw = redis_client.get(_socket_offline_token_key(user_id))
+    if not raw:
+        return 0
+    try:
+        return int(_decode_redis_value(raw))
+    except Exception:
+        return 0
 
 def _decode_redis_value(value):
     if isinstance(value, bytes):
@@ -8600,13 +8620,8 @@ def handle_connect(auth=None):
     sid = request.sid
     room = f"user_{user_id}"
 
-    # 🔥 annulla eventuale timer di disconnessione
-    task = disconnect_timers.pop(user_id, None)
-    if task:
-        try:
-            task.kill()
-        except Exception:
-            pass
+    # 🔥 invalida eventuali delayed-offline task creati da QUALSIASI worker
+    _bump_offline_token(user_id)
 
     # segna utente online
     redis_client.sadd("online_users", str(user_id))
@@ -8672,30 +8687,39 @@ def handle_disconnect():
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
 
-        # se nessuna socket → delay
+        # se nessuna socket → schedula controllo delayed con token Redis condiviso
         if remaining == 0:
             print(f"🕐 Utente {user_id} senza socket → delay check")
 
-            old_task = disconnect_timers.pop(user_id, None)
-            if old_task:
-                try:
-                    old_task.kill()
-                except Exception:
-                    pass
+            offline_token = _bump_offline_token(user_id)
 
-            disconnect_timers[user_id] = socketio.start_background_task(
-                remove_user_later, user_id
+            socketio.start_background_task(
+                remove_user_later, user_id, offline_token
             )
 
     except Exception as e:
         print("Errore disconnect:", e)
 
-def remove_user_later(user_id):
+def remove_user_later(user_id, offline_token):
 
     socketio.sleep(30)
 
+    # se nel frattempo c'è stata una nuova connect/disconnect,
+    # questo task è vecchio e va ignorato
+    current_token = _get_offline_token(user_id)
+
+    if current_token != offline_token:
+        print(f"⏭️ Skip offline stale per utente {user_id} (token vecchio)")
+        return
+
     # cleanup zombie prima del check finale
     remaining = _cleanup_user_socket_set(user_id)
+
+    # ricontrollo token dopo cleanup
+    current_token = _get_offline_token(user_id)
+    if current_token != offline_token:
+        print(f"⏭️ Skip offline stale post-cleanup per utente {user_id}")
+        return
 
     if remaining == 0:
         redis_client.delete(_socket_user_set_key(user_id))
@@ -8704,9 +8728,7 @@ def remove_user_later(user_id):
         print(f"🔴 Utente {user_id} OFFLINE (cleanup delayed)")
     else:
         print(f"⏭️ Utente {user_id} ancora attivo ({remaining} socket reali)")
-
-    disconnect_timers.pop(user_id, None)
-        
+                
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
