@@ -438,9 +438,19 @@ body {
 
     window.__chatHandlers = window.__chatHandlers || {};
 
-      if (!getSocket()) {
-        console.warn("Socket non ancora pronta, continuo comunque...");
+    const waitSocket = () => {
+      const s = getSocket();
+
+      if (s) {
+        console.log("🟢 Socket disponibile → init chat");
+        initSocketEvents();
+        return;
       }
+
+      setTimeout(waitSocket, 50);
+    };
+
+    waitSocket();
 
       console.log("🟢 Init chat socket listeners");
       const meId = parseInt("{{ g.utente['id'] }}", 10);

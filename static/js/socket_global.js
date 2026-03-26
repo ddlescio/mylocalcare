@@ -263,5 +263,6 @@ if (!window.__socket_heartbeat_interval__) {
     console.log("📄 beforeunload → socket lasciata viva");
   });
 
-    } // chiude socket.__initialized__
-  } // chiude ELSE principale (bootstrap)
+} // chiude socket.__initialized__
+} // chiude ELSE principale (bootstrap)
+} // 🔥 QUESTA MANCAVA
