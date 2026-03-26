@@ -59,7 +59,7 @@ if (window.__socket_bootstrap_done__) {
 
     console.log("🟢 Nuova socket creata");
     window.__socket_creating__ = false;
-    }
+
   }
 
   } else {
@@ -81,17 +81,19 @@ if (window.__socket_bootstrap_done__) {
       waitForSocket();
     } else {
 
-    if (!window.socket.connected && !window.socket.connecting) {
-      try {
-        window.socket.connect();
-        console.log("🔁 reconnect socket esistente");
-      } catch (e) {
-        console.warn("Errore reconnect socket:", e);
+      if (!window.socket.connected && !window.socket.connecting) {
+        try {
+          window.socket.connect();
+          console.log("🔁 reconnect socket esistente");
+        } catch (e) {
+          console.warn("Errore reconnect socket:", e);
+        }
       }
-    }
-  }
-  const socket = window.socket;
 
+    } // ← CHIUDE l'else interno (window.__socket_creating__)
+
+    const socket = window.socket;
+    
   // 🔥 evita duplicazione init su pagine diverse
   if (socket.__initialized__) {
     console.log("⚠️ socket già inizializzata (skip listeners)");
