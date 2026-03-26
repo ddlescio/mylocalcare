@@ -134,6 +134,12 @@ if (!window.__socket_bootstrap_done__) {
         socket.on("disconnect", (reason) => {
           console.log("🔌 socket disconnected:", reason);
 
+          // 🔥 NON reconnectare se è chiusura volontaria (cambio pagina)
+          if (reason === "io client disconnect") {
+            console.log("⛔ disconnect volontario → no reconnect");
+            return;
+          }
+
           if (
             reason === "transport close" ||
             reason === "ping timeout" ||
@@ -152,7 +158,7 @@ if (!window.__socket_bootstrap_done__) {
             }, 1000);
           }
         });
-
+        
         socket.on("connect_error", (err) => {
           console.warn("⚠️ socket connect_error:", err?.message || err);
         });
@@ -257,7 +263,18 @@ if (!window.__socket_bootstrap_done__) {
       // NON chiudere socket
       // ===============================
       window.addEventListener("beforeunload", () => {
-        console.log("📄 beforeunload → socket lasciata viva");
+        const s = window.socket;
+
+        if (s) {
+          try {
+            console.log("🔌 Chiusura socket per cambio pagina");
+            s.disconnect();
+          } catch (e) {
+            console.warn("Errore disconnect:", e);
+          }
+        }
+
+        window.socket = null;
       });
     }
   }
