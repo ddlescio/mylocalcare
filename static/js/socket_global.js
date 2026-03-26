@@ -21,25 +21,31 @@ if (window.__socket_bootstrap_done__) {
   // ===============================
   // SOCKET CREAZIONE (UNA SOLA)
   // ===============================
-  if (!window.socket) {
+  if (!window.socket || window.socket.disconnected) {
 
-    window.socket = io({
-      transports: ["websocket", "polling"],
-      upgrade: true,
-      withCredentials: true,
+    if (window.socket && window.socket.connected) {
+      console.log("⚠️ Socket già attiva → NON ne creo un'altra");
+    } else {
 
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      reconnectionDelay: 1000,
+      window.socket = io({
+        transports: ["websocket", "polling"],
+        upgrade: true,
+        withCredentials: true,
 
-      auth: {
-        device_type: detectDeviceType()
-      }
-    });
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        reconnectionDelay: 1000,
 
-    console.log("🟢 Nuova socket creata");
+        auth: {
+          device_type: detectDeviceType()
+        }
+      });
+
+      console.log("🟢 Nuova socket creata");
+
+    }
 
   } else {
     console.log("♻️ Riutilizzo socket esistente");
