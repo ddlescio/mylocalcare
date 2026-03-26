@@ -28,9 +28,20 @@ if (window.__socket_bootstrap_done__) {
   // ===============================
   // SOCKET CREAZIONE (UNA SOLA)
   // ===============================
-  if (!window.socket) {
+  if (!window.socket || window.socket.disconnected) {
 
-    window.socket = io({
+      // 🔥 blocco creazione doppia socket
+      if (window.__socket_creating__) {
+        console.log("🚫 socket già in creazione → skip");
+        return;
+      }
+
+      window.__socket_creating__ = true;
+
+      // 🔥 reset socket zombie (fondamentale Safari/PWA)
+      window.socket = null;
+
+      window.socket = io({
       transports: ["websocket", "polling"],
       upgrade: true,
       withCredentials: true,
@@ -48,11 +59,17 @@ if (window.__socket_bootstrap_done__) {
     });
 
     console.log("🟢 Nuova socket creata");
+    window.__socket_creating__ = false;
 
   } else {
     console.log("♻️ Riutilizzo socket esistente");
 
-    // 🔥 se esiste ma è disconnessa → NON crearla, riconnettila
+    // 🔥 evita reconnect mentre sta già creando
+    if (window.__socket_creating__) {
+      console.log("🚫 skip reconnect: socket in creazione");
+      return;
+    }
+
     if (!window.socket.connected && !window.socket.connecting) {
       try {
         window.socket.connect();
