@@ -450,8 +450,6 @@ body {
       setTimeout(waitSocket, 50);
     };
 
-    waitSocket();
-
       console.log("🟢 Init chat socket listeners");
       const meId = parseInt("{{ g.utente['id'] }}", 10);
       const wrap = document.getElementById('msgWrap');
@@ -467,7 +465,9 @@ body {
 
       let chatClosedEmitted = false;
       let chatOpenedOnce = false;
-      
+
+      waitSocket();   // 🔥 QUI, NON SOPRA      
+
     function emitChatOpened() {
 
       if (chatOpenedOnce) {
