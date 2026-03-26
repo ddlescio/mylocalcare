@@ -8521,7 +8521,7 @@ def handle_connect(auth=None):
     room = f"user_{user_id}"
     key = f"user_sockets:{user_id}"
 
-    # annulla eventuale timer di disconnessione
+    # 🔥 annulla eventuale timer di disconnessione
     task = disconnect_timers.pop(user_id, None)
     if task:
         try:
@@ -8535,29 +8535,11 @@ def handle_connect(auth=None):
     # registra questa socket
     redis_client.sadd(key, sid)
 
-    # 🔥 CLEANUP SOCKET MORTE
-    raw_sockets = redis_client.smembers(key)
-
-    valid_sockets = []
-
-    for s in raw_sockets:
-        sid_check = s.decode() if isinstance(s, bytes) else s
-
-        try:
-            is_alive = socketio.server.manager.is_connected(sid_check, '/')
-        except Exception:
-            is_alive = False
-
-        if is_alive:
-            valid_sockets.append(sid_check)
-        else:
-            print(f"🧹 Rimuovo socket zombie: {sid_check}")
-            redis_client.srem(key, sid_check)
-
     # join room utente
     join_room(room, sid=sid)
 
-    count = len(valid_sockets)
+    # conta socket (senza cleanup!)
+    count = redis_client.scard(key)
 
     print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi: {count}")
 
@@ -8573,6 +8555,7 @@ def handle_connect(auth=None):
 
     except Exception as e:
         print("Errore invio unread count:", e)
+
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8591,32 +8574,14 @@ def handle_disconnect():
         pass
 
     try:
-        # rimuovi SID
+        # 🔥 rimuovi SOLO questa socket
         redis_client.srem(key, sid)
 
-        raw_sockets = redis_client.smembers(key)
+        remaining = redis_client.scard(key)
 
-        alive = 0
-
-        for s in raw_sockets:
-            sid_check = s.decode() if isinstance(s, bytes) else s
-
-            try:
-                is_alive = socketio.server.manager.is_connected(sid_check, '/')
-            except Exception:
-                is_alive = False
-
-            if is_alive:
-                alive += 1
-            else:
-                print(f"🧹 Rimuovo socket zombie in disconnect: {sid_check}")
-                redis_client.srem(key, sid_check)
-
-        remaining = alive
-        
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste: {remaining}")
 
-        # 🔥 FIX FONDAMENTALE: pulizia immediata
+        # se nessuna socket → delay
         if remaining == 0:
             print(f"🕐 Utente {user_id} senza socket → delay check")
 
@@ -8624,10 +8589,9 @@ def handle_disconnect():
                 remove_user_later, user_id
             )
 
-            print(f"🔴 Utente {user_id} OFFLINE")
-
     except Exception as e:
         print("Errore disconnect:", e)
+
 
 def remove_user_later(user_id):
 
@@ -8635,15 +8599,18 @@ def remove_user_later(user_id):
 
     key = f"user_sockets:{user_id}"
 
-    if redis_client.scard(key) == 0:
+    remaining = redis_client.scard(key)
 
-        redis_client.delete(key)   # 🔥 AGGIUNGI QUESTO
+    if remaining == 0:
+        redis_client.delete(key)
         redis_client.srem("online_users", str(user_id))
 
-        print(f"🔴 Utente {user_id} OFFLINE")
+        print(f"🔴 Utente {user_id} OFFLINE (cleanup delayed)")
+    else:
+        print(f"⏭️ Utente {user_id} ancora attivo ({remaining} socket)")
 
     disconnect_timers.pop(user_id, None)
-
+    
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
     room_name = data.get("room")
