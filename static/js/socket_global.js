@@ -28,38 +28,47 @@ if (window.__socket_bootstrap_done__) {
   // ===============================
   // SOCKET CREAZIONE (UNA SOLA)
   // ===============================
-  if (!window.socket || window.socket.disconnected) {
+  if (!window.socket) {
 
-    if (window.socket && window.socket.connected) {
-      console.log("⚠️ Socket già attiva → NON ne creo un'altra");
-    } else {
+    window.socket = io({
+      transports: ["websocket", "polling"],
+      upgrade: true,
+      withCredentials: true,
 
-      window.socket = io({
-        transports: ["websocket", "polling"],
-        upgrade: true,
-        withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      reconnectionDelay: 1000,
 
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
-        reconnectionDelay: 1000,
+      auth: {
+        device_type: detectDeviceType(),
+        client_id: localStorage.getItem("client_id")
+      }
+    });
 
-        auth: {
-          device_type: detectDeviceType(),
-          client_id: localStorage.getItem("client_id")
-        }
-      });
-
-      console.log("🟢 Nuova socket creata");
-
-    }
+    console.log("🟢 Nuova socket creata");
 
   } else {
     console.log("♻️ Riutilizzo socket esistente");
-  }
 
+    // 🔥 se esiste ma è disconnessa → NON crearla, riconnettila
+    if (!window.socket.connected && !window.socket.connecting) {
+      try {
+        window.socket.connect();
+        console.log("🔁 reconnect socket esistente");
+      } catch (e) {
+        console.warn("Errore reconnect socket:", e);
+      }
+    }
+  }
   const socket = window.socket;
+
+  // 🔥 evita duplicazione init su pagine diverse
+  if (socket.__initialized__) {
+    console.log("⚠️ socket già inizializzata (skip listeners)");
+  } else {
+    socket.__initialized__ = true;
 
   // ===============================
   // BASE LISTENERS (UNA SOLA VOLTA)
@@ -200,16 +209,19 @@ if (!window.__socket_heartbeat_interval__) {
     window.__socket_failsafe_interval__ = setInterval(() => {
       const s = window.socket;
       if (!s) return;
+
+      // 🔥 evita reconnect inutili mentre la pagina sta cambiando
       if (document.visibilityState !== "visible") return;
 
-      if (!s.connected) {
-        console.log("🛠️ failsafe reconnect");
+      // 🔥 evita reconnect mentre è già in connecting
+      if (s.connected || s.connecting) return;
 
-        try {
-          s.connect();
-        } catch (e) {
-          console.warn("Errore failsafe:", e);
-        }
+      console.log("🛠️ failsafe reconnect");
+
+      try {
+        s.connect();
+      } catch (e) {
+        console.warn("Errore failsafe:", e);
       }
     }, 15000);
   }
@@ -220,4 +232,5 @@ if (!window.__socket_heartbeat_interval__) {
   window.addEventListener("beforeunload", () => {
     console.log("📄 beforeunload → socket lasciata viva");
   });
+}
 }
