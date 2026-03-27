@@ -8522,6 +8522,9 @@ def _socket_user_set_key(user_id):
 def _socket_sid_key(sid):
     return f"socket_sid:{sid}"
 
+def _socket_client_key(user_id, client_id):
+    return f"user_socket_client:{user_id}:{client_id}"
+
 def _socket_offline_token_key(user_id):
     return f"user_offline_token:{user_id}"
 
@@ -8558,23 +8561,46 @@ def _get_user_id_from_sid(sid):
     except Exception:
         return None
 
+def _get_client_id_from_sid(sid):
+    raw = redis_client.hget(_socket_sid_key(sid), "client_id")
+    if not raw:
+        return None
 
-def _touch_socket_sid(user_id, sid):
+    value = _decode_redis_value(raw).strip()
+    return value or None
+
+def _touch_socket_sid(user_id, sid, client_id=None):
     """
-    Registra/aggiorna il SID nel set utente
-    e aggiorna la chiave Redis del SID con TTL.
+    Registra/aggiorna il SID.
+    Se client_id presente → mantiene UN SOLO SID per quel client.
     """
     now_ts = int(time.time())
+    user_set_key = _socket_user_set_key(user_id)
 
     pipe = redis_client.pipeline()
-    pipe.sadd(_socket_user_set_key(user_id), sid)
+
+    if client_id:
+        client_key = _socket_client_key(user_id, client_id)
+        old_sid_raw = redis_client.get(client_key)
+        old_sid = _decode_redis_value(old_sid_raw) if old_sid_raw else None
+
+        if old_sid and old_sid != sid:
+            pipe.srem(user_set_key, old_sid)
+            pipe.delete(_socket_sid_key(old_sid))
+
+        pipe.set(client_key, sid, ex=SOCKET_TTL_SECONDS)
+
+    pipe.sadd(user_set_key, sid)
+
     pipe.hset(_socket_sid_key(sid), mapping={
         "user_id": str(user_id),
+        "client_id": client_id or "",
         "last_seen": str(now_ts)
     })
-    pipe.expire(_socket_sid_key(sid), SOCKET_TTL_SECONDS)
-    pipe.execute()
 
+    pipe.expire(_socket_sid_key(sid), SOCKET_TTL_SECONDS)
+
+    pipe.execute()
 
 def _remove_socket_sid(user_id, sid):
     """
@@ -8622,14 +8648,18 @@ def handle_connect(auth=None):
     sid = request.sid
     room = f"user_{user_id}"
 
+    # 🔥 PRENDI client_id DAL FRONTEND
+    client_id = None
+    if isinstance(auth, dict):
+        client_id = (auth.get("client_id") or "").strip() or None
+
     # 🔥 invalida eventuali delayed-offline task creati da QUALSIASI worker
     _bump_offline_token(user_id)
 
     # segna utente online
     redis_client.sadd("online_users", str(user_id))
 
-    # registra/aggiorna SID con TTL
-    _touch_socket_sid(user_id, sid)
+    _touch_socket_sid(user_id, sid, client_id=client_id)
 
     # join room utente
     join_room(room, sid=sid)
@@ -8662,7 +8692,8 @@ def handle_socket_heartbeat():
     if not user_id or not sid:
         return
 
-    _touch_socket_sid(user_id, sid)
+    client_id = _get_client_id_from_sid(sid)
+    _touch_socket_sid(user_id, sid, client_id=client_id)
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -8688,9 +8719,18 @@ def handle_disconnect():
 
     try:
         # 🔥 RIMUOVI SUBITO SID
+        client_id = _get_client_id_from_sid(sid)
+
+        if client_id:
+            client_key = _socket_client_key(user_id, client_id)
+            mapped_sid_raw = redis_client.get(client_key)
+            mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
+
+            if mapped_sid == sid:
+                redis_client.delete(client_key)
+
         _remove_socket_sid(user_id, sid)
 
-        # cleanup reale
         remaining = _cleanup_user_socket_set(user_id)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
