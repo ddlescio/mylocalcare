@@ -29,6 +29,7 @@ if (window.__socket_heartbeat_interval__) {
 
 window.__active_socket = null;
 window.socket = null;
+}
 
   // ===============================
   // CLIENT ID STABILE (FIX iOS PWA)
