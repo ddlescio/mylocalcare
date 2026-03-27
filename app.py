@@ -8687,24 +8687,15 @@ def handle_disconnect():
         pass
 
     try:
-        # ===============================
-        # 🔥 FIX CRITICO: NON cancellare subito il SID
-        # ===============================
+        # 🔥 RIMUOVI SUBITO SID
+        _remove_socket_sid(user_id, sid)
 
-
-        # NON cancellare subito → lascia TTL
-        redis_client.expire(_socket_sid_key(sid), 10)
-
-        # ===============================
-        # cleanup zombie basato su Redis
-        # ===============================
+        # cleanup reale
         remaining = _cleanup_user_socket_set(user_id)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
 
-        # ===============================
-        # delay offline check
-        # ===============================
+        # delay offline SOLO se davvero zero
         if remaining <= 0:
             print(f"🕐 Utente {user_id} senza socket → delay check")
 
