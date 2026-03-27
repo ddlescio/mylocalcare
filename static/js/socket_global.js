@@ -4,35 +4,6 @@ if (!window.__socket_bootstrap_done__) {
   window.__socket_bootstrap_done__ = true;
 }
 
-window.__socket_should_stay_closed__ = false;
-
-if (window.__socket_should_stay_closed__ === undefined) {
-  window.__socket_should_stay_closed__ = false;
-}
-
-function closeSocketForNavigation() {
-const s = window.socket;
-
-window.__socket_should_stay_closed__ = true;
-
-if (s) {
-  try {
-    console.log("🔌 Chiusura socket volontaria per navigazione");
-    s.disconnect();
-  } catch (e) {
-    console.warn("Errore disconnect volontario:", e);
-  }
-}
-
-if (window.__socket_heartbeat_interval__) {
-  clearInterval(window.__socket_heartbeat_interval__);
-  window.__socket_heartbeat_interval__ = null;
-}
-
-window.__active_socket = null;
-window.socket = null;
-}
-
   // ===============================
   // CLIENT ID STABILE (FIX iOS PWA)
   // ===============================
@@ -163,7 +134,6 @@ window.socket = null;
       socket.on("disconnect", (reason) => {
         console.log("🔌 socket disconnected:", reason);
 
-        if (window.__socket_should_stay_closed__) return;
         if (reason === "io client disconnect") return;
 
         if (
@@ -172,7 +142,6 @@ window.socket = null;
           reason === "transport error"
         ) {
           setTimeout(() => {
-            if (window.__socket_should_stay_closed__) return;
 
             if (!socket.connected) {
               try {
@@ -224,9 +193,6 @@ window.socket = null;
           const s = window.socket;
           if (!s) return;
 
-          if (window.__socket_should_stay_closed__) {
-            return;
-          }
 
           if (document.visibilityState === "visible") {
             console.log("👀 App tornata visibile");
@@ -255,10 +221,6 @@ window.socket = null;
           const s = window.socket;
           if (!s) return;
 
-          if (window.__socket_should_stay_closed__) {
-            return;
-          }
-
           if (event.persisted && !s.connected) {
             console.log("📄 pageshow → reconnect");
 
@@ -279,7 +241,6 @@ window.socket = null;
           const s = window.socket;
           if (!s) return;
 
-          if (window.__socket_should_stay_closed__) return;
           if (document.visibilityState !== "visible") return;
           if (s.connected || s.connecting) return;
 
@@ -293,14 +254,4 @@ window.socket = null;
         }, 15000);
       }
 
-      // ===============================
-      // NON chiudere socket
-      // ===============================
-      window.addEventListener("pagehide", () => {
-        closeSocketForNavigation();
-      });
-
-      window.addEventListener("beforeunload", () => {
-        closeSocketForNavigation();
-      });
     }
