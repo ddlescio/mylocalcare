@@ -121,22 +121,8 @@ if (!window.__socket_bootstrap_done__) {
 
         if (reason === "io client disconnect") return;
 
-        if (
-          reason === "transport close" ||
-          reason === "ping timeout" ||
-          reason === "transport error"
-        ) {
-          setTimeout(() => {
-
-            if (!socket.connected) {
-              try {
-                socket.connect();
-              } catch (e) {
-                console.warn("Errore reconnect:", e);
-              }
-            }
-          }, 1000);
-        }
+        // ❌ NON forzare reconnect manuale
+        // Socket.IO gestisce già tutto automaticamente
       });
 
       socket.on("connect_error", (err) => {
@@ -192,7 +178,7 @@ if (!window.__socket_bootstrap_done__) {
           if (document.visibilityState === "visible") {
             console.log("👀 App tornata visibile");
 
-            if (!s.connected) {
+            if (!s.connected && !s.connecting) {
               console.log("🛠️ reconnect visibility");
 
               try {
@@ -216,7 +202,7 @@ if (!window.__socket_bootstrap_done__) {
           const s = window.socket;
           if (!s) return;
 
-          if (event.persisted && !s.connected) {
+          if (event.persisted && !s.connected && !s.connecting) {
             console.log("📄 pageshow → reconnect");
 
             try {
@@ -228,26 +214,6 @@ if (!window.__socket_bootstrap_done__) {
         });
       }
 
-      // ===============================
-      // FAILSAFE
-      // ===============================
-      if (!window.__socket_failsafe_interval__) {
-        window.__socket_failsafe_interval__ = setInterval(() => {
-          const s = window.socket;
-          if (!s) return;
-
-          if (document.visibilityState !== "visible") return;
-          if (s.connected || s.connecting) return;
-
-          console.log("🛠️ failsafe reconnect");
-
-          try {
-            s.connect();
-          } catch (e) {
-            console.warn("Errore failsafe:", e);
-          }
-        }, 15000);
-      }
 
     }
 
