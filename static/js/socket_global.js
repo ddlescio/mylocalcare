@@ -4,6 +4,32 @@ if (!window.__socket_bootstrap_done__) {
   window.__socket_bootstrap_done__ = true;
 }
 
+if (window.__socket_should_stay_closed__ === undefined) {
+  window.__socket_should_stay_closed__ = false;
+}
+
+function closeSocketForNavigation() {
+const s = window.socket;
+
+window.__socket_should_stay_closed__ = true;
+
+if (s) {
+  try {
+    console.log("🔌 Chiusura socket volontaria per navigazione");
+    s.disconnect();
+  } catch (e) {
+    console.warn("Errore disconnect volontario:", e);
+  }
+}
+
+if (window.__socket_heartbeat_interval__) {
+  clearInterval(window.__socket_heartbeat_interval__);
+  window.__socket_heartbeat_interval__ = null;
+}
+
+window.__active_socket = null;
+window.socket = null;
+
   // ===============================
   // CLIENT ID STABILE (FIX iOS PWA)
   // ===============================
@@ -104,6 +130,8 @@ if (!window.__socket_bootstrap_done__) {
       if (!socket._baseListenersBound) {
         socket._baseListenersBound = true;
 
+
+
         const emitHeartbeat = () => {
           const s = window.socket;
           if (!s || !s.connected) return;
@@ -131,7 +159,11 @@ if (!window.__socket_bootstrap_done__) {
         socket.on("disconnect", (reason) => {
           console.log("🔌 socket disconnected:", reason);
 
-          // 🔥 NON reconnectare se è chiusura volontaria (cambio pagina)
+          if (window.__socket_should_stay_closed__) {
+            console.log("⛔ socket marcata come chiusa volontariamente → no reconnect");
+            return;
+          }
+
           if (reason === "io client disconnect") {
             console.log("⛔ disconnect volontario → no reconnect");
             return;
@@ -145,6 +177,11 @@ if (!window.__socket_bootstrap_done__) {
             console.log("🛠️ reconnect forzato post-disconnect");
 
             setTimeout(() => {
+              if (window.__socket_should_stay_closed__) {
+                console.log("⛔ reconnect annullato: socket chiusa volontariamente");
+                return;
+              }
+
               if (!socket.connected && socket.active !== false) {
                 try {
                   socket.connect();
@@ -197,6 +234,10 @@ if (!window.__socket_bootstrap_done__) {
           const s = window.socket;
           if (!s) return;
 
+          if (window.__socket_should_stay_closed__) {
+            return;
+          }
+
           if (document.visibilityState === "visible") {
             console.log("👀 App tornata visibile");
 
@@ -211,6 +252,7 @@ if (!window.__socket_bootstrap_done__) {
             }
           }
         });
+
       }
 
       // ===============================
@@ -222,6 +264,10 @@ if (!window.__socket_bootstrap_done__) {
         window.addEventListener("pageshow", (event) => {
           const s = window.socket;
           if (!s) return;
+
+          if (window.__socket_should_stay_closed__) {
+            return;
+          }
 
           if (event.persisted && !s.connected) {
             console.log("📄 pageshow → reconnect");
@@ -243,6 +289,7 @@ if (!window.__socket_bootstrap_done__) {
           const s = window.socket;
           if (!s) return;
 
+          if (window.__socket_should_stay_closed__) return;
           if (document.visibilityState !== "visible") return;
           if (s.connected || s.connecting) return;
 
@@ -259,19 +306,12 @@ if (!window.__socket_bootstrap_done__) {
       // ===============================
       // NON chiudere socket
       // ===============================
+      window.addEventListener("pagehide", () => {
+        closeSocketForNavigation();
+      });
+
       window.addEventListener("beforeunload", () => {
-        const s = window.socket;
-
-        if (s) {
-          try {
-            console.log("🔌 Chiusura socket per cambio pagina");
-            s.disconnect();
-          } catch (e) {
-            console.warn("Errore disconnect:", e);
-          }
-        }
-
-        window.socket = null;
+        closeSocketForNavigation();
       });
     }
   }
