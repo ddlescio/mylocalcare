@@ -27,76 +27,40 @@ if (!window.__socket_bootstrap_done__) {
   // ===============================
   // SOCKET CREAZIONE / RIUSO
   // ===============================
-  if (!window.socket || window.socket.disconnected) {
+  // ===============================
+  // SOCKET CREAZIONE / RIUSO (FIX DEFINITIVO)
+  // ===============================
+  if (!window.socket) {
 
-    // ===============================
-    // 🔥 FIX CRITICO: distruggi SEMPRE eventuale socket precedente
-    // ===============================
-    if (window.socket) {
-      try {
-        console.log("💣 distruggo socket precedente");
+    console.log("🆕 Creo socket UNA VOLTA");
 
-        window.socket.off();
-        window.socket.disconnect();
+    window.socket = io({
+      transports: ["websocket", "polling"],
+      upgrade: true,
+      withCredentials: true,
 
-      } catch (e) {
-        console.warn("Errore distruzione socket:", e);
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      reconnectionDelay: 1000,
+
+      auth: {
+        device_type: detectDeviceType(),
+        client_id: localStorage.getItem("client_id")
       }
-
-      window.socket = null;
-    }
-
-    // 🔥 blocco creazione doppia socket
-    if (window.__socket_creating__) {
-      console.log("🚫 socket già in creazione → skip");
-    } else {
-      window.__socket_creating__ = true;
-
-      window.socket = io({
-        transports: ["websocket", "polling"],
-        upgrade: true,
-        withCredentials: true,
-
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
-        reconnectionDelay: 1000,
-
-        auth: {
-          device_type: detectDeviceType(),
-          client_id: localStorage.getItem("client_id")
-        }
-      });
-
-      console.log("🟢 Nuova socket creata");
-      window.__socket_creating__ = false;
-    }
+    });
 
   } else {
 
     console.log("♻️ Riutilizzo socket esistente");
 
-    if (window.__socket_creating__) {
-      console.log("🚫 socket già in creazione → skip CREAZIONE ma continuo init");
-
-      const waitForSocket = () => {
-        if (window.socket) {
-          console.log("⏳ socket disponibile dopo creazione");
-          return;
-        }
-        setTimeout(waitForSocket, 50);
-      };
-
-      waitForSocket();
-    } else {
-      if (!window.socket.connected) {
-        try {
-          window.socket.connect();
-          console.log("🔁 reconnect socket esistente");
-        } catch (e) {
-          console.warn("Errore reconnect socket:", e);
-        }
+    if (!window.socket.connected && !window.socket.connecting) {
+      try {
+        window.socket.connect();
+        console.log("🔁 reconnect socket");
+      } catch (e) {
+        console.warn("Errore reconnect:", e);
       }
     }
   }
@@ -106,37 +70,40 @@ if (!window.__socket_bootstrap_done__) {
   // ===============================
   const socket = window.socket;
 
+  // 🔥 SEMPRE DEFINITO
+  const emitHeartbeat = () => {
+    const s = window.socket;
+    if (!s || !s.connected) return;
+
+    try {
+      s.emit("socket_heartbeat");
+    } catch (e) {
+      console.warn("Errore emit socket_heartbeat:", e);
+    }
+  };
+
+  window.__emitSocketHeartbeat = emitHeartbeat;
+
+
   if (!socket) {
     console.warn("❌ Socket assente dopo bootstrap");
   } else {
 
+    if (!window.__base_socket_listeners__) {
+      window.__base_socket_listeners__ = true;
+
+      console.log("🧠 init listener UNA SOLA VOLTA");
+
     // 🔥 evita duplicazione init su pagine diverse
     // SEMPRE inizializza listener sulla socket attuale
-    console.log("🆕 init base socket listeners (sempre su nuova socket)");
 
       // ===============================
       // BASE LISTENERS (UNA SOLA VOLTA)
       // ===============================
-      // 🔥 RESET LISTENER per evitare duplicati e garantire rebind
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("connect_error");
 
       // ===============================
       // BASE LISTENERS (SEMPRE)
       // ===============================
-      const emitHeartbeat = () => {
-        const s = window.socket;
-        if (!s || !s.connected) return;
-
-        try {
-          s.emit("socket_heartbeat");
-        } catch (e) {
-          console.warn("Errore emit socket_heartbeat:", e);
-        }
-      };
-
-      window.__emitSocketHeartbeat = emitHeartbeat;
 
       socket.on("connect", () => {
         console.log("🔌 socket connected:", socket.id);
@@ -175,11 +142,14 @@ if (!window.__socket_bootstrap_done__) {
       socket.on("connect_error", (err) => {
         console.warn("⚠️ socket connect_error:", err?.message || err);
       });
+    }
       // ===============================
       // UTILITY
       // ===============================
       window.whenSocketReady = function (callback) {
-        const s = window.__active_socket || window.socket;
+        const getSocket = () => window.socket;
+
+        const s = getSocket();
         if (!s) return;
 
         if (s.connected) {
@@ -187,7 +157,14 @@ if (!window.__socket_bootstrap_done__) {
           return;
         }
 
-        s.once("connect", () => callback(s));
+        const handler = () => {
+          const latest = getSocket();
+          if (latest && latest.connected) {
+            callback(latest);
+          }
+        };
+
+        s.once("connect", handler);
       };
 
       // ===============================
@@ -288,9 +265,6 @@ if (!window.__socket_bootstrap_done__) {
       });
 
       window.addEventListener("pagehide", () => {
-        if (window.socket && window.socket.connected) {
-          console.log("🧹 disconnect pagehide");
-          window.socket.disconnect();
-        }
+        console.log("📄 pagehide → NON disconnetto (PWA safe)");
       });
     }
