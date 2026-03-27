@@ -8600,7 +8600,9 @@ def _cleanup_user_socket_set(user_id):
     for raw_sid in raw_sids:
         sid = _decode_redis_value(raw_sid)
 
-        if redis_client.exists(_socket_sid_key(sid)):
+        ttl = redis_client.ttl(_socket_sid_key(sid))
+
+        if ttl and ttl > 0:
             alive += 1
         else:
             redis_client.srem(key, sid)
@@ -8689,11 +8691,9 @@ def handle_disconnect():
         # 🔥 FIX CRITICO: NON cancellare subito il SID
         # ===============================
 
-        # rimuovi dal set utente
-        redis_client.srem(_socket_user_set_key(user_id), sid)
 
         # NON cancellare subito → lascia TTL
-        redis_client.expire(_socket_sid_key(sid), 5)
+        redis_client.expire(_socket_sid_key(sid), 25)
 
         # ===============================
         # cleanup zombie basato su Redis
@@ -8705,7 +8705,7 @@ def handle_disconnect():
         # ===============================
         # delay offline check
         # ===============================
-        if remaining == 0:
+        if remaining <= 0:
             print(f"🕐 Utente {user_id} senza socket → delay check")
 
             offline_token = _bump_offline_token(user_id)
@@ -8716,7 +8716,7 @@ def handle_disconnect():
 
     except Exception as e:
         print("Errore disconnect:", e)
-        
+
 def remove_user_later(user_id, offline_token):
 
     socketio.sleep(30)
