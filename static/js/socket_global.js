@@ -111,7 +111,7 @@ window.socket = null;
       }
     }
   }
-  
+
   // ===============================
   // DA QUI IN POI: INIT COMUNE
   // ===============================
@@ -304,4 +304,3 @@ window.socket = null;
         closeSocketForNavigation();
       });
     }
-  }
