@@ -4,6 +4,8 @@ if (!window.__socket_bootstrap_done__) {
   window.__socket_bootstrap_done__ = true;
 }
 
+window.__socket_should_stay_closed__ = false;
+
 if (window.__socket_should_stay_closed__ === undefined) {
   window.__socket_should_stay_closed__ = false;
 }
@@ -99,7 +101,7 @@ window.socket = null;
 
       waitForSocket();
     } else {
-      if (!window.socket.connected && !window.socket.connecting) {
+      if (!window.socket.connected) {
         try {
           window.socket.connect();
           console.log("🔁 reconnect socket esistente");
@@ -109,7 +111,7 @@ window.socket = null;
       }
     }
   }
-
+  
   // ===============================
   // DA QUI IN POI: INIT COMUNE
   // ===============================
@@ -120,85 +122,72 @@ window.socket = null;
   } else {
 
     // 🔥 evita duplicazione init su pagine diverse
-    if (!socket.__initialized__) {
-      socket.__initialized__ = true;
-
-      console.log("🆕 init base socket listeners");
+    // SEMPRE inizializza listener sulla socket attuale
+    console.log("🆕 init base socket listeners (sempre su nuova socket)");
 
       // ===============================
       // BASE LISTENERS (UNA SOLA VOLTA)
       // ===============================
-      if (!socket._baseListenersBound) {
-        socket._baseListenersBound = true;
+      // 🔥 RESET LISTENER per evitare duplicati e garantire rebind
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
 
+      // ===============================
+      // BASE LISTENERS (SEMPRE)
+      // ===============================
+      const emitHeartbeat = () => {
+        const s = window.socket;
+        if (!s || !s.connected) return;
 
+        try {
+          s.emit("socket_heartbeat");
+        } catch (e) {
+          console.warn("Errore emit socket_heartbeat:", e);
+        }
+      };
 
-        const emitHeartbeat = () => {
-          const s = window.socket;
-          if (!s || !s.connected) return;
+      window.__emitSocketHeartbeat = emitHeartbeat;
 
-          try {
-            s.emit("socket_heartbeat");
-          } catch (e) {
-            console.warn("Errore emit socket_heartbeat:", e);
-          }
-        };
+      socket.on("connect", () => {
+        console.log("🔌 socket connected:", socket.id);
 
-        window.__emitSocketHeartbeat = emitHeartbeat;
+        window.__active_socket = socket;
+        window.__current_socket_id = socket.id;
 
-        socket.on("connect", () => {
-          console.log("🔌 socket connected:", socket.id);
+        emitHeartbeat();
 
-          window.__active_socket = socket;
-          window.__current_socket_id = socket.id;
+        window.dispatchEvent(new Event("socket_ready"));
+      });
 
-          emitHeartbeat();
+      socket.on("disconnect", (reason) => {
+        console.log("🔌 socket disconnected:", reason);
 
-          window.dispatchEvent(new Event("socket_ready"));
-        });
+        if (window.__socket_should_stay_closed__) return;
+        if (reason === "io client disconnect") return;
 
-        socket.on("disconnect", (reason) => {
-          console.log("🔌 socket disconnected:", reason);
+        if (
+          reason === "transport close" ||
+          reason === "ping timeout" ||
+          reason === "transport error"
+        ) {
+          setTimeout(() => {
+            if (window.__socket_should_stay_closed__) return;
 
-          if (window.__socket_should_stay_closed__) {
-            console.log("⛔ socket marcata come chiusa volontariamente → no reconnect");
-            return;
-          }
-
-          if (reason === "io client disconnect") {
-            console.log("⛔ disconnect volontario → no reconnect");
-            return;
-          }
-
-          if (
-            reason === "transport close" ||
-            reason === "ping timeout" ||
-            reason === "transport error"
-          ) {
-            console.log("🛠️ reconnect forzato post-disconnect");
-
-            setTimeout(() => {
-              if (window.__socket_should_stay_closed__) {
-                console.log("⛔ reconnect annullato: socket chiusa volontariamente");
-                return;
+            if (!socket.connected) {
+              try {
+                socket.connect();
+              } catch (e) {
+                console.warn("Errore reconnect:", e);
               }
+            }
+          }, 1000);
+        }
+      });
 
-              if (!socket.connected && socket.active !== false) {
-                try {
-                  socket.connect();
-                } catch (e) {
-                  console.warn("Errore reconnect:", e);
-                }
-              }
-            }, 1000);
-          }
-        });
-
-        socket.on("connect_error", (err) => {
-          console.warn("⚠️ socket connect_error:", err?.message || err);
-        });
-      }
-
+      socket.on("connect_error", (err) => {
+        console.warn("⚠️ socket connect_error:", err?.message || err);
+      });
       // ===============================
       // UTILITY
       // ===============================
