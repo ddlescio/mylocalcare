@@ -8693,7 +8693,7 @@ def handle_disconnect():
 
 
         # NON cancellare subito → lascia TTL
-        redis_client.expire(_socket_sid_key(sid), 25)
+        redis_client.expire(_socket_sid_key(sid), 10)
 
         # ===============================
         # cleanup zombie basato su Redis

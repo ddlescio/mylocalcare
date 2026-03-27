@@ -27,7 +27,24 @@ if (!window.__socket_bootstrap_done__) {
   // ===============================
   // SOCKET CREAZIONE / RIUSO
   // ===============================
-  if (!window.socket) {
+  if (!window.socket || window.socket.disconnected) {
+
+    // ===============================
+    // 🔥 FIX CRITICO: distruggi SEMPRE eventuale socket precedente
+    // ===============================
+    if (window.socket) {
+      try {
+        console.log("💣 distruggo socket precedente");
+
+        window.socket.off();
+        window.socket.disconnect();
+
+      } catch (e) {
+        console.warn("Errore distruzione socket:", e);
+      }
+
+      window.socket = null;
+    }
 
     // 🔥 blocco creazione doppia socket
     if (window.__socket_creating__) {
@@ -57,6 +74,7 @@ if (!window.__socket_bootstrap_done__) {
     }
 
   } else {
+
     console.log("♻️ Riutilizzo socket esistente");
 
     if (window.__socket_creating__) {
@@ -254,4 +272,25 @@ if (!window.__socket_bootstrap_done__) {
         }, 15000);
       }
 
+    }
+
+    // ===============================
+    // CLEAN DISCONNECT ON PAGE EXIT
+    // ===============================
+    if (!window.__socket_cleanup_bound__) {
+      window.__socket_cleanup_bound__ = true;
+
+      window.addEventListener("beforeunload", () => {
+        if (window.socket && window.socket.connected) {
+          console.log("🧹 disconnect beforeunload");
+          window.socket.disconnect();
+        }
+      });
+
+      window.addEventListener("pagehide", () => {
+        if (window.socket && window.socket.connected) {
+          console.log("🧹 disconnect pagehide");
+          window.socket.disconnect();
+        }
+      });
     }
