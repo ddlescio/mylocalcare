@@ -257,12 +257,6 @@ if (!window.__socket_bootstrap_done__) {
     if (!window.__socket_cleanup_bound__) {
       window.__socket_cleanup_bound__ = true;
 
-      window.addEventListener("beforeunload", () => {
-        if (window.socket && window.socket.connected) {
-          console.log("🧹 disconnect beforeunload");
-          window.socket.disconnect();
-        }
-      });
 
       window.addEventListener("pagehide", () => {
         console.log("📄 pagehide → NON disconnetto (PWA safe)");
