@@ -8567,7 +8567,11 @@ def _get_client_id_from_sid(sid):
         return None
 
     value = _decode_redis_value(raw).strip()
-    return value or None
+
+    if not value or value == "__NONE__":
+        return None
+
+    return value
 
 def _touch_socket_sid(user_id, sid, client_id=None):
     """
@@ -8594,7 +8598,7 @@ def _touch_socket_sid(user_id, sid, client_id=None):
 
     pipe.hset(_socket_sid_key(sid), mapping={
         "user_id": str(user_id),
-        "client_id": client_id or "",
+        "client_id": client_id if client_id else "__NONE__",
         "last_seen": str(now_ts)
     })
 
