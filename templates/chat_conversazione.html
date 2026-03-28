@@ -423,7 +423,7 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
 
     function getSocket() {
-      return window.socket || null;
+      return window.__active_socket || window.socket || null;
     }
 
     let boundSocket = null;
@@ -1068,11 +1068,8 @@ body {
       bindChatSocket(s);
     });
   }
+initChatBinding();
 
-  // 🔥 avvio UNA SOLA VOLTA
-  document.addEventListener("DOMContentLoaded", () => {
-    initChatBinding();
-  });
 });
 </script>
 <script>
