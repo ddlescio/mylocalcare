@@ -1038,37 +1038,32 @@ body {
   // 🔁 BIND CHAT SU SOCKET ATTUALE + REBIND SE CAMBIA
   // --------------------------------------------------
 
-  function initChatBinding() {
+  function bindWhenReady() {
     const s = getSocket();
 
-    if (!s) {
-      console.warn("❌ Socket non disponibile");
+    if (!s) return;
+
+    if (s.connected) {
+      console.log("⚡ Socket già connessa → bind immediato");
+      bindChatSocket(s);
       return;
     }
 
-    console.log("🔗 Init chat binding su socket:", s.id);
-
-    bindChatSocket(s);
-  }
-
-  if (window.whenSocketReady) {
-
-    whenSocketReady((socket) => {
-      console.log("✅ Socket pronta → init chat binding");
-      bindChatSocket(socket);
-    });
-
-  } else {
-
-    const s = getSocket();
-
-    if (s && s.connected) {
+    console.log("⏳ Attendo connect per bind chat");
+    s.once("connect", () => {
       bindChatSocket(s);
-    } else if (s) {
-      s.once("connect", () => bindChatSocket(s));
-    }
-
+    });
   }
+
+  // 🔥 1. bind subito
+  bindWhenReady();
+
+  // 🔥 2. bind anche se arriva socket_ready dopo
+  window.addEventListener("socket_ready", () => {
+    console.log("📡 socket_ready ricevuto → rebind");
+    bindWhenReady();
+  });
+
 });
 </script>
 <script>
