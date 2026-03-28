@@ -25,16 +25,15 @@ if (!window.__socket_bootstrap_done__) {
   }
 
   // ===============================
-  // SOCKET CREAZIONE / RIUSO
+  // SOCKET CREAZIONE / RIUSO (FIX PERSISTENZA TRA PAGINE)
   // ===============================
-  // ===============================
-  // SOCKET CREAZIONE / RIUSO (FIX DEFINITIVO)
-  // ===============================
-  if (!window.socket) {
+  const globalScope = window.top || window;
 
-    console.log("🆕 Creo socket UNA VOLTA");
+  if (!globalScope.socket) {
 
-    window.socket = io({
+    console.log("🆕 Creo socket UNA VOLTA (globale)");
+
+    globalScope.socket = io({
       transports: ["websocket", "polling"],
       upgrade: true,
       withCredentials: true,
@@ -53,17 +52,63 @@ if (!window.__socket_bootstrap_done__) {
 
   } else {
 
-    console.log("♻️ Riutilizzo socket esistente");
+    console.log("♻️ Riutilizzo socket globale");
 
-    if (!window.socket.connected && !window.socket.connecting) {
+    if (!globalScope.socket.connected && !globalScope.socket.connecting) {
       try {
-        window.socket.connect();
+        globalScope.socket.connect();
         console.log("🔁 reconnect socket");
       } catch (e) {
         console.warn("Errore reconnect:", e);
       }
     }
   }
+
+  // 🔥 ALLINEA SEMPRE window.socket
+  window.socket = globalScope.socket;
+
+// ===============================
+// SOCKET CREAZIONE / RIUSO (FIX PERSISTENZA TRA PAGINE)
+// ===============================
+const globalScope = window.top || window;
+
+if (!globalScope.socket) {
+
+  console.log("🆕 Creo socket UNA VOLTA (globale)");
+
+  globalScope.socket = io({
+    transports: ["websocket", "polling"],
+    upgrade: true,
+    withCredentials: true,
+
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
+    reconnectionDelay: 1000,
+
+    auth: {
+      device_type: detectDeviceType(),
+      client_id: localStorage.getItem("client_id")
+    }
+  });
+
+} else {
+
+  console.log("♻️ Riutilizzo socket globale");
+
+  if (!globalScope.socket.connected && !globalScope.socket.connecting) {
+    try {
+      globalScope.socket.connect();
+      console.log("🔁 reconnect socket");
+    } catch (e) {
+      console.warn("Errore reconnect:", e);
+    }
+  }
+}
+
+// 🔥 ALLINEA SEMPRE window.socket
+window.socket = globalScope.socket;
 
   // ===============================
   // DA QUI IN POI: INIT COMUNE
