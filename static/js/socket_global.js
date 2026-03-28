@@ -29,7 +29,7 @@ if (!window.__socket_bootstrap_done__) {
   // ===============================
   const globalScope = window.top || window;
 
-  if (!globalScope.socket) {
+  if (!globalScope.socket || globalScope.socket.disconnected) {
 
     console.log("🆕 Creo socket UNA VOLTA (globale)");
 
@@ -213,7 +213,17 @@ if (!window.__socket_bootstrap_done__) {
       window.__socket_cleanup_bound__ = true;
 
 
-      window.addEventListener("pagehide", () => {
-        console.log("📄 pagehide → NON disconnetto (PWA safe)");
-      });
+      window.addEventListener("pagehide", (event) => {
+        const s = window.socket;
+
+        // 🔥 SOLO se NON è PWA
+        if (!window.matchMedia('(display-mode: standalone)').matches) {
+          if (s && s.connected) {
+            console.log("🧨 pagehide → disconnect (browser)");
+            s.disconnect();
+          }
+        } else {
+          console.log("📱 pagehide → mantengo socket (PWA)");
+        }
+      });      
     }
