@@ -92,21 +92,11 @@ if (!window.__socket_bootstrap_done__) {
     console.warn("❌ Socket assente dopo bootstrap");
   } else {
 
-    if (!window.__base_socket_listeners__) {
-      window.__base_socket_listeners__ = true;
+    // 🔥 listener attaccati UNA SOLA VOLTA PER SOCKET (non globale)
+    if (!socket.__listeners_attached__) {
+      socket.__listeners_attached__ = true;
 
-      console.log("🧠 init listener UNA SOLA VOLTA");
-
-    // 🔥 evita duplicazione init su pagine diverse
-    // SEMPRE inizializza listener sulla socket attuale
-
-      // ===============================
-      // BASE LISTENERS (UNA SOLA VOLTA)
-      // ===============================
-
-      // ===============================
-      // BASE LISTENERS (SEMPRE)
-      // ===============================
+      console.log("🧠 init listener su socket:", socket.id);
 
       socket.on("connect", () => {
         console.log("🔌 socket connected:", socket.id);
@@ -121,11 +111,6 @@ if (!window.__socket_bootstrap_done__) {
 
       socket.on("disconnect", (reason) => {
         console.log("🔌 socket disconnected:", reason);
-
-        if (reason === "io client disconnect") return;
-
-        // ❌ NON forzare reconnect manuale
-        // Socket.IO gestisce già tutto automaticamente
       });
 
       socket.on("connect_error", (err) => {
@@ -225,5 +210,5 @@ if (!window.__socket_bootstrap_done__) {
         } else {
           console.log("📱 pagehide → mantengo socket (PWA)");
         }
-      });      
+      });
     }
