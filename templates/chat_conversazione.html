@@ -423,17 +423,13 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
 
     function getSocket() {
+      const s = window.socket;
 
-      // 🔥 PRIORITÀ alla socket realmente attiva
-      const s = window.__active_socket || window.socket;
-
-      if (!s || !s.connected) {
-        return null;
-      }
+      if (!s) return null;
 
       return s;
     }
-
+    
     let boundSocket = null;
 
     window.__chatHandlers = window.__chatHandlers || {};
