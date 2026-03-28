@@ -429,7 +429,7 @@ body {
 
       return s;
     }
-    
+
     let boundSocket = null;
 
     window.__chatHandlers = window.__chatHandlers || {};
@@ -572,6 +572,14 @@ body {
 
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
+
+      // 🔥 FIX: evita multi-bind sulla stessa socket
+      if (newSocket.__chat_bound__) {
+        console.log("⏭️ Socket già bindata, skip");
+        return;
+      }
+      newSocket.__chat_bound__ = true;
+
       console.log("🧠 bindChatSocket chiamata con socket:", newSocket.id);
 
       const oldSocket = boundSocket;
