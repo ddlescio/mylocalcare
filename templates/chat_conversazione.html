@@ -1068,8 +1068,24 @@ body {
       bindChatSocket(s);
     });
   }
-initChatBinding();
+  if (window.whenSocketReady) {
 
+    whenSocketReady((socket) => {
+      console.log("✅ Socket pronta → init chat binding");
+      bindChatSocket(socket);
+    });
+
+  } else {
+
+    const s = getSocket();
+
+    if (s && s.connected) {
+      bindChatSocket(s);
+    } else if (s) {
+      s.once("connect", () => bindChatSocket(s));
+    }
+
+  }
 });
 </script>
 <script>
