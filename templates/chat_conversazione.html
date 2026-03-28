@@ -1050,27 +1050,28 @@ body {
     bindChatSocket(s);
   }
 
-  // bind iniziale
-  if (window.whenSocketReady) {
-    window.whenSocketReady(() => {
-      console.log("🟢 whenSocketReady → bind chat");
-      bindChatOnCurrentSocket();
+  function initChatBinding() {
+    const s = getSocket();
+
+    if (!s) {
+      console.warn("❌ Socket non disponibile");
+      return;
+    }
+
+    console.log("🔗 Init chat binding su socket:", s.id);
+
+    bindChatSocket(s);
+
+    // 🔥 IMPORTANTISSIMO: rebind SOLO su reconnect reale
+    s.on("connect", () => {
+      console.log("🔁 Reconnect socket → rebind chat", s.id);
+      bindChatSocket(s);
     });
-  } else {
-    bindChatOnCurrentSocket();
   }
 
-  // rebinding quando socket_global sostituisce la socket attiva
-  window.addEventListener("socket_ready", () => {
-
-    const newSocket = getSocket();
-
-    if (!newSocket) return;
-
-    // 🔥 NON saltare mai il rebind → garantisce coerenza
-    console.log("♻️ Rebind forzato socket", newSocket.id);
-
-    bindChatSocket(newSocket);
+  // 🔥 avvio UNA SOLA VOLTA
+  document.addEventListener("DOMContentLoaded", () => {
+    initChatBinding();
   });
 });
 </script>
