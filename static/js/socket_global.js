@@ -177,16 +177,7 @@ if (!window.__socket_bootstrap_done__) {
 
           if (document.visibilityState === "visible") {
             console.log("👀 App tornata visibile");
-
-            if (!s.connected && !s.connecting) {
-              console.log("🛠️ reconnect visibility");
-
-              try {
-                s.connect();
-              } catch (e) {
-                console.warn("Errore reconnect visibilitychange:", e);
-              }
-            }
+            // ❌ NON forzare reconnect: gestito da Socket.IO
           }
         });
 
@@ -202,14 +193,9 @@ if (!window.__socket_bootstrap_done__) {
           const s = window.socket;
           if (!s) return;
 
-          if (event.persisted && !s.connected && !s.connecting) {
-            console.log("📄 pageshow → reconnect");
-
-            try {
-              s.connect();
-            } catch (e) {
-              console.warn("Errore reconnect pageshow:", e);
-            }
+          if (event.persisted) {
+            console.log("📄 pageshow (BFCache restore)");
+            // ❌ NON forzare reconnect
           }
         });
       }
