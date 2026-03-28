@@ -423,7 +423,6 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
 
     function getSocket() {
-      if (window.__active_socket) return window.__active_socket;
       return window.socket || null;
     }
 
@@ -615,8 +614,7 @@ body {
         newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
       }
 
-      window.__active_socket = newSocket;
-      boundSocket = newSocket; // puoi anche lasciarlo, ma NON deve essere usato da getSocket
+      boundSocket = newSocket;
 
       console.log("🔒 Chat bindata su socket:", newSocket.id);
 
