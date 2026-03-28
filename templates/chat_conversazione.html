@@ -423,11 +423,8 @@ body {
   document.addEventListener("DOMContentLoaded", () => {
 
     function getSocket() {
-      const s = window.socket;
-
-      if (!s) return null;
-
-      return s;
+      if (window.__active_socket) return window.__active_socket;
+      return window.socket || null;
     }
 
     let boundSocket = null;
@@ -574,13 +571,7 @@ body {
       if (!newSocket) return;
 
       // 🔥 FIX: evita multi-bind sulla stessa socket
-      if (newSocket.__chat_bound__) {
-        console.log("⏭️ Socket già bindata, skip");
-        return;
-      }
-      newSocket.__chat_bound__ = true;
-
-      console.log("🧠 bindChatSocket chiamata con socket:", newSocket.id);
+      console.log("🔁 Rebind sempre forzato su socket:", newSocket.id);
 
       const oldSocket = boundSocket;
 
@@ -1135,7 +1126,7 @@ async function initVideoSystem() {
     // ==============================
     // SOCKET
     // ==============================
-    const socket = window.socket;
+    const socket = (window.__active_socket || window.socket);
     if (!socket) {
         console.error("❌ Socket non disponibile");
         return;
