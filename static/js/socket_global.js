@@ -117,6 +117,19 @@ if (!window.__socket_bootstrap_done__) {
         console.warn("⚠️ socket connect_error:", err?.message || err);
       });
     }
+
+    // 🔥 QUESTO È IL FIX
+    if (socket.connected) {
+      console.log("⚡ socket già connessa → trigger manuale");
+
+      window.__active_socket = socket;
+      window.__current_socket_id = socket.id;
+
+      emitHeartbeat();
+
+      window.dispatchEvent(new Event("socket_ready"));
+    }
+
       // ===============================
       // UTILITY
       // ===============================
