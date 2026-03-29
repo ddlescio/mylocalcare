@@ -422,12 +422,6 @@ body {
 <script>
   document.addEventListener("DOMContentLoaded", () => {
 
-    function getSocket() {
-      return window.__active_socket || window.socket || null;
-    }
-
-    let boundSocket = null;
-
     window.__chatHandlers = window.__chatHandlers || {};
 
 
@@ -459,7 +453,7 @@ body {
       chatClosedEmitted = false;
       window.__activeChat = destId;
 
-      const s = getSocket();
+      const s = window.socket;
 
       if (s && s.connected && destId) {
         console.log("📤 emit chat_aperta");
@@ -471,7 +465,7 @@ body {
 
     function emitChatClosedOnce() {
 
-      const s = getSocket();
+      const s = window.socket;
 
       if (!s || !s.connected) {
         console.log("⛔ skip chat_chiusa (socket non stabile)");
@@ -492,7 +486,7 @@ body {
 
       console.log("📤 emit chat_chiusa");
 
-      getSocket().emit('chat_chiusa', { other_id: destId });
+      window.socket.emit('chat_chiusa', { other_id: destId });
     }
 
     window.__emitChatClosedOnce = emitChatClosedOnce;
@@ -566,100 +560,41 @@ body {
     console.log("🟢 Chat inizializzata", { meId, destId });
 
 
-    function bindChatSocket(newSocket) {
-      if (!newSocket) return;
+    function bindChatSocket(socket) {
+      if (!socket) return;
 
-      // 🔥 FIX CRITICO: evita rebinding sulla stessa socket
-      // 🔥 NON saltare mai: fai sempre rebind pulito
-      if (boundSocket === newSocket) {
-        console.log("🔁 Rebind sulla stessa socket → cleanup + reattach");
+      console.log("🔒 Bind chat su socket:", socket.id);
 
-        // cleanup listener esistenti PRIMA
-        if (window.__chatHandlers.connectInit) {
-          newSocket.off("connect", window.__chatHandlers.connectInit);
-        }
-        if (window.__chatHandlers.userTyping) {
-          newSocket.off("user_typing", window.__chatHandlers.userTyping);
-        }
-        if (window.__chatHandlers.newMessage) {
-          newSocket.off("new_message", window.__chatHandlers.newMessage);
-        }
-        if (window.__chatHandlers.messagesRead) {
-          newSocket.off("messages_read", window.__chatHandlers.messagesRead);
-        }
-        if (window.__chatHandlers.messageDelivered) {
-          newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
-        }
+      // 🔥 pulizia preventiva (NO multi-listener)
+      if (window.__chatHandlers.connectInit) socket.off("connect", window.__chatHandlers.connectInit);
+      if (window.__chatHandlers.userTyping) socket.off("user_typing", window.__chatHandlers.userTyping);
+      if (window.__chatHandlers.newMessage) socket.off("new_message", window.__chatHandlers.newMessage);
+      if (window.__chatHandlers.messagesRead) socket.off("messages_read", window.__chatHandlers.messagesRead);
+      if (window.__chatHandlers.messageDelivered) socket.off("message_delivered", window.__chatHandlers.messageDelivered);
 
-        // NON fare return → continua e riattacca
-      }
-
-      const oldSocket = boundSocket;
-
-      if (boundSocket && boundSocket !== newSocket) {
-        console.log("♻️ Cambio socket → cleanup completo");
-      }
-
-      // sgancia i listener dalla socket precedente
-      if (oldSocket && oldSocket !== newSocket) {
-        if (window.__chatHandlers.connectInit) {
-          oldSocket.off("connect", window.__chatHandlers.connectInit);
-        }
-        if (window.__chatHandlers.userTyping) {
-          oldSocket.off("user_typing", window.__chatHandlers.userTyping);
-        }
-        if (window.__chatHandlers.newMessage) {
-          oldSocket.off("new_message", window.__chatHandlers.newMessage);
-        }
-        if (window.__chatHandlers.messagesRead) {
-          oldSocket.off("messages_read", window.__chatHandlers.messagesRead);
-        }
-        if (window.__chatHandlers.messageDelivered) {
-          oldSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
-        }
-      }
-
-      // se è la stessa socket della pagina corrente, pulisci comunque i listener prima di ribindare
-      if (window.__chatHandlers.connectInit) {
-        newSocket.off("connect", window.__chatHandlers.connectInit);
-      }
-      if (window.__chatHandlers.userTyping) {
-        newSocket.off("user_typing", window.__chatHandlers.userTyping);
-      }
-      if (window.__chatHandlers.newMessage) {
-        newSocket.off("new_message", window.__chatHandlers.newMessage);
-      }
-      if (window.__chatHandlers.messagesRead) {
-        newSocket.off("messages_read", window.__chatHandlers.messagesRead);
-      }
-      if (window.__chatHandlers.messageDelivered) {
-        newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
-      }
-
-      boundSocket = newSocket;
-
-      // 🔥 RESET STATO CHAT (CRITICO)
+      // 🔥 RESET STATO
       chatOpenedOnce = false;
       chatClosedEmitted = false;
       window.__activeChat = destId;
 
-      console.log("🔒 Chat bindata su socket:", newSocket.id);
-
+      // -------------------------
+      // CONNECT
+      // -------------------------
       window.__chatHandlers.connectInit = function () {
         console.log("🟢 Socket pronta / reconnect chat");
         emitChatOpened();
       };
-      newSocket.on("connect", window.__chatHandlers.connectInit);
+      socket.on("connect", window.__chatHandlers.connectInit);
 
-      /* 🔥 FIX FONDAMENTALE:
-         se la socket è già connessa quando bindiamo,
-         il listener "connect" non scatterà più da solo.
-         Quindi dobbiamo aprire la chat SUBITO. */
-      if (newSocket.connected) {
-        console.log("🟢 Socket già connessa al bind → emitChatOpened immediato");
+      // 🔥 se già connessa → apri subito
+      if (socket.connected) {
+        console.log("🟢 Socket già connessa → apertura immediata");
         emitChatOpened();
       }
 
+      // -------------------------
+      // NEW MESSAGE
+      // -------------------------
       window.__chatHandlers.newMessage = function (m) {
 
         const currentChat = destId;
@@ -708,9 +643,8 @@ body {
             clearTimeout(markReadTimer);
 
             markReadTimer = setTimeout(() => {
-              const s = getSocket();
-              if (s && s.connected) {
-                s.emit("mark_as_read", {
+              if (socket && socket.connected) {
+                socket.emit("mark_as_read", {
                   other_id: m.mittente_id
                 });
               }
@@ -718,20 +652,20 @@ body {
           }
 
           if (alreadyBottom || m.mittente_id === meId) {
-            setTimeout(() => {
-              scrollBottom(true);
-            }, 80);
+            setTimeout(() => scrollBottom(true), 80);
           }
 
         } catch (err) {
           console.error("🔥 Errore in new_message:", err, m);
         }
       };
-      newSocket.on("new_message", window.__chatHandlers.newMessage);
+      socket.on("new_message", window.__chatHandlers.newMessage);
 
+      // -------------------------
+      // TYPING
+      // -------------------------
       window.__chatHandlers.userTyping = function (data) {
-        const currentChat = destId;
-        if (data.from !== currentChat) return;
+        if (data.from !== destId) return;
 
         if (data.typing) {
           typingIndicator.classList.remove("hidden");
@@ -739,19 +673,24 @@ body {
           typingIndicator.classList.add("hidden");
         }
       };
-      newSocket.on("user_typing", window.__chatHandlers.userTyping);
+      socket.on("user_typing", window.__chatHandlers.userTyping);
 
+      // -------------------------
+      // READ
+      // -------------------------
       window.__chatHandlers.messagesRead = function (data) {
-        const currentChat = destId;
-        if (data.from !== currentChat) return;
+        if (data.from !== destId) return;
 
         document.querySelectorAll('#msgWrap .bubble-me .spunte').forEach((spunte) => {
           spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
           spunte.dataset.read = "1";
         });
       };
-      newSocket.on("messages_read", window.__chatHandlers.messagesRead);
+      socket.on("messages_read", window.__chatHandlers.messagesRead);
 
+      // -------------------------
+      // DELIVERED
+      // -------------------------
       window.__chatHandlers.messageDelivered = function (data) {
         const bubbleEl = document.querySelector(`#msgWrap [data-mid="${data.id}"]`);
         if (!bubbleEl) return;
@@ -763,8 +702,7 @@ body {
           spunte.innerHTML = '<span class="text-gray-400">✅</span>';
         }
       };
-      newSocket.on("message_delivered", window.__chatHandlers.messageDelivered);
-
+      socket.on("message_delivered", window.__chatHandlers.messageDelivered);
     }
 
     // pulizia vecchi handler lifecycle
@@ -924,7 +862,7 @@ body {
     // invia typing:true solo la prima volta
     if (!wasTyping) {
       wasTyping = true;
-      const s = getSocket();
+      const s = window.socket;
       if (s && s.connected) {
         s.emit("typing", { to: destId, typing: true });
       }
@@ -935,7 +873,7 @@ body {
 
     typingTimeout = setTimeout(() => {
       wasTyping = false;
-      const s = getSocket();
+      const s = window.socket;
     if (s && s.connected) {
       s.emit("typing", { to: destId, typing: false });
     }
@@ -1029,7 +967,7 @@ body {
     const testo = input.value.trim();
     if (!testo) return;
 
-    const s = getSocket();
+    const s = window.socket;
 
     if (!s) {
       console.warn("❌ Socket non disponibile");
@@ -1066,7 +1004,7 @@ body {
   // --------------------------------------------------
 
   function bindWhenReady() {
-    const s = getSocket();
+    const s = window.socket;
 
     if (!s) return;
 
@@ -1137,7 +1075,7 @@ async function initVideoSystem() {
     // ==============================
     // SOCKET
     // ==============================
-    const socket = (window.__active_socket || window.socket);
+    const socket = window.socket;
     if (!socket) {
         console.error("❌ Socket non disponibile");
         return;
