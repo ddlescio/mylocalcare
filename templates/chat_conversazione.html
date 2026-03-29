@@ -569,8 +569,11 @@ body {
     function bindChatSocket(newSocket) {
       if (!newSocket) return;
 
-      // 🔥 FIX: evita multi-bind sulla stessa socket
-      console.log("🔁 Rebind sempre forzato su socket:", newSocket.id);
+      // 🔥 FIX CRITICO: evita rebinding sulla stessa socket
+      if (boundSocket === newSocket) {
+        console.log("⏭️ Socket già bindata → skip");
+        return;
+      }
 
       const oldSocket = boundSocket;
 
