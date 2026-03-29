@@ -619,6 +619,11 @@ body {
 
       boundSocket = newSocket;
 
+      // 🔥 RESET STATO CHAT (CRITICO)
+      chatOpenedOnce = false;
+      chatClosedEmitted = false;
+      window.__activeChat = destId;
+
       console.log("🔒 Chat bindata su socket:", newSocket.id);
 
       window.__chatHandlers.connectInit = function () {
