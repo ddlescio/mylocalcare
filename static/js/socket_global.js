@@ -1,8 +1,9 @@
 // static/js/socket_global.js
 
-if (!window.__socket_bootstrap_done__) {
+if (window.__socket_bootstrap_done__) {
+  console.log("⏭️ socket_global già inizializzato → skip completo");
+} else {
   window.__socket_bootstrap_done__ = true;
-}
 
   // ===============================
   // CLIENT ID STABILE (FIX iOS PWA)
@@ -29,7 +30,7 @@ if (!window.__socket_bootstrap_done__) {
   // ===============================
   const globalScope = window.top || window;
 
-  if (!globalScope.socket || globalScope.socket.disconnected) {
+  if (!globalScope.socket) {
 
     console.log("🆕 Creo socket UNA VOLTA (globale)");
 
@@ -55,9 +56,9 @@ if (!window.__socket_bootstrap_done__) {
     console.log("♻️ Riutilizzo socket globale");
 
     if (!globalScope.socket.connected && !globalScope.socket.connecting) {
+      console.log("🔁 socket non connessa → connect()");
       try {
         globalScope.socket.connect();
-        console.log("🔁 reconnect socket");
       } catch (e) {
         console.warn("Errore reconnect:", e);
       }
@@ -215,7 +216,9 @@ if (!window.__socket_bootstrap_done__) {
         const s = window.socket;
 
         // 🔥 SOLO se NON è PWA
-        if (!window.matchMedia('(display-mode: standalone)').matches) {
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+        if (!isPWA) {
           if (s && s.connected) {
             console.log("🧨 pagehide → disconnect (browser)");
             s.disconnect();
@@ -225,3 +228,4 @@ if (!window.__socket_bootstrap_done__) {
         }
       });
     }
+}
