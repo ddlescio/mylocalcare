@@ -8598,7 +8598,7 @@ def _touch_socket_sid(user_id, sid, client_id=None):
 
             pipe.srem(user_set_key, old_sid)
             pipe.delete(_socket_sid_key(old_sid))
-    
+
         pipe.set(client_key, sid, ex=SOCKET_TTL_SECONDS)
 
     pipe.sadd(user_set_key, sid)
@@ -8740,6 +8740,20 @@ def handle_disconnect():
             if mapped_sid == sid:
                 redis_client.delete(client_key)
 
+        # 🔥 CONTROLLO: questo SID è ancora valido?
+        current_client_id = _get_client_id_from_sid(sid)
+
+        if current_client_id:
+            client_key = _socket_client_key(user_id, current_client_id)
+            mapped_sid_raw = redis_client.get(client_key)
+            mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
+
+            # 🚫 se esiste già un nuovo SID per questo client → SKIP
+            if mapped_sid and mapped_sid != sid:
+                print(f"⏭️ Skip disconnect vecchio SID {sid}, sostituito da {mapped_sid}")
+                return
+
+        # ✅ SOLO QUI rimuovi davvero
         _remove_socket_sid(user_id, sid)
 
         remaining = _cleanup_user_socket_set(user_id)
