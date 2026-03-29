@@ -8589,9 +8589,16 @@ def _touch_socket_sid(user_id, sid, client_id=None):
         old_sid = _decode_redis_value(old_sid_raw) if old_sid_raw else None
 
         if old_sid and old_sid != sid:
+            print(f"🔥 Kill vecchia socket duplicata: {old_sid} (client {client_id})")
+
+            try:
+                socketio.server.disconnect(old_sid)
+            except Exception as e:
+                print(f"Errore disconnect old_sid {old_sid}:", e)
+
             pipe.srem(user_set_key, old_sid)
             pipe.delete(_socket_sid_key(old_sid))
-
+    
         pipe.set(client_key, sid, ex=SOCKET_TTL_SECONDS)
 
     pipe.sadd(user_set_key, sid)
