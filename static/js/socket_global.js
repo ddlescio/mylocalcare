@@ -1,23 +1,24 @@
 // static/js/socket_global.js
 
-if (window.__socket_bootstrap_done__) {
-  console.log("⏭️ socket_global già inizializzato → skip completo");
-} else {
-  window.__socket_bootstrap_done__ = true;
+(function () {
+  if (window.__socket_page_bootstrap_done__) {
+    console.log("⏭️ socket_global già inizializzato in questa pagina → skip");
+    return;
+  }
+  window.__socket_page_bootstrap_done__ = true;
 
   // ===============================
-  // CLIENT ID STABILE (FIX iOS PWA)
+  // CLIENT ID STABILE
   // ===============================
   if (!localStorage.getItem("client_id")) {
     localStorage.setItem("client_id", crypto.randomUUID());
   }
 
-  // ===============================
-  // DEVICE TYPE
-  // ===============================
   function detectDeviceType() {
     try {
-      if (window.matchMedia('(display-mode: standalone)').matches) return "pwa";
+      if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone) {
+        return "pwa";
+      }
       if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) return "mobile";
       return "desktop";
     } catch (e) {
@@ -26,206 +27,146 @@ if (window.__socket_bootstrap_done__) {
   }
 
   // ===============================
-  // SOCKET CREAZIONE / RIUSO (FIX PERSISTENZA TRA PAGINE)
+  // CREA SOCKET DELLA PAGINA CORRENTE
   // ===============================
-  const globalScope = window.top || window;
+  const socket = io({
+    transports: ["websocket", "polling"],
+    upgrade: true,
+    withCredentials: true,
 
-  if (!globalScope.socket) {
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
 
-    console.log("🆕 Creo socket UNA VOLTA (globale)");
-
-    globalScope.socket = io({
-      transports: ["websocket", "polling"],
-      upgrade: true,
-      withCredentials: true,
-
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      reconnectionDelay: 1000,
-
-      auth: {
-        device_type: detectDeviceType(),
-        client_id: localStorage.getItem("client_id")
-      }
-    });
-
-  } else {
-
-    console.log("♻️ Riutilizzo socket globale");
-
-    if (!globalScope.socket.connected && !globalScope.socket.connecting) {
-      console.log("🔁 socket non connessa → connect()");
-      try {
-        globalScope.socket.connect();
-      } catch (e) {
-        console.warn("Errore reconnect:", e);
-      }
+    auth: {
+      device_type: detectDeviceType(),
+      client_id: localStorage.getItem("client_id")
     }
-  }
+  });
 
-  // 🔥 ALLINEA SEMPRE window.socket
-  window.socket = globalScope.socket;
-
+  // riferimenti globali compatibili col resto del progetto
+  window.socket = socket;
+  window.__active_socket = socket;
+  window.__current_socket_id = null;
 
   // ===============================
-  // DA QUI IN POI: INIT COMUNE
+  // HEARTBEAT
   // ===============================
-  const socket = window.socket;
-
-  // 🔥 SEMPRE DEFINITO
-  const emitHeartbeat = () => {
-    const s = window.socket;
-    if (!s || !s.connected) return;
+  function emitHeartbeat() {
+    if (!socket || !socket.connected) return;
 
     try {
-      s.emit("socket_heartbeat");
+      socket.emit("socket_heartbeat");
     } catch (e) {
       console.warn("Errore emit socket_heartbeat:", e);
     }
-  };
+  }
 
   window.__emitSocketHeartbeat = emitHeartbeat;
 
+  // ===============================
+  // LISTENER BASE SOCKET
+  // ===============================
+  socket.on("connect", () => {
+    console.log("🔌 socket connected:", socket.id);
 
-  if (!socket) {
-    console.warn("❌ Socket assente dopo bootstrap");
-  } else {
+    window.__active_socket = socket;
+    window.__current_socket_id = socket.id;
 
-    // 🔥 listener attaccati UNA SOLA VOLTA PER SOCKET (non globale)
-    if (!socket.__listeners_attached__) {
-      socket.__listeners_attached__ = true;
+    emitHeartbeat();
+    window.dispatchEvent(new Event("socket_ready"));
+  });
 
-      console.log("🧠 init listener su socket:", socket.id);
+  socket.on("disconnect", (reason) => {
+    console.log("🔌 socket disconnected:", reason);
+  });
 
-      socket.on("connect", () => {
-        console.log("🔌 socket connected:", socket.id);
+  socket.on("connect_error", (err) => {
+    console.warn("⚠️ socket connect_error:", err?.message || err);
+  });
 
-        window.__active_socket = socket;
-        window.__current_socket_id = socket.id;
+  // ===============================
+  // API USATA DAL RESTO DEL SITO
+  // ===============================
+  window.whenSocketReady = function (callback) {
+    if (!socket) return;
 
-        emitHeartbeat();
-
-        window.dispatchEvent(new Event("socket_ready"));
-      });
-
-      socket.on("disconnect", (reason) => {
-        console.log("🔌 socket disconnected:", reason);
-      });
-
-      socket.on("connect_error", (err) => {
-        console.warn("⚠️ socket connect_error:", err?.message || err);
-      });
-    }
-
-    // 🔥 QUESTO È IL FIX
     if (socket.connected) {
-      console.log("⚡ socket già connessa → trigger manuale");
+      callback(socket);
+      return;
+    }
 
-      window.__active_socket = socket;
-      window.__current_socket_id = socket.id;
+    socket.once("connect", () => {
+      callback(socket);
+    });
+  };
 
+  // ===============================
+  // HEARTBEAT INTERVAL
+  // ===============================
+  if (!window.__socket_heartbeat_interval__) {
+    window.__socket_heartbeat_interval__ = setInterval(() => {
       emitHeartbeat();
+    }, 20000);
+  }
 
-      window.dispatchEvent(new Event("socket_ready"));
-    }
+  // ===============================
+  // RECONNECT SU RITORNO PAGINA
+  // ===============================
+  if (!window.__socket_visibility_fix_bound__) {
+    window.__socket_visibility_fix_bound__ = true;
 
-      // ===============================
-      // UTILITY
-      // ===============================
-      window.whenSocketReady = function (callback) {
-        const getSocket = () => window.socket;
-
-        const s = getSocket();
-        if (!s) return;
-
-        if (s.connected) {
-          callback(s);
-          return;
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        if (socket && !socket.connected) {
+          console.log("👀 Pagina visibile → reconnect socket");
+          try {
+            socket.connect();
+          } catch (e) {
+            console.warn("Errore reconnect visibilitychange:", e);
+          }
         }
-
-        const handler = () => {
-          const latest = getSocket();
-          if (latest && latest.connected) {
-            callback(latest);
-          }
-        };
-
-        s.once("connect", handler);
-      };
-
-      // ===============================
-      // HEARTBEAT REDIS MULTI-WORKER
-      // ===============================
-      if (!window.__socket_heartbeat_interval__) {
-        window.__socket_heartbeat_interval__ = setInterval(() => {
-          if (typeof window.__emitSocketHeartbeat === "function") {
-            window.__emitSocketHeartbeat();
-          }
-        }, 20000);
       }
+    });
+  }
 
-      // ===============================
-      // FIX iOS / PWA RESUME
-      // ===============================
-      if (!window.__socket_visibility_fix_bound__) {
-        window.__socket_visibility_fix_bound__ = true;
+  if (!window.__socket_pageshow_fix_bound__) {
+    window.__socket_pageshow_fix_bound__ = true;
 
-        document.addEventListener("visibilitychange", () => {
-          const s = window.socket;
-          if (!s) return;
-
-
-          if (document.visibilityState === "visible") {
-            console.log("👀 App tornata visibile");
-            // ❌ NON forzare reconnect: gestito da Socket.IO
-          }
-        });
-
-      }
-
-      // ===============================
-      // FIX BFCache (Safari iOS)
-      // ===============================
-      if (!window.__socket_pageshow_fix_bound__) {
-        window.__socket_pageshow_fix_bound__ = true;
-
-        window.addEventListener("pageshow", (event) => {
-          const s = window.socket;
-          if (!s) return;
-
-          if (event.persisted) {
-            console.log("📄 pageshow (BFCache restore)");
-            // ❌ NON forzare reconnect
-          }
-        });
-      }
-
-
-    }
-
-    // ===============================
-    // CLEAN DISCONNECT ON PAGE EXIT
-    // ===============================
-    if (!window.__socket_cleanup_bound__) {
-      window.__socket_cleanup_bound__ = true;
-
-
-      window.addEventListener("pagehide", (event) => {
-        const s = window.socket;
-
-        // 🔥 SOLO se NON è PWA
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-        if (!isPWA) {
-          if (s && s.connected) {
-            console.log("🧨 pagehide → disconnect (browser)");
-            s.disconnect();
-          }
-        } else {
-          console.log("📱 pagehide → mantengo socket (PWA)");
+    window.addEventListener("pageshow", () => {
+      if (socket && !socket.connected) {
+        console.log("📄 pageshow → reconnect socket");
+        try {
+          socket.connect();
+        } catch (e) {
+          console.warn("Errore reconnect pageshow:", e);
         }
-      });
+      }
+    });
+  }
+
+  // ===============================
+  // DISCONNECT SEMPRE SU USCITA PAGINA
+  // ===============================
+  function cleanupSocketOnExit() {
+    if (!window.socket) return;
+
+    try {
+      if (window.socket.connected) {
+        console.log("🧨 uscita pagina → disconnect socket");
+        window.socket.disconnect();
+      }
+    } catch (e) {
+      console.warn("Errore disconnect in uscita:", e);
     }
-}
+  }
+
+  if (!window.__socket_cleanup_bound__) {
+    window.__socket_cleanup_bound__ = true;
+
+    window.addEventListener("pagehide", cleanupSocketOnExit);
+    window.addEventListener("beforeunload", cleanupSocketOnExit);
+  }
+})();
