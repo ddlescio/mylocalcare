@@ -570,9 +570,28 @@ body {
       if (!newSocket) return;
 
       // 🔥 FIX CRITICO: evita rebinding sulla stessa socket
+      // 🔥 NON saltare mai: fai sempre rebind pulito
       if (boundSocket === newSocket) {
-        console.log("⏭️ Socket già bindata → skip");
-        return;
+        console.log("🔁 Rebind sulla stessa socket → cleanup + reattach");
+
+        // cleanup listener esistenti PRIMA
+        if (window.__chatHandlers.connectInit) {
+          newSocket.off("connect", window.__chatHandlers.connectInit);
+        }
+        if (window.__chatHandlers.userTyping) {
+          newSocket.off("user_typing", window.__chatHandlers.userTyping);
+        }
+        if (window.__chatHandlers.newMessage) {
+          newSocket.off("new_message", window.__chatHandlers.newMessage);
+        }
+        if (window.__chatHandlers.messagesRead) {
+          newSocket.off("messages_read", window.__chatHandlers.messagesRead);
+        }
+        if (window.__chatHandlers.messageDelivered) {
+          newSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
+        }
+
+        // NON fare return → continua e riattacca
       }
 
       const oldSocket = boundSocket;
