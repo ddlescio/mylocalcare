@@ -1085,12 +1085,6 @@ body {
   // 🔥 1. bind subito
   bindWhenReady();
 
-  // 🔥 2. bind anche se arriva socket_ready dopo
-  window.addEventListener("socket_ready", () => {
-    console.log("📡 socket_ready ricevuto → rebind");
-    bindWhenReady();
-  });
-
 });
 </script>
 <script>
