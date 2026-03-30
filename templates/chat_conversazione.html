@@ -771,12 +771,6 @@ body {
     if (window.__chatPagehideHandlerRef) {
       window.removeEventListener("pagehide", window.__chatPagehideHandlerRef);
     }
-    if (window.__chatPageshowHandlerRef) {
-      window.removeEventListener("pageshow", window.__chatPageshowHandlerRef);
-    }
-    if (window.__chatVisibilityHandlerRef) {
-      document.removeEventListener("visibilitychange", window.__chatVisibilityHandlerRef);
-    }
     if (window.__chatInternalNavHandlerRef) {
       document.removeEventListener("click", window.__chatInternalNavHandlerRef, true);
     }
@@ -788,47 +782,11 @@ body {
       } catch (_) {}
     };
 
-    // Safari / iPhone / PWA / BFCache
+    // chiusura su uscita pagina
     window.__chatPagehideHandlerRef = function () {
       try {
         emitChatClosedOnce();
       } catch (_) {}
-
-      // 🔥 importantissimo: azzera il riferimento socket chat,
-      // così al rientro non resta agganciata a uno stato vecchio
-      window.__chatBoundSocket = null;
-    };
-
-    // quando la pagina torna viva dal BFCache o da restore
-    window.__chatPageshowHandlerRef = function () {
-      console.log("📲 [CHAT] pageshow -> rebind chat");
-
-      window.__chatBoundSocket = null;
-
-      setTimeout(() => {
-        bindWhenReady();
-
-        const s = window.socket;
-        if (s && s.connected) {
-          emitChatOpened();
-        }
-      }, 0);
-    };
-
-    // quando la pagina torna visibile
-    window.__chatVisibilityHandlerRef = function () {
-      if (document.visibilityState !== "visible") return;
-
-      console.log("👀 [CHAT] visibilitychange -> visible -> rebind chat");
-
-      window.__chatBoundSocket = null;
-
-      bindWhenReady();
-
-      const s = window.socket;
-      if (s && s.connected) {
-        emitChatOpened();
-      }
     };
 
     // chiusura su navigazione interna tramite link
@@ -839,7 +797,6 @@ body {
       const href = a.getAttribute("href");
       if (!href) return;
 
-      // ignora anchor locali, javascript, target blank e link esterni
       if (
         href.startsWith("#") ||
         href.startsWith("javascript:") ||
@@ -856,8 +813,6 @@ body {
 
     window.addEventListener("beforeunload", window.__chatBeforeUnloadHandlerRef);
     window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
-    window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
-    document.addEventListener("visibilitychange", window.__chatVisibilityHandlerRef);
     document.addEventListener("click", window.__chatInternalNavHandlerRef, true);
 
   // 🎭 Emoji
