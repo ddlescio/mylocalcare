@@ -412,6 +412,7 @@ def is_user_online(user_id):
 
 disconnect_timers = {}
 recently_read_timers = {}
+offline_watchdogs = {}
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
@@ -8616,7 +8617,7 @@ def _touch_socket_sid(user_id, sid, client_id=None):
     pipe.expire(_socket_sid_key(sid), SOCKET_TTL_SECONDS)
 
     pipe.execute()
-    
+
 def _remove_socket_sid(user_id, sid):
     """
     Rimuove un SID sia dal set utente sia dalla chiave singola SID.
@@ -8768,43 +8769,61 @@ def handle_disconnect():
         if remaining <= 0:
             print(f"🕐 Utente {user_id} senza socket → delay check")
 
-            offline_token = _bump_offline_token(user_id)
-
-            socketio.start_background_task(
-                remove_user_later, user_id, offline_token
-            )
+            _bump_offline_token(user_id)
+            ensure_offline_watchdog(user_id)
 
     except Exception as e:
         print("Errore disconnect:", e)
 
-def remove_user_later(user_id, offline_token):
-
-    socketio.sleep(30)
-
-    # se nel frattempo c'è stata una nuova connect/disconnect,
-    # questo task è vecchio e va ignorato
-    current_token = _get_offline_token(user_id)
-
-    if current_token != offline_token:
-        print(f"⏭️ Skip offline stale per utente {user_id} (token vecchio)")
+def ensure_offline_watchdog(user_id):
+    """
+    Garantisce UN SOLO watchdog delayed per utente.
+    Evita di creare decine di greenlet dormienti durante
+    i cambi pagina / entra-esci rapidi.
+    """
+    if user_id in offline_watchdogs:
         return
 
-    # cleanup zombie prima del check finale
-    remaining = _cleanup_user_socket_set(user_id)
+    task = socketio.start_background_task(_offline_watchdog_loop, user_id)
+    offline_watchdogs[user_id] = task
 
-    # ricontrollo token dopo cleanup
-    current_token = _get_offline_token(user_id)
-    if current_token != offline_token:
-        print(f"⏭️ Skip offline stale post-cleanup per utente {user_id}")
-        return
 
-    if remaining == 0:
-        redis_client.delete(_socket_user_set_key(user_id))
-        redis_client.srem("online_users", str(user_id))
+def _offline_watchdog_loop(user_id):
+    """
+    Watchdog unico per utente.
+    Aspetta una finestra di quiete di 30s senza nuovi cambi token.
+    Se durante l'attesa ci sono reconnect/disconnect, il token cambia
+    e il watchdog riparte da capo senza crearne altri.
+    """
+    try:
+        while True:
+            token_before_sleep = _get_offline_token(user_id)
 
-        print(f"🔴 Utente {user_id} OFFLINE (cleanup delayed)")
-    else:
-        print(f"⏭️ Utente {user_id} ancora attivo ({remaining} socket reali)")
+            socketio.sleep(30)
+
+            token_after_sleep = _get_offline_token(user_id)
+            if token_after_sleep != token_before_sleep:
+                print(f"⏭️ Skip offline stale per utente {user_id} (token cambiato durante attesa)")
+                continue
+
+            remaining = _cleanup_user_socket_set(user_id)
+
+            token_after_cleanup = _get_offline_token(user_id)
+            if token_after_cleanup != token_before_sleep:
+                print(f"⏭️ Skip offline stale post-cleanup per utente {user_id}")
+                continue
+
+            if remaining == 0:
+                redis_client.delete(_socket_user_set_key(user_id))
+                redis_client.srem("online_users", str(user_id))
+                print(f"🔴 Utente {user_id} OFFLINE (cleanup delayed)")
+            else:
+                print(f"⏭️ Utente {user_id} ancora attivo ({remaining} socket reali)")
+
+            break
+
+    finally:
+        offline_watchdogs.pop(user_id, None)
 
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
