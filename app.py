@@ -8575,8 +8575,13 @@ def _get_client_id_from_sid(sid):
 
 def _touch_socket_sid(user_id, sid, client_id=None):
     """
-    Registra/aggiorna il SID.
-    Se client_id presente → mantiene UN SOLO SID per quel client.
+    Registra/aggiorna il SID corrente.
+    Se client_id presente, aggiorna il mapping client -> SID
+    SENZA disconnettere forzatamente il vecchio SID durante la connect.
+
+    Motivo:
+    durante i cambi pagina / rientri, vecchio e nuovo SID possono
+    sovrapporsi per un attimo. Fare disconnect hard qui introduce race.
     """
     now_ts = int(time.time())
     user_set_key = _socket_user_set_key(user_id)
@@ -8589,15 +8594,14 @@ def _touch_socket_sid(user_id, sid, client_id=None):
         old_sid = _decode_redis_value(old_sid_raw) if old_sid_raw else None
 
         if old_sid and old_sid != sid:
-            print(f"🔥 Kill vecchia socket duplicata: {old_sid} (client {client_id})")
+            print(f"♻️ Mapping client aggiornato: {old_sid} -> {sid} (client {client_id})")
 
-            try:
-                socketio.server.disconnect(old_sid)
-            except Exception as e:
-                print(f"Errore disconnect old_sid {old_sid}:", e)
-
-            pipe.srem(user_set_key, old_sid)
-            pipe.delete(_socket_sid_key(old_sid))
+            # IMPORTANTE:
+            # non disconnettere qui il vecchio SID
+            # non cancellare qui socket_sid:{old_sid}
+            # non fare srem qui del vecchio SID
+            # il vecchio SID verrà ripulito dal suo disconnect naturale
+            # oppure dal TTL / cleanup successivo
 
         pipe.set(client_key, sid, ex=SOCKET_TTL_SECONDS)
 
@@ -8612,7 +8616,7 @@ def _touch_socket_sid(user_id, sid, client_id=None):
     pipe.expire(_socket_sid_key(sid), SOCKET_TTL_SECONDS)
 
     pipe.execute()
-
+    
 def _remove_socket_sid(user_id, sid):
     """
     Rimuove un SID sia dal set utente sia dalla chiave singola SID.
