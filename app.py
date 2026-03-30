@@ -8654,28 +8654,57 @@ def _cleanup_user_socket_set(user_id):
             print(f"🧹 Rimosso SID zombie {sid} da utente {user_id}")
 
     return alive
+
 def _get_live_user_sids(user_id):
     """
-    Ritorna i SID vivi dell'utente usando Redis come fonte di verità.
-    Pulisce anche eventuali SID zombie dal set.
+    Ritorna SOLO i SID vivi e correnti dell'utente.
+
+    Se più SID appartengono allo stesso client_id, tiene solo quello
+    attualmente mappato in Redis come SID corrente per quel client.
+    In questo modo evitiamo di emettere verso socket vecchie/stale
+    durante i cambi pagina rapidi.
     """
     key = _socket_user_set_key(user_id)
     raw_sids = redis_client.smembers(key)
 
     live_sids = []
+    seen_client_ids = set()
 
     for raw_sid in raw_sids:
         sid = _decode_redis_value(raw_sid)
-        ttl = redis_client.ttl(_socket_sid_key(sid))
+        sid_key = _socket_sid_key(sid)
 
-        if ttl and ttl > 0:
-            live_sids.append(sid)
-        else:
+        ttl = redis_client.ttl(sid_key)
+        if not ttl or ttl <= 0:
             redis_client.srem(key, sid)
             print(f"🧹 Rimosso SID zombie {sid} da utente {user_id}")
+            continue
+
+        client_id = _get_client_id_from_sid(sid)
+
+        # Se il socket non ha client_id, lo consideriamo valido
+        # perché non possiamo deduplicarlo.
+        if not client_id:
+            live_sids.append(sid)
+            continue
+
+        client_key = _socket_client_key(user_id, client_id)
+        mapped_sid_raw = redis_client.get(client_key)
+        mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
+
+        # Se questo SID non è più quello corrente del client, lo ignoriamo
+        if mapped_sid != sid:
+            print(f"⏭️ Skip SID stale {sid} per utente {user_id} (client {client_id}, corrente={mapped_sid})")
+            continue
+
+        # Protezione aggiuntiva contro duplicati logici
+        if client_id in seen_client_ids:
+            continue
+
+        seen_client_ids.add(client_id)
+        live_sids.append(sid)
 
     return live_sids
-
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
