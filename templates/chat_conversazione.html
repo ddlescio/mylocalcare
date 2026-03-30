@@ -1066,26 +1066,30 @@ body {
 
     console.log("🔍 [CHAT] bindWhenReady su socket", s.id, "connected=", s.connected);
 
-    // Caso 1: socket già pronta -> bind immediato UNA SOLA VOLTA
+    // 🔥 pulizia eventuale listener socket_ready precedente
+    if (window.__chatSocketReadyHandlerRef) {
+      window.removeEventListener("socket_ready", window.__chatSocketReadyHandlerRef);
+      window.__chatSocketReadyHandlerRef = null;
+    }
+
+    // Caso 1: socket già pronta -> bind immediato
     if (s.connected) {
       bindChatSocket(s);
       return;
     }
 
-    // Caso 2: socket non ancora pronta -> aspetta l'evento globale
-    if (!window.__chatSocketReadyListenerAttached) {
-      window.__chatSocketReadyListenerAttached = true;
+    // Caso 2: socket non ancora pronta -> aggancia SEMPRE un listener fresco
+    window.__chatSocketReadyHandlerRef = function () {
+      const current = window.socket;
+      if (!current) return;
 
-      window.addEventListener("socket_ready", () => {
-        const current = window.socket;
-        if (!current) return;
+      console.log("🔁 [CHAT] socket_ready intercettato, bind su", current.id);
+      bindChatSocket(current);
+    };
 
-        console.log("🔁 [CHAT] socket_ready intercettato, bind su", current.id);
-        bindChatSocket(current);
-      }, { once: true });
-    }
+    window.addEventListener("socket_ready", window.__chatSocketReadyHandlerRef, { once: true });
   }
-  bindWhenReady();
+  bindWhenReady();  
 });
 </script>
 <script>
