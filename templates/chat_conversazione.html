@@ -561,178 +561,177 @@ body {
 
 
     function bindChatSocket(socket) {
-      function bindChatSocket(socket) {
-        if (!socket) return;
+      if (!socket) return;
 
-        window.__chatHandlers = window.__chatHandlers || {};
+      window.__chatHandlers = window.__chatHandlers || {};
 
-        const previousSocket = window.__chatBoundSocket || null;
+      const previousSocket = window.__chatBoundSocket || null;
 
-        console.log("🔒 Bind chat su socket:", socket.id, "prev:", previousSocket ? previousSocket.id : null);
+      console.log("🔒 Bind chat su socket:", socket.id, "prev:", previousSocket ? previousSocket.id : null);
 
-        // --------------------------------------------------
-        // 1. STACCA I LISTENER DAL VECCHIO SOCKET, SE ESISTE
-        // --------------------------------------------------
-        if (previousSocket && previousSocket !== socket) {
-          if (window.__chatHandlers.connectInit) previousSocket.off("connect", window.__chatHandlers.connectInit);
-          if (window.__chatHandlers.userTyping) previousSocket.off("user_typing", window.__chatHandlers.userTyping);
-          if (window.__chatHandlers.newMessage) previousSocket.off("new_message", window.__chatHandlers.newMessage);
-          if (window.__chatHandlers.messagesRead) previousSocket.off("messages_read", window.__chatHandlers.messagesRead);
-          if (window.__chatHandlers.messageDelivered) previousSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
-        }
+      // --------------------------------------------------
+      // 1. STACCA I LISTENER DAL VECCHIO SOCKET, SE ESISTE
+      // --------------------------------------------------
+      if (previousSocket && previousSocket !== socket) {
+        if (window.__chatHandlers.connectInit) previousSocket.off("connect", window.__chatHandlers.connectInit);
+        if (window.__chatHandlers.userTyping) previousSocket.off("user_typing", window.__chatHandlers.userTyping);
+        if (window.__chatHandlers.newMessage) previousSocket.off("new_message", window.__chatHandlers.newMessage);
+        if (window.__chatHandlers.messagesRead) previousSocket.off("messages_read", window.__chatHandlers.messagesRead);
+        if (window.__chatHandlers.messageDelivered) previousSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
+      }
 
-        // --------------------------------------------------
-        // 2. STACCA COMUNQUE I LISTENER DAL SOCKET ATTUALE
-        // --------------------------------------------------
-        if (window.__chatHandlers.connectInit) socket.off("connect", window.__chatHandlers.connectInit);
-        if (window.__chatHandlers.userTyping) socket.off("user_typing", window.__chatHandlers.userTyping);
-        if (window.__chatHandlers.newMessage) socket.off("new_message", window.__chatHandlers.newMessage);
-        if (window.__chatHandlers.messagesRead) socket.off("messages_read", window.__chatHandlers.messagesRead);
-        if (window.__chatHandlers.messageDelivered) socket.off("message_delivered", window.__chatHandlers.messageDelivered);
+      // --------------------------------------------------
+      // 2. STACCA COMUNQUE I LISTENER DAL SOCKET ATTUALE
+      // --------------------------------------------------
+      if (window.__chatHandlers.connectInit) socket.off("connect", window.__chatHandlers.connectInit);
+      if (window.__chatHandlers.userTyping) socket.off("user_typing", window.__chatHandlers.userTyping);
+      if (window.__chatHandlers.newMessage) socket.off("new_message", window.__chatHandlers.newMessage);
+      if (window.__chatHandlers.messagesRead) socket.off("messages_read", window.__chatHandlers.messagesRead);
+      if (window.__chatHandlers.messageDelivered) socket.off("message_delivered", window.__chatHandlers.messageDelivered);
 
-        // --------------------------------------------------
-        // 3. MEMORIZZA QUESTO COME SOCKET CHAT ATTIVO
-        // --------------------------------------------------
-        window.__chatBoundSocket = socket;
+      // --------------------------------------------------
+      // 3. MEMORIZZA QUESTO COME SOCKET CHAT ATTIVO
+      // --------------------------------------------------
+      window.__chatBoundSocket = socket;
 
-        chatOpenedOnce = false;
-        chatClosedEmitted = false;
-        window.__activeChat = destId;
+      chatOpenedOnce = false;
+      chatClosedEmitted = false;
+      window.__activeChat = destId;
 
-        // --------------------------------------------------
-        // CONNECT / RECONNECT
-        // --------------------------------------------------
-        window.__chatHandlers.connectInit = function () {
-          console.log("🟢 [CHAT] connect/reconnect su socket", socket.id);
-          emitChatOpened();
-        };
-        socket.on("connect", window.__chatHandlers.connectInit);
+      // --------------------------------------------------
+      // CONNECT / RECONNECT
+      // --------------------------------------------------
+      window.__chatHandlers.connectInit = function () {
+        console.log("🟢 [CHAT] connect/reconnect su socket", socket.id);
+        emitChatOpened();
+      };
+      socket.on("connect", window.__chatHandlers.connectInit);
 
-        if (socket.connected) {
-          console.log("🟢 [CHAT] socket già connessa, apertura immediata", socket.id);
-          emitChatOpened();
-        }
+      if (socket.connected) {
+        console.log("🟢 [CHAT] socket già connessa, apertura immediata", socket.id);
+        emitChatOpened();
+      }
 
-        // --------------------------------------------------
-        // NEW MESSAGE
-        // --------------------------------------------------
-        window.__chatHandlers.newMessage = function (m) {
-          console.log("📩 [CHAT] new_message ricevuto", m);
+      // --------------------------------------------------
+      // NEW MESSAGE
+      // --------------------------------------------------
+      window.__chatHandlers.newMessage = function (m) {
+        console.log("📩 [CHAT] new_message ricevuto", m);
 
-          const currentChat = destId;
+        const currentChat = destId;
 
-          try {
-            const belongsToThisChat =
-              (m.mittente_id === meId && m.destinatario_id === currentChat) ||
-              (m.mittente_id === currentChat && m.destinatario_id === meId);
+        try {
+          const belongsToThisChat =
+            (m.mittente_id === meId && m.destinatario_id === currentChat) ||
+            (m.mittente_id === currentChat && m.destinatario_id === meId);
 
-            if (!belongsToThisChat) return;
+          if (!belongsToThisChat) return;
 
-            const alreadyBottom = isAtBottom();
+          const alreadyBottom = isAtBottom();
 
-            if (m.created_at) {
-              ensureDateHeaderFor(m.created_at);
-              cleanDuplicateDates();
-            }
+          if (m.created_at) {
+            ensureDateHeaderFor(m.created_at);
+            cleanDuplicateDates();
+          }
 
-            let bubbleEl = document.querySelector(`#msgWrap [data-mid="${m.id}"]`);
+          let bubbleEl = document.querySelector(`#msgWrap [data-mid="${m.id}"]`);
 
-            if (!bubbleEl) {
-              const node = bubble({ ...m, me_id: meId });
-              wrap.appendChild(node);
-              bubbleEl = node.querySelector("[data-mid]");
-            }
+          if (!bubbleEl) {
+            const node = bubble({ ...m, me_id: meId });
+            wrap.appendChild(node);
+            bubbleEl = node.querySelector("[data-mid]");
+          }
 
-            if (!oldestMessageId) {
-              oldestMessageId = m.id;
-            }
+          if (!oldestMessageId) {
+            oldestMessageId = m.id;
+          }
 
-            if (m.mittente_id === meId) {
-              const spunte = bubbleEl.querySelector(".spunte");
-              if (spunte) {
-                if (m.letto) {
-                  spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
-                } else if (m.consegnato) {
-                  spunte.innerHTML = '<span class="text-gray-400">✅</span>';
-                } else {
-                  spunte.innerHTML = '<span class="text-gray-400">⏳</span>';
-                }
+          if (m.mittente_id === meId) {
+            const spunte = bubbleEl.querySelector(".spunte");
+            if (spunte) {
+              if (m.letto) {
+                spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
+              } else if (m.consegnato) {
+                spunte.innerHTML = '<span class="text-gray-400">✅</span>';
+              } else {
+                spunte.innerHTML = '<span class="text-gray-400">⏳</span>';
               }
             }
-
-            if (m.destinatario_id === meId && document.visibilityState === "visible") {
-              clearTimeout(markReadTimer);
-
-              markReadTimer = setTimeout(() => {
-                const activeSocket = window.__chatBoundSocket || window.socket;
-                if (activeSocket && activeSocket.connected) {
-                  console.log("👁️ [CHAT] mark_as_read automatico per", m.mittente_id);
-                  activeSocket.emit("mark_as_read", {
-                    other_id: m.mittente_id
-                  });
-                }
-              }, 300);
-            }
-
-            if (alreadyBottom || m.mittente_id === meId) {
-              setTimeout(() => scrollBottom(true), 80);
-            }
-
-          } catch (err) {
-            console.error("🔥 Errore in new_message:", err, m);
           }
-        };
-        socket.on("new_message", window.__chatHandlers.newMessage);
 
-        // --------------------------------------------------
-        // USER TYPING
-        // --------------------------------------------------
-        window.__chatHandlers.userTyping = function (data) {
-          console.log("⌨️ [CHAT] user_typing ricevuto", data);
+          if (m.destinatario_id === meId && document.visibilityState === "visible") {
+            clearTimeout(markReadTimer);
 
-          if (data.from !== destId) return;
-
-          if (data.typing) {
-            typingIndicator.classList.remove("hidden");
-          } else {
-            typingIndicator.classList.add("hidden");
+            markReadTimer = setTimeout(() => {
+              const activeSocket = window.__chatBoundSocket || window.socket;
+              if (activeSocket && activeSocket.connected) {
+                console.log("👁️ [CHAT] mark_as_read automatico per", m.mittente_id);
+                activeSocket.emit("mark_as_read", {
+                  other_id: m.mittente_id
+                });
+              }
+            }, 300);
           }
-        };
-        socket.on("user_typing", window.__chatHandlers.userTyping);
 
-        // --------------------------------------------------
-        // MESSAGES READ
-        // --------------------------------------------------
-        window.__chatHandlers.messagesRead = function (data) {
-          console.log("✅ [CHAT] messages_read ricevuto", data);
-
-          if (data.from !== destId) return;
-
-          document.querySelectorAll('#msgWrap .bubble-me .spunte').forEach((spunte) => {
-            spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
-            spunte.dataset.read = "1";
-          });
-        };
-        socket.on("messages_read", window.__chatHandlers.messagesRead);
-
-        // --------------------------------------------------
-        // MESSAGE DELIVERED
-        // --------------------------------------------------
-        window.__chatHandlers.messageDelivered = function (data) {
-          console.log("📬 [CHAT] message_delivered ricevuto", data);
-
-          const bubbleEl = document.querySelector(`#msgWrap [data-mid="${data.id}"]`);
-          if (!bubbleEl) return;
-
-          const spunte = bubbleEl.querySelector(".spunte");
-          if (!spunte) return;
-
-          if (!spunte.dataset.read) {
-            spunte.innerHTML = '<span class="text-gray-400">✅</span>';
+          if (alreadyBottom || m.mittente_id === meId) {
+            setTimeout(() => scrollBottom(true), 80);
           }
-        };
-        socket.on("message_delivered", window.__chatHandlers.messageDelivered);
-      }
+
+        } catch (err) {
+          console.error("🔥 Errore in new_message:", err, m);
+        }
+      };
+      socket.on("new_message", window.__chatHandlers.newMessage);
+
+      // --------------------------------------------------
+      // USER TYPING
+      // --------------------------------------------------
+      window.__chatHandlers.userTyping = function (data) {
+        console.log("⌨️ [CHAT] user_typing ricevuto", data);
+
+        if (data.from !== destId) return;
+
+        if (data.typing) {
+          typingIndicator.classList.remove("hidden");
+        } else {
+          typingIndicator.classList.add("hidden");
+        }
+      };
+      socket.on("user_typing", window.__chatHandlers.userTyping);
+
+      // --------------------------------------------------
+      // MESSAGES READ
+      // --------------------------------------------------
+      window.__chatHandlers.messagesRead = function (data) {
+        console.log("✅ [CHAT] messages_read ricevuto", data);
+
+        if (data.from !== destId) return;
+
+        document.querySelectorAll('#msgWrap .bubble-me .spunte').forEach((spunte) => {
+          spunte.innerHTML = '<span class="text-blue-400">✅✅</span>';
+          spunte.dataset.read = "1";
+        });
+      };
+      socket.on("messages_read", window.__chatHandlers.messagesRead);
+
+      // --------------------------------------------------
+      // MESSAGE DELIVERED
+      // --------------------------------------------------
+      window.__chatHandlers.messageDelivered = function (data) {
+        console.log("📬 [CHAT] message_delivered ricevuto", data);
+
+        const bubbleEl = document.querySelector(`#msgWrap [data-mid="${data.id}"]`);
+        if (!bubbleEl) return;
+
+        const spunte = bubbleEl.querySelector(".spunte");
+        if (!spunte) return;
+
+        if (!spunte.dataset.read) {
+          spunte.innerHTML = '<span class="text-gray-400">✅</span>';
+        }
+      };
+      socket.on("message_delivered", window.__chatHandlers.messageDelivered);
+    }
 
     // pulizia vecchi handler lifecycle
     if (window.__chatBeforeUnloadHandlerRef) {
