@@ -8523,6 +8523,9 @@ def _socket_user_set_key(user_id):
 def _socket_sid_key(sid):
     return f"socket_sid:{sid}"
 
+def _socket_room_name(sid):
+    return f"sock:{sid}"
+
 def _socket_client_key(user_id, client_id):
     return f"user_socket_client:{user_id}:{client_id}"
 
@@ -8676,9 +8679,9 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    Invia un evento a tutti i SID vivi dell'utente.
-    Non dipende dalle room user_{id}, che nei log stanno risultando inaffidabili
-    nel passaggio cross-worker.
+    Invia un evento a tutti i socket vivi dell'utente usando
+    una room esplicita per socket (sock:<sid>), più affidabile
+    del SID implicito nel setup multi-worker.
     """
     sids = _get_live_user_sids(user_id)
 
@@ -8689,7 +8692,7 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
         socketio.emit(
             event_name,
             payload,
-            room=sid,
+            room=_socket_room_name(sid),
             namespace="/"
         )
 
@@ -8717,8 +8720,9 @@ def handle_connect(auth=None):
 
     _touch_socket_sid(user_id, sid, client_id=client_id)
 
-    # join room utente
+    # join room utente + room esplicita del socket
     join_room(room, sid=sid)
+    join_room(_socket_room_name(sid), sid=sid)
 
     # cleanup zombie basato su Redis condiviso
     count = _cleanup_user_socket_set(user_id)
@@ -8770,6 +8774,11 @@ def handle_disconnect():
 
     try:
         leave_room(f"user_{user_id}", sid=sid)
+    except Exception:
+        pass
+
+    try:
+        leave_room(_socket_room_name(sid), sid=sid)
     except Exception:
         pass
 
