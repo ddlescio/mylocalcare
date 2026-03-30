@@ -113,61 +113,7 @@
   }
 
   // ===============================
-  // RECONNECT SU RITORNO PAGINA
+  // NIENTE RECONNECT/DISCONNECT MANUALE
+  // Lasciamo gestire tutto a Socket.IO
   // ===============================
-  if (!window.__socket_visibility_fix_bound__) {
-    window.__socket_visibility_fix_bound__ = true;
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        if (socket && !socket.connected) {
-          console.log("👀 Pagina visibile → reconnect socket");
-          try {
-            socket.connect();
-          } catch (e) {
-            console.warn("Errore reconnect visibilitychange:", e);
-          }
-        }
-      }
-    });
-  }
-
-  if (!window.__socket_pageshow_fix_bound__) {
-    window.__socket_pageshow_fix_bound__ = true;
-
-    window.addEventListener("pageshow", () => {
-      if (socket && !socket.connected) {
-        console.log("📄 pageshow → reconnect socket");
-        try {
-          socket.connect();
-        } catch (e) {
-          console.warn("Errore reconnect pageshow:", e);
-        }
-      }
-    });
-  }
-
-  // ===============================
-  // DISCONNECT SEMPRE SU USCITA PAGINA
-  // ===============================
-  function cleanupSocketOnExit() {
-    if (!window.socket) return;
-
-    try {
-      if (window.socket.connected) {
-        console.log("🧨 uscita pagina → disconnect socket");
-        window.socket.disconnect();
-      }
-    } catch (e) {
-      console.warn("Errore disconnect in uscita:", e);
-    }
-  }
-
-  if (!window.__socket_cleanup_bound__) {
-    window.__socket_cleanup_bound__ = true;
-
-    window.addEventListener("pagehide", cleanupSocketOnExit);
-    window.addEventListener("beforeunload", cleanupSocketOnExit);
-  }
-  
 })();
