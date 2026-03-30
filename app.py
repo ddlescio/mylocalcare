@@ -8968,13 +8968,13 @@ def handle_send_message(data):
         destinatario_id = int(data.get('destinatario_id'))
     except (TypeError, ValueError):
         emit('error', {'message': 'destinatario_id non valido'})
-        return
+        return {'ok': False, 'error': 'destinatario_id non valido'}
 
     testo = data.get('testo', '').strip()
 
     if not mittente_id or not destinatario_id or not testo:
         emit('error', {'message': 'Dati mancanti o sessione non valida'})
-        return
+        return {'ok': False, 'error': 'Dati mancanti o sessione non valida'}
 
     conn = None
     c = None
@@ -8991,7 +8991,10 @@ def handle_send_message(data):
             emit("error", {
                 "message": "Per inviare messaggi devi prima caricare una foto profilo."
             })
-            return
+            return {
+                'ok': False,
+                'error': 'Per inviare messaggi devi prima caricare una foto profilo.'
+            }
 
         # 🔵 Salvataggio messaggio
         msg_id = chat_invia(mittente_id, destinatario_id, testo)
@@ -9064,6 +9067,11 @@ def handle_send_message(data):
             "Nuovo messaggio su LocalCare",
             testo[:100]
         )
+
+    return {
+        'ok': True,
+        'id': msg_id
+    }
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):

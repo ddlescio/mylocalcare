@@ -945,21 +945,39 @@ body {
       return;
     }
 
-    // ⚠️ NON bloccare più l'invio
     if (!s.connected) {
-      console.warn("⚠️ Socket non connessa (probabile reconnect) → invio comunque");
+      console.warn("❌ Socket non connessa: invio bloccato");
+      return;
     }
 
     sending = true;
 
-    s.emit('send_message', { destinatario_id: destId, testo });
+    const testoOriginale = testo;
 
-    input.value = '';
-    toggleEmoji(false);
+    s.timeout(8000).emit(
+      'send_message',
+      { destinatario_id: destId, testo: testoOriginale },
+      (err, response) => {
+        if (err) {
+          console.error("❌ ACK send_message timeout/errore:", err);
+          sending = false;
+          return;
+        }
 
-    setTimeout(() => {
-      sending = false;
-    }, 250);
+        if (!response || response.ok !== true) {
+          console.error("❌ ACK send_message negativo:", response);
+          sending = false;
+          return;
+        }
+
+        input.value = '';
+        toggleEmoji(false);
+
+        setTimeout(() => {
+          sending = false;
+        }, 250);
+      }
+    );
   });
 
   // --------------------------------------------------
