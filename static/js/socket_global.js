@@ -166,7 +166,9 @@
   if (!window.__socket_cleanup_bound__) {
     window.__socket_cleanup_bound__ = true;
 
-    window.addEventListener("pagehide", cleanupSocketOnExit);
+    // ✅ Su iOS/PWA pagehide scatta troppo spesso e non equivale
+    // sempre a un'uscita reale dalla pagina.
+    // Quindi NON disconnettiamo più la socket su pagehide.
     window.addEventListener("beforeunload", cleanupSocketOnExit);
   }
 })();
