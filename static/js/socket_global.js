@@ -110,39 +110,4 @@
     }, 20000);
   }
 
-  // ===============================
-  // PAGE LIFECYCLE FIX
-  // Safari / PWA / BFCache:
-  // chiude la socket quando la pagina esce,
-  // la riapre se la pagina torna viva
-  // ===============================
-  if (!window.__socket_pagehide_handler_attached__) {
-    window.__socket_pagehide_handler_attached__ = true;
-
-    window.addEventListener("pagehide", () => {
-      try {
-        if (socket && socket.connected) {
-          console.log("📴 pagehide -> socket.disconnect()");
-          socket.disconnect();
-        }
-      } catch (e) {
-        console.warn("Errore disconnect su pagehide:", e);
-      }
-    });
-  }
-
-  if (!window.__socket_pageshow_handler_attached__) {
-    window.__socket_pageshow_handler_attached__ = true;
-
-    window.addEventListener("pageshow", (event) => {
-      try {
-        if (socket && !socket.connected) {
-          console.log("📳 pageshow -> socket.connect()", { persisted: !!event.persisted });
-          socket.connect();
-        }
-      } catch (e) {
-        console.warn("Errore reconnect su pageshow:", e);
-      }
-    });
-  }
 })();
