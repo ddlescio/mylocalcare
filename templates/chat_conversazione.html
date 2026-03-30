@@ -625,25 +625,44 @@ body {
         const currentChat = destId;
 
         try {
+          console.log("📩 [CHAT] stato base", {
+            meId,
+            destId,
+            currentChat,
+            mittente_id: m.mittente_id,
+            destinatario_id: m.destinatario_id
+          });
+
           const belongsToThisChat =
             (m.mittente_id === meId && m.destinatario_id === currentChat) ||
             (m.mittente_id === currentChat && m.destinatario_id === meId);
 
-          if (!belongsToThisChat) return;
+          console.log("📩 [CHAT] belongsToThisChat =", belongsToThisChat);
+
+          if (!belongsToThisChat) {
+            console.log("⏭️ [CHAT] messaggio ignorato: non appartiene a questa chat");
+            return;
+          }
 
           const alreadyBottom = isAtBottom();
+          console.log("📩 [CHAT] alreadyBottom =", alreadyBottom);
 
           if (m.created_at) {
+            console.log("📩 [CHAT] prima ensureDateHeaderFor");
             ensureDateHeaderFor(m.created_at);
             cleanDuplicateDates();
+            console.log("📩 [CHAT] dopo ensureDateHeaderFor");
           }
 
           let bubbleEl = document.querySelector(`#msgWrap [data-mid="${m.id}"]`);
+          console.log("📩 [CHAT] bubble esistente =", !!bubbleEl);
 
           if (!bubbleEl) {
+            console.log("📩 [CHAT] creo nuovo nodo bubble");
             const node = bubble({ ...m, me_id: meId });
             wrap.appendChild(node);
             bubbleEl = node.querySelector("[data-mid]");
+            console.log("📩 [CHAT] nodo append eseguito =", !!bubbleEl);
           }
 
           if (!oldestMessageId) {
@@ -651,6 +670,7 @@ body {
           }
 
           if (m.mittente_id === meId) {
+            console.log("📩 [CHAT] aggiorno spunte mittente");
             const spunte = bubbleEl.querySelector(".spunte");
             if (spunte) {
               if (m.letto) {
@@ -664,12 +684,17 @@ body {
           }
 
           if (m.destinatario_id === meId && document.visibilityState === "visible") {
+            console.log("📩 [CHAT] preparo mark_as_read automatico");
             clearTimeout(markReadTimer);
 
             markReadTimer = setTimeout(() => {
               const activeSocket = getChatSocket();
+              console.log("📩 [CHAT] timer mark_as_read scattato", {
+                hasSocket: !!activeSocket,
+                connected: !!(activeSocket && activeSocket.connected)
+              });
+
               if (activeSocket && activeSocket.connected) {
-                console.log("👁️ [CHAT] mark_as_read automatico per", m.mittente_id);
                 activeSocket.emit("mark_as_read", {
                   other_id: m.mittente_id
                 });
@@ -678,9 +703,11 @@ body {
           }
 
           if (alreadyBottom || m.mittente_id === meId) {
+            console.log("📩 [CHAT] scrollBottom programmato");
             setTimeout(() => scrollBottom(true), 80);
           }
 
+          console.log("✅ [CHAT] new_message completato");
         } catch (err) {
           console.error("🔥 Errore in new_message:", err, m);
         }
@@ -832,7 +859,7 @@ body {
     window.addEventListener("pageshow", window.__chatPageshowHandlerRef);
     document.addEventListener("visibilitychange", window.__chatVisibilityHandlerRef);
     document.addEventListener("click", window.__chatInternalNavHandlerRef, true);
-    
+
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPopover = document.getElementById('emojiPopover');
