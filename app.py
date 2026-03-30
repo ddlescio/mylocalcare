@@ -8651,7 +8651,47 @@ def _cleanup_user_socket_set(user_id):
             print(f"🧹 Rimosso SID zombie {sid} da utente {user_id}")
 
     return alive
+def _get_live_user_sids(user_id):
+    """
+    Ritorna i SID vivi dell'utente usando Redis come fonte di verità.
+    Pulisce anche eventuali SID zombie dal set.
+    """
+    key = _socket_user_set_key(user_id)
+    raw_sids = redis_client.smembers(key)
 
+    live_sids = []
+
+    for raw_sid in raw_sids:
+        sid = _decode_redis_value(raw_sid)
+        ttl = redis_client.ttl(_socket_sid_key(sid))
+
+        if ttl and ttl > 0:
+            live_sids.append(sid)
+        else:
+            redis_client.srem(key, sid)
+            print(f"🧹 Rimosso SID zombie {sid} da utente {user_id}")
+
+    return live_sids
+
+
+def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
+    """
+    Invia un evento a tutti i SID vivi dell'utente.
+    Non dipende dalle room user_{id}, che nei log stanno risultando inaffidabili
+    nel passaggio cross-worker.
+    """
+    sids = _get_live_user_sids(user_id)
+
+    for sid in sids:
+        if skip_sid and sid == skip_sid:
+            continue
+
+        socketio.emit(
+            event_name,
+            payload,
+            room=sid,
+            namespace="/"
+        )
 
 @socketio.on("connect")
 def handle_connect(auth=None):
@@ -9029,26 +9069,26 @@ def handle_send_message(data):
         'letto': False
     }
 
-    # 🔵 Invio realtime
-    socketio.emit('new_message', messaggio, room=f"user_{mittente_id}")
-    socketio.emit('new_message', messaggio, room=f"user_{destinatario_id}")
+    # 🔵 Invio realtime via SID vivi (NON via room user_{id})
+    emit_to_user_sids(mittente_id, 'new_message', messaggio)
+    emit_to_user_sids(destinatario_id, 'new_message', messaggio)
 
-    socketio.emit("message_delivered", {
+    emit_to_user_sids(mittente_id, "message_delivered", {
         "id": msg_id,
         "mittente_id": mittente_id,
         "destinatario_id": destinatario_id
-    }, room=f"user_{mittente_id}")
+    })
 
     count_destinatario = chat_count_unread(destinatario_id)
 
-    socketio.emit(
+    emit_to_user_sids(
+        destinatario_id,
         'update_unread_count',
-        {'count': count_destinatario},
-        room=f"user_{destinatario_id}"
+        {'count': count_destinatario}
     )
 
-    socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{mittente_id}")
-    socketio.emit('chat_threads_update', {'from': mittente_id}, room=f"user_{destinatario_id}")
+    emit_to_user_sids(mittente_id, 'chat_threads_update', {'from': mittente_id})
+    emit_to_user_sids(destinatario_id, 'chat_threads_update', {'from': mittente_id})
 
     # =====================================
     # 🔔 PUSH SE LA CHAT NON È APERTA E PAGINA NON VISIBILE
@@ -9133,26 +9173,26 @@ def handle_mark_as_read(data):
         chat_segna_letti(user_id, other_id)
 
         # aggiorna spunte nell'altra chat
-        socketio.emit(
+        emit_to_user_sids(
+            other_id,
             'messages_read',
-            {'from': user_id},
-            room=f"user_{other_id}"
+            {'from': user_id}
         )
 
         # 🔥 aggiorna badge utente
         unread_count = chat_count_unread(user_id)
 
-        socketio.emit(
+        emit_to_user_sids(
+            user_id,
             'update_unread_count',
-            {'count': unread_count},
-            room=f"user_{user_id}"
+            {'count': unread_count}
         )
 
         # aggiorna lista chat
-        socketio.emit(
+        emit_to_user_sids(
+            user_id,
             'chat_threads_update',
-            {'from': other_id},
-            room=f"user_{user_id}"
+            {'from': other_id}
         )
 
         print(f"✅ Messaggi da {other_id} segnati come letti da {user_id}")
@@ -9179,14 +9219,14 @@ def handle_chat_chiusa(data):
     clear_recently_read(user_id)
 
     # 🔥🔥 AGGIORNA SUBITO LA LISTA CHAT
-    socketio.emit('chat_threads_update', {}, room=f"user_{user_id}")
+    emit_to_user_sids(user_id, 'chat_threads_update', {})
 
 @socketio.on('refresh_threads')
 def handle_refresh_threads(data):
     user_id = session.get('utente_id')
     if not user_id:
         return
-    socketio.emit("chat_threads_update", {}, room=f"user_{user_id}")
+    emit_to_user_sids(user_id, "chat_threads_update", {})
 
 @socketio.on('typing')
 def handle_typing(data):
@@ -9206,15 +9246,14 @@ def handle_typing(data):
     typing_state[(mittente_id, destinatario_id)] = typing
 
     # Invia SOLO all'altro utente
-    socketio.emit(
+    emit_to_user_sids(
+        destinatario_id,
         'user_typing',
         {
             'from': mittente_id,
             'typing': typing
-        },
-        room=f"user_{destinatario_id}"
+        }
     )
-
 
 @app.route("/webhook/stripe", methods=["POST"])
 def webhook_stripe():
