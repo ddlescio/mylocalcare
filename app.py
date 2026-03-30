@@ -9040,17 +9040,25 @@ def _delayed_clear_recently_read(user_id, delay):
 
 @socketio.on('send_message')
 def handle_send_message(data):
+    from flask import session
+    from zoneinfo import ZoneInfo
+    from datetime import datetime
+    import traceback
+
     mittente_id = session.get('utente_id')
+    print(f"📨 [send_message] START mittente={mittente_id} data={data}")
 
     try:
         destinatario_id = int(data.get('destinatario_id'))
     except (TypeError, ValueError):
+        print("❌ [send_message] destinatario_id non valido")
         emit('error', {'message': 'destinatario_id non valido'})
         return {'ok': False, 'error': 'destinatario_id non valido'}
 
     testo = data.get('testo', '').strip()
 
     if not mittente_id or not destinatario_id or not testo:
+        print(f"❌ [send_message] dati mancanti mittente={mittente_id} destinatario={destinatario_id} testo='{testo}'")
         emit('error', {'message': 'Dati mancanti o sessione non valida'})
         return {'ok': False, 'error': 'Dati mancanti o sessione non valida'}
 
@@ -9058,14 +9066,18 @@ def handle_send_message(data):
     c = None
 
     try:
+        print("📨 [send_message] apro connessione DB")
         conn = get_db_connection()
+
+        print("📨 [send_message] ottengo cursore")
         c = get_cursor(conn)
 
-        # 🔒 Verifica foto profilo
+        print("📨 [send_message] verifico foto profilo")
         c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?"), (mittente_id,))
         row = c.fetchone()
 
         if not row or not row["foto_profilo"]:
+            print("❌ [send_message] foto profilo mancante")
             emit("error", {
                 "message": "Per inviare messaggi devi prima caricare una foto profilo."
             })
@@ -9074,29 +9086,39 @@ def handle_send_message(data):
                 'error': 'Per inviare messaggi devi prima caricare una foto profilo.'
             }
 
-        # 🔵 Salvataggio messaggio
+        print("📨 [send_message] prima di chat_invia")
         msg_id = chat_invia(mittente_id, destinatario_id, testo)
+        print(f"📨 [send_message] dopo chat_invia msg_id={msg_id}")
 
-        # 🔹 Aggiorna visibilità
+        print("📨 [send_message] aggiorno visibile_in_chat")
         conn.execute(sql(
             "UPDATE utenti SET visibile_in_chat = 1 WHERE id = ?"
         ), (mittente_id,))
+
+        print("📨 [send_message] commit")
         conn.commit()
+        print("📨 [send_message] commit OK")
+
+    except Exception as e:
+        print("❌ [send_message] ECCEZIONE")
+        traceback.print_exc()
+        emit('error', {'message': 'Errore interno invio messaggio'})
+        return {'ok': False, 'error': str(e)}
 
     finally:
+        print("📨 [send_message] finally chiusura risorse")
         try:
             if c:
                 c.close()
-        except:
-            pass
+        except Exception as e:
+            print("⚠️ [send_message] errore chiusura cursore:", e)
 
         if conn:
             try:
                 conn.close()
-            except:
-                pass
+            except Exception as e:
+                print("⚠️ [send_message] errore chiusura conn:", e)
 
-    # 🔵 Costruzione oggetto messaggio
     messaggio = {
         'id': msg_id,
         'mittente_id': mittente_id,
@@ -9107,49 +9129,60 @@ def handle_send_message(data):
         'letto': False
     }
 
-    # 🔵 Invio realtime via SID vivi (NON via room user_{id})
-    emit_to_user_sids(mittente_id, 'new_message', messaggio)
-    emit_to_user_sids(destinatario_id, 'new_message', messaggio)
+    try:
+        print("📨 [send_message] emit new_message mittente")
+        emit_to_user_sids(mittente_id, 'new_message', messaggio)
 
-    emit_to_user_sids(mittente_id, "message_delivered", {
-        "id": msg_id,
-        "mittente_id": mittente_id,
-        "destinatario_id": destinatario_id
-    })
+        print("📨 [send_message] emit new_message destinatario")
+        emit_to_user_sids(destinatario_id, 'new_message', messaggio)
 
-    count_destinatario = chat_count_unread(destinatario_id)
+        print("📨 [send_message] emit message_delivered")
+        emit_to_user_sids(mittente_id, "message_delivered", {
+            "id": msg_id,
+            "mittente_id": mittente_id,
+            "destinatario_id": destinatario_id
+        })
 
-    emit_to_user_sids(
-        destinatario_id,
-        'update_unread_count',
-        {'count': count_destinatario}
-    )
+        print("📨 [send_message] calcolo unread destinatario")
+        count_destinatario = chat_count_unread(destinatario_id)
 
-    emit_to_user_sids(mittente_id, 'chat_threads_update', {'from': mittente_id})
-    emit_to_user_sids(destinatario_id, 'chat_threads_update', {'from': mittente_id})
-
-    # =====================================
-    # 🔔 PUSH SE LA CHAT NON È APERTA E PAGINA NON VISIBILE
-    # =====================================
-
-    chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
-    pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
-
-    if chat_aperta != mittente_id and not pagina_visibile:
-
-        print(f"🔔 Push programmata per {destinatario_id}")
-
-        socketio.start_background_task(
-            invia_push,
+        print(f"📨 [send_message] emit unread destinatario count={count_destinatario}")
+        emit_to_user_sids(
             destinatario_id,
-            "Nuovo messaggio su LocalCare",
-            testo[:100]
+            'update_unread_count',
+            {'count': count_destinatario}
         )
 
-    return {
-        'ok': True,
-        'id': msg_id
-    }
+        print("📨 [send_message] emit chat_threads_update mittente")
+        emit_to_user_sids(mittente_id, 'chat_threads_update', {'from': mittente_id})
+
+        print("📨 [send_message] emit chat_threads_update destinatario")
+        emit_to_user_sids(destinatario_id, 'chat_threads_update', {'from': mittente_id})
+
+        chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
+        pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
+
+        print(f"📨 [send_message] stato push chat_aperta={chat_aperta} pagina_visibile={pagina_visibile}")
+
+        if chat_aperta != mittente_id and not pagina_visibile:
+            print(f"🔔 [send_message] Push programmata per {destinatario_id}")
+            socketio.start_background_task(
+                invia_push,
+                destinatario_id,
+                "Nuovo messaggio su LocalCare",
+                testo[:100]
+            )
+
+        print(f"✅ [send_message] END ok msg_id={msg_id}")
+        return {
+            'ok': True,
+            'id': msg_id
+        }
+
+    except Exception as e:
+        print("❌ [send_message] ECCEZIONE DURANTE EMIT")
+        traceback.print_exc()
+        return {'ok': False, 'error': str(e)}    
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
