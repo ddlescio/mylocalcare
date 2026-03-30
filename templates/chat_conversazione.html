@@ -1030,8 +1030,13 @@ body {
 
     console.log("🔍 [CHAT] bindWhenReady su socket", s.id, "connected=", s.connected);
 
-    bindChatSocket(s);
+    // Caso 1: socket già pronta -> bind immediato UNA SOLA VOLTA
+    if (s.connected) {
+      bindChatSocket(s);
+      return;
+    }
 
+    // Caso 2: socket non ancora pronta -> aspetta l'evento globale
     if (!window.__chatSocketReadyListenerAttached) {
       window.__chatSocketReadyListenerAttached = true;
 
@@ -1039,12 +1044,11 @@ body {
         const current = window.socket;
         if (!current) return;
 
-        console.log("🔁 [CHAT] socket_ready intercettato, rebind su", current.id);
+        console.log("🔁 [CHAT] socket_ready intercettato, bind su", current.id);
         bindChatSocket(current);
-      });
+      }, { once: true });
     }
   }
-
   bindWhenReady();
 });
 </script>
