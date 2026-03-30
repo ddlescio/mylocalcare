@@ -1002,6 +1002,39 @@ body {
           return;
         }
 
+        // 🔧 fallback locale: se l'echo realtime non arriva/renderizza,
+        // mostro comunque subito il messaggio inviato
+        const localId = response.id;
+        const existing = document.querySelector(`#msgWrap [data-mid="${localId}"]`);
+
+        if (!existing) {
+          const nowIso = new Date().toISOString();
+
+          if (nowIso) {
+            ensureDateHeaderFor(nowIso);
+            cleanDuplicateDates();
+          }
+
+          const node = bubble({
+            id: localId,
+            mittente_id: meId,
+            destinatario_id: destId,
+            testo: testoOriginale,
+            created_at: nowIso,
+            consegnato: true,
+            letto: false,
+            me_id: meId
+          });
+
+          wrap.appendChild(node);
+
+          if (!oldestMessageId) {
+            oldestMessageId = localId;
+          }
+
+          setTimeout(() => scrollBottom(true), 80);
+        }
+
         input.value = '';
         toggleEmoji(false);
 
@@ -1011,7 +1044,6 @@ body {
       }
     );
   });
-
   // --------------------------------------------------
   // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
