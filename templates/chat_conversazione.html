@@ -438,6 +438,10 @@ body {
       const destId = parseInt(document.getElementById('destinatario_id').value, 10);
       window.__activeChat = destId;
 
+      function getChatSocket() {
+        return window.__chatBoundSocket || window.socket || null;
+      }
+
       let chatClosedEmitted = false;
       let chatOpenedOnce = false;
 
@@ -453,7 +457,7 @@ body {
       chatClosedEmitted = false;
       window.__activeChat = destId;
 
-      const s = window.socket;
+      const s = getChatSocket();
 
       if (s && s.connected && destId) {
         console.log("📤 emit chat_aperta");
@@ -465,7 +469,7 @@ body {
 
     function emitChatClosedOnce() {
 
-      const s = window.socket;
+      const s = getChatSocket();
 
       if (!s || !s.connected) {
         console.log("⛔ skip chat_chiusa (socket non stabile)");
@@ -486,7 +490,7 @@ body {
 
       console.log("📤 emit chat_chiusa");
 
-      window.socket.emit('chat_chiusa', { other_id: destId });
+      s.emit('chat_chiusa', { other_id: destId });
     }
 
     window.__emitChatClosedOnce = emitChatClosedOnce;
@@ -663,7 +667,7 @@ body {
             clearTimeout(markReadTimer);
 
             markReadTimer = setTimeout(() => {
-              const activeSocket = window.__chatBoundSocket || window.socket;
+              const activeSocket = getChatSocket();
               if (activeSocket && activeSocket.connected) {
                 console.log("👁️ [CHAT] mark_as_read automatico per", m.mittente_id);
                 activeSocket.emit("mark_as_read", {
@@ -861,7 +865,7 @@ body {
     // invia typing:true solo la prima volta
     if (!wasTyping) {
       wasTyping = true;
-      const s = window.socket;
+      const s = getChatSocket();
       if (s && s.connected) {
         s.emit("typing", { to: destId, typing: true });
       }
@@ -872,7 +876,7 @@ body {
 
     typingTimeout = setTimeout(() => {
       wasTyping = false;
-      const s = window.socket;
+      const s = getChatSocket();
     if (s && s.connected) {
       s.emit("typing", { to: destId, typing: false });
     }
@@ -966,7 +970,7 @@ body {
     const testo = input.value.trim();
     if (!testo) return;
 
-    const s = window.socket;
+    const s = getChatSocket();
 
     if (!s) {
       console.warn("❌ Socket non disponibile");
