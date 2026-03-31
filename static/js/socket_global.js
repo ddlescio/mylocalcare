@@ -186,11 +186,11 @@ window.addEventListener("pageshow", function (event) {
     }
 
     try {
-      if (socket && (socket.connected || socket.active)) {
-        socket.disconnect();
-      }
+      // NON forzare disconnect qui.
+      // Su Safari/PWA/Desktop WebKit sta generando race e shutdown error
+      // proprio durante i cambi pagina.
     } catch (e) {
-      console.warn("Errore disconnect socket:", e);
+      console.warn("Errore teardown socket:", e);
     }
 
     // NON azzerare i riferimenti globali qui.
@@ -202,7 +202,7 @@ window.addEventListener("pageshow", function (event) {
     // importante per eventuale nuova inizializzazione pagina
     window.__socket_page_bootstrap_done__ = false;
   }
-  
+
   window.addEventListener("pagehide", () => {
     teardownSocketPage("pagehide");
   });
