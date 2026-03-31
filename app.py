@@ -9148,8 +9148,8 @@ def handle_send_message(data):
         print("📨 [send_message] emit new_message mittente")
         emit_to_user_sids(mittente_id, 'new_message', messaggio)
 
-        print("📨 [send_message] emit new_message destinatario VIA USER ROOM")
-        emit_to_user_room(destinatario_id, 'new_message', messaggio)
+        print("📨 [send_message] emit new_message destinatario")
+        emit_to_user_sids(destinatario_id, 'new_message', messaggio)
 
         print("📨 [send_message] emit message_delivered")
         emit_to_user_sids(mittente_id, "message_delivered", {
