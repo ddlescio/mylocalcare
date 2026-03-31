@@ -8725,6 +8725,21 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
             namespace="/"
         )
 
+def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
+    """
+    Invia un evento alla room standard dell'utente: user_<id>.
+    Questo bypassa il routing per-room-per-sid (sock:<sid>),
+    utile per capire se il problema reale è proprio lì.
+    """
+    room_name = f"user_{user_id}"
+
+    socketio.emit(
+        event_name,
+        payload,
+        room=room_name,
+        namespace="/"
+    )
+
 @socketio.on("connect")
 def handle_connect(auth=None):
     from flask import session, request
@@ -9133,8 +9148,8 @@ def handle_send_message(data):
         print("📨 [send_message] emit new_message mittente")
         emit_to_user_sids(mittente_id, 'new_message', messaggio)
 
-        print("📨 [send_message] emit new_message destinatario")
-        emit_to_user_sids(destinatario_id, 'new_message', messaggio)
+        print("📨 [send_message] emit new_message destinatario VIA USER ROOM")
+        emit_to_user_room(destinatario_id, 'new_message', messaggio)
 
         print("📨 [send_message] emit message_delivered")
         emit_to_user_sids(mittente_id, "message_delivered", {
