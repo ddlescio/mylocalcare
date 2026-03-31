@@ -578,21 +578,21 @@ body {
       // --------------------------------------------------
       if (previousSocket && previousSocket !== socket) {
         if (window.__chatHandlers.connectInit) previousSocket.off("connect", window.__chatHandlers.connectInit);
+        if (window.__chatHandlers.disconnectChat) previousSocket.off("disconnect", window.__chatHandlers.disconnectChat);
         if (window.__chatHandlers.userTyping) previousSocket.off("user_typing", window.__chatHandlers.userTyping);
         if (window.__chatHandlers.newMessage) previousSocket.off("new_message", window.__chatHandlers.newMessage);
         if (window.__chatHandlers.messagesRead) previousSocket.off("messages_read", window.__chatHandlers.messagesRead);
         if (window.__chatHandlers.messageDelivered) previousSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
       }
-
       // --------------------------------------------------
       // 2. STACCA COMUNQUE I LISTENER DAL SOCKET ATTUALE
       // --------------------------------------------------
       if (window.__chatHandlers.connectInit) socket.off("connect", window.__chatHandlers.connectInit);
+      if (window.__chatHandlers.disconnectChat) socket.off("disconnect", window.__chatHandlers.disconnectChat);
       if (window.__chatHandlers.userTyping) socket.off("user_typing", window.__chatHandlers.userTyping);
       if (window.__chatHandlers.newMessage) socket.off("new_message", window.__chatHandlers.newMessage);
       if (window.__chatHandlers.messagesRead) socket.off("messages_read", window.__chatHandlers.messagesRead);
       if (window.__chatHandlers.messageDelivered) socket.off("message_delivered", window.__chatHandlers.messageDelivered);
-
       // --------------------------------------------------
       // 3. MEMORIZZA QUESTO COME SOCKET CHAT ATTIVO
       // --------------------------------------------------
@@ -613,15 +613,35 @@ body {
       // --------------------------------------------------
       window.__chatHandlers.connectInit = function () {
         console.log("🟢 [CHAT] connect/reconnect su socket", socket.id);
+
+        // ad ogni connect/reconnect la chat va sempre ri-registrata
+        chatOpenedOnce = false;
+        chatClosedEmitted = false;
+        window.__activeChat = destId;
+
         emitChatOpened();
       };
+
+      window.__chatHandlers.disconnectChat = function (reason) {
+        console.log("🔌 [CHAT] disconnect su socket chat", socket.id, "reason=", reason);
+
+        // fondamentale: al prossimo reconnect NON deve saltare chat_aperta
+        chatOpenedOnce = false;
+        chatClosedEmitted = false;
+      };
+
       socket.on("connect", window.__chatHandlers.connectInit);
+      socket.on("disconnect", window.__chatHandlers.disconnectChat);
 
       if (socket.connected) {
         console.log("🟢 [CHAT] socket già connessa, apertura immediata", socket.id);
+
+        chatOpenedOnce = false;
+        chatClosedEmitted = false;
+        window.__activeChat = destId;
+
         emitChatOpened();
       }
-
       // --------------------------------------------------
       // NEW MESSAGE
       // --------------------------------------------------
