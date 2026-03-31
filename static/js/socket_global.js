@@ -1,3 +1,20 @@
+window.addEventListener("pageshow", function (event) {
+  const navEntry = performance.getEntriesByType("navigation")[0];
+  const fromBFCache =
+    event.persisted === true ||
+    (navEntry && navEntry.type === "back_forward");
+
+  if (!fromBFCache) return;
+
+  console.log("♻️ pageshow da BFCache rilevato -> reload forzato pagina");
+
+  try {
+    window.__socket_page_bootstrap_done__ = false;
+  } catch (_) {}
+
+  window.location.reload();
+});
+
 (function () {
   if (window.__socket_page_bootstrap_done__) {
     console.log("⏭️ socket_global già inizializzato in questa pagina → skip");
