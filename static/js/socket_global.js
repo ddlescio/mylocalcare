@@ -166,4 +166,49 @@ window.addEventListener("pageshow", function (event) {
       emitHeartbeat();
     }, 20000);
   }
-})();
+
+  // ===============================
+  // TEARDOWN PULITO SU USCITA PAGINA
+  // ===============================
+  function teardownSocketPage(reason) {
+    if (window.__socket_page_teardown_done__) return;
+    window.__socket_page_teardown_done__ = true;
+
+    console.log("🧹 socket teardown pagina:", reason, socket.id || null);
+
+    try {
+      if (window.__socket_heartbeat_interval__) {
+        clearInterval(window.__socket_heartbeat_interval__);
+        window.__socket_heartbeat_interval__ = null;
+      }
+    } catch (e) {
+      console.warn("Errore clear heartbeat interval:", e);
+    }
+
+    try {
+      if (socket && (socket.connected || socket.active)) {
+        socket.disconnect();
+      }
+    } catch (e) {
+      console.warn("Errore disconnect socket:", e);
+    }
+
+    window.__active_socket = null;
+    window.__current_socket_id = null;
+    window.socket = null;
+    window.__emitSocketHeartbeat = null;
+    window.whenSocketReady = null;
+
+    // importante per la prossima pagina
+    window.__socket_page_bootstrap_done__ = false;
+  }
+
+  window.addEventListener("pagehide", () => {
+    teardownSocketPage("pagehide");
+  });
+
+  window.addEventListener("beforeunload", () => {
+    teardownSocketPage("beforeunload");
+  });
+
+  })();
