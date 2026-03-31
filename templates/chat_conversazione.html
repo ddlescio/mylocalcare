@@ -431,12 +431,38 @@ body {
 
       let loadingOlder = false;
       let oldestMessageId = null;
-
-      /* ✅ AGGIUNGI QUESTA RIGA */
       let markReadTimer = null;
 
       const destId = parseInt(document.getElementById('destinatario_id').value, 10);
       window.__activeChat = destId;
+
+      // 🔥 id univoco della pagina chat corrente
+      const chatPageId = (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : ("chat_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+
+      window.__chatPageId = chatPageId;
+
+      function chatDebug(eventName, extra = {}) {
+        const s = window.__chatBoundSocket || window.socket || null;
+
+        const payload = {
+          event: eventName,
+          page_id: chatPageId,
+          page_url: window.location.pathname,
+          me_id: meId,
+          dest_id: destId,
+          socket_id: s ? s.id : null,
+          ts: new Date().toISOString(),
+          ...extra
+        };
+
+        console.log("🧪 [CHATDBG]", payload);
+
+        if (s && s.connected) {
+          s.emit("chat_debug", payload);
+        }
+      }
 
       function getChatSocket() {
         return window.__chatBoundSocket || window.socket || null;
@@ -461,6 +487,10 @@ body {
 
       if (s && s.connected && destId) {
         console.log("📤 emit chat_aperta");
+
+        chatDebug("emit_chat_aperta", {
+          bound_socket_id: s.id
+        });
 
         s.emit('chat_aperta', { other_id: destId });
         s.emit('mark_as_read', { other_id: destId });
@@ -602,12 +632,11 @@ body {
       chatClosedEmitted = false;
       window.__activeChat = destId;
 
-      console.log("✅ [CHAT] bind completato", {
-        socketId: socket.id,
-        meId,
-        destId,
-        activeChat: window.__activeChat
+      chatDebug("bind_completed", {
+        bound_socket_id: socket.id,
+        active_chat: window.__activeChat
       });
+
       // --------------------------------------------------
       // CONNECT / RECONNECT
       // --------------------------------------------------
@@ -624,6 +653,11 @@ body {
 
       window.__chatHandlers.disconnectChat = function (reason) {
         console.log("🔌 [CHAT] disconnect su socket chat", socket.id, "reason=", reason);
+
+        chatDebug("socket_disconnect", {
+          disconnected_socket_id: socket.id,
+          reason: reason || null
+        });
 
         // fondamentale: al prossimo reconnect NON deve saltare chat_aperta
         chatOpenedOnce = false;
@@ -647,6 +681,12 @@ body {
       // --------------------------------------------------
       window.__chatHandlers.newMessage = function (m) {
         console.log("📩 [CHAT] new_message ricevuto", m);
+
+        chatDebug("new_message_received", {
+          msg_id: m.id,
+          mittente_id: m.mittente_id,
+          destinatario_id: m.destinatario_id
+        });
 
         const currentChat = destId;
 
@@ -734,6 +774,11 @@ body {
           }
 
           console.log("✅ [CHAT] new_message completato");
+
+          chatDebug("new_message_render_completed", {
+            msg_id: m.id,
+            bubble_found: !!bubbleEl
+          });
         } catch (err) {
           console.error("🔥 Errore in new_message:", err, m);
         }
@@ -1054,21 +1099,39 @@ body {
 
     const testoOriginale = testo;
 
+    chatDebug("submit_send_message", {
+      text_len: testoOriginale.length
+    });
+
     s.timeout(8000).emit(
       'send_message',
       { destinatario_id: destId, testo: testoOriginale },
       (err, response) => {
         if (err) {
           console.error("❌ ACK send_message timeout/errore:", err);
+
+          chatDebug("ack_send_message_error", {
+            error: String(err)
+          });
+
           sending = false;
           return;
         }
 
         if (!response || response.ok !== true) {
           console.error("❌ ACK send_message negativo:", response);
+
+          chatDebug("ack_send_message_negative", {
+            response: response || null
+          });
+
           sending = false;
           return;
         }
+
+        chatDebug("ack_send_message_ok", {
+          msg_id: response.id
+        });        
 
         // 🔧 fallback locale: se l'echo realtime non arriva/renderizza,
         // mostro comunque subito il messaggio inviato

@@ -9182,7 +9182,7 @@ def handle_send_message(data):
     except Exception as e:
         print("❌ [send_message] ECCEZIONE DURANTE EMIT")
         traceback.print_exc()
-        return {'ok': False, 'error': str(e)}    
+        return {'ok': False, 'error': str(e)}
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
@@ -9325,6 +9325,27 @@ def handle_typing(data):
             'typing': typing
         }
     )
+
+@socketio.on("chat_debug")
+def handle_chat_debug(data):
+    from flask import session, request
+
+    try:
+        print(
+            "🧪 [CHATDBG] "
+            f"user={session.get('utente_id')} "
+            f"sid={request.sid} "
+            f"page_id={data.get('page_id')} "
+            f"event={data.get('event')} "
+            f"page_url={data.get('page_url')} "
+            f"socket_id={data.get('socket_id')} "
+            f"me_id={data.get('me_id')} "
+            f"dest_id={data.get('dest_id')} "
+            f"extra={data}"
+        )
+    except Exception as e:
+        print("❌ Errore handle_chat_debug:", e)
+
 
 @app.route("/webhook/stripe", methods=["POST"])
 def webhook_stripe():
