@@ -193,16 +193,16 @@ window.addEventListener("pageshow", function (event) {
       console.warn("Errore disconnect socket:", e);
     }
 
-    window.__active_socket = null;
-    window.__current_socket_id = null;
-    window.socket = null;
-    window.__emitSocketHeartbeat = null;
-    window.whenSocketReady = null;
+    // NON azzerare i riferimenti globali qui.
+    // Su Safari/PWA la pagina può entrare in stati intermedi
+    // e riprendere vita con script ancora attivi.
+    // Azzerando window.socket / whenSocketReady rischi di lasciare
+    // la pagina viva ma senza riferimenti al socket.
 
-    // importante per la prossima pagina
+    // importante per eventuale nuova inizializzazione pagina
     window.__socket_page_bootstrap_done__ = false;
   }
-
+  
   window.addEventListener("pagehide", () => {
     teardownSocketPage("pagehide");
   });
