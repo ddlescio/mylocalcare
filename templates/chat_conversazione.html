@@ -1211,7 +1211,20 @@ body {
     bindChatSocket(s);
   }
 
-  bootstrapChatSocket();  
+  bootstrapChatSocket();
+
+  // 🔥 iPhone/PWA: se il socket definitivo arriva dopo il bootstrap iniziale,
+  // rifaccio il controllo e ri-bindo sul socket corretto.
+  if (window.__chatSocketReadyRebindRef) {
+    window.removeEventListener("socket_ready", window.__chatSocketReadyRebindRef);
+  }
+
+  window.__chatSocketReadyRebindRef = function () {
+    console.log("🔁 [CHAT] socket_ready ricevuto -> verifico rebind");
+    bootstrapChatSocket();
+  };
+
+  window.addEventListener("socket_ready", window.__chatSocketReadyRebindRef);
 });
 </script>
 <script>
