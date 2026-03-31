@@ -602,6 +602,12 @@ body {
       chatClosedEmitted = false;
       window.__activeChat = destId;
 
+      console.log("✅ [CHAT] bind completato", {
+        socketId: socket.id,
+        meId,
+        destId,
+        activeChat: window.__activeChat
+      });
       // --------------------------------------------------
       // CONNECT / RECONNECT
       // --------------------------------------------------
