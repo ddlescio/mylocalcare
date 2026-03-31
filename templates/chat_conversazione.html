@@ -1131,7 +1131,7 @@ body {
 
         chatDebug("ack_send_message_ok", {
           msg_id: response.id
-        });        
+        });
 
         // 🔧 fallback locale: se l'echo realtime non arriva/renderizza,
         // mostro comunque subito il messaggio inviato
@@ -1187,40 +1187,31 @@ body {
   // 🔁 BIND CHAT SU SOCKET ATTUALE + REBIND SE CAMBIA
   // --------------------------------------------------
 
-  function bindWhenReady() {
+  function bootstrapChatSocket(retry = 0) {
     const s = window.socket;
 
     if (!s) {
-      console.log("⏳ [CHAT] window.socket non ancora disponibile");
+      if (retry < 120) {
+        setTimeout(() => bootstrapChatSocket(retry + 1), 50);
+        return;
+      }
+      console.error("❌ [CHAT] socket non disponibile entro timeout");
       return;
     }
 
-    console.log("🔍 [CHAT] bindWhenReady su socket", s.id, "connected=", s.connected);
-
-    // 🔥 pulizia eventuale listener socket_ready precedente
-    if (window.__chatSocketReadyHandlerRef) {
-      window.removeEventListener("socket_ready", window.__chatSocketReadyHandlerRef);
-      window.__chatSocketReadyHandlerRef = null;
-    }
-
-    // Caso 1: socket già pronta -> bind immediato
-    if (s.connected) {
-      bindChatSocket(s);
+    // se ho già bindato proprio QUESTO socket, non rifaccio nulla
+    if (window.__chatBoundSocket === s && window.__chatBootstrapped === true) {
+      console.log("⏭️ [CHAT] bind già eseguito su questo socket", s.id);
       return;
     }
 
-    // Caso 2: socket non ancora pronta -> aggancia SEMPRE un listener fresco
-    window.__chatSocketReadyHandlerRef = function () {
-      const current = window.socket;
-      if (!current) return;
+    console.log("🚀 [CHAT] bootstrap diretto su socket", s.id, "connected=", s.connected);
 
-      console.log("🔁 [CHAT] socket_ready intercettato, bind su", current.id);
-      bindChatSocket(current);
-    };
-
-    window.addEventListener("socket_ready", window.__chatSocketReadyHandlerRef, { once: true });
+    window.__chatBootstrapped = true;
+    bindChatSocket(s);
   }
-  bindWhenReady();
+
+  bootstrapChatSocket();  
 });
 </script>
 <script>
