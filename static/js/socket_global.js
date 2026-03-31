@@ -61,6 +61,46 @@ window.addEventListener("pageshow", function (event) {
     }
   });
 
+  // ======================================================
+  // DEBUG HARD: traccia chi aggancia/stacca listener chat
+  // ======================================================
+  const __origOn  = socket.on.bind(socket);
+  const __origOff = socket.off.bind(socket);
+
+  const __traceEvents = new Set([
+    "new_message",
+    "messages_read",
+    "message_delivered",
+    "user_typing",
+    "chat_threads_update",
+    "update_unread_count",
+    "connect",
+    "disconnect"
+  ]);
+
+  socket.on = function(eventName, handler, ...rest) {
+    if (__traceEvents.has(eventName)) {
+      console.log("🧷 [SOCKET TRACE] on", eventName, {
+        socketId: socket.id || null,
+        handlerName: handler?.name || "(anonimo)",
+        stack: new Error().stack
+      });
+    }
+    return __origOn(eventName, handler, ...rest);
+  };
+
+  socket.off = function(eventName, handler, ...rest) {
+    if (__traceEvents.has(eventName)) {
+      console.warn("✂️ [SOCKET TRACE] off", eventName, {
+        socketId: socket.id || null,
+        withHandler: !!handler,
+        handlerName: handler?.name || null,
+        stack: new Error().stack
+      });
+    }
+    return __origOff(eventName, handler, ...rest);
+  };
+
   // riferimenti globali compatibili col resto del progetto
   window.socket = socket;
   window.__active_socket = socket;
