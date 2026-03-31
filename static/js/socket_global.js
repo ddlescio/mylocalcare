@@ -64,7 +64,7 @@ window.addEventListener("pageshow", function (event) {
   // ======================================================
   // DEBUG HARD: traccia chi aggancia/stacca listener chat
   // ======================================================
-  const __origOn  = socket.on.bind(socket);
+  const __origOn = socket.on.bind(socket);
   const __origOff = socket.off.bind(socket);
 
   const __traceEvents = new Set([
@@ -78,7 +78,7 @@ window.addEventListener("pageshow", function (event) {
     "disconnect"
   ]);
 
-  socket.on = function(eventName, handler, ...rest) {
+  socket.on = function (eventName, handler, ...rest) {
     if (__traceEvents.has(eventName)) {
       console.log("🧷 [SOCKET TRACE] on", eventName, {
         socketId: socket.id || null,
@@ -89,7 +89,7 @@ window.addEventListener("pageshow", function (event) {
     return __origOn(eventName, handler, ...rest);
   };
 
-  socket.off = function(eventName, handler, ...rest) {
+  socket.off = function (eventName, handler, ...rest) {
     if (__traceEvents.has(eventName)) {
       console.warn("✂️ [SOCKET TRACE] off", eventName, {
         socketId: socket.id || null,
@@ -166,5 +166,4 @@ window.addEventListener("pageshow", function (event) {
       emitHeartbeat();
     }, 20000);
   }
-
 })();
