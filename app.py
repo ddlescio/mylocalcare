@@ -8796,9 +8796,21 @@ def handle_socket_heartbeat():
     if not user_id or not sid:
         return
 
-    client_id = _get_client_id_from_sid(sid)
-    _touch_socket_sid(user_id, sid, client_id=client_id)
+    now_ts = int(time.time())
+    sid_key = _socket_sid_key(sid)
 
+    # Il heartbeat NON deve mai riscrivere il mapping client_id -> sid,
+    # altrimenti un vecchio socket può tornare a diventare "corrente".
+    if not redis_client.exists(sid_key):
+        return
+
+    redis_client.hset(sid_key, mapping={
+        "user_id": str(user_id),
+        "client_id": _get_client_id_from_sid(sid) or "__NONE__",
+        "last_seen": str(now_ts)
+    })
+    redis_client.expire(sid_key, SOCKET_TTL_SECONDS)
+    
 @socketio.on("disconnect")
 def handle_disconnect():
     from flask import session, request
