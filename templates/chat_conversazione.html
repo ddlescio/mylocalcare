@@ -1227,32 +1227,64 @@ body {
       return;
     }
 
-    if (window.__chatBoundSocket === socket && window.__chatBootstrapped === true) {
-      console.log("⏭️ [CHAT] bind già eseguito su questo socket", socket.id);
+    const lastSocketId = window.__chatLastBoundSocketId || null;
+    const currentSocketId = socket.id || null;
+
+    const sameObject = window.__chatBoundSocket === socket;
+    const sameId = lastSocketId === currentSocketId;
+
+    if (sameObject && sameId && window.__chatBootstrapped === true) {
+      console.log("⏭️ [CHAT] bind già attivo su questo socket", currentSocketId);
       return;
     }
 
-    console.log("🚀 [CHAT] bind su socket pronto", socket.id, "connected=", socket.connected);
+    console.log("🚀 [CHAT] rebind forzato chat su socket", currentSocketId, {
+      sameObject,
+      sameId,
+      bootstrapped: window.__chatBootstrapped === true
+    });
+
+    try {
+      unbindChatSocket();
+    } catch (err) {
+      console.warn("⚠️ [CHAT] errore durante unbindChatSocket", err);
+    }
 
     window.__chatBootstrapped = true;
+    window.__chatLastBoundSocketId = currentSocketId;
+
     bindChatSocket(socket);
   }
 
-  if (window.whenSocketReady) {
-    window.whenSocketReady((socket) => {
-      startChatBinding(socket);
-    });
-  } else if (window.socket) {
-    if (window.socket.connected) {
-      startChatBinding(window.socket);
-    } else {
-      window.socket.once("connect", () => {
-        startChatBinding(window.socket);
+  function bootChatBinding() {
+    if (window.whenSocketReady) {
+      window.whenSocketReady((socket) => {
+        startChatBinding(socket);
       });
+      return;
     }
-  } else {
+
+    if (window.socket) {
+      if (window.socket.connected) {
+        startChatBinding(window.socket);
+      } else {
+        window.socket.once("connect", () => {
+          startChatBinding(window.socket);
+        });
+      }
+      return;
+    }
+
     console.error("❌ [CHAT] window.socket non disponibile");
   }
+
+  window.addEventListener("socket_ready", () => {
+    if (window.socket) {
+      startChatBinding(window.socket);
+    }
+  });
+
+  bootChatBinding();  
 });
 </script>
 <script>
