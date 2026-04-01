@@ -1218,74 +1218,43 @@ body {
   /* 🔥 UN SOLO BIND PULITO */
 
   // --------------------------------------------------
-  // 🔁 BIND CHAT SU SOCKET ATTUALE + REBIND SE CAMBIA
+  // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
   // --------------------------------------------------
 
-  function startChatBinding(socket) {
+  function bootstrapChatSocket() {
+    const socket = window.socket;
+
     if (!socket) {
-      console.error("❌ [CHAT] startChatBinding senza socket");
+      console.error("❌ [CHAT] window.socket non disponibile");
       return;
     }
 
-    const lastSocketId = window.__chatLastBoundSocketId || null;
-    const currentSocketId = socket.id || null;
-
-    const sameObject = window.__chatBoundSocket === socket;
-    const sameId = lastSocketId === currentSocketId;
-
-    if (sameObject && sameId && window.__chatBootstrapped === true) {
-      console.log("⏭️ [CHAT] bind già attivo su questo socket", currentSocketId);
+    if (window.__chatPageInitialized === true) {
+      console.log("⏭️ [CHAT] bootstrap chat già eseguito");
       return;
     }
 
-    console.log("🚀 [CHAT] rebind forzato chat su socket", currentSocketId, {
-      sameObject,
-      sameId,
-      bootstrapped: window.__chatBootstrapped === true
-    });
-
-    try {
-      unbindChatSocket();
-    } catch (err) {
-      console.warn("⚠️ [CHAT] errore durante unbindChatSocket", err);
-    }
-
-    window.__chatBootstrapped = true;
-    window.__chatLastBoundSocketId = currentSocketId;
-
+    window.__chatPageInitialized = true;
     bindChatSocket(socket);
   }
 
-  function bootChatBinding() {
-    if (window.whenSocketReady) {
-      window.whenSocketReady((socket) => {
-        startChatBinding(socket);
+  if (window.whenSocketReady) {
+    window.whenSocketReady(() => {
+      bootstrapChatSocket();
+    });
+  } else if (window.socket) {
+    if (window.socket.connected) {
+      bootstrapChatSocket();
+    } else {
+      window.socket.once("connect", () => {
+        bootstrapChatSocket();
       });
-      return;
     }
-
-    if (window.socket) {
-      if (window.socket.connected) {
-        startChatBinding(window.socket);
-      } else {
-        window.socket.once("connect", () => {
-          startChatBinding(window.socket);
-        });
-      }
-      return;
-    }
-
+  } else {
     console.error("❌ [CHAT] window.socket non disponibile");
   }
-
-  window.addEventListener("socket_ready", () => {
-    if (window.socket) {
-      startChatBinding(window.socket);
-    }
-  });
-
-  bootChatBinding();  
 });
+
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
