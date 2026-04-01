@@ -391,8 +391,8 @@ socketio = SocketIO(
 
     allow_upgrades=False,
 
-    ping_timeout=20,
-    ping_interval=10,
+    ping_timeout=60,
+    ping_interval=25,
     logger=True,
     engineio_logger=True
 )
