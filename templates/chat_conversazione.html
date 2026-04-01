@@ -875,9 +875,6 @@ body {
     if (window.__chatInternalNavHandlerRef) {
       document.removeEventListener("click", window.__chatInternalNavHandlerRef, true);
     }
-    if (window.__chatPagehideHandlerRef) {
-      window.removeEventListener("pagehide", window.__chatPagehideHandlerRef);
-    }
 
     // chiusura solo su navigazione interna tramite link
     window.__chatInternalNavHandlerRef = function (e) {
@@ -905,19 +902,8 @@ body {
       } catch (_) {}
     };
 
-    window.__chatPagehideHandlerRef = function () {
-      try {
-        emitChatClosedOnce();
-      } catch (_) {}
-
-      try {
-        unbindChatSocket();
-      } catch (_) {}
-    };
-
     document.addEventListener("click", window.__chatInternalNavHandlerRef, true);
-    window.addEventListener("pagehide", window.__chatPagehideHandlerRef);
-    
+
   // 🎭 Emoji
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPopover = document.getElementById('emojiPopover');
