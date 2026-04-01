@@ -8826,17 +8826,17 @@ def handle_socket_heartbeat():
             pipe.expire(client_key, SOCKET_TTL_SECONDS)
 
     pipe.execute()
-        
+
 @socketio.on("disconnect")
 def handle_disconnect():
     from flask import session, request
 
     sid = request.sid
 
-    # 🔥 PRIMA recupera SEMPRE da Redis (fonte reale)
+    # prima fonte: Redis
     user_id = _get_user_id_from_sid(sid)
 
-    # fallback session solo se serve
+    # fallback sessione
     if not user_id:
         user_id = session.get("utente_id")
 
@@ -8855,46 +8855,24 @@ def handle_disconnect():
         pass
 
     try:
-        # 🔥 RIMUOVI SUBITO SID
-        client_id = _get_client_id_from_sid(sid)
-
-        if client_id:
-            client_key = _socket_client_key(user_id, client_id)
-            mapped_sid_raw = redis_client.get(client_key)
-            mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
-
-            if mapped_sid == sid:
-                redis_client.delete(client_key)
-
-        # 🔥 CONTROLLO: questo SID è ancora valido?
-        current_client_id = _get_client_id_from_sid(sid)
-
-        if current_client_id:
-            client_key = _socket_client_key(user_id, current_client_id)
-            mapped_sid_raw = redis_client.get(client_key)
-            mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
-
-            # 🚫 se esiste già un nuovo SID per questo client → SKIP
-            if mapped_sid and mapped_sid != sid:
-                print(f"⏭️ Skip disconnect vecchio SID {sid}, sostituito da {mapped_sid}")
-                return
-
-        # ✅ SOLO QUI rimuovi davvero
+        # IMPORTANTISSIMO:
+        # il disconnect NON deve mai cancellare o toccare il mapping
+        # user_socket_client:{user_id}:{client_id}
+        # perché può appartenere già a un SID nuovo connesso nel frattempo.
+        # Qui rimuoviamo SOLO il SID che sta morendo.
         _remove_socket_sid(user_id, sid)
 
         remaining = _cleanup_user_socket_set(user_id)
 
         print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
 
-        # delay offline SOLO se davvero zero
         if remaining <= 0:
             print(f"🕐 Utente {user_id} senza socket → delay check")
-
             _bump_offline_token(user_id)
             ensure_offline_watchdog(user_id)
 
     except Exception as e:
-        print("Errore disconnect:", e)
+        print("Errore disconnect:", e)        
 
 def ensure_offline_watchdog(user_id):
     """
