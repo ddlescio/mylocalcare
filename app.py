@@ -377,10 +377,6 @@ redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     raise RuntimeError("❌ REDIS_URL non configurata su Render")
 
-from socketio import RedisManager
-
-mgr = RedisManager(redis_url)
-
 socketio = SocketIO(
     app,
     async_mode="eventlet",
@@ -390,9 +386,10 @@ socketio = SocketIO(
         "http://127.0.0.1:5050",
         "http://localhost:5050"
     ],
-    client_manager=mgr,
+    message_queue=redis_url,
+    channel="mylocalcare-socketio",
 
-    allow_upgrades=False,   # 🔥 AGGIUNGI QUESTA RIGA
+    allow_upgrades=False,
 
     ping_timeout=20,
     ping_interval=10,
@@ -8736,7 +8733,7 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
             room=room_name,
             namespace="/"
         )
-            
+
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
     Invia un evento alla room standard dell'utente: user_<id>.
