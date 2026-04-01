@@ -8529,6 +8529,27 @@ def _socket_client_key(user_id, client_id):
 def _socket_offline_token_key(user_id):
     return f"user_offline_token:{user_id}"
 
+def _chat_open_key(user_id):
+    return f"chat_open:{user_id}"
+
+def set_open_chat(user_id, other_id, ttl=300):
+    """
+    Salva in Redis quale chat è aperta per l'utente.
+    TTL rinnovato ad ogni chat_aperta.
+    """
+    redis_client.set(_chat_open_key(user_id), str(other_id), ex=ttl)
+
+def get_open_chat(user_id):
+    raw = redis_client.get(_chat_open_key(user_id))
+    if not raw:
+        return None
+    try:
+        return int(_decode_redis_value(raw))
+    except Exception:
+        return None
+
+def clear_open_chat(user_id):
+    redis_client.delete(_chat_open_key(user_id))
 
 def _bump_offline_token(user_id):
     """
@@ -9187,7 +9208,7 @@ def handle_send_message(data):
         print("📨 [send_message] emit chat_threads_update destinatario")
         emit_to_user_sids(destinatario_id, 'chat_threads_update', {'from': mittente_id})
 
-        chat_aperta = app.config.get("CHAT_APERTA_UTENTI", {}).get(destinatario_id)
+        chat_aperta = get_open_chat(destinatario_id)
         pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
 
         print(f"📨 [send_message] stato push chat_aperta={chat_aperta} pagina_visibile={pagina_visibile}")
@@ -9214,14 +9235,17 @@ def handle_send_message(data):
 
 @socketio.on('chat_aperta')
 def handle_chat_aperta(data):
-    """Registra quale chat è attualmente aperta da ciascun utente."""
+    """Registra in Redis quale chat è attualmente aperta da ciascun utente."""
     user_id = session.get('utente_id')
     other_id = data.get('other_id')
+
     if not user_id or not other_id:
         return
-    if 'CHAT_APERTA_UTENTI' not in app.config:
-        app.config['CHAT_APERTA_UTENTI'] = {}
-    app.config['CHAT_APERTA_UTENTI'][user_id] = int(other_id)
+
+    try:
+        set_open_chat(user_id, int(other_id), ttl=300)
+    except Exception as e:
+        print(f"❌ Errore salvataggio chat_aperta Redis user={user_id} other={other_id}: {e}")
 
 @socketio.on("page_visible")
 def handle_page_visible(data):
@@ -9307,9 +9331,8 @@ def handle_chat_chiusa(data):
     if not user_id or not other_id:
         return
 
-    # 🔥 PULIZIA STATO
-    if 'CHAT_APERTA_UTENTI' in app.config:
-        app.config['CHAT_APERTA_UTENTI'].pop(user_id, None)
+    # 🔥 PULIZIA STATO chat aperta cross-worker
+    clear_open_chat(user_id)
 
     if 'CHAT_ULTIMA_LETTA' not in app.config:
         app.config['CHAT_ULTIMA_LETTA'] = {}
