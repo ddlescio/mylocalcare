@@ -8706,10 +8706,10 @@ def _get_live_user_sids(user_id):
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
     Invia l'evento a tutti i SID vivi e correnti dell'utente,
-    usando le room per-socket sock:<sid>.
+    usando direttamente il SID nativo di Socket.IO come destinatario.
 
-    Questo evita di dipendere dalla room user_<id> per gli eventi chat,
-    che nel tuo flusso recente sta risultando non affidabile lato ricezione realtime.
+    NON usa più la room custom sock:<sid>, perché nel flusso multi-worker
+    attuale sta risultando inaffidabile per la consegna realtime.
     """
     live_sids = _get_live_user_sids(user_id)
 
@@ -8721,16 +8721,14 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
         if skip_sid and sid == skip_sid:
             continue
 
-        room_name = _socket_room_name(sid)
-
         print(
-            f"📡 emit_to_user_sids -> user={user_id} sid={sid} room={room_name} event={event_name}"
+            f"📡 emit_to_user_sids -> user={user_id} sid={sid} event={event_name}"
         )
 
         socketio.emit(
             event_name,
             payload,
-            room=room_name,
+            to=sid,
             namespace="/"
         )
 
