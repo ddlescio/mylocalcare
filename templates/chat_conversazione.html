@@ -1191,31 +1191,38 @@ body {
   // 🔁 BIND CHAT SU SOCKET ATTUALE + REBIND SE CAMBIA
   // --------------------------------------------------
 
-  function bootstrapChatSocket(retry = 0) {
-    const s = window.socket;
-
-    if (!s) {
-      if (retry < 120) {
-        setTimeout(() => bootstrapChatSocket(retry + 1), 50);
-        return;
-      }
-      console.error("❌ [CHAT] socket non disponibile entro timeout");
+  function startChatBinding(socket) {
+    if (!socket) {
+      console.error("❌ [CHAT] startChatBinding senza socket");
       return;
     }
 
-    // se ho già bindato proprio QUESTO socket, non rifaccio nulla
-    if (window.__chatBoundSocket === s && window.__chatBootstrapped === true) {
-      console.log("⏭️ [CHAT] bind già eseguito su questo socket", s.id);
+    if (window.__chatBoundSocket === socket && window.__chatBootstrapped === true) {
+      console.log("⏭️ [CHAT] bind già eseguito su questo socket", socket.id);
       return;
     }
 
-    console.log("🚀 [CHAT] bootstrap diretto su socket", s.id, "connected=", s.connected);
+    console.log("🚀 [CHAT] bind su socket pronto", socket.id, "connected=", socket.connected);
 
     window.__chatBootstrapped = true;
-    bindChatSocket(s);
+    bindChatSocket(socket);
   }
 
-  bootstrapChatSocket();
+  if (window.whenSocketReady) {
+    window.whenSocketReady((socket) => {
+      startChatBinding(socket);
+    });
+  } else if (window.socket) {
+    if (window.socket.connected) {
+      startChatBinding(window.socket);
+    } else {
+      window.socket.once("connect", () => {
+        startChatBinding(window.socket);
+      });
+    }
+  } else {
+    console.error("❌ [CHAT] window.socket non disponibile");
+  }
 });
 </script>
 <script>
