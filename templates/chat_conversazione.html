@@ -1082,10 +1082,26 @@ body {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
 
+    console.log("🧨 [CHAT] submit intercettato", {
+      sending,
+      rawValue: input.value,
+      trimmedValue: input.value.trim(),
+      hasSocket: !!getChatSocket(),
+      socketConnected: !!(getChatSocket() && getChatSocket().connected)
+    });
+
+    chatDebug("submit_intercepted", {
+      sending: sending,
+      raw_len: (input.value || "").length,
+      trimmed_len: (input.value || "").trim().length,
+      has_socket: !!getChatSocket(),
+      socket_connected: !!(getChatSocket() && getChatSocket().connected)
+    });
+
     if (sending) return;
 
     const testo = input.value.trim();
-    if (!testo) return;
+    if (!testo) return;    
 
     const s = getChatSocket();
 
