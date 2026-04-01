@@ -8708,26 +8708,35 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    Routing STABILE:
-    gli eventi realtime chat vengono inviati alla room utente user_<id>,
-    non al singolo sock:<sid>.
+    Invia l'evento a tutti i SID vivi e correnti dell'utente,
+    usando le room per-socket sock:<sid>.
 
-    Motivo:
-    il mapping client_id -> sid durante cambi pagina / reconnect / Safari / PWA
-    è troppo volatile per essere la base della consegna eventi.
-    La room utente è molto più robusta.
-
-    Nota:
-    skip_sid qui viene ignorato volutamente.
-    Nel flusso chat attuale non viene usato davvero.
+    Questo evita di dipendere dalla room user_<id> per gli eventi chat,
+    che nel tuo flusso recente sta risultando non affidabile lato ricezione realtime.
     """
-    socketio.emit(
-        event_name,
-        payload,
-        room=f"user_{user_id}",
-        namespace="/"
-    )
-    
+    live_sids = _get_live_user_sids(user_id)
+
+    if not live_sids:
+        print(f"⚠️ emit_to_user_sids: nessun SID vivo per utente {user_id} evento={event_name}")
+        return
+
+    for sid in live_sids:
+        if skip_sid and sid == skip_sid:
+            continue
+
+        room_name = _socket_room_name(sid)
+
+        print(
+            f"📡 emit_to_user_sids -> user={user_id} sid={sid} room={room_name} event={event_name}"
+        )
+
+        socketio.emit(
+            event_name,
+            payload,
+            room=room_name,
+            namespace="/"
+        )
+            
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
     Invia un evento alla room standard dell'utente: user_<id>.
