@@ -8779,29 +8779,20 @@ def handle_connect(auth=None):
     sid = request.sid
     room = f"user_{user_id}"
 
-    # 🔥 PRENDI client_id DAL FRONTEND
     client_id = None
     if isinstance(auth, dict):
         client_id = (auth.get("client_id") or "").strip() or None
 
-    # 🔥 invalida eventuali delayed-offline task creati da QUALSIASI worker
     _bump_offline_token(user_id)
-
-    # segna utente online
     redis_client.sadd("online_users", str(user_id))
-
     _touch_socket_sid(user_id, sid, client_id=client_id)
 
-    # join room utente + room esplicita del socket
     join_room(room, sid=sid)
-    join_room(_socket_room_name(sid), sid=sid)
 
-    # cleanup zombie basato su Redis condiviso
     count = _cleanup_user_socket_set(user_id)
 
     print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi reali: {count}")
 
-    # invio contatore messaggi non letti
     try:
         unread = chat_count_unread(user_id)
 
@@ -8861,10 +8852,8 @@ def handle_disconnect():
 
     sid = request.sid
 
-    # prima fonte: Redis
     user_id = _get_user_id_from_sid(sid)
 
-    # fallback sessione
     if not user_id:
         user_id = session.get("utente_id")
 
@@ -8878,16 +8867,6 @@ def handle_disconnect():
         pass
 
     try:
-        leave_room(_socket_room_name(sid), sid=sid)
-    except Exception:
-        pass
-
-    try:
-        # IMPORTANTISSIMO:
-        # il disconnect NON deve mai cancellare o toccare il mapping
-        # user_socket_client:{user_id}:{client_id}
-        # perché può appartenere già a un SID nuovo connesso nel frattempo.
-        # Qui rimuoviamo SOLO il SID che sta morendo.
         _remove_socket_sid(user_id, sid)
 
         remaining = _cleanup_user_socket_set(user_id)
@@ -8901,7 +8880,7 @@ def handle_disconnect():
 
     except Exception as e:
         print("Errore disconnect:", e)
-
+        
 def ensure_offline_watchdog(user_id):
     """
     Garantisce UN SOLO watchdog delayed per utente.
