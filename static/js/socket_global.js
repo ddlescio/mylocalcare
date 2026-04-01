@@ -167,48 +167,5 @@ window.addEventListener("pageshow", function (event) {
     }, 20000);
   }
 
-  // ===============================
-  // TEARDOWN PULITO SU USCITA PAGINA
-  // ===============================
-  function teardownSocketPage(reason) {
-    if (window.__socket_page_teardown_done__) return;
-    window.__socket_page_teardown_done__ = true;
-
-    console.log("🧹 socket teardown pagina:", reason, socket.id || null);
-
-    try {
-      if (window.__socket_heartbeat_interval__) {
-        clearInterval(window.__socket_heartbeat_interval__);
-        window.__socket_heartbeat_interval__ = null;
-      }
-    } catch (e) {
-      console.warn("Errore clear heartbeat interval:", e);
-    }
-
-    try {
-      // NON forzare disconnect qui.
-      // Su Safari/PWA/Desktop WebKit sta generando race e shutdown error
-      // proprio durante i cambi pagina.
-    } catch (e) {
-      console.warn("Errore teardown socket:", e);
-    }
-
-    // NON azzerare i riferimenti globali qui.
-    // Su Safari/PWA la pagina può entrare in stati intermedi
-    // e riprendere vita con script ancora attivi.
-    // Azzerando window.socket / whenSocketReady rischi di lasciare
-    // la pagina viva ma senza riferimenti al socket.
-
-    // importante per eventuale nuova inizializzazione pagina
-    window.__socket_page_bootstrap_done__ = false;
-  }
-
-  window.addEventListener("pagehide", () => {
-    teardownSocketPage("pagehide");
-  });
-
-  window.addEventListener("beforeunload", () => {
-    teardownSocketPage("beforeunload");
-  });
 
   })();
