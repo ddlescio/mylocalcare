@@ -838,6 +838,38 @@ body {
         });
       }
     }
+    function unbindChatSocket() {
+      const socket = window.__chatBoundSocket || null;
+      if (!socket) return;
+
+      console.log("🧹 [CHAT] unbind listener chat da socket", socket.id);
+
+      if (window.__chatHandlers.connectInit) {
+        socket.off("connect", window.__chatHandlers.connectInit);
+      }
+      if (window.__chatHandlers.disconnectChat) {
+        socket.off("disconnect", window.__chatHandlers.disconnectChat);
+      }
+      if (window.__chatHandlers.userTyping) {
+        socket.off("user_typing", window.__chatHandlers.userTyping);
+      }
+      if (window.__chatHandlers.newMessage) {
+        socket.off("new_message", window.__chatHandlers.newMessage);
+      }
+      if (window.__chatHandlers.messagesRead) {
+        socket.off("messages_read", window.__chatHandlers.messagesRead);
+      }
+      if (window.__chatHandlers.messageDelivered) {
+        socket.off("message_delivered", window.__chatHandlers.messageDelivered);
+      }
+
+      clearTimeout(markReadTimer);
+      clearTimeout(typingTimeout);
+
+      window.__chatBoundSocket = null;
+      window.__chatBootstrapped = false;
+      window.__activeChat = null;
+    }
 
     // pulizia vecchi handler lifecycle
     if (window.__chatBeforeUnloadHandlerRef) {
@@ -855,12 +887,20 @@ body {
       try {
         emitChatClosedOnce();
       } catch (_) {}
+
+      try {
+        unbindChatSocket();
+      } catch (_) {}
     };
 
     // chiusura su uscita pagina
     window.__chatPagehideHandlerRef = function () {
       try {
         emitChatClosedOnce();
+      } catch (_) {}
+
+      try {
+        unbindChatSocket();
       } catch (_) {}
     };
 
@@ -883,6 +923,10 @@ body {
 
       try {
         emitChatClosedOnce();
+      } catch (_) {}
+
+      try {
+        unbindChatSocket();
       } catch (_) {}
     };
 
@@ -1101,7 +1145,7 @@ body {
     if (sending) return;
 
     const testo = input.value.trim();
-    if (!testo) return;    
+    if (!testo) return;
 
     const s = getChatSocket();
 
