@@ -8708,23 +8708,26 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    Invia un evento a tutti i socket vivi dell'utente usando
-    una room esplicita per socket (sock:<sid>), più affidabile
-    del SID implicito nel setup multi-worker.
+    Routing STABILE:
+    gli eventi realtime chat vengono inviati alla room utente user_<id>,
+    non al singolo sock:<sid>.
+
+    Motivo:
+    il mapping client_id -> sid durante cambi pagina / reconnect / Safari / PWA
+    è troppo volatile per essere la base della consegna eventi.
+    La room utente è molto più robusta.
+
+    Nota:
+    skip_sid qui viene ignorato volutamente.
+    Nel flusso chat attuale non viene usato davvero.
     """
-    sids = _get_live_user_sids(user_id)
-
-    for sid in sids:
-        if skip_sid and sid == skip_sid:
-            continue
-
-        socketio.emit(
-            event_name,
-            payload,
-            room=_socket_room_name(sid),
-            namespace="/"
-        )
-
+    socketio.emit(
+        event_name,
+        payload,
+        room=f"user_{user_id}",
+        namespace="/"
+    )
+    
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
     Invia un evento alla room standard dell'utente: user_<id>.
@@ -8872,7 +8875,7 @@ def handle_disconnect():
             ensure_offline_watchdog(user_id)
 
     except Exception as e:
-        print("Errore disconnect:", e)        
+        print("Errore disconnect:", e)
 
 def ensure_offline_watchdog(user_id):
     """
