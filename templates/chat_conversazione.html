@@ -667,15 +667,6 @@ body {
       socket.on("connect", window.__chatHandlers.connectInit);
       socket.on("disconnect", window.__chatHandlers.disconnectChat);
 
-      if (socket.connected) {
-        console.log("🟢 [CHAT] socket già connessa, apertura immediata", socket.id);
-
-        chatOpenedOnce = false;
-        chatClosedEmitted = false;
-        window.__activeChat = destId;
-
-        emitChatOpened();
-      }
       // --------------------------------------------------
       // NEW MESSAGE
       // --------------------------------------------------
@@ -833,6 +824,19 @@ body {
         }
       };
       socket.on("message_delivered", window.__chatHandlers.messageDelivered);
+
+      if (socket.connected) {
+        console.log("🟢 [CHAT] socket già connessa, apertura immediata", socket.id);
+
+        chatOpenedOnce = false;
+        chatClosedEmitted = false;
+        window.__activeChat = destId;
+
+        // importante: apri la chat solo DOPO aver agganciato tutti i listener
+        queueMicrotask(() => {
+          emitChatOpened();
+        });
+      }
     }
 
     // pulizia vecchi handler lifecycle
