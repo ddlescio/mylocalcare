@@ -103,26 +103,22 @@
 </div>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-
     window.whenSocketReady((socket) => {
-
       socket.on("chat_threads_update", () => {
-        location.reload();
+        console.log("📩 chat_threads_update ricevuto su /utente/messaggi");
+        // Per test NON ricarichiamo la pagina automaticamente
       });
-
     });
-
   });
 
   // 🔁 Quando rientri su /chat con il tasto indietro, forza refresh
   window.addEventListener("pageshow", function (e) {
-      const navEntries = performance.getEntriesByType("navigation");
-      const navType = navEntries && navEntries[0] ? navEntries[0].type : null;
+    const navEntries = performance.getEntriesByType("navigation");
+    const navType = navEntries && navEntries[0] ? navEntries[0].type : null;
 
-      if (e.persisted || navType === "back_forward") {
-          location.reload();
-      }
+    if (e.persisted || navType === "back_forward") {
+      location.reload();
+    }
   });
 </script>
-
 {% endblock %}
