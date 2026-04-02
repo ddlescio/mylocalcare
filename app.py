@@ -8880,7 +8880,7 @@ def handle_disconnect():
 
     except Exception as e:
         print("Errore disconnect:", e)
-        
+
 def ensure_offline_watchdog(user_id):
     """
     Garantisce UN SOLO watchdog delayed per utente.
@@ -9068,13 +9068,16 @@ def _delayed_clear_recently_read(user_id, delay):
 
 @socketio.on('send_message')
 def handle_send_message(data):
-    from flask import session
+    from flask import session, request
     from zoneinfo import ZoneInfo
     from datetime import datetime
     import traceback
 
+    print("🚨 ENTER handle_send_message", flush=True)
+    print(f"🚨 SID={request.sid} session_user={session.get('utente_id')} data={data}", flush=True)
+
     mittente_id = session.get('utente_id')
-    print(f"📨 [send_message] START mittente={mittente_id} data={data}")
+    print(f"📨 [send_message] START mittente={mittente_id} data={data}", flush=True)    
 
     try:
         destinatario_id = int(data.get('destinatario_id'))
