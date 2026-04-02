@@ -8726,16 +8726,24 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    Invio realtime tramite room standard utente.
-    In questo progetto è più affidabile della consegna diretta al SID
-    durante reconnect/cambio pagina.
+    Invio realtime ibrido:
+    1) room standard user_<id>
+    2) fallback diretto ai SID vivi correnti
+
+    Motivo:
+    in ambiente multi-worker alcuni eventi sembrano partire verso la room
+    ma non arrivare sempre al client attivo durante cambi pagina/reconnect.
+    Il doppio canale rende la consegna più robusta.
     """
     room_name = f"user_{user_id}"
+    live_sids = _get_live_user_sids(user_id)
 
     print(
-        f"📡 emit_to_user_sids -> user={user_id} room={room_name} event={event_name} skip_sid={skip_sid}"
+        f"📡 emit_to_user_sids -> user={user_id} room={room_name} "
+        f"event={event_name} skip_sid={skip_sid} live_sids={live_sids}"
     )
 
+    # 1) invio alla room utente
     socketio.emit(
         event_name,
         payload,
@@ -8744,6 +8752,18 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
         skip_sid=skip_sid
     )
 
+    # 2) fallback diretto ai SID vivi correnti
+    for sid in live_sids:
+        if skip_sid and sid == skip_sid:
+            continue
+
+        socketio.emit(
+            event_name,
+            payload,
+            to=sid,
+            namespace="/"
+        )
+        
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
     Invia un evento alla room standard dell'utente: user_<id>.
