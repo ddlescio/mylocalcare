@@ -1218,43 +1218,42 @@ body {
   /* 🔥 UN SOLO BIND PULITO */
 
   // --------------------------------------------------
-  // 🔁 ATTIVA BIND SOCKET SOLO QUANDO LA SOCKET È PRONTA
+  // 🔁 BIND CHAT SU SOCKET ATTUALE + REBIND SE CAMBIA
   // --------------------------------------------------
 
-  function bootstrapChatSocket() {
-    const socket = window.socket;
-
+  function startChatBinding(socket) {
     if (!socket) {
-      console.error("❌ [CHAT] window.socket non disponibile");
+      console.error("❌ [CHAT] startChatBinding senza socket");
       return;
     }
 
-    if (window.__chatPageInitialized === true) {
-      console.log("⏭️ [CHAT] bootstrap chat già eseguito");
+    if (window.__chatBoundSocket === socket && window.__chatBootstrapped === true) {
+      console.log("⏭️ [CHAT] bind già eseguito su questo socket", socket.id);
       return;
     }
 
-    window.__chatPageInitialized = true;
+    console.log("🚀 [CHAT] bind su socket pronto", socket.id, "connected=", socket.connected);
+
+    window.__chatBootstrapped = true;
     bindChatSocket(socket);
   }
 
   if (window.whenSocketReady) {
-    window.whenSocketReady(() => {
-      bootstrapChatSocket();
+    window.whenSocketReady((socket) => {
+      startChatBinding(socket);
     });
   } else if (window.socket) {
     if (window.socket.connected) {
-      bootstrapChatSocket();
+      startChatBinding(window.socket);
     } else {
       window.socket.once("connect", () => {
-        bootstrapChatSocket();
+        startChatBinding(window.socket);
       });
     }
   } else {
     console.error("❌ [CHAT] window.socket non disponibile");
   }
 });
-
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
