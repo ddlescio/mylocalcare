@@ -8726,32 +8726,23 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    Invia l'evento a tutti i SID vivi e correnti dell'utente,
-    usando direttamente il SID nativo di Socket.IO come destinatario.
-
-    NON usa più la room custom sock:<sid>, perché nel flusso multi-worker
-    attuale sta risultando inaffidabile per la consegna realtime.
+    Invio realtime tramite room standard utente.
+    In questo progetto è più affidabile della consegna diretta al SID
+    durante reconnect/cambio pagina.
     """
-    live_sids = _get_live_user_sids(user_id)
+    room_name = f"user_{user_id}"
 
-    if not live_sids:
-        print(f"⚠️ emit_to_user_sids: nessun SID vivo per utente {user_id} evento={event_name}")
-        return
+    print(
+        f"📡 emit_to_user_sids -> user={user_id} room={room_name} event={event_name} skip_sid={skip_sid}"
+    )
 
-    for sid in live_sids:
-        if skip_sid and sid == skip_sid:
-            continue
-
-        print(
-            f"📡 emit_to_user_sids -> user={user_id} sid={sid} event={event_name}"
-        )
-
-        socketio.emit(
-            event_name,
-            payload,
-            to=sid,
-            namespace="/"
-        )
+    socketio.emit(
+        event_name,
+        payload,
+        room=room_name,
+        namespace="/",
+        skip_sid=skip_sid
+    )
 
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
@@ -8880,7 +8871,7 @@ def handle_disconnect():
 
     except Exception as e:
         print("Errore disconnect:", e)
-        
+
 def ensure_offline_watchdog(user_id):
     """
     Garantisce UN SOLO watchdog delayed per utente.
