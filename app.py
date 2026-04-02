@@ -8726,33 +8726,23 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    Invia l'evento a tutti i SID vivi e correnti dell'utente,
-    usando direttamente il SID nativo di Socket.IO come destinatario.
-
-    NON usa più la room custom sock:<sid>, perché nel flusso multi-worker
-    attuale sta risultando inaffidabile per la consegna realtime.
+    Invio realtime tramite room standard utente.
+    In ambiente multi-worker/PWA è più affidabile della consegna diretta al SID.
     """
-    live_sids = _get_live_user_sids(user_id)
+    room_name = f"user_{user_id}"
 
-    if not live_sids:
-        print(f"⚠️ emit_to_user_sids: nessun SID vivo per utente {user_id} evento={event_name}")
-        return
+    print(
+        f"📡 emit_to_user_sids -> user={user_id} room={room_name} event={event_name} skip_sid={skip_sid}"
+    )
 
-    for sid in live_sids:
-        if skip_sid and sid == skip_sid:
-            continue
-
-        print(
-            f"📡 emit_to_user_sids -> user={user_id} sid={sid} event={event_name}"
-        )
-
-        socketio.emit(
-            event_name,
-            payload,
-            to=sid,
-            namespace="/"
-        )
-
+    socketio.emit(
+        event_name,
+        payload,
+        room=room_name,
+        namespace="/",
+        skip_sid=skip_sid
+    )
+    
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
     Invia un evento alla room standard dell'utente: user_<id>.
@@ -9077,7 +9067,7 @@ def handle_send_message(data):
     print(f"🚨 SID={request.sid} session_user={session.get('utente_id')} data={data}", flush=True)
 
     mittente_id = session.get('utente_id')
-    print(f"📨 [send_message] START mittente={mittente_id} data={data}", flush=True)    
+    print(f"📨 [send_message] START mittente={mittente_id} data={data}", flush=True)
 
     try:
         destinatario_id = int(data.get('destinatario_id'))
