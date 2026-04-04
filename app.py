@@ -44,6 +44,25 @@ import os
 from flask import g
 from db import (insert_and_get_id)
 from realtime import emit_update_notifications
+from realtime.socket_registry import (
+    configure_socket_registry,
+    SOCKET_TTL_SECONDS,
+    is_user_online,
+    set_open_chat,
+    get_open_chat,
+    clear_open_chat,
+    _bump_offline_token,
+    _get_offline_token,
+    _get_user_id_from_sid,
+    _touch_socket_sid,
+    _remove_socket_sid,
+    _cleanup_user_socket_set,
+    emit_to_user_sids,
+    emit_to_user_room,
+    _socket_user_set_key,
+    _socket_sid_key,
+    _socket_client_key,
+)
 
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
@@ -396,6 +415,8 @@ socketio = SocketIO(
     logger=True,
     engineio_logger=True
 )
+
+configure_socket_registry(redis_client, socketio)
 
 # =====================================================
 # UTENTI ONLINE (socket registry)
@@ -8510,267 +8531,6 @@ def video_ping():
 # 🔌 SOCKET TRACKING REDIS MULTI-WORKER
 # ==========================================================
 
-SOCKET_TTL_SECONDS = 75   # heartbeat ogni 20s -> TTL largo e sicuro
-
-
-def _socket_user_set_key(user_id):
-    return f"user_sockets:{user_id}"
-
-
-def _socket_sid_key(sid):
-    return f"socket_sid:{sid}"
-
-def _socket_room_name(sid):
-    return f"sock:{sid}"
-
-def _socket_client_key(user_id, client_id):
-    return f"user_socket_client:{user_id}:{client_id}"
-
-def _socket_offline_token_key(user_id):
-    return f"user_offline_token:{user_id}"
-
-def _chat_open_key(user_id):
-    return f"chat_open:{user_id}"
-
-def set_open_chat(user_id, other_id, ttl=300):
-    """
-    Salva in Redis quale chat è aperta per l'utente.
-    TTL rinnovato ad ogni chat_aperta.
-    """
-    redis_client.set(_chat_open_key(user_id), str(other_id), ex=ttl)
-
-def get_open_chat(user_id):
-    raw = redis_client.get(_chat_open_key(user_id))
-    if not raw:
-        return None
-    try:
-        return int(_decode_redis_value(raw))
-    except Exception:
-        return None
-
-def clear_open_chat(user_id):
-    redis_client.delete(_chat_open_key(user_id))
-
-def _bump_offline_token(user_id):
-    """
-    Incrementa un token Redis condiviso tra worker.
-    Serve a invalidare i vecchi task delayed creati da altri worker.
-    """
-    return int(redis_client.incr(_socket_offline_token_key(user_id)))
-
-
-def _get_offline_token(user_id):
-    raw = redis_client.get(_socket_offline_token_key(user_id))
-    if not raw:
-        return 0
-    try:
-        return int(_decode_redis_value(raw))
-    except Exception:
-        return 0
-
-def _decode_redis_value(value):
-    if isinstance(value, bytes):
-        return value.decode()
-    return value
-
-
-def _get_user_id_from_sid(sid):
-    raw = redis_client.hget(_socket_sid_key(sid), "user_id")
-    if not raw:
-        return None
-    try:
-        return int(_decode_redis_value(raw))
-    except Exception:
-        return None
-
-def _get_client_id_from_sid(sid):
-    raw = redis_client.hget(_socket_sid_key(sid), "client_id")
-    if not raw:
-        return None
-
-    value = _decode_redis_value(raw).strip()
-
-    if not value or value == "__NONE__":
-        return None
-
-    return value
-
-def _touch_socket_sid(user_id, sid, client_id=None):
-    """
-    Registra/aggiorna il SID corrente.
-    Se client_id presente, aggiorna il mapping client -> SID
-    SENZA disconnettere forzatamente il vecchio SID durante la connect.
-
-    Motivo:
-    durante i cambi pagina / rientri, vecchio e nuovo SID possono
-    sovrapporsi per un attimo. Fare disconnect hard qui introduce race.
-    """
-    now_ts = int(time.time())
-    user_set_key = _socket_user_set_key(user_id)
-
-    pipe = redis_client.pipeline()
-
-    if client_id:
-        client_key = _socket_client_key(user_id, client_id)
-        old_sid_raw = redis_client.get(client_key)
-        old_sid = _decode_redis_value(old_sid_raw) if old_sid_raw else None
-
-        if old_sid and old_sid != sid:
-            print(f"♻️ Mapping client aggiornato: {old_sid} -> {sid} (client {client_id})")
-
-            # IMPORTANTE:
-            # non disconnettere qui il vecchio SID
-            # non cancellare qui socket_sid:{old_sid}
-            # non fare srem qui del vecchio SID
-            # il vecchio SID verrà ripulito dal suo disconnect naturale
-            # oppure dal TTL / cleanup successivo
-
-        pipe.set(client_key, sid, ex=SOCKET_TTL_SECONDS)
-
-    pipe.sadd(user_set_key, sid)
-
-    pipe.hset(_socket_sid_key(sid), mapping={
-        "user_id": str(user_id),
-        "client_id": client_id if client_id else "__NONE__",
-        "last_seen": str(now_ts)
-    })
-
-    pipe.expire(_socket_sid_key(sid), SOCKET_TTL_SECONDS)
-
-    pipe.execute()
-
-def _remove_socket_sid(user_id, sid):
-    """
-    Rimuove un SID sia dal set utente sia dalla chiave singola SID.
-    """
-    pipe = redis_client.pipeline()
-    pipe.srem(_socket_user_set_key(user_id), sid)
-    pipe.delete(_socket_sid_key(sid))
-    pipe.execute()
-
-
-def _cleanup_user_socket_set(user_id):
-    """
-    Pulisce dal set utente tutti i SID che non hanno più
-    la relativa chiave Redis socket_sid:{sid}.
-    Ritorna il numero reale di SID vivi.
-    """
-    key = _socket_user_set_key(user_id)
-    raw_sids = redis_client.smembers(key)
-
-    alive = 0
-
-    for raw_sid in raw_sids:
-        sid = _decode_redis_value(raw_sid)
-
-        ttl = redis_client.ttl(_socket_sid_key(sid))
-
-        if ttl and ttl > 0:
-            alive += 1
-        else:
-            redis_client.srem(key, sid)
-            print(f"🧹 Rimosso SID zombie {sid} da utente {user_id}")
-
-    return alive
-
-def _get_live_user_sids(user_id):
-    """
-    Ritorna SOLO i SID vivi e correnti dell'utente.
-
-    Se più SID appartengono allo stesso client_id, tiene solo quello
-    attualmente mappato in Redis come SID corrente per quel client.
-    In questo modo evitiamo di emettere verso socket vecchie/stale
-    durante i cambi pagina rapidi.
-    """
-    key = _socket_user_set_key(user_id)
-    raw_sids = redis_client.smembers(key)
-
-    live_sids = []
-    seen_client_ids = set()
-
-    for raw_sid in raw_sids:
-        sid = _decode_redis_value(raw_sid)
-        sid_key = _socket_sid_key(sid)
-
-        ttl = redis_client.ttl(sid_key)
-        if not ttl or ttl <= 0:
-            redis_client.srem(key, sid)
-            print(f"🧹 Rimosso SID zombie {sid} da utente {user_id}")
-            continue
-
-        client_id = _get_client_id_from_sid(sid)
-
-        # Se il socket non ha client_id, lo consideriamo valido
-        # perché non possiamo deduplicarlo.
-        if not client_id:
-            live_sids.append(sid)
-            continue
-
-        client_key = _socket_client_key(user_id, client_id)
-        mapped_sid_raw = redis_client.get(client_key)
-        mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
-
-        # Se questo SID non è più quello corrente del client, lo ignoriamo
-        if mapped_sid != sid:
-            print(f"⏭️ Skip SID stale {sid} per utente {user_id} (client {client_id}, corrente={mapped_sid})")
-            continue
-
-        # Protezione aggiuntiva contro duplicati logici
-        if client_id in seen_client_ids:
-            continue
-
-        seen_client_ids.add(client_id)
-        live_sids.append(sid)
-
-    return live_sids
-
-def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
-    """
-    Consegna reale tramite room stabile user_<id>.
-    I live_sids vengono usati solo per diagnostica, NON per decidere
-    se emettere o no, perché in multi-worker la room Redis può essere
-    valida anche se la registry locale/Redis dei SID è momentaneamente stale.
-    """
-    room_name = f"user_{user_id}"
-    live_sids = _get_live_user_sids(user_id)
-
-    print(
-        f"📡 emit_to_user_sids -> user={user_id} room={room_name} "
-        f"event={event_name} skip_sid={skip_sid} live_sids={live_sids}"
-    )
-
-    if not live_sids:
-        print(
-            f"⚠️ Registry SID vuota per user={user_id} event={event_name} "
-            f"→ provo comunque emit sulla room {room_name}"
-        )
-
-    try:
-        socketio.emit(
-            event_name,
-            payload,
-            room=room_name,
-            namespace="/",
-            skip_sid=skip_sid
-        )
-        print(f"➡️ Emit via room user={user_id} room={room_name} event={event_name}")
-    except Exception as e:
-        print(f"❌ Errore emit via room user={user_id} room={room_name} event={event_name}: {e}")
-
-def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
-    """
-    Invia un evento alla room standard dell'utente: user_<id>.
-    Questo bypassa il routing per-room-per-sid (sock:<sid>),
-    utile per capire se il problema reale è proprio lì.
-    """
-    room_name = f"user_{user_id}"
-
-    socketio.emit(
-        event_name,
-        payload,
-        room=room_name,
-        namespace="/"
-    )
 
 @socketio.on("connect")
 def handle_connect(auth=None):
