@@ -44,7 +44,7 @@ import os
 from flask import g
 from db import (insert_and_get_id)
 from realtime import emit_update_notifications
-from realtime.socket_registry import (
+from socket_registry import (
     configure_socket_registry,
     SOCKET_TTL_SECONDS,
     is_user_online,

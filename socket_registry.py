@@ -1,5 +1,3 @@
-# realtime/socket_registry.py
-
 import time
 
 redis_client = None
@@ -46,10 +44,6 @@ def _chat_open_key(user_id):
 
 
 def set_open_chat(user_id, other_id, ttl=300):
-    """
-    Salva in Redis quale chat è aperta per l'utente.
-    TTL rinnovato ad ogni chat_aperta.
-    """
     _ensure_ready()
     redis_client.set(_chat_open_key(user_id), str(other_id), ex=ttl)
 
@@ -71,10 +65,6 @@ def clear_open_chat(user_id):
 
 
 def _bump_offline_token(user_id):
-    """
-    Incrementa un token Redis condiviso tra worker.
-    Serve a invalidare i vecchi task delayed creati da altri worker.
-    """
     _ensure_ready()
     return int(redis_client.incr(_socket_offline_token_key(user_id)))
 
@@ -122,15 +112,6 @@ def _get_client_id_from_sid(sid):
 
 
 def _touch_socket_sid(user_id, sid, client_id=None):
-    """
-    Registra/aggiorna il SID corrente.
-    Se client_id presente, aggiorna il mapping client -> SID
-    SENZA disconnettere forzatamente il vecchio SID durante la connect.
-
-    Motivo:
-    durante i cambi pagina / rientri, vecchio e nuovo SID possono
-    sovrapporsi per un attimo. Fare disconnect hard qui introduce race.
-    """
     _ensure_ready()
 
     now_ts = int(time.time())
@@ -162,9 +143,6 @@ def _touch_socket_sid(user_id, sid, client_id=None):
 
 
 def _remove_socket_sid(user_id, sid):
-    """
-    Rimuove un SID sia dal set utente sia dalla chiave singola SID.
-    """
     _ensure_ready()
     pipe = redis_client.pipeline()
     pipe.srem(_socket_user_set_key(user_id), sid)
@@ -173,11 +151,6 @@ def _remove_socket_sid(user_id, sid):
 
 
 def _cleanup_user_socket_set(user_id):
-    """
-    Pulisce dal set utente tutti i SID che non hanno più
-    la relativa chiave Redis socket_sid:{sid}.
-    Ritorna il numero reale di SID vivi.
-    """
     _ensure_ready()
 
     key = _socket_user_set_key(user_id)
@@ -200,14 +173,6 @@ def _cleanup_user_socket_set(user_id):
 
 
 def _get_live_user_sids(user_id):
-    """
-    Ritorna SOLO i SID vivi e correnti dell'utente.
-
-    Se più SID appartengono allo stesso client_id, tiene solo quello
-    attualmente mappato in Redis come SID corrente per quel client.
-    In questo modo evitiamo di emettere verso socket vecchie/stale
-    durante i cambi pagina rapidi.
-    """
     _ensure_ready()
 
     key = _socket_user_set_key(user_id)
@@ -250,12 +215,6 @@ def _get_live_user_sids(user_id):
 
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
-    """
-    Consegna reale tramite room stabile user_<id>.
-    I live_sids vengono usati solo per diagnostica, NON per decidere
-    se emettere o no, perché in multi-worker la room Redis può essere
-    valida anche se la registry locale/Redis dei SID è momentaneamente stale.
-    """
     _ensure_ready()
 
     room_name = f"user_{user_id}"
@@ -286,11 +245,6 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
 
 
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
-    """
-    Invia un evento alla room standard dell'utente: user_<id>.
-    Questo bypassa il routing per-room-per-sid (sock:<sid>),
-    utile per capire se il problema reale è proprio lì.
-    """
     _ensure_ready()
 
     room_name = f"user_{user_id}"
