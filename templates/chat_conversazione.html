@@ -5,6 +5,31 @@
   <meta name="chat-aperta" content="true">
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      console.log("📍 CHAT DOMContentLoaded", {
+        href: window.location.href,
+        pathname: window.location.pathname,
+        referrer: document.referrer,
+        ua: navigator.userAgent
+      });
+
+      fetch("/chat-debug-page-open", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          marker: "chat_dom_loaded",
+          href: window.location.href,
+          pathname: window.location.pathname,
+          referrer: document.referrer,
+          ua: navigator.userAgent,
+          ts: new Date().toISOString()
+        })
+      }).catch(err => {
+        console.warn("❌ Errore chat-debug-page-open", err);
+      });
+
       document.body.dataset.chat = "true";
     });
   </script>

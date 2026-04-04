@@ -8742,7 +8742,7 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
         namespace="/",
         skip_sid=skip_sid
     )
-    
+
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
     Invia un evento alla room standard dell'utente: user_<id>.
@@ -9369,6 +9369,26 @@ def handle_chat_debug(data):
     except Exception as e:
         print("❌ Errore handle_chat_debug:", e)
 
+@app.route("/chat-debug-page-open", methods=["POST"])
+def chat_debug_page_open():
+    from flask import request, session
+
+    try:
+        data = request.get_json(silent=True) or {}
+        print(
+            "📍 [CHAT PAGE OPEN] "
+            f"user={session.get('utente_id')} "
+            f"marker={data.get('marker')} "
+            f"pathname={data.get('pathname')} "
+            f"href={data.get('href')} "
+            f"referrer={data.get('referrer')} "
+            f"ua={data.get('ua')} "
+            f"ts={data.get('ts')}"
+        )
+        return {"ok": True}, 200
+    except Exception as e:
+        print("❌ Errore chat_debug_page_open:", e)
+        return {"ok": False}, 500
 
 @app.route("/webhook/stripe", methods=["POST"])
 def webhook_stripe():
