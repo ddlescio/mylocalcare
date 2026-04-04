@@ -8726,9 +8726,10 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    In ambiente multi-worker la consegna affidabile va fatta sulla room stabile
-    dell'utente (user_<id>), non sul SID diretto.
-    I SID vivi restano usati solo a scopo diagnostico.
+    Consegna reale tramite room stabile user_<id>.
+    I live_sids vengono usati solo per diagnostica, NON per decidere
+    se emettere o no, perché in multi-worker la room Redis può essere
+    valida anche se la registry locale/Redis dei SID è momentaneamente stale.
     """
     room_name = f"user_{user_id}"
     live_sids = _get_live_user_sids(user_id)
@@ -8739,8 +8740,10 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     )
 
     if not live_sids:
-        print(f"⚠️ Nessun SID vivo per user={user_id} event={event_name}")
-        return
+        print(
+            f"⚠️ Registry SID vuota per user={user_id} event={event_name} "
+            f"→ provo comunque emit sulla room {room_name}"
+        )
 
     try:
         socketio.emit(
@@ -8753,7 +8756,7 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
         print(f"➡️ Emit via room user={user_id} room={room_name} event={event_name}")
     except Exception as e:
         print(f"❌ Errore emit via room user={user_id} room={room_name} event={event_name}: {e}")
-        
+
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
     Invia un evento alla room standard dell'utente: user_<id>.
