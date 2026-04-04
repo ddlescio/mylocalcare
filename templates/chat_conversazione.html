@@ -615,6 +615,32 @@ body {
     const input = document.getElementById('msgInput');
     const form = document.getElementById('composer');
     const typingIndicator = document.getElementById('typingIndicator');
+    const sendBtn = document.getElementById('sendBtn');
+
+    let chatRealtimeReady = false;
+
+    function setComposerReady(ready, reason = "") {
+      chatRealtimeReady = !!ready;
+
+      if (input) input.disabled = !chatRealtimeReady;
+      if (sendBtn) sendBtn.disabled = !chatRealtimeReady;
+
+      if (sendBtn) {
+        sendBtn.classList.toggle("opacity-50", !chatRealtimeReady);
+        sendBtn.classList.toggle("cursor-not-allowed", !chatRealtimeReady);
+        sendBtn.textContent = chatRealtimeReady ? "Invia" : "Connessione...";
+      }
+
+      if (input) {
+        input.placeholder = chatRealtimeReady
+          ? "Scrivi un messaggio…"
+          : "Attendi connessione chat…";
+      }
+
+      console.log("🧷 [CHAT] composer ready =", chatRealtimeReady, "reason=", reason);
+    }
+
+    setComposerReady(false, "init");
 
     console.log("🟢 Chat inizializzata", { meId, destId });
 
@@ -668,6 +694,8 @@ body {
       window.__chatHandlers.connectInit = function () {
         console.log("🟢 [CHAT] connect/reconnect su socket", socket.id);
 
+        setComposerReady(true, "connect");
+
         // ad ogni connect/reconnect la chat va sempre ri-registrata
         chatOpenedOnce = false;
         chatClosedEmitted = false;
@@ -678,6 +706,8 @@ body {
 
       window.__chatHandlers.disconnectChat = function (reason) {
         console.log("🔌 [CHAT] disconnect su socket chat", socket.id, "reason=", reason);
+
+        setComposerReady(false, "disconnect");
 
         chatDebug("socket_disconnect", {
           disconnected_socket_id: socket.id,
@@ -852,6 +882,8 @@ body {
 
       if (socket.connected) {
         console.log("🟢 [CHAT] socket già connessa, apertura immediata", socket.id);
+
+        setComposerReady(true, "already_connected");
 
         chatOpenedOnce = false;
         chatClosedEmitted = false;
