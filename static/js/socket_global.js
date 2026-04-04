@@ -45,8 +45,8 @@ window.addEventListener("pageshow", function (event) {
   // CREA SOCKET DELLA PAGINA CORRENTE
   // ===============================
   const socket = io({
-    transports: ["websocket", "polling"],
-    upgrade: true,
+    transports: ["websocket"],
+    upgrade: false,
     withCredentials: true,
 
     reconnection: true,
@@ -192,7 +192,7 @@ window.addEventListener("pageshow", function (event) {
   };
 
   socket.onAny(window.__socket_debug_any_handler__);
-  
+
   // ===============================
   // API USATA DAL RESTO DEL SITO
   // ===============================
