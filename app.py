@@ -416,8 +416,6 @@ socketio = SocketIO(
     engineio_logger=True
 )
 
-configure_socket_registry(redis_client, socketio)
-
 # =====================================================
 # UTENTI ONLINE (socket registry)
 # =====================================================
@@ -664,6 +662,8 @@ from flask_session import Session
 from datetime import timedelta
 
 redis_client = redis.from_url(os.environ["REDIS_URL"])
+
+configure_socket_registry(redis_client, socketio)
 
 app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_REDIS'] = redis_client
