@@ -8726,36 +8726,34 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    Invia l'evento direttamente ai SID vivi e correnti dell'utente.
-    Usa la registry Redis reale invece della room user_<id>.
+    In ambiente multi-worker la consegna affidabile va fatta sulla room stabile
+    dell'utente (user_<id>), non sul SID diretto.
+    I SID vivi restano usati solo a scopo diagnostico.
     """
+    room_name = f"user_{user_id}"
     live_sids = _get_live_user_sids(user_id)
 
     print(
-        f"📡 emit_to_user_sids -> user={user_id} event={event_name} "
-        f"skip_sid={skip_sid} live_sids={live_sids}"
+        f"📡 emit_to_user_sids -> user={user_id} room={room_name} "
+        f"event={event_name} skip_sid={skip_sid} live_sids={live_sids}"
     )
 
     if not live_sids:
         print(f"⚠️ Nessun SID vivo per user={user_id} event={event_name}")
         return
 
-    for sid in live_sids:
-        if skip_sid and sid == skip_sid:
-            print(f"⏭️ Skip SID {sid} per user={user_id} event={event_name}")
-            continue
-
-        try:
-            socketio.emit(
-                event_name,
-                payload,
-                room=sid,
-                namespace="/"
-            )
-            print(f"➡️ Emit diretto user={user_id} sid={sid} event={event_name}")
-        except Exception as e:
-            print(f"❌ Errore emit diretto user={user_id} sid={sid} event={event_name}: {e}")
-
+    try:
+        socketio.emit(
+            event_name,
+            payload,
+            room=room_name,
+            namespace="/",
+            skip_sid=skip_sid
+        )
+        print(f"➡️ Emit via room user={user_id} room={room_name} event={event_name}")
+    except Exception as e:
+        print(f"❌ Errore emit via room user={user_id} room={room_name} event={event_name}: {e}")
+        
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
     Invia un evento alla room standard dell'utente: user_<id>.
@@ -9426,7 +9424,7 @@ def chat_debug_socket_event():
     except Exception as e:
         print("❌ Errore chat_debug_socket_event:", e)
         return {"ok": False}, 500
-        
+
 @app.route("/webhook/stripe", methods=["POST"])
 def webhook_stripe():
     payload = request.data
