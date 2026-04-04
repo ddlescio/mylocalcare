@@ -1227,12 +1227,17 @@ body {
       return;
     }
 
-    console.log("🚀 [CHAT] bind forzato su socket pronto", socket.id, "connected=", socket.connected);
+    if (window.__chatBoundSocket === socket && window.__chatBootstrapped === true) {
+      console.log("⏭️ [CHAT] bind già eseguito su questo socket", socket.id);
+      return;
+    }
 
-    // 🔥 niente skip: bindChatSocket sa già sganciare/ripulire i listener precedenti
+    console.log("🚀 [CHAT] bind su socket pronto", socket.id, "connected=", socket.connected);
+
     window.__chatBootstrapped = true;
     bindChatSocket(socket);
-  }  
+  }
+
 
   if (window.whenSocketReady) {
     window.whenSocketReady((socket) => {
