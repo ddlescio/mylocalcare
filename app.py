@@ -8726,22 +8726,35 @@ def _get_live_user_sids(user_id):
 
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     """
-    Invio realtime tramite room standard utente.
-    In ambiente multi-worker/PWA è più affidabile della consegna diretta al SID.
+    Invia l'evento direttamente ai SID vivi e correnti dell'utente.
+    Usa la registry Redis reale invece della room user_<id>.
     """
-    room_name = f"user_{user_id}"
+    live_sids = _get_live_user_sids(user_id)
 
     print(
-        f"📡 emit_to_user_sids -> user={user_id} room={room_name} event={event_name} skip_sid={skip_sid}"
+        f"📡 emit_to_user_sids -> user={user_id} event={event_name} "
+        f"skip_sid={skip_sid} live_sids={live_sids}"
     )
 
-    socketio.emit(
-        event_name,
-        payload,
-        room=room_name,
-        namespace="/",
-        skip_sid=skip_sid
-    )
+    if not live_sids:
+        print(f"⚠️ Nessun SID vivo per user={user_id} event={event_name}")
+        return
+
+    for sid in live_sids:
+        if skip_sid and sid == skip_sid:
+            print(f"⏭️ Skip SID {sid} per user={user_id} event={event_name}")
+            continue
+
+        try:
+            socketio.emit(
+                event_name,
+                payload,
+                room=sid,
+                namespace="/"
+            )
+            print(f"➡️ Emit diretto user={user_id} sid={sid} event={event_name}")
+        except Exception as e:
+            print(f"❌ Errore emit diretto user={user_id} sid={sid} event={event_name}: {e}")
 
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     """
