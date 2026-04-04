@@ -9403,6 +9403,30 @@ def chat_debug_page_open():
         print("❌ Errore chat_debug_page_open:", e)
         return {"ok": False}, 500
 
+@app.route("/chat-debug-socket-event", methods=["POST"])
+def chat_debug_socket_event():
+    from flask import request, session
+
+    try:
+        data = request.get_json(silent=True) or {}
+
+        print(
+            "📥 [SOCKET CLIENT EVENT] "
+            f"user={session.get('utente_id')} "
+            f"event={data.get('event')} "
+            f"socket_id={data.get('socket_id')} "
+            f"pathname={data.get('pathname')} "
+            f"page_id={data.get('page_id')} "
+            f"payload={data.get('payload')} "
+            f"ts={data.get('ts')}"
+        )
+
+        return {"ok": True}, 200
+
+    except Exception as e:
+        print("❌ Errore chat_debug_socket_event:", e)
+        return {"ok": False}, 500
+        
 @app.route("/webhook/stripe", methods=["POST"])
 def webhook_stripe():
     payload = request.data

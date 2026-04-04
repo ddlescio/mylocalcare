@@ -143,6 +143,57 @@ window.addEventListener("pageshow", function (event) {
   });
 
   // ===============================
+  // DEBUG INGRESSO EVENTI SOCKET
+  // ===============================
+  const __debugIncomingEvents = new Set([
+    "new_message",
+    "messages_read",
+    "message_delivered",
+    "user_typing",
+    "chat_threads_update",
+    "update_unread_count"
+  ]);
+
+  if (window.__socket_debug_any_handler__) {
+    socket.offAny(window.__socket_debug_any_handler__);
+  }
+
+  window.__socket_debug_any_handler__ = function (eventName, ...args) {
+    if (!__debugIncomingEvents.has(eventName)) return;
+
+    const payload = args && args.length ? args[0] : null;
+
+    console.log("📥 [SOCKET IN]", {
+      event: eventName,
+      socketId: socket.id || null,
+      pathname: window.location.pathname,
+      pageId: window.__chatPageId || null,
+      payload
+    });
+
+    fetch("/chat-debug-socket-event", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "same-origin",
+      keepalive: true,
+      body: JSON.stringify({
+        event: eventName,
+        socket_id: socket.id || null,
+        pathname: window.location.pathname,
+        page_id: window.__chatPageId || null,
+        payload,
+        ts: new Date().toISOString()
+      })
+    }).catch((err) => {
+      console.warn("❌ Errore chat-debug-socket-event", err);
+    });
+  };
+
+  socket.onAny(window.__socket_debug_any_handler__);
+  
+  // ===============================
   // API USATA DAL RESTO DEL SITO
   // ===============================
   window.whenSocketReady = function (callback) {
