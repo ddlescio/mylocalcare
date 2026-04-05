@@ -49,6 +49,37 @@ window.addEventListener("pageshow", function (event) {
     document.documentElement.dataset.socketBaseUrl ||
     window.location.origin;
 
+    // ===============================
+    // CLEANUP SOCKET PRECEDENTE
+    // ===============================
+    try {
+      if (window.__socket_heartbeat_interval__) {
+        clearInterval(window.__socket_heartbeat_interval__);
+        window.__socket_heartbeat_interval__ = null;
+        console.log("🧹 heartbeat interval precedente ripulito");
+      }
+
+      if (window.__active_socket) {
+        try {
+          if (window.__socket_debug_any_handler__) {
+            window.__active_socket.offAny(window.__socket_debug_any_handler__);
+          }
+        } catch (_) {}
+
+        try {
+          window.__active_socket.removeAllListeners();
+        } catch (_) {}
+
+        try {
+          window.__active_socket.disconnect();
+        } catch (_) {}
+
+        console.log("🧹 socket precedente disconnessa");
+      }
+    } catch (e) {
+      console.warn("⚠️ Errore cleanup socket precedente:", e);
+    }
+
   const socket = io(SOCKET_BASE_URL, {
     path: "/socket.io",
     transports: ["websocket"],
@@ -66,7 +97,7 @@ window.addEventListener("pageshow", function (event) {
       client_id: localStorage.getItem("client_id")
     }
   });
-  
+
   // ======================================================
   // DEBUG HARD: traccia chi aggancia/stacca listener chat
   // ======================================================
@@ -218,11 +249,8 @@ window.addEventListener("pageshow", function (event) {
   // ===============================
   // HEARTBEAT INTERVAL
   // ===============================
-  if (!window.__socket_heartbeat_interval__) {
-    window.__socket_heartbeat_interval__ = setInterval(() => {
-      emitHeartbeat();
-    }, 20000);
-  }
-
+  window.__socket_heartbeat_interval__ = setInterval(() => {
+    emitHeartbeat();
+  }, 20000);
 
   })();
