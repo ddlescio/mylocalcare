@@ -692,6 +692,11 @@ body {
       // CONNECT / RECONNECT
       // --------------------------------------------------
       window.__chatHandlers.connectInit = function () {
+        if (socket !== window.__chatBoundSocket) {
+          console.log("⏭️ [CHAT] connect stale ignorato", socket.id);
+          return;
+        }
+
         console.log("🟢 [CHAT] connect/reconnect su socket", socket.id);
 
         setComposerReady(true, "connect");
@@ -705,6 +710,11 @@ body {
       };
 
       window.__chatHandlers.disconnectChat = function (reason) {
+        if (socket !== window.__chatBoundSocket) {
+          console.log("⏭️ [CHAT] disconnect stale ignorato", socket.id, "reason=", reason);
+          return;
+        }
+
         console.log("🔌 [CHAT] disconnect su socket chat", socket.id, "reason=", reason);
 
         setComposerReady(false, "disconnect");
@@ -726,6 +736,11 @@ body {
       // NEW MESSAGE
       // --------------------------------------------------
       window.__chatHandlers.newMessage = function (m) {
+        if (socket !== window.__chatBoundSocket) {
+          console.log("⏭️ [CHAT] new_message stale ignorato", socket.id, m);
+          return;
+        }
+
         console.log("📩 [CHAT] new_message ricevuto", m);
 
         chatDebug("new_message_received", {
@@ -835,6 +850,11 @@ body {
       // USER TYPING
       // --------------------------------------------------
       window.__chatHandlers.userTyping = function (data) {
+        if (socket !== window.__chatBoundSocket) {
+          console.log("⏭️ [CHAT] user_typing stale ignorato", socket.id, data);
+          return;
+        }
+
         console.log("⌨️ [CHAT] user_typing ricevuto", data);
 
         if (data.from !== destId) return;
@@ -851,6 +871,11 @@ body {
       // MESSAGES READ
       // --------------------------------------------------
       window.__chatHandlers.messagesRead = function (data) {
+        if (socket !== window.__chatBoundSocket) {
+          console.log("⏭️ [CHAT] messages_read stale ignorato", socket.id, data);
+          return;
+        }
+
         console.log("✅ [CHAT] messages_read ricevuto", data);
 
         if (data.from !== destId) return;
@@ -866,6 +891,11 @@ body {
       // MESSAGE DELIVERED
       // --------------------------------------------------
       window.__chatHandlers.messageDelivered = function (data) {
+        if (socket !== window.__chatBoundSocket) {
+          console.log("⏭️ [CHAT] message_delivered stale ignorato", socket.id, data);
+          return;
+        }
+
         console.log("📬 [CHAT] message_delivered ricevuto", data);
 
         const bubbleEl = document.querySelector(`#msgWrap [data-mid="${data.id}"]`);
@@ -877,7 +907,7 @@ body {
         if (!spunte.dataset.read) {
           spunte.innerHTML = '<span class="text-gray-400">✅</span>';
         }
-      };
+      };      
       socket.on("message_delivered", window.__chatHandlers.messageDelivered);
 
       if (socket.connected) {
