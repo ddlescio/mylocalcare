@@ -67,10 +67,6 @@ window.addEventListener("pageshow", function (event) {
         } catch (_) {}
 
         try {
-          window.__active_socket.removeAllListeners();
-        } catch (_) {}
-
-        try {
           window.__active_socket.disconnect();
         } catch (_) {}
 
