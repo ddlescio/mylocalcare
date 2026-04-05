@@ -45,12 +45,18 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
             socketio.emit(
                 "update_unread_count",
                 {"count": unread},
-                room=room
+                to=sid,
+                namespace="/"
+            )
+
+            print(
+                f"📨 unread iniziale inviato solo al SID corrente "
+                f"user={user_id} sid={sid} count={unread}"
             )
 
         except Exception as e:
-            print("Errore invio unread count:", e)
-
+            print("Errore invio unread count al SID corrente:", e)
+            
     @socketio.on("socket_heartbeat")
     def handle_socket_heartbeat():
         user_id = session.get("utente_id")
