@@ -50,8 +50,12 @@ window.addEventListener("pageshow", function (event) {
     window.location.origin;
 
     // ===============================
-    // CLEANUP SOCKET PRECEDENTE
+    // CLEANUP LEGGERO PRECEDENTE
     // ===============================
+    // Qui NON disconnettiamo la socket precedente:
+    // in Safari/PWA durante esci->rientra rischiamo di abbattere
+    // proprio la connessione valida mentre la nuova pagina si sta legando.
+    // Facciamo solo cleanup del debug globale e del vecchio heartbeat.
     try {
       if (window.__socket_heartbeat_interval__) {
         clearInterval(window.__socket_heartbeat_interval__);
@@ -59,23 +63,16 @@ window.addEventListener("pageshow", function (event) {
         console.log("🧹 heartbeat interval precedente ripulito");
       }
 
-      if (window.__active_socket) {
+      if (window.__active_socket && window.__socket_debug_any_handler__) {
         try {
-          if (window.__socket_debug_any_handler__) {
-            window.__active_socket.offAny(window.__socket_debug_any_handler__);
-          }
+          window.__active_socket.offAny(window.__socket_debug_any_handler__);
+          console.log("🧹 offAny debug precedente ripulito");
         } catch (_) {}
-
-        try {
-          window.__active_socket.disconnect();
-        } catch (_) {}
-
-        console.log("🧹 socket precedente disconnessa");
       }
     } catch (e) {
-      console.warn("⚠️ Errore cleanup socket precedente:", e);
+      console.warn("⚠️ Errore cleanup leggero socket precedente:", e);
     }
-
+        
   const socket = io(SOCKET_BASE_URL, {
     path: "/socket.io",
     transports: ["websocket"],
