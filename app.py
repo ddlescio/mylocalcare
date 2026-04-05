@@ -64,6 +64,8 @@ from socket_registry import (
     _socket_client_key,
 )
 
+from realtime_handlers import register_socket_lifecycle_handlers
+
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
 # ==========================================================
@@ -703,7 +705,6 @@ def datetimeformat(value, fmt='%d %B %Y'):
         return f"{dt.day} {mese_nome} {dt.year}"
     except Exception:
         return value
-
 
 # 🔹 Configurazione Flask-Mail letta dal file mail.env
 app.config['MAIL_SERVER'] = 'smtps.aruba.it'
@@ -8527,173 +8528,6 @@ def video_ping():
 # =====================================================
 # 📞 CHIAMATA IN ARRIVO
 # =====================================================
-# ==========================================================
-# 🔌 SOCKET TRACKING REDIS MULTI-WORKER
-# ==========================================================
-
-
-@socketio.on("connect")
-def handle_connect(auth=None):
-    from flask import session, request
-
-    user_id = session.get("utente_id")
-    if not user_id:
-        return False
-
-    sid = request.sid
-    room = f"user_{user_id}"
-
-    client_id = None
-    if isinstance(auth, dict):
-        client_id = (auth.get("client_id") or "").strip() or None
-
-    _bump_offline_token(user_id)
-    redis_client.sadd("online_users", str(user_id))
-    _touch_socket_sid(user_id, sid, client_id=client_id)
-
-    join_room(room, sid=sid)
-
-    count = _cleanup_user_socket_set(user_id)
-
-    print(f"🟢 Socket connesso utente {user_id} SID {sid} | socket attivi reali: {count}")
-
-    try:
-        unread = chat_count_unread(user_id)
-
-        socketio.emit(
-            "update_unread_count",
-            {"count": unread},
-            room=room
-        )
-
-    except Exception as e:
-        print("Errore invio unread count:", e)
-
-@socketio.on("socket_heartbeat")
-def handle_socket_heartbeat():
-    from flask import session, request
-
-    user_id = session.get("utente_id")
-    sid = request.sid
-
-    if not user_id or not sid:
-        return
-
-    now_ts = int(time.time())
-    sid_key = _socket_sid_key(sid)
-
-    if not redis_client.exists(sid_key):
-        return
-
-    client_id = _get_client_id_from_sid(sid)
-
-    pipe = redis_client.pipeline()
-
-    # 1) rinnova sempre il SID corrente
-    pipe.hset(sid_key, mapping={
-        "user_id": str(user_id),
-        "client_id": client_id or "__NONE__",
-        "last_seen": str(now_ts)
-    })
-    pipe.expire(sid_key, SOCKET_TTL_SECONDS)
-
-    # 2) rinnova il mapping client -> sid SOLO se punta già a questo SID
-    #    così evitiamo che uno socket vecchio riscriva il mapping,
-    #    ma manteniamo viva la chiave del client corrente.
-    if client_id:
-        client_key = _socket_client_key(user_id, client_id)
-        mapped_sid_raw = redis_client.get(client_key)
-        mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
-
-        if mapped_sid == sid:
-            pipe.expire(client_key, SOCKET_TTL_SECONDS)
-
-    pipe.execute()
-
-@socketio.on("disconnect")
-def handle_disconnect():
-    from flask import session, request
-
-    sid = request.sid
-
-    user_id = _get_user_id_from_sid(sid)
-
-    if not user_id:
-        user_id = session.get("utente_id")
-
-    if not user_id:
-        print(f"⚠️ Disconnect senza user_id per SID {sid}")
-        return
-
-    try:
-        leave_room(f"user_{user_id}", sid=sid)
-    except Exception:
-        pass
-
-    try:
-        _remove_socket_sid(user_id, sid)
-
-        remaining = _cleanup_user_socket_set(user_id)
-
-        print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
-
-        if remaining <= 0:
-            print(f"🕐 Utente {user_id} senza socket → delay check")
-            _bump_offline_token(user_id)
-            ensure_offline_watchdog(user_id)
-
-    except Exception as e:
-        print("Errore disconnect:", e)
-
-def ensure_offline_watchdog(user_id):
-    """
-    Garantisce UN SOLO watchdog delayed per utente.
-    Evita di creare decine di greenlet dormienti durante
-    i cambi pagina / entra-esci rapidi.
-    """
-    if user_id in offline_watchdogs:
-        return
-
-    task = socketio.start_background_task(_offline_watchdog_loop, user_id)
-    offline_watchdogs[user_id] = task
-
-
-def _offline_watchdog_loop(user_id):
-    """
-    Watchdog unico per utente.
-    Aspetta una finestra di quiete di 30s senza nuovi cambi token.
-    Se durante l'attesa ci sono reconnect/disconnect, il token cambia
-    e il watchdog riparte da capo senza crearne altri.
-    """
-    try:
-        while True:
-            token_before_sleep = _get_offline_token(user_id)
-
-            socketio.sleep(30)
-
-            token_after_sleep = _get_offline_token(user_id)
-            if token_after_sleep != token_before_sleep:
-                print(f"⏭️ Skip offline stale per utente {user_id} (token cambiato durante attesa)")
-                continue
-
-            remaining = _cleanup_user_socket_set(user_id)
-
-            token_after_cleanup = _get_offline_token(user_id)
-            if token_after_cleanup != token_before_sleep:
-                print(f"⏭️ Skip offline stale post-cleanup per utente {user_id}")
-                continue
-
-            if remaining == 0:
-                redis_client.delete(_socket_user_set_key(user_id))
-                redis_client.srem("online_users", str(user_id))
-                print(f"🔴 Utente {user_id} OFFLINE (cleanup delayed)")
-            else:
-                print(f"⏭️ Utente {user_id} ancora attivo ({remaining} socket reali)")
-
-            break
-
-    finally:
-        offline_watchdogs.pop(user_id, None)
 
 @socketio.on("video_call_left")
 def handle_video_call_left(data):
@@ -9026,6 +8860,8 @@ def chat_count_unread(user_id):
         return 0
 
     return row["count"]
+
+register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
