@@ -699,6 +699,8 @@ body {
 
         console.log("🟢 [CHAT] connect/reconnect su socket", socket.id);
 
+        stopPollingFallback();
+
         setComposerReady(true, "connect");
 
         // ad ogni connect/reconnect la chat va sempre ri-registrata
@@ -716,6 +718,9 @@ body {
         }
 
         console.log("🔌 [CHAT] disconnect su socket chat", socket.id, "reason=", reason);
+
+        startPollingFallback();
+        pollNewMessages();
 
         setComposerReady(false, "disconnect");
 
@@ -907,7 +912,7 @@ body {
         if (!spunte.dataset.read) {
           spunte.innerHTML = '<span class="text-gray-400">✅</span>';
         }
-      };      
+      };
       socket.on("message_delivered", window.__chatHandlers.messageDelivered);
 
       if (socket.connected) {
@@ -1251,6 +1256,10 @@ body {
 
   function startPollingFallback() {
     if (pollTimer) return;
+
+    console.log("🛟 [CHAT] avvio polling fallback");
+
+    pollNewMessages();
     pollTimer = setInterval(pollNewMessages, 2500);
   }
 
@@ -1260,10 +1269,17 @@ body {
     pollTimer = null;
   }
 
-  startPollingFallback();
+  const initialSocket = getChatSocket();
+  if (!initialSocket || !initialSocket.connected) {
+    startPollingFallback();
+  }
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
+    if (document.visibilityState !== "visible") return;
+
+    const s = getChatSocket();
+
+    if (!s || !s.connected) {
       pollNewMessages();
     }
   });
