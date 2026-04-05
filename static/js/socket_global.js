@@ -72,7 +72,7 @@ window.addEventListener("pageshow", function (event) {
     } catch (e) {
       console.warn("⚠️ Errore cleanup leggero socket precedente:", e);
     }
-        
+
   const socket = io(SOCKET_BASE_URL, {
     path: "/socket.io",
     transports: ["websocket"],
@@ -192,14 +192,22 @@ window.addEventListener("pageshow", function (event) {
     if (!__debugIncomingEvents.has(eventName)) return;
 
     const payload = args && args.length ? args[0] : null;
+    const isChatPage = !!document.querySelector('meta[name="chat-aperta"][content="true"]');
+    const pageId = window.__chatPageId || null;
 
     console.log("📥 [SOCKET IN]", {
       event: eventName,
       socketId: socket.id || null,
       pathname: window.location.pathname,
-      pageId: window.__chatPageId || null,
+      pageId,
       payload
     });
+
+    // 🔒 POST debug solo nella pagina chat reale
+    // e solo quando la pagina ha già creato il suo page_id
+    if (!isChatPage || !pageId) {
+      return;
+    }
 
     fetch("/chat-debug-socket-event", {
       method: "POST",
@@ -212,7 +220,7 @@ window.addEventListener("pageshow", function (event) {
         event: eventName,
         socket_id: socket.id || null,
         pathname: window.location.pathname,
-        page_id: window.__chatPageId || null,
+        page_id: pageId,
         payload,
         ts: new Date().toISOString()
       })
@@ -220,7 +228,6 @@ window.addEventListener("pageshow", function (event) {
       console.warn("❌ Errore chat-debug-socket-event", err);
     });
   };
-
   socket.onAny(window.__socket_debug_any_handler__);
 
   // ===============================
