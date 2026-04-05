@@ -1379,17 +1379,26 @@ body {
       return;
     }
 
-    if (window.__chatBoundSocket === socket && window.__chatBootstrapped === true) {
-      console.log("⏭️ [CHAT] bind già eseguito su questo socket", socket.id);
+    const sameSocket = window.__chatBoundSocket === socket;
+    const samePage = window.__chatBootstrappedPageId === chatPageId;
+
+    if (sameSocket && samePage && window.__chatBootstrapped === true) {
+      console.log("⏭️ [CHAT] bind già eseguito per questa stessa pagina/socket", socket.id);
       return;
     }
 
-    console.log("🚀 [CHAT] bind su socket pronto", socket.id, "connected=", socket.connected);
+    console.log("🚀 [CHAT] bind su socket pronto", socket.id, "connected=", socket.connected, {
+      sameSocket,
+      samePage,
+      previousPageId: window.__chatBootstrappedPageId || null,
+      currentPageId: chatPageId
+    });
 
     window.__chatBootstrapped = true;
+    window.__chatBootstrappedPageId = chatPageId;
+
     bindChatSocket(socket);
   }
-
 
   if (window.whenSocketReady) {
     window.whenSocketReady((socket) => {
