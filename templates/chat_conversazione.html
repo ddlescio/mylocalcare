@@ -896,6 +896,7 @@ body {
       }
     }
     function unbindChatSocket() {
+      stopPollingFallback();
       const socket = window.__chatBoundSocket || null;
       if (!socket) return;
 
@@ -1145,7 +1146,101 @@ body {
       scrollBottom(false);
     });
   });
+  // ============================================
+  // FALLBACK POLLING CHAT
+  // ============================================
+  let pollTimer = null;
+  let pollingInFlight = false;
 
+  function getLastRenderedMessageId() {
+    const nodes = [...document.querySelectorAll('#msgWrap [data-mid]')];
+    if (!nodes.length) return 0;
+
+    const ids = nodes
+      .map(n => parseInt(n.getAttribute('data-mid') || '0', 10))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    if (!ids.length) return 0;
+    return Math.max(...ids);
+  }
+
+  async function pollNewMessages() {
+    if (pollingInFlight) return;
+    if (document.visibilityState !== "visible") return;
+    if (document.body.dataset.chat !== "true") return;
+
+    pollingInFlight = true;
+
+    try {
+      const afterId = getLastRenderedMessageId();
+
+      const res = await fetch(`/chat/${destId}/json?after_id=${afterId}`, {
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+
+      const data = await res.json();
+
+      if (!data || !Array.isArray(data.messages) || !data.messages.length) {
+        pollingInFlight = false;
+        return;
+      }
+
+      let appended = false;
+
+      data.messages.forEach((m) => {
+        const belongsToThisChat =
+          (m.mittente_id === meId && m.destinatario_id === destId) ||
+          (m.mittente_id === destId && m.destinatario_id === meId);
+
+        if (!belongsToThisChat) return;
+
+        const existing = document.querySelector(`#msgWrap [data-mid="${m.id}"]`);
+        if (existing) return;
+
+        if (m.created_at) {
+          ensureDateHeaderFor(m.created_at);
+          cleanDuplicateDates();
+        }
+
+        const node = bubble({ ...m, me_id: meId });
+        wrap.appendChild(node);
+        appended = true;
+      });
+
+      if (appended) {
+        cleanDuplicateDates();
+        setTimeout(() => scrollBottom(true), 80);
+      }
+    } catch (err) {
+      console.warn("❌ Errore polling chat:", err);
+    } finally {
+      pollingInFlight = false;
+    }
+  }
+
+  function startPollingFallback() {
+    if (pollTimer) return;
+    pollTimer = setInterval(pollNewMessages, 2500);
+  }
+
+  function stopPollingFallback() {
+    if (!pollTimer) return;
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
+  startPollingFallback();
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      pollNewMessages();
+    }
+  });
+
+  window.addEventListener("beforeunload", () => {
+    stopPollingFallback();
+  });
 
   // 📨 Invio messaggio
   let sending = false;
