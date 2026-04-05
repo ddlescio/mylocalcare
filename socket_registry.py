@@ -217,17 +217,15 @@ def _get_live_user_sids(user_id):
 def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
     _ensure_ready()
 
-    room_name = f"user_{user_id}"
     live_sids = _get_live_user_sids(user_id)
 
     print(
-        f"📡 emit_to_user_sids -> user={user_id} room={room_name} "
+        f"📡 emit_to_user_sids -> user={user_id} "
         f"event={event_name} skip_sid={skip_sid} live_sids={live_sids}"
     )
 
     delivered = 0
 
-    # 1) prova diretta sui SID vivi
     for sid in live_sids:
         if skip_sid and sid == skip_sid:
             print(f"⏭️ Skip SID {sid} per event={event_name}")
@@ -245,24 +243,11 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
         except Exception as e:
             print(f"❌ Errore emit diretto user={user_id} sid={sid} event={event_name}: {e}")
 
-    # 2) fallback solo se non abbiamo consegnato a nessun SID
     if delivered == 0:
         print(
-            f"⚠️ Nessun SID consegnato per user={user_id} event={event_name} "
-            f"→ fallback sulla room {room_name}"
+            f"⚠️ Nessun SID vivo disponibile per user={user_id} "
+            f"event={event_name} -> nessun fallback su room"
         )
-        try:
-            socketio.emit(
-                event_name,
-                payload,
-                room=room_name,
-                namespace="/",
-                skip_sid=skip_sid
-            )
-            print(f"➡️ Fallback emit via room user={user_id} room={room_name} event={event_name}")
-        except Exception as e:
-            print(f"❌ Errore fallback room user={user_id} room={room_name} event={event_name}: {e}")
-
 
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     _ensure_ready()
