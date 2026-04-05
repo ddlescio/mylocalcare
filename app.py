@@ -66,6 +66,8 @@ from socket_registry import (
 
 from realtime_handlers import register_socket_lifecycle_handlers
 
+from chat_realtime import register_chat_socket_handlers, typing_state, pagina_attiva
+
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
 # ==========================================================
@@ -350,6 +352,8 @@ if not DAILY_API_KEY:
 app = Flask(__name__)
 import json
 from datetime import timedelta
+
+app.config["SOCKET_BASE_URL"] = os.environ.get("SOCKET_BASE_URL", "").strip()
 
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s or "[]")
 
@@ -645,10 +649,12 @@ def fmt_it_smart(value):
 
 @app.context_processor
 def inject_session():
-    """Rende disponibile la sessione Flask in tutti i template."""
+    """Rende disponibile la sessione Flask e la config socket in tutti i template."""
     from flask import session
-    return dict(session=session)
-
+    return dict(
+        session=session,
+        socket_base_url=app.config.get("SOCKET_BASE_URL", "")
+    )
 
 # Imposta tempo di "grazia" (in secondi) dopo la chiusura chat
 app.config.setdefault('CHAT_RECENTLY_READ_TTL', 5)
@@ -8637,207 +8643,6 @@ def check_video_status(data):
                 pass
 
 
-def clear_recently_read(user_id, delay=None):
-    """
-    Cancella l'ultima chat letta dopo 'delay' secondi usando eventlet.
-    Evita di creare timer duplicati per lo stesso utente.
-    """
-
-    if delay is None:
-        delay = app.config.get('CHAT_RECENTLY_READ_TTL', 5)
-
-    # 🔒 se esiste già un timer → non crearne un altro
-    if user_id in recently_read_timers:
-        return
-
-    task = socketio.start_background_task(_delayed_clear_recently_read, user_id, delay)
-    recently_read_timers[user_id] = task
-
-def _delayed_clear_recently_read(user_id, delay):
-
-    socketio.sleep(delay)
-
-    if 'CHAT_ULTIMA_LETTA' in app.config:
-        app.config['CHAT_ULTIMA_LETTA'].pop(user_id, None)
-        print(f"🧹 Pulita ultima chat letta per utente {user_id}")
-
-    # 🔥 rimuove il timer attivo
-    recently_read_timers.pop(user_id, None)
-
-@socketio.on('send_message')
-def handle_send_message(data):
-    from flask import session, request
-    from zoneinfo import ZoneInfo
-    from datetime import datetime
-    import traceback
-
-    print("🚨 ENTER handle_send_message", flush=True)
-    print(f"🚨 SID={request.sid} session_user={session.get('utente_id')} data={data}", flush=True)
-
-    mittente_id = session.get('utente_id')
-    print(f"📨 [send_message] START mittente={mittente_id} data={data}", flush=True)
-
-    try:
-        destinatario_id = int(data.get('destinatario_id'))
-    except (TypeError, ValueError):
-        print("❌ [send_message] destinatario_id non valido")
-        emit('error', {'message': 'destinatario_id non valido'})
-        return {'ok': False, 'error': 'destinatario_id non valido'}
-
-    testo = data.get('testo', '').strip()
-
-    if not mittente_id or not destinatario_id or not testo:
-        print(f"❌ [send_message] dati mancanti mittente={mittente_id} destinatario={destinatario_id} testo='{testo}'")
-        emit('error', {'message': 'Dati mancanti o sessione non valida'})
-        return {'ok': False, 'error': 'Dati mancanti o sessione non valida'}
-
-    conn = None
-    c = None
-
-    try:
-        print("📨 [send_message] apro connessione DB")
-        conn = get_db_connection()
-
-        print("📨 [send_message] ottengo cursore")
-        c = get_cursor(conn)
-
-        print("📨 [send_message] verifico foto profilo")
-        c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?"), (mittente_id,))
-        row = c.fetchone()
-
-        if not row or not row["foto_profilo"]:
-            print("❌ [send_message] foto profilo mancante")
-            emit("error", {
-                "message": "Per inviare messaggi devi prima caricare una foto profilo."
-            })
-            return {
-                'ok': False,
-                'error': 'Per inviare messaggi devi prima caricare una foto profilo.'
-            }
-
-        print("📨 [send_message] prima di chat_invia")
-        msg_id = chat_invia(mittente_id, destinatario_id, testo)
-        print(f"📨 [send_message] dopo chat_invia msg_id={msg_id}")
-
-        print("📨 [send_message] aggiorno visibile_in_chat")
-        conn.execute(sql(
-            "UPDATE utenti SET visibile_in_chat = 1 WHERE id = ?"
-        ), (mittente_id,))
-
-        print("📨 [send_message] commit")
-        conn.commit()
-        print("📨 [send_message] commit OK")
-
-    except Exception as e:
-        print("❌ [send_message] ECCEZIONE")
-        traceback.print_exc()
-        emit('error', {'message': 'Errore interno invio messaggio'})
-        return {'ok': False, 'error': str(e)}
-
-    finally:
-        print("📨 [send_message] finally chiusura risorse")
-        try:
-            if c:
-                c.close()
-        except Exception as e:
-            print("⚠️ [send_message] errore chiusura cursore:", e)
-
-        if conn:
-            try:
-                conn.close()
-            except Exception as e:
-                print("⚠️ [send_message] errore chiusura conn:", e)
-
-    messaggio = {
-        'id': msg_id,
-        'mittente_id': mittente_id,
-        'destinatario_id': destinatario_id,
-        'testo': testo,
-        'created_at': datetime.now(ZoneInfo("Europe/Rome")).isoformat(),
-        'consegnato': True,
-        'letto': False
-    }
-
-    try:
-        print("📨 [send_message] emit new_message mittente")
-        emit_to_user_sids(mittente_id, 'new_message', messaggio)
-
-        print("📨 [send_message] emit new_message destinatario")
-        emit_to_user_sids(destinatario_id, 'new_message', messaggio)
-
-        print("📨 [send_message] emit message_delivered")
-        emit_to_user_sids(mittente_id, "message_delivered", {
-            "id": msg_id,
-            "mittente_id": mittente_id,
-            "destinatario_id": destinatario_id
-        })
-
-        print("📨 [send_message] calcolo unread destinatario")
-        count_destinatario = chat_count_unread(destinatario_id)
-
-        print(f"📨 [send_message] emit unread destinatario count={count_destinatario}")
-        emit_to_user_sids(
-            destinatario_id,
-            'update_unread_count',
-            {'count': count_destinatario}
-        )
-
-        print("📨 [send_message] emit chat_threads_update mittente")
-        emit_to_user_sids(mittente_id, 'chat_threads_update', {'from': mittente_id})
-
-        print("📨 [send_message] emit chat_threads_update destinatario")
-        emit_to_user_sids(destinatario_id, 'chat_threads_update', {'from': mittente_id})
-
-        chat_aperta = get_open_chat(destinatario_id)
-        pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
-
-        print(f"📨 [send_message] stato push chat_aperta={chat_aperta} pagina_visibile={pagina_visibile}")
-
-        if chat_aperta != mittente_id and not pagina_visibile:
-            print(f"🔔 [send_message] Push programmata per {destinatario_id}")
-            socketio.start_background_task(
-                invia_push,
-                destinatario_id,
-                "Nuovo messaggio su LocalCare",
-                testo[:100]
-            )
-
-        print(f"✅ [send_message] END ok msg_id={msg_id}")
-        return {
-            'ok': True,
-            'id': msg_id
-        }
-
-    except Exception as e:
-        print("❌ [send_message] ECCEZIONE DURANTE EMIT")
-        traceback.print_exc()
-        return {'ok': False, 'error': str(e)}
-
-@socketio.on('chat_aperta')
-def handle_chat_aperta(data):
-    """Registra in Redis quale chat è attualmente aperta da ciascun utente."""
-    user_id = session.get('utente_id')
-    other_id = data.get('other_id')
-
-    if not user_id or not other_id:
-        return
-
-    try:
-        set_open_chat(user_id, int(other_id), ttl=300)
-    except Exception as e:
-        print(f"❌ Errore salvataggio chat_aperta Redis user={user_id} other={other_id}: {e}")
-
-@socketio.on("page_visible")
-def handle_page_visible(data):
-
-    user_id = session.get("utente_id")
-
-    if not user_id:
-        return
-
-    visible = bool(data.get("visible"))
-
-    pagina_attiva[user_id] = visible
 
 def chat_count_unread(user_id):
 
@@ -8863,121 +8668,23 @@ def chat_count_unread(user_id):
 
 register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 
-@socketio.on('mark_as_read')
-def handle_mark_as_read(data):
-    from flask import session
-    import traceback
+register_chat_socket_handlers(
+    socketio,
+    app,
+    get_db_connection=get_db_connection,
+    get_cursor=get_cursor,
+    sql=sql,
+    chat_invia=chat_invia,
+    chat_segna_letti=chat_segna_letti,
+    emit_to_user_sids=emit_to_user_sids,
+    chat_count_unread=chat_count_unread,
+    set_open_chat=set_open_chat,
+    get_open_chat=get_open_chat,
+    clear_open_chat=clear_open_chat,
+    invia_push=invia_push,
+    recently_read_timers=recently_read_timers,
+)
 
-    user_id = session.get('utente_id')
-    other_id = data.get('other_id')
-
-    if not user_id or not other_id:
-        return
-
-    try:
-        chat_segna_letti(user_id, other_id)
-
-        # aggiorna spunte nell'altra chat
-        emit_to_user_sids(
-            other_id,
-            'messages_read',
-            {'from': user_id}
-        )
-
-        # 🔥 aggiorna badge utente
-        unread_count = chat_count_unread(user_id)
-
-        emit_to_user_sids(
-            user_id,
-            'update_unread_count',
-            {'count': unread_count}
-        )
-
-        # aggiorna lista chat
-        emit_to_user_sids(
-            user_id,
-            'chat_threads_update',
-            {'from': other_id}
-        )
-
-        print(f"✅ Messaggi da {other_id} segnati come letti da {user_id}")
-
-    except Exception:
-        print("❌ Errore mark_as_read:")
-        traceback.print_exc()
-
-@socketio.on('chat_chiusa')
-def handle_chat_chiusa(data):
-    user_id = session.get('utente_id')
-    other_id = data.get('other_id')
-    if not user_id or not other_id:
-        return
-
-    # 🔥 PULIZIA STATO chat aperta cross-worker
-    clear_open_chat(user_id)
-
-    if 'CHAT_ULTIMA_LETTA' not in app.config:
-        app.config['CHAT_ULTIMA_LETTA'] = {}
-    app.config['CHAT_ULTIMA_LETTA'][user_id] = int(other_id)
-
-    clear_recently_read(user_id)
-
-    # 🔥🔥 AGGIORNA SUBITO LA LISTA CHAT
-    emit_to_user_sids(user_id, 'chat_threads_update', {})
-
-@socketio.on('refresh_threads')
-def handle_refresh_threads(data):
-    user_id = session.get('utente_id')
-    if not user_id:
-        return
-    emit_to_user_sids(user_id, "chat_threads_update", {})
-
-@socketio.on('typing')
-def handle_typing(data):
-    """
-    Gestisce l'indicatore 'sta scrivendo'
-    """
-    from flask import session
-
-    mittente_id = session.get('utente_id')
-    destinatario_id = data.get('to')
-    typing = data.get('typing', False)
-
-    if not mittente_id or not destinatario_id:
-        return
-
-    # Salva stato (opzionale, ma utile)
-    typing_state[(mittente_id, destinatario_id)] = typing
-
-    # Invia SOLO all'altro utente
-    emit_to_user_sids(
-        destinatario_id,
-        'user_typing',
-        {
-            'from': mittente_id,
-            'typing': typing
-        }
-    )
-
-@socketio.on("chat_debug")
-def handle_chat_debug(data):
-    from flask import session, request
-
-    try:
-        print(
-            "🧪 [CHATDBG] "
-            f"user={session.get('utente_id')} "
-            f"sid={request.sid} "
-            f"page_id={data.get('page_id')} "
-            f"event={data.get('event')} "
-            f"page_url={data.get('page_url')} "
-            f"socket_id={data.get('socket_id')} "
-            f"me_id={data.get('me_id')} "
-            f"dest_id={data.get('dest_id')} "
-            f"extra={data}"
-        )
-    except Exception as e:
-        print("❌ Errore handle_chat_debug:", e)
 
 @app.route("/chat-debug-page-open", methods=["POST"])
 def chat_debug_page_open():

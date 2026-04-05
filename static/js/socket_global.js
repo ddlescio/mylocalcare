@@ -44,7 +44,13 @@ window.addEventListener("pageshow", function (event) {
   // ===============================
   // CREA SOCKET DELLA PAGINA CORRENTE
   // ===============================
-  const socket = io({
+  const SOCKET_BASE_URL =
+    window.__SOCKET_BASE_URL__ ||
+    document.documentElement.dataset.socketBaseUrl ||
+    window.location.origin;
+
+  const socket = io(SOCKET_BASE_URL, {
+    path: "/socket.io",
     transports: ["websocket"],
     upgrade: false,
     withCredentials: true,
@@ -60,7 +66,7 @@ window.addEventListener("pageshow", function (event) {
       client_id: localStorage.getItem("client_id")
     }
   });
-
+  
   // ======================================================
   // DEBUG HARD: traccia chi aggancia/stacca listener chat
   // ======================================================
