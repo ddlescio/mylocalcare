@@ -225,23 +225,43 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
         f"event={event_name} skip_sid={skip_sid} live_sids={live_sids}"
     )
 
-    if not live_sids:
-        print(
-            f"⚠️ Registry SID vuota per user={user_id} event={event_name} "
-            f"→ provo comunque emit sulla room {room_name}"
-        )
+    delivered = 0
 
-    try:
-        socketio.emit(
-            event_name,
-            payload,
-            room=room_name,
-            namespace="/",
-            skip_sid=skip_sid
+    # 1) prova diretta sui SID vivi
+    for sid in live_sids:
+        if skip_sid and sid == skip_sid:
+            print(f"⏭️ Skip SID {sid} per event={event_name}")
+            continue
+
+        try:
+            socketio.emit(
+                event_name,
+                payload,
+                to=sid,
+                namespace="/"
+            )
+            delivered += 1
+            print(f"➡️ Emit diretto via SID user={user_id} sid={sid} event={event_name}")
+        except Exception as e:
+            print(f"❌ Errore emit diretto user={user_id} sid={sid} event={event_name}: {e}")
+
+    # 2) fallback solo se non abbiamo consegnato a nessun SID
+    if delivered == 0:
+        print(
+            f"⚠️ Nessun SID consegnato per user={user_id} event={event_name} "
+            f"→ fallback sulla room {room_name}"
         )
-        print(f"➡️ Emit via room user={user_id} room={room_name} event={event_name}")
-    except Exception as e:
-        print(f"❌ Errore emit via room user={user_id} room={room_name} event={event_name}: {e}")
+        try:
+            socketio.emit(
+                event_name,
+                payload,
+                room=room_name,
+                namespace="/",
+                skip_sid=skip_sid
+            )
+            print(f"➡️ Fallback emit via room user={user_id} room={room_name} event={event_name}")
+        except Exception as e:
+            print(f"❌ Errore fallback room user={user_id} room={room_name} event={event_name}: {e}")
 
 
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
