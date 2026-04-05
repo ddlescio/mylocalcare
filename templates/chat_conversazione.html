@@ -918,6 +918,8 @@ body {
       if (socket.connected) {
         console.log("🟢 [CHAT] socket già connessa, apertura immediata", socket.id);
 
+        stopPollingFallback();
+
         setComposerReady(true, "already_connected");
 
         chatOpenedOnce = false;
@@ -1260,7 +1262,7 @@ body {
     console.log("🛟 [CHAT] avvio polling fallback");
 
     pollNewMessages();
-    pollTimer = setInterval(pollNewMessages, 2500);
+    pollTimer = setInterval(pollNewMessages, 8000);
   }
 
   function stopPollingFallback() {
