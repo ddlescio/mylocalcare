@@ -19,12 +19,27 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
     @socketio.on("connect")
     def handle_connect(auth=None):
         user_id = session.get("utente_id")
+
+        try:
+            print("🧪 [SOCKET CONNECT DEBUG] START")
+            print(f"🧪 sid={request.sid}")
+            print(f"🧪 host={request.host}")
+            print(f"🧪 origin={request.headers.get('Origin')}")
+            print(f"🧪 referer={request.headers.get('Referer')}")
+            print(f"🧪 cookie_header_present={bool(request.headers.get('Cookie'))}")
+            print(f"🧪 cookie_header={request.headers.get('Cookie')}")
+            print(f"🧪 session_keys={list(session.keys())}")
+            print(f"🧪 session_utente_id={session.get('utente_id')}")
+            print(f"🧪 auth={auth}")
+        except Exception as e:
+            print(f"❌ [SOCKET CONNECT DEBUG] errore debug iniziale: {e}")
+
         if not user_id:
+            print("❌ [SOCKET CONNECT DEBUG] connect rifiutato: sessione senza utente_id")
             return False
 
         sid = request.sid
         room = f"user_{user_id}"
-
         client_id = None
         if isinstance(auth, dict):
             client_id = (auth.get("client_id") or "").strip() or None
@@ -56,7 +71,7 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
 
         except Exception as e:
             print("Errore invio unread count al SID corrente:", e)
-            
+
     @socketio.on("socket_heartbeat")
     def handle_socket_heartbeat():
         user_id = session.get("utente_id")
