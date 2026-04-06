@@ -380,6 +380,7 @@ app.config.update(
     # (opzionale ma utile) evita che ad ogni request ti riscriva/estenda il cookie
     SESSION_REFRESH_EACH_REQUEST=False,
 )
+
 app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
 
 @app.before_request
@@ -700,6 +701,9 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
 app.config['SESSION_COOKIE_DOMAIN'] = ".mylocalcare.it"
+
+Session(app)
+
 Session(app)
 
 @app.template_filter('safe_strip')
