@@ -1,5 +1,10 @@
-import eventlet
-eventlet.monkey_patch()
+import os
+
+APP_RUNTIME_ROLE = os.getenv("APP_RUNTIME_ROLE", "web").strip().lower()
+
+if APP_RUNTIME_ROLE == "realtime":
+    import eventlet
+    eventlet.monkey_patch()
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory
 from whitenoise import WhiteNoise
 import os
@@ -353,6 +358,8 @@ app = Flask(__name__)
 import json
 from datetime import timedelta
 
+app.config["APP_RUNTIME_ROLE"] = APP_RUNTIME_ROLE
+app.config["IS_REALTIME_SERVER"] = (APP_RUNTIME_ROLE == "realtime")
 app.config["SOCKET_BASE_URL"] = os.environ.get("SOCKET_BASE_URL", "").strip()
 
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s or "[]")
@@ -402,24 +409,25 @@ redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     raise RuntimeError("❌ REDIS_URL non configurata su Render")
 
+SOCKET_ASYNC_MODE = "eventlet" if app.config["IS_REALTIME_SERVER"] else "threading"
+
 socketio = SocketIO(
     app,
-    async_mode="eventlet",
+    async_mode=SOCKET_ASYNC_MODE,
     cors_allowed_origins=[
         "https://mylocalcare.it",
         "https://www.mylocalcare.it",
+        "https://mylocalcare-chat.onrender.com",
         "http://127.0.0.1:5050",
         "http://localhost:5050"
     ],
     message_queue=redis_url,
     channel="mylocalcare-socketio",
-
     allow_upgrades=False,
-
     ping_timeout=60,
     ping_interval=25,
-    logger=True,
-    engineio_logger=True
+    logger=app.config["IS_REALTIME_SERVER"],
+    engineio_logger=app.config["IS_REALTIME_SERVER"]
 )
 
 # =====================================================
@@ -8666,24 +8674,29 @@ def chat_count_unread(user_id):
 
     return row["count"]
 
-register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
+if app.config["IS_REALTIME_SERVER"]:
+    register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 
-register_chat_socket_handlers(
-    socketio,
-    app,
-    get_db_connection=get_db_connection,
-    get_cursor=get_cursor,
-    sql=sql,
-    chat_invia=chat_invia,
-    chat_segna_letti=chat_segna_letti,
-    emit_to_user_sids=emit_to_user_sids,
-    chat_count_unread=chat_count_unread,
-    set_open_chat=set_open_chat,
-    get_open_chat=get_open_chat,
-    clear_open_chat=clear_open_chat,
-    invia_push=invia_push,
-    recently_read_timers=recently_read_timers,
-)
+    register_chat_socket_handlers(
+        socketio,
+        app,
+        get_db_connection=get_db_connection,
+        get_cursor=get_cursor,
+        sql=sql,
+        chat_invia=chat_invia,
+        chat_segna_letti=chat_segna_letti,
+        emit_to_user_sids=emit_to_user_sids,
+        chat_count_unread=chat_count_unread,
+        set_open_chat=set_open_chat,
+        get_open_chat=get_open_chat,
+        clear_open_chat=clear_open_chat,
+        invia_push=invia_push,
+        recently_read_timers=recently_read_timers,
+    )
+
+    print("✅ Realtime handlers registrati (runtime=realtime)")
+else:
+    print("ℹ️ Realtime handlers NON registrati (runtime=web)")
 
 
 @app.route("/chat-debug-page-open", methods=["POST"])

@@ -47,7 +47,7 @@ window.addEventListener("pageshow", function (event) {
   const SOCKET_BASE_URL =
     window.__SOCKET_BASE_URL__ ||
     document.documentElement.dataset.socketBaseUrl ||
-    window.location.origin;
+    "https://chat.mylocalcare.it";
 
     // ===============================
     // CLEANUP LEGGERO PRECEDENTE
