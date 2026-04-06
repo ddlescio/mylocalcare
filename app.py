@@ -4207,11 +4207,11 @@ def invalidate_admin_counters():
 # --- Middleware per proteggere pagine riservate ---
 @app.before_request
 def load_logged_in_user():
-    # sempre disponibile per template/navbar
+    # disponibile sempre nei template
     g.path = request.path
     g.utente = None
 
-    # non interrogare il DB per asset/static/socket/health
+    # NON interrogare il DB per richieste statiche o infrastrutturali
     if request.endpoint == "static":
         return
 
@@ -4241,7 +4241,7 @@ def load_logged_in_user():
     except Exception as e:
         print(f"⚠️ load_logged_in_user errore: {e}")
         g.utente = None
-                
+
 # --- Dashboard Utente ---
 @app.route("/annuncio/<int:id>/modifica", methods=["GET", "POST"])
 @login_required
