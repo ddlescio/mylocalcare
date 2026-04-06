@@ -102,7 +102,7 @@ def init_pg_pool():
         )
 
     return _pg_pool
-
+    
 def get_cursor(conn):
     import sqlite3
     import psycopg2.extras
