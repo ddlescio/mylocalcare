@@ -102,7 +102,7 @@ def init_pg_pool():
         )
 
     return _pg_pool
-        
+
 def get_cursor(conn):
     import sqlite3
     import psycopg2.extras
@@ -4207,18 +4207,44 @@ def invalidate_admin_counters():
 # --- Middleware per proteggere pagine riservate ---
 @app.before_request
 def load_logged_in_user():
-    user_id = session.get('utente_id')
+    # sempre disponibile per i template/navbar
+    g.path = request.path
+    g.utente = None
+
+    # non toccare il DB per asset/static/health/socket
+    if request.endpoint in {
+        "static",
+    }:
+        return
+
+    if request.path in {
+        "/service-worker.js",
+        "/manifest.json",
+        "/robots.txt",
+        "/favicon.ico",
+    }:
+        return
+
+    if request.path.startswith("/static/"):
+        return
+
+    if request.path.startswith("/socket.io"):
+        return
+
+    user_id = session.get("utente_id")
     if user_id is None:
-        g.utente = None
-    else:
+        return
+
+    try:
         conn = get_db_connection()
         cur = get_cursor(conn)
-        cur.execute(sql('SELECT * FROM utenti WHERE id = ?'), (user_id,))
+        cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (user_id,))
         g.utente = cur.fetchone()
-
-    # 🔹 Identifica il percorso corrente (utile per la navbar)
-    g.path = request.path
-
+    except Exception as e:
+        # non mandare giù l'intera app per un problema DB su before_request
+        print(f"⚠️ load_logged_in_user errore: {e}")
+        g.utente = None
+        
 # --- Dashboard Utente ---
 @app.route("/annuncio/<int:id>/modifica", methods=["GET", "POST"])
 @login_required
