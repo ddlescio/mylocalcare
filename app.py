@@ -1,11 +1,11 @@
 import os
 
 RUNTIME_SERVICE = os.getenv("RUNTIME_SERVICE", "web").strip().lower()
+APP_RUNTIME_ROLE = "realtime" if RUNTIME_SERVICE == "chat" else "web"
 
 if RUNTIME_SERVICE == "chat":
     import eventlet
     eventlet.monkey_patch()
-
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory
 from whitenoise import WhiteNoise
 import os
