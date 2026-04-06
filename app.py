@@ -1,10 +1,11 @@
 import os
 
-APP_RUNTIME_ROLE = os.getenv("APP_RUNTIME_ROLE", "web").strip().lower()
+RUNTIME_SERVICE = os.getenv("RUNTIME_SERVICE", "web").strip().lower()
 
-if APP_RUNTIME_ROLE == "realtime":
+if RUNTIME_SERVICE == "chat":
     import eventlet
     eventlet.monkey_patch()
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory
 from whitenoise import WhiteNoise
 import os
@@ -42,9 +43,9 @@ import secrets
 import stripe
 import psycopg2
 import psycopg2.extras
+from psycopg2.pool import ThreadedConnectionPool
 import re
 from models import fetchone_value
-
 import os
 from flask import g
 from db import (insert_and_get_id)
@@ -78,26 +79,29 @@ from chat_realtime import register_chat_socket_handlers, typing_state, pagina_at
 # ==========================================================
 
 _pg_pool = None
-
+_pg_pool_lock = threading.Lock()
 def init_pg_pool():
     global _pg_pool
 
     if _pg_pool is not None:
-        return
+        return _pg_pool
 
     dsn = os.getenv("DATABASE_URL")
     if not dsn:
-        return
+        return None
 
-    from psycopg2.pool import ThreadedConnectionPool
+    with _pg_pool_lock:
+        if _pg_pool is not None:
+            return _pg_pool
 
-    _pg_pool = ThreadedConnectionPool(
-        minconn=1,
-        maxconn=12,
-        dsn=dsn,
-        sslmode="require",
-        cursor_factory=psycopg2.extras.RealDictCursor
-    )
+        _pg_pool = ThreadedConnectionPool(
+            minconn=1,
+            maxconn=12,
+            dsn=dsn,
+            sslmode="require"
+        )
+
+    return _pg_pool
 
 def get_cursor(conn):
     import sqlite3
@@ -870,6 +874,9 @@ def get_db_connection():
 
         if _pg_pool is None:
             init_pg_pool()
+
+        if _pg_pool is None:
+            raise RuntimeError("Pool PostgreSQL non inizializzato")
 
         if has_request_context():
             if hasattr(g, "db_conn") and g.db_conn is not None:
