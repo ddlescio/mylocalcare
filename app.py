@@ -366,13 +366,13 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_DOMAIN=".mylocalcare.it",
 
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 
     # (opzionale ma utile) evita che ad ogni request ti riscriva/estenda il cookie
     SESSION_REFRESH_EACH_REQUEST=False,
 )
-
 app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
 
 @app.before_request
@@ -691,7 +691,7 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
-
+app.config['SESSION_COOKIE_DOMAIN'] = ".mylocalcare.it"
 Session(app)
 
 @app.template_filter('safe_strip')
@@ -4726,16 +4726,16 @@ def elimina_annuncio(id):
 import werkzeug
 from werkzeug.utils import secure_filename
 
-# --- Configurazione cartella upload (Render Persistent Disk) ---
-UPLOAD_FOLDER = os.path.join("/uploads", "profili")
+# --- Configurazione cartella upload ---
+BASE_UPLOAD_DIR = os.getenv("UPLOAD_BASE_DIR", os.path.join(app.root_path, "uploads"))
+UPLOAD_FOLDER = os.path.join(BASE_UPLOAD_DIR, "profili")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # --- Upload foto profilo ---
 @app.route('/utente/foto', methods=['GET', 'POST'])
