@@ -43,7 +43,7 @@ import secrets
 import stripe
 import psycopg2
 import psycopg2.extras
-from psycopg2.pool import ThreadedConnectionPool
+import psycopg2.pool as psycopg2_pool
 import re
 from models import fetchone_value
 import os
@@ -94,7 +94,7 @@ def init_pg_pool():
         if _pg_pool is not None:
             return _pg_pool
 
-        _pg_pool = ThreadedConnectionPool(
+        _pg_pool = psycopg2_pool.ThreadedConnectionPool(
             minconn=1,
             maxconn=12,
             dsn=dsn,
@@ -102,7 +102,7 @@ def init_pg_pool():
         )
 
     return _pg_pool
-    
+        
 def get_cursor(conn):
     import sqlite3
     import psycopg2.extras
