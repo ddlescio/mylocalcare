@@ -504,21 +504,20 @@ redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     raise RuntimeError("❌ REDIS_URL non configurata su Render")
 
-SOCKET_ASYNC_MODE = "eventlet" if app.config["IS_REALTIME_SERVER"] else "threading"
-
 socketio = SocketIO(
     app,
     async_mode=SOCKET_ASYNC_MODE,
     cors_allowed_origins=[
         "https://mylocalcare.it",
         "https://www.mylocalcare.it",
+        "https://chat.mylocalcare.it",
         "https://mylocalcare-chat.onrender.com",
         "http://127.0.0.1:5050",
         "http://localhost:5050"
     ],
     message_queue=redis_url,
     channel="mylocalcare-socketio",
-    allow_upgrades=False,
+    allow_upgrades=True,
     ping_timeout=60,
     ping_interval=25,
     logger=app.config["IS_REALTIME_SERVER"],
