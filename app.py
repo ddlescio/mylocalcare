@@ -81,29 +81,42 @@ from realtime_auth import build_realtime_token
 
 _pg_pool = None
 _pg_pool_lock = threading.Lock()
+
 def init_pg_pool():
     global _pg_pool
 
     if _pg_pool is not None:
+        print("🟦 init_pg_pool: pool già presente", flush=True)
         return _pg_pool
 
     dsn = os.getenv("DATABASE_URL")
     if not dsn:
+        print("🟥 init_pg_pool: DATABASE_URL assente", flush=True)
         return None
 
     with _pg_pool_lock:
         if _pg_pool is not None:
+            print("🟦 init_pg_pool: pool creato da altro thread", flush=True)
             return _pg_pool
 
-        _pg_pool = psycopg2_pool.ThreadedConnectionPool(
-            minconn=1,
-            maxconn=12,
-            dsn=dsn,
-            sslmode="require"
-        )
+        print("🟦 init_pg_pool: creazione pool START", flush=True)
+
+        try:
+            _pg_pool = psycopg2_pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=12,
+                dsn=dsn,
+                connect_timeout=8,
+                sslmode="require"
+            )
+            print("🟩 init_pg_pool: creazione pool OK", flush=True)
+        except Exception as e:
+            print(f"🟥 init_pg_pool: errore creazione pool: {e}", flush=True)
+            _pg_pool = None
+            raise
 
     return _pg_pool
-
+    
 def get_cursor(conn):
     import sqlite3
     import psycopg2.extras
@@ -932,7 +945,7 @@ def get_db_connection():
 
         print("🟩 DB returning wrapped postgres connection", flush=True)
         return wrapped
-        
+
     # =========================
     # SQLITE
     # =========================
