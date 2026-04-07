@@ -244,10 +244,23 @@ def emit_to_user_sids(user_id, event_name, payload, skip_sid=None):
             print(f"❌ Errore emit diretto user={user_id} sid={sid} event={event_name}: {e}")
 
     if delivered == 0:
+        room_name = f"user_{user_id}"
         print(
             f"⚠️ Nessun SID vivo disponibile per user={user_id} "
-            f"event={event_name} -> nessun fallback su room"
+            f"event={event_name} -> fallback room {room_name}"
         )
+
+        try:
+            socketio.emit(
+                event_name,
+                payload,
+                room=room_name,
+                namespace="/",
+                skip_sid=skip_sid
+            )
+            print(f"➡️ Emit fallback su room {room_name} event={event_name}")
+        except Exception as e:
+            print(f"❌ Errore fallback room user={user_id} room={room_name} event={event_name}: {e}")
 
 def emit_to_user_room(user_id, event_name, payload, skip_sid=None):
     _ensure_ready()
