@@ -21,10 +21,10 @@
       window.__SOCKET_BASE_URL__ = "{{ config.get('SOCKET_BASE_URL', '') }}";
       window.__SOCKET_AUTH_TOKEN__ = {{ realtime_token|tojson }};
     </script>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="/static/js/socket_global.js"></script>
+    <script defer src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script defer src="{{ url_for('static', filename='js/socket_global.js') }}"></script>
   {% endif %}
-    
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
   /* Modalità browser normale */
