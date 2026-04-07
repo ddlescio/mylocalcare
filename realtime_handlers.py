@@ -14,6 +14,7 @@ from socket_registry import (
 
 offline_watchdogs = {}
 
+from realtime_auth import parse_realtime_token
 
 def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread):
     @socketio.on("connect")
@@ -26,7 +27,6 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
         if isinstance(auth, dict):
             token = (auth.get("token") or "").strip() or None
             if token:
-                from app import parse_realtime_token
                 token_user_id = parse_realtime_token(token)
 
         if not user_id and token_user_id:

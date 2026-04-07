@@ -73,6 +73,7 @@ from socket_registry import (
 from realtime_handlers import register_socket_lifecycle_handlers
 
 from chat_realtime import register_chat_socket_handlers, typing_state, pagina_attiva
+from realtime_auth import build_realtime_token
 
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
@@ -121,25 +122,6 @@ def get_cursor(conn):
 
 def get_reset_serializer():
     return URLSafeTimedSerializer(app.config['SECRET_KEY'])
-
-def get_realtime_serializer():
-    return URLSafeSerializer(
-        app.config["SECRET_KEY"],
-        salt="realtime-socket-auth"
-    )
-
-def build_realtime_token(user_id):
-    return get_realtime_serializer().dumps({
-        "utente_id": int(user_id)
-    })
-
-def parse_realtime_token(token):
-    try:
-        data = get_realtime_serializer().loads(token)
-        user_id = int(data.get("utente_id"))
-        return user_id
-    except Exception:
-        return None
 
 # -- Helper per AES-GCM: salviamo ciphertext||tag in un solo campo base64 --
 def gcm_pack(ciphertext: bytes, tag: bytes) -> str:
@@ -697,7 +679,7 @@ def inject_session():
         socket_base_url=app.config.get("SOCKET_BASE_URL", ""),
         realtime_token=realtime_token
     )
-    
+
 # Imposta tempo di "grazia" (in secondi) dopo la chiusura chat
 app.config.setdefault('CHAT_RECENTLY_READ_TTL', 5)
 # ---------------------------------------------------------
