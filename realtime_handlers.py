@@ -85,62 +85,62 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
         except Exception as e:
             print("Errore invio unread count al SID corrente:", e)
 
-@socketio.on("socket_heartbeat")
-def handle_socket_heartbeat():
-    sid = request.sid
-    if not sid:
-        return
+    @socketio.on("socket_heartbeat")
+    def handle_socket_heartbeat():
+        sid = request.sid
+        if not sid:
+            return
 
-    user_id = session.get("utente_id")
+        user_id = session.get("utente_id")
 
-    # ✅ fallback fondamentale: se la sessione non è disponibile
-    # usa il mapping sid -> user già registrato al connect
-    if not user_id:
-        try:
-            user_id = _get_user_id_from_sid(sid)
-        except Exception as e:
-            print(f"❌ heartbeat sid->user fallback error sid={sid}: {e}")
-            user_id = None
+        # ✅ fallback fondamentale: se la sessione non è disponibile
+        # usa il mapping sid -> user già registrato al connect
+        if not user_id:
+            try:
+                user_id = _get_user_id_from_sid(sid)
+            except Exception as e:
+                print(f"❌ heartbeat sid->user fallback error sid={sid}: {e}")
+                user_id = None
 
-    if not user_id:
-        print(f"⚠️ heartbeat ignorato: user_id assente per sid={sid}")
-        return
+        if not user_id:
+            print(f"⚠️ heartbeat ignorato: user_id assente per sid={sid}")
+            return
 
-    now_ts = int(__import__("time").time())
+        now_ts = int(__import__("time").time())
 
-    from socket_registry import (
-        _socket_sid_key,
-        _get_client_id_from_sid,
-        _socket_client_key,
-    )
+        from socket_registry import (
+            _socket_sid_key,
+            _get_client_id_from_sid,
+            _socket_client_key,
+        )
 
-    sid_key = _socket_sid_key(sid)
+        sid_key = _socket_sid_key(sid)
 
-    # se il sid non esiste più nel registry, non possiamo rigenerarlo qui in sicurezza
-    if not redis_client.exists(sid_key):
-        print(f"⚠️ heartbeat: sid_key non esiste più per sid={sid} user={user_id}")
-        return
+        # se il sid non esiste più nel registry, non possiamo rigenerarlo qui in sicurezza
+        if not redis_client.exists(sid_key):
+            print(f"⚠️ heartbeat: sid_key non esiste più per sid={sid} user={user_id}")
+            return
 
-    client_id = _get_client_id_from_sid(sid)
+        client_id = _get_client_id_from_sid(sid)
 
-    pipe = redis_client.pipeline()
+        pipe = redis_client.pipeline()
 
-    pipe.hset(sid_key, mapping={
-        "user_id": str(user_id),
-        "client_id": client_id or "__NONE__",
-        "last_seen": str(now_ts)
-    })
-    pipe.expire(sid_key, 75)
+        pipe.hset(sid_key, mapping={
+            "user_id": str(user_id),
+            "client_id": client_id or "__NONE__",
+            "last_seen": str(now_ts)
+        })
+        pipe.expire(sid_key, 75)
 
-    if client_id:
-        client_key = _socket_client_key(user_id, client_id)
-        mapped_sid_raw = redis_client.get(client_key)
-        mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
+        if client_id:
+            client_key = _socket_client_key(user_id, client_id)
+            mapped_sid_raw = redis_client.get(client_key)
+            mapped_sid = _decode_redis_value(mapped_sid_raw) if mapped_sid_raw else None
 
-        if mapped_sid == sid:
-            pipe.expire(client_key, 75)
+            if mapped_sid == sid:
+                pipe.expire(client_key, 75)
 
-    pipe.execute()
+        pipe.execute()
 
     @socketio.on("disconnect")
     def handle_disconnect():
