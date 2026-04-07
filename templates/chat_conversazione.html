@@ -490,9 +490,33 @@ body {
       }
 
       function getChatSocket() {
-        return window.__chatBoundSocket || window.socket || null;
-      }
+        const boundSocket = window.__chatBoundSocket || null;
+        const globalSocket = window.socket || null;
 
+        // 1) Se la socket globale è viva, deve avere priorità
+        if (globalSocket && globalSocket.connected) {
+          // se il bound è diverso, riallinea subito la pagina chat
+          if (boundSocket !== globalSocket) {
+            console.log("♻️ [CHAT] riallineo socket bound -> globale", {
+              bound_socket_id: boundSocket ? boundSocket.id : null,
+              global_socket_id: globalSocket.id
+            });
+
+            startChatBinding(globalSocket);
+          }
+
+          return globalSocket;
+        }
+
+        // 2) Altrimenti usa il bound solo se è davvero connesso
+        if (boundSocket && boundSocket.connected) {
+          return boundSocket;
+        }
+
+        // 3) Fallback finale
+        return globalSocket || boundSocket || null;
+      }
+      
       let chatClosedEmitted = false;
       let chatOpenedOnce = false;
 
