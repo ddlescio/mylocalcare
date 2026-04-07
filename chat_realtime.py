@@ -1,4 +1,4 @@
-from flask import session, request
+from flask import session, request, g, has_request_context
 from zoneinfo import ZoneInfo
 from datetime import datetime
 import traceback
@@ -131,19 +131,26 @@ def register_chat_socket_handlers(
             traceback.print_exc()
             return {"ok": False, "error": str(e)}
 
-        finally:
-            print("📨 [send_message] finally chiusura risorse")
-            try:
-                if c:
-                    c.close()
-            except Exception as e:
-                print("⚠️ [send_message] errore chiusura cursore:", e)
+    finally:
+        print("📨 [send_message] finally chiusura risorse")
 
-            if conn:
-                try:
-                    conn.close()
-                except Exception as e:
-                    print("⚠️ [send_message] errore chiusura conn:", e)
+        try:
+            if c:
+                c.close()
+        except Exception as e:
+            print("⚠️ [send_message] errore chiusura cursore:", e)
+
+        if conn:
+            try:
+                if has_request_context() and getattr(g, "db_conn", None) is conn:
+                    g.db_conn = None
+                    print("📨 [send_message] sganciato g.db_conn prima della close", flush=True)
+
+                conn.close()
+                print("📨 [send_message] conn.close() OK", flush=True)
+
+            except Exception as e:
+                print("⚠️ [send_message] errore chiusura conn:", e)
 
         messaggio = {
             "id": msg_id,
