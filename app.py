@@ -504,6 +504,8 @@ redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     raise RuntimeError("❌ REDIS_URL non configurata su Render")
 
+SOCKET_ASYNC_MODE = "eventlet" if app.config["IS_REALTIME_SERVER"] else "threading"
+
 socketio = SocketIO(
     app,
     async_mode=SOCKET_ASYNC_MODE,
