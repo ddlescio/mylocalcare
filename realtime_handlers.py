@@ -1,4 +1,5 @@
-from flask import session, request
+from flask import session,
+from app import parse_realtime_token
 from flask_socketio import join_room, leave_room
 
 from socket_registry import (
@@ -20,6 +21,17 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
     def handle_connect(auth=None):
         user_id = session.get("utente_id")
 
+        token_user_id = None
+        token = None
+
+        if isinstance(auth, dict):
+            token = (auth.get("token") or "").strip() or None
+            if token:
+                token_user_id = parse_realtime_token(token)
+
+        if not user_id and token_user_id:
+            user_id = token_user_id
+
         try:
             print("🧪 [SOCKET CONNECT DEBUG] START")
             print(f"🧪 sid={request.sid}")
@@ -30,12 +42,13 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
             print(f"🧪 cookie_header={request.headers.get('Cookie')}")
             print(f"🧪 session_keys={list(session.keys())}")
             print(f"🧪 session_utente_id={session.get('utente_id')}")
+            print(f"🧪 token_user_id={token_user_id}")
             print(f"🧪 auth={auth}")
         except Exception as e:
             print(f"❌ [SOCKET CONNECT DEBUG] errore debug iniziale: {e}")
 
         if not user_id:
-            print("❌ [SOCKET CONNECT DEBUG] connect rifiutato: sessione senza utente_id")
+            print("❌ [SOCKET CONNECT DEBUG] connect rifiutato: nessuna auth valida")
             return False
 
         sid = request.sid

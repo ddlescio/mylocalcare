@@ -87,8 +87,9 @@ window.addEventListener("pageshow", function (event) {
 
     auth: {
       device_type: detectDeviceType(),
-      client_id: localStorage.getItem("client_id")
-    }
+      client_id: localStorage.getItem("client_id"),
+      token: window.__SOCKET_AUTH_TOKEN__ || null
+    }    
   });
 
   // ======================================================

@@ -36,7 +36,7 @@ from models import (
 )
 from models import crea_notifica
 from flask_login import login_required
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from itsdangerous import URLSafeTimedSerializer, URLSafeSerializer, BadSignature, SignatureExpired
 from datetime import datetime, timedelta, timezone
 from services import attiva_servizio, revoca_attivazione, servizio_attivo_per_annuncio, servizio_attivo_per_utente
 import secrets
@@ -121,6 +121,25 @@ def get_cursor(conn):
 
 def get_reset_serializer():
     return URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+def get_realtime_serializer():
+    return URLSafeSerializer(
+        app.config["SECRET_KEY"],
+        salt="realtime-socket-auth"
+    )
+
+def build_realtime_token(user_id):
+    return get_realtime_serializer().dumps({
+        "utente_id": int(user_id)
+    })
+
+def parse_realtime_token(token):
+    try:
+        data = get_realtime_serializer().loads(token)
+        user_id = int(data.get("utente_id"))
+        return user_id
+    except Exception:
+        return None
 
 # -- Helper per AES-GCM: salviamo ciphertext||tag in un solo campo base64 --
 def gcm_pack(ciphertext: bytes, tag: bytes) -> str:
@@ -664,11 +683,21 @@ def fmt_it_smart(value):
 def inject_session():
     """Rende disponibile la sessione Flask e la config socket in tutti i template."""
     from flask import session
+
+    realtime_token = None
+    utente_id = session.get("utente_id")
+    if utente_id:
+        try:
+            realtime_token = build_realtime_token(utente_id)
+        except Exception as e:
+            print("❌ Errore build_realtime_token:", e)
+
     return dict(
         session=session,
-        socket_base_url=app.config.get("SOCKET_BASE_URL", "")
+        socket_base_url=app.config.get("SOCKET_BASE_URL", ""),
+        realtime_token=realtime_token
     )
-
+    
 # Imposta tempo di "grazia" (in secondi) dopo la chiusura chat
 app.config.setdefault('CHAT_RECENTLY_READ_TTL', 5)
 # ---------------------------------------------------------
