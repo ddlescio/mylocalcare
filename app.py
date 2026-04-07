@@ -935,7 +935,7 @@ class PGConnectionWrapper:
         self.conn = conn
 
     def execute(self, query, params=None):
-        cur = self.conn.cursor()
+        cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # converte placeholder SQLite → Postgres
         query = query.replace("?", "%s")
@@ -947,7 +947,7 @@ class PGConnectionWrapper:
         return PGCursorWrapper(
             self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         )
-        
+
     def commit(self):
         return self.conn.commit()
 
