@@ -1,5 +1,4 @@
 from flask import session, request
-from app import parse_realtime_token
 from flask_socketio import join_room, leave_room
 
 from socket_registry import (
@@ -27,6 +26,7 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
         if isinstance(auth, dict):
             token = (auth.get("token") or "").strip() or None
             if token:
+                from app import parse_realtime_token
                 token_user_id = parse_realtime_token(token)
 
         if not user_id and token_user_id:
