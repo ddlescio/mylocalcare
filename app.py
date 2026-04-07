@@ -1012,9 +1012,9 @@ def get_db_connection():
         if raw.closed:
             print("🟦 DB raw connection was closed, replacing it", flush=True)
             pool.putconn(raw, close=True)
-            print("🟦 DB before _pg_pool.getconn() replacement", flush=True)
-            raw = _pg_pool.getconn()
-            print("🟦 DB after _pg_pool.getconn() replacement", flush=True)
+            print("🟦 DB before pool.getconn() replacement", flush=True)
+            raw = pool.getconn()
+            print("🟦 DB after pool.getconn() replacement", flush=True)
 
         print("🟦 DB before raw.autocommit/set_session", flush=True)
         raw.autocommit = True
