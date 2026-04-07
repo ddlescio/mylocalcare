@@ -944,8 +944,10 @@ class PGConnectionWrapper:
         return cur
 
     def cursor(self):
-        return PGCursorWrapper(self.conn.cursor())
-
+        return PGCursorWrapper(
+            self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        )
+        
     def commit(self):
         return self.conn.commit()
 
