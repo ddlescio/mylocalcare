@@ -79,44 +79,123 @@ from realtime_auth import build_realtime_token
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
 # ==========================================================
 
-_pg_pool = None
-_pg_pool_lock = threading.Lock()
+_pg_pools = {}
+_pg_pool_locks = {}
+_pg_state_guard = threading.Lock()
+
+def _get_pg_pid():
+    return os.getpid()
+
+def _get_pg_lock_for_pid(pid):
+    with _pg_state_guard:
+        lock = _pg_pool_locks.get(pid)
+        if lock is None:
+            lock = threading.RLock()
+            _pg_pool_locks[pid] = lock
+        return lock
+
+def get_current_pg_pool():
+    pid = _get_pg_pid()
+    with _pg_state_guard:
+        return _pg_pools.get(pid)
+
+def _set_current_pg_pool(pool):
+    pid = _get_pg_pid()
+    with _pg_state_guard:
+        _pg_pools[pid] = pool
 
 def init_pg_pool():
-    global _pg_pool
+    pid = _get_pg_pid()
+    pool = get_current_pg_pool()
 
-    if _pg_pool is not None:
-        print("🟦 init_pg_pool: pool già presente", flush=True)
-        return _pg_pool
+    if pool is not None:
+        print(f"🟦 init_pg_pool: pool già presente pid={pid}", flush=True)
+        return pool
 
     dsn = os.getenv("DATABASE_URL")
     if not dsn:
-        print("🟥 init_pg_pool: DATABASE_URL assente", flush=True)
+        print(f"🟥 init_pg_pool: DATABASE_URL assente pid={pid}", flush=True)
         return None
 
-    with _pg_pool_lock:
-        if _pg_pool is not None:
-            print("🟦 init_pg_pool: pool creato da altro thread", flush=True)
-            return _pg_pool
+    lock = _get_pg_lock_for_pid(pid)
 
-        print("🟦 init_pg_pool: creazione pool START", flush=True)
+    print(f"🟦 init_pg_pool: before lock acquire pid={pid}", flush=True)
+    acquired = lock.acquire(timeout=10)
 
+    if not acquired:
+        print(f"🟥 init_pg_pool: timeout lock pid={pid}", flush=True)
+        raise RuntimeError(f"Timeout acquiring PostgreSQL pool lock pid={pid}")
+
+    try:
+        pool = get_current_pg_pool()
+        if pool is not None:
+            print(f"🟦 init_pg_pool: pool creato da altro thread pid={pid}", flush=True)
+            return pool
+
+        print(f"🟦 init_pg_pool: creazione pool START pid={pid}", flush=True)
+
+        pool = psycopg2_pool.ThreadedConnectionPool(
+            minconn=1,
+            maxconn=12,
+            dsn=dsn,
+            connect_timeout=8,
+            sslmode="require"
+        )
+
+        _set_current_pg_pool(pool)
+
+        print(f"🟩 init_pg_pool: creazione pool OK pid={pid}", flush=True)
+        return pool
+
+    except Exception as e:
+        _set_current_pg_pool(None)
+        print(f"🟥 init_pg_pool: errore creazione pool pid={pid}: {e}", flush=True)
+        raise
+
+    finally:
         try:
-            _pg_pool = psycopg2_pool.ThreadedConnectionPool(
-                minconn=1,
-                maxconn=12,
-                dsn=dsn,
-                connect_timeout=8,
-                sslmode="require"
-            )
-            print("🟩 init_pg_pool: creazione pool OK", flush=True)
+            lock.release()
+            print(f"🟦 init_pg_pool: lock released pid={pid}", flush=True)
         except Exception as e:
-            print(f"🟥 init_pg_pool: errore creazione pool: {e}", flush=True)
-            _pg_pool = None
-            raise
+            print(f"🟥 init_pg_pool: errore release lock pid={pid}: {e}", flush=True)
 
-    return _pg_pool
-    
+def warm_pg_pool_for_current_process():
+    dsn = os.getenv("DATABASE_URL")
+    if not dsn:
+        print("🟨 PG warmup skipped: DATABASE_URL assente", flush=True)
+        return
+
+    pid = _get_pg_pid()
+    print(f"🟦 PG warmup start pid={pid}", flush=True)
+
+    pool = init_pg_pool()
+    if pool is None:
+        raise RuntimeError(f"PG warmup failed: pool None pid={pid}")
+
+    raw = None
+    try:
+        print(f"🟦 PG warmup before getconn pid={pid}", flush=True)
+        raw = pool.getconn()
+        print(f"🟦 PG warmup after getconn pid={pid}", flush=True)
+
+        raw.autocommit = True
+        raw.set_session(readonly=False, autocommit=True)
+
+        cur = raw.cursor()
+        cur.execute("SELECT 1")
+        cur.fetchone()
+        cur.close()
+
+        print(f"🟩 PG warmup OK pid={pid}", flush=True)
+
+    finally:
+        if raw is not None:
+            try:
+                pool.putconn(raw)
+                print(f"🟦 PG warmup returned conn pid={pid}", flush=True)
+            except Exception as e:
+                print(f"🟥 PG warmup putconn error pid={pid}: {e}", flush=True)
+
 def get_cursor(conn):
     import sqlite3
     import psycopg2.extras
@@ -871,14 +950,18 @@ class PGConnectionWrapper:
         return self.conn.commit()
 
     def close(self):
-        global _pg_pool
         try:
-            _pg_pool.putconn(self.conn)
+            pool = get_current_pg_pool()
+            if pool is not None:
+                pool.putconn(self.conn)
+                return
+        except Exception as e:
+            print(f"🟥 PGConnectionWrapper.close putconn error: {e}", flush=True)
+
+        try:
+            self.conn.close()
         except Exception:
-            try:
-                self.conn.close()
-            except:
-                pass
+            pass
 
     def __getattr__(self, name):
         return getattr(self.conn, name)
@@ -897,13 +980,12 @@ def get_db_connection():
     if database_url:
         print("🟦 DB enter POSTGRES branch", flush=True)
 
-        if _pg_pool is None:
-            print("🟦 DB before init_pg_pool()", flush=True)
-            init_pg_pool()
-            print("🟦 DB after init_pg_pool()", flush=True)
+        print("🟦 DB before init_pg_pool()", flush=True)
+        pool = init_pg_pool()
+        print("🟦 DB after init_pg_pool()", flush=True)
 
-        if _pg_pool is None:
-            print("🟥 DB pool is still None after init_pg_pool()", flush=True)
+        if pool is None:
+            print("🟥 DB pool is None after init_pg_pool()", flush=True)
             raise RuntimeError("Pool PostgreSQL non inizializzato")
 
         if has_request_context():
@@ -922,12 +1004,12 @@ def get_db_connection():
                     g.db_conn = None
 
         print("🟦 DB before _pg_pool.getconn()", flush=True)
-        raw = _pg_pool.getconn()
+        raw = pool.getconn()
         print("🟦 DB after _pg_pool.getconn()", flush=True)
 
         if raw.closed:
             print("🟦 DB raw connection was closed, replacing it", flush=True)
-            _pg_pool.putconn(raw, close=True)
+            pool.putconn(raw, close=True)
             print("🟦 DB before _pg_pool.getconn() replacement", flush=True)
             raw = _pg_pool.getconn()
             print("🟦 DB after _pg_pool.getconn() replacement", flush=True)
