@@ -13,6 +13,7 @@ from db import (
 # -----------------------------
 import sqlite3
 import base64
+import os
 from flask import session
 from Crypto.Cipher import AES
 from nacl.public import PrivateKey, PublicKey
@@ -43,6 +44,26 @@ def _get_dek():
         raise ValueError("Chiave DEK non presente in sessione (utente non autenticato correttamente)")
     return base64.b64decode(dek_b64)
 
+def _gcm_unpack_local(b64: str):
+    raw = base64.b64decode(b64)
+    return raw[:-16], raw[-16:]
+
+
+def _decrypt_with_master_local(enc_b64: str, nonce_b64: str) -> bytes:
+    master_secret_hex = os.getenv("MASTER_SECRET_KEY")
+    if not master_secret_hex:
+        raise ValueError("MASTER_SECRET_KEY non disponibile")
+
+    master_secret = bytes.fromhex(master_secret_hex)
+    if len(master_secret) != 32:
+        raise ValueError("MASTER_SECRET_KEY non valida")
+
+    ct, tag = _gcm_unpack_local(enc_b64)
+    nonce = base64.b64decode(nonce_b64)
+
+    cipher = AES.new(master_secret, AES.MODE_GCM, nonce=nonce)
+    return cipher.decrypt_and_verify(ct, tag)
+
 def _derive_shared_key(x_priv_bytes: bytes, other_pub_b64: str) -> bytes:
     """Deriva una chiave condivisa (ECDH X25519) tra mittente e destinatario."""
     try:
@@ -61,18 +82,39 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     """Cifra il messaggio con ECDH (X25519) + AES-GCM e lo salva nel DB."""
     from nacl.public import Box
 
-    # --- Recupera chiave privata X25519 del mittente ---
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    # --- Recupera materiale crittografico mittente ---
     x_priv_b64 = session.get("x25519_priv_b64")
-    if not x_priv_b64:
-        raise ValueError("Chiave privata X25519 mancante in sessione")
+    dek_b64 = session.get("dek_b64")
+
+    if not x_priv_b64 or not dek_b64:
+        c.execute(sql("""
+            SELECT dek_enc, dek_nonce, x25519_priv_enc, x25519_priv_nonce
+            FROM utenti
+            WHERE id = ?
+        """), (mittente_id,))
+        sender_row = c.fetchone()
+
+        if not sender_row:
+            raise ValueError("Mittente non trovato")
+
+        dek = _decrypt_with_master_local(sender_row["dek_enc"], sender_row["dek_nonce"])
+
+        x_nonce = base64.b64decode(sender_row["x25519_priv_nonce"])
+        x_ct, x_tag = _gcm_unpack_local(sender_row["x25519_priv_enc"])
+
+        cipher_x = AES.new(dek, AES.MODE_GCM, nonce=x_nonce)
+        x_priv_bytes = cipher_x.decrypt_and_verify(x_ct, x_tag)
+
+        x_priv_b64 = base64.b64encode(x_priv_bytes).decode()
+        dek_b64 = base64.b64encode(dek).decode()
 
     x_priv_bytes = base64.b64decode(x_priv_b64)
     priv_mittente = PrivateKey(x_priv_bytes)
 
     # --- Recupera chiave pubblica del destinatario ---
-    conn = get_db_connection()
-    c = get_cursor(conn)  # <-- usa lo stesso cursor helper (IMPORTANTE)
-
     c.execute(sql("SELECT x25519_pub FROM utenti WHERE id = ?"), (destinatario_id,))
     row = c.fetchone()
 
@@ -86,8 +128,6 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     eph_priv = PrivateKey.generate()
     eph_pub = eph_priv.public_key
 
-    # 🔹 Deriva chiave condivisa come mittente
-    #    (Box con effimera privata + pubblica destinatario)
     box = Box(eph_priv, pub_dest)
     shared = box.shared_key()
 
@@ -99,14 +139,14 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     nonce_b64 = base64.b64encode(cipher.nonce).decode()
     eph_pub_b64 = base64.b64encode(bytes(eph_pub)).decode()
 
-    # --- 🔐 Cifra la chiave effimera privata con la DEK personale ---
-    dek = base64.b64decode(session["dek_b64"])
+    # --- Cifra la chiave effimera privata con la DEK personale ---
+    dek = base64.b64decode(dek_b64)
     cipher_eph = AES.new(dek, AES.MODE_GCM)
     eph_ct, eph_tag = cipher_eph.encrypt_and_digest(bytes(eph_priv))
     eph_priv_enc_b64 = base64.b64encode(eph_ct + eph_tag).decode()
     eph_priv_nonce_b64 = base64.b64encode(cipher_eph.nonce).decode()
 
-    # --- 💾 Salva nel DB (aggiunte le colonne per la chiave effimera cifrata) ---
+    # --- Salva nel DB ---
     msg_id = insert_and_get_id(
         c,
         """
@@ -126,7 +166,7 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
 
     conn.commit()
     return msg_id
-
+    
 def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: int | None = None, before_id: int | None = None):
     """
     Restituisce la conversazione decifrando i messaggi leggibili con la chiave privata X25519.
@@ -303,7 +343,7 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: i
         messaggi_decifrati.append(r)
 
     return messaggi_decifrati
-    
+
 def chat_threads(user_id: int):
     """
     Logica IDENTICA alla tua.
