@@ -1,4 +1,4 @@
-from flask import session,
+from flask import session, request
 from app import parse_realtime_token
 from flask_socketio import join_room, leave_room
 
