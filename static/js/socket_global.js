@@ -73,25 +73,24 @@ window.addEventListener("pageshow", function (event) {
       console.warn("⚠️ Errore cleanup leggero socket precedente:", e);
     }
 
-  const socket = io(SOCKET_BASE_URL, {
-    path: "/socket.io",
-    transports: ["websocket"],
-    upgrade: false,
-    withCredentials: true,
+    const socket = io(SOCKET_BASE_URL, {
+      path: "/socket.io",
+      transports: ["polling", "websocket"],
+      upgrade: true,
+      withCredentials: true,
 
-    reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    timeout: 20000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
 
-    auth: {
-      device_type: detectDeviceType(),
-      client_id: localStorage.getItem("client_id"),
-      token: window.__SOCKET_AUTH_TOKEN__ || null
-    }    
-  });
-
+      auth: {
+        device_type: detectDeviceType(),
+        client_id: localStorage.getItem("client_id"),
+        token: window.__SOCKET_AUTH_TOKEN__ || null
+      }
+    });
   // ======================================================
   // DEBUG HARD: traccia chi aggancia/stacca listener chat
   // ======================================================
