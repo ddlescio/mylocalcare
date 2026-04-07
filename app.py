@@ -882,41 +882,57 @@ def get_db_connection():
     # POSTGRES
     # =========================
     if database_url:
+        print("🟦 DB enter POSTGRES branch", flush=True)
 
         if _pg_pool is None:
+            print("🟦 DB before init_pg_pool()", flush=True)
             init_pg_pool()
+            print("🟦 DB after init_pg_pool()", flush=True)
 
         if _pg_pool is None:
+            print("🟥 DB pool is still None after init_pg_pool()", flush=True)
             raise RuntimeError("Pool PostgreSQL non inizializzato")
 
         if has_request_context():
             if hasattr(g, "db_conn") and g.db_conn is not None:
+                print("🟦 DB found g.db_conn, testing SELECT 1", flush=True)
                 try:
                     g.db_conn.cursor().execute("SELECT 1")
+                    print("🟦 DB reusing g.db_conn", flush=True)
                     return g.db_conn
-                except Exception:
+                except Exception as e:
+                    print(f"🟥 DB g.db_conn invalid: {e}", flush=True)
                     try:
                         g.db_conn.close()
-                    except:
-                        pass
+                    except Exception as e2:
+                        print(f"🟥 DB error closing invalid g.db_conn: {e2}", flush=True)
                     g.db_conn = None
 
+        print("🟦 DB before _pg_pool.getconn()", flush=True)
         raw = _pg_pool.getconn()
+        print("🟦 DB after _pg_pool.getconn()", flush=True)
 
         if raw.closed:
+            print("🟦 DB raw connection was closed, replacing it", flush=True)
             _pg_pool.putconn(raw, close=True)
+            print("🟦 DB before _pg_pool.getconn() replacement", flush=True)
             raw = _pg_pool.getconn()
+            print("🟦 DB after _pg_pool.getconn() replacement", flush=True)
 
+        print("🟦 DB before raw.autocommit/set_session", flush=True)
         raw.autocommit = True
         raw.set_session(readonly=False, autocommit=True)
+        print("🟦 DB after raw.autocommit/set_session", flush=True)
 
         wrapped = PGConnectionWrapper(raw)
 
         if has_request_context():
             g.db_conn = wrapped
+            print("🟦 DB stored wrapped connection in g.db_conn", flush=True)
 
+        print("🟩 DB returning wrapped postgres connection", flush=True)
         return wrapped
-
+        
     # =========================
     # SQLITE
     # =========================
@@ -5761,7 +5777,7 @@ def login():
 
     print("🔐 LOGIN GET render_template(login.html)", flush=True)
     return render_template('login.html')
-    
+
 @app.route('/password_dimenticata', methods=['GET', 'POST'])
 def password_dimenticata():
     if request.method == 'POST':
