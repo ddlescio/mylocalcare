@@ -3,8 +3,32 @@ from zoneinfo import ZoneInfo
 from datetime import datetime
 import traceback
 
+from socket_registry import _get_user_id_from_sid
+
 typing_state = {}
 pagina_attiva = {}
+
+def _resolve_socket_user_id():
+    user_id = session.get("utente_id")
+
+    if user_id:
+        try:
+            return int(user_id)
+        except Exception:
+            return user_id
+
+    sid = getattr(request, "sid", None)
+    if not sid:
+        return None
+
+    try:
+        fallback_user_id = _get_user_id_from_sid(sid)
+        if fallback_user_id:
+            return int(fallback_user_id)
+    except Exception as e:
+        print(f"❌ [_resolve_socket_user_id] errore sid->user per sid={sid}: {e}", flush=True)
+
+    return None
 
 
 def register_chat_socket_handlers(
@@ -46,9 +70,14 @@ def register_chat_socket_handlers(
     @socketio.on("send_message")
     def handle_send_message(data):
         print("🚨 ENTER handle_send_message", flush=True)
-        print(f"🚨 SID={request.sid} session_user={session.get('utente_id')} data={data}", flush=True)
+        resolved_user_id = _resolve_socket_user_id()
+        print(
+            f"🚨 SID={request.sid} session_user={session.get('utente_id')} "
+            f"resolved_user={resolved_user_id} data={data}",
+            flush=True
+        )
 
-        mittente_id = session.get("utente_id")
+        mittente_id = resolved_user_id
         print(f"📨 [send_message] START mittente={mittente_id} data={data}", flush=True)
 
         try:
@@ -183,7 +212,7 @@ def register_chat_socket_handlers(
 
     @socketio.on("chat_aperta")
     def handle_chat_aperta(data):
-        user_id = session.get("utente_id")
+        user_id = _resolve_socket_user_id()
         other_id = data.get("other_id")
 
         if not user_id or not other_id:
@@ -196,7 +225,7 @@ def register_chat_socket_handlers(
 
     @socketio.on("page_visible")
     def handle_page_visible(data):
-        user_id = session.get("utente_id")
+        user_id = _resolve_socket_user_id()
         if not user_id:
             return
 
@@ -205,7 +234,7 @@ def register_chat_socket_handlers(
 
     @socketio.on("mark_as_read")
     def handle_mark_as_read(data):
-        user_id = session.get("utente_id")
+        user_id = _resolve_socket_user_id()
         other_id = data.get("other_id")
 
         if not user_id or not other_id:
@@ -242,7 +271,7 @@ def register_chat_socket_handlers(
 
     @socketio.on("chat_chiusa")
     def handle_chat_chiusa(data):
-        user_id = session.get("utente_id")
+        user_id = _resolve_socket_user_id()
         other_id = data.get("other_id")
         if not user_id or not other_id:
             return
@@ -260,7 +289,7 @@ def register_chat_socket_handlers(
 
     @socketio.on("refresh_threads")
     def handle_refresh_threads(data):
-        user_id = session.get("utente_id")
+        user_id = _resolve_socket_user_id()
         if not user_id:
             return
 
@@ -268,7 +297,7 @@ def register_chat_socket_handlers(
 
     @socketio.on("typing")
     def handle_typing(data):
-        mittente_id = session.get("utente_id")
+        mittente_id = _resolve_socket_user_id()
         destinatario_id = data.get("to")
         typing = data.get("typing", False)
 
@@ -291,7 +320,7 @@ def register_chat_socket_handlers(
         try:
             print(
                 "🧪 [CHATDBG] "
-                f"user={session.get('utente_id')} "
+                f"user={_resolve_socket_user_id()} "
                 f"sid={request.sid} "
                 f"page_id={data.get('page_id')} "
                 f"event={data.get('event')} "
