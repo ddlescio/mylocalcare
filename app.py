@@ -931,6 +931,7 @@ class PGConnectionWrapper:
 
     def __init__(self, conn):
         self.conn = conn
+        self._released = False
 
     def execute(self, query, params=None):
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -950,6 +951,11 @@ class PGConnectionWrapper:
         return self.conn.commit()
 
     def close(self):
+        if self._released:
+            return
+
+        self._released = True
+
         try:
             pool = get_current_pg_pool()
             if pool is not None:
