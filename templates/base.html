@@ -16,7 +16,7 @@
   <title>MyLocalCare</title>
   {% block head_extra %}{% endblock %}
 
-  {% if session.get('utente_id') and enable_socket %}
+  {% if false and session.get('utente_id') and enable_socket %}
     <script>
       window.__SOCKET_BASE_URL__ = "{{ config.get('SOCKET_BASE_URL', '') }}";
       window.__SOCKET_AUTH_TOKEN__ = {{ realtime_token|tojson }};
