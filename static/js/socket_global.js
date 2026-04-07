@@ -203,7 +203,14 @@ window.addEventListener("pageshow", function (event) {
       payload
     });
 
-    // 🔒 POST debug solo nella pagina chat reale
+    // DEBUG HTTP disattivato di default per evitare tempeste di POST
+    // durante reconnect / on-off rete / resume PWA iPhone.
+    const enableHttpSocketDebug = window.__ENABLE_HTTP_SOCKET_DEBUG__ === true;
+    if (!enableHttpSocketDebug) {
+      return;
+    }
+
+    // POST debug solo nella pagina chat reale
     // e solo quando la pagina ha già creato il suo page_id
     if (!isChatPage || !pageId) {
       return;
