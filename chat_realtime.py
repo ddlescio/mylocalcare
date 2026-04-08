@@ -1,4 +1,4 @@
-from flask import session, request
+from flask import session, request, g, has_request_context
 from zoneinfo import ZoneInfo
 from datetime import datetime
 import traceback
