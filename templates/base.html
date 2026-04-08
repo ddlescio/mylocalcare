@@ -1979,11 +1979,16 @@ async function registerPush() {
         }
       }
 
+      const vapidPublicKey = {{ config.get("VAPID_PUBLIC_KEY", "")|tojson }};
+
+      if (!vapidPublicKey) {
+        console.error("❌ VAPID_PUBLIC_KEY mancante nel template");
+        return;
+      }
+
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          "BI7ruKyBvwQ5MRJ0IVUnimhvQGyQpTWxBi1R6c-9VdJkHMBWSbrOtprNJ5axs9ZXQQ-zLiFtMTR5lWqLXTdTObM"
-        )
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
       });
     }
 

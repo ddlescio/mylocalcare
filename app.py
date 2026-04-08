@@ -549,6 +549,8 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_PUBLIC_KEY  = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_CLAIM_EMAIL = os.environ.get("VAPID_CLAIM_EMAIL", "mailto:info@mylocalcare.it")
+app.config["VAPID_PUBLIC_KEY"] = VAPID_PUBLIC_KEY
+app.config["VAPID_CLAIM_EMAIL"] = VAPID_CLAIM_EMAIL
 
 # Converte i "\n" in newline reali
 if VAPID_PRIVATE_KEY:
