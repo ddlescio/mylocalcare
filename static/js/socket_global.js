@@ -158,6 +158,7 @@ window.addEventListener("pageshow", function (event) {
   function disposePageSocket(reason = "pagehide") {
     if (pageSocketDisposed) return;
     pageSocketDisposed = true;
+    socket.__page_disposed__ = true;
 
     try {
       console.log("🛑 disposePageSocket", {
@@ -178,6 +179,14 @@ window.addEventListener("pageshow", function (event) {
       if (window.__socket_debug_any_handler__) {
         socket.offAny(window.__socket_debug_any_handler__);
       }
+    } catch (_) {}
+
+    try {
+      if (fastReconnectTimer) {
+        clearTimeout(fastReconnectTimer);
+        fastReconnectTimer = null;
+      }
+      fastReconnectInFlight = false;
     } catch (_) {}
 
     // IMPORTANTE:
@@ -225,6 +234,10 @@ window.addEventListener("pageshow", function (event) {
   function forceFastReconnect(reason, delay = 120) {
     try {
       const now = Date.now();
+      if (pageSocketDisposed || socket.__page_disposed__ === true) {
+        console.log("⏸️ force reconnect skip: pagina/socket dismessa", reason);
+        return;
+      }
 
       console.log("⚡ forceFastReconnect:", reason, {
         connected: socket.connected,
@@ -262,6 +275,13 @@ window.addEventListener("pageshow", function (event) {
       }
 
       fastReconnectTimer = setTimeout(() => {
+        if (pageSocketDisposed || socket.__page_disposed__ === true) {
+          fastReconnectTimer = null;
+          fastReconnectInFlight = false;
+          console.log("⏸️ force reconnect timer abort: pagina/socket dismessa", reason);
+          return;
+        }
+
         fastReconnectTimer = null;
         fastReconnectInFlight = true;
         lastFastReconnectAt = Date.now();
@@ -291,6 +311,11 @@ window.addEventListener("pageshow", function (event) {
 
           setTimeout(() => {
             try {
+              if (pageSocketDisposed || socket.__page_disposed__ === true) {
+                console.log("⏸️ force reconnect connect abort: pagina/socket dismessa", reason);
+                return;
+              }
+
               socket.connect();
             } catch (e) {
               console.warn("⚠️ force reconnect connect error:", e);
@@ -300,7 +325,7 @@ window.addEventListener("pageshow", function (event) {
               }, 700);
             }
           }, 150);
-
+          
         } catch (e) {
           fastReconnectInFlight = false;
           console.warn("⚠️ forceFastReconnect error:", e);
@@ -451,6 +476,8 @@ window.addEventListener("pageshow", function (event) {
       });
     } catch (_) {}
 
+    socket.__page_disposed__ = true;
+
     try {
       if (window.__socket_heartbeat_interval__) {
         clearInterval(window.__socket_heartbeat_interval__);
@@ -462,6 +489,14 @@ window.addEventListener("pageshow", function (event) {
       if (window.__socket_debug_any_handler__) {
         socket.offAny(window.__socket_debug_any_handler__);
       }
+    } catch (_) {}
+
+    try {
+      if (fastReconnectTimer) {
+        clearTimeout(fastReconnectTimer);
+        fastReconnectTimer = null;
+      }
+      fastReconnectInFlight = false;
     } catch (_) {}
 
     try {
