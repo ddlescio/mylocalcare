@@ -69,7 +69,7 @@ def register_chat_socket_handlers(
 
         recently_read_timers.pop(user_id, None)
 
-            def _invia_push_via_web_service(user_id, title, body):
+    def _invia_push_via_web_service(user_id, title, body):
         web_base_url = (app.config.get("APP_BASE_URL") or "").rstrip("/")
         if not web_base_url:
             print("❌ [_invia_push_via_web_service] APP_BASE_URL mancante")
