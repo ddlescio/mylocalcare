@@ -240,13 +240,16 @@ def register_chat_socket_handlers(
             print(f"📨 [send_message] stato push chat_aperta={chat_aperta} pagina_visibile={pagina_visibile}")
 
             if chat_aperta != mittente_id and not pagina_visibile:
-                print(f"🔔 [send_message] Push inoltrata al web service per {destinatario_id}")
-                socketio.start_background_task(
-                    _invia_push_via_web_service,
-                    destinatario_id,
-                    "Nuovo messaggio su LocalCare",
-                    testo[:100]
-                )
+                try:
+                    print(f"🔔 [send_message] Push INVIO DIRETTO per {destinatario_id}", flush=True)
+                    _invia_push_via_web_service(
+                        destinatario_id,
+                        "Nuovo messaggio su LocalCare",
+                        testo[:100]
+                    )
+                    print(f"✅ [send_message] _invia_push_via_web_service completata per {destinatario_id}", flush=True)
+                except Exception as e:
+                    print(f"❌ [send_message] errore _invia_push_via_web_service per {destinatario_id}: {e}", flush=True)
             else:
                 print(
                     f"⏭️ [send_message] push saltata "
