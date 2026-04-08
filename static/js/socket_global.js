@@ -174,12 +174,21 @@ window.addEventListener("pageshow", function (event) {
     console.warn("⚠️ socket connect_error:", err?.message || err);
   });
 
-  function forceFastReconnect(reason) {
+  let fastReconnectTimer = null;
+  let fastReconnectInFlight = false;
+  let lastFastReconnectAt = 0;
+
+  function scheduleFastReconnect(reason, delay = 250) {
     try {
-      console.log("⚡ forceFastReconnect:", reason, {
+      const now = Date.now();
+
+      console.log("⚡ scheduleFastReconnect:", reason, {
         connected: socket.connected,
         active: document.visibilityState,
-        online: navigator.onLine
+        online: navigator.onLine,
+        inFlight: fastReconnectInFlight,
+        hasTimer: !!fastReconnectTimer,
+        sinceLast: now - lastFastReconnectAt
       });
 
       if (socket.connected) {
@@ -187,44 +196,82 @@ window.addEventListener("pageshow", function (event) {
         return;
       }
 
-      try {
-        socket.io.opts.transports = ["polling", "websocket"];
-      } catch (_) {}
+      if (!navigator.onLine) {
+        console.log("⏸️ reconnect skip: offline", reason);
+        return;
+      }
 
-      try {
-        socket.disconnect();
-      } catch (_) {}
+      if (fastReconnectInFlight) {
+        console.log("⏸️ reconnect skip: already in flight", reason);
+        return;
+      }
 
-      setTimeout(() => {
+      if (fastReconnectTimer) {
+        console.log("⏸️ reconnect skip: timer già presente", reason);
+        return;
+      }
+
+      if (now - lastFastReconnectAt < 2000) {
+        console.log("⏸️ reconnect skip: cooldown attivo", reason);
+        return;
+      }
+
+      fastReconnectTimer = setTimeout(() => {
+        fastReconnectTimer = null;
+        fastReconnectInFlight = true;
+        lastFastReconnectAt = Date.now();
+
         try {
-          socket.connect();
-        } catch (e) {
-          console.warn("⚠️ forceFastReconnect connect error:", e);
+          console.log("🚀 reconnect start:", reason, {
+            connected: socket.connected,
+            active: socket.active,
+            visibility: document.visibilityState,
+            online: navigator.onLine
+          });
+
+          if (socket.connected) {
+            emitHeartbeat();
+            return;
+          }
+
+          try {
+            socket.io.opts.transports = ["polling", "websocket"];
+          } catch (_) {}
+
+          try {
+            socket.connect();
+          } catch (e) {
+            console.warn("⚠️ reconnect connect error:", e);
+          }
+        } finally {
+          setTimeout(() => {
+            fastReconnectInFlight = false;
+          }, 1200);
         }
-      }, 150);
+      }, delay);
     } catch (e) {
-      console.warn("⚠️ forceFastReconnect error:", e);
+      console.warn("⚠️ scheduleFastReconnect error:", e);
     }
   }
 
   window.addEventListener("online", () => {
-    forceFastReconnect("window_online");
+    scheduleFastReconnect("window_online", 100);
   });
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      forceFastReconnect("visibility_visible");
+      scheduleFastReconnect("visibility_visible", 150);
     }
   });
 
   window.addEventListener("focus", () => {
-    forceFastReconnect("window_focus");
+    scheduleFastReconnect("window_focus", 200);
   });
 
   window.addEventListener("pageshow", () => {
-    forceFastReconnect("pageshow");
+    scheduleFastReconnect("pageshow", 300);
   });
-
+  
   // ===============================
   // DEBUG INGRESSO EVENTI SOCKET
   // ===============================
