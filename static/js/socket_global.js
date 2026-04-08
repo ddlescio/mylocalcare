@@ -325,7 +325,7 @@ window.addEventListener("pageshow", function (event) {
               }, 700);
             }
           }, 150);
-          
+
         } catch (e) {
           fastReconnectInFlight = false;
           console.warn("⚠️ forceFastReconnect error:", e);
@@ -339,24 +339,43 @@ window.addEventListener("pageshow", function (event) {
 
   window.__forceFastReconnect = forceFastReconnect;
 
+  function isRealChatPage() {
+    try {
+      return !!document.querySelector('meta[name="chat-aperta"][content="true"]');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function forceFastReconnectOnlyOnChat(reason, delay) {
+    if (!isRealChatPage()) {
+      console.log("⏭️ forceFastReconnect skip: pagina non chat", {
+        reason,
+        pathname: window.location.pathname
+      });
+      return;
+    }
+
+    forceFastReconnect(reason, delay);
+  }
+
   window.addEventListener("online", () => {
-    forceFastReconnect("window_online", 50);
+    forceFastReconnectOnlyOnChat("window_online", 50);
   });
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      forceFastReconnect("visibility_visible", 80);
+      forceFastReconnectOnlyOnChat("visibility_visible", 80);
     }
   });
 
   window.addEventListener("focus", () => {
-    forceFastReconnect("window_focus", 100);
+    forceFastReconnectOnlyOnChat("window_focus", 100);
   });
 
   window.addEventListener("pageshow", () => {
-    forceFastReconnect("pageshow", 120);
+    forceFastReconnectOnlyOnChat("pageshow", 120);
   });
-
   // ===============================
   // DEBUG INGRESSO EVENTI SOCKET
   // ===============================
