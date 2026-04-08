@@ -5115,50 +5115,6 @@ def modifica_recensione():
 # =========================================================
 
 from pywebpush import webpush, WebPushException
-import json
-import os
-
-@app.route("/push/subscribe", methods=["POST"])
-@login_required
-def push_subscribe():
-
-    data = request.get_json()
-
-    if not data:
-        return jsonify({"error": "Nessun dato ricevuto"}), 400
-
-    endpoint = data.get("endpoint")
-    keys = data.get("keys")
-
-    if not endpoint or not keys:
-        return jsonify({"error": "Subscription non valida"}), 400
-
-    conn = get_db_connection()
-    cur = get_cursor(conn)
-
-    cur.execute(sql("""
-        INSERT INTO push_subscriptions (utente_id, endpoint, p256dh, auth)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(endpoint) DO NOTHING
-    """), (
-        g.utente["id"],
-        endpoint,
-        keys.get("p256dh"),
-        keys.get("auth")
-    ))
-
-    conn.commit()
-    cur.close()
-
-    return jsonify({"success": True})
-
-
-
-# =========================================================
-# 🔔 INVIO PUSH GENERICA (SERVER-SIDE)
-# =========================================================
-
-from pywebpush import webpush, WebPushException
 import requests
 import json
 import os
@@ -5180,28 +5136,41 @@ def invia_push(user_id, title, body):
             print("❌ [invia_push] VAPID_PRIVATE_KEY mancante nel servizio corrente")
             return
 
+        print("🔔 [invia_push] prima di get_db_connection()")
         conn = get_db_connection()
+
+        print("🔔 [invia_push] dopo get_db_connection()")
         cur = get_cursor(conn)
 
+        print("🔔 [invia_push] dopo get_cursor() - eseguo SELECT subscriptions")
         cur.execute(sql("""
             SELECT endpoint, p256dh, auth
             FROM push_subscriptions
             WHERE utente_id = ?
         """), (user_id,))
 
+        print("🔔 [invia_push] SELECT eseguita - faccio fetchall()")
         subs = cur.fetchall()
+
+        print(f"🔔 [invia_push] fetch completata - subscriptions trovate: {len(subs) if subs is not None else 'None'}")
 
         if not subs:
             print(f"⚠️ [invia_push] Nessuna subscription push per utente {user_id}")
             return
 
-        print(f"🔔 [invia_push] subscriptions trovate: {len(subs)}")
-
-        for sub in subs:
+        for idx, sub in enumerate(subs, start=1):
             endpoint = sub["endpoint"]
 
             try:
-                print(f"🔔 [invia_push] tentativo endpoint={endpoint[:90]}...")
+                print(f"🔔 [invia_push] tentativo #{idx} endpoint={endpoint[:120]}...")
+
+                payload = json.dumps({
+                    "title": title,
+                    "body": body,
+                    "url": "/utente/messaggi"
+                })
+
+                print(f"🔔 [invia_push] payload={payload}")
 
                 webpush(
                     subscription_info={
@@ -5211,11 +5180,7 @@ def invia_push(user_id, title, body):
                             "auth": sub["auth"],
                         },
                     },
-                    data=json.dumps({
-                        "title": title,
-                        "body": body,
-                        "url": "/utente/messaggi"
-                    }),
+                    data=payload,
                     vapid_private_key=VAPID_PRIVATE_KEY,
                     vapid_claims={
                         "sub": VAPID_CLAIM_EMAIL
@@ -5223,20 +5188,26 @@ def invia_push(user_id, title, body):
                     timeout=5
                 )
 
-                print(f"✅ [invia_push] Push inviata a user_id={user_id}")
+                print(f"✅ [invia_push] Push inviata a user_id={user_id} endpoint_idx={idx}")
 
             except WebPushException as e:
                 status_code = None
+                response_text = None
+
                 try:
                     if e.response is not None:
                         status_code = e.response.status_code
+                        response_text = e.response.text
                 except Exception:
                     pass
 
-                print(f"❌ [invia_push] WebPushException status={status_code} err={e}")
+                print(
+                    f"❌ [invia_push] WebPushException user_id={user_id} "
+                    f"endpoint_idx={idx} status={status_code} err={e} response={response_text}"
+                )
 
                 if status_code in (404, 410):
-                    print(f"🧹 [invia_push] subscription scaduta -> delete endpoint={endpoint[:90]}...")
+                    print(f"🧹 [invia_push] subscription scaduta -> delete endpoint={endpoint[:120]}...")
                     cur.execute(sql("""
                         DELETE FROM push_subscriptions
                         WHERE endpoint = ?
@@ -5244,10 +5215,13 @@ def invia_push(user_id, title, body):
                     conn.commit()
 
             except requests.exceptions.Timeout:
-                print(f"⚠️ [invia_push] timeout user_id={user_id}")
+                print(f"⚠️ [invia_push] timeout user_id={user_id} endpoint_idx={idx}")
 
             except Exception as e:
-                print(f"❌ [invia_push] errore generico endpoint={endpoint[:90]}... err={e}")
+                print(
+                    f"❌ [invia_push] errore generico user_id={user_id} "
+                    f"endpoint_idx={idx} endpoint={endpoint[:120]}... err={e}"
+                )
 
         print(f"🔔 [invia_push] END user_id={user_id}")
 
@@ -5266,7 +5240,6 @@ def invia_push(user_id, title, body):
                 conn.close()
         except Exception as e:
             print(f"⚠️ [invia_push] errore chiusura conn: {e}")
-
 
 @app.route("/service-worker.js")
 def service_worker():
