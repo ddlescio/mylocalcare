@@ -196,7 +196,7 @@ window.addEventListener("pageshow", function (event) {
   window.addEventListener("beforeunload", () => {
     disposePageSocket("beforeunload");
   });
-  
+
   // ===============================
   // LISTENER BASE SOCKET
   // ===============================
@@ -410,6 +410,66 @@ window.addEventListener("pageshow", function (event) {
       callback(socket);
     });
   };
+
+  // ===============================
+  // DISCONNECT SOLO SU NAVIGAZIONE INTERNA REALE
+  // ===============================
+  if (window.__socketInternalNavHandlerRef) {
+    document.removeEventListener("click", window.__socketInternalNavHandlerRef, true);
+  }
+
+  window.__socketInternalNavHandlerRef = function (e) {
+    const a = e.target.closest("a");
+    if (!a) return;
+
+    const href = a.getAttribute("href");
+    if (!href) return;
+
+    // ignora anchor, javascript, nuova scheda, link esterni
+    if (
+      href.startsWith("#") ||
+      href.startsWith("javascript:") ||
+      a.target === "_blank" ||
+      (a.origin && a.origin !== window.location.origin)
+    ) {
+      return;
+    }
+
+    // evita doppie chiusure
+    if (socket.__internal_nav_disconnect_done__) {
+      return;
+    }
+    socket.__internal_nav_disconnect_done__ = true;
+
+    try {
+      console.log("🧭 Navigazione interna rilevata -> disconnect socket corrente", {
+        href,
+        socketId: socket.id || null,
+        connected: socket.connected
+      });
+    } catch (_) {}
+
+    try {
+      if (window.__socket_heartbeat_interval__) {
+        clearInterval(window.__socket_heartbeat_interval__);
+        window.__socket_heartbeat_interval__ = null;
+      }
+    } catch (_) {}
+
+    try {
+      if (window.__socket_debug_any_handler__) {
+        socket.offAny(window.__socket_debug_any_handler__);
+      }
+    } catch (_) {}
+
+    try {
+      socket.disconnect();
+    } catch (err) {
+      console.warn("⚠️ Errore disconnect su navigazione interna:", err);
+    }
+  };
+
+  document.addEventListener("click", window.__socketInternalNavHandlerRef, true);
 
   // ===============================
   // HEARTBEAT INTERVAL
