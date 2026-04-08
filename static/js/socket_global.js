@@ -312,6 +312,8 @@ window.addEventListener("pageshow", function (event) {
     }
   }
 
+  window.__forceFastReconnect = forceFastReconnect;
+
   window.addEventListener("online", () => {
     forceFastReconnect("window_online", 50);
   });

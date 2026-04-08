@@ -516,7 +516,7 @@ body {
         // 3) Fallback finale
         return globalSocket || boundSocket || null;
       }
-      
+
       let chatClosedEmitted = false;
       let chatOpenedOnce = false;
 
@@ -1298,8 +1298,13 @@ body {
   const initialSocket = getChatSocket();
   if (!initialSocket || !initialSocket.connected) {
     startPollingFallback();
-  }
 
+    if (navigator.onLine && window.__forceFastReconnect) {
+      console.log("⚡ [CHAT] forzo reconnect immediato entrando in chat");
+      window.__forceFastReconnect("chat_page_initial_not_connected", 20);
+    }
+  }
+  
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
 
