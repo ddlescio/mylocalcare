@@ -41,21 +41,18 @@ window.addEventListener("pageshow", function (event) {
     }
   }
   function shouldInitSocketOnThisPage() {
-  try {
-    const path = window.location.pathname || "";
+    try {
+      const path = window.location.pathname || "";
 
-    // chat singola
-    if (path.startsWith("/chat/")) return true;
+      // SOLO chat singola
+      if (path.startsWith("/chat/")) return true;
 
-    // lista messaggi
-    if (path === "/utente/messaggi") return true;
-
-    // tutto il resto NO, inclusa home
-    return false;
-  } catch (e) {
-    return false;
+      // tutto il resto NO, inclusi home e lista messaggi
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
-}
 
 if (!shouldInitSocketOnThisPage()) {
   console.log("⏭️ socket_global: init socket saltata su questa pagina", {
