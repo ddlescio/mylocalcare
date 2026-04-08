@@ -1,7 +1,9 @@
-from flask import session, request, g, has_request_context
+from flask import session, request
 from zoneinfo import ZoneInfo
 from datetime import datetime
 import traceback
+import requests
+import os
 
 from socket_registry import _get_user_id_from_sid
 
@@ -66,6 +68,46 @@ def register_chat_socket_handlers(
             print(f"🧹 Pulita ultima chat letta per utente {user_id}")
 
         recently_read_timers.pop(user_id, None)
+
+            def _invia_push_via_web_service(user_id, title, body):
+        web_base_url = (app.config.get("APP_BASE_URL") or "").rstrip("/")
+        if not web_base_url:
+            print("❌ [_invia_push_via_web_service] APP_BASE_URL mancante")
+            return
+
+        url = f"{web_base_url}/internal/push/send"
+        internal_secret = os.getenv("MASTER_SECRET_KEY", "")
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        if internal_secret:
+            headers["X-Internal-Secret"] = internal_secret
+
+        payload = {
+            "user_id": user_id,
+            "title": title,
+            "body": body
+        }
+
+        try:
+            print(f"🔔 [_invia_push_via_web_service] POST {url} user_id={user_id}")
+
+            resp = requests.post(
+                url,
+                json=payload,
+                headers=headers,
+                timeout=8
+            )
+
+            print(
+                f"🔔 [_invia_push_via_web_service] risposta status={resp.status_code} "
+                f"body={resp.text[:300]}"
+            )
+
+        except Exception as e:
+            print(f"❌ [_invia_push_via_web_service] errore user_id={user_id}: {e}")
 
     @socketio.on("send_message")
     def handle_send_message(data):
@@ -198,17 +240,13 @@ def register_chat_socket_handlers(
             print(f"📨 [send_message] stato push chat_aperta={chat_aperta} pagina_visibile={pagina_visibile}")
 
             if chat_aperta != mittente_id and not pagina_visibile:
-                print(f"🔔 [send_message] Push INVIO DIRETTO per {destinatario_id}", flush=True)
-
-                try:
-                    invia_push(
-                        destinatario_id,
-                        "Nuovo messaggio su LocalCare",
-                        testo[:100]
-                    )
-                    print(f"✅ [send_message] invia_push completata per {destinatario_id}", flush=True)
-                except Exception as e:
-                    print(f"❌ [send_message] errore invia_push per {destinatario_id}: {e}", flush=True)
+                print(f"🔔 [send_message] Push inoltrata al web service per {destinatario_id}")
+                socketio.start_background_task(
+                    _invia_push_via_web_service,
+                    destinatario_id,
+                    "Nuovo messaggio su LocalCare",
+                    testo[:100]
+                )
             else:
                 print(
                     f"⏭️ [send_message] push saltata "
@@ -223,7 +261,7 @@ def register_chat_socket_handlers(
             }
 
         except Exception as e:
-            print("❌ [send_message] ECCEZIONE DURANTE EMIT")
+            print("❌ [send_message] ECCEZIONE nella fase emit/finale")
             traceback.print_exc()
             return {"ok": False, "error": str(e)}
 

@@ -5247,6 +5247,44 @@ def invia_push(user_id, title, body):
         except Exception as e:
             print(f"⚠️ [invia_push] errore chiusura conn: {e}")
 
+@app.route("/internal/push/send", methods=["POST"])
+def internal_push_send():
+    try:
+        internal_token = request.headers.get("X-Internal-Token", "")
+        expected_token = os.environ.get("INTERNAL_PUSH_TOKEN", "")
+
+        if not expected_token:
+            print("❌ [internal_push_send] INTERNAL_PUSH_TOKEN mancante")
+            return jsonify({"ok": False, "error": "internal token not configured"}), 500
+
+        if internal_token != expected_token:
+            print("❌ [internal_push_send] token interno non valido")
+            return jsonify({"ok": False, "error": "unauthorized"}), 403
+
+        data = request.get_json(silent=True) or {}
+
+        user_id = data.get("user_id")
+        title = data.get("title")
+        body = data.get("body")
+
+        if not user_id or not title or body is None:
+            print(f"❌ [internal_push_send] payload non valido: {data}")
+            return jsonify({"ok": False, "error": "invalid payload"}), 400
+
+        print(
+            f"🔔 [internal_push_send] richiesta ricevuta "
+            f"user_id={user_id} title={title!r}"
+        )
+
+        invia_push(int(user_id), str(title), str(body))
+
+        print(f"✅ [internal_push_send] invia_push completata per user_id={user_id}")
+        return jsonify({"ok": True})
+
+    except Exception as e:
+        print(f"❌ [internal_push_send] errore fatale: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @app.route("/service-worker.js")
 def service_worker():
     return app.send_static_file("service-worker.js")
