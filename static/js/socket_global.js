@@ -40,6 +40,38 @@ window.addEventListener("pageshow", function (event) {
       return "unknown";
     }
   }
+  function shouldInitSocketOnThisPage() {
+  try {
+    const path = window.location.pathname || "";
+
+    // chat singola
+    if (path.startsWith("/chat/")) return true;
+
+    // lista messaggi
+    if (path === "/utente/messaggi") return true;
+
+    // tutto il resto NO, inclusa home
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+if (!shouldInitSocketOnThisPage()) {
+  console.log("⏭️ socket_global: init socket saltata su questa pagina", {
+    pathname: window.location.pathname
+  });
+
+  window.socket = null;
+  window.__active_socket = null;
+  window.__current_socket_id = null;
+
+  window.whenSocketReady = function () {
+    console.log("⏭️ whenSocketReady ignorato: socket non prevista su questa pagina");
+  };
+
+  return;
+}
 
   // ===============================
   // CREA SOCKET DELLA PAGINA CORRENTE
