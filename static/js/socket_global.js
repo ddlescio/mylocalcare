@@ -180,8 +180,12 @@ window.addEventListener("pageshow", function (event) {
       }
     } catch (_) {}
 
+    // IMPORTANTE:
+    // su iPhone PWA pagehide/beforeunload possono scattare in situazioni
+    // in cui non vogliamo abbattere aggressivamente la socket.
+    // Lasciamo che sia il browser / socket.io a gestire la chiusura naturale.
     try {
-      socket.disconnect();
+      console.log("ℹ️ disposePageSocket: nessun socket.disconnect() esplicito");
     } catch (_) {}
   }
 
@@ -192,7 +196,7 @@ window.addEventListener("pageshow", function (event) {
   window.addEventListener("beforeunload", () => {
     disposePageSocket("beforeunload");
   });
-
+  
   // ===============================
   // LISTENER BASE SOCKET
   // ===============================
@@ -325,7 +329,7 @@ window.addEventListener("pageshow", function (event) {
   window.addEventListener("pageshow", () => {
     forceFastReconnect("pageshow", 120);
   });
-  
+
   // ===============================
   // DEBUG INGRESSO EVENTI SOCKET
   // ===============================
