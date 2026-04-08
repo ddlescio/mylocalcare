@@ -70,20 +70,21 @@ def register_chat_socket_handlers(
         recently_read_timers.pop(user_id, None)
 
     def _invia_push_via_web_service(user_id, title, body):
+        import json
+        import urllib.request
+        import urllib.error
+
         web_base_url = (app.config.get("APP_BASE_URL") or "").rstrip("/")
         if not web_base_url:
-            print("❌ [_invia_push_via_web_service] APP_BASE_URL mancante")
+            print("❌ [_invia_push_via_web_service] APP_BASE_URL mancante", flush=True)
             return
 
         url = f"{web_base_url}/internal/push/send"
-        internal_secret = os.getenv("MASTER_SECRET_KEY", "")
+        internal_token = os.getenv("INTERNAL_PUSH_TOKEN", "")
 
-        headers = {
-            "Content-Type": "application/json",
-        }
-
-        if internal_secret:
-            headers["X-Internal-Secret"] = internal_secret
+        if not internal_token:
+            print("❌ [_invia_push_via_web_service] INTERNAL_PUSH_TOKEN mancante", flush=True)
+            return
 
         payload = {
             "user_id": user_id,
@@ -91,24 +92,44 @@ def register_chat_socket_handlers(
             "body": body
         }
 
-        try:
-            print(f"🔔 [_invia_push_via_web_service] POST {url} user_id={user_id}")
+        data = json.dumps(payload).encode("utf-8")
 
-            resp = requests.post(
-                url,
-                json=payload,
-                headers=headers,
-                timeout=8
-            )
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "X-Internal-Token": internal_token
+            },
+            method="POST"
+        )
+
+        try:
+            print(f"🔔 [_invia_push_via_web_service] POST {url} user_id={user_id}", flush=True)
+
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                body_text = resp.read().decode("utf-8", errors="replace")
+                print(
+                    f"✅ [_invia_push_via_web_service] risposta status={resp.status} "
+                    f"body={body_text[:300]}",
+                    flush=True
+                )
+
+        except urllib.error.HTTPError as e:
+            try:
+                err_body = e.read().decode("utf-8", errors="replace")
+            except Exception:
+                err_body = "<no body>"
 
             print(
-                f"🔔 [_invia_push_via_web_service] risposta status={resp.status_code} "
-                f"body={resp.text[:300]}"
+                f"❌ [_invia_push_via_web_service] HTTPError user_id={user_id} "
+                f"status={e.code} body={err_body[:300]}",
+                flush=True
             )
 
         except Exception as e:
-            print(f"❌ [_invia_push_via_web_service] errore user_id={user_id}: {e}")
-
+            print(f"❌ [_invia_push_via_web_service] errore user_id={user_id}: {e}", flush=True)
+        
     @socketio.on("send_message")
     def handle_send_message(data):
         print("🚨 ENTER handle_send_message", flush=True)
