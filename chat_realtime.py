@@ -129,7 +129,7 @@ def register_chat_socket_handlers(
 
         except Exception as e:
             print(f"❌ [_invia_push_via_web_service] errore user_id={user_id}: {e}", flush=True)
-        
+
     @socketio.on("send_message")
     def handle_send_message(data):
         print("🚨 ENTER handle_send_message", flush=True)
@@ -260,21 +260,34 @@ def register_chat_socket_handlers(
 
             print(f"📨 [send_message] stato push chat_aperta={chat_aperta} pagina_visibile={pagina_visibile}")
 
-            if chat_aperta != mittente_id and not pagina_visibile:
+            chat_attualmente_visibile = (chat_aperta == mittente_id and pagina_visibile is True)
+
+            if not chat_attualmente_visibile:
                 try:
-                    print(f"🔔 [send_message] Push INVIO DIRETTO per {destinatario_id}", flush=True)
+                    print(
+                        f"🔔 [send_message] Push INVIO DIRETTO per {destinatario_id} "
+                        f"(chat_attualmente_visibile={chat_attualmente_visibile})",
+                        flush=True
+                    )
                     _invia_push_via_web_service(
                         destinatario_id,
                         "Nuovo messaggio su LocalCare",
                         testo[:100]
                     )
-                    print(f"✅ [send_message] _invia_push_via_web_service completata per {destinatario_id}", flush=True)
+                    print(
+                        f"✅ [send_message] _invia_push_via_web_service completata per {destinatario_id}",
+                        flush=True
+                    )
                 except Exception as e:
-                    print(f"❌ [send_message] errore _invia_push_via_web_service per {destinatario_id}: {e}", flush=True)
+                    print(
+                        f"❌ [send_message] errore _invia_push_via_web_service per {destinatario_id}: {e}",
+                        flush=True
+                    )
             else:
                 print(
                     f"⏭️ [send_message] push saltata "
-                    f"chat_aperta={chat_aperta} pagina_visibile={pagina_visibile}",
+                    f"chat_aperta={chat_aperta} pagina_visibile={pagina_visibile} "
+                    f"chat_attualmente_visibile={chat_attualmente_visibile}",
                     flush=True
                 )
 
