@@ -5162,76 +5162,109 @@ import json
 import os
 
 def invia_push(user_id, title, body):
+    conn = None
+    cur = None
 
-    conn = get_db_connection()
-    cur = get_cursor(conn)
+    try:
+        print(f"🔔 [invia_push] START user_id={user_id} title={title!r}")
 
-    cur.execute(sql("""
-        SELECT endpoint, p256dh, auth
-        FROM push_subscriptions
-        WHERE utente_id = ?
-    """), (user_id,))
+        print(
+            f"🔔 [invia_push] runtime_realtime={app.config.get('IS_REALTIME_SERVER')} "
+            f"vapid_private_present={bool(VAPID_PRIVATE_KEY)} "
+            f"vapid_claim={VAPID_CLAIM_EMAIL!r}"
+        )
 
-    subs = cur.fetchall()
+        if not VAPID_PRIVATE_KEY:
+            print("❌ [invia_push] VAPID_PRIVATE_KEY mancante nel servizio corrente")
+            return
 
-    if not subs:
-        print(f"Nessuna subscription push per utente {user_id}")
-        cur.close()
-        conn.close()
-        return
+        conn = get_db_connection()
+        cur = get_cursor(conn)
 
-    for sub in subs:
+        cur.execute(sql("""
+            SELECT endpoint, p256dh, auth
+            FROM push_subscriptions
+            WHERE utente_id = ?
+        """), (user_id,))
+
+        subs = cur.fetchall()
+
+        if not subs:
+            print(f"⚠️ [invia_push] Nessuna subscription push per utente {user_id}")
+            return
+
+        print(f"🔔 [invia_push] subscriptions trovate: {len(subs)}")
+
+        for sub in subs:
+            endpoint = sub["endpoint"]
+
+            try:
+                print(f"🔔 [invia_push] tentativo endpoint={endpoint[:90]}...")
+
+                webpush(
+                    subscription_info={
+                        "endpoint": endpoint,
+                        "keys": {
+                            "p256dh": sub["p256dh"],
+                            "auth": sub["auth"],
+                        },
+                    },
+                    data=json.dumps({
+                        "title": title,
+                        "body": body,
+                        "url": "/utente/messaggi"
+                    }),
+                    vapid_private_key=VAPID_PRIVATE_KEY,
+                    vapid_claims={
+                        "sub": VAPID_CLAIM_EMAIL
+                    },
+                    timeout=5
+                )
+
+                print(f"✅ [invia_push] Push inviata a user_id={user_id}")
+
+            except WebPushException as e:
+                status_code = None
+                try:
+                    if e.response is not None:
+                        status_code = e.response.status_code
+                except Exception:
+                    pass
+
+                print(f"❌ [invia_push] WebPushException status={status_code} err={e}")
+
+                if status_code in (404, 410):
+                    print(f"🧹 [invia_push] subscription scaduta -> delete endpoint={endpoint[:90]}...")
+                    cur.execute(sql("""
+                        DELETE FROM push_subscriptions
+                        WHERE endpoint = ?
+                    """), (endpoint,))
+                    conn.commit()
+
+            except requests.exceptions.Timeout:
+                print(f"⚠️ [invia_push] timeout user_id={user_id}")
+
+            except Exception as e:
+                print(f"❌ [invia_push] errore generico endpoint={endpoint[:90]}... err={e}")
+
+        print(f"🔔 [invia_push] END user_id={user_id}")
+
+    except Exception as e:
+        print(f"❌ [invia_push] ERRORE FATALE user_id={user_id}: {e}")
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception as e:
+            print(f"⚠️ [invia_push] errore chiusura cur: {e}")
 
         try:
-
-            webpush(
-                subscription_info={
-                    "endpoint": sub["endpoint"],
-                    "keys": {
-                        "p256dh": sub["p256dh"],
-                        "auth": sub["auth"],
-                    },
-                },
-                data=json.dumps({
-                    "title": title,
-                    "body": body,
-                    "url": "/utente/messaggi"
-                }),
-                vapid_private_key=os.getenv("VAPID_PRIVATE_KEY"),
-                vapid_claims={
-                    "sub": os.getenv("VAPID_CLAIM_EMAIL")
-                },
-                timeout=3   # ⚠️ evita blocchi del server
-            )
-
-            print(f"🔔 Push inviata a {user_id}")
-
-        except WebPushException as e:
-
-            print("Errore push:", e)
-
-            # subscription scaduta → rimuoviamo
-            if hasattr(e, "response") and e.response and e.response.status_code in (404, 410):
-
-                print("🧹 Subscription scaduta, la rimuovo")
-
-                cur.execute(sql("""
-                    DELETE FROM push_subscriptions
-                    WHERE endpoint = ?
-                """), (sub["endpoint"],))
-
-                conn.commit()
-
-        except requests.exceptions.Timeout:
-
-            print("⚠️ Timeout push evitato")
-
+            if conn:
+                conn.close()
         except Exception as e:
+            print(f"⚠️ [invia_push] errore chiusura conn: {e}")
 
-            print("Errore push generico:", e)
-
-    cur.close()
-    conn.close()
 
 @app.route("/service-worker.js")
 def service_worker():
