@@ -153,6 +153,46 @@ window.addEventListener("pageshow", function (event) {
 
   window.__emitSocketHeartbeat = emitHeartbeat;
 
+  let pageSocketDisposed = false;
+
+  function disposePageSocket(reason = "pagehide") {
+    if (pageSocketDisposed) return;
+    pageSocketDisposed = true;
+
+    try {
+      console.log("🛑 disposePageSocket", {
+        reason,
+        socketId: socket.id || null,
+        connected: socket.connected
+      });
+    } catch (_) {}
+
+    try {
+      if (window.__socket_heartbeat_interval__) {
+        clearInterval(window.__socket_heartbeat_interval__);
+        window.__socket_heartbeat_interval__ = null;
+      }
+    } catch (_) {}
+
+    try {
+      if (window.__socket_debug_any_handler__) {
+        socket.offAny(window.__socket_debug_any_handler__);
+      }
+    } catch (_) {}
+
+    try {
+      socket.disconnect();
+    } catch (_) {}
+  }
+
+  window.addEventListener("pagehide", (event) => {
+    disposePageSocket(event && event.persisted ? "pagehide_bfcache" : "pagehide");
+  });
+
+  window.addEventListener("beforeunload", () => {
+    disposePageSocket("beforeunload");
+  });
+
   // ===============================
   // LISTENER BASE SOCKET
   // ===============================
@@ -271,7 +311,7 @@ window.addEventListener("pageshow", function (event) {
   window.addEventListener("pageshow", () => {
     scheduleFastReconnect("pageshow", 300);
   });
-  
+
   // ===============================
   // DEBUG INGRESSO EVENTI SOCKET
   // ===============================
