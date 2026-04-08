@@ -24,7 +24,7 @@
     <script defer src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script defer src="{{ url_for('static', filename='js/socket_global.js') }}"></script>
   {% endif %}
-  
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
   /* Modalità browser normale */
@@ -1956,44 +1956,66 @@ document.addEventListener("DOMContentLoaded", function() {
 </script>
 <script>
 async function registerPush() {
-
+  try {
     if (!("serviceWorker" in navigator)) return;
     if (!("PushManager" in window)) return;
+    if (!window.isSecureContext) return;
 
     const registration = await navigator.serviceWorker.ready;
 
-    // 🔎 Verifica se esiste già una subscription
     let subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
+      if (Notification.permission === "denied") {
+        console.log("Permesso notifiche negato");
+        return;
+      }
 
-        if (Notification.permission !== "granted") {
-            const permission = await Notification.requestPermission();
-            if (permission !== "granted") {
-                console.log("Permesso notifiche negato");
-                return;
-            }
+      if (Notification.permission !== "granted") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          console.log("Permesso notifiche non concesso");
+          return;
         }
+      }
 
-        subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array("BI7ruKyBvwQ5MRJ0IVUnimhvQGyQpTWxBi1R6c-9VdJkHMBWSbrOtprNJ5axs9ZXQQ-zLiFtMTR5lWqLXTdTObM")
-        });
-
-        await fetch("/push/subscribe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(subscription)
-        });
-
-        console.log("Push registrata correttamente");
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          "BI7ruKyBvwQ5MRJ0IVUnimhvQGyQpTWxBi1R6c-9VdJkHMBWSbrOtprNJ5axs9ZXQQ-zLiFtMTR5lWqLXTdTObM"
+        )
+      });
     }
 
-    // 🔥 Invio automatico push di test
-    await fetch("/push/test");
+    const resp = await fetch("/push/subscribe", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(subscription)
+    });
 
-    console.log("Push di test inviata");
+    if (!resp.ok) {
+      const txt = await resp.text();
+      console.error("❌ Errore /push/subscribe:", resp.status, txt);
+      return;
+    }
+
+    console.log("✅ Push registrata/sincronizzata correttamente");
+  } catch (err) {
+    console.error("❌ Errore registerPush:", err);
+  }
 }
+
+window.addEventListener("load", async () => {
+  try {
+    if (!("serviceWorker" in navigator)) return;
+
+    await navigator.serviceWorker.ready;
+    await registerPush();
+  } catch (err) {
+    console.warn("⚠️ Avvio registerPush fallito:", err);
+  }
+});
 </script>
 <script>
 window.addEventListener("beforeunload", () => {
