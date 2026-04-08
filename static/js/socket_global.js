@@ -81,9 +81,10 @@ window.addEventListener("pageshow", function (event) {
 
       reconnection: true,
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 2000,
+      randomizationFactor: 0.2,
+      timeout: 8000,
 
       auth: {
         device_type: detectDeviceType(),
@@ -91,6 +92,7 @@ window.addEventListener("pageshow", function (event) {
         token: window.__SOCKET_AUTH_TOKEN__ || null
       }
     });
+
   // ======================================================
   // DEBUG HARD: traccia chi aggancia/stacca listener chat
   // ======================================================
@@ -170,6 +172,57 @@ window.addEventListener("pageshow", function (event) {
 
   socket.on("connect_error", (err) => {
     console.warn("⚠️ socket connect_error:", err?.message || err);
+  });
+
+  function forceFastReconnect(reason) {
+    try {
+      console.log("⚡ forceFastReconnect:", reason, {
+        connected: socket.connected,
+        active: document.visibilityState,
+        online: navigator.onLine
+      });
+
+      if (socket.connected) {
+        emitHeartbeat();
+        return;
+      }
+
+      try {
+        socket.io.opts.transports = ["polling", "websocket"];
+      } catch (_) {}
+
+      try {
+        socket.disconnect();
+      } catch (_) {}
+
+      setTimeout(() => {
+        try {
+          socket.connect();
+        } catch (e) {
+          console.warn("⚠️ forceFastReconnect connect error:", e);
+        }
+      }, 150);
+    } catch (e) {
+      console.warn("⚠️ forceFastReconnect error:", e);
+    }
+  }
+
+  window.addEventListener("online", () => {
+    forceFastReconnect("window_online");
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      forceFastReconnect("visibility_visible");
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    forceFastReconnect("window_focus");
+  });
+
+  window.addEventListener("pageshow", () => {
+    forceFastReconnect("pageshow");
   });
 
   // ===============================
