@@ -5007,7 +5007,7 @@ def upload_foto():
                 pass
 
     return render_template('upload_foto.html', utente=g.utente)
-    
+
 # --- Upload copertina profilo ---
 @app.route('/utente/copertina', methods=['POST'])
 @login_required
@@ -5021,54 +5021,139 @@ def upload_copertina():
         flash("Seleziona un file valido.")
         return redirect(request.referrer or url_for('dashboard'))
 
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'webp'}
     estensione = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else None
 
-    if estensione not in ALLOWED_EXTENSIONS:
+    if estensione not in allowed_extensions:
         flash("Formato non valido. Usa JPG, PNG o WEBP.")
         return redirect(request.referrer or url_for('dashboard'))
 
-    upload_dir = os.path.join("/uploads", "profili", "copertine")
-    os.makedirs(upload_dir, exist_ok=True)
+    conn = None
+    cur = None
 
-    filename = f"copertina_{g.utente['id']}.{estensione}"
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    try:
+        # Cartella reale servita da /static/...
+        upload_dir = os.path.join(app.root_path, "static", "uploads", "profili", "copertine")
+        os.makedirs(upload_dir, exist_ok=True)
 
-    # Salva percorso nel DB
-    conn = get_db_connection()
-    conn.execute(sql("UPDATE utenti SET copertina = ? WHERE id = ?"), (f"uploads/profili/copertine/{filename}", g.utente['id']))
-    conn.commit()
+        conn = get_db_connection()
+        cur = get_cursor(conn)
 
+        # Leggo eventuale vecchia copertina
+        cur.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (g.utente['id'],))
+        row = cur.fetchone()
+        vecchia_copertina_db = row["copertina"] if row and row["copertina"] else None
 
-    flash("Copertina aggiornata con successo 📸", "success")
-    return redirect(request.referrer or url_for('dashboard'))
+        # Nome file stabile per utente: sostituisce la precedente
+        filename = f"copertina_{g.utente['id']}.{estensione}"
+        file_path = os.path.join(upload_dir, filename)
+
+        # Se esiste una vecchia copertina con estensione diversa, la elimino
+        if vecchia_copertina_db:
+            vecchio_nome = os.path.basename(vecchia_copertina_db)
+            vecchio_path_assoluto = os.path.join(upload_dir, vecchio_nome)
+            if os.path.exists(vecchio_path_assoluto) and vecchio_nome != filename:
+                try:
+                    os.remove(vecchio_path_assoluto)
+                except Exception as e:
+                    print(f"⚠️ Errore eliminazione vecchia copertina: {e}", flush=True)
+
+        # Sovrascrive direttamente se stesso se stesso nome/estensione
+        file.save(file_path)
+
+        nuovo_path_db = f"uploads/profili/copertine/{filename}"
+
+        cur.execute(
+            sql("UPDATE utenti SET copertina = ? WHERE id = ?"),
+            (nuovo_path_db, g.utente['id'])
+        )
+        conn.commit()
+
+        flash("Copertina aggiornata con successo 📸", "success")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    except Exception as e:
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+        print(f"❌ Errore upload_copertina: {e}", flush=True)
+        traceback.print_exc()
+        flash("Errore durante il salvataggio della copertina.")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
 
 @app.route('/rimuovi_copertina', methods=['POST'])
 @login_required
 def rimuovi_copertina():
-    """Elimina la copertina profilo e ripristina il fondo azzurro di default"""
+    """Elimina la copertina profilo e ripristina il fondo di default"""
     user_id = g.utente['id']
 
-    conn = get_db_connection()
-    cur = get_cursor(conn)
-    cur.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (user_id,))
-    row = cur.fetchone()
+    conn = None
+    cur = None
 
-    if row and row['copertina']:
-        path = os.path.join("/uploads", row['copertina'].replace("uploads/", ""))
-        if os.path.exists(path):
+    try:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+
+        cur.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (user_id,))
+        row = cur.fetchone()
+
+        if row and row['copertina']:
+            upload_dir = os.path.join(app.root_path, "static", "uploads", "profili", "copertine")
+            nome_file = os.path.basename(row['copertina'])
+            path = os.path.join(upload_dir, nome_file)
+
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except Exception as e:
+                    print(f"⚠️ Errore eliminando la copertina: {e}", flush=True)
+
+        cur.execute(sql("UPDATE utenti SET copertina = NULL WHERE id = ?"), (user_id,))
+        conn.commit()
+
+        flash("Copertina rimossa. Tornerà il fondo di default 💙", "info")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    except Exception as e:
+        if conn:
             try:
-                os.remove(path)
-            except Exception as e:
-                print(f"⚠️ Errore eliminando la copertina: {e}")
+                conn.rollback()
+            except Exception:
+                pass
 
-    conn.execute(sql("UPDATE utenti SET copertina = NULL WHERE id = ?"), (user_id,))
-    conn.commit()
+        print(f"❌ Errore rimuovi_copertina: {e}", flush=True)
+        traceback.print_exc()
+        flash("Errore durante la rimozione della copertina.")
+        return redirect(request.referrer or url_for('dashboard'))
 
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
 
-    flash("Copertina rimossa. Tornerà il fondo di default 💙", "info")
-    return redirect(request.referrer or url_for('dashboard'))
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
 
 @app.route('/utente/messaggi')
 @login_required
