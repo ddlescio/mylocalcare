@@ -519,58 +519,91 @@ body {
 
       let chatClosedEmitted = false;
       let chatOpenedOnce = false;
+      let chatPresenceInterval = null;
 
+      function emitChatOpened() {
 
-    function emitChatOpened() {
+        if (chatOpenedOnce) {
+          console.log("⏭️ chat_aperta già inviata → skip");
+          return;
+        }
 
-      if (chatOpenedOnce) {
-        console.log("⏭️ chat_aperta già inviata → skip");
-        return;
+        chatOpenedOnce = true;
+        chatClosedEmitted = false;
+        window.__activeChat = destId;
+
+        const s = getChatSocket();
+
+        if (s && s.connected && destId) {
+          console.log("📤 emit chat_aperta");
+
+          chatDebug("emit_chat_aperta", {
+            bound_socket_id: s.id
+          });
+
+          s.emit('chat_aperta', { other_id: destId });
+          s.emit('mark_as_read', { other_id: destId });
+
+          if (chatPresenceInterval) {
+            clearInterval(chatPresenceInterval);
+          }
+
+          chatPresenceInterval = setInterval(() => {
+            const liveSocket = getChatSocket();
+
+            if (!liveSocket || !liveSocket.connected) return;
+            if (document.visibilityState !== "visible") return;
+
+            liveSocket.emit("chat_aperta", { other_id: destId });
+            liveSocket.emit("page_visible", {
+              visible: true,
+              page: "chat",
+              other_id: destId
+            });
+
+            console.log("🔄 refresh presenza chat", {
+              other_id: destId,
+              socket_id: liveSocket.id
+            });
+          }, 10000);
+        }
       }
 
-      chatOpenedOnce = true;
-      chatClosedEmitted = false;
-      window.__activeChat = destId;
+      function emitChatClosedOnce() {
 
-      const s = getChatSocket();
+        const s = getChatSocket();
 
-      if (s && s.connected && destId) {
-        console.log("📤 emit chat_aperta");
+        if (!s || !s.connected) {
+          console.log("⛔ skip chat_chiusa (socket non stabile)");
+          return;
+        }
 
-        chatDebug("emit_chat_aperta", {
-          bound_socket_id: s.id
+        if (s.disconnected) {
+          console.log("⛔ skip chat_chiusa (socket in reconnect)");
+          return;
+        }
+
+        if (chatClosedEmitted) return;
+
+        chatClosedEmitted = true;
+        chatOpenedOnce = false;
+        window.__activeChat = null;
+
+        if (chatPresenceInterval) {
+          clearInterval(chatPresenceInterval);
+          chatPresenceInterval = null;
+        }
+
+        console.log("📤 emit chat_chiusa");
+
+        s.emit("page_visible", {
+          visible: false,
+          page: "",
+          other_id: null
         });
 
-        s.emit('chat_aperta', { other_id: destId });
-        s.emit('mark_as_read', { other_id: destId });
+        s.emit("chat_chiusa", { other_id: destId });
       }
-    }
-
-    function emitChatClosedOnce() {
-
-      const s = getChatSocket();
-
-      if (!s || !s.connected) {
-        console.log("⛔ skip chat_chiusa (socket non stabile)");
-        return;
-      }
-
-      if (s.disconnected) {
-        console.log("⛔ skip chat_chiusa (socket in reconnect)");
-        return;
-      }
-
-      if (chatClosedEmitted) return;
-
-      chatClosedEmitted = true;
-      chatOpenedOnce = false; // 🔥 RESET
-
-      window.__activeChat = null;
-
-      console.log("📤 emit chat_chiusa");
-
-      s.emit('chat_chiusa', { other_id: destId });
-    }
 
     window.__emitChatClosedOnce = emitChatClosedOnce;
 
@@ -599,7 +632,7 @@ body {
         bound_socket_id: s.id
       });
     }
-    
+
     document.addEventListener("visibilitychange", () => {
       emitPageVisible();
 
@@ -1042,6 +1075,11 @@ body {
 
       clearTimeout(markReadTimer);
       clearTimeout(typingTimeout);
+
+      if (chatPresenceInterval) {
+        clearInterval(chatPresenceInterval);
+        chatPresenceInterval = null;
+      }
 
       window.__chatBoundSocket = null;
       window.__chatBootstrapped = false;

@@ -43,7 +43,7 @@ def _chat_open_key(user_id):
     return f"chat_open:{user_id}"
 
 
-def set_open_chat(user_id, other_id, ttl=300):
+def set_open_chat(user_id, other_id, ttl=20):
     _ensure_ready()
     redis_client.set(_chat_open_key(user_id), str(other_id), ex=ttl)
 

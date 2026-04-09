@@ -303,7 +303,7 @@ def register_chat_socket_handlers(
                     f"chat_visibile_con_mittente={chat_visibile_con_mittente}",
                     flush=True
                 )
-    
+
             print(f"✅ [send_message] END ok msg_id={msg_id}")
             return {
                 "ok": True,
@@ -324,7 +324,8 @@ def register_chat_socket_handlers(
             return
 
         try:
-            set_open_chat(user_id, int(other_id), ttl=300)
+            set_open_chat(user_id, int(other_id), ttl=20)
+            print(f"🟢 chat_aperta user={user_id} other={other_id} ttl=20")
         except Exception as e:
             print(f"❌ Errore salvataggio chat_aperta Redis user={user_id} other={other_id}: {e}")
 
@@ -338,17 +339,22 @@ def register_chat_socket_handlers(
         page = (data.get("page") or "").strip()
         other_id = data.get("other_id")
 
-        try:
-            other_id = int(other_id) if other_id is not None else None
-        except (TypeError, ValueError):
-            other_id = None
-
         pagina_attiva[user_id] = {
             "visible": visible,
             "page": page,
-            "other_id": other_id
+            "other_id": int(other_id) if other_id not in (None, "", False) else None
         }
 
+        try:
+            if visible and page == "chat" and other_id not in (None, "", False):
+                set_open_chat(user_id, int(other_id), ttl=20)
+                print(f"🔄 refresh chat_aperta via page_visible user={user_id} other={other_id} ttl=20")
+            else:
+                clear_open_chat(user_id)
+                print(f"🧹 clear_open_chat via page_visible user={user_id} page={page} visible={visible}")
+        except Exception as e:
+            print(f"❌ handle_page_visible errore user={user_id}: {e}")
+        
     @socketio.on("mark_as_read")
     def handle_mark_as_read(data):
         user_id = _resolve_socket_user_id()

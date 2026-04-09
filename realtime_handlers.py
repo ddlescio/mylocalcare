@@ -142,39 +142,44 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
 
         pipe.execute()
 
-    @socketio.on("disconnect")
-    def handle_disconnect():
-        sid = request.sid
+@socketio.on("disconnect")
+def handle_disconnect():
+    sid = request.sid
 
-        user_id = _get_user_id_from_sid(sid)
+    user_id = _get_user_id_from_sid(sid)
 
-        if not user_id:
-            user_id = session.get("utente_id")
+    if not user_id:
+        user_id = session.get("utente_id")
 
-        if not user_id:
-            print(f"⚠️ Disconnect senza user_id per SID {sid}")
-            return
+    if not user_id:
+        print(f"⚠️ Disconnect senza user_id per SID {sid}")
+        return
+
+    try:
+        leave_room(f"user_{user_id}", sid=sid)
+    except Exception:
+        pass
+
+    try:
+        _remove_socket_sid(user_id, sid)
 
         try:
-            leave_room(f"user_{user_id}", sid=sid)
-        except Exception:
-            pass
-
-        try:
-            _remove_socket_sid(user_id, sid)
-
-            remaining = _cleanup_user_socket_set(user_id)
-
-            print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
-
-            if remaining <= 0:
-                print(f"🕐 Utente {user_id} senza socket → delay check")
-                _bump_offline_token(user_id)
-                ensure_offline_watchdog(socketio, redis_client, user_id)
-
+            clear_open_chat(user_id)
+            print(f"🧹 clear_open_chat su disconnect per user={user_id}")
         except Exception as e:
-            print("Errore disconnect:", e)
+            print(f"⚠️ clear_open_chat fallita su disconnect per user={user_id}: {e}")
 
+        remaining = _cleanup_user_socket_set(user_id)
+
+        print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
+
+        if remaining <= 0:
+            print(f"🕐 Utente {user_id} senza socket → delay check")
+            _bump_offline_token(user_id)
+            ensure_offline_watchdog(socketio, redis_client, user_id)
+
+    except Exception as e:
+        print("Errore disconnect:", e)
 
 def ensure_offline_watchdog(socketio, redis_client, user_id):
     if user_id in offline_watchdogs:
