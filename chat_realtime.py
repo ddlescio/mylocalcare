@@ -261,7 +261,9 @@ def register_chat_socket_handlers(
             pagina_visibile = bool(page_state.get("visible", False))
             pagina_chat_corrente = (page_state.get("page") == "chat")
             chat_visibile_con_mittente = (
-                pagina_chat_corrente and page_state.get("other_id") == mittente_id
+                pagina_visibile is True and
+                pagina_chat_corrente and
+                page_state.get("other_id") == mittente_id
             )
 
             print(
@@ -272,12 +274,12 @@ def register_chat_socket_handlers(
                 f"chat_visibile_con_mittente={chat_visibile_con_mittente}"
             )
 
-            if chat_aperta != mittente_id and not chat_visibile_con_mittente:
+            if not chat_visibile_con_mittente:
 
                 try:
                     print(
                         f"🔔 [send_message] Push INVIO DIRETTO per {destinatario_id} "
-                        f"(chat_attualmente_visibile={chat_attualmente_visibile})",
+                        f"(chat_visibile_con_mittente={chat_visibile_con_mittente})",
                         flush=True
                     )
                     _invia_push_via_web_service(
@@ -351,10 +353,15 @@ def register_chat_socket_handlers(
                 print(f"🔄 refresh chat_aperta via page_visible user={user_id} other={other_id} ttl=20")
             else:
                 clear_open_chat(user_id)
+                pagina_attiva[user_id] = {
+                    "visible": False,
+                    "page": "",
+                    "other_id": None
+                }
                 print(f"🧹 clear_open_chat via page_visible user={user_id} page={page} visible={visible}")
         except Exception as e:
             print(f"❌ handle_page_visible errore user={user_id}: {e}")
-        
+
     @socketio.on("mark_as_read")
     def handle_mark_as_read(data):
         user_id = _resolve_socket_user_id()
@@ -400,6 +407,12 @@ def register_chat_socket_handlers(
             return
 
         clear_open_chat(user_id)
+
+        pagina_attiva[user_id] = {
+            "visible": False,
+            "page": "",
+            "other_id": None
+        }
 
         if "CHAT_ULTIMA_LETTA" not in app.config:
             app.config["CHAT_ULTIMA_LETTA"] = {}
