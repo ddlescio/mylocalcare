@@ -170,6 +170,17 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
             except Exception as e:
                 print(f"⚠️ clear_open_chat fallita su disconnect per user={user_id}: {e}")
 
+            try:
+                from chat_realtime import pagina_attiva
+                pagina_attiva[user_id] = {
+                    "visible": False,
+                    "page": "",
+                    "other_id": None
+                }
+                print(f"🧹 reset pagina_attiva su disconnect per user={user_id}", flush=True)
+            except Exception as e:
+                print(f"⚠️ reset pagina_attiva fallito su disconnect per user={user_id}: {e}", flush=True)
+    
             remaining = _cleanup_user_socket_set(user_id)
 
             print(f"🔌 Socket chiusa utente {user_id} SID {sid} | rimaste reali: {remaining}")
