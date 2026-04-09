@@ -574,6 +574,57 @@ body {
 
     window.__emitChatClosedOnce = emitChatClosedOnce;
 
+    function emitPageVisible() {
+      const s = getChatSocket();
+
+      if (!s || !s.connected) {
+        console.log("⛔ skip page_visible (socket non stabile)");
+        return;
+      }
+
+      const visible = document.visibilityState === "visible";
+
+      console.log("📤 emit page_visible", { visible });
+
+      s.emit("page_visible", { visible });
+
+      chatDebug("emit_page_visible", {
+        visible,
+        bound_socket_id: s.id
+      });
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      emitPageVisible();
+
+      if (document.visibilityState === "visible") {
+        chatClosedEmitted = false;
+        chatOpenedOnce = false;
+        emitChatOpened();
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      emitPageVisible();
+      chatClosedEmitted = false;
+      chatOpenedOnce = false;
+      emitChatOpened();
+    });
+
+    window.addEventListener("blur", () => {
+      emitPageVisible();
+    });
+
+    window.addEventListener("pagehide", () => {
+      emitPageVisible();
+      emitChatClosedOnce();
+    });
+
+    window.addEventListener("beforeunload", () => {
+      emitPageVisible();
+      emitChatClosedOnce();
+    });
+
     // -----------------------------
     // 🚀 CARICAMENTO MESSAGGI VECCHI
     // -----------------------------
@@ -733,6 +784,7 @@ body {
         window.__activeChat = destId;
 
         emitChatOpened();
+        emitPageVisible();        
       };
 
       window.__chatHandlers.disconnectChat = function (reason) {
@@ -950,9 +1002,9 @@ body {
         chatClosedEmitted = false;
         window.__activeChat = destId;
 
-        // importante: apri la chat solo DOPO aver agganciato tutti i listener
         queueMicrotask(() => {
           emitChatOpened();
+          emitPageVisible();
         });
       }
     }
@@ -1304,7 +1356,7 @@ body {
       window.__forceFastReconnect("chat_page_initial_not_connected", 20);
     }
   }
-  
+
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
 
