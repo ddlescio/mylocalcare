@@ -4933,77 +4933,80 @@ def upload_foto():
             flash("Seleziona un file valido.")
             return redirect(request.url)
 
-        if file and allowed_file(file.filename):
-            user_id = g.utente['id']
-
-            conn = None
-            cur = None
-
-            try:
-                conn = get_db_connection()
-                cur = get_cursor(conn)
-
-                cur.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?"), (user_id,))
-                row = cur.fetchone()
-                vecchia_foto = row["foto_profilo"] if row and row["foto_profilo"] else None
-
-                estensione = file.filename.rsplit('.', 1)[1].lower()
-                filename = secure_filename(f"utente_{user_id}.{estensione}")
-                file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-
-                file.save(file_path)
-
-                nuovo_path_db = f"uploads/profili/{filename}"
-
-                conn.execute(
-                    sql("UPDATE utenti SET foto_profilo = ? WHERE id = ?"),
-                    (nuovo_path_db, user_id)
-                )
-                conn.commit()
-
-                if vecchia_foto and vecchia_foto != nuovo_path_db:
-                    vecchio_file_path = os.path.join(app.static_folder, vecchia_foto)
-                    if os.path.exists(vecchio_file_path):
-                        try:
-                            os.remove(vecchio_file_path)
-                        except Exception as e:
-                            print(f"⚠️ Errore eliminando la vecchia foto profilo: {e}")
-
-                g.utente['foto_profilo'] = nuovo_path_db
-
-                flash("Foto profilo aggiornata con successo.")
-                return redirect(url_for('dashboard'))
-
-            except Exception as e:
-                if conn:
-                    try:
-                        conn.rollback()
-                    except Exception:
-                        pass
-                print(f"❌ Errore upload_foto: {e}")
-                traceback.print_exc()
-                flash("Errore durante il salvataggio della foto profilo.")
-                return redirect(request.url)
-
-            finally:
-                try:
-                    if cur:
-                        cur.close()
-                except Exception:
-                    pass
-
-                try:
-                    if conn:
-                        conn.close()
-                except Exception:
-                    pass
-
-        else:
+        if not (file and allowed_file(file.filename)):
             flash("Formato file non valido. Usa JPG, PNG o GIF.")
             return redirect(request.url)
 
-    return render_template('upload_foto.html', utente=g.utente)
+        user_id = g.utente['id']
+        conn = None
+        cur = None
 
+        try:
+            conn = get_db_connection()
+            cur = get_cursor(conn)
+
+            upload_dir = os.path.join(app.static_folder, "uploads", "profili")
+            os.makedirs(upload_dir, exist_ok=True)
+
+            # elimina eventuali vecchie foto profilo dello stesso utente, qualunque estensione abbiano
+            possibili_vecchie = [
+                os.path.join(upload_dir, f"utente_{user_id}.jpg"),
+                os.path.join(upload_dir, f"utente_{user_id}.jpeg"),
+                os.path.join(upload_dir, f"utente_{user_id}.png"),
+                os.path.join(upload_dir, f"utente_{user_id}.gif"),
+                os.path.join(upload_dir, f"utente_{user_id}.webp"),
+            ]
+
+            for vecchio_file in possibili_vecchie:
+                if os.path.exists(vecchio_file):
+                    try:
+                        os.remove(vecchio_file)
+                    except Exception as e:
+                        print(f"⚠️ Errore eliminando vecchia foto profilo {vecchio_file}: {e}", flush=True)
+
+            # nome fisso coerente con ciò che la dashboard sta già chiedendo nei log
+            filename = f"utente_{user_id}.png"
+            file_path = os.path.join(upload_dir, filename)
+            file.save(file_path)
+
+            percorso_db = f"uploads/profili/{filename}"
+
+            cur.execute(
+                sql("UPDATE utenti SET foto_profilo = ? WHERE id = ?"),
+                (percorso_db, user_id)
+            )
+            conn.commit()
+
+            flash("Foto profilo aggiornata con successo.")
+            return redirect(url_for('dashboard'))
+
+        except Exception as e:
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+
+            print(f"❌ Errore upload_foto user={user_id}: {e}", flush=True)
+            traceback.print_exc()
+            flash("Errore durante il salvataggio della foto profilo.")
+            return redirect(request.url)
+
+        finally:
+            try:
+                if cur:
+                    cur.close()
+            except Exception:
+                pass
+
+            try:
+                if conn:
+                    conn.close()
+            except Exception:
+                pass
+
+    return render_template('upload_foto.html', utente=g.utente)
+    
 # --- Upload copertina profilo ---
 @app.route('/utente/copertina', methods=['POST'])
 @login_required
@@ -5090,7 +5093,7 @@ def upload_copertina():
                 conn.close()
         except Exception:
             pass
-            
+
 @app.route('/rimuovi_copertina', methods=['POST'])
 @login_required
 def rimuovi_copertina():
