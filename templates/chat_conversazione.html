@@ -584,16 +584,22 @@ body {
 
       const visible = document.visibilityState === "visible";
 
-      console.log("📤 emit page_visible", { visible });
+      const payload = {
+        visible,
+        page: "chat",
+        other_id: destId
+      };
 
-      s.emit("page_visible", { visible });
+      console.log("📤 emit page_visible", payload);
+
+      s.emit("page_visible", payload);
 
       chatDebug("emit_page_visible", {
-        visible,
+        ...payload,
         bound_socket_id: s.id
       });
     }
-
+    
     document.addEventListener("visibilitychange", () => {
       emitPageVisible();
 
@@ -784,7 +790,7 @@ body {
         window.__activeChat = destId;
 
         emitChatOpened();
-        emitPageVisible();        
+        emitPageVisible();
       };
 
       window.__chatHandlers.disconnectChat = function (reason) {

@@ -256,13 +256,24 @@ def register_chat_socket_handlers(
             emit_to_user_sids(destinatario_id, "chat_threads_update", {"from": mittente_id})
 
             chat_aperta = get_open_chat(destinatario_id)
-            pagina_visibile = bool(pagina_attiva.get(destinatario_id, False))
 
-            print(f"📨 [send_message] stato push chat_aperta={chat_aperta} pagina_visibile={pagina_visibile}")
+            page_state = pagina_attiva.get(destinatario_id) or {}
+            pagina_visibile = bool(page_state.get("visible", False))
+            pagina_chat_corrente = (page_state.get("page") == "chat")
+            chat_visibile_con_mittente = (
+                pagina_chat_corrente and page_state.get("other_id") == mittente_id
+            )
 
-            chat_attualmente_visibile = (chat_aperta == mittente_id and pagina_visibile is True)
+            print(
+                f"📨 [send_message] stato push "
+                f"chat_aperta={chat_aperta} "
+                f"pagina_visibile={pagina_visibile} "
+                f"pagina_chat_corrente={pagina_chat_corrente} "
+                f"chat_visibile_con_mittente={chat_visibile_con_mittente}"
+            )
 
-            if not chat_attualmente_visibile:
+            if chat_aperta != mittente_id and not chat_visibile_con_mittente:
+
                 try:
                     print(
                         f"🔔 [send_message] Push INVIO DIRETTO per {destinatario_id} "
@@ -286,11 +297,13 @@ def register_chat_socket_handlers(
             else:
                 print(
                     f"⏭️ [send_message] push saltata "
-                    f"chat_aperta={chat_aperta} pagina_visibile={pagina_visibile} "
-                    f"chat_attualmente_visibile={chat_attualmente_visibile}",
+                    f"chat_aperta={chat_aperta} "
+                    f"pagina_visibile={pagina_visibile} "
+                    f"pagina_chat_corrente={pagina_chat_corrente} "
+                    f"chat_visibile_con_mittente={chat_visibile_con_mittente}",
                     flush=True
                 )
-
+    
             print(f"✅ [send_message] END ok msg_id={msg_id}")
             return {
                 "ok": True,
@@ -322,7 +335,19 @@ def register_chat_socket_handlers(
             return
 
         visible = bool(data.get("visible"))
-        pagina_attiva[user_id] = visible
+        page = (data.get("page") or "").strip()
+        other_id = data.get("other_id")
+
+        try:
+            other_id = int(other_id) if other_id is not None else None
+        except (TypeError, ValueError):
+            other_id = None
+
+        pagina_attiva[user_id] = {
+            "visible": visible,
+            "page": page,
+            "other_id": other_id
+        }
 
     @socketio.on("mark_as_read")
     def handle_mark_as_read(data):
