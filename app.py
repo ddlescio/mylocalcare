@@ -5039,7 +5039,8 @@ def upload_copertina():
         upload_dir = os.path.join(app.config["UPLOAD_FOLDER"], "copertine")
         os.makedirs(upload_dir, exist_ok=True)
 
-        filename = f"copertina_{user_id}.{estensione}"
+        # nome fisso, sempre .jpg per evitare mismatch DB/file
+        filename = f"copertina_{user_id}.jpg"
         file_path = os.path.join(upload_dir, filename)
         file.save(file_path)
 
@@ -5142,7 +5143,7 @@ def rimuovi_copertina():
                 conn.close()
         except Exception:
             pass
-            
+
 @app.route('/utente/messaggi')
 @login_required
 def utente_messaggi():
