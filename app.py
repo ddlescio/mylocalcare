@@ -4924,17 +4924,76 @@ def upload_foto():
             return redirect(request.url)
 
         if file and allowed_file(file.filename):
-            filename = secure_filename(f"utente_{g.utente['id']}.{file.filename.rsplit('.', 1)[1].lower()}")
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
+            conn = None
+            cur = None
 
-            conn = get_db_connection()
-            conn.execute(sql("UPDATE utenti SET foto_profilo = ? WHERE id = ?"), (f"uploads/profili/{filename}", g.utente['id']))
-            conn.commit()
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
 
+                # recupero eventuale vecchia foto
+                cur.execute(
+                    sql("SELECT foto_profilo FROM utenti WHERE id = ?"),
+                    (g.utente['id'],)
+                )
+                old_row = cur.fetchone()
+                old_foto = old_row["foto_profilo"] if old_row and old_row["foto_profilo"] else None
 
-            flash("Foto profilo aggiornata con successo.")
-            return redirect(url_for('dashboard'))
+                # creo nome nuovo per evitare cache browser
+                estensione = file.filename.rsplit('.', 1)[1].lower()
+                filename = secure_filename(
+                    f"utente_{g.utente['id']}_{int(datetime.now().timestamp())}.{estensione}"
+                )
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+                # salvo nuovo file
+                file.save(file_path)
+
+                # aggiorno database
+                nuovo_percorso_db = f"uploads/profili/{filename}"
+                cur.execute(
+                    sql("UPDATE utenti SET foto_profilo = ? WHERE id = ?"),
+                    (nuovo_percorso_db, g.utente['id'])
+                )
+                conn.commit()
+
+                # cancello il vecchio file solo dopo commit riuscito
+                if old_foto and old_foto != nuovo_percorso_db:
+                    old_file_path = os.path.join(app.static_folder, old_foto)
+                    if os.path.exists(old_file_path):
+                        try:
+                            os.remove(old_file_path)
+                        except Exception as e:
+                            print(f"⚠️ Errore cancellazione vecchia foto profilo: {e}", flush=True)
+
+                flash("Foto profilo aggiornata con successo.")
+                return redirect(url_for('dashboard'))
+
+            except Exception as e:
+                if conn:
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+
+                print(f"❌ Errore upload_foto: {e}", flush=True)
+                traceback.print_exc()
+                flash("Errore durante il salvataggio della foto profilo.")
+                return redirect(request.url)
+
+            finally:
+                try:
+                    if cur:
+                        cur.close()
+                except Exception:
+                    pass
+
+                try:
+                    if conn:
+                        conn.close()
+                except Exception:
+                    pass
+
         else:
             flash("Formato file non valido. Usa JPG, PNG o GIF.")
             return redirect(request.url)
