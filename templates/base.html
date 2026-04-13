@@ -937,34 +937,11 @@ document.addEventListener("click", function(e) {
 
     document.addEventListener("DOMContentLoaded", () => {
       initNavbarSocketBinding();
-    });    
+    });
   });
   })();
   </script>
   <script src="{{ url_for('static', filename='js/flash_manager.js') }}"></script>
-  <script>
-
-  document.addEventListener("visibilitychange", () => {
-
-    if (document.visibilityState === "visible" && window.socket) {
-
-      if (!window.socket.connected) {
-
-        console.log("🔁 reconnect socket");
-
-        try {
-          window.socket.connect();
-        } catch(e) {
-          console.warn("Errore reconnect socket:", e);
-        }
-
-      }
-
-    }
-
-  });
-
-  </script>
   <script>
 document.addEventListener("DOMContentLoaded", () => {
   const toggleBtn = document.getElementById("toggle-search");
