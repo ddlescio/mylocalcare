@@ -604,146 +604,34 @@ document.addEventListener("click", function(e) {
     }
   }
 });
-
 </script>
+<!-- ✅ Socket.IO unificato per badge e chat -->
+<script>
+(function () {
+  if (window.__socket_ui_bootstrap__) return;
+  window.__socket_ui_bootstrap__ = true;
 
-  <!-- ✅ Socket.IO unificato per badge e chat -->
-  <script>
-  (function () {
-    if (window.__socket_ui_bootstrap__) return;
-    window.__socket_ui_bootstrap__ = true;
-    const socket = window.socket || window.__active_socket;
-    if (!socket && window.whenSocketReady) {
-      window.whenSocketReady(() => window.location.reload());
-      return;
-    }
-    if (!socket) return;    
   document.addEventListener("DOMContentLoaded", () => {
-
-    const chatBadge  = document.querySelector('#chatBadge');
-    const notifBadge = document.querySelector('#notifBadge');
+    const chatBadge = document.getElementById("chatBadge");
+    const notifBadge = document.getElementById("notifBadge");
     const isChatPage = window.location.pathname.startsWith("/chat/");
-    let lastUnreadChats  = parseInt(chatBadge?.dataset.unread || chatBadge?.textContent || "0") || 0;
-    let lastUnreadNotifs = parseInt(notifBadge?.dataset.unread || "0") || 0;
-    let reloading = false;
+    let lastUnreadChats = parseInt(chatBadge?.dataset.unread || chatBadge?.textContent || "0", 10) || 0;
+    let lastUnreadNotifs = parseInt(notifBadge?.dataset.unread || notifBadge?.textContent || "0", 10) || 0;
 
-    // 🔒 Blocca fetch badge quando overlay video è aperto
     function canDoBadgeFetch() {
       const overlay = document.getElementById("videoOverlay");
       if (!overlay) return true;
-
-      const isVisible = window.getComputedStyle(overlay).display !== "none";
-      return !isVisible;
+      return window.getComputedStyle(overlay).display === "none";
     }
-
-
-    // 📞 CHIAMATA IN ARRIVO
-    socket.on("incoming_call", (data) => {
-
-        window.pendingIncomingCall = null;
-
-        console.log("📞 Incoming call:", data);
-
-        // ✅ Se siamo già in chat
-        if (window.chatAperta === true) {
-
-            const currentDestId = parseInt(
-                document.getElementById("destinatario_id")?.value || "0",
-                10
-            );
-
-            // Se la chiamata è proprio con questo utente
-            if (currentDestId === parseInt(data.from, 10)) {
-
-                console.log("🎯 Siamo già nella chat corretta → avvio diretto");
-
-                if (typeof window.startIncomingCall === "function") {
-                    window.startIncomingCall(data.room_name, data.room_url);
-                }
-
-                return; // 🚫 NON mostrare modale
-            }
-        }
-
-        // ❗ Se NON siamo in chat → modale normale
-        const modal = document.getElementById("incomingCallModal");
-        if (!modal) return;
-
-        modal.dataset.roomUrl  = data.room_url;
-        modal.dataset.roomName = data.room_name;
-        modal.dataset.fromUser = data.from;
-        window.pendingIncomingCall = {
-          roomName: data.room_name,
-          roomUrl: data.room_url
-      };
-
-        modal.classList.remove("hidden");
-        document.body.classList.add("modal-open");
-    });
-
-    // 📛 CHIAMATA RIFIUTATA (arriva SOLO al chiamante)
-    socket.on("video_call_rejected", (data) => {
-
-      console.log("📛 video_call_rejected ricevuto:", data);
-
-      // ✅ Cleanup unico e definitivo
-      if (typeof window.endCallCleanup === "function") {
-        window.endCallCleanup("remote_rejected");
-      }
-
-      // ✅ Forza stop eventuale iframe / provider video
-      const mount = document.getElementById("videoMount");
-      if (mount) {
-        mount.innerHTML = "";
-      }
-
-      // ✅ Reset variabili chiamata
-      window.inCall = false;
-      window.callRoom = null;
-      window.pendingIncomingCall = null;
-
-      // ✅ Se la pagina chat ha un flag tipo "calling"
-      if (typeof window.isCalling !== "undefined") {
-        window.isCalling = false;
-      }
-
-      alert("L'utente ha rifiutato la chiamata.");
-    });
-
-    // 👉 Funzioni helper per aggiornare badge
-    // async function refreshChatCount() {
-    //   if (!chatBadge) return;
-    //   if (!canDoBadgeFetch()) return;   // ← AGGIUNGI QUESTA RIGA
-    //   try {
-    //     const res = await fetch("/chat/unread_count", { credentials: "same-origin" });
-    //     const js  = await res.json();
-    //     const n   = (js && typeof js.count === "number") ? js.count : 0;
-    //
-    //     chatBadge.textContent = n > 0 ? n : "";
-    //     chatBadge.style.display = n > 0 ? "inline-block" : "none";
-    //     chatBadge.dataset.unread = String(n);
-    //
-    //     const onThreadsPage = (window.location.pathname === "/utente/messaggi");
-    //     const increased = n > lastUnreadChats;
-    //
-    //     if (onThreadsPage && increased && !reloading && document.visibilityState === "visible") {
-    //       reloading = true;
-    //       setTimeout(() => { window.location.reload(); }, 120);
-    //     }
-    //
-    //     lastUnreadChats = n;
-    //   } catch (err) {
-    //     console.error("Errore refreshChatCount:", err);
-    //   }
-    // }
 
     async function refreshNotifCount() {
       if (!notifBadge) return;
-      if (!canDoBadgeFetch()) return;   // ← AGGIUNGI QUESTA RIGA
+      if (!canDoBadgeFetch()) return;
+
       try {
         const res = await fetch("/notifiche/unread_count", { credentials: "same-origin" });
-        const js  = await res.json();
-        const n   = (js && typeof js.count === "number") ? js.count : 0;
+        const js = await res.json();
+        const n = (js && typeof js.count === "number") ? js.count : 0;
 
         notifBadge.textContent = n > 0 ? n : "";
         notifBadge.style.display = n > 0 ? "inline-block" : "none";
@@ -754,44 +642,12 @@ document.addEventListener("click", function(e) {
       }
     }
 
-    socket.on("force_call_end", (data) => {
-      console.log("🛑 force_call_end ricevuto:", data);
-
-      if (typeof window.endCallCleanup === "function") {
-        window.endCallCleanup("force_call_end");
-      }
-
-      const mount = document.getElementById("videoMount");
-      if (mount) mount.innerHTML = "";
-    });
-
-    // 🔌 Connessione socket
-
-    if (!window.__socket_connect_logger_bound__) {
-      window.__socket_connect_logger_bound__ = true;
-
-      socket.on("connect", () => {
-
-        console.log("🔌 socket connected:", socket.id);
-
-        // 🔥 segnala che la socket è pronta
-        window.socketReady = true;
-        window.dispatchEvent(new Event("socket_ready"));
-
-      });
-    }
-
-    // ===============================
-    // NAVBAR BADGES + VIDEO BUSY
-    // bindati alla socket globale attiva
-    // ===============================
     function bindNavbarSocketHandlers(activeSocket) {
       if (!activeSocket) return;
 
       window.__navbarSocketHandlers = window.__navbarSocketHandlers || {};
       const prevSocket = window.__navbarSocketHandlers.socket || null;
 
-      // sgancia dal vecchio socket, se diverso
       if (prevSocket && prevSocket !== activeSocket) {
         if (window.__navbarSocketHandlers.updateUnreadCount) {
           prevSocket.off("update_unread_count", window.__navbarSocketHandlers.updateUnreadCount);
@@ -807,7 +663,6 @@ document.addEventListener("click", function(e) {
         }
       }
 
-      // evita duplicati sul socket corrente
       if (window.__navbarSocketHandlers.updateUnreadCount) {
         activeSocket.off("update_unread_count", window.__navbarSocketHandlers.updateUnreadCount);
       }
@@ -835,6 +690,7 @@ document.addEventListener("click", function(e) {
         }
 
         lastUnreadChats = n;
+        console.log("🧷 badge chat aggiornato realtime:", n);
       };
 
       window.__navbarSocketHandlers.videoBusy = function (data) {
@@ -844,11 +700,7 @@ document.addEventListener("click", function(e) {
 
         const userId = parseInt(data.user_id || 0, 10);
         const busy = !!data.busy;
-
-        const destId = parseInt(
-          document.getElementById("destinatario_id")?.value || "0",
-          10
-        );
+        const destId = parseInt(document.getElementById("destinatario_id")?.value || "0", 10);
 
         if (window.currentUserId && userId === window.currentUserId) {
           window.inCall = busy;
@@ -858,12 +710,7 @@ document.addEventListener("click", function(e) {
 
         if (userId === destId) {
           window.userBusy = busy;
-
-          if (busy) {
-            console.log("🔴 utente occupato");
-          } else {
-            console.log("🟢 utente libero");
-          }
+          console.log(busy ? "🔴 utente occupato" : "🟢 utente libero");
         }
       };
 
@@ -941,8 +788,8 @@ document.addEventListener("click", function(e) {
 
     initNavbarSocketBinding();
   });
-  })();
-  </script>
+})();
+</script>
   <script src="{{ url_for('static', filename='js/flash_manager.js') }}"></script>
   <script>
 document.addEventListener("DOMContentLoaded", () => {
