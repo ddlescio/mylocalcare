@@ -777,28 +777,63 @@ document.addEventListener("click", function(e) {
       });
     }
 
-    // 💬 Conteggio chat non letti
-    socket.on("update_unread_count", (data) => {
+    // ===============================
+    // NAVBAR BADGES + VIDEO BUSY
+    // bindati alla socket globale attiva
+    // ===============================
+    function bindNavbarSocketHandlers(activeSocket) {
+      if (!activeSocket) return;
 
-      if (!data || typeof data.count !== "number") return;
+      window.__navbarSocketHandlers = window.__navbarSocketHandlers || {};
+      const prevSocket = window.__navbarSocketHandlers.socket || null;
 
-      const n = data.count;
-
-      if (chatBadge) {
-        chatBadge.textContent = n > 0 ? n : "";
-        chatBadge.style.display = n > 0 ? "inline-block" : "none";
-        chatBadge.dataset.unread = String(n);
+      // sgancia dal vecchio socket, se diverso
+      if (prevSocket && prevSocket !== activeSocket) {
+        if (window.__navbarSocketHandlers.updateUnreadCount) {
+          prevSocket.off("update_unread_count", window.__navbarSocketHandlers.updateUnreadCount);
+        }
+        if (window.__navbarSocketHandlers.videoBusy) {
+          prevSocket.off("video_busy", window.__navbarSocketHandlers.videoBusy);
+        }
+        if (window.__navbarSocketHandlers.updateNotifications) {
+          prevSocket.off("update_notifications", window.__navbarSocketHandlers.updateNotifications);
+        }
+        if (window.__navbarSocketHandlers.nuovaNotifica) {
+          prevSocket.off("nuova_notifica", window.__navbarSocketHandlers.nuovaNotifica);
+        }
       }
 
-      // 🔥 aggiorna stato interno
-      lastUnreadChats = n;
+      // evita duplicati sul socket corrente
+      if (window.__navbarSocketHandlers.updateUnreadCount) {
+        activeSocket.off("update_unread_count", window.__navbarSocketHandlers.updateUnreadCount);
+      }
+      if (window.__navbarSocketHandlers.videoBusy) {
+        activeSocket.off("video_busy", window.__navbarSocketHandlers.videoBusy);
+      }
+      if (window.__navbarSocketHandlers.updateNotifications) {
+        activeSocket.off("update_notifications", window.__navbarSocketHandlers.updateNotifications);
+      }
+      if (window.__navbarSocketHandlers.nuovaNotifica) {
+        activeSocket.off("nuova_notifica", window.__navbarSocketHandlers.nuovaNotifica);
+      }
 
-    });
+      window.__navbarSocketHandlers.socket = activeSocket;
 
+      window.__navbarSocketHandlers.updateUnreadCount = function (data) {
+        if (!data || typeof data.count !== "number") return;
 
-    // 🎥 Aggiornamento stato video (utente occupato/libero)
-      socket.on("video_busy", (data) => {
+        const n = data.count;
 
+        if (chatBadge) {
+          chatBadge.textContent = n > 0 ? n : "";
+          chatBadge.style.display = n > 0 ? "inline-block" : "none";
+          chatBadge.dataset.unread = String(n);
+        }
+
+        lastUnreadChats = n;
+      };
+
+      window.__navbarSocketHandlers.videoBusy = function (data) {
         if (!data) return;
 
         console.log("📡 video_busy:", data);
@@ -811,16 +846,13 @@ document.addEventListener("click", function(e) {
           10
         );
 
-        // 🔥 aggiorna stato globale se riguarda noi
         if (window.currentUserId && userId === window.currentUserId) {
           window.inCall = busy;
         }
 
-        // se non siamo nella chat non serve altro
         if (!destId) return;
 
         if (userId === destId) {
-
           window.userBusy = busy;
 
           if (busy) {
@@ -828,46 +860,67 @@ document.addEventListener("click", function(e) {
           } else {
             console.log("🟢 utente libero");
           }
+        }
+      };
 
+      window.__navbarSocketHandlers.updateNotifications = function (data) {
+        if (!canDoBadgeFetch()) return;
+        if (isChatPage) return;
+
+        if (data && typeof data.count === "number") {
+          const n = data.count;
+
+          if (notifBadge) {
+            notifBadge.textContent = n > 0 ? n : "";
+            notifBadge.style.display = n > 0 ? "inline-block" : "none";
+            notifBadge.dataset.unread = String(n);
+            lastUnreadNotifs = n;
+          }
+          return;
         }
 
+        refreshNotifCount();
+      };
+
+      window.__navbarSocketHandlers.nuovaNotifica = function (data) {
+        if (!canDoBadgeFetch()) return;
+
+        if (data && typeof data.count === "number") {
+          const n = data.count;
+
+          if (notifBadge) {
+            notifBadge.textContent = n > 0 ? n : "";
+            notifBadge.style.display = n > 0 ? "inline-block" : "none";
+            notifBadge.dataset.unread = String(n);
+            lastUnreadNotifs = n;
+          }
+          return;
+        }
+
+        refreshNotifCount();
+      };
+
+      activeSocket.on("update_unread_count", window.__navbarSocketHandlers.updateUnreadCount);
+      activeSocket.on("video_busy", window.__navbarSocketHandlers.videoBusy);
+      activeSocket.on("update_notifications", window.__navbarSocketHandlers.updateNotifications);
+      activeSocket.on("nuova_notifica", window.__navbarSocketHandlers.nuovaNotifica);
+
+      console.log("🧷 navbar socket handlers bindati su socket:", activeSocket.id || null);
+    }
+
+    if (window.whenSocketReady) {
+      window.whenSocketReady((activeSocket) => {
+        bindNavbarSocketHandlers(activeSocket);
       });
-
-    // 🔔 Conteggio notifiche non lette
-    socket.on("update_notifications", (data) => {
-      if (!canDoBadgeFetch()) return;
-      if (isChatPage) return;
-      // ✅ Nuovo payload dal backend: { count: numero }
-      if (data && typeof data.count === "number") {
-        const n = data.count;
-
-        if (notifBadge) {
-          notifBadge.textContent = n > 0 ? n : "";
-          notifBadge.style.display = n > 0 ? "inline-block" : "none";
-          notifBadge.dataset.unread = String(n);
-          lastUnreadNotifs = n;
-        }
-        return;
+    } else if (window.socket) {
+      if (window.socket.connected) {
+        bindNavbarSocketHandlers(window.socket);
+      } else {
+        window.socket.once("connect", () => {
+          bindNavbarSocketHandlers(window.socket);
+        });
       }
-
-      // 🔁 Fallback: se arriva evento vecchio/esterno senza payload
-      refreshNotifCount();
-    });
-    // ⬇️ AGGIUNGI SUBITO QUI
-    socket.on("nuova_notifica", (data) => {
-      if (!canDoBadgeFetch()) return;
-      if (data && typeof data.count === "number") {
-        const n = data.count;
-        if (notifBadge) {
-          notifBadge.textContent = n > 0 ? n : "";
-          notifBadge.style.display = n > 0 ? "inline-block" : "none";
-          notifBadge.dataset.unread = String(n);
-          lastUnreadNotifs = n;
-        }
-        return;
-      }
-      refreshNotifCount();
-    });
+    }
   });
   })();
   </script>
