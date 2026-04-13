@@ -612,8 +612,12 @@ document.addEventListener("click", function(e) {
   (function () {
     if (window.__socket_ui_bootstrap__) return;
     window.__socket_ui_bootstrap__ = true;
-    const socket = window.socket;
-    if (!socket) return;
+    const socket = window.socket || window.__active_socket;
+    if (!socket && window.whenSocketReady) {
+      window.whenSocketReady(() => window.location.reload());
+      return;
+    }
+    if (!socket) return;    
   document.addEventListener("DOMContentLoaded", () => {
 
     const chatBadge  = document.querySelector('#chatBadge');
