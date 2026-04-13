@@ -908,19 +908,36 @@ document.addEventListener("click", function(e) {
       console.log("🧷 navbar socket handlers bindati su socket:", activeSocket.id || null);
     }
 
-    if (window.whenSocketReady) {
-      window.whenSocketReady((activeSocket) => {
-        bindNavbarSocketHandlers(activeSocket);
-      });
-    } else if (window.socket) {
-      if (window.socket.connected) {
-        bindNavbarSocketHandlers(window.socket);
-      } else {
+    function initNavbarSocketBinding(attempt = 0) {
+      if (window.whenSocketReady) {
+        window.whenSocketReady((activeSocket) => {
+          bindNavbarSocketHandlers(activeSocket);
+        });
+        return;
+      }
+
+      if (window.socket) {
+        if (window.socket.connected) {
+          bindNavbarSocketHandlers(window.socket);
+          return;
+        }
+
         window.socket.once("connect", () => {
           bindNavbarSocketHandlers(window.socket);
         });
+        return;
+      }
+
+      if (attempt < 50) {
+        setTimeout(() => initNavbarSocketBinding(attempt + 1), 100);
+      } else {
+        console.warn("⚠️ Navbar socket binding non inizializzato: socket globale non pronta");
       }
     }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initNavbarSocketBinding();
+    });    
   });
   })();
   </script>
