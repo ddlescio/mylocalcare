@@ -43,13 +43,13 @@ window.addEventListener("pageshow", function (event) {
   function shouldInitSocketOnThisPage() {
     try {
       // Socket globale leggera su tutte le pagine.
-      // La logica chat vera resta confinata in chat_conversazione.html.
+      // La logica chat vera resta confinata a chat_conversazione.html.
       return true;
     } catch (e) {
       return true;
     }
   }
-  
+    
 if (!shouldInitSocketOnThisPage()) {
   console.log("⏭️ socket_global: init socket saltata su questa pagina", {
     pathname: window.location.pathname
