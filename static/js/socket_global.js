@@ -42,18 +42,14 @@ window.addEventListener("pageshow", function (event) {
   }
   function shouldInitSocketOnThisPage() {
     try {
-      const path = window.location.pathname || "";
-
-      // SOLO chat singola
-      if (path.startsWith("/chat/")) return true;
-
-      // tutto il resto NO, inclusi home e lista messaggi
-      return false;
+      // Socket globale leggera su tutte le pagine.
+      // La logica chat vera resta confinata in chat_conversazione.html.
+      return true;
     } catch (e) {
-      return false;
+      return true;
     }
   }
-
+  
 if (!shouldInitSocketOnThisPage()) {
   console.log("⏭️ socket_global: init socket saltata su questa pagina", {
     pathname: window.location.pathname
