@@ -4905,9 +4905,12 @@ UPLOAD_FOLDER = os.path.join(BASE_UPLOAD_DIR, "profili")
 UPLOAD_COPERTINE_FOLDER = os.path.join(UPLOAD_FOLDER, "copertine")
 UPLOAD_GALLERIA_FOLDER = os.path.join(UPLOAD_FOLDER, "galleria")
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(UPLOAD_COPERTINE_FOLDER, exist_ok=True)
-os.makedirs(UPLOAD_GALLERIA_FOLDER, exist_ok=True)
+# Le cartelle upload vanno create solo sul servizio web.
+# Il servizio realtime/chat non deve provare a scrivere su /uploads.
+if APP_RUNTIME_ROLE != "realtime":
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(UPLOAD_COPERTINE_FOLDER, exist_ok=True)
+    os.makedirs(UPLOAD_GALLERIA_FOLDER, exist_ok=True)
 
 app.config["UPLOAD_BASE_DIR"] = BASE_UPLOAD_DIR
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -5006,7 +5009,7 @@ def upload_foto():
                 pass
 
     return render_template('upload_foto.html', utente=g.utente)
-    
+
 # --- Upload copertina profilo ---
 @app.route('/utente/copertina', methods=['POST'])
 @login_required
