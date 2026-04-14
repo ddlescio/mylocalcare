@@ -1263,6 +1263,11 @@ def admin_counters():
     cache["ts"] = now
     return jsonify(payload)
 
+@app.route("/admin/counters/page")
+@admin_required
+def admin_counters_page():
+    return render_template("admin_counters_page.html")    
+
 
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA
@@ -1444,7 +1449,7 @@ def admin_video_calls():
         "admin_video_calls.html",
         mesi=mesi
     )
-    
+
 # ---------------------------------------------------------
 # 💰 ADMIN - SERVIZI (MONETIZZAZIONE) - SOLO CONFIG (STEP 3)
 # ---------------------------------------------------------
