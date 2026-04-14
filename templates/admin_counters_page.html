@@ -1,0 +1,221 @@
+{% extends "layout_admin.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block admin_content %}
+<style>
+/* --- FIX NAVBAR (COERENTE CON LE ALTRE PAGINE ADMIN) --- */
+.page-wrapper { padding-top: 10px; }
+
+/* --- CARD iOS STYLE --- */
+.admin-card {
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 22px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* --- TITOLO --- */
+.admin-title {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+}
+
+.admin-subtitle {
+    color: #64748b;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+}
+
+/* --- GRID CARD CONTATORI --- */
+.counter-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+    .counter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .counter-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.counter-box {
+    border-radius: 18px;
+    padding: 18px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.counter-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.counter-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+}
+
+/* --- BLOCCO DETTAGLI --- */
+.details-box {
+    border-radius: 18px;
+    padding: 18px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+}
+
+.details-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+}
+
+.details-list {
+    display: grid;
+    gap: 10px;
+}
+
+.details-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+}
+
+.details-row span:first-child {
+    color: #475569;
+    font-weight: 500;
+}
+
+.details-row span:last-child {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+/* --- MOBILE --- */
+@media (max-width: 640px) {
+    .admin-card { padding: 16px; }
+    .admin-title { font-size: 1.4rem; }
+    .counter-value { font-size: 1.7rem; }
+    .details-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
+</style>
+
+<div class="page-wrapper">
+  <div class="admin-card">
+
+    <h1 class="admin-title">💬 Contatori amministrazione</h1>
+    <p class="admin-subtitle">
+      Panoramica dei contenuti in attesa e del totale elementi da gestire.
+    </p>
+
+    <div class="counter-grid">
+      <div class="counter-box">
+        <div class="counter-label">📣 Annunci in attesa</div>
+        <div id="counter-annunci" class="counter-value">—</div>
+      </div>
+
+      <div class="counter-box">
+        <div class="counter-label">⭐ Recensioni in attesa</div>
+        <div id="counter-recensioni" class="counter-value">—</div>
+      </div>
+
+      <div class="counter-box">
+        <div class="counter-label">↩️ Risposte in attesa</div>
+        <div id="counter-risposte" class="counter-value">—</div>
+      </div>
+
+      <div class="counter-box">
+        <div class="counter-label">🧮 Totale da moderare</div>
+        <div id="counter-totale" class="counter-value">—</div>
+      </div>
+    </div>
+
+    <div class="details-box">
+      <div class="details-title">Dettaglio riepilogo</div>
+
+      <div class="details-list">
+        <div class="details-row">
+          <span>Annunci</span>
+          <span id="detail-annunci">—</span>
+        </div>
+
+        <div class="details-row">
+          <span>Recensioni</span>
+          <span id="detail-recensioni">—</span>
+        </div>
+
+        <div class="details-row">
+          <span>Risposte</span>
+          <span id="detail-risposte">—</span>
+        </div>
+
+        <div class="details-row">
+          <span>Totale complessivo</span>
+          <span id="detail-totale">—</span>
+        </div>
+
+        <div class="details-row">
+          <span>Minuti video usati</span>
+          <span id="detail-video-minuti">—</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const res = await fetch("/admin/counters", { cache: "no-store" });
+    if (!res.ok) throw new Error("Errore caricamento contatori");
+
+    const data = await res.json();
+
+    const annunci = data.annunci ?? 0;
+    const recensioni = data.recensioni ?? 0;
+    const risposte = data.risposte ?? 0;
+    const totale = data.totale ?? 0;
+    const videoMinuti = data.video_minuti ?? 0;
+
+    document.getElementById("counter-annunci").textContent = annunci;
+    document.getElementById("counter-recensioni").textContent = recensioni;
+    document.getElementById("counter-risposte").textContent = risposte;
+    document.getElementById("counter-totale").textContent = totale;
+
+    document.getElementById("detail-annunci").textContent = annunci;
+    document.getElementById("detail-recensioni").textContent = recensioni;
+    document.getElementById("detail-risposte").textContent = risposte;
+    document.getElementById("detail-totale").textContent = totale;
+    document.getElementById("detail-video-minuti").textContent = videoMinuti;
+
+  } catch (err) {
+    console.error("Errore caricamento /admin/counters:", err);
+  }
+});
+</script>
+{% endblock %}

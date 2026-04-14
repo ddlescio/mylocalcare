@@ -64,10 +64,9 @@
   </a>
 
   <!-- 🟩 Messaggi -->
-  <a href="{{ url_for('admin_counters') }}"
+  <div
      class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
-            flex items-center gap-4 transition-all duration-200
-            hover:shadow-lg hover:-translate-y-1">
+            flex items-center gap-4 transition-all duration-200">
 
     <div class="p-3 rounded-xl bg-green-100 text-green-700 text-xl
                 group-hover:bg-green-200 transition">
@@ -78,7 +77,7 @@
       <p class="text-sm font-medium text-slate-500">Messaggi non letti</p>
       <p id="dash-messaggi" class="text-2xl font-bold text-slate-800">—</p>
     </div>
-  </a>
+  </div>
 
   <!-- 🎥 Videochiamate -->
 <a href="{{ url_for('admin_video_calls') }}"
