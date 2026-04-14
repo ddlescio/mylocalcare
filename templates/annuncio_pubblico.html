@@ -178,19 +178,23 @@
     shadow-xl text-center
   ">
     <h2 class="text-lg font-semibold text-blue-700 mb-3 text-center">📸 Immagini</h2>
+
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
       {% for foto in annuncio['media'].split(',') if foto %}
       <img
         src="{{ url_for('static', filename=foto.strip()) }}"
-        class="rounded-xl object-cover w-full h-40 border shadow hover:scale-105 transition
-               first:col-span-1 sm:first:col-span-3"
-          onclick="apriZoom('{{ url_for('static', filename=foto.strip()) }}')"
-        />
+        loading="lazy"
+        decoding="async"
+        fetchpriority="low"
+        alt="Immagine annuncio"
+        class="rounded-xl object-cover w-full h-40 border shadow hover:scale-105 transition first:col-span-1 sm:first:col-span-3"
+        onclick="apriZoom('{{ url_for('static', filename=foto.strip()) }}')"
+      />
       {% endfor %}
     </div>
   </div>
   {% endif %}
-
+  
   <!-- ✉️ PULSANTE MESSAGGIO -->
   <div class="flex justify-center mt-6">
     {% if g.utente and g.utente['id'] != annuncio['utente_id'] %}
