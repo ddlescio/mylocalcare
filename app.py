@@ -1228,6 +1228,10 @@ def admin_counters():
             # ✅ Somma recensioni + risposte nel badge “recensioni”
             pending_recensioni_totali = pending_recensioni + pending_risposte
 
+            # 🟡 Conta utenti totali
+            c.execute(sql("SELECT COUNT(*) FROM utenti"))
+            totale_utenti = fetchone_value(c.fetchone())
+
                         # 🎥 Minuti video usati (mese corrente)
             if app.config.get("IS_POSTGRES"):
                 c.execute("""
@@ -1252,6 +1256,7 @@ def admin_counters():
 
     totale = pending_annunci + pending_recensioni_totali
     payload = {
+        "utenti": totale_utenti,
         "annunci": pending_annunci,
         "recensioni": pending_recensioni_totali,
         "risposte": pending_risposte,
@@ -8765,7 +8770,7 @@ def video_start():
         return jsonify({
             "error": "Videochiamate attualmente non disponibili."
         }), 503
-        
+
     from datetime import datetime
     import time
     import requests
