@@ -1,97 +1,150 @@
 {% extends "layout_admin.html" %}
 {% block admin_content %}
 
-<h1 class="text-2xl font-bold text-slate-800 mb-6">
-🎥 Storico Videochiamate
-</h1>
+<div class="flex flex-col gap-6">
 
-{% if not mesi %}
-<p class="text-slate-500">Nessuna chiamata registrata.</p>
-{% endif %}
+  <!-- HEADER PAGINA -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">
+        🎥 Storico Videochiamate
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Monitoraggio chiamate e controllo globale disponibilità video.
+      </p>
+    </div>
 
-{% for mese, data in mesi.items() %}
+    <!-- TOGGLE GLOBALE VIDEO -->
+    <div class="bg-white border rounded-2xl shadow-sm px-5 py-4 min-w-[280px]">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <div class="text-sm font-semibold text-slate-700">
+            Stato videochiamate
+          </div>
+          <div class="text-xs text-slate-500 mt-1">
+            {% if video_calls_enabled %}
+              Attualmente abilitate per tutti gli utenti
+            {% else %}
+              Attualmente disabilitate per tutti gli utenti
+            {% endif %}
+          </div>
+        </div>
 
-<div class="mb-10">
-
-  <!-- HEADER MESE -->
-  <div class="flex items-center justify-between mb-3">
-    <h2 class="text-xl font-bold text-slate-700">
-      📅 {{ mese }}
-    </h2>
-
-    <div class="text-sm text-slate-600">
-      <div class="text-right">
-
-      <div>
-      <b>{{ data.participant_used }}</b> / 10000 participant-minutes
+        <div class="shrink-0">
+          {% if video_calls_enabled %}
+            <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 text-xs font-semibold px-3 py-1">
+              Attive
+            </span>
+          {% else %}
+            <span class="inline-flex items-center rounded-full bg-red-100 text-red-700 text-xs font-semibold px-3 py-1">
+              Disattivate
+            </span>
+          {% endif %}
+        </div>
       </div>
 
-      <div class="text-xs text-slate-500">
-      Restanti: {{ data.participant_remaining }}
-      </div>
-
-      <div class="mt-1 font-semibold">
-      Costo mese: € {{ '%.2f' % (data.costo / 100) }}
-      </div>
-
-      </div>      
+      <form method="POST"
+            action="{{ url_for('admin_video_calls_toggle') }}"
+            class="mt-4">
+        {% if video_calls_enabled %}
+          <input type="hidden" name="enabled" value="0">
+          <button type="submit"
+                  class="w-full inline-flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-4 py-2.5 transition">
+            Disabilita videochiamate
+          </button>
+        {% else %}
+          <input type="hidden" name="enabled" value="1">
+          <button type="submit"
+                  class="w-full inline-flex items-center justify-center rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium text-sm px-4 py-2.5 transition">
+            Abilita videochiamate
+          </button>
+        {% endif %}
+      </form>
     </div>
   </div>
 
-  <!-- TABELLA -->
-  <div class="overflow-x-auto bg-white border rounded-xl shadow-sm">
-    <table class="min-w-full text-sm">
+  {% if not mesi %}
+    <div class="bg-white border rounded-xl shadow-sm p-5">
+      <p class="text-slate-500">Nessuna chiamata registrata.</p>
+    </div>
+  {% endif %}
 
-      <thead class="bg-slate-100 text-slate-600">
-        <tr>
-          <th class="p-3 text-left">Utente 1</th>
-          <th class="p-3 text-left">Utente 2</th>
-          <th class="p-3">Inizio</th>
-          <th class="p-3">Fine</th>
-          <th class="p-3">Durata</th>
-          <th class="p-3">Costo</th>
-        </tr>
-      </thead>
+  {% for mese, data in mesi.items() %}
+    <div class="mb-4">
 
-      <tbody>
+      <!-- HEADER MESE -->
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xl font-bold text-slate-700">
+          📅 {{ mese }}
+        </h2>
 
-        {% for c in data.calls %}
-        <tr class="border-t hover:bg-slate-50">
+        <div class="text-sm text-slate-600">
+          <div class="text-right">
+            <div>
+              <b>{{ data.participant_used }}</b> / 10000 participant-minutes
+            </div>
 
-          <td class="p-3 font-medium">
-            {{ c.user1_name }}
-          </td>
+            <div class="text-xs text-slate-500">
+              Restanti: {{ data.participant_remaining }}
+            </div>
 
-          <td class="p-3 font-medium">
-            {{ c.user2_name }}
-          </td>
+            <div class="mt-1 font-semibold">
+              Costo mese: € {{ '%.2f' % (data.costo / 100) }}
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <td class="p-3 text-center">
-            {{ c.start_date }}<br>
-            <span class="text-slate-500 text-xs">{{ c.start_time }}</span>
-          </td>
+      <!-- TABELLA -->
+      <div class="overflow-x-auto bg-white border rounded-xl shadow-sm">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100 text-slate-600">
+            <tr>
+              <th class="p-3 text-left">Utente 1</th>
+              <th class="p-3 text-left">Utente 2</th>
+              <th class="p-3">Inizio</th>
+              <th class="p-3">Fine</th>
+              <th class="p-3">Durata</th>
+              <th class="p-3">Costo</th>
+            </tr>
+          </thead>
 
-          <td class="p-3 text-center">
-            {{ c.end_time }}
-          </td>
+          <tbody>
+            {% for c in data.calls %}
+              <tr class="border-t hover:bg-slate-50">
+                <td class="p-3 font-medium">
+                  {{ c.user1_name }}
+                </td>
 
-          <td class="p-3 text-center">
-            {{ (c.durata_secondi or 0) // 60 }} min
-          </td>
+                <td class="p-3 font-medium">
+                  {{ c.user2_name }}
+                </td>
 
-          <td class="p-3 text-center font-semibold text-purple-600">
-            € {{ '%.2f' % ((c.costo_stimato_cent or 0) / 100) }}
-          </td>
+                <td class="p-3 text-center">
+                  {{ c.start_date }}<br>
+                  <span class="text-slate-500 text-xs">{{ c.start_time }}</span>
+                </td>
 
-        </tr>
-        {% endfor %}
+                <td class="p-3 text-center">
+                  {{ c.end_time }}
+                </td>
 
-      </tbody>
-    </table>
-  </div>
+                <td class="p-3 text-center">
+                  {{ (c.durata_secondi or 0) // 60 }} min
+                </td>
+
+                <td class="p-3 text-center font-semibold text-purple-600">
+                  € {{ '%.2f' % ((c.costo_stimato_cent or 0) / 100) }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  {% endfor %}
 
 </div>
-
-{% endfor %}
 
 {% endblock %}

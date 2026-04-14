@@ -1266,7 +1266,7 @@ def admin_counters():
 @app.route("/admin/counters/page")
 @admin_required
 def admin_counters_page():
-    return render_template("admin_counters_page.html")    
+    return render_template("admin_counters_page.html")
 
 
 # ==========================================================
@@ -1447,7 +1447,8 @@ def admin_video_calls():
 
     return render_template(
         "admin_video_calls.html",
-        mesi=mesi
+        mesi=mesi,
+        video_calls_enabled=is_video_calls_enabled()
     )
 
 # ---------------------------------------------------------
@@ -8653,6 +8654,103 @@ def emit_incoming_call_later(caller_id, destinatario_id, room_name, room_url, de
         room=f"user_{destinatario_id}"
     )
 
+# ==========================================================
+# 🎥 VIDEO CALLS — IMPOSTAZIONE GLOBALE ON/OFF
+# ==========================================================
+def ensure_app_settings_table():
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            CREATE TABLE IF NOT EXISTS app_settings (
+                chiave TEXT PRIMARY KEY,
+                valore TEXT NOT NULL
+            )
+        """))
+        conn.commit()
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def is_video_calls_enabled():
+    ensure_app_settings_table()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(
+            sql("SELECT valore FROM app_settings WHERE chiave = ?"),
+            ("video_calls_enabled",)
+        )
+        row = cur.fetchone()
+
+        # default: attive
+        if not row:
+            return True
+
+        return str(row["valore"]).strip() == "1"
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def set_video_calls_enabled(enabled: bool):
+    ensure_app_settings_table()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(
+            sql("DELETE FROM app_settings WHERE chiave = ?"),
+            ("video_calls_enabled",)
+        )
+
+        cur.execute(
+            sql("INSERT INTO app_settings (chiave, valore) VALUES (?, ?)"),
+            ("video_calls_enabled", "1" if enabled else "0")
+        )
+
+        conn.commit()
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+@app.route("/admin/video-calls/toggle", methods=["POST"])
+@admin_required
+def admin_video_calls_toggle():
+    enabled = request.form.get("enabled") == "1"
+
+    set_video_calls_enabled(enabled)
+
+    flash(
+        "Videochiamate abilitate." if enabled else "Videochiamate disabilitate.",
+        "success"
+    )
+    return redirect(url_for("admin_video_calls"))
+
 @app.route("/video/start", methods=["POST"])
 @login_required
 def video_start():
@@ -8663,6 +8761,11 @@ def video_start():
     if not altro_id:
         return jsonify({"error": "Utente non valido"}), 400
 
+    if not is_video_calls_enabled():
+        return jsonify({
+            "error": "Videochiamate attualmente non disponibili."
+        }), 503
+        
     from datetime import datetime
     import time
     import requests
