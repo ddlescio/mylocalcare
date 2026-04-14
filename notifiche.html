@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-6 mt-4">
+
+  <!-- 🔙 TORNA INDIETRO -->
+  <div class="mb-5">
+    <button onclick="history.back()"
+            class="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+           stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      Torna indietro
+    </button>
+  </div>
+
+  <!-- TITOLO -->
+  <h2 class="text-2xl font-bold text-blue-700 mb-4">🔔 Le tue notifiche</h2>
+
+  <!-- BOTTONI AZIONE -->
+  <div class="flex justify-end gap-2 mb-5">
+    <button id="markAllRead"
+            class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full border border-blue-200 hover:bg-blue-200 transition">
+      Segna tutte come lette
+    </button>
+    <button id="deleteAll"
+            class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-full border border-red-200 hover:bg-red-200 transition">
+      Elimina tutte
+    </button>
+  </div>
+
+  <!-- LISTA NOTIFICHE -->
+  <div class="space-y-3">
+    {% if notifiche and notifiche|length > 0 %}
+      {% for n in notifiche %}
+        <div
+          class="flex items-start gap-3 p-4 rounded-xl shadow-sm border transition cursor-pointer
+                 {% if n['letta'] == 0 %}
+                   bg-blue-50 border-blue-200 hover:bg-blue-100
+                 {% else %}
+                   bg-white border-gray-200 hover:bg-gray-50
+                 {% endif %}"
+          {% if n['link'] %}
+            onclick="window.location.href='{{ url_for('apri_notifica', id=n['id']) }}'"
+          {% endif %}
+        >
+          <div class="text-2xl">🔔</div>
+
+          <div class="flex-1">
+            {% set righe = n['messaggio'].split('\n') %}
+            {% set parti = righe[1].split('|') if righe|length > 1 else [] %}
+
+            <!-- TITOLO NOTIFICA -->
+            <p class="font-semibold text-gray-900 text-base">
+              {{ righe[0] }}
+            </p>
+
+            <!-- DETTAGLI -->
+            {% if parti|length > 0 %}
+              <div class="flex flex-wrap items-center gap-2 mt-2 text-sm">
+
+                <!-- CATEGORIA -->
+                {% if parti|length > 0 %}
+                  <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+                    {{ parti[0] }}
+                  </span>
+                {% endif %}
+
+                <!-- OFFRO / CERCO -->
+                {% if parti|length > 1 %}
+                  {% if parti[1] == 'offro' %}
+                    <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                      offro
+                    </span>
+                  {% else %}
+                    <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                      cerco
+                    </span>
+                  {% endif %}
+                {% endif %}
+
+                <!-- LUOGO -->
+                {% if parti|length > 2 %}
+                  <span class="text-gray-600">
+                    a {{ parti[2] }}
+                  </span>
+                {% endif %}
+
+                <!-- AUTORE -->
+                {% if parti|length > 3 %}
+                  <span class="text-gray-500">
+                    • {{ parti[3] }}
+                  </span>
+                {% endif %}
+
+              </div>
+            {% endif %}
+
+            <!-- DATA -->
+            <p class="text-xs text-gray-500 mt-2">
+              {{ n['data'] | fmt_it_smart }}
+            </p>
+          </div>
+
+          {% if n['letta'] == 0 %}
+            <form method="post"
+                  action="{{ url_for('leggi_notifica', id=n['id']) }}"
+                  onsubmit="event.stopPropagation();">
+              <button type="submit"
+                      class="text-sm text-blue-600 hover:text-blue-800 ml-3">
+                Segna letta
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-gray-500 text-center py-10 italic">
+        Nessuna notifica.
+      </p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- OFFSET CSS -->
+<style>
+body.offset-navbar {
+  padding-top: 4.5rem !important; /* desktop */
+}
+
+@media (max-width: 1024px) {
+  body.offset-navbar {
+    padding-top: 5rem !important; /* iPad */
+  }
+}
+
+@media (max-width: 640px) {
+  body.offset-navbar {
+    padding-top: 4rem !important; /* mobile */
+  }
+}
+</style>
+
+<!-- JS -->
+<script>
+document.getElementById("markAllRead")?.addEventListener("click", async () => {
+  const resp = await fetch("/notifiche/segna_tutte_lette", { method: "POST" });
+  const data = await resp.json();
+  if (data.success) {
+    document.querySelectorAll(".bg-blue-50").forEach(div => {
+      div.classList.remove("bg-blue-50", "border-blue-200");
+      div.classList.add("bg-white", "border-gray-200");
+      const btn = div.querySelector("form button");
+      if (btn) btn.remove();
+    });
+  }
+});
+
+document.getElementById("deleteAll")?.addEventListener("click", async () => {
+  if (!confirm("Vuoi davvero eliminare tutte le notifiche?")) return;
+  const resp = await fetch("/notifiche/elimina_tutte", { method: "POST" });
+  const data = await resp.json();
+  if (data.success) {
+    document.querySelector(".space-y-3").innerHTML =
+      '<p class="text-gray-500 text-center py-10 italic">Nessuna notifica.</p>';
+  }
+});
+</script>
+
+{% endblock %}

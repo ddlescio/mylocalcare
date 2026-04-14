@@ -1,0 +1,284 @@
+{% extends "layout_admin.html" %}
+
+{% block admin_title %}Recensioni &amp; risposte{% endblock %}
+{% block admin_subtitle %}
+Gestisci recensioni lasciate dagli utenti e le relative risposte.
+{% endblock %}
+
+{% block admin_content %}
+
+<!-- 🚀 FILTRI COMPATTI -->
+<form method="get"
+      class="mb-3 grid grid-cols-2 md:grid-cols-5 gap-2 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+
+  <div>
+    <label class="text-xs font-medium text-gray-600">Autore recensione</label>
+    <input type="text" name="autore" value="{{ request.args.get('autore','') }}"
+           class="mt-1 w-full border-gray-300 rounded-md text-sm py-1.5 px-2">
+  </div>
+
+  <div>
+    <label class="text-xs font-medium text-gray-600">Destinatario</label>
+    <input type="text" name="destinatario" value="{{ request.args.get('destinatario','') }}"
+           class="mt-1 w-full border-gray-300 rounded-md text-sm py-1.5 px-2">
+  </div>
+
+  <div>
+    <label class="text-xs font-medium text-gray-600">Voto</label>
+    <select name="voto"
+            class="mt-1 w-full border-gray-300 rounded-md text-sm py-1.5 px-2">
+      <option value="">Tutti</option>
+      {% for v in [1,2,3,4,5] %}
+        <option value="{{ v }}" {% if request.args.get('voto') == v|string %}selected{% endif %}>{{ v }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label class="text-xs font-medium text-gray-600">Stato recensione</label>
+    <select name="stato"
+            class="mt-1 w-full border-gray-300 rounded-md text-sm py-1.5 px-2">
+      <option value="">Tutti</option>
+      {% for s in ['in_attesa','approvato','rifiutato'] %}
+        <option value="{{ s }}" {% if request.args.get('stato') == s %}selected{% endif %}>
+          {{ s.replace('_',' ') }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-span-2 md:col-span-5 flex justify-end gap-2 items-end">
+    <a href="{{ url_for('admin_recensioni') }}"
+       class="px-3 py-1.5 rounded-md border text-xs md:text-sm text-gray-600 hover:bg-gray-50">
+      Reset filtri
+    </a>
+    <button type="submit"
+            class="px-4 py-1.5 rounded-md bg-blue-600 text-white text-xs md:text-sm hover:bg-blue-700">
+      Filtra
+    </button>
+  </div>
+</form>
+
+<!-- 🚀 TABELLA -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 mt-4 overflow-x-auto">
+  <div class="min-w-[1100px]">
+
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-100">
+        <tr>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Autore</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Destinatario</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Voto</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Recensione</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Stato rec.</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Risposta</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Stato risp.</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Azioni recensione</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Azioni risposta</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-gray-100">
+
+      {% for r in recensioni %}
+
+        {% set testo = r.get('testo') or '' %}
+        {% set risposta = r.get('risposta_testo') or '' %}
+
+        <tr class="align-top">
+
+          <!-- AUTORE -->
+          <td class="px-3 py-2 text-gray-800 font-medium">
+              {{ r.get('autore_nome') }} {{ r.get('autore_cognome') }}
+
+              <div class="mt-1 flex gap-1">
+                  {% if r.get('autore_id') %}
+                    <a href="{{ url_for('chat_conversazione_view', other_id=r.get('autore_id')) }}"
+                       class="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs hover:bg-blue-100">
+                       💬
+                    </a>
+                  {% endif %}
+
+                  {% if r.get('autore_email') %}
+                    <a href="mailto:{{ r.get('autore_email') }}"
+                       class="inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700 border border-gray-200 text-xs hover:bg-gray-100">
+                       ✉️
+                    </a>
+                  {% endif %}
+              </div>
+          </td>
+
+          <!-- DESTINATARIO -->
+          <td class="px-3 py-2 text-gray-800">
+              {{ r.get('dest_nome') }} {{ r.get('dest_cognome') }}
+
+              <div class="mt-1 flex gap-1">
+                  {% if r.get('dest_id') %}
+                    <a href="{{ url_for('chat_conversazione_view', other_id=r.get('dest_id')) }}"
+                       class="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs hover:bg-blue-100">
+                       💬
+                    </a>
+                  {% endif %}
+
+                  {% if r.get('dest_email') %}
+                    <a href="mailto:{{ r.get('dest_email') }}"
+                       class="inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700 border border-gray-200 text-xs hover:bg-gray-100">
+                       ✉️
+                    </a>
+                  {% endif %}
+              </div>
+          </td>
+
+          <!-- VOTO -->
+          <td class="px-3 py-2 text-yellow-500">
+            {{ r.get('voto') }}★
+          </td>
+
+          <!-- RECENSIONE (1 riga + "Leggi tutto") -->
+          <td class="px-3 py-2">
+            <div class="truncate max-w-[220px] text-gray-700">
+              {{ testo }}
+            </div>
+
+            <button onclick="openDettaglio('recensione', `{{ testo|escape }}`, '{{ r.get('autore_nome') }} {{ r.get('autore_cognome') }}', '{{ r.get('data_recensione') }}')"
+                    class="text-blue-600 text-[11px] hover:underline">
+              Leggi tutto
+            </button>
+          </td>
+
+          <!-- STATO RECENSIONE -->
+          <td class="px-3 py-2 text-xs">
+            {% if r.get('stato') == 'approvato' %}
+              <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 text-[11px]">Approvato</span>
+            {% elif r.get('stato') == 'rifiutato' %}
+              <span class="px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-[11px]">Rifiutato</span>
+            {% else %}
+              <span class="px-2 py-1 rounded-full bg-yellow-50 text-yellow-800 border border-yellow-200 text-[11px]">In attesa</span>
+            {% endif %}
+          </td>
+
+          <!-- RISPOSTA (anteprima 1 riga + bottone modale) -->
+          <td class="px-3 py-2">
+            {% if r.get('risposta_id') %}
+              <div class="truncate max-w-[220px] text-gray-700">
+                {{ risposta }}
+              </div>
+
+              <button
+                onclick="openDettaglio(
+                  'risposta',
+                  `{{ risposta|escape }}`,
+                  '{{ r.get('risposta_autore_nome') }} {{ r.get('risposta_autore_cognome') }}',
+                  ''
+                )"
+                class="mt-1 text-blue-600 text-[11px] hover:underline">
+                Apri dettaglio
+              </button>
+            {% else %}
+              <span class="text-xs text-gray-400">—</span>
+            {% endif %}
+          </td>
+
+          <!-- STATO RISPOSTA -->
+          <td class="px-3 py-2 text-xs">
+            {% if r.get('risposta_id') %}
+              {% if r.get('risposta_stato') == 'approvato' %}
+                <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 text-[11px]">Approvata</span>
+              {% elif r.get('risposta_stato') == 'rifiutato' %}
+                <span class="px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-[11px]">Rifiutata</span>
+              {% else %}
+                <span class="px-2 py-1 rounded-full bg-yellow-50 text-yellow-800 border border-yellow-200 text-[11px]">In attesa</span>
+              {% endif %}
+            {% else %}
+              <span class="text-xs text-gray-400">—</span>
+            {% endif %}
+          </td>
+
+          <!-- AZIONI RECENSIONE -->
+          <td class="px-3 py-2 space-x-1">
+
+            {% if r.get('stato') == 'in_attesa' %}
+                <a href="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
+                   class="px-3 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700">
+                  Approva
+                </a>
+                <a href="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
+
+                   class="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700">
+                  Rifiuta
+                </a>
+
+            {% elif r.get('stato') == 'approvato' %}
+                <a href="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
+                   class="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700">
+                  Rifiuta
+                </a>
+
+            {% elif r.get('stato') == 'rifiutato' %}
+                <a href="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}">                   class="px-3 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700">
+                  Approva
+                </a>
+            {% endif %}
+          </td>
+
+          <!-- AZIONI RISPOSTA -->
+          <td class="px-3 py-2">
+            {% if r.get('risposta_id') %}
+              {% if r.get('risposta_stato') == 'approvato' %}
+                <a href="{{ url_for('rifiuta_risposta', id=r.get('risposta_id'), next=request.full_path) }}"
+                   class="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700">
+                  Rifiuta
+                </a>
+              {% else %}
+                <a href="{{ url_for('approva_risposta', id=r.get('risposta_id'), next=request.full_path) }}"
+                   class="px-3 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700">
+                  Approva
+                </a>
+              {% endif %}
+            {% else %}
+              <span class="text-xs text-gray-400">—</span>
+            {% endif %}
+          </td>
+
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+<!-- 🚀 MODALE DINAMICO SEMPRE VISIBILE -->
+<div id="modalDettaglio"
+     class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99999] hidden flex items-center justify-center p-4">
+
+  <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6 relative">
+    <button onclick="closeDettaglio()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">
+      ✕
+    </button>
+
+    <h2 id="modalTitolo" class="text-lg font-semibold text-gray-800 mb-2"></h2>
+    <p id="modalMeta" class="text-xs text-gray-500 mb-4"></p>
+    <div id="modalTesto" class="text-sm text-gray-700 whitespace-pre-line"></div>
+  </div>
+</div>
+
+<script>
+function openDettaglio(tipo, testo, autore, data) {
+  document.getElementById('modalTitolo').innerText =
+    tipo === 'recensione' ? 'Dettaglio recensione' : 'Dettaglio risposta';
+
+  document.getElementById('modalMeta').innerText =
+    autore + (data ? ' – ' + data : '');
+
+  document.getElementById('modalTesto').innerText = testo;
+
+  document.getElementById('modalDettaglio').classList.remove('hidden');
+}
+
+function closeDettaglio() {
+  document.getElementById('modalDettaglio').classList.add('hidden');
+}
+</script>
+
+{% endblock %}

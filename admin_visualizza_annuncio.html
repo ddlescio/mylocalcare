@@ -1,0 +1,212 @@
+{% extends "layout_admin.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block admin_content %}
+
+<style>
+/* --- CARD PRINCIPALE iOS --- */
+.ios-card {
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 26px;
+    box-shadow: 0 4px 22px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* --- TITOLI --- */
+.ios-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1e3a8a;
+    margin-bottom: 6px;
+}
+
+.ios-sub {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+/* SEZIONI */
+.section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    margin-bottom: 8px;
+}
+
+/* TAG FILTRI */
+.filter-tag {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* IMMAGINI */
+.img-grid img {
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: .2s;
+}
+.img-grid img:hover {
+    transform: scale(1.02);
+}
+
+/* BOTTONI iOS */
+.btn-ios {
+    padding: 10px 20px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+    transition: .2s;
+}
+.btn-green { background:#10b981; }
+.btn-green:hover { background:#059669; }
+
+.btn-red { background:#ef4444; }
+.btn-red:hover { background:#dc2626; }
+
+.btn-yellow { background:#fbbf24; color:#1f2937; }
+.btn-yellow:hover { background:#f59e0b; }
+
+.btn-gray { background:#9ca3af; }
+.btn-gray:hover { background:#6b7280; }
+
+/* MODALE iOS */
+#modal {
+    backdrop-filter: blur(6px);
+}
+#modalImg {
+    border-radius: 18px;
+}
+</style>
+
+
+<div class="max-w-5xl mx-auto ios-card mt-4">
+
+    <!-- TITOLO -->
+    <h2 class="ios-title">{{ annuncio['titolo'] }}</h2>
+    <p class="ios-sub mb-6">ID Annuncio: {{ annuncio['id'] }}</p>
+
+    <!-- INFO PRINCIPALI -->
+    <div class="grid md:grid-cols-2 gap-6 mb-6 text-gray-800">
+
+        <div>
+            <p><strong>🗂 Categoria:</strong> {{ annuncio['categoria'] or 'n/d' }}</p>
+            <p><strong>📍 Zona:</strong> {{ annuncio['zona'] or 'n/d' }}</p>
+            <p><strong>💶 Prezzo:</strong> {{ annuncio['prezzo'] or 'n/d' }}</p>
+            <p><strong>📅 Stato:</strong>
+              <span class="px-2 py-1 rounded text-white
+                {% if annuncio['stato']=='approvato' %} bg-green-600
+                {% elif annuncio['stato']=='rifiutato' %} bg-red-600
+                {% else %} bg-yellow-500 {% endif %}">
+                {{ annuncio['stato']|capitalize }}
+              </span>
+            </p>
+            <p><strong>🕒 Pubblicato il:</strong> {{ annuncio['data_pubblicazione'] or 'n/d' }}</p>
+        </div>
+
+        <div>
+            <p><strong>👤 Utente:</strong> {{ annuncio['nome'] }} {{ annuncio['cognome'] }}</p>
+            <p><strong>📧 Email:</strong>
+                <a href="mailto:{{ annuncio['email'] }}" class="text-blue-600 hover:underline">
+                {{ annuncio['email'] }}
+                </a>
+            </p>
+            <p><strong>☎️ Telefono:</strong> {{ annuncio['telefono'] or 'n/d' }}</p>
+            <p><strong>🧑‍💻 Username:</strong> {{ annuncio['username'] }}</p>
+        </div>
+
+    </div>
+
+    <!-- DESCRIZIONE -->
+    <div class="mb-6">
+        <h3 class="section-title">📝 Descrizione</h3>
+        <p class="text-gray-700 whitespace-pre-line">
+            {{ annuncio['descrizione'] or '—' }}
+        </p>
+    </div>
+
+    <!-- BIO -->
+    {% if annuncio['bio_utente'] %}
+    <div class="mb-6">
+        <h3 class="section-title">💬 Bio dell’utente</h3>
+        <p class="text-gray-700 whitespace-pre-line">
+            {{ annuncio['bio_utente'] }}
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- FILTRI -->
+    {% if annuncio['filtri_categoria'] %}
+    <div class="mb-6">
+        <h3 class="section-title">🏷️ Filtri specifici</h3>
+        <div class="flex flex-wrap gap-2">
+            {% for f in annuncio['filtri_categoria'].split(',') %}
+            <span class="filter-tag">{{ f.strip() }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- IMMAGINI -->
+    {% if annuncio['media'] %}
+    <div class="mb-8">
+        <h3 class="section-title">🖼️ Immagini caricate</h3>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 img-grid">
+            {% for foto in annuncio['media'].split(',') %}
+            <img src="{{ url_for('static', filename=foto) }}"
+                 class="w-full h-48 object-cover cursor-pointer"
+                 onclick="apriModale('{{ url_for('static', filename=foto) }}')">
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- BOTTONI iOS -->
+    <div class="flex flex-wrap gap-3 justify-center mt-6">
+        <a href="{{ url_for('approva_annuncio', id=annuncio['id']) }}" class="btn-ios btn-green">Approva</a>
+        <a href="{{ url_for('rifiuta_annuncio', id=annuncio['id']) }}" class="btn-ios btn-red">Rifiuta</a>
+        <a href="{{ url_for('toggle_annuncio', id=annuncio['id']) }}" class="btn-ios btn-yellow">Attiva/Disattiva</a>
+        <a href="{{ url_for('admin_annunci') }}" class="btn-ios btn-gray">Torna</a>
+    </div>
+
+</div>
+
+
+<!-- MODALE IMMAGINE -->
+<div id="modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 px-2">
+  <div class="relative w-full max-w-5xl mx-auto flex items-center justify-center">
+
+    <button onclick="chiudiModale()"
+            class="absolute top-3 right-3 bg-white/90 text-black rounded-full px-3 py-1 text-base font-bold shadow-md">
+      ✖
+    </button>
+
+    <img id="modalImg" src="" class="max-h-[90vh] w-auto object-contain">
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+function apriModale(src){
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  modalImg.src = src;
+}
+function chiudiModale(){
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+document.addEventListener("click", e => {
+  if(e.target.id === "modal") chiudiModale();
+});
+</script>
+{% endblock %}

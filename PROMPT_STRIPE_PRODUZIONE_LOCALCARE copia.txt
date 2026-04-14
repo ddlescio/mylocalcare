@@ -1,0 +1,79 @@
+PROMPT – FINALIZZAZIONE STRIPE + APPLE PAY / GOOGLE PAY (LOCALCARE)
+
+Stiamo lavorando sul progetto LocalCare (Flask + SQLite).
+Stripe è già integrato e funzionante in modalità test.
+
+OBIETTIVO:
+Portare Stripe in produzione ed abilitare Apple Pay e Google Pay
+senza cambiare l’architettura esistente.
+
+IMPORTANTE:
+- NON proporre nuove architetture
+- NON duplicare logica
+- NON semplificare eliminando parti esistenti
+- Qualsiasi modifica deve INTEGRARSI con il codice attuale
+
+--------------------------------------------------
+STACK TECNICO
+--------------------------------------------------
+- Backend: Flask (Python)
+- DB: SQLite
+- Pagamenti: Stripe (PaymentIntent + Webhook)
+- Modello: acquisti → attivazioni_servizi → storico_servizi
+- Servizi singoli e pacchetti
+- Servizi con ambito "profilo" o "annuncio"
+
+--------------------------------------------------
+ROTTE ESISTENTI (NON DA RISCRIVERE)
+--------------------------------------------------
+
+1) POST /api/crea-payment-intent
+- Crea PaymentIntent Stripe
+- Registra acquisto con stato 'creato'
+- Salva piano realmente scelto (prezzo_id)
+- Usa metadata.acquisto_id
+
+2) Webhook Stripe – pagamento confermato
+- Funzione: gestisci_pagamento_confermato(payment_intent)
+- Usa UNA sola connessione DB
+- Idempotenza su stato acquisto
+- Attiva servizi o pacchetti tramite attiva_servizio()
+- Commit / rollback gestiti
+
+3) Funzione centrale: attiva_servizio(...)
+- Nuova attivazione / rinnovo
+- Servizi permanenti
+- Ambito profilo o annuncio
+- Aggiorna attivazioni_servizi e storico_servizi
+- NON duplicabile
+
+4) GET /admin/acquisti
+- Storico acquisti corretto
+- Servizio o pacchetto corretto
+- Stato attivo / scaduto
+- Scadenza calcolata
+
+--------------------------------------------------
+COSA SERVIRÀ PER LA PRODUZIONE
+--------------------------------------------------
+- Dominio reale
+- Chiavi Stripe LIVE
+- Verifica dominio Apple Pay (.well-known)
+- Abilitazione Apple Pay / Google Pay da dashboard Stripe
+- Uso Stripe Payment Element (frontend)
+
+--------------------------------------------------
+VINCOLI
+--------------------------------------------------
+- Stesso PaymentIntent
+- Stesso webhook
+- Stessa logica backend
+- Nessuna nuova rotta pagamento
+- Nessuna nuova tabella
+
+--------------------------------------------------
+OBIETTIVO DEL SUPPORTO CHATGPT
+--------------------------------------------------
+- Verifica integrazione Apple Pay / Google Pay
+- Zero regressioni
+- Modifiche minime e chirurgiche

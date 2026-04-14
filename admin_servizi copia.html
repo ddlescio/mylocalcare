@@ -1,0 +1,156 @@
+{% extends "layout_admin.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block admin_content %}
+<div class="max-w-5xl mx-auto">
+
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+
+    <!-- HEADER -->
+    <div class="flex flex-col gap-4">
+
+      <!-- TITOLO -->
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">
+          💰 Servizi (Monetizzazione)
+        </h1>
+        <p class="text-slate-600 mt-1">
+          Qui definisci cosa è “vendibile/attivabile”. Nessun pagamento e nessuna logica pubblica in questo step.
+        </p>
+      </div>
+
+      <!-- TABS -->
+      <div class="flex gap-2">
+        <a href="{{ url_for('admin_servizi') }}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold
+           {% if tab == 'servizi' %}
+             bg-blue-600 text-white
+           {% else %}
+             bg-slate-100 text-slate-700 hover:bg-slate-200
+           {% endif %}">
+          Servizi
+        </a>
+
+        <a href="{{ url_for('admin_pacchetti') }}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold
+           {% if tab == 'pacchetti' %}
+             bg-blue-600 text-white
+           {% else %}
+             bg-slate-100 text-slate-700 hover:bg-slate-200
+           {% endif %}">
+          Pacchetti
+        </a>
+
+        <a href="{{ url_for('admin_acquisti') }}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold
+           {% if tab == 'acquisti' %}
+             bg-blue-600 text-white
+           {% else %}
+             bg-slate-100 text-slate-700 hover:bg-slate-200
+           {% endif %}">
+          Acquisti
+        </a>
+      </div>
+      
+      <!-- AZIONI -->
+      <div class="flex flex-col sm:flex-row gap-2 sm:justify-end">
+        <a href="{{ url_for('admin_dashboard') }}"
+           class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-center">
+          ← Dashboard
+        </a>
+
+        <a href="{{ url_for('admin_servizi_nuovo') }}"
+           class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm text-center">
+          + Nuovo servizio
+        </a>
+      </div>
+
+    </div>
+
+    <!-- TABELLA -->
+    <div>
+      {% if servizi and servizi|length > 0 %}
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="p-3 text-left">Codice</th>
+              <th class="p-3 text-left">Nome</th>
+              <th class="p-3 text-left">Ambito</th>
+              <th class="p-3 text-left">Target</th>
+              <th class="p-3 text-center">Durata</th>
+              <th class="p-3 text-center">Attivo</th>
+              <th class="p-3 text-right">Azioni</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for s in servizi %}
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 font-mono text-slate-700">{{ s.codice }}</td>
+
+              <td class="p-3">
+                <div class="font-semibold text-slate-900">{{ s.nome }}</div>
+                {% if s.descrizione %}
+                  <div class="text-xs text-slate-500 mt-0.5">
+                    {{ s.descrizione }}
+                  </div>
+                {% endif %}
+              </td>
+
+              <td class="p-3 text-slate-700">{{ s.ambito }}</td>
+              <td class="p-3 text-slate-700">{{ s.target }}</td>
+
+              <td class="p-3 text-center text-slate-700">
+                {% if s.durata_default_giorni %}
+                  {{ s.durata_default_giorni }} gg
+                {% else %}
+                  one-shot
+                {% endif %}
+              </td>
+
+              <td class="p-3 text-center">
+                {% if s.attivo == 1 %}
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                    Attivo
+                  </span>
+                {% else %}
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                    Off
+                  </span>
+                {% endif %}
+              </td>
+
+              <td class="p-3 text-right whitespace-nowrap">
+                <a class="text-blue-600 hover:underline"
+                   href="{{ url_for('admin_servizi_modifica', id=s.id) }}">
+                  Modifica
+                </a>
+
+                <span class="text-slate-300 mx-1">|</span>
+
+                <a class="{% if s.attivo == 1 %}text-rose-600{% else %}text-emerald-600{% endif %} hover:underline"
+                   href="{{ url_for('admin_servizi_toggle', id=s.id) }}"
+                   onclick="return confirm(
+                     '{% if s.attivo == 1 %}⚠️ Disattivare questo servizio?\n\nNon sarà più vendibile finché non verrà riattivato.{% else %}Attivare questo servizio?\n\nDiventerà nuovamente disponibile.{% endif %}'
+                   );">
+                  {% if s.attivo == 1 %}Disattiva{% else %}Attiva{% endif %}
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+        <p class="text-slate-600">
+          Nessun servizio trovato.
+        </p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "layout_admin.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block admin_content %}
+<div class="max-w-5xl mx-auto">
+
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+
+    <!-- HEADER -->
+    <div class="flex flex-col gap-4">
+
+      <!-- TITOLO -->
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">
+          📦 Pacchetti (Monetizzazione)
+        </h1>
+        <p class="text-slate-600 mt-1">
+          I pacchetti attivano più servizi contemporaneamente.
+        </p>
+      </div>
+
+      <!-- TABS -->
+      <div class="flex gap-2">
+        <a href="{{ url_for('admin_servizi') }}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold
+           {% if tab == 'servizi' %}
+             bg-blue-600 text-white
+           {% else %}
+             bg-slate-100 text-slate-700 hover:bg-slate-200
+           {% endif %}">
+          Servizi
+        </a>
+
+        <a href="{{ url_for('admin_pacchetti') }}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold
+           {% if tab == 'pacchetti' %}
+             bg-blue-600 text-white
+           {% else %}
+             bg-slate-100 text-slate-700 hover:bg-slate-200
+           {% endif %}">
+          Pacchetti
+        </a>
+
+        <a href="{{ url_for('admin_acquisti') }}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold
+           {% if tab == 'acquisti' %}
+             bg-blue-600 text-white
+           {% else %}
+             bg-slate-100 text-slate-700 hover:bg-slate-200
+           {% endif %}">
+          Acquisti
+        </a>
+      </div>
+      
+      <!-- AZIONI -->
+      <div class="flex flex-col sm:flex-row gap-2 sm:justify-end">
+        <a href="{{ url_for('admin_dashboard') }}"
+           class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-center">
+          ← Dashboard
+        </a>
+
+        <a href="{{ url_for('admin_pacchetti_nuovo') }}"
+           class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm text-center">
+          + Nuovo pacchetto
+        </a>
+      </div>
+
+    </div>
+
+    <!-- TABELLA -->
+    <div>
+      {% if pacchetti and pacchetti|length > 0 %}
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="p-3 text-left">Codice</th>
+              <th class="p-3 text-left">Nome</th>
+              <th class="p-3 text-left">Descrizione</th>
+              <th class="p-3 text-center">Attivo</th>
+              <th class="p-3 text-right">Azioni</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for p in pacchetti %}
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 font-mono text-slate-700">
+                {{ p.codice }}
+              </td>
+
+              <td class="p-3 font-semibold text-slate-900">
+                {{ p.nome }}
+              </td>
+
+              <td class="p-3 text-slate-600 text-sm">
+                {{ p.descrizione or "—" }}
+              </td>
+
+              <td class="p-3 text-center">
+                {% if p.attivo == 1 %}
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                    Attivo
+                  </span>
+                {% else %}
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                    Off
+                  </span>
+                {% endif %}
+              </td>
+
+              <td class="p-3 text-right whitespace-nowrap">
+                <a class="text-blue-600 hover:underline"
+                   href="{{ url_for('admin_pacchetti_modifica', id=p.id) }}">
+                  Modifica
+                </a>
+
+                <span class="text-slate-300 mx-1">|</span>
+
+                <a class="{% if p.attivo == 1 %}text-rose-600{% else %}text-emerald-600{% endif %} hover:underline"
+                   href="{{ url_for('admin_toggle_pacchetto', id=p.id) }}"
+                   onclick="return confirm('Confermi il cambio di stato del pacchetto?');">
+                  {% if p.attivo == 1 %}Disattiva{% else %}Attiva{% endif %}
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+        <p class="text-slate-600">
+          Nessun pacchetto trovato.
+        </p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

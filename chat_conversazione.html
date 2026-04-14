@@ -31,22 +31,10 @@
       });
 
       document.body.dataset.chat = "true";
-
-      // ✅ Fondamentale per base.html:
-      // dice al layout globale che siamo davvero dentro una chat aperta
-      window.chatAperta = true;
-    });
-
-    // ✅ Cleanup quando esci dalla pagina chat
-    window.addEventListener("pagehide", () => {
-      window.chatAperta = false;
-    });
-
-    window.addEventListener("beforeunload", () => {
-      window.chatAperta = false;
     });
   </script>
 {% endblock %}
+
 {% block content %}
 <style>
 :root {

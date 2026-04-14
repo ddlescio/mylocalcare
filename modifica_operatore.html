@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded shadow">
+  <h2 class="text-2xl font-bold mb-4">Modifica Operatore</h2>
+
+  {% if successo %}
+    <p class="mb-4 text-green-600 font-semibold">Modifica salvata con successo.</p>
+  {% endif %}
+
+  <form method="post">
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Nome</label>
+      <input type="text" name="nome" value="{{ operatore.nome }}" class="w-full border px-3 py-2 rounded" required>
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Categoria</label>
+      <select name="categoria" id="categoria-select" required class="w-full border px-3 py-2 rounded">
+        <option value="" disabled selected>Seleziona categoria</option>
+        <option value="operatori benessere">Operatori Benessere</option>
+        <option value="babysitter">Babysitter</option>
+        <option value="petsitter">PetSitter</option>
+        <option value="caregiver">Caregiver</option>
+        <option value="ripetizioni">Ripetizioni</option>
+        <option value="aiuto in casa">Aiuto in casa</option>
+        <option value="escursioni & sport">Escursioni & Sport</option>
+        <option value="biglietti spettacoli">Biglietti spettacoli</option>
+        <option value="libri scuola">Libri scuola</option>
+      </select>
+    </div>
+
+<div class="mb-4" id="filtri-categoria"></div>
+
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Zona</label>
+      <input type="text" name="zona" value="{{ operatore.zona }}" class="w-full border px-3 py-2 rounded">
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Servizi</label>
+      <textarea name="servizi" class="w-full border px-3 py-2 rounded">{{ operatore.servizi }}</textarea>
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Prezzo</label>
+      <input type="text" name="prezzo" value="{{ operatore.prezzo }}" class="w-full border px-3 py-2 rounded">
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Biografia</label>
+      <textarea name="bio" class="w-full border px-3 py-2 rounded">{{ operatore.bio }}</textarea>
+    </div>
+
+    <div class="flex gap-4">
+      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+        Salva modifiche
+      </button>
+      <a href="/admin" class="text-gray-600 hover:underline py-2 px-4">Annulla</a>
+    </div>
+  </form>
+</div>
+
+<script>
+const FILTRI_PER_CATEGORIA = {
+  olistico: ["Massaggio", "Riflessologia", "Reiki", "Kinesiologia", "Altro"],
+  ripetizioni: ["Italiano", "Matematica", "Inglese", "Scienze", "Storia", "Fisica", "Chimica", "Latino", "Greco", "Altro"],
+  "aiuto in casa": ["Pulizie", "Stiro", "Spesa", "Giardinaggio", "Cucina", "Babysitting occasionale", "Altro"],
+  babysitter: ["Neonati", "Età scolare", "Compiti", "Cucinare", "Notturno", "Urgenze", "Automunito", "Lingue straniere", "Sindrome di Down", "Autismo", "Disabilità", "Altro"],
+  dogsitter: ["Cane", "Gatto", "Passeggiate", "Pensione", "Somministrazione farmaci", "Taglia grande", "Taglia piccola", "Altro"],
+  anziani: ["Compagnia", "Igiene", "Somministrazione farmaci", "Disabilità", "Alzheimer/Demenza", "Flessibilità oraria", "Notturno", "Automunito", "Altro"]
+};
+
+document.addEventListener("DOMContentLoaded", function () {
+  const categoriaSelect = document.getElementById("categoria-select");
+  const filtriContainer = document.getElementById("filtri-categoria");
+
+  // Converte la stringa salvata in lista, se esiste
+  const filtriSalvati = {{ operatore.filtri_categoria | tojson | safe }} || [];
+
+  function renderFiltri(categoria) {
+    filtriContainer.innerHTML = "";
+    const filtri = FILTRI_PER_CATEGORIA[categoria] || [];
+
+    if (filtri.length === 0) return;
+
+    const label = document.createElement("label");
+    label.className = "block font-semibold mb-2";
+    label.textContent = "Filtri specifici:";
+    filtriContainer.appendChild(label);
+
+    filtri.forEach(filtro => {
+      const isChecked = filtriSalvati.includes(filtro) ? "checked" : "";
+      const inputId = `filtro-${filtro.replace(/\s+/g, "-")}`;
+
+      const wrapper = document.createElement("label");
+      wrapper.className = "inline-flex items-center mr-4 mb-2";
+      wrapper.innerHTML = `
+        <input type="checkbox" name="filtri_categoria" value="${filtro}" ${isChecked} class="mr-2">
+        ${filtro}
+      `;
+      filtriContainer.appendChild(wrapper);
+    });
+  }
+
+  // Primo render e aggiornamento al cambio categoria
+  renderFiltri(categoriaSelect.value);
+  categoriaSelect.addEventListener("change", function () {
+    renderFiltri(this.value);
+  });
+});
+</script>
+
+{% endblock %}

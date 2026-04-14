@@ -1,0 +1,2577 @@
+{% extends "base.html" %}
+{% block content %}
+{% set pubblico = pubblico|default(False) %}
+
+
+  <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow p-0 mt-2 sm:mt-3 overflow-hidden">
+  <!-- HEADER PROFILO STILE FACEBOOK -->
+
+  <!-- ▼ NUOVO WRAPPER: SOLO HERO (copertina + riga profilo) -->
+  <section id="profilo-hero" class="relative w-full">
+
+    <!-- COPERTINA -->
+    <div id="copertina-wrapper" class="relative">
+      <div id="copertina" class="relative">
+      <img
+        id="copertina-img"
+        src="{{ url_for('static', filename=(utente.get('copertina') or 'img/copertina_default_localcare.png')) }}"
+        alt="Copertina"
+        class="block w-full h-full object-cover"
+      />
+
+      {% if not pubblico %}
+      <!-- MENU COPERTINA (centrato) -->
+      <div id="menuOptions"
+           class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                  z-[90] flex items-center justify-center">
+
+        <div class="w-56 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+          <form id="formCopertina"
+                action="{{ url_for('upload_copertina') }}"
+                method="post"
+                enctype="multipart/form-data">
+
+            <label for="fileCopertina"
+                   class="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-50 cursor-pointer">
+              📸 Cambia copertina
+            </label>
+
+            <input id="fileCopertina"
+                   name="file"
+                   type="file"
+                   accept="image/*"
+                   class="hidden"
+                   onchange="document.getElementById('formCopertina').submit()">
+          </form>
+
+          {% if utente.get('copertina') %}
+          <form action="{{ url_for('rimuovi_copertina') }}" method="post">
+            <button type="submit"
+                    class="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50">
+              🗑️ Rimuovi copertina
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if not pubblico %}
+
+      {# 🔐 BOTTONE ADMIN — SOLO SE ADMIN #}
+      {% if session.get('is_admin') or utente.get('is_admin') or utente.get('ruolo') == 'admin' or utente.get('username') == 'ADMIN' %}
+      <a href="{{ url_for('admin_dashboard') }}"
+         id="btn-admin-dashboard"
+         class="btn-floating-admin"
+         title="Admin dashboard">
+         <span>🛠️</span>
+      </a>
+      {% endif %}
+
+      {# ⚙️ IMPOSTAZIONI #}
+      <a href="{{ url_for('impostazioni') }}"
+         id="btn-impostazioni"
+         class="bg-white/90 backdrop-blur-md border border-gray-300
+                text-gray-700 hover:text-blue-700 hover:bg-white transition
+                flex items-center justify-center rounded-full shadow-lg">
+        <span class="text-xl">⚙️</span>
+      </a>
+
+    {% endif %}
+
+    </div> <!-- chiude #copertina-wrapper -->
+
+
+    <!-- FOTO PROFILO + INFO -->
+
+      <!-- FOTO PROFILO -->
+      <div id="wrapper-foto-profilo"
+           class="absolute left-6 sm:left-10 -bottom-14 sm:-bottom-16 z-[90]">
+
+        {% if not pubblico %}
+        <a href="{{ url_for('upload_foto') }}" class="group block relative w-fit">
+
+          {% if not utente.get('foto_profilo') %}
+            <!-- 🔥 PLACEHOLDER ANIMATO QUANDO NON C’È LA FOTO -->
+            <div class="placeholder-foto-profilo w-36 h-36 sm:w-40 sm:h-40 rounded-full ring-4 ring-white shadow-lg
+                        flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100
+                        cursor-pointer relative overflow-visible">
+
+              <span class="testo-foto-profilo text-sm font-semibold text-blue-700 text-center leading-tight">
+                Carica la tua<br>foto profilo
+              </span>
+
+              <!-- 👆 MANINA ANIMATA -->
+              <div class="manina-animata absolute -right-6 bottom-2 text-3xl select-none pointer-events-none">
+                👆
+              </div>
+            </div>
+
+          {% else %}
+            <!-- FOTO NORMALE -->
+            <img src="{{ url_for('static', filename=utente.get('foto_profilo')) }}"
+                 class="foto-profilo w-36 h-36 sm:w-40 sm:h-40 rounded-full object-cover ring-4 ring-white shadow-lg"
+                 alt="Foto profilo">
+          {% endif %}
+
+        </a>
+        {% else %}
+        <img src="{{ url_for('static', filename=(utente.get('foto_profilo') or 'img/user_default.png')) }}"
+             id="fotoProfiloPubblica"
+             class="foto-profilo w-36 h-36 sm:w-40 sm:h-40 rounded-full object-cover ring-4 ring-white shadow-lg cursor-pointer"
+             alt="Foto profilo">
+        {% endif %}
+      </div>
+      <div class="info-profilo relative max-w-6xl mx-auto px-6 sm:px-10">
+
+        <!-- BLOCCHI TESTO -->
+        <div class="pt-20 pb-6 mb-6{% if utente['username']|length >= 17 %} username-lungo{% endif %}">
+
+          <!-- WRAPPER ORIZZONTALE per DESKTOP -->
+          <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 xl:gap-8">
+
+            <!-- COLONNA SINISTRA: username + visibilità + stelle + link -->
+            <div class="w-full colonna-info blocco-info-prof">
+
+              <!-- USERNAME + VISIBILITÀ -->
+              <div class="flex items-center justify-center sm:justify-start gap-4 riga-username">
+                <h1 id="usernameTitolo" class="text-2xl sm:text-3xl font-semibold text-blue-700 flex items-center">
+                  <span class="text-gray-500">@</span>{{ utente['username'] }}
+                </h1>
+
+                {% if not pubblico %}
+                <form action="{{ url_for('toggle_visibilita') }}" method="post"
+                      class="casella-visibilita flex items-center gap-2">
+
+                  <label for="visibile" class="flex items-center cursor-pointer select-none">
+
+                    <!-- Input reale (nascosto ma attivo) -->
+                    <input type="checkbox"
+                           id="visibile"
+                           name="visibile"
+                           class="peer sr-only"
+                           onchange="this.form.submit()"
+                           {% if utente.get('visibile_pubblicamente', 1) == 1 %}checked{% endif %}>
+
+                    <!-- SLIDER -->
+                    <div class="w-11 h-6 rounded-full bg-gray-300
+                                peer-checked:bg-blue-500
+                                transition-all duration-300 relative">
+
+                      <!-- PALLINA -->
+                      <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow
+                                  transition-all duration-300
+                                  peer-checked:translate-x-5"></div>
+                    </div>
+
+                  </label>
+
+                  <span class="text-sm text-gray-700 ml-1">Visibile</span>
+
+                </form>
+                {% endif %}
+              </div>
+
+              {% set media = media_recensioni|default(0) %}
+              {% set totale = totale_recensioni|default(0) %}
+
+              <!-- STELLINE -->
+              <div class="mt-1 flex items-center justify-center sm:justify-start gap-1 text-[15px]">
+                {% if totale > 0 %}
+                  {% if pubblico %}
+                    <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
+                       class="inline-flex items-center gap-1 text-yellow-500 hover:text-yellow-600">
+                  {% else %}
+                    <a href="{{ url_for('mie_recensioni_ricevute') }}"
+                       class="inline-flex items-center gap-1 text-yellow-500 hover:text-yellow-600">
+                  {% endif %}
+                    {% for i in range(1, 6) %}
+                      {% if i <= media|round(0, 'floor') %}
+                      <span>★</span>
+                      {% else %}
+                      <span class="text-gray-300">★</span>
+                      {% endif %}
+                    {% endfor %}
+                    <span class="font-semibold text-gray-800 ml-1">{{ (media or 0)|round(1) }}/5</span>
+                    <span class="text-gray-500 ml-1 text-sm">({{ totale }} recension{{ 'e' if totale == 1 else 'i' }})</span>
+                  </a>
+                {% else %}
+                  {% if pubblico %}
+                    <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
+                       class="text-gray-400 hover:text-yellow-600">
+                      ☆☆☆☆☆ <span class="text-sm">(nessuna recensione)</span>
+                    </a>
+                  {% else %}
+                    <a href="{{ url_for('mie_recensioni_ricevute') }}"
+                       class="text-gray-400 hover:text-yellow-600">
+                      ☆☆☆☆☆ <span class="text-sm">(nessuna recensione)</span>
+                    </a>
+                  {% endif %}
+                {% endif %}
+              </div>
+
+              {% if not pubblico %}
+              <div class="mt-3 flex justify-center sm:justify-start">
+                  <a href="{{ url_for('nuovo_annuncio') }}"
+                     class="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold
+                            text-blue-600 bg-blue-50 border border-blue-200 shadow-sm
+                            hover:bg-blue-100 hover:border-blue-300 transition-all duration-200">
+                      <span class="text-base leading-none">＋</span>
+                      <span>Crea annuncio</span>
+                  </a>
+              </div>
+              {% endif %}
+
+              <!-- LINK SOTTO LE STELLINE -->
+              {% if pubblico and session.get('utente_id') != utente['id'] %}
+                <div class="mt-2 text-center sm:text-left">
+                  <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
+                     class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">
+                    Lascia una recensione
+                  </a>
+                </div>
+              {% endif %}
+
+            </div> <!-- /w-full colonna-info -->
+
+            <!-- COLONNA DESTRA: bottone chat / crea annuncio -->
+            <div class="btn-chat-wrapper mt-4 sm:mt-0 flex items-center justify-center sm:justify-end gap-3">
+                {% if not session.get('utente_id') or session.get('utente_id') != utente['id'] %}
+                <a href="{{ url_for('chat_conversazione_view', other_id=utente['id']) }}"
+                   class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition shadow">
+                   💬 Scrivi in chat
+                </a>
+                {% else %}
+                <div class="h-6" style="width:210px;"></div>
+                {% endif %}
+            </div>
+
+          </div> <!-- /flex orizzontale -->
+        </div>   <!-- /pt-20 -->
+  </section>
+
+  <!-- 🖼️ MODALE FOTO PROFILO PUBBLICA (versione tonda) -->
+  <div id="modaleFotoProfilo" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[999] hidden">
+    <div class="relative flex items-center justify-center">
+      <img id="fotoProfiloGrande" src="" alt="Foto profilo ingrandita"
+           class="w-64 h-64 sm:w-80 sm:h-80 object-cover rounded-full shadow-2xl border-4 border-white transition-all duration-300 scale-95 opacity-0" />
+      <button id="chiudiModaleFoto"
+              class="absolute -top-4 -right-4 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow px-3 py-1 text-lg font-semibold transition">
+        ✕
+      </button>
+    </div>
+  </div>
+  <!-- ▲ FINE WRAPPER -->
+  <!-- 🌟 BARRA TABS RINNOVATA -->
+    <div class="sticky top-16 sm:top-14 z-[60] bg-transparent relative">
+      <div class="w-full px-0 sm:px-0">
+      <nav class="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 p-1.5">
+        {% if pubblico %}
+          {% set tabs = [('annunci','Annunci'), ('info','Info'), ('foto','Foto')] %}
+        {% else %}
+          {% set tabs = [('annunci','Annunci'), ('info','Info'), ('foto','Foto'), ('recensioni','Recensioni')] %}
+        {% endif %}
+        {% for key,label in tabs %}
+        <button
+          class="tab-btn relative flex-1 sm:flex-none px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200
+                 {% if key=='annunci' %}
+                   text-white bg-blue-600 shadow-sm
+                 {% else %}
+                   text-gray-600 hover:text-blue-700 hover:bg-blue-50
+                 {% endif %}"
+          data-tab="{{ key }}"
+          type="button">
+          {{ label }}
+          <span class="tab-underline absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] bg-blue-500 rounded-full transition-all duration-300 ease-out
+            {% if key=='annunci' %}w-2/3 opacity-100{% else %}w-0 opacity-0{% endif %}"></span>
+        </button>
+        {% endfor %}
+      </nav>
+    </div>
+  </div>
+  <!-- CONTENUTI TABS -->
+  <section>
+
+    <!-- 🟦 TAB: ANNUNCI (default) -->
+    <div id="tab-annunci" class="tab-pane">
+      <!-- Shell in stile app iOS: sfondo soft + contenuto centrato -->
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-7">
+
+          <!-- SINISTRA: Intro (card sticky) -->
+          <aside class="lg:col-span-1">
+            <div class="profilo-card p-4 sm:p-5 lg:sticky lg:top-32 space-y-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-gray-900 tracking-tight">Intro profilo</h3>
+
+                {% if not pubblico %}
+                  <a href="#tab-info" data-jump="info"
+                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold
+                            text-blue-600 bg-blue-50 border border-blue-200 shadow-sm
+                            hover:bg-blue-100 hover:border-blue-300 transition-all duration-200">
+                       <span>Modifica info</span>
+                  </a>
+                {% endif %}
+              </div>
+
+              <!-- 🔹 Info base -->
+              <div class="flex flex-col gap-3 text-[14px] text-gray-700">
+                {% if utente.get('citta') %}
+                  <div class="flex items-center gap-3">
+                    <span class="text-red-500 text-lg">📍</span>
+                    <span class="font-medium">{{ utente['citta'] }}</span>
+                  </div>
+                {% endif %}
+                {% if utente.get('lingue') %}
+                  <div class="flex items-center gap-3">
+                    <span class="text-blue-500 text-lg">🗣️</span>
+                    <span>{{ utente['lingue'] }}</span>
+                  </div>
+                {% endif %}
+                {% if utente.get('frase') %}
+                  <div class="flex items-start gap-3 italic text-gray-600">
+                    <span class="text-gray-400 text-lg">💬</span>
+                    “{{ utente['frase'] }}”
+                  </div>
+                {% endif %}
+              </div>
+
+
+              <!-- 🔹 Attività Offro / Cerco -->
+              {% set categorie = [
+                'Operatori benessere',
+                'Aiuto in casa',
+                'Ripetizioni',
+                'Babysitter',
+                'Pet-sitter',
+                'Caregiver',
+                'escursioni-sport',
+                'Biglietti spettacoli',
+                'Libri scuola',
+                'Caffe & parole'
+              ] %}
+
+              {% set offro = [] %}
+              {% set cerco = [] %}
+
+              {% for cat in categorie %}
+                {% set i = loop.index %}
+                {% if (utente.get('offro_' ~ i) or 0)|int == 1 %}
+                  {% set _ = offro.append(cat) %}
+                {% endif %}
+                {% if (utente.get('cerco_' ~ i) or 0)|int == 1 %}
+                  {% set _ = cerco.append(cat) %}
+                {% endif %}
+              {% endfor %}
+
+              {% if offro or cerco %}
+                <div class="mt-3 border-t border-gray-100 pt-3 space-y-4">
+                  {% if offro %}
+                    <div>
+                      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Servizi</p>
+                      <div class="flex flex-wrap gap-2">
+                        {% for cat in offro %}
+                          <span class="px-2.5 py-1 text-[11px] rounded-full bg-blue-100 text-blue-700 font-medium">
+                            {{ cat }}
+                          </span>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% endif %}
+                  {% if cerco %}
+                    <div>
+                      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Sto cercando</p>
+                      <div class="flex flex-wrap gap-2">
+                        {% for cat in cerco %}
+                          <span class="px-2.5 py-1 text-[11px] rounded-full bg-green-100 text-green-700 font-medium">
+                            {{ cat }}
+                          </span>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+            {% set contatti_attivi = servizio_attivo_per_utente(utente['id'], 'contatti_profilo') %}
+            {% set email_pubblica = utente.get('email_pubblica')|default('', true)|trim %}
+            {% set telefono = utente.get('telefono')|default('', true)|trim %}
+            {% set indirizzo_studio = utente.get('indirizzo_studio')|default('', true)|trim %}
+            {% set instagram = utente.get('instagram')|default('', true)|trim %}
+            {% set facebook = utente.get('facebook')|default('', true)|trim %}
+            {% set linkedin = utente.get('linkedin')|default('', true)|trim %}
+            {% set sito_web = utente.get('sito_web')|default('', true)|trim %}
+
+            {% if contatti_attivi and (email_pubblica or telefono or indirizzo_studio or sito_web or instagram or facebook or linkedin) %}
+              <div class="mt-3 border-t border-gray-100 pt-3 space-y-3">
+
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">
+                  Contatti
+                </p>
+
+                <!-- ICONE CONTATTO ALLINEATE -->
+                <div class="flex justify-center gap-4">
+
+                  {% if telefono %}
+                  <!-- WhatsApp -->
+                  <a href="https://wa.me/{{ telefono|replace(' ','') }}"
+                     target="_blank"
+                     title="WhatsApp"
+                     class="w-10 h-10 flex items-center justify-center rounded-full
+                            bg-[#25D366] hover:bg-[#1ebe5d]
+                            shadow-sm transition">
+
+                    <!-- WhatsApp logo CORRETTO e leggibile -->
+                    <svg viewBox="0 0 32 32"
+                         class="w-5 h-5"
+                         fill="white"
+                         aria-hidden="true">
+                      <path d="M16 2.667C8.64 2.667 2.667 8.64 2.667 16c0 2.56.747 5.04 2.133 7.147L2.667 29.333l6.347-2.08A13.27 13.27 0 0 0 16 29.333c7.36 0 13.333-5.973 13.333-13.333C29.333 8.64 23.36 2.667 16 2.667zm0 24.053c-2.133 0-4.213-.587-6.027-1.707l-.427-.253-3.76 1.227 1.253-3.653-.28-.44A10.69 10.69 0 0 1 5.333 16c0-5.893 4.773-10.667 10.667-10.667S26.667 10.107 26.667 16 21.893 26.72 16 26.72z"/>
+                      <path d="M21.76 18.987c-.293-.147-1.76-.867-2.027-.973-.267-.107-.453-.147-.64.147-.187.293-.733.973-.893 1.173-.16.2-.333.227-.627.08-.293-.147-1.24-.453-2.36-1.453-.867-.773-1.453-1.733-1.627-2.027-.173-.293-.013-.453.133-.6.133-.133.293-.333.44-.507.147-.173.2-.293.293-.48.093-.187.053-.347-.027-.493-.08-.147-.64-1.547-.88-2.12-.233-.56-.467-.48-.64-.493h-.547c-.187 0-.493.067-.747.347-.253.28-.973.947-.973 2.307 0 1.36 1 2.667 1.133 2.853.147.187 1.96 3 4.747 4.2.667.287 1.187.46 1.6.587.673.213 1.287.183 1.773.113.54-.08 1.76-.72 2.013-1.413.253-.693.253-1.293.173-1.413-.08-.12-.267-.187-.56-.333z"/>
+                    </svg>
+                  </a>
+
+                  <!-- Telefono -->
+                  <a href="tel:{{ telefono|replace(' ','') }}"
+                     title="Chiama"
+                     class="w-10 h-10 flex items-center justify-center rounded-full
+                            bg-gray-100 hover:bg-gray-200
+                            text-gray-700 transition">
+                    <span class="text-base">📞</span>
+                  </a>
+                  {% endif %}
+
+                  {% if email_pubblica %}
+                  <!-- Email -->
+                  <a href="mailto:{{ email_pubblica }}"
+                     title="Email"
+                     class="w-10 h-10 flex items-center justify-center rounded-full
+                            bg-gray-100 hover:bg-gray-200
+                            text-gray-700 transition">
+                    <span class="text-base">✉️</span>
+                  </a>
+                  {% endif %}
+
+                </div>
+
+                <!-- INDIRIZZO -->
+                {% if indirizzo_studio %}
+                <div class="flex justify-center items-center gap-1 text-[13px] text-gray-600 pt-1">
+                  <span class="opacity-70">📍</span>
+                  <span>{{ indirizzo_studio }}</span>
+                </div>
+                {% endif %}
+
+                <!-- SOCIAL + SITO WEB -->
+                {% if instagram or facebook or linkedin or sito_web %}
+                <div class="flex justify-center gap-4 text-[13px] pt-1">
+
+                  {% if instagram %}
+                  <a href="{{ instagram }}" target="_blank"
+                     class="flex items-center gap-1 text-blue-600 hover:underline">
+                    <!-- Instagram ufficiale -->
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M7.75 2C4.57 2 2 4.57 2 7.75v8.5C2 19.43 4.57 22 7.75 22h8.5C19.43 22 22 19.43 22 16.25v-8.5C22 4.57 19.43 2 16.25 2h-8.5zm0 1.5h8.5A4.25 4.25 0 0 1 20.5 7.75v8.5A4.25 4.25 0 0 1 16.25 20.5h-8.5A4.25 4.25 0 0 1 3.5 16.25v-8.5A4.25 4.25 0 0 1 7.75 3.5z"/>
+                      <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 1.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z"/>
+                      <circle cx="17.5" cy="6.5" r="1"/>
+                    </svg>
+                    Instagram
+                  </a>
+                  {% endif %}
+
+                  {% if facebook %}
+                  <a href="{{ facebook }}" target="_blank"
+                     class="flex items-center gap-1 text-blue-600 hover:underline">
+                    <!-- Facebook ufficiale -->
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M22 12a10 10 0 1 0-11.6 9.9v-7H8v-3h2.4V9.7c0-2.4 1.4-3.7 3.6-3.7 1 0 2 .1 2 .1v2.3h-1.2c-1.2 0-1.6.7-1.6 1.5V12H16l-.4 3h-2.6v7A10 10 0 0 0 22 12z"/>
+                    </svg>
+                    Facebook
+                  </a>
+                  {% endif %}
+
+                  {% if linkedin %}
+                  <a href="{{ linkedin }}" target="_blank"
+                     class="flex items-center gap-1 text-blue-600 hover:underline">
+                    💼 LinkedIn
+                  </a>
+                  {% endif %}
+
+                  {% if sito_web %}
+                  <a href="{{ sito_web if sito_web.startswith('http') else 'https://' ~ sito_web }}"
+                     target="_blank"
+                     class="flex items-center gap-1 text-blue-600 hover:underline">
+                    🌐 Sito
+                  </a>
+                  {% endif %}
+
+                </div>
+                {% endif %}
+              </div>
+            {% endif %}
+
+          </div>
+
+          </aside>
+
+          <!-- DESTRA: feed annunci -->
+          <div class="lg:col-span-2">
+            <div class="profilo-card p-4 sm:p-5">
+              <div class="flex items-center justify-between mb-1.5 sm:mb-3">
+                <div>
+                  <h3 class="text-base font-semibold text-gray-900 tracking-tight">Annunci pubblicati</h3>
+                  <p class="text-xs text-gray-400 mt-0.5">
+                    I tuoi annunci attivi e in revisione
+                  </p>
+                </div>
+
+                {% if not pubblico %}
+                <a href="{{ url_for('nuovo_annuncio') }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold
+                          text-blue-600 bg-blue-50 border border-blue-200 shadow-sm
+                          hover:bg-blue-100 hover:border-blue-300 transition-all duration-200">
+                  <span class="text-base leading-none">＋</span>
+                  <span>Crea annuncio</span>
+                </a>
+                {% endif %}
+              </div>
+
+              {% if annunci and annunci|length %}
+              <div class="grid md:grid-cols-2 gap-4 sm:gap-5 mt-3">
+                {% for a in annunci %}
+                <div class="relative flex flex-col rounded-2xl border border-[rgba(240,240,240,0.9)]
+                            bg-[linear-gradient(160deg,rgba(255,255,255,0.96),rgba(244,246,255,0.9))]
+                            shadow-[0_6px_14px_rgba(15,23,42,0.06),_0_18px_40px_rgba(15,23,42,0.12)]
+                            hover:shadow-[0_10px_22px_rgba(15,23,42,0.08),_0_24px_55px_rgba(15,23,42,0.16)]
+                            hover:-translate-y-[3px] transition-all duration-300 overflow-hidden backdrop-blur-[10px]">
+                  <!-- Contenuto principale -->
+                  <a href="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
+                     class="flex-1 block p-4 sm:p-5 relative">
+
+                    {% if not pubblico %}
+                      <span class="absolute top-3 right-4 text-[10px] px-2 py-[3px] rounded-full border font-medium leading-tight whitespace-nowrap
+                                   {% if a['stato']=='approvato' %}
+                                     bg-green-50 text-green-700 border-green-200
+                                   {% elif a['stato']=='in_attesa' %}
+                                     bg-yellow-50 text-yellow-700 border-yellow-200
+                                   {% elif a['stato']=='rifiutato' %}
+                                     bg-red-50 text-red-700 border-red-200
+                                   {% endif %}">
+                        {% if a['stato']=='approvato' %}Pubblicato{% elif a['stato']=='in_attesa' %}In revisione{% else %}Rifiutato{% endif %}
+                      </span>
+                    {% endif %}
+
+                    <h4 class="text-blue-800 font-semibold text-[15px] sm:text-[16px] mb-1.5 pr-16 line-clamp-2">
+                      {{ a['titolo'] }}
+                    </h4>
+                    <p class="text-[12px] text-gray-500 mb-2 flex items-center gap-1">
+                      <span>📍</span>
+                      <span class="truncate">{{ a['zona'] or 'n/d' }} · {{ a['categoria'] }}</span>
+                    </p>
+                    {% if a['descrizione'] %}
+                      <p class="text-[13px] text-gray-700 leading-snug line-clamp-3">
+                        {{ a['descrizione'] }}
+                      </p>
+                    {% endif %}
+                  </a>
+
+                  {% if not pubblico %}
+                  <div class="flex items-center justify-between gap-2 text-[11px] border-t border-gray-100 px-3.5 py-2.5 bg-white/80 backdrop-blur-sm mt-auto">
+
+                    <!-- SINISTRA -->
+                    {% if a['stato'] == 'approvato' %}
+                    <button
+                      onclick="apriVisibilita({{ a['id'] }})"
+                      class="flex items-center gap-1 px-3 py-1.5 rounded-full
+                             bg-blue-600 text-white hover:bg-blue-700 shadow">
+                      🚀 <span>Aumenta visibilità</span>
+                    </button>
+                    {% else %}
+                      <div></div> {# placeholder per mantenere allineamento #}
+                    {% endif %}
+
+                    <!-- DESTRA -->
+                    <div class="flex gap-2">
+                      {% if a['stato'] != 'approvato' %}
+                        <a href="{{ url_for('modifica_annuncio', id=a['id']) }}"
+                           class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-gray-600
+                                  hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/60 transition-all duration-200">
+                          ✏️ <span>Modifica</span>
+                        </a>
+                      {% endif %}
+
+                      <a href="{{ url_for('elimina_annuncio', id=a['id']) }}"
+                         onclick="return confirm('Eliminare questo annuncio?');"
+                         class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-gray-600
+                                hover:text-red-600 hover:border-red-200 hover:bg-red-50/70 transition-all duration-200">
+                        🗑️ <span>Elimina</span>
+                      </a>
+                    </div>
+
+                  </div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <p class="text-sm text-gray-500 mt-3">
+                {% if pubblico %}
+                  Questo utente non ha ancora pubblicato annunci.
+                {% else %}
+                  Non hai ancora pubblicato annunci.
+                  <span class="text-blue-600 font-medium">Crea il tuo primo annuncio!</span>
+                {% endif %}
+              </p>
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 🟩 TAB: INFO -->
+    <div id="tab-info" class="tab-pane hidden">
+      {% if pubblico %}
+        {% include 'partials/tab_info_pubblico.html' %}
+      {% else %}
+        {% include 'partials/tab_info_privato.html' %}
+      {% endif %}
+    </div>
+
+    <!-- 🟨 TAB: FOTO -->
+    <div id="tab-foto" class="tab-pane hidden">
+      {% include 'partials/tab_foto_privato.html' %}
+    </div>
+
+    {% if not pubblico %}
+      <!-- 🟧 TAB: RECENSIONI -->
+      <div id="tab-recensioni" class="tab-pane hidden">
+        {% include 'partials/tab_recensioni_privato.html' %}
+      </div>
+    {% endif %}
+
+  </section>
+</div>
+<!-- 🚀 MODALE AUMENTA VISIBILITÀ -->
+<div id="modale-visibilita"
+     class="hidden fixed inset-0 z-[999] bg-black/60 flex items-end sm:items-center justify-center">
+  <!-- CONTENUTO -->
+  <div class="
+    w-full sm:max-w-md
+    bg-white
+    rounded-t-3xl sm:rounded-3xl
+    shadow-2xl
+    p-6
+    max-h-[90vh]
+    overflow-y-auto
+  ">
+
+    <!-- HEADER -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-blue-700">
+        Aumenta la visibilità
+      </h2>
+      <button onclick="chiudiVisibilita()" class="text-gray-400 text-xl">
+        ✕
+      </button>
+    </div>
+
+    <!-- STATO ATTUALE -->
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">
+        Ora il tuo annuncio è:
+      </h3>
+
+      <div id="box-visibilita-stato"
+           class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
+        Caricamento stato visibilità…
+      </div>
+    </div>
+
+    <!-- SERVIZI SINGOLI -->
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">
+        Servizi singoli
+      </h3>
+
+      <div class="space-y-3">
+
+        <!-- BOOST LISTA -->
+        <div id="card-boost_lista" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm">🚀 Boost lista</span>
+            <span id="badge-boost_lista" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            Aumenta temporaneamente la visibilità del tuo annuncio nei risultati.
+          </p>
+
+          <p id="info-boost_lista" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-boost_lista"
+            onclick="apriServizio(this)"
+            data-codice="boost_lista"
+            data-titolo="🚀 Boost lista"
+            data-descrizione="Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca."
+            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+        <!-- EVIDENZA -->
+        <div id="card-badge_evidenza" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm">✨ Evidenza</span>
+            <span id="badge-badge_evidenza" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            Rende il tuo annuncio più riconoscibile con cornice e badge.
+          </p>
+
+          <p id="info-badge_evidenza" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-badge_evidenza"
+            onclick="apriServizio(this)"
+            data-codice="badge_evidenza"
+            data-titolo="✨ Evidenza"
+            data-descrizione="Rende il tuo annuncio più visibile con cornice e badge."
+            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+        <!-- VETRINA -->
+        <div id="card-vetrina_annuncio" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm">🪟 Vetrina</span>
+            <span id="badge-vetrina_annuncio" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            Inserisce l’annuncio in una sezione ad alta visibilità.
+          </p>
+
+          <p id="info-vetrina_annuncio" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-vetrina_annuncio"
+            onclick="apriServizio(this)"
+            data-codice="vetrina_annuncio"
+            data-titolo="🪟 Vetrina"
+            data-descrizione="Inserisce il tuo annuncio in una sezione dedicata ad alta visibilità."
+            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+        <!-- URGENTE -->
+        <div id="card-annuncio_urgente" class="border border-rose-200 bg-rose-50/70 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm text-rose-700">⚡ Urgente</span>
+            <span id="badge-annuncio_urgente" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-700">
+            Spinta immediata con notifiche agli utenti compatibili.
+          </p>
+
+          <p id="info-annuncio_urgente" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-annuncio_urgente"
+            onclick="apriServizio(this)"
+            data-codice="annuncio_urgente"
+            data-titolo="⚡ Urgente"
+            data-descrizione="Spinta massima con notifiche agli utenti compatibili."
+            class="mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+        <!-- CONTATTI -->
+        <div id="card-contatti" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm">📞 Sblocco contatti</span>
+            <span id="badge-contatti" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            Consente di visualizzare email e telefono dell’annuncio.
+          </p>
+
+          <p id="info-contatti" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-contatti"
+            onclick="apriServizio(this)"
+            data-codice="contatti"
+            data-titolo="📞 Sblocco contatti"
+            data-descrizione="Consente di visualizzare email e telefono dell’annuncio."
+            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+            Scopri
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PACCHETTI -->
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">
+        Pacchetti consigliati
+      </h3>
+
+      <div class="space-y-4">
+
+        <!-- PACCHETTO VISIBILITÀ -->
+        <div id="card-pacchetto_visibilita"
+             class="border border-blue-200 bg-blue-50/60 rounded-2xl p-4">
+
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm text-blue-800">📦 Pacchetto Visibilità</span>
+            <span id="badge-pacchetto_visibilita"
+                  class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-700">
+            Combina più servizi per aumentare la visibilità del tuo annuncio.
+          </p>
+
+          <ul class="mt-2 text-xs text-slate-600 list-disc list-inside space-y-1">
+            <li>Boost lista</li>
+            <li>Evidenza</li>
+            <li>Contatti temporanei</li>
+          </ul>
+
+          <p id="info-pacchetto_visibilita" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-pacchetto_visibilita"
+            onclick="apriServizio(this)"
+            data-codice="pacchetto_visibilita"
+            data-titolo="📦 Pacchetto Visibilità"
+            data-descrizione="Pacchetto che combina più servizi di visibilità."
+            class="mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
+            Scopri il pacchetto
+          </button>
+        </div>
+
+        <!-- VISIBILITÀ PREMIUM -->
+        <div id="card-visibilita_premium"
+             class="border border-amber-300 bg-amber-50/70 rounded-2xl p-4">
+
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm text-amber-800">🌟 Visibilità Premium</span>
+            <span id="badge-visibilita_premium"
+                  class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          </div>
+
+          <p class="text-xs text-slate-700">
+            Tutti i servizi inclusi con massima priorità.
+          </p>
+
+          <ul class="mt-2 text-xs text-slate-700 list-disc list-inside space-y-1">
+            <li>Tutti i servizi di visibilità</li>
+            <li>Vetrina</li>
+            <li>Contatti inclusi</li>
+          </ul>
+
+          <p id="info-visibilita_premium" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+          <button id="btn-visibilita_premium"
+            onclick="apriServizio(this)"
+            data-codice="visibilita_premium"
+            data-titolo="🌟 Visibilità Premium"
+            data-descrizione="Pacchetto con massima visibilità e priorità."
+            class="mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
+            Scopri
+          </button>
+        </div>
+
+        <!-- ✅ MODALE CONFERMA -->
+        <div id="modale-conferma"
+             class="hidden fixed inset-0 z-[70] bg-black/60 flex items-end sm:items-center justify-center">
+
+          <div class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6">
+
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-slate-900">
+                Conferma attivazione
+              </h2>
+              <button onclick="chiudiConferma()" class="text-gray-400 text-xl">✕</button>
+            </div>
+
+            <div class="space-y-3 text-sm text-slate-700">
+              <p>
+                Stai per attivare:
+              </p>
+
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div class="font-semibold" id="conf-titolo">—</div>
+                <div class="text-xs text-slate-500" id="conf-durata">—</div>
+                <div class="text-lg font-bold mt-1" id="conf-prezzo">—</div>
+              </div>
+
+              <p class="text-xs text-slate-500">
+                Il servizio verrà attivato immediatamente sul tuo annuncio.
+              </p>
+            </div>
+
+            <div id="stripe-box" class="mt-4 hidden">
+              <div id="payment-element"></div>
+
+              <button
+                id="pay-button"
+                class="mt-4 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                Paga ora
+              </button>
+
+              <p id="payment-error" class="mt-2 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <button
+              onclick="confermaAttivazione(this)"
+              class="mt-5 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+              Conferma
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 📦 MODALE SERVIZIO (POP CORN) -->
+    <div id="modale-servizio"
+         class="hidden fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center">
+
+      <div class="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6">
+
+        <!-- HEADER -->
+        <div class="flex items-center justify-between mb-4">
+          <h2 id="ms-titolo" class="text-lg font-bold text-blue-700">
+            —
+          </h2>
+          <button onclick="chiudiServizio()" class="text-gray-400 text-xl">✕</button>
+        </div>
+
+        <!-- DESCRIZIONE -->
+        <p id="ms-descrizione" class="text-sm text-slate-700 mb-5">
+          —
+        </p>
+
+        <!-- PIANI -->
+        <div id="ms-piani" class="grid gap-4">
+          <!-- JS inserisce i piani qui -->
+        </div>
+
+        <!-- CTA -->
+        <button id="ms-conferma"
+                disabled
+                class="mt-5 w-full py-3 rounded-full bg-blue-600 text-white text-sm font-semibold opacity-50 cursor-not-allowed">
+          Continua
+        </button>
+
+        <p class="mt-3 text-xs text-gray-500 text-center">
+          Nessun servizio garantisce una posizione fissa nei risultati.
+        </p>
+      </div>
+    </div>
+
+    <!-- NOTA TRASPARENZA -->
+    <div class="text-xs text-gray-500 border-t pt-4">
+      I servizi hanno una durata limitata.
+      Alla scadenza, l’annuncio tornerà visibile normalmente.
+      <br>
+      Nessun servizio garantisce una posizione fissa nei risultati.
+    </div>
+  </div>
+
+<style>
+/* ============================================================
+   🌟 LOCALCARE — PROFILO UTENTE (DESKTOP + MOBILE APP STYLE)
+   ============================================================ */
+
+
+
+/* ----------------------------------
+   GENERALE
+---------------------------------- */
+.input {
+  @apply w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500;
+}
+input[disabled], textarea[disabled], select[disabled] {
+  background-color: #f9fafb !important;
+  color: #555 !important;
+  border-color: #e5e7eb !important;
+  cursor: not-allowed !important;
+}
+
+/* ----------------------------------
+   HERO DESKTOP
+---------------------------------- */
+#profilo-hero {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+#profilo-hero {
+  margin-top: 4rem !important;   /* 64px */
+}
+
+/* mobile: navbar leggermente più bassa → puoi lasciare comunque 4rem */
+@media (max-width: 640px) {
+  #profilo-hero {
+    margin-top: 4rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body:not([data-pubblico="false"]) #profilo-hero {
+      margin-bottom: -1rem !important;
+  }
+}
+
+/* Copertina — Desktop FIX DEFINITIVO */
+body[data-pubblico="false"] #copertina-img {
+  transition: opacity .3s ease-in, transform .2s ease;
+}
+body[data-pubblico="false"] #copertina:hover #copertina-img {
+  transform: scale(1.01);
+}
+body[data-pubblico="false"] #copertina,
+body[data-pubblico="false"] #copertina-img {
+  cursor: pointer;
+}
+
+#copertina {
+  position: relative;
+  width: min(92%, 1100px);
+  margin: 0 auto;
+
+  aspect-ratio: 16 / 9;   /* ⭐ rapporto ideale tipo Facebook */
+  min-height: 300px;
+  max-height: 420px;
+
+  background-color: #fff;
+  border-radius: 2rem;
+  overflow: hidden;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+#copertina-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center; /* esplicito */
+  opacity: 0;
+  transition: opacity .3s ease-in;
+}
+
+#copertina-img.loaded { opacity: 1; }
+
+/* Foto profilo — Desktop */
+.foto-profilo {
+  transition: transform .25s ease;
+}
+.foto-profilo:hover {
+  transform: scale(1.02);
+}
+
+/* FOTO PROFILO — POSIZIONE DESKTOP PERFETTA */
+@media (min-width: 641px) {
+
+  #wrapper-foto-profilo {
+    position: absolute;
+    z-index: 95;
+
+    /* POSIZIONE PERFETTA COME NEL TUO SCREENSHOT */
+    left: calc(50% - 475px);   /* allinea esattamente con bordo copertina */
+    top: calc(23rem - 180px);  /* metà sopra, metà sotto la copertina */
+
+    /* puoi aumentare o diminuire regolando -180px */
+  }
+
+  #wrapper-foto-profilo img {
+    width: 260px;
+    height: 260px;
+    border-radius: 9999px;
+    border-width: 6px;
+    object-fit: cover;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+}
+
+/* DESKTOP ≥ 1200px → layout orizzontale */
+@media (min-width: 1200px) {
+  .info-profilo > div.pt-20 {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: flex-end !important;
+      gap: 3rem !important;
+  }
+}
+
+/* TABLET (641–1199px) → layout normale MA bottone mobile-style */
+@media (min-width: 641px) and (max-width: 1199px) {
+  .info-profilo > div.pt-20 {
+      display: block !important;   /* impedisce l’allineamento orizzontale */
+  }
+}
+
+/* MOBILE → resta tutto mobile */
+@media (max-width: 640px) {
+  .info-profilo > div.pt-20 {
+      display: block !important;
+  }
+}
+
+/* 🔵 riduzione spazio sotto il blocco profilo prima della barra tabs - solo pubblico desktop */
+@media (min-width: 641px) {
+  body[data-pubblico="true"] .info-profilo > div.pt-20 {
+      padding-bottom: 0.75rem !important; /* era pb-6 → molto più compatto */
+      margin-bottom: 0.75rem !important;  /* era mb-6 */
+  }
+}
+
+/* ===============================
+   📱 TABLET (iPad, 641px → 1024px)
+   =============================== */
+@media (min-width: 641px) and (max-width: 1024px) {
+
+  #copertina {
+    width: min(82%, 760px);        /* ✅ meno larga su iPad verticale */
+    aspect-ratio: 16 / 8.6;        /* ✅ più alta (non banner) */
+    min-height: 360px;             /* ✅ presenza reale */
+    max-height: 460px;
+  }
+
+  /* Foto profilo su tablet — intermedia */
+  #wrapper-foto-profilo img {
+    width: 235px !important;
+    height: 235px !important;
+    border-width: 5px !important;
+  }
+
+  /* Posizionamento perfetto su tablet */
+  #wrapper-foto-profilo {
+    left: calc(50% - 330px) !important; /* prima era 475px */
+    top: calc(19rem - 150px) !important; /* centrata su copertina tablet */
+  }
+
+  /* Spaziatura sotto la foto */
+  .info-profilo > div.pt-20 {
+    padding-top: 7rem !important;
+  }
+
+
+}
+
+/* ------------------------------------------
+   FIX iPad 13" — ripristina margini laterali
+   su display 1024–1366 px di larghezza
+------------------------------------------- */
+@media (min-width: 1024px) and (max-width: 1366px) {
+  .max-w-6xl {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+
+  #profilo-hero,
+  section {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
+
+/* ===============================================
+   IPAD VERTICALE (641–1024px)
+   Centra TUTTO il blocco username + stelle + link
+   così si allinea perfettamente al bottone “Scrivi in chat”
+   =============================================== */
+   @media (min-width: 641px) and (max-width: 1024px) {
+
+     /* Colonna sinistra centrata su iPad verticale */
+     .info-profilo > div.pt-20 > .flex > .w-full {
+         display: flex !important;
+         flex-direction: column !important;
+         align-items: center !important;
+         text-align: center !important;
+     }
+
+     /* Titolo @username centrato */
+     .info-profilo h1 {
+         text-align: center !important;
+         justify-content: center !important;
+         width: 100% !important;
+     }
+
+     /* Stelle centrate (già ok per il blocco esistente) */
+     .info-profilo .flex.items-center.gap-1 {
+         justify-content: center !important;
+         width: 100% !important;
+     }
+
+     /* Link “Lascia una recensione” centrato */
+     .info-profilo .mt-2 {
+         text-align: center !important;
+         width: 100% !important;
+     }
+   }
+
+
+
+
+/* ----------------------------------
+   INTRO DESCRIZIONE
+---------------------------------- */
+aside .space-y-4 { gap:1.1rem !important; }
+aside .text-sm.text-gray-500 { color:#4b5563; }
+aside .border-t { margin-top:.75rem; padding-top:.75rem; }
+
+aside p.text-sm.text-gray-500.font-medium {
+  color:#374151 !important;
+  font-weight:600;
+  font-size:.9rem;
+}
+
+/* Margini laterali SOLO per Intro Profilo e Annunci pubblicati */
+#tab-annunci aside > div,
+#tab-annunci .lg\:col-span-2 > div {
+    margin-left: 1.5rem;   /* desktop */
+    margin-right: 1.5rem;
+}
+
+/* MOBILE */
+@media (max-width: 640px) {
+  #tab-annunci aside > div,
+  #tab-annunci .lg\:col-span-2 > div {
+      margin-left: 0.75rem;   /* mobile */
+      margin-right: 0.75rem;
+  }
+}
+
+/* ----------------------------------
+   SEZIONE CONTENUTI PROFILO (APPLE STYLE)
+---------------------------------- */
+#tab-annunci {
+  background: #f5f7ff; /* soft iOS background */
+}
+
+/* Card unica stile pannello iOS */
+.profilo-card {
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow:
+    0 10px 25px rgba(15, 23, 42, 0.06),
+    0 24px 55px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+/* ----------------------------------
+   TABS
+---------------------------------- */
+nav {
+  background:rgba(255,255,255,.72);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(221,230,250,.8);
+}
+
+.tab-btn {
+  border-radius:.75rem;
+  overflow:hidden;
+  transition:all .25s ease;
+}
+.tab-btn.active {
+  background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%);
+  color:#1d4ed8 !important;
+  box-shadow:inset 0 0 0 1.5px #93c5fd, 0 2px 4px rgba(59,130,246,.18);
+  font-weight:600;
+}
+.tab-btn .tab-underline {
+  position:absolute;
+  bottom:.15rem;
+  left:50%;
+  transform:translateX(-50%);
+  height:2.5px;
+  width:0;
+  opacity:0;
+  background:#2563eb;
+  transition:all .25s ease;
+}
+.tab-btn.active .tab-underline {
+  width:65%;
+  opacity:1;
+}
+
+/* ----------------------------------
+   MODALE FOTO PROFILO
+---------------------------------- */
+#modaleFotoProfilo {
+  animation: fadeInModal .25s ease;
+}
+@keyframes fadeInModal { from{opacity:0;} to{opacity:1;} }
+
+#fotoProfiloGrande {
+  opacity:0;
+  transform:scale(.9);
+  transition:transform .35s cubic-bezier(.25,1.15,.5,1), opacity .3s ease;
+}
+#fotoProfiloGrande.animate-in {
+  opacity:1;
+  transform:scale(1);
+}
+
+/* ============================================================
+   📱 MOBILE — VERSIONE APP STYLE
+   ============================================================ */
+@media (max-width: 640px) {
+
+  /* Eliminazione totale margini/padding wrapper */
+  .max-w-6xl {
+    max-width:100% !important;
+    width:100% !important;
+    margin:0 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+  }
+
+  body[data-page="profilo"] .container,
+  body[data-page="profilo"] .container > *,
+  body[data-page="profilo"] .max-w-6xl,
+  body[data-page="profilo"] .max-w-6xl > * {
+    padding:0 !important;
+    margin:0 !important;
+  }
+
+  /* Copertina mobile */
+  #copertina {
+    width:100% !important;
+    height:15rem !important;   /* +1rem come richiesto */
+    border-radius:0 !important;
+    margin:0 !important;
+  }
+
+  #copertina-img {
+    border-radius:1rem !important;
+    object-fit:cover !important;
+  }
+
+  /* Foto profilo mobile */
+  #wrapper-foto-profilo {
+    left:0rem !important;
+    top:calc(15rem - 55px) !important;  /* offset perfetto */
+    bottom:auto !important;
+  }
+
+  #wrapper-foto-profilo img {
+    width:175px !important;
+    height:175px !important;
+    border-width:1px !important;
+  }
+
+
+
+  /* Spazio sotto la foto */
+  .info-profilo > div.pt-20 {
+    padding-top:6rem !important;
+  }
+
+  /* Tabs full-width mobile */
+  .tab-btn { flex:1 !important; }
+
+  nav {
+    border-radius:0 !important;
+  }
+
+  /* Menu tre puntini mobile */
+  .copertina-menu {
+    top:.6rem !important;
+    right:.6rem !important;
+  }
+
+  /* Tabs più compatti su mobile */
+  nav .tab-btn {
+    padding-left: 0.75rem !important;   /* riduce da px-5 */
+    padding-right: 0.75rem !important;
+    font-size: 0.80rem !important;      /* riduce leggermente il font */
+  }
+
+  nav {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+  }
+
+  #tab-annunci aside .flex.gap-3 {
+      align-items: flex-start;
+  }
+  #tab-annunci aside .flex.gap-3 span:first-child {
+      font-size: 1.3rem !important;
+  }
+
+  #tab-annunci .lg\:col-span-2 > div:first-child {
+      margin-bottom: 0.75rem;
+  }
+
+  #tab-annunci .lg\:col-span-2 > div,
+  #tab-annunci aside > div {
+      margin-left: 1rem !important;
+      margin-right: 1rem !important;
+      }
+  #tab-annunci {
+      background: #fafbff; /* leggerissimo */
+      padding-top: 1rem;
+      padding-bottom: 1.5rem;
+    }
+
+}
+</style>
+<style>
+  /* =====================================================
+     POSIZIONAMENTO RESPONSIVE DEL BOTTONE "Scrivi in chat"
+     ===================================================== */
+
+  /* --- DESKTOP ≥1200px (NON 1025px!) --- */
+  @media (min-width: 1200px) {
+    .btn-chat-wrapper {
+      position: relative;
+      top: 8px;
+      margin-left: 3rem;
+      justify-content: flex-end !important;
+    }
+  }
+
+  /* --- TABLET (641px → 1199px) E MOBILE (≤640px) ---
+       → Il bottone deve stare SOTTO e CENTRATO
+  */
+  @media (max-width: 1199px) {
+    .btn-chat-wrapper {
+      width: 100%;
+      justify-content: center !important;
+      margin-top: 1.2rem !important;
+      margin-bottom: 0.5rem !important;
+      top: 0 !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+  .btn-chat-wrapper {
+    margin-top: 0.6rem !important;     /* prima 1.2rem → ora MOLTO più su */
+    margin-bottom: 0rem !important;
+  }
+}
+
+  /* ============================================================
+   🔵 ALLINEAMENTO PERFETTO CHAT SU DESKTOP ≥ 1000px
+   ============================================================ */
+@media (min-width: 1000px) {
+
+    /* Alza leggermente il bottone chat */
+    .btn-chat-wrapper {
+        position: relative !important;
+        margin-left: 0 !important;  /* evita spostamenti laterali */
+    }
+
+}
+
+  /* =====================================================
+     POSIZIONAMENTO BUTTON CHAT — SOLO TABLET VERTICALE
+     (mantiene layout tablet ma mobile-izza SOLO quella riga)
+     ===================================================== */
+
+     /* 🔥 SOLO iPad verticale — Chat mobile, MA layout desktop */
+     @media (min-width: 641px) and (max-width: 1024px) {
+
+       /* Mantiene la riga orizzontale, MA la porta più in alto come desktop */
+       .info-profilo > div.pt-20 {
+           padding-top: 3rem !important;   /* come desktop */
+           margin-bottom: 2rem !important;
+       }
+
+       /* Centra perfettamente USERNAME + STELLE + LASCIA RECENSIONE */
+       .info-profilo > div.pt-20 > .flex {
+           justify-content: center !important;
+           text-align: center !important;
+           width: 100%;
+       }
+
+       /* Fa comportare il bottone come su mobile */
+       .btn-chat-wrapper {
+           width: 100%;
+           justify-content: center !important;
+           margin-top: 1rem !important;
+           position: relative !important;
+           top: 0 !important;
+       }
+     }
+
+     /* ===== MOBILE small fix ===== */
+     @media (max-width: 640px) {
+       .info-profilo > div.pt-20 {
+          padding-top: 5.3rem !important;  /* era 6rem → leggermente più vicino */
+       }
+     }
+
+     /* ============================================================
+        🔵 SISTEMAZIONE TOGGLE "Visibile"
+        Mobile (≤640) + Tablet verticale (641–1024)
+        ============================================================ */
+
+     /* MOBILE e TABLET VERTICALE */
+     @media (max-width: 1024px) {
+
+         /* sposta il toggle sotto alle stelline */
+         .casella-visibilita {
+             width: 100%;
+             display: flex;
+             justify-content: center;
+             margin-top: 0.4rem !important;
+             margin-bottom: 0.2rem !important;
+         }
+
+         /* la riga username+toggle non deve essere orizzontale */
+         .riga-username {
+             flex-direction: column !important;
+             align-items: center !important;
+             gap: 0.4rem !important;
+         }
+     }
+     /* --------------------------------------------
+        FIX SLIDER VISIBILITÀ — Priorità massima
+     --------------------------------------------- */
+
+     .casella-visibilita input.peer:checked ~ div {
+         background-color: #3b82f6 !important; /* blu acceso */
+     }
+
+     .casella-visibilita input.peer:checked ~ div > div {
+         transform: translateX(20px) !important; /* scorrimento pallina */
+     }
+
+     /* Stato OFF pallina */
+     .casella-visibilita div > div {
+         transform: translateX(0px) !important;
+     }
+     /* ============================================================
+        📏 DISTANZA ADATTATIVA FINALE — OVERRIDE TOTALE
+        Funziona SEMPRE su mobile + tablet verticale
+        ============================================================ */
+
+        @media (max-width: 640px) {
+
+          /* default */
+          .info-profilo > div.pt-20 {
+              padding-top: 6rem !important;
+          }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+
+          /* default */
+          .info-profilo > div.pt-20 {
+              padding-top: 5rem !important;
+          }
+        }
+
+</style>
+<style>
+  /* ============================================================
+     🌟 SISTEMAZIONE BLOCCO USER — SOLO DESKTOP ≥ 1200px
+     ============================================================ */
+  @media (min-width: 1000px) {
+
+    /* Wrapper verticale centrato */
+    .info-profilo > div.pt-20 > .flex {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        gap: 0.75rem !important;
+        margin-top: -1.5rem !important; /* 🔥 SALE di 1.5rem */
+    }
+
+    /* Colonna-info centrata */
+    .info-profilo .colonna-info {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    /* Username centrato */
+    .info-profilo h1 {
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+
+    /* Slider “Visibile” centrato */
+    .riga-username {
+        justify-content: center !important;
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    /* Stelle centrate */
+    .info-profilo .flex.items-center.gap-1 {
+        justify-content: center !important;
+        width: 100% !important;
+    }
+
+    /* Bottone "Crea annuncio" centrato */
+    .info-profilo .mt-3 {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+        margin-top: 0.75rem !important;
+    }
+
+  }
+</style>
+<style>
+/* HERO auto-height SOLO nella pagina profilo */
+body[data-page="profilo"] #profilo-hero {
+    height: auto !important;
+    min-height: unset !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Blocca gli spazi verticali e lascia crescere solo in base al contenuto */
+body[data-page="profilo"] .info-profilo > div.pt-20 {
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+
+
+</style>
+<style>
+  /* ======================================================
+     ⚙️ POSIZIONAMENTO BOTTONE IMPOSTAZIONI
+     /* 📱 MOBILE — bottone impostazioni sotto la copertina */
+     @media (max-width: 640px) {
+
+
+       /* wrapper dedicato */
+       #copertina-wrapper {
+         display: flex;
+         flex-direction: column;
+         align-items: stretch;
+       }
+     }
+</style>
+<style>
+#copertina-wrapper {
+  position: relative;
+}
+
+#btn-impostazioni {
+  position: absolute;
+
+  /* 👇 riferimento: copertina */
+  right: 1.25rem;
+  bottom: -2.75rem;
+
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9999px;
+  z-index: 120;
+}
+@media (max-width: 640px) {
+  #btn-impostazioni {
+    bottom: -3rem;
+    right: 5rem;
+  }
+}
+
+</style>
+<style>
+  /* ============================
+     PLACEHOLDER FOTO PROFILO
+     ============================ */
+
+  .placeholder-foto-profilo {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    transition: transform .25s ease;
+  }
+
+  .placeholder-foto-profilo:hover {
+    transform: scale(1.03);
+  }
+
+  /* Testo “Carica la tua foto profilo” */
+  .placeholder-foto-profilo .testo-foto-profilo {
+    animation: fadeIn .8s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  /* 👆 Manina animata stile social */
+  .manina-animata {
+    animation: bounceHand 1.4s infinite ease-in-out;
+  }
+
+  @keyframes bounceHand {
+    0%   { transform: translateY(0) rotate(0deg); }
+    30%  { transform: translateY(-6px) rotate(-8deg); }
+    50%  { transform: translateY(0) rotate(0deg); }
+    70%  { transform: translateY(-3px) rotate(6deg); }
+    100% { transform: translateY(0) rotate(0deg); }
+  }
+</style>
+<style>
+  #btn-admin-dashboard {
+    position: absolute;
+    right: 4.75rem; /* ← accanto al bottone impostazioni */
+    bottom: -2.75rem;
+
+    width: 44px;
+    height: 44px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 9999px;
+
+    color: #dc2626;
+    font-size: 1.2rem;
+
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+    z-index: 120;
+  }
+
+  #btn-admin-dashboard:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+    transform: translateY(-1px) scale(1.05);
+  }
+
+  @media (max-width: 640px) {
+    #btn-admin-dashboard {
+      right: 8.5rem;
+      bottom: -3rem;
+    }
+  }
+
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const tabs = document.querySelectorAll(".tab-btn");
+  const panes = document.querySelectorAll(".tab-pane");
+
+  const attivaTab = (key) => {
+    tabs.forEach(b => {
+      const attivo = b.dataset.tab === key;
+      b.classList.toggle("active", attivo);
+      b.classList.toggle("bg-blue-600", attivo);
+      b.classList.toggle("text-white", attivo);
+      b.classList.toggle("text-gray-600", !attivo);
+      b.classList.toggle("hover:text-blue-700", !attivo);
+      b.classList.toggle("hover:bg-blue-50", !attivo);
+    });
+
+    panes.forEach(p => {
+      p.classList.toggle("hidden", p.id !== `tab-${key}`);
+    });
+  };
+
+  // 🔹 Quando clicchi una tab → salvi quale è attiva
+  tabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.tab;
+      attivaTab(key);
+      localStorage.setItem("ultima_tab_profilo", key);
+    });
+  });
+
+  // 🔹 Ripristina la tab corretta dopo refresh
+  const salvata = localStorage.getItem("ultima_tab_profilo");
+  if (salvata) {
+    attivaTab(salvata);
+  }
+});
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+
+    function autoScrollAfterTab() {
+      const hero = document.querySelector("#profilo-hero");
+      if (!hero) return;
+
+      const offset = hero.offsetHeight - 20;
+      window.scrollTo({
+        top: offset,
+        behavior: "smooth"
+      });
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+
+        // 🔥 Scroll anche su desktop e iPad orizzontale
+        const wait = 150;
+        setTimeout(autoScrollAfterTab, wait);
+
+      });
+    });
+
+  });
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // 🔹 Se esiste il link "Modifica informazioni" nella sezione Intro
+  const jumpLink = document.querySelector('a[data-jump="info"]');
+  if (!jumpLink) return;
+
+  jumpLink.addEventListener("click", (e) => {
+    e.preventDefault(); // Evita il comportamento standard
+    const infoTab = document.querySelector('.tab-btn[data-tab="info"]');
+    if (infoTab) {
+      infoTab.click(); // Attiva la tab “Info”
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scrolla in alto in modo elegante
+    }
+  });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const img = document.getElementById("copertina-img");
+  if (img.complete) {
+    img.classList.add("loaded");
+  } else {
+    img.addEventListener("load", () => img.classList.add("loaded"));
+  }
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const copertina = document.getElementById("copertina");
+  const menu = document.getElementById("menuOptions");
+
+  if (!copertina || !menu) return;
+
+  copertina.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.toggle("hidden");
+  });
+
+  menu.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+
+  document.addEventListener("click", () => {
+    menu.classList.add("hidden");
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      menu.classList.add("hidden");
+    }
+  });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const img = document.getElementById("fotoProfiloPubblica");
+  const modal = document.getElementById("modaleFotoProfilo");
+  const imgGrande = document.getElementById("fotoProfiloGrande");
+  const chiudi = document.getElementById("chiudiModaleFoto");
+
+  if (img) {
+    img.addEventListener("click", () => {
+      imgGrande.classList.remove("animate-in"); // reset animazione
+      imgGrande.src = img.src;
+      modal.classList.remove("hidden");
+
+      // Forza repaint per evitare glitch
+      void imgGrande.offsetWidth;
+
+      // Attiva animazione solo dopo apertura effettiva
+      setTimeout(() => imgGrande.classList.add("animate-in"), 50);
+    });
+  }
+
+  if (chiudi) {
+    chiudi.addEventListener("click", () => {
+      imgGrande.classList.remove("animate-in");
+      modal.classList.add("hidden");
+    });
+  }
+
+  modal?.addEventListener("click", (e) => {
+    if (e.target === modal) chiudi.click();
+  });
+});
+</script>
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+let ANNUNCIO_ID_CORRENTE = null;
+</script>
+<script>
+function apriZoom(src) {
+  document.getElementById("zoom-img").src = src;
+  document.getElementById("zoom-overlay").classList.remove("hidden");
+}
+function chiudiZoom() {
+  document.getElementById("zoom-overlay").classList.add("hidden");
+}
+</script>
+<script>
+  function apriVisibilita(id) {
+    ANNUNCIO_ID_CORRENTE = id;
+
+    document.getElementById("modale-visibilita").classList.remove("hidden");
+    document.body.classList.add("overflow-hidden", "modal-open"); // 🔒 BLOCCA SCROLL
+
+    // reset contatori
+    serviziCaricati = 0;
+    Object.keys(statoServizi).forEach(k => delete statoServizi[k]);
+
+    const servizi = [
+      "boost_lista",
+      "badge_evidenza",
+      "vetrina_annuncio",
+      "annuncio_urgente",
+      "contatti",
+      "pacchetto_visibilita",
+      "visibilita_premium"
+    ];
+
+    NUM_SERVIZI_ATTESI = servizi.length;
+    servizi.forEach(codice =>
+      caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice)
+    );
+  }
+</script>
+<script>
+  function chiudiVisibilita() {
+    document.getElementById("modale-visibilita").classList.add("hidden");
+    document.body.classList.remove("overflow-hidden", "modal-open"); // 🔓 RIABILITA SCROLL
+  }
+</script>
+<script>
+let selezioneCorrente = null;
+
+async function apriServizio(btn) {
+  const modale = document.getElementById("modale-servizio");
+  if (!modale.classList.contains("hidden")) return;
+
+  const codice = btn.dataset.codice;
+  const titolo = btn.dataset.titolo || "Servizio";
+  const descrizione = btn.dataset.descrizione || "";
+
+  try {
+    const tipo = codice.startsWith("pacchetto_") || codice.includes("premium")
+      ? "pacchetti"
+      : "servizi";
+
+    const res = await fetch(`/api/${tipo}/${encodeURIComponent(codice)}/piani`, {
+      headers: { "Accept": "application/json" }
+    });
+
+    if (!res.ok) {
+      alert("Errore nel caricamento dei piani del servizio.");
+      return;
+    }
+
+    const data = await res.json();
+
+    document.getElementById("ms-titolo").innerText = titolo;
+    document.getElementById("ms-descrizione").innerText = descrizione;
+
+    const box = document.getElementById("ms-piani");
+    box.innerHTML = "";
+    selezioneCorrente = null;
+
+    const btnConferma = document.getElementById("ms-conferma");
+    btnConferma.disabled = true;
+    btnConferma.classList.add("opacity-50", "cursor-not-allowed");
+
+    (data.piani || []).forEach(p => {
+      const el = document.createElement("div");
+
+      const permanente = !!p.permanente || p.durata === null || p.durata === undefined;
+
+      el.className = `
+        border rounded-2xl p-4 cursor-pointer transition
+        ${p.evidenziato ? "border-blue-600 scale-[1.03]" : "border-slate-200"}
+      `;
+
+      el.innerHTML = `
+        <div class="flex justify-between items-center mb-1">
+          <span class="font-semibold text-sm">
+            ${permanente ? "♾️ Senza scadenza" : `${p.durata} giorni`}
+          </span>
+          ${p.consigliato ? `
+            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+              ⭐ più scelto
+            </span>` : ""}
+        </div>
+
+        <div class="text-2xl font-bold">
+          ${(p.prezzo / 100).toFixed(2)} €
+        </div>
+
+        <p class="mt-1 text-xs text-slate-500">
+          ${permanente ? "Paghi una sola volta, senza scadenza" : "Scade automaticamente"}
+        </p>
+      `;
+
+      el.onclick = () => {
+        document.querySelectorAll("#ms-piani > div").forEach(x =>
+          x.classList.remove("ring-2", "ring-blue-500")
+        );
+        el.classList.add("ring-2", "ring-blue-500");
+
+        selezioneCorrente = {
+          piano_id: p.id,
+          prezzo: p.prezzo,
+          durata: p.durata,
+          permanente,
+          titolo: titolo,
+          codice: codice,
+          tipo: tipo // "servizi" | "pacchetti"
+        };
+
+        btnConferma.disabled = false;
+        btnConferma.classList.remove("opacity-50", "cursor-not-allowed");
+      };
+
+      box.appendChild(el);
+    });
+
+    modale.classList.remove("hidden");
+  } catch (e) {
+    console.error(e);
+    alert("Errore di rete o JS durante il caricamento del servizio.");
+  }
+}
+
+function chiudiServizio() {
+  document.getElementById("modale-servizio").classList.add("hidden");
+}
+</script>
+<script>
+/* =========================================================
+   CONFIGURAZIONE RINNOVO (UX)
+   ========================================================= */
+const PERCENTUALE_RINNOVO = 0.25; // 25% finale della durata
+const MIN_GIORNI_RINNOVO = 1;     // mai prima di 1 giorno
+
+/* =========================================================
+   STATO GLOBALE
+   ========================================================= */
+const statoServizi = {};
+let serviziCaricati = 0;
+let NUM_SERVIZI_ATTESI = 0;
+
+/* =========================================================
+   CARICA STATO SERVIZIO
+   ========================================================= */
+   async function caricaStatoServizio(annuncioId, codice) {
+     try {
+       const res = await fetch(
+         `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
+         { cache: "no-store" }
+       );
+
+       let data = { attivo: false };
+
+       if (res.ok) {
+         data = await res.json();
+       } else {
+         console.warn("API non ok:", codice);
+       }
+
+       // salva stato globale SEMPRE
+       statoServizi[codice] = data;
+
+       const badge = document.getElementById(`badge-${codice}`);
+       const info  = document.getElementById(`info-${codice}`);
+       const btn   = document.getElementById(`btn-${codice}`);
+
+       if (badge && btn) {
+
+         info?.classList.add("hidden");
+
+         /* =====================================================
+            SERVIZIO NON ATTIVO
+            ===================================================== */
+         if (!data.attivo) {
+           badge.textContent = "Non attivo";
+           badge.className =
+             "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+
+           btn.disabled = false;
+           btn.textContent = "Scopri";
+           btn.className =
+             "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
+           } else {
+             badge.textContent = "Attivo";
+             badge.className =
+               "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+
+               // PERMANENTE (admin / infinito)
+               if (data.permanente === true) {
+                 btn.disabled = true;
+                 btn.textContent = "♾️ Senza scadenza";
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-green-100 text-indigo-700 text-sm font-medium cursor-default";
+
+                 if (info) {
+                   info.classList.remove("hidden");
+                   info.textContent = "Servizio attivo senza scadenza";
+                 }
+               }
+
+               // DATE MANCANTI (fallback sicurezza)
+               else if (!data.data_fine || !data.data_inizio) {
+                 btn.disabled = true;
+                 btn.textContent = "Attivo";
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
+               }
+
+             else {
+
+               const fine = new Date(data.data_fine);
+               fine.setHours(23,59,59,999);
+
+               const oggi = new Date();
+               oggi.setHours(0,0,0,0);
+
+               const giorniResidui = Math.ceil((fine - oggi) / 86400000);
+
+               // SCADUTO
+               if (giorniResidui <= 0) {
+                 badge.textContent = "Scaduto";
+                 badge.className =
+                   "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+
+                 btn.disabled = false;
+                 btn.textContent = "Scopri";
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
+               }
+
+               // VICINO SCADENZA (≤ 3 giorni)
+               else if (giorniResidui <= 3) {
+                 btn.disabled = false;
+                 btn.textContent = "Rinnova";
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium";
+               }
+
+               // LONTANO
+               else {
+                 btn.disabled = true;
+                 btn.textContent = `Attivo fino al ${fine.toLocaleDateString('it-IT')}`;
+                 btn.className =
+                   "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
+               }
+             }
+           }
+       }
+
+     } catch (e) {
+       console.error("Errore stato servizio", codice, e);
+       statoServizi[codice] = { attivo: false };
+     }
+
+     // QUESTO DEVE SEMPRE PARTIRE
+     serviziCaricati++;
+     if (serviziCaricati === NUM_SERVIZI_ATTESI) {
+       aggiornaStatoPacchetti();
+       aggiornaStatoVisibilita();
+     }
+   }
+</script>
+<script>
+function aggiornaStatoPacchetti() {
+
+  const pacchetti = {
+    pacchetto_visibilita: [
+      "boost_lista",
+      "badge_evidenza",
+      "contatti"
+    ],
+    visibilita_premium: [
+      "boost_lista",
+      "badge_evidenza",
+      "vetrina_annuncio",
+      "contatti"
+    ]
+  };
+
+  Object.entries(pacchetti).forEach(([codicePacchetto, servizi]) => {
+
+    const badge = document.getElementById(`badge-${codicePacchetto}`);
+    const info  = document.getElementById(`info-${codicePacchetto}`);
+    const btn   = document.getElementById(`btn-${codicePacchetto}`);
+
+    if (!badge || !btn) return;
+
+    const stati = servizi
+      .map(s => statoServizi[s])
+      .filter(Boolean);
+
+    if (stati.length === 0) return;
+
+    const tuttiAttivi = stati.every(s => s.attivo === true);
+
+    /* =========================
+       PACCHETTO NON ATTIVO
+       ========================= */
+    if (!tuttiAttivi) {
+      badge.textContent = "Non attivo";
+      badge.className =
+        "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+
+      btn.disabled = false;
+      btn.textContent = "Scopri il pacchetto";
+      btn.className =
+        "mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold";
+      return;
+    }
+
+    /* =========================
+       PACCHETTO ATTIVO
+       ========================= */
+    badge.textContent = "Attivo";
+    badge.className =
+      "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+
+      const attivi = stati.filter(s => s.attivo === true);
+      const servizioInScadenza = attivi
+      .filter(s => s.data_inizio && s.data_fine)
+      .sort((a, b) => new Date(a.data_fine) - new Date(b.data_fine))[0];
+
+    if (servizioInScadenza && info) {
+      const fine = new Date(servizioInScadenza.data_fine);
+      const gg = Math.ceil((fine - new Date()) / 86400000);
+
+      info.classList.remove("hidden");
+      info.textContent =
+        gg > 0
+          ? `Un servizio scade tra ${gg} giorni`
+          : "In scadenza";
+    }
+
+    /* =========================
+       LOGICA RINNOVO PACCHETTO
+       ========================= */
+    if (servizioInScadenza) {
+      const inizio = new Date(servizioInScadenza.data_inizio);
+      const fine   = new Date(servizioInScadenza.data_fine);
+
+      const durataTotale =
+        Math.max(1, Math.ceil((fine - inizio) / 86400000));
+
+      const giorniResidui =
+        Math.ceil((fine - new Date()) / 86400000);
+
+      const sogliaRinnovo = Math.max(
+        MIN_GIORNI_RINNOVO,
+        Math.ceil(durataTotale * PERCENTUALE_RINNOVO)
+      );
+
+      if (giorniResidui > 0 && giorniResidui <= sogliaRinnovo) {
+        btn.disabled = false;
+        btn.textContent = "Rinnova pacchetto";
+        btn.className =
+          "mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold";
+        return;
+      }
+    }
+
+    /* =========================
+       ATTIVO MA NON RINNOVABILE
+       ========================= */
+    btn.disabled = true;
+    btn.textContent = "Attivo";
+    btn.className =
+      "mt-4 w-full py-2.5 rounded-full bg-green-100 text-green-700 cursor-default";
+  });
+}
+</script>
+<script>
+
+function aggiornaStatoVisibilita() {
+  const box = document.getElementById("box-visibilita-stato");
+  if (!box) return;
+
+  const attivo = c => statoServizi[c]?.attivo === true;
+
+  // reset
+  box.innerHTML = "";
+  box.className = "";
+
+  /* ======================================================
+     1️⃣ ANNUNCIO URGENTE → precedenza comunicativa
+     ====================================================== */
+  if (attivo("annuncio_urgente")) {
+    box.className =
+      "relative bg-rose-50 border border-rose-300 rounded-xl p-4 text-sm text-rose-800 shadow-sm";
+    box.innerHTML = `
+      <div class="absolute -top-3 -left-3 bg-rose-500 text-white text-xs px-2 py-1 rounded-full shadow">
+        Priorità
+      </div>
+      ⚡ <b>Annuncio urgente attivo</b><br>
+      Il tuo annuncio sta ricevendo una spinta immediata di visibilità.
+    `;
+    return;
+  }
+
+  /* ======================================================
+     2️⃣ SERVIZI DI VISIBILITÀ REALI
+     ====================================================== */
+  const serviziVisibilita = [
+    "boost_lista",
+    "badge_evidenza",
+    "vetrina_annuncio"
+  ];
+
+  const visAttivi = serviziVisibilita.filter(attivo);
+  const visMancanti = serviziVisibilita.filter(s => !attivo(s));
+  const contattiAttivi = attivo("contatti");
+
+  /* ======================================================
+     3️⃣ MASSIMA VISIBILITÀ (TUTTI I SERVIZI ATTIVI)
+     ====================================================== */
+  if (visMancanti.length === 0 && contattiAttivi) {
+    box.className =
+      "relative bg-gradient-to-br from-amber-50 to-white border border-amber-300 rounded-xl p-4 text-sm text-amber-800 shadow-sm";
+    box.innerHTML = `
+      <div class="absolute -top-3 -left-3 bg-amber-500 text-white text-xs px-2 py-1 rounded-full shadow">
+        Premium
+      </div>
+      🌟 <b>Massima visibilità attiva</b><br>
+      Il tuo annuncio è al massimo livello possibile.<br>
+      <span class="text-xs">Contatti visibili e priorità completa.</span>
+    `;
+    return;
+  }
+
+  /* ======================================================
+     4️⃣ STATO INTERMEDIO
+     ====================================================== */
+  if (visAttivi.length > 0) {
+    box.className =
+      "relative bg-gradient-to-br from-emerald-50 to-white border border-emerald-300 rounded-xl p-4 text-sm text-emerald-800 shadow-sm";
+
+    box.innerHTML = `
+      <div class="absolute -top-3 -left-3 bg-emerald-500 text-white text-xs px-2 py-1 rounded-full shadow">
+      Buona visibilità
+      </div>
+      🚀 <b>Visibilità migliorata</b><br>
+      ${
+        visMancanti.length > 0
+          ? `Ti manca solo <b>${visMancanti.map(s => s.replace("_", " ")).join(" e ")}</b>
+             per ottenere la massima visibilità.`
+          : "La visibilità è già molto alta."
+      }
+      <div class="mt-2 text-xs text-emerald-700">
+        ${contattiAttivi
+          ? "✅ I contatti sono visibili."
+          : "ℹ️ I contatti non sono ancora visibili."}
+      </div>
+    `;
+    return;
+  }
+
+  /* ======================================================
+     5️⃣ BASE
+     ====================================================== */
+  box.className =
+    "relative bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600";
+  box.innerHTML = `
+    <div class="absolute -top-3 -left-3 bg-slate-400 text-white text-xs px-2 py-1 rounded-full shadow">
+      Base
+    </div>
+    Visibilità standard.<br>
+    Puoi aumentare la visibilità per ottenere più contatti.
+  `;
+}
+</script>
+<script>
+  document.getElementById("ms-conferma").onclick = () => {
+    if (!selezioneCorrente) return;
+
+    chiudiServizio();
+
+    document.getElementById("conf-titolo").innerText =
+      selezioneCorrente.titolo;
+
+    document.getElementById("conf-durata").innerText =
+      selezioneCorrente.permanente
+        ? "Senza scadenza"
+        : `${selezioneCorrente.durata} giorni`;
+
+    document.getElementById("conf-prezzo").innerText =
+      `${(selezioneCorrente.prezzo / 100).toFixed(2)} €`;
+
+    document.getElementById("modale-conferma").classList.remove("hidden");
+  };
+</script>
+
+<script>
+  function chiudiConferma() {
+    document.getElementById("modale-conferma").classList.add("hidden");
+  }
+</script>
+<script>
+  const stripe = Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+  let elements = null;
+
+  async function confermaAttivazione(btn) {
+    if (!selezioneCorrente) return;
+
+    // disabilita subito il bottone per evitare doppio click
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("opacity-50", "cursor-not-allowed");
+    }
+
+    try {
+      const res = await fetch("/api/crea-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          annuncio_id: ANNUNCIO_ID_CORRENTE,
+          piano_id: selezioneCorrente.piano_id,
+          tipo: selezioneCorrente.tipo
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.client_secret) {
+        alert(data?.error || "Errore creazione pagamento");
+        throw new Error("PaymentIntent non valido");
+      }
+
+      // 🔑 crea Stripe Elements
+      elements = stripe.elements({ clientSecret: data.client_secret });
+
+      const container = document.getElementById("payment-element");
+      container.innerHTML = "";
+
+      const paymentElement = elements.create("payment");
+      paymentElement.mount(container);
+
+      // mostra Stripe
+      document.getElementById("stripe-box").classList.remove("hidden");
+
+      // nasconde il bottone Conferma (UX pulita)
+      btn?.classList.add("hidden");
+
+    } catch (err) {
+      console.error(err);
+      alert("Errore durante la preparazione del pagamento.");
+
+      // riabilita il bottone SOLO se Stripe non è stato mostrato
+      if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
+        btn.disabled = false;
+        btn.classList.remove("opacity-50", "cursor-not-allowed");
+      }
+    }
+  }
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  const payBtn = document.getElementById("pay-button");
+  const errBox = document.getElementById("payment-error");
+
+  if (!payBtn) return; // sicurezza: bottone non ancora nel DOM
+
+  payBtn.onclick = async () => {
+    // sicurezza: niente pagamento se Stripe Elements non è pronto
+    if (!elements) return;
+
+    // reset errore
+    if (errBox) {
+      errBox.textContent = "";
+      errBox.classList.add("hidden");
+    }
+
+    // evita doppio click
+    payBtn.disabled = true;
+    payBtn.classList.add("opacity-50", "cursor-not-allowed");
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.href
+        }
+      });
+
+      /*
+        - Se error è presente → errore immediato (carta rifiutata, ecc.)
+        - Se NON c'è error → Stripe può fare redirect (3DS)
+          oppure il pagamento va avanti e il webhook farà il resto
+      */
+      if (error) {
+        if (errBox) {
+          errBox.textContent = error.message || "Pagamento non riuscito.";
+          errBox.classList.remove("hidden");
+        } else {
+          alert(error.message || "Pagamento non riuscito.");
+        }
+
+        // riabilita per nuovo tentativo
+        payBtn.disabled = false;
+        payBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      }
+
+    } catch (e) {
+      console.error("Errore Stripe:", e);
+
+      if (errBox) {
+        errBox.textContent = "Errore imprevisto durante il pagamento. Riprova.";
+        errBox.classList.remove("hidden");
+      } else {
+        alert("Errore imprevisto durante il pagamento. Riprova.");
+      }
+
+      // riabilita per nuovo tentativo
+      payBtn.disabled = false;
+      payBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    }
+  };
+
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,172 @@
+{% extends "layout_admin.html" %}
+
+{% block admin_title %}Utenti Registrati{% endblock %}
+{% block admin_subtitle %}Gestione degli utenti, dello stato degli account e delle azioni amministrative.{% endblock %}
+
+{% block admin_content %}
+
+<style>
+/* FILTRI */
+.filter-box {
+    background: #fafafa;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 22px;
+}
+
+.filter-box input,
+.filter-box select {
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    padding: 8px 10px;
+    background: white;
+    width: 100%;
+}
+
+/* BADGE */
+.badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-red { background: #fee2e2; color: #991b1b; }
+.badge-yellow { background: #fef9c3; color: #854d0e; }
+
+/* TABELLA */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-wrapper table td,
+.table-wrapper table th {
+    padding: 12px;
+    white-space: nowrap;
+}
+</style>
+
+<!-- FILTRI -->
+<form method="get" class="filter-box grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+    <div>
+        <label class="text-xs font-medium text-gray-600">Nome / Cognome</label>
+        <input type="text" name="nome" value="{{ request.args.get('nome','') }}" placeholder="Cerca nome">
+    </div>
+
+    <div>
+        <label class="text-xs font-medium text-gray-600">Email</label>
+        <input type="text" name="email" value="{{ request.args.get('email','') }}" placeholder="Email">
+    </div>
+
+    <div>
+        <label class="text-xs font-medium text-gray-600">Città</label>
+        <input type="text" name="citta" value="{{ request.args.get('citta','') }}" placeholder="Città">
+    </div>
+
+    <div>
+        <label class="text-xs font-medium text-gray-600">Stato account</label>
+        <select name="stato">
+            <option value="">Tutti</option>
+            <option value="attivo"
+              {% if request.args.get('stato')=='attivo' %}selected{% endif %}>Attivo</option>
+            <option value="sospeso"
+              {% if request.args.get('stato')=='sospeso' %}selected{% endif %}>Sospeso</option>
+            <option value="non_attivo"
+              {% if request.args.get('stato')=='non_attivo' %}selected{% endif %}>Non attivo</option>
+        </select>
+    </div>
+
+    <div class="sm:col-span-2 lg:col-span-4 flex gap-2 mt-2">
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+            Filtra
+        </button>
+        <a href="{{ url_for('admin_utenti') }}"
+           class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300">
+            Reset
+        </a>
+    </div>
+
+</form>
+
+<!-- TABELLA UTENTI -->
+<div class="table-wrapper bg-white rounded-xl border border-gray-200 shadow-sm">
+
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Cognome</th>
+                <th>Email</th>
+                <th>Username</th>
+                <th>Città</th>
+                <th>Stato</th>
+                <th class="text-center">Azioni</th>
+            </tr>
+        </thead>
+
+        <tbody class="divide-y divide-gray-100">
+            {% for u in utenti %}
+            <tr class="hover:bg-gray-50">
+
+                <td>{{ u.id }}</td>
+
+                <td>{{ u.nome }}</td>
+
+                <td>{{ u.cognome }}</td>
+
+                <td>{{ u.email }}</td>
+
+                <td>{{ u.username }}</td>
+
+                <td>{{ u.citta or "-" }}</td>
+
+                <td>
+                    {% if u.sospeso == 1 %}
+                        <span class="badge badge-yellow">Sospeso</span>
+                    {% elif u.attivo == 1 %}
+                        <span class="badge badge-green">Attivo</span>
+                    {% else %}
+                        <span class="badge badge-red">Non attivo</span>
+                    {% endif %}
+                </td>
+
+                <td class="text-center space-x-2">
+
+                    <!-- 🔵 CHAT -->
+                    <a href="{{ url_for('chat_conversazione_view', other_id=u.id) }}"
+                       class="inline-block px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs hover:bg-blue-100">
+                       💬 Chat
+                    </a>
+
+                    <!-- ✉️ MAIL -->
+                    <a href="mailto:{{ u.email }}"
+                       class="inline-block px-2 py-1 rounded bg-gray-50 text-gray-700 border border-gray-200 text-xs hover:bg-gray-100">
+                       ✉️ Mail
+                    </a>
+
+                    <!-- ⚙️ AZIONI STANDARD -->
+                    <a href="{{ url_for('toggle_utente_admin', id=u.id) }}"
+                       class="text-blue-600 hover:underline">
+                        {{ 'Disattiva' if u.attivo else 'Attiva' }}
+                    </a>
+
+                    <a href="{{ url_for('elimina_utente_route', id=u.id) }}"
+                       onclick="return confirm('Eliminare questo utente?');"
+                       class="text-red-600 hover:underline">
+                        Elimina
+                    </a>
+
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

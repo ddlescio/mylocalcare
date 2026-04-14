@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+
+  <h1 class="text-lg sm:text-xl font-bold mb-3 text-gray-800 text-center">
+    Cerca persone su <span class="text-blue-600">LocalCare</span>
+  </h1>
+
+  <!-- 🔍 FORM DI RICERCA — stile coerente con /cerca -->
+  <form method="get"
+        class="mb-6 bg-white/90 backdrop-blur-md rounded-2xl
+               shadow-[0_8px_22px_rgba(15,23,42,0.08)]
+               border border-gray-100/70 p-4 sm:p-5 space-y-3.5">
+
+    <!-- USERNAME -->
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">
+        Username
+      </label>
+      <input
+        type="text"
+        name="username"
+        value="{{ request.args.get('username','') }}"
+        placeholder="es. vale46"
+        class="border border-gray-200 rounded-2xl px-3.5 py-2.5 w-full
+               bg-gray-50 focus:bg-white
+               focus:ring-2 focus:ring-blue-200 focus:border-blue-300
+               outline-none transition-all duration-150"
+      >
+    </div>
+
+    <!-- 📍 ZONA -->
+    <div class="relative">
+      <label class="block text-xs font-medium text-gray-500 mb-1">
+        Comune o zona
+      </label>
+
+      <input
+        type="text"
+        id="zona-autocomplete"
+        name="zona_autocomplete_visuale"
+        class="border border-gray-200 rounded-2xl px-3.5 py-2.5 w-full
+               bg-gray-50 focus:bg-white
+               focus:ring-2 focus:ring-blue-200 focus:border-blue-300
+               outline-none transition-all duration-150"
+        placeholder="Scrivi un comune..."
+        autocomplete="off"
+        value="{{ request.args.get('zona_autocomplete_visuale','') }}"
+      >
+      <input type="hidden" name="zona" id="zona" value="{{ request.args.get('zona','') }}">
+      <input type="hidden" name="provincia" id="provincia" value="{{ request.args.get('provincia','') }}">
+
+      <ul id="zona-suggerimenti"
+          class="absolute z-30 left-0 right-0 mt-2 hidden max-h-60 overflow-y-auto
+                 bg-white border border-slate-200 rounded-2xl shadow-lg">
+      </ul>
+    </div>
+
+    <!-- 🏷️ CATEGORIA -->
+    <div>
+      <label class="block text-xs font-medium text-gray-500 mb-1">
+        Categoria
+      </label>
+
+      <select
+        name="categoria"
+        class="appearance-none border border-gray-200 rounded-2xl
+               px-3.5 py-2.5 w-full bg-gray-50
+               focus:bg-white focus:ring-2 focus:ring-blue-200
+               focus:border-blue-300 outline-none transition-all"
+      >
+        <option value="">Tutte le categorie</option>
+        <option value="operatori-benessere" {% if request.args.get('categoria') == 'operatori-benessere' %}selected{% endif %}>
+          Operatori Benessere
+        </option>
+        <option value="babysitter" {% if request.args.get('categoria') == 'babysitter' %}selected{% endif %}>
+          Babysitter
+        </option>
+        <option value="petsitter" {% if request.args.get('categoria') == 'petsitter' %}selected{% endif %}>
+          Pet-sitter
+        </option>
+        <option value="caregiver" {% if request.args.get('categoria') == 'caregiver' %}selected{% endif %}>
+          Caregiver
+        </option>
+        <option value="ripetizioni" {% if request.args.get('categoria') == 'ripetizioni' %}selected{% endif %}>
+          Ripetizioni
+        </option>
+        <option value="aiuto-in-casa" {% if request.args.get('categoria') == 'aiuto-in-casa' %}selected{% endif %}>
+          Aiuto in casa
+        </option>
+        <option value="escursioni-sport" {% if request.args.get('categoria') == 'escursioni-sport' %}selected{% endif %}>
+          Escursioni & Sport
+        </option>
+        <option value="biglietti-spettacoli" {% if request.args.get('categoria') == 'biglietti-spettacoli' %}selected{% endif %}>
+          Biglietti Spettacoli
+        </option>
+        <option value="libri-scuola" {% if request.args.get('categoria') == 'libri-scuola' %}selected{% endif %}>
+          Libri scuola
+        </option>
+        <option value="caffe-parole" {% if request.args.get('categoria') == 'caffe-parole' %}selected{% endif %}>
+          Caffè & parole
+        </option>
+      </select>
+    </div>
+
+    <!-- 🔘 BOTTONI (full width come mock) -->
+    <div class="grid grid-cols-2 gap-3 pt-2">
+
+      <button
+        type="submit"
+        class="bg-blue-600 text-white px-4 py-2.5 rounded-full
+               hover:bg-blue-700
+               shadow-[0_6px_16px_rgba(37,99,235,0.25)]
+               hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)]
+               transition-all duration-200 font-semibold"
+      >
+        Cerca
+      </button>
+
+      <a
+        href="{{ url_for('ricerca_utenti') }}"
+        class="border border-gray-200 text-gray-700 px-4 py-2.5 rounded-full
+               bg-white hover:bg-gray-50
+               transition-all duration-150 text-center font-medium"
+      >
+        Reset
+      </a>
+    </div>
+  </form>
+
+  <!-- 🧩 RISULTATI -->
+  {% if utenti %}
+    <div class="grid grid-cols-1 gap-6">
+      {% for u in utenti %}
+        <div class="relative group">
+          <a
+            href="{% if logged_in %}{{ url_for('profilo_pubblico', id=u['id']) }}{% else %}{{ url_for('login', next=request.path) }}{% endif %}"
+            {% if not logged_in %}onclick="alert('Devi accedere per vedere il profilo.'); return false;"{% endif %}
+            class="relative block rounded-2xl border border-gray-100
+                   bg-white shadow-sm
+                   hover:shadow-md transition-all duration-300 p-6 text-center no-underline">
+
+            <img
+              src="{{ url_for('static', filename=u['foto_profilo'] or 'img/user_default.png') }}"
+              class="w-28 h-28 rounded-full mx-auto mb-3 object-cover border shadow"
+            >
+
+            <h2 class="text-lg font-semibold text-gray-800">
+              @{{ u['username'] }}
+            </h2>
+
+            {% if u['citta'] %}
+              <p class="text-sm text-gray-500">{{ u['citta'] }}</p>
+            {% endif %}
+
+            {% if u['numero_recensioni'] > 0 %}
+              <div class="mt-2 text-yellow-500 text-sm">
+                ⭐ {{ u['media_recensioni'] }}
+                <span class="text-gray-500">({{ u['numero_recensioni'] }})</span>
+              </div>
+            {% else %}
+              <p class="text-xs text-gray-400 italic mt-2">Nessuna recensione</p>
+            {% endif %}
+
+            <div class="mt-4 inline-block bg-blue-600 text-white text-sm font-semibold
+                        px-5 py-2.5 rounded-xl shadow-sm">
+              {% if logged_in %}Vedi profilo →{% else %}🔒 Accedi{% endif %}
+            </div>
+
+            {% if not logged_in %}
+              <div class="absolute inset-0 bg-white/80 flex items-center justify-center
+                          rounded-2xl opacity-0 group-hover:opacity-100 transition">
+                🔒
+              </div>
+            {% endif %}
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-center text-gray-500 mt-8">Nessun utente trovato.</p>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================
+   AUTOCOMPLETE COMUNI (COPIA IDENTICA /cerca)
+============================ */
+document.addEventListener("DOMContentLoaded", function () {
+  const zonaInput = document.getElementById("zona-autocomplete");
+  const zonaHidden = document.getElementById("zona");
+  const provinciaHidden = document.getElementById("provincia");
+  const box = document.getElementById("zona-suggerimenti");
+
+  if (!zonaInput || !box) return;
+  if (zonaInput.dataset.init === "1") return;
+  zonaInput.dataset.init = "1";
+
+  let timeout, hasSelected = false;
+
+  const norm = s =>
+    (s || "").toLowerCase().normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/['’]/g, "").trim();
+
+  const score = (n, q) =>
+    n === q ? 0 : n.startsWith(q) ? 1 : n.includes(q) ? 2 : 99;
+
+  function hide() { box.classList.add("hidden"); }
+  function show() { box.classList.remove("hidden"); }
+
+  zonaInput.addEventListener("input", () => {
+    clearTimeout(timeout);
+    hasSelected = false;
+    box.innerHTML = "";
+
+    const raw = zonaInput.value.trim();
+    const q = norm(raw);
+    if (q.length < 2) return hide();
+
+    timeout = setTimeout(() => {
+      fetch(`/api/suggerimenti-comuni?q=${encodeURIComponent(raw)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!Array.isArray(data)) return hide();
+
+          const risultati = data
+            .map(c => ({ ...c, _s: score(norm(c.comune), q) }))
+            .sort((a,b) => a._s - b._s)
+            .slice(0,10);
+
+          risultati.forEach(c => {
+            const el = document.createElement("div");
+            el.textContent = `${c.comune} (${c.provincia})`;
+            el.className = "px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm";
+
+            el.addEventListener("pointerdown", e => {
+              e.preventDefault();
+              zonaInput.value = `${c.comune} (${c.provincia})`;
+              zonaHidden.value = c.comune;
+              provinciaHidden.value = c.provincia;
+              hasSelected = true;
+              hide();
+            });
+
+            box.appendChild(el);
+          });
+          show();
+        });
+    }, 200);
+  });
+
+  zonaInput.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!hasSelected) {
+        zonaInput.value = "";
+        zonaHidden.value = "";
+        provinciaHidden.value = "";
+      }
+      hide();
+    }, 120);
+  });
+});
+</script>
+{% endblock %}

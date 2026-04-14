@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded shadow max-w-xl mx-auto">
+  <h2 class="text-2xl font-bold mb-4">Aggiungi un nuovo operatore</h2>
+
+  {% if successo %}
+    <div class="bg-green-100 text-green-800 px-4 py-2 rounded mb-4">Operatore aggiunto con successo!</div>
+  {% endif %}
+
+  <form method="POST" class="space-y-4">
+    <div>
+      <label class="block font-medium mb-1">Nome</label>
+      <input type="text" name="nome" required class="w-full border rounded px-3 py-2">
+    </div>
+    <div>
+      <label class="block font-medium mb-1">Categoria</label>
+      <select name="categoria" required class="w-full border rounded px-3 py-2">
+        <option value="olistico">Olistico</option>
+        <option value="babysitter">Babysitter</option>
+        <option value="dogsitter">Dog/Cat sitter</option>
+        <option value="anziani">Assistenza anziani</option>
+      </select>
+    </div>
+    <div>
+      <label class="block font-medium mb-1">Zona</label>
+      <input type="text" name="zona" required class="w-full border rounded px-3 py-2">
+    </div>
+    <div>
+      <label class="block font-medium mb-1">Servizi</label>
+      <input type="text" name="servizi" required class="w-full border rounded px-3 py-2">
+    </div>
+    <div>
+      <label class="block font-medium mb-1">Prezzo</label>
+      <input type="text" name="prezzo" required class="w-full border rounded px-3 py-2">
+    </div>
+    <div>
+      <label class="block font-medium mb-1">Biografia / Descrizione</label>
+      <textarea name="bio" required class="w-full border rounded px-3 py-2" rows="4"></textarea>
+    </div>
+    <div class="text-right">
+      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+        Salva
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,1244 @@
+{% extends "base.html" %}
+{% set body_class = "page-cerca" %}
+
+{% block content %}
+
+{% if categoria %}
+
+<form method="get" action="/cerca" id="filtri-container"
+      class="hidden mb-6 rounded-3xl p-5 sm:p-6
+             bg-gradient-to-br from-blue-50 via-indigo-50 to-pink-50
+             border border-indigo-100
+             shadow-2xl backdrop-blur-lg">
+  <input type="hidden" name="categoria" value="{{ categoria }}">
+
+  <div class="flex items-center gap-2 mb-4 pb-3 border-b border-indigo-100">
+  <span class="text-lg">✨</span>
+  <h3 class="text-base font-semibold bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 bg-clip-text text-transparent">
+    Filtri di ricerca
+  </h3>
+  </div>
+
+  <!-- 📍 Campo ZONA con autocomplete -->
+  <div class="mb-6 relative">
+    <label for="zona" class="block font-semibold mb-2">📍 Zona</label>
+    <input
+      type="text"
+      id="zona-autocomplete"
+      name="zona_autocomplete_visuale"
+      class="border border-indigo-100 px-4 py-3 rounded-xl w-full text-base
+       focus:ring-2 focus:ring-indigo-400 focus:outline-none
+       shadow-md transition-all"
+      placeholder="Comune o zona (es. Milano, Lambrate...)"
+      autocomplete="off"
+    >
+    <input type="hidden" name="zona" id="zona">
+    <input type="hidden" name="provincia" id="provincia">
+    <ul id="zona-suggerimenti"
+        class="absolute z-10 left-0 right-0 bg-white border rounded shadow mt-1 hidden max-h-60 overflow-y-auto"></ul>
+  </div>
+
+    <!-- 🔁 Tipo annuncio: Offro / Cerco -->
+  <div class="mb-6">
+    <label class="block font-semibold mb-2">🔁 Tipo annuncio</label>
+
+    <div class="flex flex-wrap gap-3 mt-1">
+      <!-- OFFRO -->
+      <label class="cursor-pointer">
+        <input
+          type="radio"
+          name="tipo_annuncio"
+          value="offro"
+          class="hidden peer"
+          {% if tipo_annuncio == 'offro' %}checked{% endif %}
+        >
+        <span
+          class="peer-checked:bg-gradient-to-r peer-checked:from-blue-600 peer-checked:to-indigo-600
+          peer-checked:text-white
+          bg-white hover:bg-indigo-50 text-gray-700
+          text-sm px-5 py-2.5 rounded-full border border-indigo-100
+          shadow-md transition-all select-none inline-block">
+          🟢 Offro
+        </span>
+      </label>
+
+      <!-- CERCO -->
+      <label class="cursor-pointer">
+        <input
+          type="radio"
+          name="tipo_annuncio"
+          value="cerco"
+          class="hidden peer"
+          {% if tipo_annuncio == 'cerco' %}checked{% endif %}
+        >
+        <span
+          class="peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-pink-500
+          peer-checked:text-white
+          bg-white hover:bg-indigo-50 text-gray-700
+          text-sm px-5 py-2.5 rounded-full border border-indigo-100
+          shadow-md transition-all select-none inline-block">
+          🔵 Cerco
+        </span>
+      </label>
+
+      <!-- RESET -->
+      <label class="cursor-pointer">
+        <input
+          type="radio"
+          name="tipo_annuncio"
+          value=""
+          class="hidden peer"
+          {% if not tipo_annuncio %}checked{% endif %}
+        >
+        <span
+          class="peer-checked:bg-indigo-100 peer-checked:text-indigo-800
+                 bg-gray-100 hover:bg-gray-200 text-gray-600
+                 text-sm px-4 py-2 rounded-full border border-gray-200
+                 shadow-sm transition-all select-none inline-block">
+          Tutti
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <!-- 🔹 Filtri categoria (stile pill interattive) -->
+  <div class="flex flex-wrap gap-2 mb-6">
+    {% for filtro in filtri_possibili %}
+      <label class="cursor-pointer">
+        <input
+          type="checkbox"
+          name="filtri"
+          value="{{ filtro }}"
+          class="hidden peer"
+          {% if filtro in filtri %}checked{% endif %}
+        >
+        <span
+          class="peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-pink-500
+                peer-checked:text-white
+                 bg-gray-100 hover:bg-blue-50 text-gray-700
+                 text-sm px-4 py-2 rounded-full border border-gray-200
+                 shadow-sm transition-all duration-150
+                 hover:shadow-md hover:-translate-y-0.5 select-none inline-block">
+          {{ filtro }}
+        </span>
+      </label>
+    {% endfor %}
+  </div>
+
+  <!-- ✅ Applica filtri -->
+  <div class="flex justify-center mt-4">
+    <button type="submit"
+            class="inline-flex items-center justify-center gap-2
+                   px-6 py-2 text-sm font-semibold
+                   bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-500
+                   text-white rounded-full shadow-lg
+                   hover:shadow-xl hover:scale-[1.02]
+                   transition-all duration-150">
+      ✨ Applica filtri
+    </button>
+  </div>
+</form>
+{% endif %}
+
+<!-- 🧭 Titolo categoria + Bottoni -->
+<div class="header-cerca flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+
+  <!-- SINISTRA: Titolo + Filtri -->
+  <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+
+    <!-- Titolo -->
+    <h2 class="text-xl sm:text-2xl font-semibold text-blue-700 inline-flex items-center gap-2
+               bg-blue-50 px-4 py-2 rounded-md shadow-sm">
+      {% if categoria == 'operatori benessere' %}🧘 Operatori Benessere
+      {% elif categoria == 'babysitter' %}👶 Babysitter
+      {% elif categoria == 'petsitter' %}🐾 Pet-sitter
+      {% elif categoria == 'caregiver' %}👵 Caregiver
+      {% elif categoria == 'ripetizioni' %}📚 Ripetizioni
+      {% elif categoria == 'aiuto-in-casa' %}🏠 Aiuto in Casa
+      {% elif categoria == 'escursioni & sport' %}🥾 Escursioni & Sport
+      {% elif categoria == 'biglietti spettacoli' %}🎟️ Biglietti Spettacoli
+      {% elif categoria == 'libri scuola' %}📖 Libri Scuola
+      {% else %}{{ categoria|capitalize }}
+      {% endif %}
+    </h2>
+
+    <!-- Filtri desktop -->
+    <div class="filtri-wrapper hidden sm:flex gap-3">
+      <button type="button" id="toggle-filtri"
+              class="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-semibold
+                     bg-gradient-to-r from-blue-500 to-indigo-500
+                     text-white rounded-full shadow-md
+                     hover:shadow-lg hover:scale-[1.02]
+                     transition-all duration-150">
+        🔍 <span>Filtri</span>
+      </button>
+
+      <button type="button" id="reset-filtri"
+              class="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-semibold
+                     bg-white border border-red-300 text-red-600
+                     rounded-full shadow-sm
+                     hover:bg-red-50 hover:shadow-md hover:scale-[1.02]
+                     transition-all duration-150">
+        ✕ <span>Azzera</span>
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- DESTRA: Pubblica annuncio -->
+  <a href="{{ url_for('nuovo_annuncio') }}"
+     id="btn-pubblica-annuncio"
+     class="hidden sm:inline-flex items-center gap-1 px-4 py-1.5
+            text-blue-700 bg-white/70 backdrop-blur-sm border border-blue-200
+            rounded-full font-medium text-sm shadow-sm hover:bg-blue-50 transition">
+    ➕ Pubblica annuncio
+  </a>
+
+</div>
+
+
+<!-- 🎯 Filtri attivi -->
+{% if filtri %}
+  <div class="mb-4">
+    <p class="text-sm text-gray-600">
+      <strong>Filtri attivi:</strong>
+      {% for f in filtri %}
+        <span class="inline-block bg-gray-200 text-gray-800 text-xs font-semibold px-2 py-1 rounded mr-2">{{ f }}</span>
+      {% endfor %}
+    </p>
+  </div>
+{% endif %}
+
+<!-- 🟡 VETRINA -->
+{% if annunci_vetrina %}
+<section class="vetrina-wrapper">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+      🟡 In vetrina
+    </h3>
+    <span class="text-xs text-gray-500">Annunci selezionati</span>
+  </div>
+
+  <!-- Mobile: scroll orizzontale -->
+  <div class="flex gap-4 overflow-x-auto pb-4 sm:hidden">
+    {% for a in annunci_vetrina %}
+    <div class="min-w-[260px] max-w-[260px] card-vetrina
+         {% if a.get('has_urgente', 0) == 1 %}card-vetrina-urgente{% endif %}"
+           onclick="window.location.href='{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}'">
+
+           {% if a.get('affidabilita_top', 0) == 1 %}
+             <div class="badge-affidabilita-vetrina" title="Affidabilità Top">
+               🏅
+             </div>
+           {% endif %}
+
+           {% if a.get('has_urgente', 0) == 1 %}
+             <div class="badge-urgente-top">Urgente</div>
+           {% else %}
+             <div class="badge-vetrina">In vetrina</div>
+           {% endif %}
+
+        <img src="{{ url_for('static', filename=a['foto_profilo']) }}"
+             class="w-20 h-20 rounded-full object-cover mx-auto mb-3">
+
+        <h4 class="text-sm font-semibold text-center mb-1 line-clamp-2">
+          {{ a['titolo'] }}
+        </h4>
+
+        <!-- ⭐ RECENSIONI -->
+        {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+          <div class="flex justify-center text-yellow-500 text-sm mb-1">
+            {% for i in range(1,6) %}
+              {% if i <= a['media_recensioni']|round(0, 'floor') %}
+                ⭐
+              {% elif i - a['media_recensioni'] < 1 %}
+                🌟
+              {% else %}
+                ☆
+              {% endif %}
+            {% endfor %}
+            {% if a['numero_recensioni'] %}
+              <span class="ml-1 text-gray-400 text-xs">({{ a['numero_recensioni'] }})</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <!-- 📍 ZONA + 🔁 TIPO ANNUNCIO -->
+        <div class="flex justify-center items-center gap-1 text-xs text-gray-500">
+          <span>{{ a['zona'] or '—' }}</span>
+
+          {% if a['tipo_annuncio'] %}
+            <span class="mx-1">•</span>
+            <span class="font-semibold
+              {% if a['tipo_annuncio'] == 'offro' %}
+                text-green-600
+              {% elif a['tipo_annuncio'] == 'cerco' %}
+                text-blue-600
+              {% endif %}">
+              {% if a['tipo_annuncio'] == 'offro' %}
+                🟢 Offro
+              {% else %}
+                🔵 Cerco
+              {% endif %}
+            </span>
+          {% endif %}
+        </div>
+
+        {% if a['categoria'] %}
+          <div class="mt-2 flex flex-wrap justify-center gap-2">
+
+            <!-- Categoria -->
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
+                         bg-blue-50 text-blue-700 border border-blue-100">
+              {{ a['categoria'] }}
+            </span>
+
+            {% if a['filtri_categoria'] %}
+              {% set filtri = a['filtri_categoria'].split(',') %}
+              {% for filtro in filtri[:2] if filtro.strip() %}
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-medium
+                             bg-gray-100 text-gray-700 border border-gray-200">
+                  {{ filtro.strip() }}
+                </span>
+              {% endfor %}
+
+              {% if filtri|length > 2 %}
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
+                             bg-gray-200 text-gray-600 border border-gray-300">
+                  +{{ filtri|length - 2 }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Desktop: griglia -->
+  <div class="hidden sm:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    {% for a in annunci_vetrina %}
+    <div
+      class="cursor-pointer card-vetrina
+        {% if a.get('has_urgente', 0) == 1 %}
+          card-vetrina-urgente
+        {% endif %}"
+      onclick="window.location.href='{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}'">
+
+            {% if a.get('affidabilita_top', 0) == 1 %}
+              <div class="badge-affidabilita-vetrina" title="Affidabilità Top">
+                🏅
+              </div>
+            {% endif %}
+
+           {% if a.get('has_urgente', 0) == 1 %}
+             <div class="badge-urgente-top">Urgente</div>
+           {% else %}
+             <div class="badge-vetrina">In vetrina</div>
+           {% endif %}
+
+        <img src="{{ url_for('static', filename=a['foto_profilo']) }}"
+             class="w-20 h-20 rounded-full object-cover mx-auto mb-3">
+
+        <h4 class="text-sm font-semibold text-center mb-1 line-clamp-2">
+          {{ a['titolo'] }}
+        </h4>
+
+        <!-- ⭐ RECENSIONI -->
+        {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+          <div class="flex justify-center text-yellow-500 text-sm mb-1">
+            {% for i in range(1,6) %}
+              {% if i <= a['media_recensioni']|round(0, 'floor') %}
+                ⭐
+              {% elif i - a['media_recensioni'] < 1 %}
+                🌟
+              {% else %}
+                ☆
+              {% endif %}
+            {% endfor %}
+            {% if a['numero_recensioni'] %}
+              <span class="ml-1 text-gray-400 text-xs">({{ a['numero_recensioni'] }})</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <!-- 📍 ZONA + 🔁 TIPO ANNUNCIO -->
+        <div class="flex justify-center items-center gap-1 text-xs text-gray-500">
+          <span>{{ a['zona'] or '—' }}</span>
+
+          {% if a['tipo_annuncio'] %}
+            <span class="mx-1">•</span>
+            <span class="font-semibold
+              {% if a['tipo_annuncio'] == 'offro' %}
+                text-green-600
+              {% elif a['tipo_annuncio'] == 'cerco' %}
+                text-blue-600
+              {% endif %}">
+              {% if a['tipo_annuncio'] == 'offro' %}
+                🟢 Offro
+              {% else %}
+                🔵 Cerco
+              {% endif %}
+            </span>
+          {% endif %}
+        </div>
+
+        {% if a['categoria'] %}
+          <div class="mt-2 flex flex-wrap justify-center gap-2">
+
+            <!-- Categoria -->
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
+                         bg-blue-50 text-blue-700 border border-blue-100">
+              {{ a['categoria'] }}
+            </span>
+
+            <!-- Primo filtro -->
+            {% if a['filtri_categoria'] %}
+              {% set filtri = a['filtri_categoria'].split(',') %}
+              {% for filtro in filtri[:2] if filtro.strip() %}
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-medium
+                             bg-gray-100 text-gray-700 border border-gray-200">
+                  {{ filtro.strip() }}
+                </span>
+              {% endfor %}
+
+              {% if filtri|length > 2 %}
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
+                             bg-gray-200 text-gray-600 border border-gray-300">
+                  +{{ filtri|length - 2 }}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+</section>
+{% endif %}
+
+<!-- ✅ GRIGLIA CARD OPERATORI -->
+<div class="max-w-7xl mx-auto px-2 sm:px-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 justify-items-center">
+    {% for a in annunci %}
+    <!-- ✅ CARD OPERATORE -->
+    <div
+      class="relative group card-ios rounded-2xl p-5 flex flex-col items-center text-center gap-5 cursor-pointer
+             min-h-[480px] w-full max-w-[380px]
+             {% if a.get('has_urgente', 0) == 1 %}
+               card-urgente
+             {% elif a.get('has_evidenza', 0) == 1 %}
+               card-evidenza
+             {% endif %}"
+      onclick="window.location.href='{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}'"
+    >
+    {% if a.get('affidabilita_top', 0) == 1 %}
+      <div class="absolute top-3 left-3 z-10">
+        <div class="badge-affidabilita-top" title="Basato su recensioni verificate">
+          <span class="badge-affidabilita-icona" aria-hidden="true">🏅</span>
+          <span class="badge-affidabilita-testo">Fiducia Top</span>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if a.get('has_urgente', 0) == 1 %}
+      <div class="badge-urgente-top">
+        <span class="badge-urgente-dot"></span>
+        Urgente
+      </div>
+
+    {% elif a.get('has_evidenza', 0) == 1 %}
+      <div class="absolute top-3 right-3 z-10">
+        <span class="inline-flex items-center gap-1
+                     px-3 py-1 rounded-full
+                     text-xs font-semibold
+                     bg-gradient-to-r from-amber-400 to-yellow-300
+                     text-amber-900
+                     shadow-md">
+          ⭐ In evidenza
+        </span>
+      </div>
+    {% endif %}
+
+      <!-- FOTO PROFILO -->
+      <div class="relative flex justify-center mb-[-150px] z-10">
+        {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
+        <img
+          src="{{ url_for('static', filename=foto) }}"
+          class="
+            w-52 h-52
+            sm:w-56 sm:h-56
+            rounded-full object-cover
+            border-[4px] border-white/80
+            shadow-2xl
+          "
+        >
+      </div>
+      <!-- TESTO -->
+    <div class="w-full mt-24 px-2 sm:px-4">
+        <div class="mini-card-dati">
+          <!-- contenuto testuale ESISTENTE qui dentro -->
+        <!-- 🔹 Titolo + stelle recensioni -->
+        <div class="flex flex-col items-center gap-2 mb-1">
+          <h4 class="text-lg font-semibold text-gray-900 leading-snug tracking-tight group-hover:text-blue-700 transition break-words">
+            {{ a['titolo'] }}
+          </h4>
+
+          {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+            <div class="flex items-center justify-center sm:justify-end text-yellow-500 text-sm mt-0.5">
+              {% for i in range(1,6) %}
+                {% if i <= a['media_recensioni']|round(0, 'floor') %}
+                  ⭐
+                {% elif i - a['media_recensioni'] < 1 %}
+                  🌟
+                {% else %}
+                  ☆
+                {% endif %}
+              {% endfor %}
+              {% if a['numero_recensioni'] %}
+                <span class="ml-1 text-gray-500 text-xs">({{ a['numero_recensioni'] }})</span>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+
+        <p class="text-sm text-gray-500 mb-2">
+          {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
+        </p>
+
+        {% if a['descrizione'] %}
+          <p class="text-sm text-gray-700 mb-3 line-clamp-2 sm:line-clamp-3 leading-snug">
+            {{ a['descrizione'] }}
+          </p>
+        {% endif %}
+
+        {% if a['filtri_categoria'] %}
+          <div class="flex flex-wrap justify-center gap-2 mb-3">
+            {% for filtro in a['filtri_categoria'].split(',') if filtro.strip() %}
+              <span class="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200">
+                {{ filtro.strip() }}
+              </span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if a['prezzo'] %}
+          <p class="text-sm text-gray-700 font-medium mb-2">
+            Prezzo indicativo:
+            <span class="inline-flex items-center gap-1
+            px-3 py-1 rounded-full
+            bg-emerald-50 text-emerald-700
+            text-xs font-semibold">
+           da {{ a['prezzo'] }} €
+          </span>
+          </p>
+        {% endif %}
+
+        <p class="text-xs text-gray-500 mt-auto text-center">
+          📍 <b>{{ a['zona'] or 'n/d' }}</b> — {{ a['categoria'] }}
+        </p>
+
+        {% if a['tipo_annuncio'] %}
+        <div class="mt-1 flex justify-center">
+          <span class="inline-flex items-center gap-1 text-xs font-medium
+                       {% if a['tipo_annuncio'] == 'offro' %}
+                         text-green-600
+                       {% elif a['tipo_annuncio'] == 'cerco' %}
+                         text-blue-600
+                       {% endif %}">
+            {% if a['tipo_annuncio'] == 'offro' %}
+              🟢 Offro
+            {% elif a['tipo_annuncio'] == 'cerco' %}
+              🔵 Cerco
+            {% endif %}
+          </span>
+        </div>
+        {% endif %}
+
+        <!-- 🔗 LINK AZIONI -->
+        <div class="flex flex-wrap justify-center items-center gap-4 mt-3">
+
+          {% if a.get('id_operatore') %}
+          <a href="{{ url_for('profilo_pubblico', id=a['utente_id']) }}"
+             onclick="event.stopPropagation()"
+             class="btn-profilo-ios">
+             👤 Vai al profilo
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- 📱 FAB mobile/tablet verticale -->
+<a href="{{ url_for('nuovo_annuncio') }}"
+   id="fab-pubblica-annuncio"
+   class="fab-pubblica-annuncio block">
+   ➕ <span>Pubblica</span>
+</a>
+<style>
+/* 🌟 CARD iOS-style */
+.card-ios {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(210,220,255,0.55);
+
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.08),
+    0 12px 32px rgba(0,0,0,0.12);
+
+  transition: all 0.25s ease;
+}
+
+.card-ios:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 6px 20px rgba(0,0,0,0.12),
+    0 18px 40px rgba(0,0,0,0.18);
+}
+
+/* Pulsante Vai al profilo — stile iOS */
+.btn-profilo-ios {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(200,210,255,0.8);
+  backdrop-filter: blur(8px);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s ease;
+}
+
+.btn-profilo-ios:hover {
+  background: rgba(230,240,255,1);
+  border-color: rgba(180,200,255,1);
+  color: #1e40af;
+}
+/* ⭐ CARD IN EVIDENZA */
+.card-evidenza {
+  border: 2px solid rgba(251, 191, 36, 0.85); /* amber-400 */
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.25),
+    0 8px 22px rgba(251, 191, 36, 0.25),
+    0 20px 40px rgba(0, 0, 0, 0.18);
+}
+
+/* Hover leggermente più deciso */
+.card-evidenza:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 0 0 2px rgba(251, 191, 36, 0.45),
+    0 12px 28px rgba(251, 191, 36, 0.35),
+    0 28px 50px rgba(0, 0, 0, 0.22);
+}
+.card-evidenza {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 251, 235, 0.95),
+    rgba(255, 255, 255, 0.85)
+  );
+}
+/* 🏅 Badge Affidabilità Top (reputazione) */
+.badge-affidabilita-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 6px 10px;
+  border-radius: 9999px;
+
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.45); /* slate soft */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+}
+
+.badge-affidabilita-icona {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.badge-affidabilita-testo {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a; /* slate-900 */
+  letter-spacing: 0.2px;
+}
+/* 🟡 CARD VETRINA */
+.card-vetrina {
+  position: relative;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(250,204,21,0.5);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  transition: all 0.25s ease;
+}
+
+.card-vetrina:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.18);
+}
+
+/* Badge vetrina */
+.badge-vetrina {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 9999px;
+
+  background: linear-gradient(to right, #facc15, #fde047);
+  color: #78350f;
+
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+/* 🚨 BADGE URGENTE – slot evidenza */
+.badge-urgente-top {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 12px;
+  border-radius: 9999px;
+
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+
+  box-shadow:
+    0 6px 18px rgba(239, 68, 68, 0.45),
+    0 0 0 1px rgba(255,255,255,0.25);
+
+  animation: urgentPulse 2.6s ease-in-out infinite;
+}
+
+/* Pallino */
+.badge-urgente-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255,255,255,0.9);
+}
+
+/* Animazione molto soft */
+@keyframes urgentPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+/* 🚨 VETRINA URGENTE (rosso più soft della lista) */
+.card-vetrina-urgente {
+  border: 1.5px solid rgba(239, 68, 68, 0.65);
+  box-shadow:
+    0 4px 14px rgba(239, 68, 68, 0.25),
+    0 10px 26px rgba(0, 0, 0, 0.18);
+
+  background: linear-gradient(
+    180deg,
+    rgba(254, 226, 226, 0.45),
+    rgba(255, 255, 255, 0.9)
+  );
+}
+/* 🚨 CARD URGENTE */
+.card-urgente {
+  border: 2px solid rgba(239, 68, 68, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.25),
+    0 8px 22px rgba(239, 68, 68, 0.30),
+    0 20px 40px rgba(0, 0, 0, 0.18);
+
+    background: linear-gradient(
+      180deg,
+      rgba(254, 226, 226, 0.30), /* ⬅️ prima era 0.55 */
+      rgba(255, 255, 255, 0.90)
+    );
+  }
+
+/* Hover più deciso dell’evidenza */
+.card-urgente:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 0 0 2px rgba(239, 68, 68, 0.45),
+    0 12px 28px rgba(239, 68, 68, 0.40),
+    0 28px 50px rgba(0, 0, 0, 0.22);
+}
+
+/* 🏅 Badge Affidabilità – VETRINA (solo icona) */
+.badge-affidabilita-vetrina {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+
+  border-radius: 9999px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+}
+/* ============================
+   SEPARAZIONE VETRINA / LISTA
+============================ */
+
+/* Contenitore vetrina: piano superiore */
+.vetrina-wrapper {
+  position: relative;
+  margin: 0 auto 56px auto;
+  padding: 24px 16px 32px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(255, 252, 235, 0.65),
+    rgba(255, 255, 255, 0)
+  );
+
+  border-radius: 28px;
+
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.06);
+
+  z-index: 2;
+}
+
+/* Desktop spacing più ariosa */
+@media (min-width: 768px) {
+  .vetrina-wrapper {
+    padding: 32px 24px 40px;
+    margin-bottom: 72px;
+  }
+}
+
+/* Separatore morbido sotto la vetrina */
+.vetrina-wrapper::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -18px;
+  transform: translateX(-50%);
+
+  width: 70%;
+  height: 1px;
+
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(0, 0, 0, 0.12),
+    transparent
+  );
+}
+
+</style>
+<style>
+  /* Bottoni filtri – stile App Store */
+  .filtri-wrapper {
+    display: flex;
+    gap: 12px;
+  }
+
+  /* Desktop, iPad verticale/orizzontale, mobile orizzontale */
+  @media (min-width: 640px) {
+
+    /* Il titolo occupa la larghezza disponibile */
+    .page-cerca h2 {
+      margin-right: 20px; /* distanza naturale dal gruppetto bottoni */
+    }
+
+    /* I bottoni si posizionano subito dopo il titolo, NON attaccati a destra */
+    .filtri-wrapper {
+      margin-left: 0;      /* elimina spinta verso destra */
+      justify-content: flex-start;
+    }
+
+  }
+
+  /* Mobile verticale: bottoni sotto il titolo centrati */
+  @media (max-width: 639px) {
+    .filtri-wrapper {
+      width: 100%;
+      justify-content: center;
+      margin-top: 12px;
+    }
+  }
+</style>
+<style>
+.page-cerca {
+  padding-bottom: 160px;
+}
+
+@media (min-width: 1024px) {
+  .page-cerca {
+    padding-bottom: 120px;
+  }
+}
+
+</style>
+<style>
+
+/* ------------------------------
+   BOTTONI FILTRI
+------------------------------ */
+
+/* Desktop: filtri vicino al titolo */
+
+/* ------------------------------
+   BOTTONE DESKTOP “PUBBLICA ANNUNCIO”
+   visibile solo da 1024px in su
+------------------------------ */
+/* Pubblica annuncio — fissato totalmente a destra su desktop e tablet orizzontale */
+.header-cerca {
+    width: 100%;
+}
+
+#btn-pubblica-annuncio {
+    flex-shrink: 0;
+}
+
+@media (max-width: 1023px) {
+    #btn-pubblica-annuncio {
+        display: none !important; /* nascondilo su tablet verticale + mobile */
+    }
+}
+
+/* ------------------------------
+   FAB MOBILE / TABLET VERTICALE (stile iOS)
+   visibile SOLO < 1024px
+------------------------------ */
+.fab-pubblica-annuncio {
+    position: fixed;
+    bottom: 30px;
+    right: 20px;
+
+    padding: 10px 18px;
+    height: auto;
+
+    background: rgba(255, 255, 255, 0.72); /* bianco traslucido stile iOS */
+    border: 1px solid rgba(180, 190, 255, 0.40); /* bordo soft azzurro */
+    border-radius: 9999px;
+
+    color: #2563eb;
+    font-size: 15px;
+    font-weight: 600;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+
+    z-index: 9999;
+    transition: all 0.22s ease;
+}
+
+/* Hover / Tap */
+.fab-pubblica-annuncio:hover {
+    background: rgba(255, 255, 255, 0.90);
+    transform: translateY(-2px);
+}
+
+/* Desktop e tablet orizzontale: NASCONDI FAB */
+@media (min-width: 1024px) {
+    .fab-pubblica-annuncio {
+        display: none !important;
+    }
+}
+
+/* Mobile centratura filtri */
+@media (max-width: 639px) {
+    .filtri-wrapper {
+        width: 100%;
+        justify-content: center;
+        margin-top: 12px;
+    }
+}
+/* 📱💙 Fix FAB su iPad verticale */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    .fab-pubblica-annuncio {
+        bottom: 95px !important;   /* spazio sicuro sopra la bottom bar */
+        right: 30px !important;    /* leggermente più distanziato */
+    }
+}
+
+</style>
+<style>
+  .mini-card-dati {
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 32px 32px 40px 40px;
+    margin-left: -8px;
+    margin-right: -8px;
+
+    padding: 130px 24px 28px;
+
+  @media (min-width: 390px) {
+    .mini-card-dati {
+      padding: 130px 30px 32px;
+    }
+  }
+
+    box-shadow:
+      0 14px 30px rgba(0, 0, 0, 0.14),
+      0 4px 10px rgba(0, 0, 0, 0.08);
+
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    border: 1px solid rgba(210, 220, 255, 0.9);
+    margin-top: -85px;   /* segue davvero la foto */
+  }
+
+/* Hover leggerissimo */
+.card-ios:hover .mini-card-dati {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.16),
+    0 4px 10px rgba(0, 0, 0, 0.08);
+}
+.mini-card-dati {
+  position: relative;
+}
+
+.mini-card-dati::after {
+  content: "";
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #60a5fa, #34d399);
+}
+
+.mini-card-dati::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(96,165,250,0.45),
+    transparent
+  );
+}
+.card-ios img {
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.25),
+    0 0 0 1px rgba(255,255,255,0.6);
+}
+
+</style>
+{% endblock %}
+
+
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  /* ============================
+     TOGGLE / RESET FILTRI
+  ============================ */
+  const toggleBtn = document.getElementById("toggle-filtri");
+  const container = document.getElementById("filtri-container");
+  const resetBtn = document.getElementById("reset-filtri");
+
+  if (toggleBtn && container) {
+    toggleBtn.addEventListener("click", () => {
+      container.classList.toggle("hidden");
+    });
+  }
+
+  if (resetBtn && container) {
+    resetBtn.addEventListener("click", () => {
+      container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+      const zonaHidden = container.querySelector('input[name="zona"]');
+      const provinciaHidden = container.querySelector('input[name="provincia"]');
+
+      if (zonaHidden) zonaHidden.value = "";
+      if (provinciaHidden) provinciaHidden.value = "";
+
+      container.submit();
+    });
+  }
+
+  /* ============================
+     AUTOCOMPLETE COMUNI (FIX ROMA)
+  ============================ */
+  const zonaInput = document.getElementById("zona-autocomplete");
+  const zonaHidden = document.getElementById("zona");
+  const provinciaHidden = document.getElementById("provincia");
+  const suggerimentiBox = document.getElementById("zona-suggerimenti");
+
+  if (!zonaInput || !zonaHidden || !provinciaHidden || !suggerimentiBox) return;
+
+  // 🔒 anti doppia inizializzazione
+  if (zonaInput.dataset.autocompleteInit === "1") return;
+  zonaInput.dataset.autocompleteInit = "1";
+
+  let timeoutId = null;
+  let hasSelected = false;
+
+  const norm = (s) =>
+    (s || "")
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/['’]/g, "");
+
+  function scoreComune(nome, q) {
+    if (nome === q) return 0;
+    if (nome.startsWith(q)) return 1;
+    if (nome.includes(q)) return 2;
+    return 99;
+  }
+
+  function hideList() {
+    suggerimentiBox.classList.add("hidden");
+  }
+
+  function showList() {
+    suggerimentiBox.classList.remove("hidden");
+  }
+
+  function invalidate() {
+    hasSelected = false;
+    zonaHidden.value = "";
+    provinciaHidden.value = "";
+  }
+
+  zonaInput.setAttribute("autocomplete", "off");
+
+  zonaInput.addEventListener("input", function () {
+    clearTimeout(timeoutId);
+    invalidate();
+    suggerimentiBox.innerHTML = "";
+
+    const raw = zonaInput.value.trim();
+    const q = norm(raw);
+
+    if (q.length < 2) {
+      hideList();
+      return;
+    }
+
+    timeoutId = setTimeout(() => {
+      fetch(`/api/suggerimenti-comuni?q=${encodeURIComponent(raw)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!Array.isArray(data) || !data.length) {
+            hideList();
+            return;
+          }
+
+          const risultati = data
+            .map(c => ({
+              ...c,
+              _score: scoreComune(norm(c.comune), q)
+            }))
+            .sort((a, b) => {
+              if (a._score !== b._score) return a._score - b._score;
+              return norm(a.comune).localeCompare(norm(b.comune));
+            })
+            .slice(0, 10);
+
+          suggerimentiBox.innerHTML = "";
+
+          risultati.forEach(c => {
+            const el = document.createElement("div");
+            el.textContent = `${c.comune} (${c.provincia})`;
+            el.className = "px-4 py-2 hover:bg-gray-200 cursor-pointer text-sm";
+
+            // ✅ pointerdown = mouse + touch + no blur
+            el.addEventListener("pointerdown", e => {
+              e.preventDefault();
+              zonaInput.value = `${c.comune} (${c.provincia})`;
+              zonaHidden.value = c.comune;
+              provinciaHidden.value = c.provincia || "";
+              hasSelected = true;
+              hideList();
+            });
+
+            suggerimentiBox.appendChild(el);
+          });
+
+          showList();
+        })
+        .catch(() => hideList());
+    }, 200);
+  });
+
+  // 🔒 blur controllato
+  zonaInput.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!hasSelected) {
+        zonaInput.value = "";
+        zonaHidden.value = "";
+        provinciaHidden.value = "";
+      }
+      hideList();
+    }, 120);
+  });
+
+  // 🚫 ENTER senza selezione valida
+  zonaInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !hasSelected) {
+      e.preventDefault();
+      showList();
+    }
+  });
+
+  document.addEventListener("click", e => {
+    if (!zonaInput.contains(e.target) && !suggerimentiBox.contains(e.target)) {
+      hideList();
+    }
+  });
+
+});
+</script>
+{% endblock %}

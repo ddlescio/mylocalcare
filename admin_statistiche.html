@@ -1,0 +1,78 @@
+{% extends "layout_admin.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block admin_content %}
+
+<style>
+.stat-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 3px 14px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    transition: 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.8;
+}
+</style>
+
+
+<h1 class="admin-title mb-6 flex items-center gap-2">
+    📊 Statistiche Generali
+</h1>
+
+
+<!-- 📌 DASHBOARD MODERNA -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+    <div class="stat-card">
+        <div class="stat-label text-blue-700">Utenti attivi</div>
+        <div class="stat-value text-blue-800">{{ utenti_attivi }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label text-amber-700">Annunci totali</div>
+        <div class="stat-value text-amber-800">{{ annunci_totali }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label text-emerald-700">Utenti con annunci</div>
+        <div class="stat-value text-emerald-800">{{ utenti_con_annunci }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label text-rose-700">Utenti senza annunci</div>
+        <div class="stat-value text-rose-800">{{ utenti_senza_annunci }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label text-purple-700">Utenti recensiti</div>
+        <div class="stat-value text-purple-800">{{ utenti_recensiti }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label text-slate-700">Chat create</div>
+        <div class="stat-value text-slate-900">{{ chat_totali }}</div>
+    </div>
+
+</div>
+
+{% endblock %}
