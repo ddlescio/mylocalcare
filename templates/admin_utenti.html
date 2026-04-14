@@ -117,6 +117,18 @@
 
 </form>
 
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+    <p class="text-sm font-medium text-gray-500">Utenti totali registrati</p>
+    <p class="text-3xl font-bold text-slate-800 mt-1">{{ totale_utenti }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+    <p class="text-sm font-medium text-gray-500">Utenti mostrati con i filtri attuali</p>
+    <p class="text-3xl font-bold text-blue-700 mt-1">{{ totale_filtrati }}</p>
+  </div>
+</div>
+
 <!-- TABELLA UTENTI -->
 <div class="table-wrapper bg-white rounded-xl border border-gray-200 shadow-sm">
 
