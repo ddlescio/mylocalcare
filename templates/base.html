@@ -661,6 +661,12 @@ document.addEventListener("click", function(e) {
         if (window.__navbarSocketHandlers.nuovaNotifica) {
           prevSocket.off("nuova_notifica", window.__navbarSocketHandlers.nuovaNotifica);
         }
+        if (window.__navbarSocketHandlers.videoCallIncoming) {
+          prevSocket.off("video_call_incoming", window.__navbarSocketHandlers.videoCallIncoming);
+        }
+        if (window.__navbarSocketHandlers.videoCallRejected) {
+          prevSocket.off("video_call_rejected", window.__navbarSocketHandlers.videoCallRejected);
+        }
       }
 
       if (window.__navbarSocketHandlers.updateUnreadCount) {
@@ -674,6 +680,12 @@ document.addEventListener("click", function(e) {
       }
       if (window.__navbarSocketHandlers.nuovaNotifica) {
         activeSocket.off("nuova_notifica", window.__navbarSocketHandlers.nuovaNotifica);
+      }
+      if (window.__navbarSocketHandlers.videoCallIncoming) {
+        activeSocket.off("video_call_incoming", window.__navbarSocketHandlers.videoCallIncoming);
+      }
+      if (window.__navbarSocketHandlers.videoCallRejected) {
+        activeSocket.off("video_call_rejected", window.__navbarSocketHandlers.videoCallRejected);
       }
 
       window.__navbarSocketHandlers.socket = activeSocket;
@@ -751,10 +763,75 @@ document.addEventListener("click", function(e) {
         refreshNotifCount();
       };
 
+      window.__navbarSocketHandlers.videoCallIncoming = function (data) {
+        if (!data) return;
+
+        console.log("📞 video_call_incoming ricevuto:", data);
+
+        if (window.chatAperta === true) {
+          const currentDestId = parseInt(
+            document.getElementById("destinatario_id")?.value || "0",
+            10
+          );
+
+          if (currentDestId === parseInt(data.from, 10)) {
+            console.log("🎯 Siamo già nella chat corretta → avvio diretto");
+
+            if (typeof window.startIncomingCall === "function") {
+              window.startIncomingCall(data.room_name, data.room_url);
+            } else {
+              console.warn("⚠️ startIncomingCall non disponibile");
+            }
+
+            return;
+          }
+        }
+
+        const modal = document.getElementById("incomingCallModal");
+        if (!modal) return;
+
+        modal.dataset.roomUrl = data.room_url;
+        modal.dataset.roomName = data.room_name;
+        modal.dataset.fromUser = data.from;
+
+        window.pendingIncomingCall = {
+          roomName: data.room_name,
+          roomUrl: data.room_url
+        };
+
+        modal.classList.remove("hidden");
+        document.body.classList.add("modal-open");
+      };
+
+      window.__navbarSocketHandlers.videoCallRejected = function (data) {
+        console.log("📛 video_call_rejected ricevuto:", data);
+
+        if (typeof window.endCallCleanup === "function") {
+          window.endCallCleanup("remote_rejected");
+        }
+
+        const mount = document.getElementById("videoMount");
+        if (mount) {
+          mount.innerHTML = "";
+        }
+
+        window.inCall = false;
+        window.callRoom = null;
+        window.pendingIncomingCall = null;
+
+        if (typeof window.isCalling !== "undefined") {
+          window.isCalling = false;
+        }
+
+        alert("L'utente ha rifiutato la chiamata.");
+      };
+
       activeSocket.on("update_unread_count", window.__navbarSocketHandlers.updateUnreadCount);
       activeSocket.on("video_busy", window.__navbarSocketHandlers.videoBusy);
       activeSocket.on("update_notifications", window.__navbarSocketHandlers.updateNotifications);
       activeSocket.on("nuova_notifica", window.__navbarSocketHandlers.nuovaNotifica);
+      activeSocket.on("video_call_incoming", window.__navbarSocketHandlers.videoCallIncoming);
+      activeSocket.on("video_call_rejected", window.__navbarSocketHandlers.videoCallRejected);
 
       console.log("🧷 navbar socket handlers bindati su socket:", activeSocket.id || null);
     }
