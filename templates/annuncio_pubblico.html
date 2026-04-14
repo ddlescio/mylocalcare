@@ -665,7 +665,6 @@
 
 </style>
 
-<script src="https://js.stripe.com/v3/"></script>
 <script>
   function apriZoom(src) {
     document.getElementById("zoom-img").src = src;
@@ -1181,19 +1180,63 @@ function aggiornaStatoVisibilita() {
   }
 </script>
 <script>
-  const stripe = Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+  let stripe = null;
   let elements = null;
+  let stripeJsPromise = null;
+
+  function loadStripeJs() {
+    if (window.Stripe) {
+      return Promise.resolve();
+    }
+
+    if (stripeJsPromise) {
+      return stripeJsPromise;
+    }
+
+    stripeJsPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-stripe-lazy="true"]');
+
+      if (existing) {
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", () => reject(new Error("Errore caricamento Stripe JS")), { once: true });
+        return;
+      }
+
+      const s = document.createElement("script");
+      s.src = "https://js.stripe.com/v3/";
+      s.async = true;
+      s.defer = true;
+      s.dataset.stripeLazy = "true";
+
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("Errore caricamento Stripe JS"));
+
+      document.head.appendChild(s);
+    });
+
+    return stripeJsPromise;
+  }
+
+  async function getStripeInstance() {
+    if (stripe) return stripe;
+
+    await loadStripeJs();
+
+    stripe = window.Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+    return stripe;
+  }
 
   async function confermaAttivazione(btn) {
     if (!selezioneCorrente) return;
 
-    // disabilita subito il bottone per evitare doppio click
     if (btn) {
       btn.disabled = true;
       btn.classList.add("opacity-50", "cursor-not-allowed");
     }
 
     try {
+      const stripeInstance = await getStripeInstance();
+
       const res = await fetch("/api/crea-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1211,8 +1254,7 @@ function aggiornaStatoVisibilita() {
         throw new Error("PaymentIntent non valido");
       }
 
-      // 🔑 crea Stripe Elements
-      elements = stripe.elements({ clientSecret: data.client_secret });
+      elements = stripeInstance.elements({ clientSecret: data.client_secret });
 
       const container = document.getElementById("payment-element");
       container.innerHTML = "";
@@ -1220,17 +1262,13 @@ function aggiornaStatoVisibilita() {
       const paymentElement = elements.create("payment");
       paymentElement.mount(container);
 
-      // mostra Stripe
       document.getElementById("stripe-box").classList.remove("hidden");
-
-      // nasconde il bottone Conferma (UX pulita)
       btn?.classList.add("hidden");
 
     } catch (err) {
       console.error(err);
       alert("Errore durante la preparazione del pagamento.");
 
-      // riabilita il bottone SOLO se Stripe non è stato mostrato
       if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
         btn.disabled = false;
         btn.classList.remove("opacity-50", "cursor-not-allowed");
@@ -1261,13 +1299,14 @@ document.addEventListener("DOMContentLoaded", () => {
     payBtn.classList.add("opacity-50", "cursor-not-allowed");
 
     try {
-      const { error } = await stripe.confirmPayment({
+      const stripeInstance = await getStripeInstance();
+
+      const { error } = await stripeInstance.confirmPayment({
         elements,
         confirmParams: {
           return_url: window.location.href
         }
       });
-
       /*
         - Se error è presente → errore immediato (carta rifiutata, ecc.)
         - Se NON c'è error → Stripe può fare redirect (3DS)
