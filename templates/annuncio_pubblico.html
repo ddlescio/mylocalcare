@@ -807,23 +807,42 @@ let NUM_SERVIZI_ATTESI = 0;
 /* =========================================================
    INIT
    ========================================================= */
-document.addEventListener("DOMContentLoaded", () => {
-  const ANNUNCIO_ID = {{ annuncio['id'] }};
+   document.addEventListener("DOMContentLoaded", () => {
+     const ANNUNCIO_ID = {{ annuncio['id'] }};
 
-  const servizi = [
-    "boost_lista",
-    "badge_evidenza",
-    "vetrina_annuncio",
-    "annuncio_urgente",
-    "contatti",
-    "pacchetto_visibilita",
-    "visibilita_premium"
-  ];
+     const servizi = [
+       "boost_lista",
+       "badge_evidenza",
+       "vetrina_annuncio",
+       "annuncio_urgente",
+       "contatti"
+     ];
 
-  NUM_SERVIZI_ATTESI = servizi.length;
+     const pacchetti = [
+       "pacchetto_visibilita",
+       "visibilita_premium"
+     ];
 
-  servizi.forEach(codice => caricaStatoServizio(ANNUNCIO_ID, codice));
-});
+     NUM_SERVIZI_ATTESI = servizi.length + pacchetti.length;
+
+     servizi.forEach(codice => caricaStatoServizio(ANNUNCIO_ID, codice));
+     pacchetti.forEach(codice => caricaStatoPacchetto(codice));
+   });
+
+   async function caricaStatoPacchetto(codice) {
+     try {
+       statoServizi[codice] = { attivo: false };
+     } catch (e) {
+       console.error("Errore stato pacchetto", codice, e);
+       statoServizi[codice] = { attivo: false };
+     }
+
+     serviziCaricati++;
+     if (serviziCaricati === NUM_SERVIZI_ATTESI) {
+       aggiornaStatoPacchetti();
+       aggiornaStatoVisibilita();
+     }
+   }
 
 /* =========================================================
    CARICA STATO SERVIZIO
