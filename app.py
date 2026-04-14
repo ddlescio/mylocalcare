@@ -117,11 +117,10 @@ def init_pg_pool():
     lock = _get_pg_lock_for_pid(pid)
 
     print(f"🟦 init_pg_pool: before lock acquire pid={pid}", flush=True)
-    acquired = lock.acquire(timeout=10)
 
-    if not acquired:
-        print(f"🟥 init_pg_pool: timeout lock pid={pid}", flush=True)
-        raise RuntimeError(f"Timeout acquiring PostgreSQL pool lock pid={pid}")
+    # NON far fallire la request se un altro thread dello stesso worker
+    # sta già creando il pool: aspetta finché il lock si libera.
+    lock.acquire()
 
     try:
         pool = get_current_pg_pool()
@@ -155,7 +154,7 @@ def init_pg_pool():
             print(f"🟦 init_pg_pool: lock released pid={pid}", flush=True)
         except Exception as e:
             print(f"🟥 init_pg_pool: errore release lock pid={pid}: {e}", flush=True)
-
+            
 def warm_pg_pool_for_current_process():
     dsn = os.getenv("DATABASE_URL")
     if not dsn:
