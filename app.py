@@ -2703,10 +2703,27 @@ def admin_recensioni():
 
     recensioni_filtrate = [r for r in recensioni_dict if match(r)]
 
+    totale_recensioni = len(recensioni_dict)
+    totale_filtrate = len(recensioni_filtrate)
+
+    totale_in_attesa = sum(
+        1 for r in recensioni_dict
+        if str(r.get("stato") or "").lower() == "in_attesa"
+    )
+
+    totale_risposte_in_attesa = sum(
+        1 for r in recensioni_dict
+        if r.get("risposta_id") and str(r.get("risposta_stato") or "").lower() == "in_attesa"
+    )
+
     return render_template(
         "admin_recensioni.html",
         recensioni=recensioni_filtrate,
-        active_page="recensioni"
+        active_page="recensioni",
+        totale_recensioni=totale_recensioni,
+        totale_filtrate=totale_filtrate,
+        totale_in_attesa=totale_in_attesa,
+        totale_risposte_in_attesa=totale_risposte_in_attesa
     )
 
 from datetime import datetime, timedelta
@@ -4142,7 +4159,7 @@ def admin_annunci():
         totale_filtrati=totale_filtrati,
         totale_in_attesa=totale_in_attesa
     )
-    
+
 @app.route("/admin/annunci/approva/<int:id>")
 @admin_required
 def approva_annuncio(id):

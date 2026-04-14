@@ -1,176 +1,526 @@
 {% extends "layout_admin.html" %}
 
-{% block admin_title %}Recensioni &amp; risposte{% endblock %}
+{% block admin_title %}Recensioni & risposte{% endblock %}
 {% block admin_subtitle %}
 Gestisci recensioni lasciate dagli utenti e le relative risposte.
 {% endblock %}
 
 {% block admin_content %}
 
-<!-- 🚀 FILTRI COMPATTI -->
-<form method="get"
-      class="mb-3 grid grid-cols-2 md:grid-cols-5 gap-2 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+<style>
+/* ===== WRAPPER ===== */
+.admin-shell {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 18px;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.05),
+        0 12px 30px rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+}
 
-  <div>
-    <label class="text-xs font-medium text-gray-600">Autore recensione</label>
-    <input type="text" name="autore" value="{{ request.args.get('autore','') }}"
-           class="mt-1 w-full border-gray-300 rounded-md text-sm py-1.5 px-2">
+/* ===== CONTATORI ===== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+@media (min-width: 640px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 20px;
+    padding: 14px 16px;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 8px 22px rgba(15, 23, 42, 0.04);
+}
+
+.stat-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.7rem;
+    line-height: 1;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.stat-value-blue { color: #2563eb; }
+.stat-value-amber { color: #b45309; }
+.stat-value-emerald { color: #047857; }
+
+/* ===== FILTRI ===== */
+.filter-box {
+    background: rgba(255, 255, 255, 0.84);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 22px;
+    padding: 14px;
+    margin-bottom: 18px;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (min-width: 640px) {
+    .filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .filter-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.filter-field label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 5px;
+    letter-spacing: 0.01em;
+}
+
+.filter-box input,
+.filter-box select {
+    width: 100%;
+    min-height: 40px;
+    border-radius: 14px;
+    border: 1px solid #dbe3ee;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.96);
+    color: #0f172a;
+    font-size: 0.92rem;
+    transition: all 0.16s ease;
+    box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.02);
+}
+
+.filter-box input:focus,
+.filter-box select:focus {
+    outline: none;
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.18);
+    background: #fff;
+}
+
+.filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.filter-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #3b82f6, #2563eb);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: none;
+    box-shadow:
+        0 6px 18px rgba(37, 99, 235, 0.18),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.18s ease;
+}
+
+.filter-btn-primary:hover {
+    transform: translateY(-1px);
+}
+
+.filter-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 9999px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #dbe3ee;
+    transition: all 0.18s ease;
+    text-decoration: none;
+}
+
+.filter-btn-secondary:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* ===== TABELLA ===== */
+.table-shell {
+    background: rgba(255,255,255,0.95);
+    border-radius: 22px;
+    border: 1px solid #e5e7eb;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 8px 24px rgba(15, 23, 42, 0.05);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-shell table {
+    min-width: 1100px;
+}
+
+.table-shell thead {
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.table-shell th {
+    padding: 12px;
+    text-align: left;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.01em;
+}
+
+.table-shell td {
+    padding: 12px;
+    vertical-align: top;
+}
+
+.table-shell tbody tr + tr td {
+    border-top: 1px solid #f1f5f9;
+}
+
+.table-shell tbody tr:hover {
+    background: #fafcff;
+}
+
+/* ===== BADGE ===== */
+.badge-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.badge-green {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.badge-red {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.badge-yellow {
+    background: #fffbeb;
+    color: #a16207;
+    border-color: #fde68a;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.16s ease;
+}
+
+.action-green {
+    background: #16a34a;
+    color: white;
+}
+.action-green:hover { background: #15803d; }
+
+.action-red {
+    background: #dc2626;
+    color: white;
+}
+.action-red:hover { background: #b91c1c; }
+
+.mini-link {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    border: 1px solid;
+    text-decoration: none;
+    transition: 0.16s ease;
+}
+
+.mini-link-blue {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+.mini-link-blue:hover { background: #dbeafe; }
+
+.mini-link-gray {
+    background: #f9fafb;
+    color: #374151;
+    border-color: #e5e7eb;
+}
+.mini-link-gray:hover { background: #f3f4f6; }
+
+/* ===== MODALE ===== */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.modal-card {
+    width: 100%;
+    max-width: 680px;
+    background: rgba(255,255,255,0.98);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+    padding: 22px;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: #0f172a;
+}
+</style>
+
+<div class="admin-shell">
+
+  <!-- CONTATORI -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <p class="stat-label">Recensioni totali</p>
+      <p class="stat-value">{{ totale_recensioni|default(recensioni|length, true) }}</p>
+    </div>
+
+    <div class="stat-card">
+      <p class="stat-label">Elementi mostrati con i filtri</p>
+      <p class="stat-value stat-value-blue">{{ totale_filtrate|default(recensioni|length, true) }}</p>
+    </div>
+
+    <div class="stat-card">
+      <p class="stat-label">Recensioni in attesa</p>
+      <p class="stat-value stat-value-amber">{{ totale_in_attesa|default(0, true) }}</p>
+    </div>
+
+    <div class="stat-card">
+      <p class="stat-label">Risposte in attesa</p>
+      <p class="stat-value stat-value-emerald">{{ totale_risposte_in_attesa|default(0, true) }}</p>
+    </div>
   </div>
 
-  <div>
-    <label class="text-xs font-medium text-gray-600">Destinatario</label>
-    <input type="text" name="destinatario" value="{{ request.args.get('destinatario','') }}"
-           class="mt-1 w-full border-gray-300 rounded-md text-sm py-1.5 px-2">
-  </div>
+  <!-- FILTRI -->
+  <form method="get" class="filter-box">
+    <div class="filter-grid">
 
-  <div>
-    <label class="text-xs font-medium text-gray-600">Voto</label>
-    <select name="voto"
-            class="mt-1 w-full border-gray-300 rounded-md text-sm py-1.5 px-2">
-      <option value="">Tutti</option>
-      {% for v in [1,2,3,4,5] %}
-        <option value="{{ v }}" {% if request.args.get('voto') == v|string %}selected{% endif %}>{{ v }}</option>
-      {% endfor %}
-    </select>
-  </div>
+      <div class="filter-field">
+        <label>Autore recensione</label>
+        <input type="text"
+               name="autore"
+               value="{{ request.args.get('autore','') }}"
+               placeholder="Nome o cognome">
+      </div>
 
-  <div>
-    <label class="text-xs font-medium text-gray-600">Stato recensione</label>
-    <select name="stato"
-            class="mt-1 w-full border-gray-300 rounded-md text-sm py-1.5 px-2">
-      <option value="">Tutti</option>
-      {% for s in ['in_attesa','approvato','rifiutato'] %}
-        <option value="{{ s }}" {% if request.args.get('stato') == s %}selected{% endif %}>
-          {{ s.replace('_',' ') }}
-        </option>
-      {% endfor %}
-    </select>
-  </div>
+      <div class="filter-field">
+        <label>Destinatario</label>
+        <input type="text"
+               name="destinatario"
+               value="{{ request.args.get('destinatario','') }}"
+               placeholder="Nome o cognome">
+      </div>
 
-  <div class="col-span-2 md:col-span-5 flex justify-end gap-2 items-end">
-    <a href="{{ url_for('admin_recensioni') }}"
-       class="px-3 py-1.5 rounded-md border text-xs md:text-sm text-gray-600 hover:bg-gray-50">
-      Reset filtri
-    </a>
-    <button type="submit"
-            class="px-4 py-1.5 rounded-md bg-blue-600 text-white text-xs md:text-sm hover:bg-blue-700">
-      Filtra
-    </button>
-  </div>
-</form>
+      <div class="filter-field">
+        <label>Voto</label>
+        <select name="voto">
+          <option value="">Tutti</option>
+          {% for v in [1,2,3,4,5] %}
+            <option value="{{ v }}" {% if request.args.get('voto') == v|string %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-<!-- 🚀 TABELLA -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 mt-4 overflow-x-auto">
-  <div class="min-w-[1100px]">
+      <div class="filter-field">
+        <label>Stato recensione</label>
+        <select name="stato">
+          <option value="">Tutti</option>
+          {% for s in ['in_attesa','approvato','rifiutato'] %}
+            <option value="{{ s }}" {% if request.args.get('stato') == s %}selected{% endif %}>
+              {{ s.replace('_',' ') }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <table class="min-w-full text-sm">
-      <thead class="bg-gray-50 border-b border-gray-100">
+    </div>
+
+    <div class="filter-actions">
+      <a href="{{ url_for('admin_recensioni') }}" class="filter-btn-secondary">
+        Reset filtri
+      </a>
+      <button type="submit" class="filter-btn-primary">
+        Filtra
+      </button>
+    </div>
+  </form>
+
+  <!-- TABELLA -->
+  <div class="table-shell">
+    <table class="w-full text-sm">
+      <thead>
         <tr>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Autore</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Destinatario</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Voto</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Recensione</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Stato rec.</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Risposta</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Stato risp.</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Azioni recensione</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">Azioni risposta</th>
+          <th>Autore</th>
+          <th>Destinatario</th>
+          <th>Voto</th>
+          <th>Recensione</th>
+          <th>Stato rec.</th>
+          <th>Risposta</th>
+          <th>Stato risp.</th>
+          <th>Azioni recensione</th>
+          <th>Azioni risposta</th>
         </tr>
       </thead>
 
-      <tbody class="divide-y divide-gray-100">
-
+      <tbody>
       {% for r in recensioni %}
 
         {% set testo = r.get('testo') or '' %}
         {% set risposta = r.get('risposta_testo') or '' %}
 
-        <tr class="align-top">
+        <tr>
 
           <!-- AUTORE -->
-          <td class="px-3 py-2 text-gray-800 font-medium">
-              {{ r.get('autore_nome') }} {{ r.get('autore_cognome') }}
+          <td class="text-gray-800 font-medium">
+            {{ r.get('autore_nome') }} {{ r.get('autore_cognome') }}
 
-              <div class="mt-1 flex gap-1">
-                  {% if r.get('autore_id') %}
-                    <a href="{{ url_for('chat_conversazione_view', other_id=r.get('autore_id')) }}"
-                       class="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs hover:bg-blue-100">
-                       💬
-                    </a>
-                  {% endif %}
+            <div class="mt-2 flex gap-1">
+              {% if r.get('autore_id') %}
+                <a href="{{ url_for('chat_conversazione_view', other_id=r.get('autore_id')) }}"
+                   class="mini-link mini-link-blue">💬</a>
+              {% endif %}
 
-                  {% if r.get('autore_email') %}
-                    <a href="mailto:{{ r.get('autore_email') }}"
-                       class="inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700 border border-gray-200 text-xs hover:bg-gray-100">
-                       ✉️
-                    </a>
-                  {% endif %}
-              </div>
+              {% if r.get('autore_email') %}
+                <a href="mailto:{{ r.get('autore_email') }}"
+                   class="mini-link mini-link-gray">✉️</a>
+              {% endif %}
+            </div>
           </td>
 
           <!-- DESTINATARIO -->
-          <td class="px-3 py-2 text-gray-800">
-              {{ r.get('dest_nome') }} {{ r.get('dest_cognome') }}
+          <td class="text-gray-800">
+            {{ r.get('dest_nome') }} {{ r.get('dest_cognome') }}
 
-              <div class="mt-1 flex gap-1">
-                  {% if r.get('dest_id') %}
-                    <a href="{{ url_for('chat_conversazione_view', other_id=r.get('dest_id')) }}"
-                       class="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs hover:bg-blue-100">
-                       💬
-                    </a>
-                  {% endif %}
+            <div class="mt-2 flex gap-1">
+              {% if r.get('dest_id') %}
+                <a href="{{ url_for('chat_conversazione_view', other_id=r.get('dest_id')) }}"
+                   class="mini-link mini-link-blue">💬</a>
+              {% endif %}
 
-                  {% if r.get('dest_email') %}
-                    <a href="mailto:{{ r.get('dest_email') }}"
-                       class="inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700 border border-gray-200 text-xs hover:bg-gray-100">
-                       ✉️
-                    </a>
-                  {% endif %}
-              </div>
+              {% if r.get('dest_email') %}
+                <a href="mailto:{{ r.get('dest_email') }}"
+                   class="mini-link mini-link-gray">✉️</a>
+              {% endif %}
+            </div>
           </td>
 
           <!-- VOTO -->
-          <td class="px-3 py-2 text-yellow-500">
+          <td class="text-yellow-500 font-semibold">
             {{ r.get('voto') }}★
           </td>
 
-          <!-- RECENSIONE (1 riga + "Leggi tutto") -->
-          <td class="px-3 py-2">
+          <!-- RECENSIONE -->
+          <td>
             <div class="truncate max-w-[220px] text-gray-700">
               {{ testo }}
             </div>
 
-            <button onclick="openDettaglio('recensione', `{{ testo|escape }}`, '{{ r.get('autore_nome') }} {{ r.get('autore_cognome') }}', '{{ r.get('data_recensione') }}')"
-                    class="text-blue-600 text-[11px] hover:underline">
+            <button type="button"
+                    onclick="openDettaglio('recensione', `{{ testo|escape }}`, '{{ r.get('autore_nome') }} {{ r.get('autore_cognome') }}', '{{ r.get('data_recensione') }}')"
+                    class="mt-1 text-blue-600 text-[11px] hover:underline">
               Leggi tutto
             </button>
           </td>
 
           <!-- STATO RECENSIONE -->
-          <td class="px-3 py-2 text-xs">
+          <td>
             {% if r.get('stato') == 'approvato' %}
-              <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 text-[11px]">Approvato</span>
+              <span class="badge-pill badge-green">Approvato</span>
             {% elif r.get('stato') == 'rifiutato' %}
-              <span class="px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-[11px]">Rifiutato</span>
+              <span class="badge-pill badge-red">Rifiutato</span>
             {% else %}
-              <span class="px-2 py-1 rounded-full bg-yellow-50 text-yellow-800 border border-yellow-200 text-[11px]">In attesa</span>
+              <span class="badge-pill badge-yellow">In attesa</span>
             {% endif %}
           </td>
 
-          <!-- RISPOSTA (anteprima 1 riga + bottone modale) -->
-          <td class="px-3 py-2">
+          <!-- RISPOSTA -->
+          <td>
             {% if r.get('risposta_id') %}
               <div class="truncate max-w-[220px] text-gray-700">
                 {{ risposta }}
               </div>
 
               <button
-                onclick="openDettaglio(
-                  'risposta',
-                  `{{ risposta|escape }}`,
-                  '{{ r.get('risposta_autore_nome') }} {{ r.get('risposta_autore_cognome') }}',
-                  ''
-                )"
+                type="button"
+                onclick="openDettaglio('risposta', `{{ risposta|escape }}`, '{{ r.get('risposta_autore_nome') }} {{ r.get('risposta_autore_cognome') }}', '')"
                 class="mt-1 text-blue-600 text-[11px] hover:underline">
                 Apri dettaglio
               </button>
@@ -180,14 +530,14 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
           </td>
 
           <!-- STATO RISPOSTA -->
-          <td class="px-3 py-2 text-xs">
+          <td>
             {% if r.get('risposta_id') %}
               {% if r.get('risposta_stato') == 'approvato' %}
-                <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 text-[11px]">Approvata</span>
+                <span class="badge-pill badge-green">Approvata</span>
               {% elif r.get('risposta_stato') == 'rifiutato' %}
-                <span class="px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-[11px]">Rifiutata</span>
+                <span class="badge-pill badge-red">Rifiutata</span>
               {% else %}
-                <span class="px-2 py-1 rounded-full bg-yellow-50 text-yellow-800 border border-yellow-200 text-[11px]">In attesa</span>
+                <span class="badge-pill badge-yellow">In attesa</span>
               {% endif %}
             {% else %}
               <span class="text-xs text-gray-400">—</span>
@@ -195,43 +545,42 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
           </td>
 
           <!-- AZIONI RECENSIONE -->
-          <td class="px-3 py-2 space-x-1">
-
+          <td class="space-x-1">
             {% if r.get('stato') == 'in_attesa' %}
-                <a href="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
-                   class="px-3 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700">
-                  Approva
-                </a>
-                <a href="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
-
-                   class="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700">
-                  Rifiuta
-                </a>
+              <a href="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
+                 class="action-btn action-green">
+                Approva
+              </a>
+              <a href="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
+                 class="action-btn action-red">
+                Rifiuta
+              </a>
 
             {% elif r.get('stato') == 'approvato' %}
-                <a href="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
-                   class="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700">
-                  Rifiuta
-                </a>
+              <a href="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
+                 class="action-btn action-red">
+                Rifiuta
+              </a>
 
             {% elif r.get('stato') == 'rifiutato' %}
-                <a href="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}">                   class="px-3 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700">
-                  Approva
-                </a>
+              <a href="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
+                 class="action-btn action-green">
+                Approva
+              </a>
             {% endif %}
           </td>
 
           <!-- AZIONI RISPOSTA -->
-          <td class="px-3 py-2">
+          <td>
             {% if r.get('risposta_id') %}
               {% if r.get('risposta_stato') == 'approvato' %}
                 <a href="{{ url_for('rifiuta_risposta', id=r.get('risposta_id'), next=request.full_path) }}"
-                   class="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700">
+                   class="action-btn action-red">
                   Rifiuta
                 </a>
               {% else %}
                 <a href="{{ url_for('approva_risposta', id=r.get('risposta_id'), next=request.full_path) }}"
-                   class="px-3 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700">
+                   class="action-btn action-green">
                   Approva
                 </a>
               {% endif %}
@@ -244,18 +593,14 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
       {% endfor %}
       </tbody>
     </table>
-
   </div>
+
 </div>
 
-<!-- 🚀 MODALE DINAMICO SEMPRE VISIBILE -->
-<div id="modalDettaglio"
-     class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99999] hidden flex items-center justify-center p-4">
-
-  <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6 relative">
-    <button onclick="closeDettaglio()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">
-      ✕
-    </button>
+<!-- MODALE -->
+<div id="modalDettaglio" class="modal-backdrop">
+  <div class="modal-card">
+    <button type="button" onclick="closeDettaglio()" class="modal-close">✕</button>
 
     <h2 id="modalTitolo" class="text-lg font-semibold text-gray-800 mb-2"></h2>
     <p id="modalMeta" class="text-xs text-gray-500 mb-4"></p>
@@ -272,12 +617,11 @@ function openDettaglio(tipo, testo, autore, data) {
     autore + (data ? ' – ' + data : '');
 
   document.getElementById('modalTesto').innerText = testo;
-
-  document.getElementById('modalDettaglio').classList.remove('hidden');
+  document.getElementById('modalDettaglio').style.display = 'flex';
 }
 
 function closeDettaglio() {
-  document.getElementById('modalDettaglio').classList.add('hidden');
+  document.getElementById('modalDettaglio').style.display = 'none';
 }
 </script>
 
