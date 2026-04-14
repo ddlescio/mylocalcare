@@ -8624,7 +8624,7 @@ def emit_incoming_call_later(caller_id, destinatario_id, room_name, room_url, de
     socketio.sleep(delay)
 
     socketio.emit(
-        "incoming_call",
+        "video_call_incoming",
         {
             "from": caller_id,
             "room_name": room_name,
