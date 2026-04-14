@@ -1388,21 +1388,32 @@ def admin_video_calls():
 
     limiti_dict = {l["mese"]: l for l in limiti}
 
+    def to_local_dt(value):
+        if not value:
+            return None
 
+        if isinstance(value, datetime):
+            return value + timedelta(hours=1)
+
+        if isinstance(value, str):
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
+                try:
+                    return datetime.strptime(value, fmt) + timedelta(hours=1)
+                except ValueError:
+                    pass
+
+        return None
 
     mesi = {}
 
     for r in rows:
-
         mese = r["mese"]
 
-        # 🔹 crea il mese se non esiste
         if mese not in mesi:
-
             limite = limiti_dict.get(mese)
 
-            used = limite["minuti_totali"] if limite else 0
-            costo = limite["costo_totale_cent"] if limite else 0
+            used = limite["minuti_totali"] if limite and limite["minuti_totali"] is not None else 0
+            costo = limite["costo_totale_cent"] if limite and limite["costo_totale_cent"] is not None else 0
 
             mesi[mese] = {
                 "calls": [],
@@ -1413,21 +1424,16 @@ def admin_video_calls():
 
         call = dict(r)
 
-        # INIZIO
-        if call["created_at"]:
-            start_utc = datetime.strptime(call["created_at"], "%Y-%m-%d %H:%M:%S")
-            start_local = start_utc + timedelta(hours=1)
-
+        start_local = to_local_dt(call.get("created_at"))
+        if start_local:
             call["start_date"] = start_local.strftime("%d/%m/%Y")
             call["start_time"] = start_local.strftime("%H:%M:%S")
         else:
             call["start_date"] = "-"
             call["start_time"] = "-"
 
-        # FINE
-        if call.get("ended_at"):
-            end_utc = datetime.strptime(call["ended_at"], "%Y-%m-%d %H:%M:%S")
-            end_local = end_utc + timedelta(hours=1)
+        end_local = to_local_dt(call.get("ended_at"))
+        if end_local:
             call["end_time"] = end_local.strftime("%H:%M:%S")
         else:
             call["end_time"] = "-"
@@ -1438,7 +1444,7 @@ def admin_video_calls():
         "admin_video_calls.html",
         mesi=mesi
     )
-
+    
 # ---------------------------------------------------------
 # 💰 ADMIN - SERVIZI (MONETIZZAZIONE) - SOLO CONFIG (STEP 3)
 # ---------------------------------------------------------
