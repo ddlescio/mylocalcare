@@ -4123,12 +4123,26 @@ def admin_annunci():
     with open("static/data/filtri_categoria.json", encoding="utf-8") as f:
         categorie = list(json.load(f).keys())
 
+    # =========================
+    # CONTATORI
+    # =========================
+    c.execute(sql("SELECT COUNT(*) AS totale FROM annunci"))
+    totale_annunci = c.fetchone()["totale"]
+
+    c.execute(sql("SELECT COUNT(*) AS totale FROM annunci WHERE stato = ?"), ("in_attesa",))
+    totale_in_attesa = c.fetchone()["totale"]
+
+    totale_filtrati = len(annunci)
+
     return render_template(
         "admin_annunci.html",
         annunci=annunci,
-        categorie=categorie
+        categorie=categorie,
+        totale_annunci=totale_annunci,
+        totale_filtrati=totale_filtrati,
+        totale_in_attesa=totale_in_attesa
     )
-
+    
 @app.route("/admin/annunci/approva/<int:id>")
 @admin_required
 def approva_annuncio(id):
