@@ -2802,20 +2802,7 @@ def admin_acquisti():
         LIMIT 500
     """)).fetchall()
 
-
-
-    # ✅ CONVERSIONE UTC → ORA ITALIANA
-    acquisti = []
-
-    for r in rows:
-        row = dict(r)
-
-        if row["created_at"]:
-            created_utc = datetime.strptime(row["created_at"], "%Y-%m-%d %H:%M:%S")
-            created_local = created_utc + timedelta(hours=1)
-            row["created_at"] = created_local.strftime("%Y-%m-%d %H:%M:%S")
-
-        acquisti.append(row)
+    acquisti = [dict(r) for r in rows]
 
     return render_template(
         "admin_acquisti.html",
