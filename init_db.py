@@ -31,7 +31,7 @@ def get_conn():
         import sqlite3
         conn = sqlite3.connect("database.db")
         conn.row_factory = sqlite3.Row
-        return conn        
+        return conn
 # ---------------------------------------------------------
 # 🧩 TABELLA UTENTI
 # ---------------------------------------------------------
@@ -786,7 +786,6 @@ def crea_tabella_acquisti():
       created_at {dt_col(True)},
 
       FOREIGN KEY (utente_id) REFERENCES utenti(id),
-      FOREIGN KEY (prezzo_id) REFERENCES prezzi(id),
       FOREIGN KEY (annuncio_id) REFERENCES annunci(id)
     );
     """))
