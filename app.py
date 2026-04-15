@@ -7414,8 +7414,9 @@ def gestisci_pagamento_confermato(payment_intent):
 
     except Exception as e:
         conn.rollback()
-        print("❌ ERRORE STRIPE:", e)
-
+        print("❌ ERRORE STRIPE:", repr(e), flush=True)
+        traceback.print_exc()
+    
     finally:
         try:
             conn.close()
