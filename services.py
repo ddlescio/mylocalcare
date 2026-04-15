@@ -23,7 +23,7 @@ def dt_sql(field):
     from app import dt_sql as _f
     return _f(field)
 
-    
+
 # ---------------------------------------------------------
 # Normalizzazione codici servizio (alias)
 # ---------------------------------------------------------
@@ -384,17 +384,23 @@ def attiva_servizio(
 
             cur.execute(sql(f"""
                 UPDATE attivazioni_servizi
-                SET data_fine = {_extend_from_current_or_end_sql(durata_finale)}
+                SET acquisto_id = ?,
+                    data_inizio = {_now_sql()},
+                    data_fine = {_add_days_sql(durata_finale)},
+                    attivato_da = ?
                 WHERE id = ?
-            """), (last["id"],))
+            """), (
+                acquisto_id,
+                attivato_da,
+                last["id"],
+            ))
 
             _storico_append(conn, last["id"], "rinnovato", attivato_da, note or "")
 
             if own_conn:
                 conn.commit()
 
-            return True, "Servizio rinnovato.", int(last["id"])
-
+            return True, "Servizio riattivato.", int(last["id"])
         # -------------------------------
         # 🆕 NUOVA ATTIVAZIONE
         # -------------------------------
