@@ -154,7 +154,7 @@ def init_pg_pool():
             print(f"🟦 init_pg_pool: lock released pid={pid}", flush=True)
         except Exception as e:
             print(f"🟥 init_pg_pool: errore release lock pid={pid}: {e}", flush=True)
-            
+
 def warm_pg_pool_for_current_process():
     dsn = os.getenv("DATABASE_URL")
     if not dsn:
@@ -7086,7 +7086,7 @@ def api_attiva():
         # ✅ INSERT COMPLETO (UGUALE A crea-payment-intent)
         acquisto_id = insert_and_get_id(
             cur,
-            """
+            f"""
             INSERT INTO acquisti
             (
                 utente_id,
@@ -7199,7 +7199,7 @@ def crea_payment_intent():
         # crea acquisto locale (stato: creato)
         acquisto_id = insert_and_get_id(
             cur,
-            """
+            f"""
             INSERT INTO acquisti
             (utente_id, tipo, ref_id, prezzo_id, metodo, importo_cent, stato, annuncio_id, created_at)
             VALUES (?, ?, ?, ?, 'stripe', ?, 'creato', ?, {now_sql()})
