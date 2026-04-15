@@ -372,7 +372,9 @@ def attiva_servizio(
             """, (utente_id, s["id"], annuncio_id))
 
         # -------------------------------
-        # 🔁 RINNOVO
+        # 🔁 RINNOVO / RIATTIVAZIONE
+        # - non somma le durate
+        # - non accorcia mai una scadenza già più lunga
         # -------------------------------
         if last and last["stato"] == "attivo":
 
@@ -382,16 +384,32 @@ def attiva_servizio(
             if durata_finale is None:
                 return False, "Servizio già attivo.", None
 
-            cur.execute(sql(f"""
+            ora_utc = datetime.now(ZoneInfo("UTC"))
+            nuova_scadenza = ora_utc + timedelta(days=durata_finale)
+
+            data_fine_attuale = last["data_fine"]
+
+            # PostgreSQL può restituire datetime, SQLite spesso stringa
+            if isinstance(data_fine_attuale, str):
+                data_fine_attuale = datetime.fromisoformat(str(data_fine_attuale))
+
+            if data_fine_attuale.tzinfo is None:
+                data_fine_attuale = data_fine_attuale.replace(tzinfo=ZoneInfo("UTC"))
+
+            # Regola corretta:
+            # mantieni la scadenza più lontana, senza sommare
+            data_fine_finale = max(data_fine_attuale, nuova_scadenza)
+
+            cur.execute(sql("""
                 UPDATE attivazioni_servizi
                 SET acquisto_id = ?,
-                    data_inizio = {_now_sql()},
-                    data_fine = {_add_days_sql(durata_finale)},
-                    attivato_da = ?
+                    attivato_da = ?,
+                    data_fine = ?
                 WHERE id = ?
             """), (
                 acquisto_id,
                 attivato_da,
+                data_fine_finale.strftime("%Y-%m-%d %H:%M:%S"),
                 last["id"],
             ))
 
@@ -400,7 +418,8 @@ def attiva_servizio(
             if own_conn:
                 conn.commit()
 
-            return True, "Servizio riattivato.", int(last["id"])
+            return True, "Servizio aggiornato.", int(last["id"])
+
         # -------------------------------
         # 🆕 NUOVA ATTIVAZIONE
         # -------------------------------
