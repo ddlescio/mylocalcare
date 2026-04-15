@@ -2453,60 +2453,84 @@ function aggiornaStatoVisibilita() {
   const stripe = Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
   let elements = null;
 
-  async function confermaAttivazione(btn) {
-    if (!selezioneCorrente) return;
+    async function confermaAttivazione(btn) {
+      console.log("🧪 [dashboard] confermaAttivazione START");
+      console.log("🧪 [dashboard] selezioneCorrente =", selezioneCorrente);
+      console.log("🧪 [dashboard] ANNUNCIO_ID_CORRENTE =", ANNUNCIO_ID_CORRENTE);
+      console.log("🧪 [dashboard] btn =", btn);
 
-    // disabilita subito il bottone per evitare doppio click
-    if (btn) {
-      btn.disabled = true;
-      btn.classList.add("opacity-50", "cursor-not-allowed");
-    }
+      if (!selezioneCorrente) {
+        console.warn("🧪 [dashboard] BLOCCO: selezioneCorrente assente");
+        return;
+      }
 
-    try {
-      const res = await fetch("/api/crea-payment-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      if (!ANNUNCIO_ID_CORRENTE) {
+        console.warn("🧪 [dashboard] BLOCCO: ANNUNCIO_ID_CORRENTE assente");
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add("opacity-50", "cursor-not-allowed");
+      }
+
+      try {
+        const payload = {
           annuncio_id: ANNUNCIO_ID_CORRENTE,
           piano_id: selezioneCorrente.piano_id,
           tipo: selezioneCorrente.tipo
-        })
-      });
+        };
 
-      const data = await res.json();
+        console.log("🧪 [dashboard] payload =", payload);
+        console.log("🧪 [dashboard] prima del fetch /api/crea-payment-intent");
 
-      if (!res.ok || !data.client_secret) {
-        alert(data?.error || "Errore creazione pagamento");
-        throw new Error("PaymentIntent non valido");
-      }
+        const res = await fetch("/api/crea-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-      // 🔑 crea Stripe Elements
-      elements = stripe.elements({ clientSecret: data.client_secret });
+        console.log("🧪 [dashboard] fetch completato, status =", res.status);
 
-      const container = document.getElementById("payment-element");
-      container.innerHTML = "";
+        const data = await res.json();
+        console.log("🧪 [dashboard] risposta JSON =", data);
 
-      const paymentElement = elements.create("payment");
-      paymentElement.mount(container);
+        if (!res.ok || !data.client_secret) {
+          alert(data?.error || "Errore creazione pagamento");
+          throw new Error("PaymentIntent non valido");
+        }
 
-      // mostra Stripe
-      document.getElementById("stripe-box").classList.remove("hidden");
+        console.log("🧪 [dashboard] prima di stripe.elements()");
+        elements = stripe.elements({ clientSecret: data.client_secret });
+        console.log("🧪 [dashboard] dopo stripe.elements()", elements);
 
-      // nasconde il bottone Conferma (UX pulita)
-      btn?.classList.add("hidden");
+        const container = document.getElementById("payment-element");
+        console.log("🧪 [dashboard] payment-element =", container);
 
-    } catch (err) {
-      console.error(err);
-      alert("Errore durante la preparazione del pagamento.");
+        container.innerHTML = "";
 
-      // riabilita il bottone SOLO se Stripe non è stato mostrato
-      if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
-        btn.disabled = false;
-        btn.classList.remove("opacity-50", "cursor-not-allowed");
+        const paymentElement = elements.create("payment");
+        console.log("🧪 [dashboard] paymentElement creato =", paymentElement);
+
+        paymentElement.mount(container);
+        console.log("🧪 [dashboard] paymentElement montato");
+
+        document.getElementById("stripe-box").classList.remove("hidden");
+        btn?.classList.add("hidden");
+
+        console.log("🧪 [dashboard] END OK");
+
+      } catch (err) {
+        console.error("🧪 [dashboard] ERRORE =", err);
+        alert("Errore durante la preparazione del pagamento.");
+
+        if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
+          btn.disabled = false;
+          btn.classList.remove("opacity-50", "cursor-not-allowed");
+        }
       }
     }
-  }
-</script>
+  </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 

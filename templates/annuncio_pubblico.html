@@ -194,7 +194,7 @@
     </div>
   </div>
   {% endif %}
-  
+
   <!-- ✉️ PULSANTE MESSAGGIO -->
   <div class="flex justify-center mt-6">
     {% if g.utente and g.utente['id'] != annuncio['utente_id'] %}
@@ -1249,56 +1249,82 @@ function aggiornaStatoVisibilita() {
     return stripe;
   }
 
-  async function confermaAttivazione(btn) {
-    if (!selezioneCorrente) return;
+    async function confermaAttivazione(btn) {
+      console.log("🧪 [annuncio] confermaAttivazione START");
+      console.log("🧪 [annuncio] selezioneCorrente =", selezioneCorrente);
+      console.log("🧪 [annuncio] btn =", btn);
 
-    if (btn) {
-      btn.disabled = true;
-      btn.classList.add("opacity-50", "cursor-not-allowed");
-    }
+      if (!selezioneCorrente) {
+        console.warn("🧪 [annuncio] BLOCCO: selezioneCorrente assente");
+        return;
+      }
 
-    try {
-      const stripeInstance = await getStripeInstance();
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add("opacity-50", "cursor-not-allowed");
+      }
 
-      const res = await fetch("/api/crea-payment-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      try {
+        console.log("🧪 [annuncio] prima di getStripeInstance()");
+        const stripeInstance = await getStripeInstance();
+        console.log("🧪 [annuncio] dopo getStripeInstance()", stripeInstance);
+
+        const payload = {
           annuncio_id: {{ annuncio['id'] }},
           piano_id: selezioneCorrente.piano_id,
           tipo: selezioneCorrente.tipo
-        })
-      });
+        };
 
-      const data = await res.json();
+        console.log("🧪 [annuncio] payload =", payload);
+        console.log("🧪 [annuncio] prima del fetch /api/crea-payment-intent");
 
-      if (!res.ok || !data.client_secret) {
-        alert(data?.error || "Errore creazione pagamento");
-        throw new Error("PaymentIntent non valido");
-      }
+        const res = await fetch("/api/crea-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-      elements = stripeInstance.elements({ clientSecret: data.client_secret });
+        console.log("🧪 [annuncio] fetch completato, status =", res.status);
 
-      const container = document.getElementById("payment-element");
-      container.innerHTML = "";
+        const data = await res.json();
+        console.log("🧪 [annuncio] risposta JSON =", data);
 
-      const paymentElement = elements.create("payment");
-      paymentElement.mount(container);
+        if (!res.ok || !data.client_secret) {
+          alert(data?.error || "Errore creazione pagamento");
+          throw new Error("PaymentIntent non valido");
+        }
 
-      document.getElementById("stripe-box").classList.remove("hidden");
-      btn?.classList.add("hidden");
+        console.log("🧪 [annuncio] prima di stripe.elements()");
+        elements = stripeInstance.elements({ clientSecret: data.client_secret });
+        console.log("🧪 [annuncio] dopo stripe.elements()", elements);
 
-    } catch (err) {
-      console.error(err);
-      alert("Errore durante la preparazione del pagamento.");
+        const container = document.getElementById("payment-element");
+        console.log("🧪 [annuncio] payment-element =", container);
 
-      if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
-        btn.disabled = false;
-        btn.classList.remove("opacity-50", "cursor-not-allowed");
+        container.innerHTML = "";
+
+        const paymentElement = elements.create("payment");
+        console.log("🧪 [annuncio] paymentElement creato =", paymentElement);
+
+        paymentElement.mount(container);
+        console.log("🧪 [annuncio] paymentElement montato");
+
+        document.getElementById("stripe-box").classList.remove("hidden");
+        btn?.classList.add("hidden");
+
+        console.log("🧪 [annuncio] END OK");
+
+      } catch (err) {
+        console.error("🧪 [annuncio] ERRORE =", err);
+        alert("Errore durante la preparazione del pagamento.");
+
+        if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
+          btn.disabled = false;
+          btn.classList.remove("opacity-50", "cursor-not-allowed");
+        }
       }
     }
-  }
-</script>
+  </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
