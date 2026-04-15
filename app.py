@@ -42,6 +42,7 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool as psycopg2_pool
 import re
+import traceback
 from models import fetchone_value
 import os
 from flask import g
@@ -7245,6 +7246,7 @@ def gestisci_pagamento_confermato(payment_intent):
         metadata = payment_intent["metadata"] if "metadata" in payment_intent else {}
 
     acquisto_id = metadata.get("acquisto_id")
+    print(f"🧪 [STRIPE] START gestisci_pagamento_confermato id={riferimento_esterno} acquisto_id={acquisto_id} metadata={metadata}", flush=True)
 
     if not acquisto_id:
         print("❌ Webhook Stripe: metadata.acquisto_id mancante", metadata)
@@ -7268,6 +7270,7 @@ def gestisci_pagamento_confermato(payment_intent):
         """), (int(acquisto_id),))
 
         acquisto = cur.fetchone()
+        print(f"🧪 [STRIPE] acquisto letto = {dict(acquisto) if acquisto else None}", flush=True)
 
         if not acquisto:
             print("❌ Webhook Stripe: acquisto non trovato:", acquisto_id)
@@ -7295,6 +7298,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 riferimento_esterno = ?
             WHERE id = ?
         """), (riferimento_esterno, int(acquisto_id)))
+        print(f"🧪 [STRIPE] acquisto aggiornato a paid id={acquisto_id} rif={riferimento_esterno}", flush=True)
 
         # ===============================
         # SERVIZIO SINGOLO
@@ -7310,6 +7314,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 WHERE id = ?
             """), (piano_servizio_id,))
             piano = cur.fetchone()
+            print(f"🧪 [STRIPE] piano servizio = {dict(piano) if piano else None}", flush=True)
             if not piano:
                 raise Exception("Piano servizio non trovato")
 
@@ -7324,7 +7329,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 float(int(piano["prezzo_cent"]) / 100.0),
                 riferimento_esterno
             ))
-
+            print(f"🧪 [STRIPE] inserito acquisti_servizi utente={utente_id} servizio={int(piano['servizio_id'])} rif={riferimento_esterno}", flush=True)
             ok, msg, att_id = attiva_servizio(
                 conn=conn,
                 utente_id=utente_id,
@@ -7387,7 +7392,7 @@ def gestisci_pagamento_confermato(payment_intent):
                     float(quota),
                     riferimento_esterno
                 ))
-
+                print(f"🧪 [STRIPE] inserito acquisti_servizi PACCHETTO utente={utente_id} servizio={servizio_id} rif={riferimento_esterno}", flush=True)
                 ok, msg, att_id = attiva_servizio(
                     conn=conn,
                     utente_id=utente_id,
