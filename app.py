@@ -662,11 +662,23 @@ def _release_pg_conn(exc):
 def dt_roma(value):
     if not value:
         return ""
-    dt = datetime.fromisoformat(value)
-    return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(
-        ZoneInfo("Europe/Rome")
-    ).strftime("%Y-%m-%d %H:%M:%S")
 
+    try:
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            dt = datetime.fromisoformat(str(value))
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+
+        return dt.astimezone(
+            ZoneInfo("Europe/Rome")
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+    except Exception:
+        return str(value)
+        
 @app.template_filter("fromjson")
 def fromjson_filter(value):
     if not value:
