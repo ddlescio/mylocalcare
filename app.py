@@ -7237,11 +7237,13 @@ def crea_payment_intent():
     })
 
 def gestisci_pagamento_confermato(payment_intent):
-    if not isinstance(payment_intent, dict):
-        payment_intent = payment_intent.to_dict_recursive()
+    if isinstance(payment_intent, dict):
+        riferimento_esterno = payment_intent.get("id")
+        metadata = payment_intent.get("metadata", {}) or {}
+    else:
+        riferimento_esterno = payment_intent["id"]
+        metadata = payment_intent["metadata"] if "metadata" in payment_intent else {}
 
-    riferimento_esterno = payment_intent.get("id")
-    metadata = payment_intent.get("metadata", {}) or {}
     acquisto_id = metadata.get("acquisto_id")
 
     if not acquisto_id:
@@ -7416,7 +7418,7 @@ def gestisci_pagamento_confermato(payment_intent):
         conn.rollback()
         print("❌ ERRORE STRIPE:", repr(e), flush=True)
         traceback.print_exc()
-    
+
     finally:
         try:
             conn.close()
