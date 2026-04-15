@@ -7237,10 +7237,13 @@ def crea_payment_intent():
     })
 
 def gestisci_pagamento_confermato(payment_intent):
+    if not isinstance(payment_intent, dict):
+        payment_intent = payment_intent.to_dict_recursive()
+
     riferimento_esterno = payment_intent.get("id")
     metadata = payment_intent.get("metadata", {}) or {}
     acquisto_id = metadata.get("acquisto_id")
-
+    
     if not acquisto_id:
         print("❌ Webhook Stripe: metadata.acquisto_id mancante", metadata)
         return
