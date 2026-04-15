@@ -9329,32 +9329,51 @@ def chat_debug_socket_event():
 
 @app.route("/webhook/stripe", methods=["POST"])
 def webhook_stripe():
-    payload = request.data
-    sig_header = request.headers.get("Stripe-Signature")
-    endpoint_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
-
-    if not endpoint_secret:
-        print("❌ STRIPE_WEBHOOK_SECRET non trovato")
-        return "Webhook secret missing", 500
-
     try:
-        event = stripe.Webhook.construct_event(
-            payload=payload,
-            sig_header=sig_header,
-            secret=endpoint_secret
-        )
-    except ValueError:
-        return "Invalid payload", 400
-    except stripe.error.SignatureVerificationError:
-        return "Invalid signature", 400
+        print("🧪 [WEBHOOK] START /webhook/stripe", flush=True)
 
-    # Gestiamo SOLO il succeeded (gli altri li ignoriamo)
-    if event["type"] == "payment_intent.succeeded":
-        payment_intent = event["data"]["object"]
-        gestisci_pagamento_confermato(payment_intent)
+        payload = request.data
+        sig_header = request.headers.get("Stripe-Signature")
+        endpoint_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
 
-    return "ok", 200
+        print(f"🧪 [WEBHOOK] sig_header presente = {bool(sig_header)}", flush=True)
+        print(f"🧪 [WEBHOOK] endpoint_secret presente = {bool(endpoint_secret)}", flush=True)
 
+        if not endpoint_secret:
+            print("❌ STRIPE_WEBHOOK_SECRET non trovato", flush=True)
+            return "Webhook secret missing", 500
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload=payload,
+                sig_header=sig_header,
+                secret=endpoint_secret
+            )
+            print(f"🧪 [WEBHOOK] event type = {event['type']}", flush=True)
+
+        except ValueError as e:
+            print(f"❌ [WEBHOOK] Invalid payload: {repr(e)}", flush=True)
+            traceback.print_exc()
+            return "Invalid payload", 400
+
+        except stripe.error.SignatureVerificationError as e:
+            print(f"❌ [WEBHOOK] Invalid signature: {repr(e)}", flush=True)
+            traceback.print_exc()
+            return "Invalid signature", 400
+
+        if event["type"] == "payment_intent.succeeded":
+            payment_intent = event["data"]["object"]
+            print("🧪 [WEBHOOK] prima di gestisci_pagamento_confermato", flush=True)
+            gestisci_pagamento_confermato(payment_intent)
+            print("🧪 [WEBHOOK] dopo gestisci_pagamento_confermato", flush=True)
+
+        return "ok", 200
+
+    except Exception as e:
+        print(f"❌ [WEBHOOK] ECCEZIONE NON GESTITA: {repr(e)}", flush=True)
+        traceback.print_exc()
+        return "Webhook error", 500
+        
 @app.route("/uploads/<path:filename>")
 def uploaded_files(filename):
     return send_from_directory("/uploads", filename)
