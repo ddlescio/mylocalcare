@@ -7243,7 +7243,7 @@ def gestisci_pagamento_confermato(payment_intent):
     riferimento_esterno = payment_intent.get("id")
     metadata = payment_intent.get("metadata", {}) or {}
     acquisto_id = metadata.get("acquisto_id")
-    
+
     if not acquisto_id:
         print("❌ Webhook Stripe: metadata.acquisto_id mancante", metadata)
         return
@@ -7253,8 +7253,10 @@ def gestisci_pagamento_confermato(payment_intent):
     cur = get_cursor(conn)
 
     try:
-        # lock di scrittura
-        cur.execute(sql("BEGIN IMMEDIATE"))
+        # SQLite: lock esplicito
+        # PostgreSQL: la transazione è già gestita dalla connessione
+        if not app.config.get("IS_POSTGRES"):
+            cur.execute(sql("BEGIN IMMEDIATE"))
 
         # fonte di verità: l’acquisto
         cur.execute(sql("""
@@ -7262,6 +7264,7 @@ def gestisci_pagamento_confermato(payment_intent):
             FROM acquisti
             WHERE id = ?
         """), (int(acquisto_id),))
+
         acquisto = cur.fetchone()
 
         if not acquisto:
