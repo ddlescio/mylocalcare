@@ -7241,11 +7241,12 @@ def gestisci_pagamento_confermato(payment_intent):
     if isinstance(payment_intent, dict):
         riferimento_esterno = payment_intent.get("id")
         metadata = payment_intent.get("metadata", {}) or {}
+        acquisto_id = metadata.get("acquisto_id")
     else:
         riferimento_esterno = payment_intent["id"]
         metadata = payment_intent["metadata"] if "metadata" in payment_intent else {}
+        acquisto_id = metadata["acquisto_id"] if "acquisto_id" in metadata else None
 
-    acquisto_id = metadata.get("acquisto_id")
     print(f"🧪 [STRIPE] START gestisci_pagamento_confermato id={riferimento_esterno} acquisto_id={acquisto_id} metadata={metadata}", flush=True)
 
     if not acquisto_id:
@@ -9373,7 +9374,7 @@ def webhook_stripe():
         print(f"❌ [WEBHOOK] ECCEZIONE NON GESTITA: {repr(e)}", flush=True)
         traceback.print_exc()
         return "Webhook error", 500
-        
+
 @app.route("/uploads/<path:filename>")
 def uploaded_files(filename):
     return send_from_directory("/uploads", filename)
