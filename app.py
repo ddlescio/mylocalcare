@@ -678,7 +678,7 @@ def dt_roma(value):
 
     except Exception:
         return str(value)
-        
+
 @app.template_filter("fromjson")
 def fromjson_filter(value):
     if not value:
@@ -6900,7 +6900,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
     cur = get_cursor(conn)
 
     # servizio
-    cur.execute(sql(f"""
+    cur.execute(sql("""
         SELECT id, ambito
         FROM servizi
         WHERE codice = ? AND attivo = 1
@@ -6908,10 +6908,14 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
     servizio = cur.fetchone()
 
     if not servizio:
-
         return jsonify({"error": "Servizio non trovato"}), 404
 
-    # query dinamica in base all’ambito
+    # query dinamica in base all’ambito:
+    # prende la MIGLIORE copertura attiva del servizio
+    # priorità:
+    # 1) permanente (data_fine NULL)
+    # 2) scadenza più lontana
+    # 3) attivazione più recente
     if servizio["ambito"] == "profilo":
         cur.execute(sql(f"""
             SELECT
@@ -6924,7 +6928,12 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
             WHERE servizio_id = ?
               AND utente_id = ?
               AND annuncio_id IS NULL
-            ORDER BY {order_datetime("data_inizio")} DESC
+              AND stato = 'attivo'
+              AND (data_fine IS NULL OR data_fine > {now_sql()})
+            ORDER BY
+                CASE WHEN data_fine IS NULL THEN 1 ELSE 0 END DESC,
+                data_fine DESC,
+                {order_datetime("data_inizio")} DESC
             LIMIT 1
         """), (servizio["id"], g.utente["id"]))
     else:
@@ -6939,12 +6948,16 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
             WHERE servizio_id = ?
               AND annuncio_id = ?
               AND utente_id = ?
-            ORDER BY {order_datetime("data_inizio")} DESC
+              AND stato = 'attivo'
+              AND (data_fine IS NULL OR data_fine > {now_sql()})
+            ORDER BY
+                CASE WHEN data_fine IS NULL THEN 1 ELSE 0 END DESC,
+                data_fine DESC,
+                {order_datetime("data_inizio")} DESC
             LIMIT 1
         """), (servizio["id"], annuncio_id, g.utente["id"]))
 
     att = cur.fetchone()
-
 
     if not att:
         return jsonify({
@@ -6955,22 +6968,20 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
             "permanente": False
         })
 
-    is_attivo = att["stato"] == "attivo"
-
     def solo_data(v):
         if not v:
             return None
         return str(v)[:10]
 
     return jsonify({
-        "attivo": is_attivo,
-        "stato": att["stato"],
-        "data_inizio": solo_data(att["data_inizio"]) if is_attivo else None,
-        "data_fine": solo_data(att["data_fine"]) if is_attivo else None,
-        "permanente": is_attivo and not att["data_fine"],
+        "attivo": True,
+        "stato": "attivo",
+        "data_inizio": solo_data(att["data_inizio"]),
+        "data_fine": solo_data(att["data_fine"]),
+        "permanente": not att["data_fine"],
         "attivato_da": att["attivato_da"]
     })
-
+    
 @app.route("/api/pacchetti/<codice>/piani")
 @login_required
 def api_pacchetti_piani(codice):

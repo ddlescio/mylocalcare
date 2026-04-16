@@ -376,7 +376,7 @@ def attiva_servizio(
         # - non somma le durate
         # - non accorcia mai una scadenza già più lunga
         # -------------------------------
-        if last and last["stato"] == "attivo":
+        if acquisto_id is None and last and last["stato"] == "attivo":
 
             if last["data_fine"] is None:
                 return False, "Servizio già attivo senza scadenza.", None
