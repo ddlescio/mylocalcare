@@ -1401,33 +1401,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.remove("modal-open");
   }
 </script>
-<!-- ✅ TOAST ESITO PAGAMENTO -->
-<div id="payment-toast"
-     class="hidden fixed z-[1000] left-1/2 -translate-x-1/2 bottom-4 sm:bottom-auto sm:top-5 sm:left-auto sm:right-5 sm:translate-x-0 w-[calc(100%-24px)] sm:w-[420px]">
-  <div id="payment-toast-card"
-       class="rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
-
-    <div id="payment-toast-icon"
-         class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-slate-100">
-      ℹ️
-    </div>
-
-    <div class="min-w-0 flex-1">
-      <div id="payment-toast-title" class="text-sm font-semibold text-slate-900">
-        Stato pagamento
-      </div>
-      <div id="payment-toast-message" class="mt-1 text-sm text-slate-600 leading-relaxed">
-        —
-      </div>
-    </div>
-
-    <button type="button"
-            onclick="closePaymentToast()"
-            class="shrink-0 text-slate-400 hover:text-slate-600 text-lg leading-none">
-      ✕
-    </button>
-  </div>
-</div>
 
 <script>
   let paymentToastTimer = null;
@@ -1439,11 +1412,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     toast = document.createElement("div");
     toast.id = "payment-toast";
-    toast.className = "hidden fixed z-[99999] left-3 right-3 bottom-4 sm:left-auto sm:right-5 sm:bottom-5 sm:w-[420px] pointer-events-none";
-
+    toast.className = "hidden fixed inset-0 z-[99999] flex items-center justify-center p-4 pointer-events-none";
     toast.innerHTML = `
-      <div id="payment-toast-card"
-           class="pointer-events-auto rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
+    <div id="payment-toast-card"
+         class="pointer-events-auto w-full max-w-md rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
         <div id="payment-toast-icon"
              class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-slate-100">
           ℹ️
@@ -1495,7 +1467,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!toast || !card || !icon || !titleEl || !messageEl) return;
 
     card.className =
-      "pointer-events-auto rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300";
+      "pointer-events-auto w-full max-w-md rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300";
 
     icon.className =
       "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg";
@@ -1528,6 +1500,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 6500);
   }
 
+  function savePendingPaymentContextFromAnnuncio() {
+    const titolo = document.getElementById("conf-titolo")?.textContent?.trim() || "";
+    const durata = document.getElementById("conf-durata")?.textContent?.trim() || "";
+    const prezzo = document.getElementById("conf-prezzo")?.textContent?.trim() || "";
+
+    sessionStorage.setItem("lc_payment_title_annuncio", titolo);
+    sessionStorage.setItem("lc_payment_duration_annuncio", durata);
+    sessionStorage.setItem("lc_payment_price_annuncio", prezzo);
+  }
+
+  function consumePendingPaymentContextFromAnnuncio() {
+    const titolo = sessionStorage.getItem("lc_payment_title_annuncio") || "";
+    const durata = sessionStorage.getItem("lc_payment_duration_annuncio") || "";
+    const prezzo = sessionStorage.getItem("lc_payment_price_annuncio") || "";
+
+    sessionStorage.removeItem("lc_payment_title_annuncio");
+    sessionStorage.removeItem("lc_payment_duration_annuncio");
+    sessionStorage.removeItem("lc_payment_price_annuncio");
+
+    return { titolo, durata, prezzo };
+  }
+
+
   async function getStripeStatusInstanceForAnnuncio() {
     if (typeof getStripeInstance === "function") {
       return await getStripeInstance();
@@ -1556,6 +1551,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!stripeInstance) return;
 
       const { paymentIntent } = await stripeInstance.retrievePaymentIntent(clientSecret);
+      const ctx = consumePendingPaymentContextFromAnnuncio();
+      const dettaglio = [ctx.titolo, ctx.durata].filter(Boolean).join(" · ");
 
       if (!paymentIntent) {
         showPaymentToast(
@@ -1566,14 +1563,18 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (paymentIntent.status === "succeeded") {
         showPaymentToast(
           "success",
-          "Pagamento completato",
-          "Operazione eseguita con successo. La visibilità del tuo annuncio verrà aggiornata a breve."
+          "Pagamento completato con successo",
+          dettaglio
+            ? `${dettaglio} attivato correttamente. La visibilità del tuo annuncio verrà aggiornata a breve.`
+            : "Il servizio selezionato è stato attivato correttamente. La visibilità del tuo annuncio verrà aggiornata a breve."
         );
       } else if (paymentIntent.status === "processing") {
         showPaymentToast(
           "info",
           "Pagamento in elaborazione",
-          "Il pagamento è in elaborazione. Attendi qualche istante."
+          dettaglio
+            ? `${dettaglio} è in fase di conferma. Attendi qualche istante.`
+            : "Il pagamento è in fase di conferma. Attendi qualche istante."
         );
       } else if (paymentIntent.status === "requires_payment_method") {
         showPaymentToast(
@@ -1587,7 +1588,7 @@ document.addEventListener("DOMContentLoaded", () => {
           "Stato aggiornato",
           "Abbiamo ricevuto un aggiornamento sul pagamento. Verifica che il servizio risulti attivo."
         );
-      }
+      }      
     } catch (err) {
       console.error("Errore lettura esito pagamento:", err);
       showPaymentToast(
@@ -1602,6 +1603,17 @@ document.addEventListener("DOMContentLoaded", () => {
       window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
     }
   }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const payBtn = document.getElementById("pay-button");
+
+    if (payBtn && !payBtn.dataset.toastBound) {
+      payBtn.dataset.toastBound = "1";
+      payBtn.addEventListener("click", () => {
+        savePendingPaymentContextFromAnnuncio();
+      }, { capture: true });
+    }
+  });
 
   window.addEventListener("load", () => {
     setTimeout(() => {
