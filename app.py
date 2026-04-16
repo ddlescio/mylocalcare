@@ -3646,7 +3646,7 @@ def _normalizza_lista(value):
 # ==========================================================
 import sqlite3
 
-def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
+def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin", conn=None):
     """
     Invia notifiche per un annuncio urgente.
     Viene chiamata:
@@ -3655,7 +3655,9 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
     - da riattivazione futura
     """
 
-    conn = get_db_connection()
+    own_conn = conn is None
+    if own_conn:
+        conn = get_db_connection()
     c = get_cursor(conn)
 
     try:
@@ -3814,11 +3816,12 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
         traceback.print_exc()
 
     finally:
-        try:
-            conn.close()
-        except Exception:
-            pass
-            
+        if own_conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
 # ==========================================================
 # APPROVA / RIFIUTA RECENSIONI E RISPOSTE
 # ==========================================================
@@ -7393,7 +7396,8 @@ def gestisci_pagamento_confermato(payment_intent):
                     notifica_urgente(
                         annuncio_id=int(annuncio_id),
                         attivazione_id=int(att_id) if att_id else None,
-                        eseguito_da="stripe"
+                        eseguito_da="stripe",
+                        conn=conn
                     )
                 except Exception as e:
                     print(
@@ -7486,7 +7490,8 @@ def gestisci_pagamento_confermato(payment_intent):
                         notifica_urgente(
                             annuncio_id=int(annuncio_id),
                             attivazione_id=int(att_id) if att_id else None,
-                            eseguito_da="stripe"
+                            eseguito_da="stripe",
+                            conn=conn
                         )
                     except Exception as e:
                         print(
