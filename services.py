@@ -373,10 +373,44 @@ def attiva_servizio(
 
         # -------------------------------
         # 🔁 RINNOVO / RIATTIVAZIONE
-        # - non somma le durate
-        # - non accorcia mai una scadenza già più lunga
+        # Regola voluta:
+        # - servizio -> servizio  => somma
+        # - pacchetto -> pacchetto => somma
+        # - servizio -> pacchetto o pacchetto -> servizio => NON somma
         # -------------------------------
-        if acquisto_id is None and last and last["stato"] == "attivo":
+        rinnovo_consentito = False
+        tipo_attivazione_corrente = None
+        tipo_nuovo_acquisto = None
+
+        if last and last["stato"] == "attivo":
+            # tipo dell'attivazione già esistente
+            if last.get("acquisto_id"):
+                row_tipo_last = _fetchone(conn, """
+                    SELECT tipo
+                    FROM acquisti
+                    WHERE id = ?
+                    LIMIT 1
+                """, (int(last["acquisto_id"]),))
+                tipo_attivazione_corrente = row_tipo_last["tipo"] if row_tipo_last else None
+
+            # tipo del nuovo acquisto
+            if acquisto_id is not None:
+                row_tipo_new = _fetchone(conn, """
+                    SELECT tipo
+                    FROM acquisti
+                    WHERE id = ?
+                    LIMIT 1
+                """, (int(acquisto_id),))
+                tipo_nuovo_acquisto = row_tipo_new["tipo"] if row_tipo_new else None
+
+            # casi admin/manual senza acquisto_id: mantieni il rinnovo consentito
+            if acquisto_id is None:
+                rinnovo_consentito = True
+            # casi Stripe: rinnova solo se stessa famiglia di acquisto
+            elif tipo_attivazione_corrente and tipo_nuovo_acquisto and tipo_attivazione_corrente == tipo_nuovo_acquisto:
+                rinnovo_consentito = True
+
+        if rinnovo_consentito and last and last["stato"] == "attivo":
 
             if last["data_fine"] is None:
                 return False, "Servizio già attivo senza scadenza.", None
@@ -385,8 +419,6 @@ def attiva_servizio(
                 return False, "Servizio già attivo.", None
 
             ora_utc = datetime.now(ZoneInfo("UTC"))
-            nuova_scadenza = ora_utc + timedelta(days=durata_finale)
-
             data_fine_attuale = last["data_fine"]
 
             # PostgreSQL può restituire datetime, SQLite spesso stringa
@@ -396,9 +428,10 @@ def attiva_servizio(
             if data_fine_attuale.tzinfo is None:
                 data_fine_attuale = data_fine_attuale.replace(tzinfo=ZoneInfo("UTC"))
 
-            # Regola corretta:
-            # mantieni la scadenza più lontana, senza sommare
-            data_fine_finale = max(data_fine_attuale, nuova_scadenza)
+            # Se il servizio è ancora attivo, somma dalla scadenza attuale.
+            # Se invece è già oltre scadenza, riparti da adesso.
+            base_rinnovo = data_fine_attuale if data_fine_attuale > ora_utc else ora_utc
+            data_fine_finale = base_rinnovo + timedelta(days=durata_finale)
 
             cur.execute(sql("""
                 UPDATE attivazioni_servizi
@@ -413,13 +446,19 @@ def attiva_servizio(
                 last["id"],
             ))
 
-            _storico_append(conn, last["id"], "rinnovato", attivato_da, note or "")
+            _storico_append(
+                conn,
+                last["id"],
+                "rinnovato",
+                attivato_da,
+                note or f"Rinnovo {tipo_attivazione_corrente or 'manuale'}"
+            )
 
             if own_conn:
                 conn.commit()
 
-            return True, "Servizio aggiornato.", int(last["id"])
-
+            return True, "Servizio rinnovato.", int(last["id"])
+            
         # -------------------------------
         # 🆕 NUOVA ATTIVAZIONE
         # -------------------------------
