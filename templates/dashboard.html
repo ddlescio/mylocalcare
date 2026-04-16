@@ -2450,122 +2450,176 @@ function aggiornaStatoVisibilita() {
   }
 </script>
 <script>
-  const stripe = Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+  let stripe = null;
   let elements = null;
+  let stripeJsPromise = null;
 
-    async function confermaAttivazione(btn) {
-      console.log("🧪 [dashboard] confermaAttivazione START");
-      console.log("🧪 [dashboard] selezioneCorrente =", selezioneCorrente);
-      console.log("🧪 [dashboard] ANNUNCIO_ID_CORRENTE =", ANNUNCIO_ID_CORRENTE);
-      console.log("🧪 [dashboard] btn =", btn);
+  function loadStripeJs() {
+    if (window.Stripe) {
+      return Promise.resolve();
+    }
 
-      if (!selezioneCorrente) {
-        console.warn("🧪 [dashboard] BLOCCO: selezioneCorrente assente");
+    if (stripeJsPromise) {
+      return stripeJsPromise;
+    }
+
+    stripeJsPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-stripe-lazy="true"]');
+
+      if (existing) {
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", () => reject(new Error("Errore caricamento Stripe JS")), { once: true });
         return;
       }
 
-      if (!ANNUNCIO_ID_CORRENTE) {
-        console.warn("🧪 [dashboard] BLOCCO: ANNUNCIO_ID_CORRENTE assente");
-        return;
+      const s = document.createElement("script");
+      s.src = "https://js.stripe.com/v3/";
+      s.async = true;
+      s.defer = true;
+      s.dataset.stripeLazy = "true";
+
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("Errore caricamento Stripe JS"));
+
+      document.head.appendChild(s);
+    });
+
+    return stripeJsPromise;
+  }
+
+  async function getStripeInstance() {
+    if (stripe) return stripe;
+
+    await loadStripeJs();
+
+    stripe = window.Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+    return stripe;
+  }
+  </script>
+  <script>
+  async function confermaAttivazione(btn) {
+    console.log("🧪 [dashboard] confermaAttivazione START");
+    console.log("🧪 [dashboard] selezioneCorrente =", selezioneCorrente);
+    console.log("🧪 [dashboard] ANNUNCIO_ID_CORRENTE =", ANNUNCIO_ID_CORRENTE);
+    console.log("🧪 [dashboard] btn =", btn);
+
+    if (!selezioneCorrente) {
+      console.warn("🧪 [dashboard] BLOCCO: selezioneCorrente assente");
+      return;
+    }
+
+    if (!ANNUNCIO_ID_CORRENTE) {
+      console.warn("🧪 [dashboard] BLOCCO: ANNUNCIO_ID_CORRENTE assente");
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("opacity-50", "cursor-not-allowed");
+    }
+
+    try {
+      console.log("🧪 [dashboard] prima di getStripeInstance()");
+      const stripeInstance = await getStripeInstance();
+      console.log("🧪 [dashboard] dopo getStripeInstance()", stripeInstance);
+
+      const payload = {
+        annuncio_id: ANNUNCIO_ID_CORRENTE,
+        piano_id: selezioneCorrente.piano_id,
+        tipo: selezioneCorrente.tipo
+      };
+
+      console.log("🧪 [dashboard] payload =", payload);
+      console.log("🧪 [dashboard] prima del fetch /api/crea-payment-intent");
+
+      const res = await fetch("/api/crea-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      console.log("🧪 [dashboard] fetch completato, status =", res.status);
+
+      const data = await res.json();
+      console.log("🧪 [dashboard] risposta JSON =", data);
+
+      if (!res.ok || !data.client_secret) {
+        alert(data?.error || "Errore creazione pagamento");
+        throw new Error("PaymentIntent non valido");
       }
 
-      if (btn) {
-        btn.disabled = true;
-        btn.classList.add("opacity-50", "cursor-not-allowed");
+      console.log("🧪 [dashboard] prima di stripeInstance.elements()");
+      elements = stripeInstance.elements({ clientSecret: data.client_secret });
+      console.log("🧪 [dashboard] dopo stripeInstance.elements()", elements);
+
+      const container = document.getElementById("payment-element");
+      console.log("🧪 [dashboard] payment-element =", container);
+
+      if (!container) {
+        throw new Error("Container #payment-element non trovato");
       }
 
-      try {
-        const payload = {
-          annuncio_id: ANNUNCIO_ID_CORRENTE,
-          piano_id: selezioneCorrente.piano_id,
-          tipo: selezioneCorrente.tipo
-        };
+      container.innerHTML = "";
 
-        console.log("🧪 [dashboard] payload =", payload);
-        console.log("🧪 [dashboard] prima del fetch /api/crea-payment-intent");
+      const paymentElement = elements.create("payment");
+      console.log("🧪 [dashboard] paymentElement creato =", paymentElement);
 
-        const res = await fetch("/api/crea-payment-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+      paymentElement.mount(container);
+      console.log("🧪 [dashboard] paymentElement montato");
 
-        console.log("🧪 [dashboard] fetch completato, status =", res.status);
+      document.getElementById("stripe-box")?.classList.remove("hidden");
+      btn?.classList.add("hidden");
 
-        const data = await res.json();
-        console.log("🧪 [dashboard] risposta JSON =", data);
+      console.log("🧪 [dashboard] END OK");
 
-        if (!res.ok || !data.client_secret) {
-          alert(data?.error || "Errore creazione pagamento");
-          throw new Error("PaymentIntent non valido");
-        }
+    } catch (err) {
+      console.error("🧪 [dashboard] ERRORE =", err);
+      alert("Errore durante la preparazione del pagamento.");
 
-        console.log("🧪 [dashboard] prima di stripe.elements()");
-        elements = stripe.elements({ clientSecret: data.client_secret });
-        console.log("🧪 [dashboard] dopo stripe.elements()", elements);
-
-        const container = document.getElementById("payment-element");
-        console.log("🧪 [dashboard] payment-element =", container);
-
-        container.innerHTML = "";
-
-        const paymentElement = elements.create("payment");
-        console.log("🧪 [dashboard] paymentElement creato =", paymentElement);
-
-        paymentElement.mount(container);
-        console.log("🧪 [dashboard] paymentElement montato");
-
-        document.getElementById("stripe-box").classList.remove("hidden");
-        btn?.classList.add("hidden");
-
-        console.log("🧪 [dashboard] END OK");
-
-      } catch (err) {
-        console.error("🧪 [dashboard] ERRORE =", err);
-        alert("Errore durante la preparazione del pagamento.");
-
-        if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
-          btn.disabled = false;
-          btn.classList.remove("opacity-50", "cursor-not-allowed");
-        }
+      if (btn && document.getElementById("stripe-box")?.classList.contains("hidden")) {
+        btn.disabled = false;
+        btn.classList.remove("opacity-50", "cursor-not-allowed");
       }
     }
-  </script>
+  }
+</script>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-
   const payBtn = document.getElementById("pay-button");
   const errBox = document.getElementById("payment-error");
 
-  if (!payBtn) return; // sicurezza: bottone non ancora nel DOM
+  if (!payBtn) return;
 
   payBtn.onclick = async () => {
-    // sicurezza: niente pagamento se Stripe Elements non è pronto
-    if (!elements) return;
+    if (!elements) {
+      console.warn("🧪 [dashboard] BLOCCO payBtn: elements assente");
+      return;
+    }
 
-    // reset errore
     if (errBox) {
       errBox.textContent = "";
       errBox.classList.add("hidden");
     }
 
-    // evita doppio click
     payBtn.disabled = true;
     payBtn.classList.add("opacity-50", "cursor-not-allowed");
+    payBtn.textContent = "Reindirizzamento in corso...";
 
     try {
-      const { error } = await stripe.confirmPayment({
+      console.log("🧪 [dashboard] prima di getStripeInstance() nel click Paga ora");
+      const stripeInstance = await getStripeInstance();
+      console.log("🧪 [dashboard] dopo getStripeInstance() nel click Paga ora", stripeInstance);
+
+      console.log("🧪 [dashboard] prima di stripeInstance.confirmPayment()");
+      const { error } = await stripeInstance.confirmPayment({
         elements,
         confirmParams: {
           return_url: window.location.href
         }
       });
+      console.log("🧪 [dashboard] dopo stripeInstance.confirmPayment()");
 
-      /*
-        - Se error è presente → errore immediato (carta rifiutata, ecc.)
-        - Se NON c'è error → Stripe può fare redirect (3DS)
-          oppure il pagamento va avanti e il webhook farà il resto
-      */
       if (error) {
         if (errBox) {
           errBox.textContent = error.message || "Pagamento non riuscito.";
@@ -2574,13 +2628,13 @@ document.addEventListener("DOMContentLoaded", () => {
           alert(error.message || "Pagamento non riuscito.");
         }
 
-        // riabilita per nuovo tentativo
         payBtn.disabled = false;
         payBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        payBtn.textContent = "Paga ora";
       }
 
     } catch (e) {
-      console.error("Errore Stripe:", e);
+      console.error("🧪 [dashboard] eccezione in confirmPayment =", e);
 
       if (errBox) {
         errBox.textContent = "Errore imprevisto durante il pagamento. Riprova.";
@@ -2589,217 +2643,12 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Errore imprevisto durante il pagamento. Riprova.");
       }
 
-      // riabilita per nuovo tentativo
       payBtn.disabled = false;
       payBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      payBtn.textContent = "Paga ora";
     }
   };
-
 });
-</script>
-<!-- ✅ TOAST ESITO PAGAMENTO -->
-<div id="payment-toast"
-     class="hidden fixed z-[1000] left-1/2 -translate-x-1/2 bottom-4 sm:bottom-auto sm:top-5 sm:left-auto sm:right-5 sm:translate-x-0 w-[calc(100%-24px)] sm:w-[420px]">
-  <div id="payment-toast-card"
-       class="rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
-
-    <div id="payment-toast-icon"
-         class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-slate-100">
-      ℹ️
-    </div>
-
-    <div class="min-w-0 flex-1">
-      <div id="payment-toast-title" class="text-sm font-semibold text-slate-900">
-        Stato pagamento
-      </div>
-      <div id="payment-toast-message" class="mt-1 text-sm text-slate-600 leading-relaxed">
-        —
-      </div>
-    </div>
-
-    <button type="button"
-            onclick="closePaymentToast()"
-            class="shrink-0 text-slate-400 hover:text-slate-600 text-lg leading-none">
-      ✕
-    </button>
-  </div>
-</div>
-
-<script>
-  let paymentToastTimer = null;
-
-  function ensurePaymentToast() {
-    let toast = document.getElementById("payment-toast");
-
-    if (toast) return toast;
-
-    toast = document.createElement("div");
-    toast.id = "payment-toast";
-    toast.className = "hidden fixed z-[99999] left-3 right-3 bottom-4 sm:left-auto sm:right-5 sm:bottom-5 sm:w-[420px] pointer-events-none";
-
-    toast.innerHTML = `
-      <div id="payment-toast-card"
-           class="pointer-events-auto rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
-        <div id="payment-toast-icon"
-             class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-slate-100">
-          ℹ️
-        </div>
-
-        <div class="min-w-0 flex-1">
-          <div id="payment-toast-title" class="text-sm font-semibold text-slate-900">
-            Stato pagamento
-          </div>
-          <div id="payment-toast-message" class="mt-1 text-sm text-slate-600 leading-relaxed">
-            —
-          </div>
-        </div>
-
-        <button type="button"
-                id="payment-toast-close"
-                class="shrink-0 text-slate-400 hover:text-slate-600 text-lg leading-none">
-          ✕
-        </button>
-      </div>
-    `;
-
-    document.body.appendChild(toast);
-
-    toast.querySelector("#payment-toast-close")?.addEventListener("click", closePaymentToast);
-
-    return toast;
-  }
-
-  function closePaymentToast() {
-    const toast = document.getElementById("payment-toast");
-    if (!toast) return;
-
-    toast.classList.add("hidden");
-
-    if (paymentToastTimer) {
-      clearTimeout(paymentToastTimer);
-      paymentToastTimer = null;
-    }
-  }
-
-  function showPaymentToast(type, title, message) {
-    const toast = ensurePaymentToast();
-    const card = document.getElementById("payment-toast-card");
-    const icon = document.getElementById("payment-toast-icon");
-    const titleEl = document.getElementById("payment-toast-title");
-    const messageEl = document.getElementById("payment-toast-message");
-
-    if (!toast || !card || !icon || !titleEl || !messageEl) return;
-
-    card.className =
-      "pointer-events-auto rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300";
-
-    icon.className =
-      "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg";
-
-    if (type === "success") {
-      card.classList.add("border-emerald-200");
-      icon.classList.add("bg-emerald-100", "text-emerald-700");
-      icon.textContent = "✅";
-    } else if (type === "error") {
-      card.classList.add("border-rose-200");
-      icon.classList.add("bg-rose-100", "text-rose-700");
-      icon.textContent = "⚠️";
-    } else {
-      card.classList.add("border-blue-200");
-      icon.classList.add("bg-blue-100", "text-blue-700");
-      icon.textContent = "ℹ️";
-    }
-
-    titleEl.textContent = title;
-    messageEl.textContent = message;
-
-    toast.classList.remove("hidden");
-
-    if (paymentToastTimer) {
-      clearTimeout(paymentToastTimer);
-    }
-
-    paymentToastTimer = setTimeout(() => {
-      closePaymentToast();
-    }, 6500);
-  }
-
-  async function getStripeStatusInstanceForDashboard() {
-    if (typeof stripe !== "undefined" && stripe) {
-      return stripe;
-    }
-
-    if (window.Stripe) {
-      return window.Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
-    }
-
-    return null;
-  }
-
-  async function handleStripeReturnStatusDashboard() {
-    const url = new URL(window.location.href);
-    const clientSecret = url.searchParams.get("payment_intent_client_secret");
-
-    if (!clientSecret) return;
-
-    try {
-      const stripeInstance = await getStripeStatusInstanceForDashboard();
-
-      if (!stripeInstance) return;
-
-      const { paymentIntent } = await stripeInstance.retrievePaymentIntent(clientSecret);
-
-      if (!paymentIntent) {
-        showPaymentToast(
-          "error",
-          "Pagamento non verificato",
-          "Non sono riuscito a verificare l’esito del pagamento. Controlla tra pochi istanti."
-        );
-      } else if (paymentIntent.status === "succeeded") {
-        showPaymentToast(
-          "success",
-          "Pagamento completato",
-          "Operazione eseguita con successo. La visibilità del tuo annuncio verrà aggiornata a breve."
-        );
-      } else if (paymentIntent.status === "processing") {
-        showPaymentToast(
-          "info",
-          "Pagamento in elaborazione",
-          "Il pagamento è in elaborazione. Attendi qualche istante."
-        );
-      } else if (paymentIntent.status === "requires_payment_method") {
-        showPaymentToast(
-          "error",
-          "Pagamento non riuscito",
-          "Il pagamento non è andato a buon fine. Puoi riprovare con un altro metodo di pagamento."
-        );
-      } else {
-        showPaymentToast(
-          "info",
-          "Stato aggiornato",
-          "Abbiamo ricevuto un aggiornamento sul pagamento. Verifica che il servizio risulti attivo."
-        );
-      }
-    } catch (err) {
-      console.error("Errore lettura esito pagamento:", err);
-      showPaymentToast(
-        "error",
-        "Verifica pagamento non disponibile",
-        "Non sono riuscito a leggere l’esito del pagamento in questo momento."
-      );
-    } finally {
-      url.searchParams.delete("payment_intent");
-      url.searchParams.delete("payment_intent_client_secret");
-      url.searchParams.delete("redirect_status");
-      window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
-    }
-  }
-
-  window.addEventListener("load", () => {
-    setTimeout(() => {
-      handleStripeReturnStatusDashboard();
-    }, 150);
-  });
 </script>
 
 {% endblock %}
