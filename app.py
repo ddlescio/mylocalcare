@@ -6981,7 +6981,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
         "permanente": not att["data_fine"],
         "attivato_da": att["attivato_da"]
     })
-    
+
 @app.route("/api/pacchetti/<codice>/piani")
 @login_required
 def api_pacchetti_piani(codice):
@@ -7257,14 +7257,17 @@ def gestisci_pagamento_confermato(payment_intent):
         metadata = payment_intent["metadata"] if "metadata" in payment_intent else {}
         acquisto_id = metadata["acquisto_id"] if "acquisto_id" in metadata else None
 
-    print(f"🧪 [STRIPE] START gestisci_pagamento_confermato id={riferimento_esterno} acquisto_id={acquisto_id} metadata={metadata}", flush=True)
+    print(
+        f"🧪 [STRIPE] START gestisci_pagamento_confermato "
+        f"id={riferimento_esterno} acquisto_id={acquisto_id} metadata={metadata}",
+        flush=True
+    )
 
     if not acquisto_id:
-        print("❌ Webhook Stripe: metadata.acquisto_id mancante", metadata)
+        print("❌ Webhook Stripe: metadata.acquisto_id mancante", metadata, flush=True)
         return
 
     conn = get_db_connection()
-
     cur = get_cursor(conn)
 
     try:
@@ -7284,7 +7287,7 @@ def gestisci_pagamento_confermato(payment_intent):
         print(f"🧪 [STRIPE] acquisto letto = {dict(acquisto) if acquisto else None}", flush=True)
 
         if not acquisto:
-            print("❌ Webhook Stripe: acquisto non trovato:", acquisto_id)
+            print("❌ Webhook Stripe: acquisto non trovato:", acquisto_id, flush=True)
             conn.rollback()
             return
 
@@ -7296,8 +7299,9 @@ def gestisci_pagamento_confermato(payment_intent):
         utente_id = int(acquisto["utente_id"])
         tipo = acquisto["tipo"]                  # 'servizio' | 'pacchetto'
         ref_id = int(acquisto["ref_id"])         # servizio: id piano servizi_piani | pacchetto: pacchetto_id
-        piano_id = acquisto["prezzo_id"]         # piano scelto e pagato (id servizi_piani o pacchetti_piani)
+        piano_id = acquisto["prezzo_id"]         # id servizi_piani o pacchetti_piani
         annuncio_id = acquisto["annuncio_id"]
+
         if annuncio_id is not None:
             annuncio_id = int(annuncio_id)
 
@@ -7309,14 +7313,16 @@ def gestisci_pagamento_confermato(payment_intent):
                 riferimento_esterno = ?
             WHERE id = ?
         """), (riferimento_esterno, int(acquisto_id)))
-        print(f"🧪 [STRIPE] acquisto aggiornato a paid id={acquisto_id} rif={riferimento_esterno}", flush=True)
+
+        print(
+            f"🧪 [STRIPE] acquisto aggiornato a paid id={acquisto_id} rif={riferimento_esterno}",
+            flush=True
+        )
 
         # ===============================
         # SERVIZIO SINGOLO
         # ===============================
         if tipo == "servizio":
-            # Nel tuo flusso attuale ref_id = servizi_piani.id
-            # (ma per sicurezza, usiamo piano_id se presente)
             piano_servizio_id = int(piano_id) if piano_id is not None else int(ref_id)
 
             cur.execute(sql("""
@@ -7325,7 +7331,9 @@ def gestisci_pagamento_confermato(payment_intent):
                 WHERE id = ?
             """), (piano_servizio_id,))
             piano = cur.fetchone()
+
             print(f"🧪 [STRIPE] piano servizio = {dict(piano) if piano else None}", flush=True)
+
             if not piano:
                 raise Exception("Piano servizio non trovato")
 
@@ -7340,21 +7348,49 @@ def gestisci_pagamento_confermato(payment_intent):
                 float(int(piano["prezzo_cent"]) / 100.0),
                 riferimento_esterno
             ))
-            print(f"🧪 [STRIPE] inserito acquisti_servizi utente={utente_id} servizio={int(piano['servizio_id'])} rif={riferimento_esterno}", flush=True)
+
+            print(
+                f"🧪 [STRIPE] inserito acquisti_servizi "
+                f"utente={utente_id} servizio={int(piano['servizio_id'])} rif={riferimento_esterno}",
+                flush=True
+            )
+
             ok, msg, att_id = attiva_servizio(
                 conn=conn,
                 utente_id=utente_id,
                 servizio_id=int(piano["servizio_id"]),
                 annuncio_id=annuncio_id,
-                durata_giorni=piano["durata_giorni"],  # ✅ dal piano
+                durata_giorni=piano["durata_giorni"],
                 acquisto_id=int(acquisto_id),
                 attivato_da="stripe",
                 note=f"Stripe PI {riferimento_esterno}"
             )
 
-            print("ATTIVA SERVIZIO:", ok, msg, att_id)
+            print("ATTIVA SERVIZIO:", ok, msg, att_id, flush=True)
+
             if not ok:
                 raise Exception(msg)
+
+            # se è annuncio_urgente, invia notifiche interne
+            cur.execute(sql("""
+                SELECT codice
+                FROM servizi
+                WHERE id = ?
+            """), (int(piano["servizio_id"]),))
+            servizio_row = cur.fetchone()
+
+            if servizio_row and servizio_row["codice"] == "annuncio_urgente" and annuncio_id:
+                try:
+                    notifica_urgente(
+                        annuncio_id=int(annuncio_id),
+                        attivazione_id=int(att_id) if att_id else None,
+                        eseguito_da="stripe"
+                    )
+                except Exception as e:
+                    print(
+                        f"⚠️ Errore notifica urgente (stripe servizio singolo): {e}",
+                        flush=True
+                    )
 
         # ===============================
         # PACCHETTO
@@ -7363,20 +7399,19 @@ def gestisci_pagamento_confermato(payment_intent):
             if piano_id is None:
                 raise Exception("piano_id mancante su acquisti.prezzo_id (impossibile determinare durata pacchetto)")
 
-            # ✅ durata e prezzo TOT dal piano PACCHETTO PAGATO
             cur.execute(sql("""
                 SELECT durata_giorni, prezzo_cent
                 FROM pacchetti_piani
                 WHERE id = ?
             """), (int(piano_id),))
             piano_p = cur.fetchone()
+
             if not piano_p:
                 raise Exception("Piano pacchetto non trovato")
 
             durata_piano = piano_p["durata_giorni"]   # può essere NULL => permanente
             prezzo_tot_cent = int(piano_p["prezzo_cent"] or 0)
 
-            # ✅ servizi reali del pacchetto (senza usare durata default!)
             cur.execute(sql("""
                 SELECT servizio_id
                 FROM pacchetti_servizi
@@ -7403,32 +7438,58 @@ def gestisci_pagamento_confermato(payment_intent):
                     float(quota),
                     riferimento_esterno
                 ))
-                print(f"🧪 [STRIPE] inserito acquisti_servizi PACCHETTO utente={utente_id} servizio={servizio_id} rif={riferimento_esterno}", flush=True)
+
+                print(
+                    f"🧪 [STRIPE] inserito acquisti_servizi PACCHETTO "
+                    f"utente={utente_id} servizio={servizio_id} rif={riferimento_esterno}",
+                    flush=True
+                )
+
                 ok, msg, att_id = attiva_servizio(
                     conn=conn,
                     utente_id=utente_id,
                     servizio_id=servizio_id,
                     annuncio_id=annuncio_id,
-                    durata_giorni=durata_piano,  # ✅ SOLO durata del piano pagato
+                    durata_giorni=durata_piano,
                     acquisto_id=int(acquisto_id),
                     attivato_da="stripe",
                     note=f"Stripe PI {riferimento_esterno} (pacchetto)"
                 )
 
-                print("ATTIVA SERVIZIO PACCHETTO:", ok, msg, att_id)
+                print("ATTIVA SERVIZIO PACCHETTO:", ok, msg, att_id, flush=True)
 
-                # caso legale: servizio permanente già attivo → non è errore
                 if not ok and msg == "Servizio già attivo.":
                     continue
 
                 if not ok:
                     raise Exception(msg)
 
+                # se nel pacchetto c'è annuncio_urgente, invia notifiche interne
+                cur.execute(sql("""
+                    SELECT codice
+                    FROM servizi
+                    WHERE id = ?
+                """), (servizio_id,))
+                servizio_row = cur.fetchone()
+
+                if servizio_row and servizio_row["codice"] == "annuncio_urgente" and annuncio_id:
+                    try:
+                        notifica_urgente(
+                            annuncio_id=int(annuncio_id),
+                            attivazione_id=int(att_id) if att_id else None,
+                            eseguito_da="stripe"
+                        )
+                    except Exception as e:
+                        print(
+                            f"⚠️ Errore notifica urgente (stripe pacchetto): {e}",
+                            flush=True
+                        )
+
         else:
             raise Exception("Tipo acquisto non valido")
 
         conn.commit()
-        print("✅ Stripe webhook OK – servizi attivati")
+        print("✅ Stripe webhook OK – servizi attivati", flush=True)
 
     except Exception as e:
         conn.rollback()
@@ -7438,9 +7499,8 @@ def gestisci_pagamento_confermato(payment_intent):
     finally:
         try:
             conn.close()
-        except:
+        except Exception:
             pass
-
 
 def attiva_servizio_by_id(conn, servizio_id, **kwargs):
     row = conn.execute(
