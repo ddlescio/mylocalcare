@@ -3762,7 +3762,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin", conn
         # ---------------------------------------------------------
         messaggio = (
             "Annuncio urgente in zona\n"
-            f"{categoria}|{tipo_annuncio}|{luogo}|{username}"
+            f"{categoria}|{tipo_annuncio}|{luogo}|{username}|{titolo}"
         )
 
         for uid in notificati:

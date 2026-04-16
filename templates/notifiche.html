@@ -98,6 +98,12 @@
               </div>
             {% endif %}
 
+            {% if parti|length > 4 and parti[4] %}
+              <p class="mt-2 text-sm font-medium text-gray-800">
+                “{{ parti[4] }}”
+              </p>
+            {% endif %}
+
             <!-- DATA -->
             <p class="text-xs text-gray-500 mt-2">
               {{ n['data'] | fmt_it_smart }}
