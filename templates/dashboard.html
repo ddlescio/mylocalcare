@@ -2660,11 +2660,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     toast = document.createElement("div");
     toast.id = "payment-toast";
-    toast.className = "hidden fixed z-[99999] left-3 right-3 bottom-4 sm:left-auto sm:right-5 sm:bottom-5 sm:w-[420px] pointer-events-none";
-
+    toast.className = "hidden fixed inset-0 z-[99999] flex items-center justify-center p-4 pointer-events-none";
     toast.innerHTML = `
-      <div id="payment-toast-card"
-           class="pointer-events-auto rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
+    <div id="payment-toast-card"
+         class="pointer-events-auto w-full max-w-md rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
         <div id="payment-toast-icon"
              class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-slate-100">
           ℹ️
@@ -2715,7 +2714,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!toast || !card || !icon || !titleEl || !messageEl) return;
 
     card.className =
-      "pointer-events-auto rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300";
+      "pointer-events-auto w-full max-w-md rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300";
 
     icon.className =
       "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg";
