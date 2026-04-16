@@ -3658,158 +3658,167 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin"):
     conn = get_db_connection()
     c = get_cursor(conn)
 
-    # ---------------------------------------------------------
-    # 1️⃣ Recupera annuncio + verifica servizio urgente ATTIVO
-    # ---------------------------------------------------------
-    c.execute(sql(f"""
-        SELECT
-            a.id,
-            a.utente_id,
-            a.categoria,
-            a.tipo_annuncio,
-            a.provincia,
-            a.zona,
-            a.titolo,
-            u.username
-        FROM annunci a
-        JOIN utenti u ON u.id = a.utente_id
-        JOIN attivazioni_servizi act ON act.annuncio_id = a.id
-        JOIN servizi s ON s.id = act.servizio_id
-        WHERE a.id = ?
-          AND a.stato = 'approvato'
-          AND s.codice = 'annuncio_urgente'
-          AND act.stato = 'attivo'
-          AND act.data_inizio <= {now_sql()}
-          AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
-    """), (annuncio_id,))
-    annuncio = c.fetchone()
-
-    if not annuncio:
-
-        print("⚠️ Annuncio non valido o non urgente.")
-        return
-
-    (
-        annuncio_id,
-        autore_id,
-        categoria,
-        tipo_annuncio,
-        provincia,
-        zona,
-        titolo,
-        username
-    ) = annuncio
-
-    tipo_opposto = "cerco" if tipo_annuncio == "offro" else "offro"
-    luogo = zona or provincia
-
-    notificati = set()
-
-    # ---------------------------------------------------------
-    # 2️⃣ PRIORITÀ 1 — ANNUNCI COMPATIBILI
-    # ---------------------------------------------------------
-    c.execute(sql("""
-        SELECT DISTINCT a.utente_id
-        FROM annunci a
-        JOIN utenti u ON u.id = a.utente_id
-        WHERE a.stato = 'approvato'
-          AND a.tipo_annuncio = ?
-          AND a.categoria = ?
-          AND a.provincia = ?
-          AND a.utente_id != ?
-          AND u.sospeso = 0
-          AND u.disattivato_admin = 0
-          AND u.attivo = 1
-          AND u.email_notifiche = 1
-    """), (tipo_opposto, categoria, provincia, autore_id))
-
-    for (uid,) in c.fetchall():
-        notificati.add(uid)
-
-    # ---------------------------------------------------------
-    # 3️⃣ PRIORITÀ 2 — INFO UTENTE (match per CATEGORIA specifica)
-    # ---------------------------------------------------------
-    categoria_slug = to_slug(categoria)
-    categoria_index = CATEGORIA_TO_INDEX.get(categoria_slug)
-
-    if categoria_index:
-        colonna = f"{tipo_opposto}_{categoria_index}"
-
+    try:
+        # ---------------------------------------------------------
+        # 1️⃣ Recupera annuncio + verifica servizio urgente ATTIVO
+        # ---------------------------------------------------------
         c.execute(sql(f"""
-            SELECT id
-            FROM utenti
-            WHERE provincia = ?
-              AND id != ?
-              AND sospeso = 0
-              AND (disattivato_admin IS NULL OR disattivato_admin = 0)
-              AND attivo = 1
-              AND email_notifiche = 1
-              AND {colonna} = 1
-        """), (provincia, autore_id))
+            SELECT
+                a.id,
+                a.utente_id,
+                a.categoria,
+                a.tipo_annuncio,
+                a.provincia,
+                a.zona,
+                a.titolo,
+                u.username
+            FROM annunci a
+            JOIN utenti u ON u.id = a.utente_id
+            JOIN attivazioni_servizi act ON act.annuncio_id = a.id
+            JOIN servizi s ON s.id = act.servizio_id
+            WHERE a.id = ?
+              AND a.stato = 'approvato'
+              AND s.codice = 'annuncio_urgente'
+              AND act.stato = 'attivo'
+              AND act.data_inizio <= {now_sql()}
+              AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
+        """), (annuncio_id,))
+        annuncio = c.fetchone()
 
-        for (uid,) in c.fetchall():
+        if not annuncio:
+            print("⚠️ Annuncio non valido o non urgente.", flush=True)
+            return
+
+        # ✅ lettura corretta da row/dict-like
+        annuncio_id = int(annuncio["id"])
+        autore_id = int(annuncio["utente_id"])
+        categoria = annuncio["categoria"]
+        tipo_annuncio = annuncio["tipo_annuncio"]
+        provincia = annuncio["provincia"]
+        zona = annuncio["zona"]
+        titolo = annuncio["titolo"]
+        username = annuncio["username"]
+
+        tipo_opposto = "cerco" if tipo_annuncio == "offro" else "offro"
+        luogo = zona or provincia
+
+        notificati = set()
+
+        # ---------------------------------------------------------
+        # 2️⃣ PRIORITÀ 1 — ANNUNCI COMPATIBILI
+        # ---------------------------------------------------------
+        c.execute(sql("""
+            SELECT DISTINCT a.utente_id
+            FROM annunci a
+            JOIN utenti u ON u.id = a.utente_id
+            WHERE a.stato = 'approvato'
+              AND a.tipo_annuncio = ?
+              AND a.categoria = ?
+              AND a.provincia = ?
+              AND a.utente_id != ?
+              AND u.sospeso = 0
+              AND u.disattivato_admin = 0
+              AND u.attivo = 1
+              AND u.email_notifiche = 1
+        """), (tipo_opposto, categoria, provincia, autore_id))
+
+        for row in c.fetchall():
+            uid = int(row["utente_id"] if isinstance(row, dict) or hasattr(row, "keys") else row[0])
             notificati.add(uid)
 
-    if not notificati:
+        # ---------------------------------------------------------
+        # 3️⃣ PRIORITÀ 2 — INFO UTENTE (match per CATEGORIA specifica)
+        # ---------------------------------------------------------
+        categoria_slug = to_slug(categoria)
+        categoria_index = CATEGORIA_TO_INDEX.get(categoria_slug)
 
-        print("ℹ️ Nessun destinatario compatibile.")
-        return
+        if categoria_index:
+            colonna = f"{tipo_opposto}_{categoria_index}"
 
-    # ---------------------------------------------------------
-    # 4️⃣ Inserimento notifiche (TESTO DEFINITIVO VISIBILE)
-    # ---------------------------------------------------------
+            c.execute(sql(f"""
+                SELECT id
+                FROM utenti
+                WHERE provincia = ?
+                  AND id != ?
+                  AND sospeso = 0
+                  AND (disattivato_admin IS NULL OR disattivato_admin = 0)
+                  AND attivo = 1
+                  AND email_notifiche = 1
+                  AND {colonna} = 1
+            """), (provincia, autore_id))
 
-    messaggio = (
-        "Annuncio urgente in zona\n"
-        f"{categoria}|{tipo_annuncio}|{luogo}|{username}"
-    )
+            for row in c.fetchall():
+                uid = int(row["id"] if isinstance(row, dict) or hasattr(row, "keys") else row[0])
+                notificati.add(uid)
 
-    for uid in notificati:
-        c.execute(sql("""
-            INSERT INTO notifiche (
-                id_utente,
-                titolo,
+        if not notificati:
+            print("ℹ️ Nessun destinatario compatibile.", flush=True)
+            return
+
+        # ---------------------------------------------------------
+        # 4️⃣ Inserimento notifiche (TESTO DEFINITIVO VISIBILE)
+        # ---------------------------------------------------------
+        messaggio = (
+            "Annuncio urgente in zona\n"
+            f"{categoria}|{tipo_annuncio}|{luogo}|{username}"
+        )
+
+        for uid in notificati:
+            c.execute(sql("""
+                INSERT INTO notifiche (
+                    id_utente,
+                    titolo,
+                    messaggio,
+                    link,
+                    tipo
+                ) VALUES (?, ?, ?, ?, ?)
+            """), (
+                uid,
+                "urgente",  # titolo tecnico, non visibile
                 messaggio,
-                link,
-                tipo
-            ) VALUES (?, ?, ?, ?, ?)
-        """), (
-            uid,
-            "urgente",  # titolo tecnico, non visibile
-            messaggio,
-            f"/annuncio/{annuncio_id}",
-            "urgente"
-        ))
+                f"/annuncio/{annuncio_id}",
+                "urgente"
+            ))
 
-    # ---------------------------------------------------------
-    # 5️⃣ Storico servizio (audit)
-    # ---------------------------------------------------------
-    if attivazione_id:
-        c.execute(sql("""
-            INSERT INTO storico_servizi (
+        # ---------------------------------------------------------
+        # 5️⃣ Storico servizio (audit)
+        # ---------------------------------------------------------
+        if attivazione_id:
+            c.execute(sql("""
+                INSERT INTO storico_servizi (
+                    attivazione_id,
+                    azione,
+                    eseguito_da,
+                    note
+                ) VALUES (?, 'notifica_inviata', ?, ?)
+            """), (
                 attivazione_id,
-                azione,
                 eseguito_da,
-                note
-            ) VALUES (?, 'notifica_inviata', ?, ?)
-        """), (
-            attivazione_id,
-            eseguito_da,
-            f"Inviate {len(notificati)} notifiche urgenti"
-        ))
+                f"Inviate {len(notificati)} notifiche urgenti"
+            ))
 
-    conn.commit()
+        conn.commit()
 
+        print(f"✅ Notifica urgente inviata a {len(notificati)} utenti.", flush=True)
 
-    print(f"✅ Notifica urgente inviata a {len(notificati)} utenti.")
+        # ---------------------------------------------------------
+        # 6️⃣ EMISSIONE SOCKET REALTIME
+        # ---------------------------------------------------------
+        for uid in notificati:
+            count = conta_non_lette(uid)
+            emit_update_notifications(uid)
 
-    # ---------------------------------------------------------
-    # 6️⃣ EMISSIONE SOCKET REALTIME (come recensioni)
-    # ---------------------------------------------------------
-    for uid in notificati:
-        count = conta_non_lette(uid)
-        emit_update_notifications(uid)
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Errore in notifica_urgente: {repr(e)}", flush=True)
+        traceback.print_exc()
 
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+            
 # ==========================================================
 # APPROVA / RIFIUTA RECENSIONI E RISPOSTE
 # ==========================================================
