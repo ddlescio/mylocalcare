@@ -566,7 +566,7 @@
              class="hidden fixed inset-0 z-[70] bg-black/60 overflow-y-auto overscroll-contain p-0 sm:p-6 flex items-end sm:items-center justify-center">
 
           <div class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto">
-            
+
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-lg font-bold text-slate-900">
                 Conferma attivazione
@@ -1400,6 +1400,171 @@ document.addEventListener("DOMContentLoaded", () => {
   function bodyModalOff() {
     document.body.classList.remove("modal-open");
   }
+</script>
+<!-- ✅ TOAST ESITO PAGAMENTO -->
+<div id="payment-toast"
+     class="hidden fixed z-[1000] left-1/2 -translate-x-1/2 bottom-4 sm:bottom-auto sm:top-5 sm:left-auto sm:right-5 sm:translate-x-0 w-[calc(100%-24px)] sm:w-[420px]">
+  <div id="payment-toast-card"
+       class="rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
+
+    <div id="payment-toast-icon"
+         class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-slate-100">
+      ℹ️
+    </div>
+
+    <div class="min-w-0 flex-1">
+      <div id="payment-toast-title" class="text-sm font-semibold text-slate-900">
+        Stato pagamento
+      </div>
+      <div id="payment-toast-message" class="mt-1 text-sm text-slate-600 leading-relaxed">
+        —
+      </div>
+    </div>
+
+    <button type="button"
+            onclick="closePaymentToast()"
+            class="shrink-0 text-slate-400 hover:text-slate-600 text-lg leading-none">
+      ✕
+    </button>
+  </div>
+</div>
+
+<script>
+  let paymentToastTimer = null;
+
+  function closePaymentToast() {
+    const toast = document.getElementById("payment-toast");
+    if (!toast) return;
+    toast.classList.add("hidden");
+    if (paymentToastTimer) {
+      clearTimeout(paymentToastTimer);
+      paymentToastTimer = null;
+    }
+  }
+
+  function showPaymentToast(type, title, message) {
+    const toast = document.getElementById("payment-toast");
+    const card = document.getElementById("payment-toast-card");
+    const icon = document.getElementById("payment-toast-icon");
+    const titleEl = document.getElementById("payment-toast-title");
+    const messageEl = document.getElementById("payment-toast-message");
+
+    if (!toast || !card || !icon || !titleEl || !messageEl) return;
+
+    card.className =
+      "rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300";
+
+    icon.className =
+      "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg";
+
+    if (type === "success") {
+      card.classList.add("border-emerald-200");
+      icon.classList.add("bg-emerald-100", "text-emerald-700");
+      icon.textContent = "✅";
+    } else if (type === "error") {
+      card.classList.add("border-rose-200");
+      icon.classList.add("bg-rose-100", "text-rose-700");
+      icon.textContent = "⚠️";
+    } else {
+      card.classList.add("border-blue-200");
+      icon.classList.add("bg-blue-100", "text-blue-700");
+      icon.textContent = "ℹ️";
+    }
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+
+    toast.classList.remove("hidden");
+
+    if (paymentToastTimer) {
+      clearTimeout(paymentToastTimer);
+    }
+
+    paymentToastTimer = setTimeout(() => {
+      closePaymentToast();
+    }, 6500);
+  }
+
+  async function getStripeStatusInstanceForAnnuncio() {
+    if (typeof getStripeInstance === "function") {
+      return await getStripeInstance();
+    }
+
+    if (typeof stripe !== "undefined" && stripe) {
+      return stripe;
+    }
+
+    if (window.Stripe) {
+      return window.Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+    }
+
+    return null;
+  }
+
+  async function handleStripeReturnStatusAnnuncio() {
+    const url = new URL(window.location.href);
+    const clientSecret = url.searchParams.get("payment_intent_client_secret");
+
+    if (!clientSecret) return;
+
+    try {
+      const stripeInstance = await getStripeStatusInstanceForAnnuncio();
+
+      if (!stripeInstance) {
+        return;
+      }
+
+      const { paymentIntent } = await stripeInstance.retrievePaymentIntent(clientSecret);
+
+      if (!paymentIntent) {
+        showPaymentToast(
+          "error",
+          "Pagamento non verificato",
+          "Non sono riuscito a verificare l’esito del pagamento. Controlla tra pochi istanti."
+        );
+      } else if (paymentIntent.status === "succeeded") {
+        showPaymentToast(
+          "success",
+          "Pagamento completato",
+          "Operazione eseguita con successo. La visibilità del tuo annuncio verrà aggiornata a breve."
+        );
+      } else if (paymentIntent.status === "processing") {
+        showPaymentToast(
+          "info",
+          "Pagamento in elaborazione",
+          "Il pagamento è in elaborazione. Ti consigliamo di attendere qualche istante prima di riprovare."
+        );
+      } else if (paymentIntent.status === "requires_payment_method") {
+        showPaymentToast(
+          "error",
+          "Pagamento non riuscito",
+          "Il pagamento non è andato a buon fine. Puoi riprovare con un altro metodo di pagamento."
+        );
+      } else {
+        showPaymentToast(
+          "info",
+          "Stato aggiornato",
+          "Abbiamo ricevuto un aggiornamento sul pagamento. Verifica che il servizio risulti attivo."
+        );
+      }
+    } catch (err) {
+      console.error("Errore lettura esito pagamento:", err);
+      showPaymentToast(
+        "error",
+        "Verifica pagamento non disponibile",
+        "Non sono riuscito a leggere l’esito del pagamento in questo momento."
+      );
+    } finally {
+      url.searchParams.delete("payment_intent");
+      url.searchParams.delete("payment_intent_client_secret");
+      url.searchParams.delete("redirect_status");
+      window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    handleStripeReturnStatusAnnuncio();
+  });
 </script>
 
 {% endblock %}
