@@ -2628,10 +2628,53 @@ document.addEventListener("DOMContentLoaded", () => {
 <script>
   let paymentToastTimer = null;
 
+  function ensurePaymentToast() {
+    let toast = document.getElementById("payment-toast");
+
+    if (toast) return toast;
+
+    toast = document.createElement("div");
+    toast.id = "payment-toast";
+    toast.className = "hidden fixed z-[99999] left-3 right-3 bottom-4 sm:left-auto sm:right-5 sm:bottom-5 sm:w-[420px] pointer-events-none";
+
+    toast.innerHTML = `
+      <div id="payment-toast-card"
+           class="pointer-events-auto rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300">
+        <div id="payment-toast-icon"
+             class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-slate-100">
+          ℹ️
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <div id="payment-toast-title" class="text-sm font-semibold text-slate-900">
+            Stato pagamento
+          </div>
+          <div id="payment-toast-message" class="mt-1 text-sm text-slate-600 leading-relaxed">
+            —
+          </div>
+        </div>
+
+        <button type="button"
+                id="payment-toast-close"
+                class="shrink-0 text-slate-400 hover:text-slate-600 text-lg leading-none">
+          ✕
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    toast.querySelector("#payment-toast-close")?.addEventListener("click", closePaymentToast);
+
+    return toast;
+  }
+
   function closePaymentToast() {
     const toast = document.getElementById("payment-toast");
     if (!toast) return;
+
     toast.classList.add("hidden");
+
     if (paymentToastTimer) {
       clearTimeout(paymentToastTimer);
       paymentToastTimer = null;
@@ -2639,7 +2682,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function showPaymentToast(type, title, message) {
-    const toast = document.getElementById("payment-toast");
+    const toast = ensurePaymentToast();
     const card = document.getElementById("payment-toast-card");
     const icon = document.getElementById("payment-toast-icon");
     const titleEl = document.getElementById("payment-toast-title");
@@ -2648,7 +2691,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!toast || !card || !icon || !titleEl || !messageEl) return;
 
     card.className =
-      "rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300";
+      "pointer-events-auto rounded-2xl border bg-white/95 backdrop-blur-xl shadow-2xl px-4 py-4 flex items-start gap-3 transition-all duration-300";
 
     icon.className =
       "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg";
@@ -2702,9 +2745,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const stripeInstance = await getStripeStatusInstanceForDashboard();
 
-      if (!stripeInstance) {
-        return;
-      }
+      if (!stripeInstance) return;
 
       const { paymentIntent } = await stripeInstance.retrievePaymentIntent(clientSecret);
 
@@ -2724,7 +2765,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showPaymentToast(
           "info",
           "Pagamento in elaborazione",
-          "Il pagamento è in elaborazione. Ti consigliamo di attendere qualche istante prima di riprovare."
+          "Il pagamento è in elaborazione. Attendi qualche istante."
         );
       } else if (paymentIntent.status === "requires_payment_method") {
         showPaymentToast(
@@ -2754,8 +2795,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    handleStripeReturnStatusDashboard();
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      handleStripeReturnStatusDashboard();
+    }, 150);
   });
 </script>
 
