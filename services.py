@@ -1,4 +1,6 @@
 from typing import Optional, Dict, Any, List, Tuple
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 def get_db_connection():
     from app import get_db_connection as _f
@@ -262,6 +264,7 @@ def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: 
               AND stato = 'attivo'
               AND {dt_sql("data_inizio")} <= {_now_sql()}
               AND (data_fine IS NULL OR {dt_sql("data_fine")} > {_now_sql()})
+            ORDER BY {dt_sql("data_fine")} DESC NULLS FIRST, id DESC
             LIMIT 1
         """, (utente_id, servizio_id))
     else:
@@ -274,9 +277,9 @@ def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: 
               AND stato = 'attivo'
               AND {dt_sql("data_inizio")} <= {_now_sql()}
               AND (data_fine IS NULL OR {dt_sql("data_fine")} > {_now_sql()})
+            ORDER BY {dt_sql("data_fine")} DESC NULLS FIRST, id DESC
             LIMIT 1
         """, (utente_id, servizio_id, annuncio_id))
-
 
 def _validate_annuncio_owner(conn, annuncio_id: int, utente_id: int) -> bool:
     row = _fetchone(conn, "SELECT 1 FROM annunci WHERE id = ? AND utente_id = ? LIMIT 1", (annuncio_id, utente_id))
@@ -348,28 +351,14 @@ def attiva_servizio(
                 return False, "Durata non valida.", None
 
         # -------------------------------
-        # 2️⃣ ULTIMA ATTIVAZIONE
+        # 2️⃣ ATTIVAZIONE ATTIVA CORRENTE
         # -------------------------------
-        if annuncio_id is None:
-            last = _fetchone(conn, """
-                SELECT *
-                FROM attivazioni_servizi
-                WHERE utente_id = ?
-                  AND servizio_id = ?
-                  AND annuncio_id IS NULL
-                ORDER BY id DESC
-                LIMIT 1
-            """, (utente_id, s["id"]))
-        else:
-            last = _fetchone(conn, """
-                SELECT *
-                FROM attivazioni_servizi
-                WHERE utente_id = ?
-                  AND servizio_id = ?
-                  AND annuncio_id = ?
-                ORDER BY id DESC
-                LIMIT 1
-            """, (utente_id, s["id"], annuncio_id))
+        last = _get_active_activation(
+            conn=conn,
+            utente_id=utente_id,
+            servizio_id=s["id"],
+            annuncio_id=annuncio_id
+        )
 
         # -------------------------------
         # 🔁 RINNOVO / RIATTIVAZIONE
@@ -410,12 +399,12 @@ def attiva_servizio(
             #    MA senza perdere la sua data_fine storica originale
             cur.execute(sql("""
                 UPDATE attivazioni_servizi
-                SET stato = 'scaduto'
+                SET stato = 'rinnovato'
                 WHERE id = ?
             """), (
                 last["id"],
             ))
-
+            
             _storico_append(
                 conn,
                 last["id"],
@@ -440,7 +429,12 @@ def attiva_servizio(
                 attivato_da,
             ))
 
-            new_id = _lastrowid(cur)
+            if is_postgres():
+                cur.execute(sql("SELECT currval(pg_get_serial_sequence('attivazioni_servizi','id'))"))
+                new_id = cur.fetchone()["currval"]
+            else:
+                cur.execute(sql("SELECT last_insert_rowid()"))
+                new_id = cur.fetchone()[0]
 
             _storico_append(
                 conn,
