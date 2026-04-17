@@ -47,7 +47,7 @@
             name="q"
             type="text"
             value="{{ request.args.get('q', '') }}"
-            placeholder="Email, oggetto, annuncio, metodo..."
+            placeholder="Email, oggetto, annuncio, categoria, provincia, metodo..."
             class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
           >
         </div>
@@ -143,6 +143,16 @@
                 Annuncio <span class="sort-icon text-slate-400">↕</span>
               </button>
             </th>
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="categoria">
+                Categoria <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="provincia">
+                Provincia <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
             <th class="p-3 text-center">
               <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="importo">
                 Importo <span class="sort-icon text-slate-400">↕</span>
@@ -186,6 +196,8 @@
             data-tipo="{{ (a.tipo or '')|lower }}"
             data-oggetto="{{ (a.pacchetto_nome or a.servizio_nome or '')|lower }}"
             data-annuncio="{{ a.annuncio_id or 0 }}"
+            data-categoria="{{ (a.categoria_visuale or '')|lower }}"
+            data-provincia="{{ (a.provincia_visuale or '')|lower }}"
             data-importo="{{ a.importo_cent or 0 }}"
             data-durata="{{ a.durata_iniziale_giorni or 0 }}"
             data-scadenza="{{ a.data_fine or '' }}"
@@ -205,9 +217,21 @@
 
             <td class="p-3">
               {% if a.tipo == 'pacchetto' %}
-                <span class="px-2 py-1 rounded bg-indigo-100 text-indigo-700 text-xs font-semibold">
-                  Pacchetto
-                </span>
+                <button type="button"
+                        class="toggle-pacchetto inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-left text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition"
+                        data-toggle-detail="acq-{{ a.acquisto_id }}"
+                        aria-expanded="false">
+                  <span class="text-xs font-semibold">Pacchetto</span>
+
+                  <svg class="detail-chevron h-4 w-4 transition-transform duration-200"
+                       viewBox="0 0 20 20"
+                       fill="currentColor"
+                       aria-hidden="true">
+                    <path fill-rule="evenodd"
+                          d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06z"
+                          clip-rule="evenodd" />
+                  </svg>
+                </button>
               {% else %}
                 <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-xs font-semibold">
                   Servizio
@@ -227,11 +251,22 @@
               {% endif %}
             </td>
 
+            <td class="p-3">
+              <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                {{ a.categoria_visuale }}
+              </span>
+            </td>
+
+            <td class="p-3">
+              <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                {{ a.provincia_visuale }}
+              </span>
+            </td>
+
             <td class="p-3 text-center font-semibold">
               {{ '%.2f'|format(a.importo_cent / 100) }} €
             </td>
 
-            <!-- DURATA -->
             <td class="p-3 text-center text-slate-700">
               {% if a.durata_iniziale_giorni %}
                 {{ a.durata_iniziale_giorni }} g
@@ -240,10 +275,9 @@
               {% endif %}
             </td>
 
-            <!-- SCADENZA -->
             <td class="p-3 text-center text-slate-700">
               {% if a.tipo == 'pacchetto' %}
-                <span class="text-slate-400 text-xs font-medium">Vedi servizi sotto</span>
+                <span class="text-slate-400 text-xs font-medium">Dettaglio nel tipo</span>
               {% elif a.data_fine %}
                 {{ a.data_fine | dt_roma }}
               {% else %}
@@ -251,7 +285,6 @@
               {% endif %}
             </td>
 
-            <!-- STATO -->
             <td class="p-3 text-center">
               {% if a.stato_visuale == 'attivo' %}
                 <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
@@ -282,26 +315,10 @@
 
             <td class="p-3 text-center text-xs text-slate-600">
               {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
-                <button type="button"
-                        class="toggle-pacchetto mx-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-700 hover:border-blue-200 hover:bg-blue-50 transition"
-                        data-toggle-detail="acq-{{ a.acquisto_id }}"
-                        aria-expanded="false">
-                  <span class="text-sm">📦</span>
-
-                  <span class="flex flex-col items-start leading-tight">
-                    <span class="font-semibold text-slate-800">Pacchetto</span>
-                    <span class="text-[11px] text-slate-500">{{ a.numero_attivazioni }} servizi inclusi</span>
-                  </span>
-
-                  <svg class="detail-chevron ml-1 h-4 w-4 text-slate-400 transition-transform duration-200"
-                       viewBox="0 0 20 20"
-                       fill="currentColor"
-                       aria-hidden="true">
-                    <path fill-rule="evenodd"
-                          d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06z"
-                          clip-rule="evenodd" />
-                  </svg>
-                </button>
+                <span class="inline-flex flex-col items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 leading-tight">
+                  <span class="font-semibold text-indigo-800">📦 Pacchetto</span>
+                  <span class="text-[11px] text-indigo-700">{{ a.numero_attivazioni }} servizi</span>
+                </span>
               {% elif a.stato_visuale == 'rinnovato' %}
                 <span class="inline-flex flex-col items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 leading-tight">
                   <span class="font-semibold text-amber-800">🔁 Rinnovo</span>
@@ -319,12 +336,11 @@
                 </span>
               {% endif %}
             </td>
-
           </tr>
 
           {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
           <tr class="hidden acquisto-detail-row" data-parent-id="acq-{{ a.acquisto_id }}">
-            <td colspan="11" class="px-4 py-4">
+            <td colspan="13" class="px-4 py-4">
               <div class="detail-panel detail-panel-compact rounded-2xl p-4">
                 <div class="flex items-center justify-between mb-3">
                   <div class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
@@ -463,6 +479,11 @@
   .toggle-pacchetto[aria-expanded="true"] .detail-chevron {
     transform: rotate(180deg);
   }
+
+  #acquisti-table td .toggle-pacchetto {
+    white-space: nowrap;
+  }
+
 </style>
 
 <script>

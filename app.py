@@ -2770,6 +2770,9 @@ def admin_acquisti():
             u.id              AS utente_id,
             u.email,
 
+            an.categoria       AS annuncio_categoria,
+            an.provincia       AS annuncio_provincia,
+
             sp.servizio_id     AS servizio_id_base,
             s.nome             AS servizio_nome,
             s.codice           AS servizio_codice,
@@ -2781,6 +2784,9 @@ def admin_acquisti():
         FROM acquisti a
         JOIN utenti u
           ON u.id = a.utente_id
+
+        LEFT JOIN annunci an
+          ON an.id = a.annuncio_id
 
         LEFT JOIN servizi_piani sp
           ON a.tipo = 'servizio'
@@ -2806,6 +2812,9 @@ def admin_acquisti():
 
     for r in rows:
         a = dict(r)
+
+        a["categoria_visuale"] = a.get("annuncio_categoria") or "—"
+        a["provincia_visuale"] = a.get("annuncio_provincia") or "—"
 
         dettagli_rows = conn.execute(sql("""
             SELECT
@@ -2856,7 +2865,9 @@ def admin_acquisti():
             str(a.get("pacchetto_nome") or ""),
             str(a.get("servizio_nome") or ""),
             str(a.get("metodo") or ""),
-            str(a.get("annuncio_id") or "")
+            str(a.get("annuncio_id") or ""),
+            str(a.get("annuncio_categoria") or ""),
+            str(a.get("annuncio_provincia") or "")
         ]).lower()
 
         if q and q not in testo_ricerca:
@@ -2878,6 +2889,7 @@ def admin_acquisti():
         acquisti=acquisti,
         tab="acquisti"
     )
+
 
 @app.route("/admin/acquisti/export.xlsx")
 @login_required
@@ -2916,6 +2928,9 @@ def admin_acquisti_export():
             u.id              AS utente_id,
             u.email,
 
+            an.categoria       AS annuncio_categoria,
+            an.provincia       AS annuncio_provincia,
+
             sp.servizio_id     AS servizio_id_base,
             s.nome             AS servizio_nome,
             s.codice           AS servizio_codice,
@@ -2927,6 +2942,9 @@ def admin_acquisti_export():
         FROM acquisti a
         JOIN utenti u
           ON u.id = a.utente_id
+
+        LEFT JOIN annunci an
+          ON an.id = a.annuncio_id
 
         LEFT JOIN servizi_piani sp
           ON a.tipo = 'servizio'
@@ -2995,7 +3013,9 @@ def admin_acquisti_export():
             str(a.get("pacchetto_nome") or ""),
             str(a.get("servizio_nome") or ""),
             str(a.get("metodo") or ""),
-            str(a.get("annuncio_id") or "")
+            str(a.get("annuncio_id") or ""),
+            str(a.get("annuncio_categoria") or ""),
+            str(a.get("annuncio_provincia") or "")
         ]).lower()
 
         if q and q not in testo_ricerca:
@@ -3016,6 +3036,8 @@ def admin_acquisti_export():
                     a["tipo"],
                     a.get("pacchetto_nome") or a.get("servizio_nome"),
                     a.get("annuncio_id"),
+                    a.get("annuncio_categoria") or "",
+                    a.get("annuncio_provincia") or "",
                     (a["importo_cent"] or 0) / 100,
                     durata_iniziale,
                     d.get("servizio_nome"),
@@ -3032,6 +3054,8 @@ def admin_acquisti_export():
                 a["tipo"],
                 a.get("pacchetto_nome") or a.get("servizio_nome"),
                 a.get("annuncio_id"),
+                a.get("annuncio_categoria") or "",
+                a.get("annuncio_provincia") or "",
                 (a["importo_cent"] or 0) / 100,
                 durata_iniziale,
                 a.get("servizio_nome"),
@@ -3052,6 +3076,8 @@ def admin_acquisti_export():
         "Tipo",
         "Oggetto acquisto",
         "Annuncio",
+        "Categoria annuncio",
+        "Provincia annuncio",
         "Importo €",
         "Durata iniziale (giorni)",
         "Servizio",
