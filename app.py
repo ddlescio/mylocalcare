@@ -2765,7 +2765,7 @@ def admin_acquisti():
             -- nome pacchetto (se pacchetto)
             p.nome          AS pacchetto_nome,
 
-            -- stato calcolato
+            -- stato visuale calcolato
             CASE
                 WHEN EXISTS (
                     SELECT 1
@@ -2774,9 +2774,29 @@ def admin_acquisti():
                       AND at.stato = 'attivo'
                       AND (at.data_fine IS NULL OR at.data_fine > {now_sql()})
                 )
-                THEN 1
-                ELSE 0
-            END AS stato_attivo,
+                THEN 'attivo'
+
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM attivazioni_servizi at
+                    WHERE at.acquisto_id = a.id
+                      AND at.stato = 'rinnovato'
+                )
+                THEN 'rinnovato'
+
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM attivazioni_servizi at
+                    WHERE at.acquisto_id = a.id
+                      AND at.stato = 'revocato'
+                )
+                THEN 'revocato'
+
+                WHEN a.stato IN ('creato', 'pending')
+                THEN 'in_attesa'
+
+                ELSE 'scaduto'
+            END AS stato_visuale,
 
             (
                 SELECT MAX(data_fine)
@@ -2789,7 +2809,7 @@ def admin_acquisti():
                 FROM attivazioni_servizi
                 WHERE acquisto_id = a.id
             ) AS numero_attivazioni
-
+            
         FROM acquisti a
         JOIN utenti u
           ON u.id = a.utente_id

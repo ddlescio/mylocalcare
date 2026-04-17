@@ -91,9 +91,21 @@
 
             <!-- STATO -->
             <td class="p-3 text-center">
-              {% if a.stato_attivo %}
+              {% if a.stato_visuale == 'attivo' %}
                 <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
                   Attivo
+                </span>
+              {% elif a.stato_visuale == 'rinnovato' %}
+                <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                  Rinnovato
+                </span>
+              {% elif a.stato_visuale == 'revocato' %}
+                <span class="px-2 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">
+                  Revocato
+                </span>
+              {% elif a.stato_visuale == 'in_attesa' %}
+                <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                  In attesa
                 </span>
               {% else %}
                 <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
@@ -107,15 +119,17 @@
             </td>
 
             <td class="p-3 text-center text-xs text-slate-600">
-              {% if a.numero_attivazioni > 1 %}
+              {% if a.stato_visuale == 'rinnovato' %}
+                🔁 Sostituito da rinnovo
+              {% elif a.numero_attivazioni > 1 %}
                 🔁 Rinnovo
               {% else %}
                 🆕 Nuovo
               {% endif %}
               <br>
-              {{ a.numero_attivazioni }} att.              
+              {{ a.numero_attivazioni }} att.
             </td>
-
+            
           </tr>
           {% endfor %}
         </tbody>
