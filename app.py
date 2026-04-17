@@ -3075,6 +3075,66 @@ def admin_acquisti_export():
         download_name="storico_acquisti.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+# ==========================================================
+# ADMIN – STATISTICHE
+# ==========================================================
+@app.route("/admin/statistiche")
+@admin_required
+def admin_statistiche():
+    conn = get_db_connection()
+
+    c = get_cursor(conn)
+
+    c.execute(sql("SELECT COUNT(*) FROM utenti WHERE attivo = 1"))
+    utenti_attivi = fetchone_value(c.fetchone())
+
+    c.execute(sql("SELECT COUNT(*) FROM annunci"))
+    annunci_totali = fetchone_value(c.fetchone())
+
+    c.execute(sql("SELECT COUNT(DISTINCT utente_id) FROM annunci"))
+    utenti_con_annunci = fetchone_value(c.fetchone())
+
+    c.execute(sql("""
+        SELECT COUNT(*)
+        FROM utenti
+        WHERE id NOT IN (SELECT DISTINCT utente_id FROM annunci)
+    """))
+    utenti_senza_annunci = fetchone_value(c.fetchone())
+
+    c.execute(sql("""
+        SELECT COUNT(DISTINCT id_destinatario)
+        FROM recensioni
+    """))
+    utenti_recensiti = fetchone_value(c.fetchone())
+
+    c.execute(sql("""
+        SELECT COUNT(*)
+        FROM (
+            SELECT
+                CASE
+                    WHEN mittente_id < destinatario_id THEN mittente_id
+                    ELSE destinatario_id
+                END AS a,
+                CASE
+                    WHEN mittente_id > destinatario_id THEN mittente_id
+                    ELSE destinatario_id
+                END AS b
+            FROM messaggi_chat
+            GROUP BY a, b
+        )
+    """))
+    chat_totali = fetchone_value(c.fetchone())
+
+    return render_template(
+        "admin_statistiche.html",
+        utenti_attivi=utenti_attivi,
+        annunci_totali=annunci_totali,
+        utenti_con_annunci=utenti_con_annunci,
+        utenti_senza_annunci=utenti_senza_annunci,
+        utenti_recensiti=utenti_recensiti,
+        chat_totali=chat_totali
+    )    
 # ==========================================================
 # ADMIN – NOTIFICHE DI SISTEMA
 # ==========================================================
