@@ -325,7 +325,7 @@
           {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
           <tr class="hidden acquisto-detail-row" data-parent-id="acq-{{ a.acquisto_id }}">
             <td colspan="11" class="px-4 py-4">
-              <div class="detail-panel rounded-2xl p-4">
+              <div class="detail-panel detail-panel-compact rounded-2xl p-4">
                 <div class="flex items-center justify-between mb-3">
                   <div class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Servizi inclusi nel pacchetto
@@ -337,12 +337,12 @@
 
                 <div class="space-y-2">
                   {% for d in a.dettagli_servizi %}
-                  <div class="detail-service-row grid grid-cols-1 sm:grid-cols-[1.2fr_.9fr_.6fr] gap-3 items-center rounded-xl px-4 py-3 text-sm">
-                    <div class="font-semibold text-slate-800">
+                  <div class="detail-service-row detail-service-row-compact grid grid-cols-[minmax(180px,240px)_minmax(150px,190px)_110px] gap-3 items-center rounded-xl px-4 py-3 text-sm">
+                    <div class="font-semibold text-slate-800 truncate">
                       {{ d.servizio_nome }}
                     </div>
 
-                    <div class="text-slate-600 text-sm">
+                    <div class="text-slate-600 text-sm whitespace-nowrap">
                       {% if d.data_fine %}
                         {{ d.data_fine | dt_roma }}
                       {% else %}
@@ -350,7 +350,7 @@
                       {% endif %}
                     </div>
 
-                    <div class="sm:text-right">
+                    <div class="text-right">
                       {% if d.stato == 'attivo' %}
                         <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
                           Attivo
@@ -432,6 +432,32 @@
   .detail-service-row {
     background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
     border: 1px solid #e2e8f0;
+  }
+
+  .detail-panel-compact {
+    width: 100%;
+    max-width: 620px;
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  .detail-service-row-compact {
+    width: 100%;
+  }
+
+  @media (max-width: 640px) {
+    .detail-panel-compact {
+      max-width: 100%;
+    }
+
+    .detail-service-row-compact {
+      grid-template-columns: 1fr !important;
+      justify-items: start;
+    }
+
+    .detail-service-row-compact > div:nth-child(3) {
+      text-align: left !important;
+    }
   }
 
   .toggle-pacchetto[aria-expanded="true"] .detail-chevron {
