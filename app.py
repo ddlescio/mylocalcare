@@ -2769,6 +2769,7 @@ def admin_acquisti():
 
             u.id              AS utente_id,
             u.email,
+            u.username        AS username,
 
             an.categoria       AS annuncio_categoria,
             an.provincia       AS annuncio_provincia,
@@ -2927,6 +2928,7 @@ def admin_acquisti_export():
 
             u.id              AS utente_id,
             u.email,
+            u.username        AS username,
 
             an.categoria       AS annuncio_categoria,
             an.provincia       AS annuncio_provincia,
@@ -3112,7 +3114,7 @@ def admin_acquisti_export():
         download_name="storico_acquisti.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    
+
 # ==========================================================
 # ADMIN – STATISTICHE
 # ==========================================================

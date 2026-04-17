@@ -214,8 +214,9 @@
             <td class="p-3">
               <div class="font-semibold">{{ a.email }}</div>
               <div class="text-xs text-slate-500">ID {{ a.utente_id }}</div>
+              <div class="text-xs text-slate-500">@{{ a.username or '—' }}</div>
             </td>
-
+            
             <td class="p-3">
               {% if a.tipo == 'pacchetto' %}
                 <button type="button"
