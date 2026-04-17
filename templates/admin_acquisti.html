@@ -82,7 +82,9 @@
 
             <!-- SCADENZA -->
             <td class="p-3 text-center text-slate-700">
-              {% if a.data_fine %}
+              {% if a.tipo == 'pacchetto' %}
+                <span class="text-slate-400 text-xs font-medium">Vedi servizi sotto</span>
+              {% elif a.data_fine %}
                 {{ a.data_fine | dt_roma }}
               {% else %}
                 ∞
@@ -119,20 +121,79 @@
             </td>
 
             <td class="p-3 text-center text-xs text-slate-600">
-              {% if a.stato_visuale == 'rinnovato' %}
+              {% if a.tipo == 'pacchetto' %}
+                📦 Pacchetto
+                <br>
+                {{ a.numero_attivazioni }} serv.
+              {% elif a.stato_visuale == 'rinnovato' %}
                 🔁 Sostituito da rinnovo
+                <br>
+                {{ a.numero_attivazioni }} att.
               {% elif a.numero_attivazioni > 1 %}
                 🔁 Rinnovo
+                <br>
+                {{ a.numero_attivazioni }} att.
               {% else %}
                 🆕 Nuovo
+                <br>
+                {{ a.numero_attivazioni }} att.
               {% endif %}
-              <br>
-              {{ a.numero_attivazioni }} att.
             </td>
-            
+
           </tr>
+
+          {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
+          <tr class="bg-slate-50/70">
+            <td colspan="10" class="px-4 py-3">
+              <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
+                  Servizi inclusi nel pacchetto
+                </div>
+
+                <div class="space-y-2">
+                  {% for d in a.dettagli_servizi %}
+                  <div class="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_.7fr] gap-2 items-center rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
+                    <div class="font-medium text-slate-800">
+                      {{ d.servizio_nome }}
+                    </div>
+
+                    <div class="text-slate-600 text-sm">
+                      {% if d.data_fine %}
+                        {{ d.data_fine | dt_roma }}
+                      {% else %}
+                        ∞
+                      {% endif %}
+                    </div>
+
+                    <div class="sm:text-right">
+                      {% if d.stato == 'attivo' %}
+                        <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                          Attivo
+                        </span>
+                      {% elif d.stato == 'rinnovato' %}
+                        <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                          Rinnovato
+                        </span>
+                      {% elif d.stato == 'revocato' %}
+                        <span class="px-2 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">
+                          Revocato
+                        </span>
+                      {% else %}
+                        <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
+                          Scaduto
+                        </span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+
           {% endfor %}
-        </tbody>
+        </tbody>        
       </table>
     </div>
 

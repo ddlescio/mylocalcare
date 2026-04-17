@@ -2739,14 +2739,14 @@ def admin_recensioni():
     )
 
 from datetime import datetime, timedelta
+
 @app.route("/admin/acquisti")
 @login_required
 @admin_required
 def admin_acquisti():
     conn = get_db_connection()
 
-
-    rows = conn.execute(sql(f"""
+    rows = conn.execute(sql("""
         SELECT
             a.id            AS acquisto_id,
             a.tipo,
@@ -2755,76 +2755,29 @@ def admin_acquisti():
             a.stato,
             a.created_at,
             a.annuncio_id,
+            a.ref_id,
+            a.prezzo_id,
 
             u.id            AS utente_id,
             u.email,
 
-            -- nome servizio (se servizio)
-            s.nome          AS servizio_nome,
+            sp.servizio_id   AS servizio_id_base,
+            s.nome           AS servizio_nome,
+            s.codice         AS servizio_codice,
 
-            -- nome pacchetto (se pacchetto)
-            p.nome          AS pacchetto_nome,
+            p.nome           AS pacchetto_nome
 
-            -- stato visuale calcolato
-            CASE
-                WHEN EXISTS (
-                    SELECT 1
-                    FROM attivazioni_servizi at
-                    WHERE at.acquisto_id = a.id
-                      AND at.stato = 'attivo'
-                      AND (at.data_fine IS NULL OR at.data_fine > {now_sql()})
-                )
-                THEN 'attivo'
-
-                WHEN EXISTS (
-                    SELECT 1
-                    FROM attivazioni_servizi at
-                    WHERE at.acquisto_id = a.id
-                      AND at.stato = 'rinnovato'
-                )
-                THEN 'rinnovato'
-
-                WHEN EXISTS (
-                    SELECT 1
-                    FROM attivazioni_servizi at
-                    WHERE at.acquisto_id = a.id
-                      AND at.stato = 'revocato'
-                )
-                THEN 'revocato'
-
-                WHEN a.stato IN ('creato', 'pending')
-                THEN 'in_attesa'
-
-                ELSE 'scaduto'
-            END AS stato_visuale,
-
-            (
-                SELECT MAX(data_fine)
-                FROM attivazioni_servizi
-                WHERE acquisto_id = a.id
-            ) AS data_fine,
-
-            (
-                SELECT COUNT(*)
-                FROM attivazioni_servizi
-                WHERE acquisto_id = a.id
-            ) AS numero_attivazioni
-            
         FROM acquisti a
         JOIN utenti u
           ON u.id = a.utente_id
 
-        -- servizio (solo se tipo servizio)
-        LEFT JOIN servizi s
+        LEFT JOIN servizi_piani sp
           ON a.tipo = 'servizio'
-         AND s.id = (
-             SELECT servizio_id
-             FROM attivazioni_servizi
-             WHERE acquisto_id = a.id
-             LIMIT 1
-         )
+         AND sp.id = a.prezzo_id
 
-        -- pacchetto
+        LEFT JOIN servizi s
+          ON s.id = sp.servizio_id
+
         LEFT JOIN pacchetti p
           ON a.tipo = 'pacchetto'
          AND p.id = a.ref_id
@@ -2834,14 +2787,59 @@ def admin_acquisti():
         LIMIT 500
     """)).fetchall()
 
-    acquisti = [dict(r) for r in rows]
+    acquisti = []
+
+    for r in rows:
+        a = dict(r)
+
+        dettagli_rows = conn.execute(sql("""
+            SELECT
+                ats.id        AS attivazione_id,
+                ats.data_inizio,
+                ats.data_fine,
+                ats.stato,
+                sv.id         AS servizio_id,
+                sv.codice     AS servizio_codice,
+                sv.nome       AS servizio_nome
+            FROM attivazioni_servizi ats
+            JOIN servizi sv
+              ON sv.id = ats.servizio_id
+            WHERE ats.acquisto_id = ?
+            ORDER BY sv.nome ASC, ats.id DESC
+        """), (a["acquisto_id"],)).fetchall()
+
+        dettagli_servizi = [dict(x) for x in dettagli_rows]
+        a["dettagli_servizi"] = dettagli_servizi
+        a["numero_attivazioni"] = len(dettagli_servizi)
+
+        stati = {d["stato"] for d in dettagli_servizi}
+
+        if "attivo" in stati:
+            a["stato_visuale"] = "attivo"
+        elif "rinnovato" in stati:
+            a["stato_visuale"] = "rinnovato"
+        elif "revocato" in stati:
+            a["stato_visuale"] = "revocato"
+        elif a["stato"] in ("creato", "pending"):
+            a["stato_visuale"] = "in_attesa"
+        else:
+            a["stato_visuale"] = "scaduto"
+
+        if a["tipo"] == "pacchetto":
+            a["data_fine"] = None
+            a["ha_sottodettaglio"] = len(dettagli_servizi) > 0
+        else:
+            a["ha_sottodettaglio"] = False
+            a["data_fine"] = dettagli_servizi[0]["data_fine"] if dettagli_servizi else None
+
+        acquisti.append(a)
 
     return render_template(
         "admin_acquisti.html",
         acquisti=acquisti,
         tab="acquisti"
     )
-
+    
 # ==========================================================
 # ADMIN – STATISTICHE
 # ==========================================================
