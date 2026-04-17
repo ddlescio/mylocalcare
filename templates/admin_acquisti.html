@@ -281,39 +281,64 @@
             </td>
 
             <td class="p-3 text-center text-xs text-slate-600">
-              {% if a.tipo == 'pacchetto' %}
-                📦 Pacchetto
-                <br>
-                {{ a.numero_attivazioni }} serv.
+              {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
+                <button type="button"
+                        class="toggle-pacchetto mx-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-700 hover:border-blue-200 hover:bg-blue-50 transition"
+                        data-toggle-detail="acq-{{ a.acquisto_id }}"
+                        aria-expanded="false">
+                  <span class="text-sm">📦</span>
+
+                  <span class="flex flex-col items-start leading-tight">
+                    <span class="font-semibold text-slate-800">Pacchetto</span>
+                    <span class="text-[11px] text-slate-500">{{ a.numero_attivazioni }} servizi inclusi</span>
+                  </span>
+
+                  <svg class="detail-chevron ml-1 h-4 w-4 text-slate-400 transition-transform duration-200"
+                       viewBox="0 0 20 20"
+                       fill="currentColor"
+                       aria-hidden="true">
+                    <path fill-rule="evenodd"
+                          d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06z"
+                          clip-rule="evenodd" />
+                  </svg>
+                </button>
               {% elif a.stato_visuale == 'rinnovato' %}
-                🔁 Sostituito da rinnovo
-                <br>
-                {{ a.numero_attivazioni }} att.
+                <span class="inline-flex flex-col items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 leading-tight">
+                  <span class="font-semibold text-amber-800">🔁 Rinnovo</span>
+                  <span class="text-[11px] text-amber-700">{{ a.numero_attivazioni }} att.</span>
+                </span>
               {% elif a.numero_attivazioni > 1 %}
-                🔁 Rinnovo
-                <br>
-                {{ a.numero_attivazioni }} att.
+                <span class="inline-flex flex-col items-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 leading-tight">
+                  <span class="font-semibold text-blue-800">🆕 Multiplo</span>
+                  <span class="text-[11px] text-blue-700">{{ a.numero_attivazioni }} att.</span>
+                </span>
               {% else %}
-                🆕 Nuovo
-                <br>
-                {{ a.numero_attivazioni }} att.
+                <span class="inline-flex flex-col items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 leading-tight">
+                  <span class="font-semibold text-slate-800">🆕 Nuovo</span>
+                  <span class="text-[11px] text-slate-500">{{ a.numero_attivazioni }} att.</span>
+                </span>
               {% endif %}
             </td>
 
           </tr>
 
           {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
-          <tr class="bg-slate-50/70 acquisto-detail-row" data-parent-id="acq-{{ a.acquisto_id }}">
-            <td colspan="11" class="px-4 py-3">
-              <div class="rounded-xl border border-slate-200 bg-white p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
-                  Servizi inclusi nel pacchetto
+          <tr class="hidden acquisto-detail-row" data-parent-id="acq-{{ a.acquisto_id }}">
+            <td colspan="11" class="px-4 py-4">
+              <div class="detail-panel rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    Servizi inclusi nel pacchetto
+                  </div>
+                  <div class="text-[11px] text-slate-400">
+                    {{ a.numero_attivazioni }} elementi
+                  </div>
                 </div>
 
                 <div class="space-y-2">
                   {% for d in a.dettagli_servizi %}
-                  <div class="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_.7fr] gap-2 items-center rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
-                    <div class="font-medium text-slate-800">
+                  <div class="detail-service-row grid grid-cols-1 sm:grid-cols-[1.2fr_.9fr_.6fr] gap-3 items-center rounded-xl px-4 py-3 text-sm">
+                    <div class="font-semibold text-slate-800">
                       {{ d.servizio_nome }}
                     </div>
 
@@ -327,19 +352,19 @@
 
                     <div class="sm:text-right">
                       {% if d.stato == 'attivo' %}
-                        <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                        <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
                           Attivo
                         </span>
                       {% elif d.stato == 'rinnovato' %}
-                        <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                        <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
                           Rinnovato
                         </span>
                       {% elif d.stato == 'revocato' %}
-                        <span class="px-2 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">
+                        <span class="px-2.5 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">
                           Revocato
                         </span>
                       {% else %}
-                        <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
+                        <span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
                           Scaduto
                         </span>
                       {% endif %}
@@ -351,7 +376,6 @@
             </td>
           </tr>
           {% endif %}
-
           {% endfor %}
         </tbody>
       </table>
@@ -359,6 +383,61 @@
 
   </div>
 </div>
+<style>
+  #acquisti-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+  }
+
+  #acquisti-table thead th {
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    color: #0f172a;
+    font-weight: 700;
+    border-bottom: 1px solid #cbd5e1;
+    white-space: nowrap;
+  }
+
+  #acquisti-table .sort-btn {
+    color: #1e293b;
+  }
+
+  #acquisti-table .sort-btn:hover {
+    color: #2563eb;
+  }
+
+  #acquisti-table tbody tr.acquisto-main-row > td {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+  }
+
+  #acquisti-table tbody tr.acquisto-main-row:hover > td {
+    background: #f8fbff;
+  }
+
+  #acquisti-table tbody tr.acquisto-detail-row > td {
+    background: #f8fafc;
+    border-bottom: 1px solid #dbeafe;
+  }
+
+  .detail-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #dbe7f5;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      inset 0 1px 0 rgba(255,255,255,0.9);
+  }
+
+  .detail-service-row {
+    background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+    border: 1px solid #e2e8f0;
+  }
+
+  .toggle-pacchetto[aria-expanded="true"] .detail-chevron {
+    transform: rotate(180deg);
+  }
+</style>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -390,10 +469,16 @@ document.addEventListener("DOMContentLoaded", () => {
       return statoOrder(value);
     }
 
-    if (key === "data" || key === "scadenza") {
+    if (key === "data") {
       if (!value) return 0;
       const parsed = Date.parse(value);
       return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    if (key === "scadenza") {
+      if (!value) return Number.MAX_SAFE_INTEGER;
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
     }
 
     return value.toLowerCase();
@@ -455,6 +540,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
       sortTable(key);
     });
+  });
+
+  tbody.addEventListener("click", (e) => {
+    const toggleBtn = e.target.closest("[data-toggle-detail]");
+    if (!toggleBtn) return;
+
+    const groupId = toggleBtn.dataset.toggleDetail;
+    const detailRow = tbody.querySelector(`.acquisto-detail-row[data-parent-id="${groupId}"]`);
+    if (!detailRow) return;
+
+    const isOpen = toggleBtn.getAttribute("aria-expanded") === "true";
+
+    toggleBtn.setAttribute("aria-expanded", isOpen ? "false" : "true");
+    detailRow.classList.toggle("hidden", isOpen);
   });
 
   updateIcons();
