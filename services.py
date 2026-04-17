@@ -373,44 +373,17 @@ def attiva_servizio(
 
         # -------------------------------
         # 🔁 RINNOVO / RIATTIVAZIONE
-        # Regola voluta:
-        # - servizio -> servizio  => somma
-        # - pacchetto -> pacchetto => somma
-        # - servizio -> pacchetto o pacchetto -> servizio => NON somma
+        # Regola finale:
+        # - ogni attivazione viene trattata come SERVIZIO SINGOLO
+        # - se esiste già una attivazione attiva dello stesso servizio
+        #   per lo stesso utente/annuncio, si considera sempre rinnovo
+        # - il rinnovo NON modifica in-place la vecchia attivazione
+        # - la vecchia attivazione viene solo marcata come scaduta
+        #   lasciando intatta la sua data_fine originale
+        # - si crea una NUOVA attivazione con nuova scadenza:
+        #   residuo precedente + nuova durata
         # -------------------------------
-        rinnovo_consentito = False
-        tipo_attivazione_corrente = None
-        tipo_nuovo_acquisto = None
-
         if last and last["stato"] == "attivo":
-            # tipo dell'attivazione già esistente
-            if last.get("acquisto_id"):
-                row_tipo_last = _fetchone(conn, """
-                    SELECT tipo
-                    FROM acquisti
-                    WHERE id = ?
-                    LIMIT 1
-                """, (int(last["acquisto_id"]),))
-                tipo_attivazione_corrente = row_tipo_last["tipo"] if row_tipo_last else None
-
-            # tipo del nuovo acquisto
-            if acquisto_id is not None:
-                row_tipo_new = _fetchone(conn, """
-                    SELECT tipo
-                    FROM acquisti
-                    WHERE id = ?
-                    LIMIT 1
-                """, (int(acquisto_id),))
-                tipo_nuovo_acquisto = row_tipo_new["tipo"] if row_tipo_new else None
-
-            # casi admin/manual senza acquisto_id: mantieni il rinnovo consentito
-            if acquisto_id is None:
-                rinnovo_consentito = True
-            # casi Stripe: rinnova solo se stessa famiglia di acquisto
-            elif tipo_attivazione_corrente and tipo_nuovo_acquisto and tipo_attivazione_corrente == tipo_nuovo_acquisto:
-                rinnovo_consentito = True
-
-        if rinnovo_consentito and last and last["stato"] == "attivo":
 
             if last["data_fine"] is None:
                 return False, "Servizio già attivo senza scadenza.", None
@@ -428,21 +401,18 @@ def attiva_servizio(
             if data_fine_attuale.tzinfo is None:
                 data_fine_attuale = data_fine_attuale.replace(tzinfo=ZoneInfo("UTC"))
 
-            # Se il servizio è ancora attivo, somma dalla scadenza attuale.
-            # Se invece è già oltre scadenza, riparti da adesso.
+            # Se la vecchia attivazione è ancora valida, somma dalla sua scadenza.
+            # Se è già scaduta, riparti da adesso.
             base_rinnovo = data_fine_attuale if data_fine_attuale > ora_utc else ora_utc
             data_fine_finale = base_rinnovo + timedelta(days=durata_finale)
 
+            # 1) chiudiamo la vecchia attivazione
+            #    MA senza perdere la sua data_fine storica originale
             cur.execute(sql("""
                 UPDATE attivazioni_servizi
-                SET acquisto_id = ?,
-                    attivato_da = ?,
-                    data_fine = ?
+                SET stato = 'scaduto'
                 WHERE id = ?
             """), (
-                acquisto_id,
-                attivato_da,
-                data_fine_finale.strftime("%Y-%m-%d %H:%M:%S"),
                 last["id"],
             ))
 
@@ -451,14 +421,40 @@ def attiva_servizio(
                 last["id"],
                 "rinnovato",
                 attivato_da,
-                note or f"Rinnovo {tipo_attivazione_corrente or 'manuale'}"
+                note or f"Rinnovo sostituito da nuovo acquisto {acquisto_id or 'manuale'}"
+            )
+
+            # 2) creiamo una nuova attivazione collegata al nuovo acquisto
+            cur.execute(sql("""
+                INSERT INTO attivazioni_servizi
+                (acquisto_id, servizio_id, utente_id, annuncio_id,
+                 data_inizio, data_fine, stato, attivato_da)
+                VALUES (?, ?, ?, ?, ?, ?, 'attivo', ?)
+            """), (
+                acquisto_id,
+                s["id"],
+                utente_id,
+                annuncio_id,
+                ora_utc.strftime("%Y-%m-%d %H:%M:%S"),
+                data_fine_finale.strftime("%Y-%m-%d %H:%M:%S"),
+                attivato_da,
+            ))
+
+            new_id = _lastrowid(cur)
+
+            _storico_append(
+                conn,
+                new_id,
+                "attivato",
+                attivato_da,
+                note or "Nuova attivazione creata da rinnovo"
             )
 
             if own_conn:
                 conn.commit()
 
-            return True, "Servizio rinnovato.", int(last["id"])
-            
+            return True, "Servizio rinnovato.", int(new_id)
+
         # -------------------------------
         # 🆕 NUOVA ATTIVAZIONE
         # -------------------------------
