@@ -2,46 +2,197 @@
 {% set body_class = "offset-navbar" %}
 
 {% block admin_content %}
-<div class="max-w-6xl mx-auto">
+<div class="max-w-7xl mx-auto">
 
   <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
 
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900">
-        🧾 Storico Acquisti
-      </h1>
-      <p class="text-slate-600 mt-1">
-        Elenco completo degli acquisti effettuati (servizi e pacchetti).
-      </p>
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">
+          🧾 Storico Acquisti
+        </h1>
+        <p class="text-slate-600 mt-1">
+          Elenco completo degli acquisti effettuati (servizi e pacchetti).
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="{{ url_for('admin_acquisti_export',
+                            q=request.args.get('q', ''),
+                            tipo=request.args.get('tipo', ''),
+                            stato=request.args.get('stato', ''),
+                            metodo=request.args.get('metodo', '')) }}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-sm font-semibold shadow-sm transition">
+          ⬇️ Excel
+        </a>
+
+        <button onclick="history.back()"
+                class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-sm font-semibold">
+          ← Indietro
+        </button>
+      </div>
     </div>
 
-    <div class="flex justify-end">
-      <button onclick="history.back()"
-              class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-sm font-semibold">
-        ← Indietro
-      </button>
-    </div>
+    <!-- FILTRI -->
+    <form method="get"
+          class="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] shadow-sm p-4">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+
+        <div class="flex-1 min-w-0">
+          <label for="q" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Cerca
+          </label>
+          <input
+            id="q"
+            name="q"
+            type="text"
+            value="{{ request.args.get('q', '') }}"
+            placeholder="Email, oggetto, annuncio, metodo..."
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          >
+        </div>
+
+        <div class="w-full lg:w-44">
+          <label for="tipo" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Tipo
+          </label>
+          <select
+            id="tipo"
+            name="tipo"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          >
+            <option value="">Tutti</option>
+            <option value="servizio" {% if request.args.get('tipo') == 'servizio' %}selected{% endif %}>Servizio</option>
+            <option value="pacchetto" {% if request.args.get('tipo') == 'pacchetto' %}selected{% endif %}>Pacchetto</option>
+          </select>
+        </div>
+
+        <div class="w-full lg:w-44">
+          <label for="stato" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Stato
+          </label>
+          <select
+            id="stato"
+            name="stato"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          >
+            <option value="">Tutti</option>
+            <option value="attivo" {% if request.args.get('stato') == 'attivo' %}selected{% endif %}>Attivo</option>
+            <option value="rinnovato" {% if request.args.get('stato') == 'rinnovato' %}selected{% endif %}>Rinnovato</option>
+            <option value="revocato" {% if request.args.get('stato') == 'revocato' %}selected{% endif %}>Revocato</option>
+            <option value="in_attesa" {% if request.args.get('stato') == 'in_attesa' %}selected{% endif %}>In attesa</option>
+            <option value="scaduto" {% if request.args.get('stato') == 'scaduto' %}selected{% endif %}>Scaduto</option>
+          </select>
+        </div>
+
+        <div class="w-full lg:w-40">
+          <label for="metodo" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Metodo
+          </label>
+          <select
+            id="metodo"
+            name="metodo"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          >
+            <option value="">Tutti</option>
+            <option value="stripe" {% if request.args.get('metodo') == 'stripe' %}selected{% endif %}>Stripe</option>
+            <option value="admin" {% if request.args.get('metodo') == 'admin' %}selected{% endif %}>Admin</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2 lg:self-end">
+          <button type="submit"
+                  class="inline-flex items-center justify-center px-4 py-2.5 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-sm transition">
+            Applica
+          </button>
+
+          <a href="{{ url_for('admin_acquisti') }}"
+             class="inline-flex items-center justify-center px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition">
+            Reset
+          </a>
+        </div>
+      </div>
+    </form>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
+      <table id="acquisti-table" class="w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
         <thead class="bg-slate-50 border-b">
           <tr>
-            <th class="p-3 text-left">Data</th>
-            <th class="p-3 text-left">Utente</th>
-            <th class="p-3 text-left">Tipo</th>
-            <th class="p-3 text-left">Oggetto</th>
-            <th class="p-3 text-center">Annuncio</th>
-            <th class="p-3 text-center">Importo</th>
-            <th class="p-3 text-center">Scadenza</th>
-            <th class="p-3 text-center">Stato</th>
-            <th class="p-3 text-center">Metodo</th>
-            <th class="p-3 text-center">Dettaglio</th>
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="data">
+                Data <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="utente">
+                Utente <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="tipo">
+                Tipo <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="oggetto">
+                Oggetto <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-center">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="annuncio">
+                Annuncio <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-center">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="importo">
+                Importo <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-center">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="durata">
+                Durata <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-center">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="scadenza">
+                Scadenza <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-center">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="stato">
+                Stato <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-center">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="metodo">
+                Metodo <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+            <th class="p-3 text-center">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="dettaglio">
+                Dettaglio <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-slate-100">
+        <tbody id="acquisti-tbody" class="divide-y divide-slate-100">
           {% for a in acquisti %}
-          <tr class="hover:bg-slate-50">
+          <tr
+            class="hover:bg-slate-50 acquisto-main-row"
+            data-group-id="acq-{{ a.acquisto_id }}"
+            data-data="{{ a.created_at or '' }}"
+            data-utente="{{ (a.email or '')|lower }}"
+            data-tipo="{{ (a.tipo or '')|lower }}"
+            data-oggetto="{{ (a.pacchetto_nome or a.servizio_nome or '')|lower }}"
+            data-annuncio="{{ a.annuncio_id or 0 }}"
+            data-importo="{{ a.importo_cent or 0 }}"
+            data-durata="{{ a.durata_iniziale_giorni or 0 }}"
+            data-scadenza="{{ a.data_fine or '' }}"
+            data-stato="{{ a.stato_visuale or '' }}"
+            data-metodo="{{ (a.metodo or '')|lower }}"
+            data-dettaglio="{{ a.numero_attivazioni or 0 }}"
+          >
 
             <td class="p-3 text-slate-700">
               {{ a.created_at | dt_roma }}
@@ -78,6 +229,15 @@
 
             <td class="p-3 text-center font-semibold">
               {{ '%.2f'|format(a.importo_cent / 100) }} €
+            </td>
+
+            <!-- DURATA -->
+            <td class="p-3 text-center text-slate-700">
+              {% if a.durata_iniziale_giorni %}
+                {{ a.durata_iniziale_giorni }} g
+              {% else %}
+                —
+              {% endif %}
             </td>
 
             <!-- SCADENZA -->
@@ -143,8 +303,8 @@
           </tr>
 
           {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
-          <tr class="bg-slate-50/70">
-            <td colspan="10" class="px-4 py-3">
+          <tr class="bg-slate-50/70 acquisto-detail-row" data-parent-id="acq-{{ a.acquisto_id }}">
+            <td colspan="11" class="px-4 py-3">
               <div class="rounded-xl border border-slate-200 bg-white p-4">
                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
                   Servizi inclusi nel pacchetto
@@ -193,10 +353,111 @@
           {% endif %}
 
           {% endfor %}
-        </tbody>        
+        </tbody>
       </table>
     </div>
 
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const tbody = document.getElementById("acquisti-tbody");
+  const sortButtons = document.querySelectorAll(".sort-btn");
+
+  let currentSortKey = "data";
+  let currentSortDirection = "desc";
+
+  function statoOrder(value) {
+    const map = {
+      "attivo": 4,
+      "in_attesa": 3,
+      "rinnovato": 2,
+      "revocato": 1,
+      "scaduto": 0
+    };
+    return map[value] ?? -1;
+  }
+
+  function parseValue(row, key) {
+    const value = row.dataset[key] || "";
+
+    if (["annuncio", "importo", "durata", "dettaglio"].includes(key)) {
+      return Number(value || 0);
+    }
+
+    if (key === "stato") {
+      return statoOrder(value);
+    }
+
+    if (key === "data" || key === "scadenza") {
+      if (!value) return 0;
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    return value.toLowerCase();
+  }
+
+  function updateIcons() {
+    sortButtons.forEach(btn => {
+      const icon = btn.querySelector(".sort-icon");
+      if (!icon) return;
+
+      if (btn.dataset.sortKey === currentSortKey) {
+        icon.textContent = currentSortDirection === "asc" ? "▲" : "▼";
+        icon.classList.remove("text-slate-400");
+        icon.classList.add("text-blue-600");
+      } else {
+        icon.textContent = "↕";
+        icon.classList.remove("text-blue-600");
+        icon.classList.add("text-slate-400");
+      }
+    });
+  }
+
+  function sortTable(key) {
+    const mainRows = Array.from(tbody.querySelectorAll(".acquisto-main-row"));
+
+    const grouped = mainRows.map(mainRow => {
+      const groupId = mainRow.dataset.groupId;
+      const detailRow = tbody.querySelector(`.acquisto-detail-row[data-parent-id="${groupId}"]`);
+      return { mainRow, detailRow };
+    });
+
+    grouped.sort((a, b) => {
+      const av = parseValue(a.mainRow, key);
+      const bv = parseValue(b.mainRow, key);
+
+      if (av < bv) return currentSortDirection === "asc" ? -1 : 1;
+      if (av > bv) return currentSortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    grouped.forEach(({ mainRow, detailRow }) => {
+      tbody.appendChild(mainRow);
+      if (detailRow) tbody.appendChild(detailRow);
+    });
+
+    updateIcons();
+  }
+
+  sortButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.sortKey;
+
+      if (currentSortKey === key) {
+        currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+      } else {
+        currentSortKey = key;
+        currentSortDirection = key === "data" ? "desc" : "asc";
+      }
+
+      sortTable(key);
+    });
+  });
+
+  updateIcons();
+});
+</script>
 {% endblock %}
