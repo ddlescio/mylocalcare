@@ -7,14 +7,14 @@
 
 <div class="admin-wrapper pt-20 md:pt-24">
 
-  {# 🔹 Overlay mobile #}
+  {# 🔹 Overlay sidebar #}
   <div id="admin-sidebar-overlay"
-       class="fixed inset-0 bg-black/30 z-30 hidden md:hidden"></div>
+       class="fixed inset-0 bg-black/30 z-30 hidden"></div>
 
   {# 🔹 SIDEBAR ADMIN #}
   <aside id="admin-sidebar"
          class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 shadow-sm
-                transform -translate-x-full md:translate-x-0 transition-transform duration-200
+                transform -translate-x-full transition-transform duration-200
                 flex flex-col">
 
     {# Header sidebar #}
@@ -24,10 +24,10 @@
         <span class="text-sm font-semibold text-slate-800">Amministrazione</span>
       </div>
 
-      {# Bottone chiudi solo mobile #}
+      {# Bottone chiudi sempre visibile #}
       <button type="button"
               id="admin-sidebar-close"
-              class="md:hidden inline-flex items-center justify-center rounded-full p-2
+              class="inline-flex items-center justify-center rounded-full p-2
                      text-slate-500 hover:bg-slate-100">
         ✕
       </button>
@@ -111,18 +111,17 @@
                 {% endif %}">
         <span>🔔</span>
         <span>Notifiche</span>
+      </a>
 
-        <a href="{{ url_for('admin_servizi') }}"
-           class="flex items-center gap-2 px-3 py-2 rounded-xl
-                  {% if current.startswith('/admin/servizi') %}
-                     bg-slate-900 text-white shadow-sm
-                  {% else %}
-                     text-slate-700 hover:bg-slate-100
-                  {% endif %}">
-          <span>💰</span>
-          <span>Servizi</span>
-        </a>
-
+      <a href="{{ url_for('admin_servizi') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/servizi') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>💰</span>
+        <span>Servizi</span>
       </a>
     </nav>
 
@@ -139,14 +138,14 @@
   </aside>
 
   {# 🔹 CONTENUTO PRINCIPALE ADMIN #}
-  <div class="flex-1 md:ml-64">
+  <div class="flex-1">
     <div class="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-8">
 
-      {# bottone per aprire sidebar su mobile #}
-      <div class="md:hidden mb-4 flex items-center justify-between">
+      {# bottone per aprire sidebar sempre visibile #}
+      <div class="mb-4 flex items-center justify-between">
         <button id="admin-sidebar-open"
                 class="inline-flex items-center gap-2 px-3 py-2 rounded-xl
-                       bg-white border border-slate-200 text-slate-700 shadow-sm">
+                       bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50">
           <span>☰</span>
           <span class="text-sm font-medium">Menu admin</span>
         </button>
@@ -206,6 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
     .catch(() => {});
 });
 </script>
+
 <!-- 🔥 Socket.IO aggiornamento realtime badge admin -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
