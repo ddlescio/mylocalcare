@@ -2890,6 +2890,17 @@ def admin_acquisti_export():
     filtro_stato = (request.args.get("stato") or "").strip().lower()
     filtro_metodo = (request.args.get("metodo") or "").strip().lower()
 
+    def excel_safe_dt(value):
+        if value is None:
+            return None
+
+        if hasattr(value, "tzinfo"):
+            if value.tzinfo is not None:
+                value = value.replace(tzinfo=None)
+            return value.strftime("%d/%m/%Y %H:%M:%S")
+
+        return value
+
     rows = conn.execute(sql("""
         SELECT
             a.id              AS acquisto_id,
@@ -2999,7 +3010,7 @@ def admin_acquisti_export():
         if a["tipo"] == "pacchetto" and dettagli_servizi:
             for d in dettagli_servizi:
                 records.append([
-                    a["created_at"],
+                    excel_safe_dt(a["created_at"]),
                     a["email"],
                     a["utente_id"],
                     a["tipo"],
@@ -3008,14 +3019,14 @@ def admin_acquisti_export():
                     (a["importo_cent"] or 0) / 100,
                     durata_iniziale,
                     d.get("servizio_nome"),
-                    d.get("data_fine"),
+                    excel_safe_dt(d.get("data_fine")),
                     d.get("stato"),
                     a.get("metodo"),
                     a["acquisto_id"]
                 ])
         else:
             records.append([
-                a["created_at"],
+                excel_safe_dt(a["created_at"]),
                 a["email"],
                 a["utente_id"],
                 a["tipo"],
@@ -3024,7 +3035,7 @@ def admin_acquisti_export():
                 (a["importo_cent"] or 0) / 100,
                 durata_iniziale,
                 a.get("servizio_nome"),
-                dettagli_servizi[0]["data_fine"] if dettagli_servizi else None,
+                excel_safe_dt(dettagli_servizi[0]["data_fine"] if dettagli_servizi else None),
                 stato_visuale,
                 a.get("metodo"),
                 a["acquisto_id"]
@@ -3075,7 +3086,7 @@ def admin_acquisti_export():
         download_name="storico_acquisti.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
+    
 # ==========================================================
 # ADMIN – STATISTICHE
 # ==========================================================
@@ -3134,7 +3145,7 @@ def admin_statistiche():
         utenti_senza_annunci=utenti_senza_annunci,
         utenti_recensiti=utenti_recensiti,
         chat_totali=chat_totali
-    )    
+    )
 # ==========================================================
 # ADMIN – NOTIFICHE DI SISTEMA
 # ==========================================================
