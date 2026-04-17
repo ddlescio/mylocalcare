@@ -72,6 +72,9 @@ from realtime_handlers import register_socket_lifecycle_handlers
 
 from chat_realtime import register_chat_socket_handlers, typing_state, pagina_attiva
 from realtime_auth import build_realtime_token
+from io import BytesIO
+from flask import send_file
+from openpyxl import Workbook
 
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
@@ -2746,9 +2749,15 @@ from datetime import datetime, timedelta
 def admin_acquisti():
     conn = get_db_connection()
 
+    # filtri lato server
+    q = (request.args.get("q") or "").strip().lower()
+    filtro_tipo = (request.args.get("tipo") or "").strip().lower()
+    filtro_stato = (request.args.get("stato") or "").strip().lower()
+    filtro_metodo = (request.args.get("metodo") or "").strip().lower()
+
     rows = conn.execute(sql("""
         SELECT
-            a.id            AS acquisto_id,
+            a.id              AS acquisto_id,
             a.tipo,
             a.importo_cent,
             a.metodo,
@@ -2758,14 +2767,16 @@ def admin_acquisti():
             a.ref_id,
             a.prezzo_id,
 
-            u.id            AS utente_id,
+            u.id              AS utente_id,
             u.email,
 
-            sp.servizio_id   AS servizio_id_base,
-            s.nome           AS servizio_nome,
-            s.codice         AS servizio_codice,
+            sp.servizio_id     AS servizio_id_base,
+            s.nome             AS servizio_nome,
+            s.codice           AS servizio_codice,
+            sp.durata_giorni   AS durata_servizio_giorni,
 
-            p.nome           AS pacchetto_nome
+            p.nome             AS pacchetto_nome,
+            pp.durata_giorni   AS durata_pacchetto_giorni
 
         FROM acquisti a
         JOIN utenti u
@@ -2782,9 +2793,13 @@ def admin_acquisti():
           ON a.tipo = 'pacchetto'
          AND p.id = a.ref_id
 
+        LEFT JOIN pacchetti_piani pp
+          ON a.tipo = 'pacchetto'
+         AND pp.id = a.prezzo_id
+
         WHERE a.stato IN ('creato', 'pending', 'paid')
         ORDER BY a.created_at DESC
-        LIMIT 500
+        LIMIT 1000
     """)).fetchall()
 
     acquisti = []
@@ -2794,13 +2809,13 @@ def admin_acquisti():
 
         dettagli_rows = conn.execute(sql("""
             SELECT
-                ats.id        AS attivazione_id,
+                ats.id          AS attivazione_id,
                 ats.data_inizio,
                 ats.data_fine,
                 ats.stato,
-                sv.id         AS servizio_id,
-                sv.codice     AS servizio_codice,
-                sv.nome       AS servizio_nome
+                sv.id           AS servizio_id,
+                sv.codice       AS servizio_codice,
+                sv.nome         AS servizio_nome
             FROM attivazioni_servizi ats
             JOIN servizi sv
               ON sv.id = ats.servizio_id
@@ -2828,9 +2843,33 @@ def admin_acquisti():
         if a["tipo"] == "pacchetto":
             a["data_fine"] = None
             a["ha_sottodettaglio"] = len(dettagli_servizi) > 0
+            a["durata_iniziale_giorni"] = a.get("durata_pacchetto_giorni")
         else:
             a["ha_sottodettaglio"] = False
             a["data_fine"] = dettagli_servizi[0]["data_fine"] if dettagli_servizi else None
+            a["durata_iniziale_giorni"] = a.get("durata_servizio_giorni")
+
+        # filtro testuale
+        testo_ricerca = " ".join([
+            str(a.get("email") or ""),
+            str(a.get("tipo") or ""),
+            str(a.get("pacchetto_nome") or ""),
+            str(a.get("servizio_nome") or ""),
+            str(a.get("metodo") or ""),
+            str(a.get("annuncio_id") or "")
+        ]).lower()
+
+        if q and q not in testo_ricerca:
+            continue
+
+        if filtro_tipo and a["tipo"] != filtro_tipo:
+            continue
+
+        if filtro_stato and a["stato_visuale"] != filtro_stato:
+            continue
+
+        if filtro_metodo and (a.get("metodo") or "").lower() != filtro_metodo:
+            continue
 
         acquisti.append(a)
 
@@ -2839,70 +2878,203 @@ def admin_acquisti():
         acquisti=acquisti,
         tab="acquisti"
     )
-    
-# ==========================================================
-# ADMIN – STATISTICHE
-# ==========================================================
-@app.route("/admin/statistiche")
+
+@app.route("/admin/acquisti/export.xlsx")
+@login_required
 @admin_required
-def admin_statistiche():
+def admin_acquisti_export():
     conn = get_db_connection()
 
-    c = get_cursor(conn)
+    q = (request.args.get("q") or "").strip().lower()
+    filtro_tipo = (request.args.get("tipo") or "").strip().lower()
+    filtro_stato = (request.args.get("stato") or "").strip().lower()
+    filtro_metodo = (request.args.get("metodo") or "").strip().lower()
 
-    c.execute(sql("SELECT COUNT(*) FROM utenti WHERE attivo = 1"))
-    utenti_attivi = fetchone_value(c.fetchone())
+    rows = conn.execute(sql("""
+        SELECT
+            a.id              AS acquisto_id,
+            a.tipo,
+            a.importo_cent,
+            a.metodo,
+            a.stato,
+            a.created_at,
+            a.annuncio_id,
+            a.ref_id,
+            a.prezzo_id,
 
-    c.execute(sql("SELECT COUNT(*) FROM annunci"))
-    annunci_totali = fetchone_value(c.fetchone())
+            u.id              AS utente_id,
+            u.email,
 
-    c.execute(sql("SELECT COUNT(DISTINCT utente_id) FROM annunci"))
-    utenti_con_annunci = fetchone_value(c.fetchone())
+            sp.servizio_id     AS servizio_id_base,
+            s.nome             AS servizio_nome,
+            s.codice           AS servizio_codice,
+            sp.durata_giorni   AS durata_servizio_giorni,
 
-    c.execute(sql("""
-        SELECT COUNT(*)
-        FROM utenti
-        WHERE id NOT IN (SELECT DISTINCT utente_id FROM annunci)
-    """))
-    utenti_senza_annunci = fetchone_value(c.fetchone())
+            p.nome             AS pacchetto_nome,
+            pp.durata_giorni   AS durata_pacchetto_giorni
 
-    c.execute(sql("""
-        SELECT COUNT(DISTINCT id_destinatario)
-        FROM recensioni
-    """))
-    utenti_recensiti = fetchone_value(c.fetchone())
+        FROM acquisti a
+        JOIN utenti u
+          ON u.id = a.utente_id
 
-    c.execute(sql("""
-        SELECT COUNT(*)
-        FROM (
+        LEFT JOIN servizi_piani sp
+          ON a.tipo = 'servizio'
+         AND sp.id = a.prezzo_id
+
+        LEFT JOIN servizi s
+          ON s.id = sp.servizio_id
+
+        LEFT JOIN pacchetti p
+          ON a.tipo = 'pacchetto'
+         AND p.id = a.ref_id
+
+        LEFT JOIN pacchetti_piani pp
+          ON a.tipo = 'pacchetto'
+         AND pp.id = a.prezzo_id
+
+        WHERE a.stato IN ('creato', 'pending', 'paid')
+        ORDER BY a.created_at DESC
+        LIMIT 5000
+    """)).fetchall()
+
+    records = []
+
+    for r in rows:
+        a = dict(r)
+
+        dettagli_rows = conn.execute(sql("""
             SELECT
-                CASE
-                    WHEN mittente_id < destinatario_id THEN mittente_id
-                    ELSE destinatario_id
-                END AS a,
-                CASE
-                    WHEN mittente_id > destinatario_id THEN mittente_id
-                    ELSE destinatario_id
-                END AS b
-            FROM messaggi_chat
-            GROUP BY a, b
+                ats.id          AS attivazione_id,
+                ats.data_inizio,
+                ats.data_fine,
+                ats.stato,
+                sv.id           AS servizio_id,
+                sv.codice       AS servizio_codice,
+                sv.nome         AS servizio_nome
+            FROM attivazioni_servizi ats
+            JOIN servizi sv
+              ON sv.id = ats.servizio_id
+            WHERE ats.acquisto_id = ?
+            ORDER BY sv.nome ASC, ats.id DESC
+        """), (a["acquisto_id"],)).fetchall()
+
+        dettagli_servizi = [dict(x) for x in dettagli_rows]
+        stati = {d["stato"] for d in dettagli_servizi}
+
+        if "attivo" in stati:
+            stato_visuale = "attivo"
+        elif "rinnovato" in stati:
+            stato_visuale = "rinnovato"
+        elif "revocato" in stati:
+            stato_visuale = "revocato"
+        elif a["stato"] in ("creato", "pending"):
+            stato_visuale = "in_attesa"
+        else:
+            stato_visuale = "scaduto"
+
+        durata_iniziale = (
+            a.get("durata_pacchetto_giorni")
+            if a["tipo"] == "pacchetto"
+            else a.get("durata_servizio_giorni")
         )
-    """))
-    chat_totali = fetchone_value(c.fetchone())
 
+        testo_ricerca = " ".join([
+            str(a.get("email") or ""),
+            str(a.get("tipo") or ""),
+            str(a.get("pacchetto_nome") or ""),
+            str(a.get("servizio_nome") or ""),
+            str(a.get("metodo") or ""),
+            str(a.get("annuncio_id") or "")
+        ]).lower()
 
+        if q and q not in testo_ricerca:
+            continue
+        if filtro_tipo and a["tipo"] != filtro_tipo:
+            continue
+        if filtro_stato and stato_visuale != filtro_stato:
+            continue
+        if filtro_metodo and (a.get("metodo") or "").lower() != filtro_metodo:
+            continue
 
-    return render_template(
-        "admin_statistiche.html",
-        utenti_attivi=utenti_attivi,
-        annunci_totali=annunci_totali,
-        utenti_con_annunci=utenti_con_annunci,
-        utenti_senza_annunci=utenti_senza_annunci,
-        utenti_recensiti=utenti_recensiti,
-        chat_totali=chat_totali
+        if a["tipo"] == "pacchetto" and dettagli_servizi:
+            for d in dettagli_servizi:
+                records.append([
+                    a["created_at"],
+                    a["email"],
+                    a["utente_id"],
+                    a["tipo"],
+                    a.get("pacchetto_nome") or a.get("servizio_nome"),
+                    a.get("annuncio_id"),
+                    (a["importo_cent"] or 0) / 100,
+                    durata_iniziale,
+                    d.get("servizio_nome"),
+                    d.get("data_fine"),
+                    d.get("stato"),
+                    a.get("metodo"),
+                    a["acquisto_id"]
+                ])
+        else:
+            records.append([
+                a["created_at"],
+                a["email"],
+                a["utente_id"],
+                a["tipo"],
+                a.get("pacchetto_nome") or a.get("servizio_nome"),
+                a.get("annuncio_id"),
+                (a["importo_cent"] or 0) / 100,
+                durata_iniziale,
+                a.get("servizio_nome"),
+                dettagli_servizi[0]["data_fine"] if dettagli_servizi else None,
+                stato_visuale,
+                a.get("metodo"),
+                a["acquisto_id"]
+            ])
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Storico Acquisti"
+
+    ws.append([
+        "Data acquisto",
+        "Email utente",
+        "ID utente",
+        "Tipo",
+        "Oggetto acquisto",
+        "Annuncio",
+        "Importo €",
+        "Durata iniziale (giorni)",
+        "Servizio",
+        "Scadenza",
+        "Stato",
+        "Metodo",
+        "ID acquisto"
+    ])
+
+    for row in records:
+        ws.append(row)
+
+    for col in ws.columns:
+        max_len = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            try:
+                value = "" if cell.value is None else str(cell.value)
+                if len(value) > max_len:
+                    max_len = len(value)
+            except Exception:
+                pass
+        ws.column_dimensions[col_letter].width = min(max_len + 2, 35)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="storico_acquisti.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
 # ==========================================================
 # ADMIN – NOTIFICHE DI SISTEMA
 # ==========================================================
