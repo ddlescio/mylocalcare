@@ -9,6 +9,7 @@ import os
 import sqlite3
 import json
 import uuid
+import time
 from flask_mail import Mail, Message
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 from socketio import RedisManager
@@ -35,7 +36,13 @@ from models import crea_notifica
 from flask_login import login_required
 from itsdangerous import URLSafeTimedSerializer, URLSafeSerializer, BadSignature, SignatureExpired
 from datetime import datetime, timedelta, timezone
-from services import attiva_servizio, revoca_attivazione, servizio_attivo_per_annuncio, servizio_attivo_per_utente
+from services import (
+    attiva_servizio,
+    revoca_attivazione,
+    servizio_attivo_per_annuncio,
+    servizio_attivo_per_utente,
+    aggiorna_servizi_scaduti,
+)
 import secrets
 import stripe
 import psycopg2
