@@ -240,23 +240,74 @@
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
 <script>
-document.querySelector("form").addEventListener("submit", function(e) {
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.querySelector("form");
 
-  const tipo = document.querySelector('input[name="tipo_annuncio"]:checked');
+  if (!form) return;
 
-  if (!tipo) {
-    e.preventDefault();
+  form.addEventListener("submit", function (e) {
+    const errori = [];
 
-    alert("Devi selezionare se OFFRI o CERCHI il servizio.");
+    const tipo = document.querySelector('input[name="tipo_annuncio"]:checked');
+    const categoria = document.getElementById("categoria");
+    const zona = document.getElementById("zona-autocomplete");
+    const titolo = document.getElementById("titolo");
+    const descrizione = document.getElementById("descrizione");
 
-    document.querySelector('[name="tipo_annuncio"]').scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-  }
+    if (!tipo) {
+      errori.push("Seleziona se OFFRI o CERCHI il servizio.");
+    }
 
+    if (!categoria || !categoria.value.trim()) {
+      errori.push("Seleziona una categoria.");
+    }
+
+    if (!zona || !zona.value.trim()) {
+      errori.push("Inserisci una zona o un comune.");
+    }
+
+    if (!titolo || !titolo.value.trim()) {
+      errori.push("Inserisci il titolo dell'annuncio.");
+    }
+
+    if (!descrizione || !descrizione.value.trim()) {
+      errori.push("Inserisci la descrizione dettagliata.");
+    }
+
+    if (errori.length > 0) {
+      e.preventDefault();
+
+      alert("Per pubblicare l'annuncio completa questi campi obbligatori:\n\n- " + errori.join("\n- "));
+
+      const primoCampo =
+        (!tipo && document.querySelector('input[name="tipo_annuncio"]')) ||
+        (!categoria?.value.trim() && categoria) ||
+        (!zona?.value.trim() && zona) ||
+        (!titolo?.value.trim() && titolo) ||
+        (!descrizione?.value.trim() && descrizione);
+
+      if (primoCampo) {
+        primoCampo.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+
+        setTimeout(() => {
+          try {
+            primoCampo.focus();
+          } catch (err) {}
+        }, 250);
+      }
+
+      return;
+    }
+
+    if (!form.checkValidity()) {
+      e.preventDefault();
+      form.reportValidity();
+    }
+  });
 });
 </script>
-
 {% endblock %}
 {% endblock %}
