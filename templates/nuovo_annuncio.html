@@ -248,27 +248,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const isNuovo = {{ 'true' if modalità != 'modifica' else 'false' }};
   const storageKey = "localcare_nuovo_annuncio_draft";
 
-  function getFieldValue(el) {
-    if (!el) return null;
-
-    if (el.type === "radio") {
-      return el.checked;
-    }
-
-    if (el.type === "checkbox") {
-      return el.checked;
-    }
-
-    if (el.type === "file") {
-      return null;
-    }
-
-    return el.value;
-  }
-
-  function saveDraft() {
-    if (!isNuovo) return;
-
+  function collectDraftData() {
     const data = {};
     const fields = form.querySelectorAll("input, textarea, select");
 
@@ -291,28 +271,23 @@ document.addEventListener("DOMContentLoaded", function () {
       data[el.name] = el.value;
     });
 
+    return data;
+  }
+
+  function saveDraft() {
+    if (!isNuovo) return;
+    const data = collectDraftData();
     sessionStorage.setItem(storageKey, JSON.stringify(data));
   }
 
-  function restoreDraft() {
-    if (!isNuovo) return;
-
-    const raw = sessionStorage.getItem(storageKey);
-    if (!raw) return;
-
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch (e) {
-      return;
-    }
+  function applyDraftData(data) {
+    if (!data) return;
 
     const fields = form.querySelectorAll("input, textarea, select");
 
     fields.forEach((el) => {
       if (!el.name) return;
       if (!(el.name in data)) return;
-
       if (el.type === "file") return;
 
       if (el.type === "radio") {
@@ -341,31 +316,42 @@ document.addEventListener("DOMContentLoaded", function () {
       const filtriContainer = document.getElementById("filtri-checkboxes");
       if (!filtriContainer) return;
 
-      const raw2 = sessionStorage.getItem(storageKey);
-      if (!raw2) return;
-
-      let data2;
-      try {
-        data2 = JSON.parse(raw2);
-      } catch (e) {
-        return;
-      }
-
       const checkboxes = filtriContainer.querySelectorAll('input[type="checkbox"]');
       checkboxes.forEach((cb) => {
         if (!cb.name) return;
-        if (!Array.isArray(data2[cb.name])) return;
-        cb.checked = data2[cb.name].includes(cb.value);
+        if (!Array.isArray(data[cb.name])) return;
+        cb.checked = data[cb.name].includes(cb.value);
       });
     }, 250);
+  }
+
+  function restoreDraft() {
+    if (!isNuovo) return;
+
+    const raw = sessionStorage.getItem(storageKey);
+    if (!raw) return;
+
+    try {
+      const data = JSON.parse(raw);
+      applyDraftData(data);
+    } catch (e) {}
   }
 
   restoreDraft();
 
   form.addEventListener("input", saveDraft);
   form.addEventListener("change", saveDraft);
+  form.addEventListener("keyup", saveDraft);
+  form.addEventListener("blur", saveDraft, true);
+
+  window.addEventListener("pageshow", restoreDraft);
 
   form.addEventListener("submit", function (e) {
+    const draftBeforeValidation = collectDraftData();
+    if (isNuovo) {
+      sessionStorage.setItem(storageKey, JSON.stringify(draftBeforeValidation));
+    }
+
     const errori = [];
 
     const tipo = document.querySelector('input[name="tipo_annuncio"]:checked');
@@ -396,9 +382,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (errori.length > 0) {
       e.preventDefault();
-      saveDraft();
 
       alert("Per pubblicare l'annuncio completa questi campi obbligatori:\n\n- " + errori.join("\n- "));
+
+      // Ripristino immediato della bozza anche se Safari resetta il form
+      applyDraftData(draftBeforeValidation);
+      setTimeout(() => applyDraftData(draftBeforeValidation), 50);
+      setTimeout(() => applyDraftData(draftBeforeValidation), 250);
 
       const primoCampo =
         (!tipo && document.querySelector('input[name="tipo_annuncio"]')) ||
@@ -417,13 +407,11 @@ document.addEventListener("DOMContentLoaded", function () {
           try {
             primoCampo.focus();
           } catch (err) {}
-        }, 250);
+        }, 300);
       }
 
       return;
     }
-
-    saveDraft();
 
     if (isNuovo) {
       sessionStorage.removeItem(storageKey);
