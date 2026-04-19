@@ -235,7 +235,7 @@
     {{ annuncio['filtri_categoria'].split(',') | tojson }}
   </script>
 {% endif %}
-
+{% endblock %}
 <!-- ✅ Script dinamici -->
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
