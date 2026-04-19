@@ -17,6 +17,19 @@
     {{ "✏️ Modifica annuncio" if modalità == "modifica" else "📝 Crea un nuovo annuncio" }}
   </h2>
 
+  {% set current_username = annuncio['username'] if modalità == 'modifica' else (request.form.get('username') or (g.utente['username'] if g.utente else '')) %}
+{% set current_tipo_annuncio = annuncio['tipo_annuncio'] if modalità == 'modifica' else (request.form.get('tipo_annuncio', '')) %}
+{% set current_categoria = annuncio['categoria'] if modalità == 'modifica' else (request.form.get('categoria', '')) %}
+{% set current_zona = annuncio['zona'] if modalità == 'modifica' else (request.form.get('zona', '')) %}
+{% set current_provincia = annuncio['provincia'] if modalità == 'modifica' else (request.form.get('provincia', '')) %}
+{% set current_titolo = annuncio['titolo'] if modalità == 'modifica' else (request.form.get('titolo', '')) %}
+{% set current_descrizione = annuncio['descrizione'] if modalità == 'modifica' else (request.form.get('descrizione', '')) %}
+{% set current_bio_utente = annuncio['bio_utente'] if modalità == 'modifica' else (request.form.get('bio_utente', '')) %}
+{% set current_prezzo = annuncio['prezzo'] if modalità == 'modifica' else (request.form.get('prezzo', '')) %}
+{% set current_telefono = annuncio['telefono'] if modalità == 'modifica' else (request.form.get('telefono', '')) %}
+{% set current_email = annuncio['email'] if modalità == 'modifica' else (request.form.get('email', '')) %}
+
+
   <form method="POST" enctype="multipart/form-data"
         action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalità == 'modifica' else url_for('nuovo_annuncio') }}"
         class="space-y-6"
@@ -30,7 +43,7 @@
     <div>
       <label for="username" class="block text-sm font-medium text-gray-700">Nome utente</label>
       <input type="text" id="username" name="username"
-             value="{{ annuncio['username'] if modalità == 'modifica' else (g.utente['username'] if g.utente else '') }}"
+             value="{{ current_username }}"
              class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
              placeholder="Il tuo username (puoi modificarlo)">
     </div>
@@ -51,7 +64,7 @@
             value="offro"
             class="accent-green-600"
             required
-            {% if modalità == 'modifica' and annuncio['tipo_annuncio'] == 'offro' %}checked{% endif %}
+            {% if current_tipo_annuncio == 'offro' %}checked{% endif %}
           >
           <span class="inline-flex items-center gap-1 text-sm font-medium
                        bg-green-100 text-green-700 px-3 py-1 rounded-full border border-green-200">
@@ -67,7 +80,7 @@
             value="cerco"
             class="accent-blue-600"
             required
-            {% if modalità == 'modifica' and annuncio['tipo_annuncio'] == 'cerco' %}checked{% endif %}
+            {% if current_tipo_annuncio == 'cerco' %}checked{% endif %}
           >
           <span class="inline-flex items-center gap-1 text-sm font-medium
                        bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
@@ -89,34 +102,34 @@
               class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
         <option value="">Seleziona una categoria</option>
         <option value="operatori benessere"
-          {% if modalità == 'modifica' and annuncio['categoria'] == 'operatori benessere' %}selected{% endif %}>
+          {% if current_categoria == 'operatori benessere' %}selected{% endif %}>
           Operatori benessere</option>
           <option value="babysitter"
-            {% if modalità == 'modifica' and annuncio['categoria'] == 'babysitter' %}selected{% endif %}>
+            {% if current_categoria == 'babysitter' %}selected{% endif %}>
             Babysitter</option>
         <option value="caregiver"
-          {% if modalità == 'modifica' and annuncio['categoria'] == 'caregiver' %}selected{% endif %}>
+          {% if current_categoria == 'caregiver' %}selected{% endif %}>
           Caregiver</option>
         <option value="petsitter"
-          {% if modalità == 'modifica' and annuncio['categoria'] == 'petsitter' %}selected{% endif %}>
+          {% if current_categoria == 'petsitter' %}selected{% endif %}>
           Pet-Sitter</option>
         <option value="ripetizioni"
-          {% if modalità == 'modifica' and annuncio['categoria'] == 'ripetizioni' %}selected{% endif %}>
+          {% if current_categoria == 'ripetizioni' %}selected{% endif %}>
           Ripetizioni</option>
         <option value="aiuto-in-casa"
-          {% if modalità == 'modifica' and annuncio['categoria'] == 'aiuto-in-casa' %}selected{% endif %}>
+          {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>
           Aiuto in casa</option>
         <option value="escursioni & sport"
-          {% if modalità == 'modifica' and annuncio['categoria'] == 'escursioni & sport' %}selected{% endif %}>
+          {% if current_categoria == 'escursioni & sport' %}selected{% endif %}>
           Gite / Compagni di allenamento</option>
         <option value="biglietti spettacoli"
-          {% if modalità == 'modifica' and annuncio['categoria'] == 'biglietti spettacoli' %}selected{% endif %}>
+          {% if current_categoria == 'biglietti spettacoli' %}selected{% endif %}>
           Biglietti spettacoli</option>
         <option value="libri scuola"
-          {% if modalità == 'modifica' and annuncio['categoria'] == 'libri scuola' %}selected{% endif %}>
+          {% if current_categoria == 'libri scuola' %}selected{% endif %}>
           Libri scuola</option>
           <option value="caffe & parole"
-            {% if modalità == 'modifica' and annuncio['categoria'] == 'caffe & parole' %}selected{% endif %}>
+            {% if current_categoria == 'caffe & parole' %}selected{% endif %}>
             Caffè & parole</option>
       </select>
     </div>
@@ -132,13 +145,13 @@
       <label for="zona" class="block text-sm font-medium text-gray-700">Zona</label>
 
       <input type="text" id="zona-autocomplete" name="zona" autocomplete="off" required
-             value="{{ annuncio['zona'] if modalità == 'modifica' else '' }}"
+             value="{{ current_zona }}"
              class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
              placeholder="Inserisci zona o comune">
 
       <!-- ✅ provincia certificata -->
       <input type="hidden" name="provincia" id="zona_provincia"
-             value="{{ annuncio['provincia'] if modalità == 'modifica' else '' }}">
+             value="{{ current_provincia }}">
 
       <ul id="zona-suggerimenti"
           class="absolute w-full mt-1 border border-gray-200 rounded-lg bg-white shadow-md hidden z-10 max-h-56 overflow-y-auto"></ul>
@@ -148,7 +161,7 @@
     <div>
       <label for="titolo" class="block text-sm font-medium text-gray-700">Titolo annuncio</label>
       <input type="text" id="titolo" name="titolo"
-             value="{{ annuncio['titolo'] if modalità == 'modifica' else '' }}"
+             value="{{ current_titolo }}"
              class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
              placeholder="Inserisci un titolo breve e chiaro" required>
     </div>
@@ -158,7 +171,7 @@
       <label for="descrizione" class="block text-sm font-medium text-gray-700">Descrizione dettagliata</label>
       <textarea id="descrizione" name="descrizione" rows="5" required
                 class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ annuncio['descrizione'] if modalità == 'modifica' else '' }}</textarea>
+                placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ current_descrizione }}</textarea>
     </div>
 
     <!-- Bio utente -->
@@ -166,14 +179,14 @@
       <label for="bio_utente" class="block text-sm font-medium text-gray-700">Breve descrizione di te</label>
       <textarea id="bio_utente" name="bio_utente" rows="3"
                 class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Parla brevemente di te stesso o della tua attività.">{{ annuncio['bio_utente'] if modalità == 'modifica' else '' }}</textarea>
+                placeholder="Parla brevemente di te stesso o della tua attività.">{{ current_bio_utente }}</textarea>
     </div>
 
     <!-- Prezzo -->
     <div>
       <label for="prezzo" class="block text-sm font-medium text-gray-700">Prezzo richiesto (opzionale)</label>
       <input type="text" id="prezzo" name="prezzo"
-             value="{{ annuncio['prezzo'] if modalità == 'modifica' else '' }}"
+             value="{{ current_prezzo }}"
              class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
              placeholder="Es. 25€/ora, trattabile...">
     </div>
@@ -183,14 +196,14 @@
       <div>
         <label for="telefono" class="block text-sm font-medium text-gray-700">Telefono (opzionale)</label>
         <input type="text" id="telefono" name="telefono"
-               value="{{ annuncio['telefono'] if modalità == 'modifica' else '' }}"
+               value="{{ current_telefono }}"
                class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
                placeholder="Numero di telefono">
       </div>
       <div>
         <label for="email" class="block text-sm font-medium text-gray-700">Email (opzionale)</label>
         <input type="email" id="email" name="email"
-              value="{{ annuncio['email'] if modalità == 'modifica' else '' }}"
+              value="{{ current_email }}"
                class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
                placeholder="Inserisci email per contatti diretti">
       </div>
