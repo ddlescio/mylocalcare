@@ -30,10 +30,12 @@
 {% set current_email = annuncio['email'] if modalità == 'modifica' else (request.form.get('email', '')) %}
 
 
-  <form method="POST" enctype="multipart/form-data"
-        action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalità == 'modifica' else url_for('nuovo_annuncio') }}"
-        class="space-y-6"
-        novalidate>
+<form id="annuncio-form"
+      method="POST"
+      enctype="multipart/form-data"
+      action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalità == 'modifica' else url_for('nuovo_annuncio') }}"
+      class="space-y-6"
+      novalidate>
 
     {% if modalità == "modifica" %}
       <input type="hidden" name="id_annuncio" value="{{ annuncio['id'] }}">
@@ -256,7 +258,7 @@
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  const form = document.querySelector("form");
+  const form = document.getElementById("annuncio-form");
   if (!form) return;
 
   const isNuovo = {{ 'true' if modalità != 'modifica' else 'false' }};
