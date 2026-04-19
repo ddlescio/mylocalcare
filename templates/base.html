@@ -1598,6 +1598,22 @@ body[data-chat="true"] #mobile-search-container {
 }
 </style>
 <style>
+/* ✅ Forza la visibilità del blocco avatar su mobile, anche nelle pagine chat */
+@media (max-width: 640px) {
+  body[data-chat="true"] nav .user-info {
+    display: flex !important;
+    align-items: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body[data-chat="true"] nav .user-info img,
+  body[data-chat="true"] nav .user-info span {
+    display: inline-block !important;
+  }
+}
+</style>
+<style>
 /* Sposta logo+titolo leggermente a sinistra sui dispositivi stretti */
 
 @media (max-width: 480px) {       /* iPhone e smartphone piccoli */

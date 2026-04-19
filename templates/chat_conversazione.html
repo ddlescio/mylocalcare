@@ -256,9 +256,18 @@ body {
 /* ✅ Nascondi solo su mobile */
 @media (max-width: 640px) {
   body[data-chat="true"] nav .user-info {
+    display: flex !important;
+    align-items: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body[data-chat="true"] nav .user-info span {
     display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
+  }
+
+  body[data-chat="true"] nav .user-info img {
+    display: block !important;
   }
 }
 </style>
