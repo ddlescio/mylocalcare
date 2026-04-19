@@ -1,0 +1,167 @@
+# Exported from Render on 2026-04-19T13:07:31Z
+version: "1"
+projects:
+- name: My project
+  environments:
+  - name: Production
+    services:
+    - type: web
+      name: mylocalcare
+      runtime: python
+      repo: https://github.com/ddlescio/mylocalcare
+      plan: standard
+      envVars:
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: INTERNAL_PUSH_TOKEN
+        sync: false
+      - key: RUNTIME_SERVICE
+        sync: false
+      - key: SOCKET_BASE_URL
+        sync: false
+      - key: APP_RUNTIME_ROLE
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_CLAIM_EMAIL
+        sync: false
+      - key: PYTHON_VERSION
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: MASTER_SECRET_KEY
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: FLASK_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DAILY_DOMAIN
+        sync: false
+      - key: DAILY_API_KEY
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      region: frankfurt
+      buildCommand: pip install -r requirements.txt
+      startCommand: mkdir -p /uploads/profili/copertine /uploads/profili/galleria && rm -rf /opt/render/project/src/static/uploads && ln -s /uploads /opt/render/project/src/static/uploads && gunicorn --worker-class gthread -w 3 --threads 8 --timeout 120 --bind 0.0.0.0:$PORT app:app
+      domains:
+      - mylocalcare.it
+      - www.mylocalcare.it
+      disk:
+        name: disk
+        mountPath: /uploads
+        sizeGB: 1
+      autoDeployTrigger: commit
+
+    - type: web
+      name: mylocalcare-chat
+      runtime: python
+      repo: https://github.com/ddlescio/mylocalcare
+      plan: starter
+      envVars:
+      - key: APP_BASE_URL
+        sync: false
+      - key: INTERNAL_PUSH_TOKEN
+        sync: false
+      - key: RUNTIME_SERVICE
+        sync: false
+      - key: SOCKET_BASE_URL
+        sync: false
+      - key: APP_RUNTIME_ROLE
+        sync: false
+      - key: UPLOAD_FOLDER
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_CLAIM_EMAIL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: PYTHON_VERSION
+        sync: false
+      - key: MASTER_SECRET_KEY
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: FLASK_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DAILY_DOMAIN
+        sync: false
+      - key: DAILY_API_KEY
+        sync: false
+      region: frankfurt
+      buildCommand: pip install -r requirements.txt
+      startCommand: gunicorn --worker-class eventlet -w 1 --worker-connections 1000 --timeout 0 --bind 0.0.0.0:$PORT app:app
+      domains:
+      - chat.mylocalcare.it
+      autoDeployTrigger: commit
+
+    - type: cron
+      name: localcare-sync-servizi-scaduti
+      runtime: python
+      repo: https://github.com/ddlescio/mylocalcare
+      plan: starter
+      envVars:
+      - key: APP_BASE_URL
+        sync: false
+      - key: INTERNAL_PUSH_TOKEN
+        sync: false
+      - key: RUNTIME_SERVICE
+        sync: false
+      - key: SOCKET_BASE_URL
+        sync: false
+      - key: APP_RUNTIME_ROLE
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_CLAIM_EMAIL
+        sync: false
+      - key: PYTHON_VERSION
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: MASTER_SECRET_KEY
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: FLASK_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DAILY_DOMAIN
+        sync: false
+      - key: DAILY_API_KEY
+        sync: false
+      schedule: "*/1 * * * *"
+      region: frankfurt
+      buildCommand: pip install -r requirements.txt
+      startCommand: python sync_servizi_scaduti.py
+      autoDeployTrigger: commit
