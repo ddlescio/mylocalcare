@@ -1277,13 +1277,26 @@ document.addEventListener("DOMContentLoaded", function () {
             // ✅ pointerdown = mouse + touch + no blur
             el.addEventListener("pointerdown", e => {
               e.preventDefault();
-              zonaInput.value = `${c.comune} (${c.provincia})`;
-              zonaHidden.value = c.comune;
-              provinciaHidden.value = c.provincia || "";
+
+              const comuneNorm = norm(c.comune);
+              const provinciaNorm = norm(c.provincia || "");
+
+              // Se comune e provincia coincidono (es. Oristano, Milano),
+              // trattiamo la scelta come filtro per PROVINCIA
+              if (comuneNorm && provinciaNorm && comuneNorm === provinciaNorm) {
+                zonaInput.value = c.provincia;
+                zonaHidden.value = "";
+                provinciaHidden.value = c.provincia || "";
+              } else {
+                zonaInput.value = `${c.comune} (${c.provincia})`;
+                zonaHidden.value = c.comune;
+                provinciaHidden.value = c.provincia || "";
+              }
+
               hasSelected = true;
               hideList();
             });
-
+            
             suggerimentiBox.appendChild(el);
           });
 
