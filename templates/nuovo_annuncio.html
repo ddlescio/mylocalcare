@@ -4,19 +4,32 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto mt-10 px-4 sm:px-0">
+<div class="max-w-4xl mx-auto mt-8 sm:mt-10 px-4 sm:px-0">
 
   <!-- 🔙 FRECCIA TORNA INDIETRO -->
   <a href="javascript:history.back()"
      class="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 mb-4">
-     <span class="text-xl">←</span>
-     Torna
+    <span class="text-xl">←</span>
+    Torna
   </a>
 
-  <div class="bg-white shadow-md rounded-2xl p-6 sm:p-8">
-    <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">
-      {{ "✏️ Modifica annuncio" if modalità == "modifica" else "📝 Crea un nuovo annuncio" }}
-    </h2>
+  <div class="bg-white shadow-md rounded-3xl p-5 sm:p-8 border border-gray-100">
+
+    <!-- HEADER PAGINA -->
+    <div class="mb-8 text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100 mb-4">
+        <span>📌</span>
+        <span>{{ "Gestione annuncio" if modalità == "modifica" else "Nuovo annuncio" }}</span>
+      </div>
+
+      <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900">
+        {{ "✏️ Modifica annuncio" if modalità == "modifica" else "📝 Crea un nuovo annuncio" }}
+      </h2>
+
+      <p class="mt-3 text-base text-gray-500 max-w-2xl mx-auto">
+        Compila i campi in modo chiaro e completo per rendere il tuo annuncio più efficace e facile da trovare.
+      </p>
+    </div>
 
     {% set current_username = annuncio['username'] if modalità == 'modifica' else (request.form.get('username') or (g.utente['username'] if g.utente else '')) %}
     {% set current_tipo_annuncio = annuncio['tipo_annuncio'] if modalità == 'modifica' else (request.form.get('tipo_annuncio', '')) %}
@@ -41,26 +54,33 @@
         <input type="hidden" name="id_annuncio" value="{{ annuncio['id'] }}">
       {% endif %}
 
-      <!-- SEZIONE 1: INFORMAZIONI BASE -->
-      <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900">Informazioni base</h3>
-          <p class="text-sm text-gray-500">Definisci il tipo di annuncio e dove deve comparire.</p>
+      <!-- SEZIONE 1 -->
+      <div class="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
+        <div class="flex flex-col gap-2">
+          <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold uppercase tracking-wide">
+            1 · Informazioni base
+          </span>
+          <h3 class="text-2xl font-bold text-slate-900">Impostazioni principali</h3>
+          <p class="text-sm sm:text-base text-slate-600">Definisci il tipo di annuncio e dove deve comparire.</p>
         </div>
 
         <!-- Username -->
-        <div>
-          <label for="username" class="block text-sm font-medium text-gray-700">Nome utente</label>
+        <div class="space-y-2">
+          <label for="username" class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Nome utente</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 font-semibold">visibile</span>
+          </label>
           <input type="text" id="username" name="username"
                  value="{{ current_username }}"
-                 class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                 class="block w-full border-2 border-slate-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
                  placeholder="Il tuo username (puoi modificarlo)">
         </div>
 
         <!-- Tipo annuncio -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Tipo di annuncio
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Tipo di annuncio</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">obbligatorio</span>
           </label>
 
           <div class="flex flex-wrap gap-4">
@@ -71,9 +91,8 @@
                 value="offro"
                 class="accent-green-600"
                 required
-                {% if current_tipo_annuncio == 'offro' %}checked{% endif %}
-              >
-              <span class="inline-flex items-center gap-1 text-sm font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full border border-green-200">
+                {% if current_tipo_annuncio == 'offro' %}checked{% endif %}>
+              <span class="inline-flex items-center gap-2 text-lg font-bold bg-green-100 text-green-700 px-4 py-2 rounded-full border border-green-200 shadow-sm">
                 🟢 Offro
               </span>
             </label>
@@ -85,71 +104,58 @@
                 value="cerco"
                 class="accent-blue-600"
                 required
-                {% if current_tipo_annuncio == 'cerco' %}checked{% endif %}
-              >
-              <span class="inline-flex items-center gap-1 text-sm font-medium bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
+                {% if current_tipo_annuncio == 'cerco' %}checked{% endif %}>
+              <span class="inline-flex items-center gap-2 text-lg font-bold bg-blue-100 text-blue-700 px-4 py-2 rounded-full border border-blue-200 shadow-sm">
                 🔵 Cerco
               </span>
             </label>
           </div>
 
-          <p class="text-xs text-gray-500 mt-2">
-            Seleziona se stai offrendo qualcosa o se stai cercando
+          <p class="text-sm text-slate-500">
+            Seleziona se stai offrendo qualcosa o se stai cercando.
           </p>
         </div>
 
         <!-- Categoria -->
-        <div>
-          <label for="categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
+        <div class="space-y-2">
+          <label for="categoria" class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Categoria</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">obbligatorio</span>
+          </label>
           <select id="categoria" name="categoria" required
-                  class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                  class="block w-full border-2 border-slate-200 rounded-2xl p-3.5 text-slate-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm">
             <option value="">Seleziona una categoria</option>
-            <option value="operatori benessere" {% if current_categoria == 'operatori benessere' %}selected{% endif %}>
-              Operatori benessere
-            </option>
-            <option value="babysitter" {% if current_categoria == 'babysitter' %}selected{% endif %}>
-              Babysitter
-            </option>
-            <option value="caregiver" {% if current_categoria == 'caregiver' %}selected{% endif %}>
-              Caregiver
-            </option>
-            <option value="petsitter" {% if current_categoria == 'petsitter' %}selected{% endif %}>
-              Pet-Sitter
-            </option>
-            <option value="ripetizioni" {% if current_categoria == 'ripetizioni' %}selected{% endif %}>
-              Ripetizioni
-            </option>
-            <option value="aiuto-in-casa" {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>
-              Aiuto in casa
-            </option>
-            <option value="escursioni & sport" {% if current_categoria == 'escursioni & sport' %}selected{% endif %}>
-              Gite / Compagni di allenamento
-            </option>
-            <option value="biglietti spettacoli" {% if current_categoria == 'biglietti spettacoli' %}selected{% endif %}>
-              Biglietti spettacoli
-            </option>
-            <option value="libri scuola" {% if current_categoria == 'libri scuola' %}selected{% endif %}>
-              Libri scuola
-            </option>
-            <option value="caffe & parole" {% if current_categoria == 'caffe & parole' %}selected{% endif %}>
-              Caffè & parole
-            </option>
+            <option value="operatori benessere" {% if current_categoria == 'operatori benessere' %}selected{% endif %}>Operatori benessere</option>
+            <option value="babysitter" {% if current_categoria == 'babysitter' %}selected{% endif %}>Babysitter</option>
+            <option value="caregiver" {% if current_categoria == 'caregiver' %}selected{% endif %}>Caregiver</option>
+            <option value="petsitter" {% if current_categoria == 'petsitter' %}selected{% endif %}>Pet-Sitter</option>
+            <option value="ripetizioni" {% if current_categoria == 'ripetizioni' %}selected{% endif %}>Ripetizioni</option>
+            <option value="aiuto-in-casa" {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>Aiuto in casa</option>
+            <option value="escursioni & sport" {% if current_categoria == 'escursioni & sport' %}selected{% endif %}>Gite / Compagni di allenamento</option>
+            <option value="biglietti spettacoli" {% if current_categoria == 'biglietti spettacoli' %}selected{% endif %}>Biglietti spettacoli</option>
+            <option value="libri scuola" {% if current_categoria == 'libri scuola' %}selected{% endif %}>Libri scuola</option>
+            <option value="caffe & parole" {% if current_categoria == 'caffe & parole' %}selected{% endif %}>Caffè & parole</option>
           </select>
         </div>
 
         <!-- Filtri dinamici -->
         <div id="filtri-container" class="hidden mt-2">
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Filtri specifici</label>
+          <label class="flex items-center gap-2 text-base font-bold text-slate-800 mb-2">
+            <span>Filtri specifici</span>
+          </label>
           <div id="filtri-checkboxes" class="flex flex-wrap gap-2"></div>
         </div>
 
         <!-- Zona -->
-        <div class="relative">
-          <label for="zona" class="block text-sm font-medium text-gray-700">Zona</label>
+        <div class="relative space-y-2">
+          <label for="zona" class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Zona</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">obbligatorio</span>
+          </label>
 
           <input type="text" id="zona-autocomplete" name="zona" autocomplete="off" required
                  value="{{ current_zona }}"
-                 class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                 class="block w-full border-2 border-slate-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
                  placeholder="Inserisci zona o comune">
 
           <input type="hidden" name="provincia" id="zona_provincia"
@@ -160,94 +166,123 @@
         </div>
       </div>
 
-      <!-- SEZIONE 2: CONTENUTO ANNUNCIO -->
-      <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900">Contenuto annuncio</h3>
-          <p class="text-sm text-gray-500">Scrivi in modo chiaro cosa offri o cosa stai cercando.</p>
+      <!-- SEZIONE 2 -->
+      <div class="bg-gradient-to-br from-blue-50/60 to-indigo-50/40 border border-blue-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
+        <div class="flex flex-col gap-2">
+          <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-bold uppercase tracking-wide">
+            2 · Contenuto annuncio
+          </span>
+          <h3 class="text-2xl font-bold text-slate-900">Presentazione</h3>
+          <p class="text-sm sm:text-base text-slate-600">Scrivi in modo chiaro cosa offri o cosa stai cercando.</p>
         </div>
 
         <!-- Titolo -->
-        <div>
-          <label for="titolo" class="block text-sm font-medium text-gray-700">Titolo annuncio</label>
+        <div class="space-y-2">
+          <label for="titolo" class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Titolo annuncio</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">obbligatorio</span>
+          </label>
           <input type="text" id="titolo" name="titolo"
                  value="{{ current_titolo }}"
-                 class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                 class="block w-full border-2 border-blue-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
                  placeholder="Inserisci un titolo breve e chiaro" required>
         </div>
 
         <!-- Descrizione -->
-        <div>
-          <label for="descrizione" class="block text-sm font-medium text-gray-700">Descrizione dettagliata</label>
+        <div class="space-y-2">
+          <label for="descrizione" class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Descrizione dettagliata</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">obbligatorio</span>
+          </label>
           <textarea id="descrizione" name="descrizione" rows="5" required
-                    class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    class="block w-full border-2 border-blue-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
                     placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ current_descrizione }}</textarea>
         </div>
 
         <!-- Bio utente -->
-        <div>
-          <label for="bio_utente" class="block text-sm font-medium text-gray-700">Breve descrizione di te</label>
+        <div class="space-y-2">
+          <label for="bio_utente" class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Breve descrizione di te</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
+          </label>
           <textarea id="bio_utente" name="bio_utente" rows="3"
-                    class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    class="block w-full border-2 border-blue-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
                     placeholder="Parla brevemente di te stesso o della tua attività.">{{ current_bio_utente }}</textarea>
         </div>
       </div>
 
-      <!-- SEZIONE 3: DETTAGLI E CONTATTI -->
-      <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900">Dettagli e contatti</h3>
-          <p class="text-sm text-gray-500">Aggiungi informazioni utili per chi visualizza l’annuncio.</p>
+      <!-- SEZIONE 3 -->
+      <div class="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 border border-emerald-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
+        <div class="flex flex-col gap-2">
+          <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold uppercase tracking-wide">
+            3 · Dettagli e contatti
+          </span>
+          <h3 class="text-2xl font-bold text-slate-900">Informazioni aggiuntive</h3>
+          <p class="text-sm sm:text-base text-slate-600">Aggiungi informazioni utili per chi visualizza l’annuncio.</p>
         </div>
 
         <!-- Prezzo -->
-        <div>
-          <label for="prezzo" class="block text-sm font-medium text-gray-700">Prezzo richiesto (opzionale)</label>
+        <div class="space-y-2">
+          <label for="prezzo" class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Prezzo richiesto</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
+          </label>
           <input type="text" id="prezzo" name="prezzo"
                  value="{{ current_prezzo }}"
-                 class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                 class="block w-full border-2 border-emerald-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 bg-white shadow-sm"
                  placeholder="Es. 25€/ora, trattabile...">
         </div>
 
         <!-- Contatti -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label for="telefono" class="block text-sm font-medium text-gray-700">Telefono (opzionale)</label>
+          <div class="space-y-2">
+            <label for="telefono" class="flex items-center gap-2 text-base font-bold text-slate-800">
+              <span>Telefono</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
+            </label>
             <input type="text" id="telefono" name="telefono"
                    value="{{ current_telefono }}"
-                   class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                   class="block w-full border-2 border-emerald-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 bg-white shadow-sm"
                    placeholder="Numero di telefono">
           </div>
-          <div>
-            <label for="email" class="block text-sm font-medium text-gray-700">Email (opzionale)</label>
+          <div class="space-y-2">
+            <label for="email" class="flex items-center gap-2 text-base font-bold text-slate-800">
+              <span>Email</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
+            </label>
             <input type="email" id="email" name="email"
                    value="{{ current_email }}"
-                   class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                   class="block w-full border-2 border-emerald-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 bg-white shadow-sm"
                    placeholder="Inserisci email per contatti diretti">
           </div>
         </div>
       </div>
 
-      <!-- SEZIONE 4: MEDIA -->
-      <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900">Media</h3>
-          <p class="text-sm text-gray-500">Carica immagini o video per rendere l’annuncio più efficace.</p>
+      <!-- SEZIONE 4 -->
+      <div class="bg-gradient-to-br from-amber-50/60 to-orange-50/40 border border-amber-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
+        <div class="flex flex-col gap-2">
+          <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-bold uppercase tracking-wide">
+            4 · Media
+          </span>
+          <h3 class="text-2xl font-bold text-slate-900">Immagini e video</h3>
+          <p class="text-sm sm:text-base text-slate-600">Carica immagini o video per rendere l’annuncio più efficace.</p>
         </div>
 
-        <!-- Allegati -->
-        <div>
-          <label for="media" class="block text-sm font-medium text-gray-700">Immagini o video (opzionali)</label>
+        <div class="space-y-2">
+          <label for="media" class="flex items-center gap-2 text-base font-bold text-slate-800">
+            <span>Immagini o video</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
+          </label>
           <input type="file" id="media" name="media" multiple accept="image/*,video/*"
-                 class="mt-1 block w-full text-sm text-gray-700 border border-gray-300 rounded-xl cursor-pointer bg-white focus:outline-none p-3">
-          <p class="text-xs text-gray-500 mt-1">Puoi caricare più file (max 10MB ciascuno)</p>
+                 class="block w-full text-sm text-slate-700 border-2 border-amber-200 rounded-2xl cursor-pointer bg-white focus:outline-none p-3.5 shadow-sm">
+          <p class="text-xs text-slate-500 mt-1">Puoi caricare più file (max 10MB ciascuno)</p>
 
           {% if modalità == 'modifica' and annuncio['media'] %}
             <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
               {% for img in annuncio['media'].split(',') if img.strip() %}
                 <div class="relative group">
                   <img src="{{ url_for('static', filename=img.strip()) }}"
-                       class="rounded-xl w-full h-32 object-cover border border-gray-200">
+                       class="rounded-2xl w-full h-32 object-cover border border-gray-200 shadow-sm">
                   <label class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs cursor-pointer hidden group-hover:block">
                     <input type="checkbox" name="cancellate" value="{{ img.strip() }}" class="hidden">
                     ✕
@@ -263,7 +298,7 @@
       <div class="pt-2">
         <button type="button"
                 id="submit-annuncio-btn"
-                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-sm transition">
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3.5 rounded-2xl font-bold shadow-md transition">
           {{ "💾 Salva modifiche" if modalità == "modifica" else "📢 Pubblica annuncio" }}
         </button>
       </div>
