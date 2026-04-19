@@ -132,7 +132,7 @@ projects:
         sync: false
       - key: APP_RUNTIME_ROLE
         sync: false
-      - key: UPLOAD_FOLDER
+      - key: UPLOAD_BASE_DIR
         value: /tmp/uploads
       - key: REDIS_URL
         sync: false
