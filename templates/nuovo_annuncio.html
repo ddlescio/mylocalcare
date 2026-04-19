@@ -4,7 +4,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto mt-10 bg-white shadow-md rounded-2xl p-8">
+<div class="max-w-4xl mx-auto mt-10 px-4 sm:px-0">
 
   <!-- 🔙 FRECCIA TORNA INDIETRO -->
   <a href="javascript:history.back()"
@@ -13,236 +13,262 @@
      Torna
   </a>
 
-  <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">
-    {{ "✏️ Modifica annuncio" if modalità == "modifica" else "📝 Crea un nuovo annuncio" }}
-  </h2>
+  <div class="bg-white shadow-md rounded-2xl p-6 sm:p-8">
+    <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">
+      {{ "✏️ Modifica annuncio" if modalità == "modifica" else "📝 Crea un nuovo annuncio" }}
+    </h2>
 
-  {% set current_username = annuncio['username'] if modalità == 'modifica' else (request.form.get('username') or (g.utente['username'] if g.utente else '')) %}
-{% set current_tipo_annuncio = annuncio['tipo_annuncio'] if modalità == 'modifica' else (request.form.get('tipo_annuncio', '')) %}
-{% set current_categoria = annuncio['categoria'] if modalità == 'modifica' else (request.form.get('categoria', '')) %}
-{% set current_zona = annuncio['zona'] if modalità == 'modifica' else (request.form.get('zona', '')) %}
-{% set current_provincia = annuncio['provincia'] if modalità == 'modifica' else (request.form.get('provincia', '')) %}
-{% set current_titolo = annuncio['titolo'] if modalità == 'modifica' else (request.form.get('titolo', '')) %}
-{% set current_descrizione = annuncio['descrizione'] if modalità == 'modifica' else (request.form.get('descrizione', '')) %}
-{% set current_bio_utente = annuncio['bio_utente'] if modalità == 'modifica' else (request.form.get('bio_utente', '')) %}
-{% set current_prezzo = annuncio['prezzo'] if modalità == 'modifica' else (request.form.get('prezzo', '')) %}
-{% set current_telefono = annuncio['telefono'] if modalità == 'modifica' else (request.form.get('telefono', '')) %}
-{% set current_email = annuncio['email'] if modalità == 'modifica' else (request.form.get('email', '')) %}
+    {% set current_username = annuncio['username'] if modalità == 'modifica' else (request.form.get('username') or (g.utente['username'] if g.utente else '')) %}
+    {% set current_tipo_annuncio = annuncio['tipo_annuncio'] if modalità == 'modifica' else (request.form.get('tipo_annuncio', '')) %}
+    {% set current_categoria = annuncio['categoria'] if modalità == 'modifica' else (request.form.get('categoria', '')) %}
+    {% set current_zona = annuncio['zona'] if modalità == 'modifica' else (request.form.get('zona', '')) %}
+    {% set current_provincia = annuncio['provincia'] if modalità == 'modifica' else (request.form.get('provincia', '')) %}
+    {% set current_titolo = annuncio['titolo'] if modalità == 'modifica' else (request.form.get('titolo', '')) %}
+    {% set current_descrizione = annuncio['descrizione'] if modalità == 'modifica' else (request.form.get('descrizione', '')) %}
+    {% set current_bio_utente = annuncio['bio_utente'] if modalità == 'modifica' else (request.form.get('bio_utente', '')) %}
+    {% set current_prezzo = annuncio['prezzo'] if modalità == 'modifica' else (request.form.get('prezzo', '')) %}
+    {% set current_telefono = annuncio['telefono'] if modalità == 'modifica' else (request.form.get('telefono', '')) %}
+    {% set current_email = annuncio['email'] if modalità == 'modifica' else (request.form.get('email', '')) %}
 
+    <form id="annuncio-form"
+          method="POST"
+          enctype="multipart/form-data"
+          action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalità == 'modifica' else url_for('nuovo_annuncio') }}"
+          class="space-y-8"
+          novalidate>
 
-<form id="annuncio-form"
-      method="POST"
-      enctype="multipart/form-data"
-      action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalità == 'modifica' else url_for('nuovo_annuncio') }}"
-      class="space-y-6"
-      novalidate>
-
-    {% if modalità == "modifica" %}
-      <input type="hidden" name="id_annuncio" value="{{ annuncio['id'] }}">
-    {% endif %}
-
-    <!-- Username -->
-    <div>
-      <label for="username" class="block text-sm font-medium text-gray-700">Nome utente</label>
-      <input type="text" id="username" name="username"
-             value="{{ current_username }}"
-             class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-             placeholder="Il tuo username (puoi modificarlo)">
-    </div>
-
-    <!-- 🔹 TIPO ANNUNCIO -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">
-        Tipo di annuncio
-      </label>
-
-      <div class="flex gap-4">
-
-        <!-- OFFRO -->
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="tipo_annuncio"
-            value="offro"
-            class="accent-green-600"
-            required
-            {% if current_tipo_annuncio == 'offro' %}checked{% endif %}
-          >
-          <span class="inline-flex items-center gap-1 text-sm font-medium
-                       bg-green-100 text-green-700 px-3 py-1 rounded-full border border-green-200">
-            🟢 Offro
-          </span>
-        </label>
-
-        <!-- CERCO -->
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="tipo_annuncio"
-            value="cerco"
-            class="accent-blue-600"
-            required
-            {% if current_tipo_annuncio == 'cerco' %}checked{% endif %}
-          >
-          <span class="inline-flex items-center gap-1 text-sm font-medium
-                       bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
-            🔵 Cerco
-          </span>
-        </label>
-
-      </div>
-
-      <p class="text-xs text-gray-500 mt-1">
-        Seleziona se stai offrendo qualcosa o se stai cercando
-      </p>
-    </div>
-
-    <!-- Categoria -->
-    <div>
-      <label for="categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
-      <select id="categoria" name="categoria" required
-              class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
-        <option value="">Seleziona una categoria</option>
-        <option value="operatori benessere"
-          {% if current_categoria == 'operatori benessere' %}selected{% endif %}>
-          Operatori benessere</option>
-          <option value="babysitter"
-            {% if current_categoria == 'babysitter' %}selected{% endif %}>
-            Babysitter</option>
-        <option value="caregiver"
-          {% if current_categoria == 'caregiver' %}selected{% endif %}>
-          Caregiver</option>
-        <option value="petsitter"
-          {% if current_categoria == 'petsitter' %}selected{% endif %}>
-          Pet-Sitter</option>
-        <option value="ripetizioni"
-          {% if current_categoria == 'ripetizioni' %}selected{% endif %}>
-          Ripetizioni</option>
-        <option value="aiuto-in-casa"
-          {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>
-          Aiuto in casa</option>
-        <option value="escursioni & sport"
-          {% if current_categoria == 'escursioni & sport' %}selected{% endif %}>
-          Gite / Compagni di allenamento</option>
-        <option value="biglietti spettacoli"
-          {% if current_categoria == 'biglietti spettacoli' %}selected{% endif %}>
-          Biglietti spettacoli</option>
-        <option value="libri scuola"
-          {% if current_categoria == 'libri scuola' %}selected{% endif %}>
-          Libri scuola</option>
-          <option value="caffe & parole"
-            {% if current_categoria == 'caffe & parole' %}selected{% endif %}>
-            Caffè & parole</option>
-      </select>
-    </div>
-
-    <!-- 🔹 Filtri dinamici -->
-    <div id="filtri-container" class="hidden mt-2">
-      <label class="block text-sm font-semibold text-gray-700 mb-2">Filtri specifici</label>
-      <div id="filtri-checkboxes" class="flex flex-wrap gap-2"></div>
-    </div>
-
-    <!-- Zona -->
-    <div class="relative">
-      <label for="zona" class="block text-sm font-medium text-gray-700">Zona</label>
-
-      <input type="text" id="zona-autocomplete" name="zona" autocomplete="off" required
-             value="{{ current_zona }}"
-             class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-             placeholder="Inserisci zona o comune">
-
-      <!-- ✅ provincia certificata -->
-      <input type="hidden" name="provincia" id="zona_provincia"
-             value="{{ current_provincia }}">
-
-      <ul id="zona-suggerimenti"
-          class="absolute w-full mt-1 border border-gray-200 rounded-lg bg-white shadow-md hidden z-10 max-h-56 overflow-y-auto"></ul>
-    </div>
-
-    <!-- Titolo -->
-    <div>
-      <label for="titolo" class="block text-sm font-medium text-gray-700">Titolo annuncio</label>
-      <input type="text" id="titolo" name="titolo"
-             value="{{ current_titolo }}"
-             class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-             placeholder="Inserisci un titolo breve e chiaro" required>
-    </div>
-
-    <!-- Descrizione -->
-    <div>
-      <label for="descrizione" class="block text-sm font-medium text-gray-700">Descrizione dettagliata</label>
-      <textarea id="descrizione" name="descrizione" rows="5" required
-                class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ current_descrizione }}</textarea>
-    </div>
-
-    <!-- Bio utente -->
-    <div>
-      <label for="bio_utente" class="block text-sm font-medium text-gray-700">Breve descrizione di te</label>
-      <textarea id="bio_utente" name="bio_utente" rows="3"
-                class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Parla brevemente di te stesso o della tua attività.">{{ current_bio_utente }}</textarea>
-    </div>
-
-    <!-- Prezzo -->
-    <div>
-      <label for="prezzo" class="block text-sm font-medium text-gray-700">Prezzo richiesto (opzionale)</label>
-      <input type="text" id="prezzo" name="prezzo"
-             value="{{ current_prezzo }}"
-             class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-             placeholder="Es. 25€/ora, trattabile...">
-    </div>
-
-    <!-- Contatti -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div>
-        <label for="telefono" class="block text-sm font-medium text-gray-700">Telefono (opzionale)</label>
-        <input type="text" id="telefono" name="telefono"
-               value="{{ current_telefono }}"
-               class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-               placeholder="Numero di telefono">
-      </div>
-      <div>
-        <label for="email" class="block text-sm font-medium text-gray-700">Email (opzionale)</label>
-        <input type="email" id="email" name="email"
-              value="{{ current_email }}"
-               class="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
-               placeholder="Inserisci email per contatti diretti">
-      </div>
-    </div>
-
-    <!-- Allegati -->
-    <div>
-      <label for="media" class="block text-sm font-medium text-gray-700">Immagini o video (opzionali)</label>
-      <input type="file" id="media" name="media" multiple accept="image/*,video/*"
-             class="mt-1 block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
-      <p class="text-xs text-gray-500 mt-1">Puoi caricare più file (max 10MB ciascuno)</p>
-
-      {% if modalità == 'modifica' and annuncio['media'] %}
-        <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {% for img in annuncio['media'].split(',') if img.strip() %}
-            <div class="relative group">
-              <img src="{{ url_for('static', filename=img.strip()) }}"
-                   class="rounded-lg w-full h-32 object-cover border border-gray-200">
-              <label class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs cursor-pointer hidden group-hover:block">
-                <input type="checkbox" name="cancellate" value="{{ img.strip() }}" class="hidden">
-                ✕
-              </label>
-            </div>
-          {% endfor %}
-        </div>
+      {% if modalità == "modifica" %}
+        <input type="hidden" name="id_annuncio" value="{{ annuncio['id'] }}">
       {% endif %}
-    </div>
 
-    <!-- Pulsante -->
-    <div class="text-center pt-4">
-      <button type="button"
-              id="submit-annuncio-btn"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">
-        {{ "💾 Salva modifiche" if modalità == "modifica" else "📢 Pubblica annuncio" }}
-      </button>
-    </div>
-  </form>
+      <!-- SEZIONE 1: INFORMAZIONI BASE -->
+      <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Informazioni base</h3>
+          <p class="text-sm text-gray-500">Definisci il tipo di annuncio e dove deve comparire.</p>
+        </div>
+
+        <!-- Username -->
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-700">Nome utente</label>
+          <input type="text" id="username" name="username"
+                 value="{{ current_username }}"
+                 class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                 placeholder="Il tuo username (puoi modificarlo)">
+        </div>
+
+        <!-- Tipo annuncio -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Tipo di annuncio
+          </label>
+
+          <div class="flex flex-wrap gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="tipo_annuncio"
+                value="offro"
+                class="accent-green-600"
+                required
+                {% if current_tipo_annuncio == 'offro' %}checked{% endif %}
+              >
+              <span class="inline-flex items-center gap-1 text-sm font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full border border-green-200">
+                🟢 Offro
+              </span>
+            </label>
+
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="tipo_annuncio"
+                value="cerco"
+                class="accent-blue-600"
+                required
+                {% if current_tipo_annuncio == 'cerco' %}checked{% endif %}
+              >
+              <span class="inline-flex items-center gap-1 text-sm font-medium bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
+                🔵 Cerco
+              </span>
+            </label>
+          </div>
+
+          <p class="text-xs text-gray-500 mt-2">
+            Seleziona se stai offrendo qualcosa o se stai cercando
+          </p>
+        </div>
+
+        <!-- Categoria -->
+        <div>
+          <label for="categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
+          <select id="categoria" name="categoria" required
+                  class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+            <option value="">Seleziona una categoria</option>
+            <option value="operatori benessere" {% if current_categoria == 'operatori benessere' %}selected{% endif %}>
+              Operatori benessere
+            </option>
+            <option value="babysitter" {% if current_categoria == 'babysitter' %}selected{% endif %}>
+              Babysitter
+            </option>
+            <option value="caregiver" {% if current_categoria == 'caregiver' %}selected{% endif %}>
+              Caregiver
+            </option>
+            <option value="petsitter" {% if current_categoria == 'petsitter' %}selected{% endif %}>
+              Pet-Sitter
+            </option>
+            <option value="ripetizioni" {% if current_categoria == 'ripetizioni' %}selected{% endif %}>
+              Ripetizioni
+            </option>
+            <option value="aiuto-in-casa" {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>
+              Aiuto in casa
+            </option>
+            <option value="escursioni & sport" {% if current_categoria == 'escursioni & sport' %}selected{% endif %}>
+              Gite / Compagni di allenamento
+            </option>
+            <option value="biglietti spettacoli" {% if current_categoria == 'biglietti spettacoli' %}selected{% endif %}>
+              Biglietti spettacoli
+            </option>
+            <option value="libri scuola" {% if current_categoria == 'libri scuola' %}selected{% endif %}>
+              Libri scuola
+            </option>
+            <option value="caffe & parole" {% if current_categoria == 'caffe & parole' %}selected{% endif %}>
+              Caffè & parole
+            </option>
+          </select>
+        </div>
+
+        <!-- Filtri dinamici -->
+        <div id="filtri-container" class="hidden mt-2">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Filtri specifici</label>
+          <div id="filtri-checkboxes" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Zona -->
+        <div class="relative">
+          <label for="zona" class="block text-sm font-medium text-gray-700">Zona</label>
+
+          <input type="text" id="zona-autocomplete" name="zona" autocomplete="off" required
+                 value="{{ current_zona }}"
+                 class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                 placeholder="Inserisci zona o comune">
+
+          <input type="hidden" name="provincia" id="zona_provincia"
+                 value="{{ current_provincia }}">
+
+          <ul id="zona-suggerimenti"
+              class="absolute w-full mt-1 border border-gray-200 rounded-xl bg-white shadow-md hidden z-10 max-h-56 overflow-y-auto"></ul>
+        </div>
+      </div>
+
+      <!-- SEZIONE 2: CONTENUTO ANNUNCIO -->
+      <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Contenuto annuncio</h3>
+          <p class="text-sm text-gray-500">Scrivi in modo chiaro cosa offri o cosa stai cercando.</p>
+        </div>
+
+        <!-- Titolo -->
+        <div>
+          <label for="titolo" class="block text-sm font-medium text-gray-700">Titolo annuncio</label>
+          <input type="text" id="titolo" name="titolo"
+                 value="{{ current_titolo }}"
+                 class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                 placeholder="Inserisci un titolo breve e chiaro" required>
+        </div>
+
+        <!-- Descrizione -->
+        <div>
+          <label for="descrizione" class="block text-sm font-medium text-gray-700">Descrizione dettagliata</label>
+          <textarea id="descrizione" name="descrizione" rows="5" required
+                    class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ current_descrizione }}</textarea>
+        </div>
+
+        <!-- Bio utente -->
+        <div>
+          <label for="bio_utente" class="block text-sm font-medium text-gray-700">Breve descrizione di te</label>
+          <textarea id="bio_utente" name="bio_utente" rows="3"
+                    class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    placeholder="Parla brevemente di te stesso o della tua attività.">{{ current_bio_utente }}</textarea>
+        </div>
+      </div>
+
+      <!-- SEZIONE 3: DETTAGLI E CONTATTI -->
+      <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Dettagli e contatti</h3>
+          <p class="text-sm text-gray-500">Aggiungi informazioni utili per chi visualizza l’annuncio.</p>
+        </div>
+
+        <!-- Prezzo -->
+        <div>
+          <label for="prezzo" class="block text-sm font-medium text-gray-700">Prezzo richiesto (opzionale)</label>
+          <input type="text" id="prezzo" name="prezzo"
+                 value="{{ current_prezzo }}"
+                 class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                 placeholder="Es. 25€/ora, trattabile...">
+        </div>
+
+        <!-- Contatti -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="telefono" class="block text-sm font-medium text-gray-700">Telefono (opzionale)</label>
+            <input type="text" id="telefono" name="telefono"
+                   value="{{ current_telefono }}"
+                   class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                   placeholder="Numero di telefono">
+          </div>
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">Email (opzionale)</label>
+            <input type="email" id="email" name="email"
+                   value="{{ current_email }}"
+                   class="mt-1 block w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                   placeholder="Inserisci email per contatti diretti">
+          </div>
+        </div>
+      </div>
+
+      <!-- SEZIONE 4: MEDIA -->
+      <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Media</h3>
+          <p class="text-sm text-gray-500">Carica immagini o video per rendere l’annuncio più efficace.</p>
+        </div>
+
+        <!-- Allegati -->
+        <div>
+          <label for="media" class="block text-sm font-medium text-gray-700">Immagini o video (opzionali)</label>
+          <input type="file" id="media" name="media" multiple accept="image/*,video/*"
+                 class="mt-1 block w-full text-sm text-gray-700 border border-gray-300 rounded-xl cursor-pointer bg-white focus:outline-none p-3">
+          <p class="text-xs text-gray-500 mt-1">Puoi caricare più file (max 10MB ciascuno)</p>
+
+          {% if modalità == 'modifica' and annuncio['media'] %}
+            <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {% for img in annuncio['media'].split(',') if img.strip() %}
+                <div class="relative group">
+                  <img src="{{ url_for('static', filename=img.strip()) }}"
+                       class="rounded-xl w-full h-32 object-cover border border-gray-200">
+                  <label class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs cursor-pointer hidden group-hover:block">
+                    <input type="checkbox" name="cancellate" value="{{ img.strip() }}" class="hidden">
+                    ✕
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- PULSANTE -->
+      <div class="pt-2">
+        <button type="button"
+                id="submit-annuncio-btn"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-sm transition">
+          {{ "💾 Salva modifiche" if modalità == "modifica" else "📢 Pubblica annuncio" }}
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- ✅ Filtri selezionati per la modalità modifica -->
