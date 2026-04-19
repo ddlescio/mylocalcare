@@ -252,10 +252,11 @@ def _get_servizio_by_codice(conn, codice_servizio: str) -> Optional[dict]:
         LIMIT 1
     """, (codice_servizio,))
 
-def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: Optional[int]) -> Optional[dict]:
+
+def _get_active_activations(conn, utente_id: int, servizio_id: int, annuncio_id: Optional[int]) -> List[dict]:
     # se annuncio_id è NULL, cerchiamo attivazioni globali/profilo (annuncio_id IS NULL)
     if annuncio_id is None:
-        return _fetchone(conn, f"""
+        return _fetchall(conn, f"""
             SELECT id, data_inizio, data_fine, stato
             FROM attivazioni_servizi
             WHERE utente_id = ?
@@ -265,10 +266,9 @@ def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: 
               AND {dt_sql("data_inizio")} <= {_now_sql()}
               AND (data_fine IS NULL OR {dt_sql("data_fine")} > {_now_sql()})
             ORDER BY {dt_sql("data_fine")} DESC NULLS FIRST, id DESC
-            LIMIT 1
         """, (utente_id, servizio_id))
     else:
-        return _fetchone(conn, f"""
+        return _fetchall(conn, f"""
             SELECT id, data_inizio, data_fine, stato
             FROM attivazioni_servizi
             WHERE utente_id = ?
@@ -278,7 +278,6 @@ def _get_active_activation(conn, utente_id: int, servizio_id: int, annuncio_id: 
               AND {dt_sql("data_inizio")} <= {_now_sql()}
               AND (data_fine IS NULL OR {dt_sql("data_fine")} > {_now_sql()})
             ORDER BY {dt_sql("data_fine")} DESC NULLS FIRST, id DESC
-            LIMIT 1
         """, (utente_id, servizio_id, annuncio_id))
 
 def _validate_annuncio_owner(conn, annuncio_id: int, utente_id: int) -> bool:
@@ -351,9 +350,9 @@ def attiva_servizio(
                 return False, "Durata non valida.", None
 
         # -------------------------------
-        # 2️⃣ ATTIVAZIONE ATTIVA CORRENTE
+        # 2️⃣ ATTIVAZIONI ATTIVE CORRENTI
         # -------------------------------
-        last = _get_active_activation(
+        active_rows = _get_active_activations(
             conn=conn,
             utente_id=utente_id,
             servizio_id=s["id"],
@@ -367,53 +366,100 @@ def attiva_servizio(
         # - se esiste già una attivazione attiva dello stesso servizio
         #   per lo stesso utente/annuncio, si considera sempre rinnovo
         # - il rinnovo NON modifica in-place la vecchia attivazione
-        # - la vecchia attivazione viene solo marcata come scaduta
+        # - le vecchie attivazioni attive vengono marcate come "rinnovato"
+        #   oppure assorbite dal permanente nel caso speciale di contatti
         #   lasciando intatta la sua data_fine originale
         # - si crea una NUOVA attivazione con nuova scadenza:
         #   residuo precedente + nuova durata
         # -------------------------------
-        if last and last["stato"] == "attivo":
+        if active_rows:
 
-            if last["data_fine"] is None:
+            permanent_row = next(
+                (row for row in active_rows if row["data_fine"] is None),
+                None
+            )
+
+            if permanent_row is not None:
+                # Caso speciale:
+                # esiste già "contatti" permanente attivo e arriva una nuova
+                # attivazione temporanea (es. pacchetto a scadenza).
+                # In questo caso NON creiamo una nuova riga temporanea,
+                # NON tocchiamo il permanente e consideriamo il servizio già coperto.
+                if s["codice"] == "contatti" and durata_finale is not None:
+
+                    # Se per errore esistono anche vecchie attivazioni temporanee ancora attive,
+                    # le chiudiamo per mantenere una sola attivazione attiva effettiva.
+                    for row in active_rows:
+                        if row["id"] == permanent_row["id"]:
+                            continue
+
+                        cur.execute(sql("""
+                            UPDATE attivazioni_servizi
+                            SET stato = 'rinnovato'
+                            WHERE id = ?
+                        """), (row["id"],))
+
+                        _storico_append(
+                            conn,
+                            row["id"],
+                            "coperto_da_permanente",
+                            attivato_da,
+                            note or f"Attivazione temporanea chiusa perché assorbita da contatti permanente (acquisto {acquisto_id or 'manuale'})"
+                        )
+
+                    _storico_append(
+                        conn,
+                        permanent_row["id"],
+                        "coperto_da_permanente",
+                        attivato_da,
+                        note or f"Richiesta temporanea assorbita da attivazione permanente (acquisto {acquisto_id or 'manuale'})"
+                    )
+
+                    if own_conn:
+                        conn.commit()
+
+                    return True, "Servizio già coperto da attivazione permanente.", int(permanent_row["id"])
+
                 return False, "Servizio già attivo senza scadenza.", None
 
             if durata_finale is None:
                 return False, "Servizio già attivo.", None
 
             ora_utc = datetime.now(ZoneInfo("UTC"))
-            data_fine_attuale = last["data_fine"]
 
-            # PostgreSQL può restituire datetime, SQLite spesso stringa
-            if isinstance(data_fine_attuale, str):
-                data_fine_attuale = datetime.fromisoformat(str(data_fine_attuale))
+            data_fine_candidates = []
+            for row in active_rows:
+                df = row["data_fine"]
 
-            if data_fine_attuale.tzinfo is None:
-                data_fine_attuale = data_fine_attuale.replace(tzinfo=ZoneInfo("UTC"))
+                if isinstance(df, str):
+                    df = datetime.fromisoformat(str(df))
 
-            # Se la vecchia attivazione è ancora valida, somma dalla sua scadenza.
-            # Se è già scaduta, riparti da adesso.
-            base_rinnovo = data_fine_attuale if data_fine_attuale > ora_utc else ora_utc
+                if df.tzinfo is None:
+                    df = df.replace(tzinfo=ZoneInfo("UTC"))
+
+                data_fine_candidates.append(df)
+
+            max_data_fine_attuale = max(data_fine_candidates) if data_fine_candidates else ora_utc
+            base_rinnovo = max_data_fine_attuale if max_data_fine_attuale > ora_utc else ora_utc
             data_fine_finale = base_rinnovo + timedelta(days=durata_finale)
 
-            # 1) chiudiamo la vecchia attivazione
-            #    MA senza perdere la sua data_fine storica originale
-            cur.execute(sql("""
-                UPDATE attivazioni_servizi
-                SET stato = 'rinnovato'
-                WHERE id = ?
-            """), (
-                last["id"],
-            ))
-            
-            _storico_append(
-                conn,
-                last["id"],
-                "rinnovato",
-                attivato_da,
-                note or f"Rinnovo sostituito da nuovo acquisto {acquisto_id or 'manuale'}"
-            )
+            # chiudiamo TUTTE le attivazioni attive correnti dello stesso servizio
+            for row in active_rows:
+                cur.execute(sql("""
+                    UPDATE attivazioni_servizi
+                    SET stato = 'rinnovato'
+                    WHERE id = ?
+                """), (row["id"],))
 
-            # 2) creiamo una nuova attivazione collegata al nuovo acquisto
+                _storico_append(
+                    conn,
+                    row["id"],
+                    "rinnovato",
+                    attivato_da,
+                    note or f"Rinnovo sostituito da nuovo acquisto {acquisto_id or 'manuale'}"
+                )
+
+            # creiamo una sola nuova attivazione attiva
             cur.execute(sql("""
                 INSERT INTO attivazioni_servizi
                 (acquisto_id, servizio_id, utente_id, annuncio_id,
