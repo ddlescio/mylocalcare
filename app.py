@@ -689,6 +689,27 @@ def dt_roma(value):
     except Exception:
         return str(value)
 
+@app.template_filter("dt_roma_admin")
+def dt_roma_admin(value):
+    if not value:
+        return ""
+
+    try:
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            dt = datetime.fromisoformat(str(value))
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+
+        return dt.astimezone(
+            ZoneInfo("Europe/Rome")
+        ).strftime("%d/%m/%Y %H:%M").lstrip("0").replace("/0", "/")
+
+    except Exception:
+        return str(value)
+        
 @app.template_filter("fromjson")
 def fromjson_filter(value):
     if not value:

@@ -208,7 +208,7 @@
           >
 
             <td class="p-3 text-slate-700">
-              {{ a.created_at | dt_roma }}
+              {{ a.created_at | dt_roma_admin }}
             </td>
 
             <td class="p-3">
@@ -216,7 +216,7 @@
               <div class="text-xs text-slate-500">ID {{ a.utente_id }}</div>
               <div class="text-xs text-slate-500">@{{ a.username or '—' }}</div>
             </td>
-            
+
             <td class="p-3">
               {% if a.tipo == 'pacchetto' %}
                 <button type="button"
@@ -281,7 +281,7 @@
               {% if a.tipo == 'pacchetto' %}
                 <span class="text-slate-400 text-xs font-medium">Dettaglio nel tipo</span>
               {% elif a.data_fine %}
-                {{ a.data_fine | dt_roma }}
+                {{ a.data_fine | dt_roma_admin }}
               {% else %}
                 ∞
               {% endif %}
@@ -362,7 +362,7 @@
 
                     <div class="text-slate-600 text-sm whitespace-nowrap">
                       {% if d.data_fine %}
-                        {{ d.data_fine | dt_roma }}
+                        {{ d.data_fine | dt_roma_admin }}
                       {% else %}
                         ∞
                       {% endif %}
