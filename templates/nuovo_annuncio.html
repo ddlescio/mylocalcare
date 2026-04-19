@@ -19,8 +19,9 @@
 
   <form method="POST" enctype="multipart/form-data"
         action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalità == 'modifica' else url_for('nuovo_annuncio') }}"
-        class="space-y-6">
-
+        class="space-y-6"
+        novalidate>
+        
     {% if modalità == "modifica" %}
       <input type="hidden" name="id_annuncio" value="{{ annuncio['id'] }}">
     {% endif %}
