@@ -1598,7 +1598,7 @@ body[data-chat="true"] #mobile-search-container {
 }
 </style>
 <style>
-/* ✅ Forza la visibilità del blocco avatar su mobile, anche nelle pagine chat */
+/* ✅ In chat mobile: lascia avatar, nascondi solo il nome utente */
 @media (max-width: 640px) {
   body[data-chat="true"] nav .user-info {
     display: flex !important;
@@ -1607,9 +1607,12 @@ body[data-chat="true"] #mobile-search-container {
     opacity: 1 !important;
   }
 
-  body[data-chat="true"] nav .user-info img,
+  body[data-chat="true"] nav .user-info img {
+    display: block !important;
+  }
+
   body[data-chat="true"] nav .user-info span {
-    display: inline-block !important;
+    display: none !important;
   }
 }
 </style>
