@@ -132,6 +132,8 @@ projects:
         sync: false
       - key: APP_RUNTIME_ROLE
         sync: false
+      - key: UPLOAD_FOLDER
+        value: /tmp/uploads
       - key: REDIS_URL
         sync: false
       - key: VAPID_PUBLIC_KEY
@@ -163,5 +165,5 @@ projects:
       schedule: "*/1 * * * *"
       region: frankfurt
       buildCommand: pip install -r requirements.txt
-      startCommand: python sync_servizi_scaduti.py
+      startCommand: mkdir -p /tmp/uploads && python sync_servizi_scaduti.py
       autoDeployTrigger: commit
