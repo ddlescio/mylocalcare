@@ -234,7 +234,8 @@
 
     <!-- Pulsante -->
     <div class="text-center pt-4">
-      <button type="submit"
+      <button type="button"
+              id="submit-annuncio-btn"
               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">
         {{ "💾 Salva modifiche" if modalità == "modifica" else "📢 Pubblica annuncio" }}
       </button>
@@ -359,77 +360,81 @@ document.addEventListener("DOMContentLoaded", function () {
 
   window.addEventListener("pageshow", restoreDraft);
 
-  form.addEventListener("submit", function (e) {
-    const draftBeforeValidation = collectDraftData();
-    if (isNuovo) {
-      sessionStorage.setItem(storageKey, JSON.stringify(draftBeforeValidation));
-    }
+  const submitBtn = document.getElementById("submit-annuncio-btn");
 
-    const errori = [];
+  if (submitBtn) {
+    submitBtn.addEventListener("click", function () {
+      const draftBeforeValidation = collectDraftData();
 
-    const tipo = document.querySelector('input[name="tipo_annuncio"]:checked');
-    const categoria = document.getElementById("categoria");
-    const zona = document.getElementById("zona-autocomplete");
-    const titolo = document.getElementById("titolo");
-    const descrizione = document.getElementById("descrizione");
-
-    if (!tipo) {
-      errori.push("Seleziona se OFFRI o CERCHI il servizio.");
-    }
-
-    if (!categoria || !categoria.value.trim()) {
-      errori.push("Seleziona una categoria.");
-    }
-
-    if (!zona || !zona.value.trim()) {
-      errori.push("Inserisci una zona o un comune.");
-    }
-
-    if (!titolo || !titolo.value.trim()) {
-      errori.push("Inserisci il titolo dell'annuncio.");
-    }
-
-    if (!descrizione || !descrizione.value.trim()) {
-      errori.push("Inserisci la descrizione dettagliata.");
-    }
-
-    if (errori.length > 0) {
-      e.preventDefault();
-
-      alert("Per pubblicare l'annuncio completa questi campi obbligatori:\n\n- " + errori.join("\n- "));
-
-      // Ripristino immediato della bozza anche se Safari resetta il form
-      applyDraftData(draftBeforeValidation);
-      setTimeout(() => applyDraftData(draftBeforeValidation), 50);
-      setTimeout(() => applyDraftData(draftBeforeValidation), 250);
-
-      const primoCampo =
-        (!tipo && document.querySelector('input[name="tipo_annuncio"]')) ||
-        (!categoria?.value.trim() && categoria) ||
-        (!zona?.value.trim() && zona) ||
-        (!titolo?.value.trim() && titolo) ||
-        (!descrizione?.value.trim() && descrizione);
-
-      if (primoCampo) {
-        primoCampo.scrollIntoView({
-          behavior: "smooth",
-          block: "center"
-        });
-
-        setTimeout(() => {
-          try {
-            primoCampo.focus();
-          } catch (err) {}
-        }, 300);
+      if (isNuovo) {
+        sessionStorage.setItem(storageKey, JSON.stringify(draftBeforeValidation));
       }
 
-      return;
-    }
+      const errori = [];
 
-    if (isNuovo) {
-      sessionStorage.removeItem(storageKey);
-    }
-  });
+      const tipo = document.querySelector('input[name="tipo_annuncio"]:checked');
+      const categoria = document.getElementById("categoria");
+      const zona = document.getElementById("zona-autocomplete");
+      const titolo = document.getElementById("titolo");
+      const descrizione = document.getElementById("descrizione");
+
+      if (!tipo) {
+        errori.push("Seleziona se OFFRI o CERCHI il servizio.");
+      }
+
+      if (!categoria || !categoria.value.trim()) {
+        errori.push("Seleziona una categoria.");
+      }
+
+      if (!zona || !zona.value.trim()) {
+        errori.push("Inserisci una zona o un comune.");
+      }
+
+      if (!titolo || !titolo.value.trim()) {
+        errori.push("Inserisci il titolo dell'annuncio.");
+      }
+
+      if (!descrizione || !descrizione.value.trim()) {
+        errori.push("Inserisci la descrizione dettagliata.");
+      }
+
+      if (errori.length > 0) {
+        alert("Per pubblicare l'annuncio completa questi campi obbligatori:\n\n- " + errori.join("\n- "));
+
+        applyDraftData(draftBeforeValidation);
+        setTimeout(() => applyDraftData(draftBeforeValidation), 50);
+        setTimeout(() => applyDraftData(draftBeforeValidation), 250);
+
+        const primoCampo =
+          (!tipo && document.querySelector('input[name="tipo_annuncio"]')) ||
+          (!categoria?.value.trim() && categoria) ||
+          (!zona?.value.trim() && zona) ||
+          (!titolo?.value.trim() && titolo) ||
+          (!descrizione?.value.trim() && descrizione);
+
+        if (primoCampo) {
+          primoCampo.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+
+          setTimeout(() => {
+            try {
+              primoCampo.focus();
+            } catch (err) {}
+          }, 300);
+        }
+
+        return;
+      }
+
+      if (isNuovo) {
+        sessionStorage.removeItem(storageKey);
+      }
+
+      form.submit();
+    });
+  }
 });
 </script>
 {% endblock %}
