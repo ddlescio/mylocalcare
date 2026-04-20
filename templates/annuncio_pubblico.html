@@ -78,33 +78,48 @@
 
       <!-- titolo -->
       <div class="text-center max-w-2xl mx-auto">
-        <h1 class="ugc-text-strong text-[2.15rem] leading-[1.02] sm:text-[2.7rem] sm:leading-[1.02] tracking-[-0.03em] drop-shadow-[0_1px_0_rgba(255,255,255,0.75)]">
+        <div class="flex justify-center">
+          <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/85 px-3.5 py-1.5 shadow-sm backdrop-blur-sm">
+            <span class="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.10)]"></span>
+            <span class="text-[0.78rem] sm:text-[0.82rem] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Profilo verificabile
+            </span>
+          </div>
+        </div>
+
+        <h1 class="mt-4 ugc-text-strong text-[2.15rem] leading-[0.98] sm:text-[2.85rem] sm:leading-[0.98] tracking-[-0.045em] text-slate-950 text-balance drop-shadow-[0_1px_0_rgba(255,255,255,0.78)]">
           {{ annuncio['titolo'] }}
         </h1>
 
-        <p class="ugc-text-strong mt-2.5 text-[1.05rem] sm:text-[1.25rem] text-blue-700 tracking-[-0.02em]">
-          {{ annuncio['username'] or annuncio['nome'] }}
+        <div class="mt-3 flex items-center justify-center gap-2">
+          <span class="inline-flex items-center rounded-full bg-blue-50 border border-blue-100 px-3 py-1 text-[0.9rem] sm:text-[1rem] font-semibold text-blue-700 shadow-sm">
+            {{ annuncio['username'] or annuncio['nome'] }}
+          </span>
+        </div>
+
+        <p class="mt-3 text-sm sm:text-[15px] text-slate-500 max-w-xl mx-auto leading-relaxed">
+          Annuncio pubblicato da una persona reale, con foto profilo visibile e informazioni chiare.
         </p>
 
-        <div class="mt-3.5 flex flex-wrap items-center justify-center gap-2.5 text-sm">
-          <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-slate-700 font-medium">
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-2.5 text-sm">
+          <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-slate-700 font-semibold shadow-sm">
             {{ categoria_label }}
           </span>
 
           {% if annuncio['zona'] %}
-            <span class="inline-flex items-center rounded-full bg-white border border-slate-200 px-3 py-1 text-slate-600 font-medium">
+            <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-slate-600 font-medium shadow-sm">
               📍 {{ annuncio['zona'] }}
             </span>
           {% endif %}
 
           {% if annuncio['prezzo'] %}
-            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-emerald-700 font-semibold">
+            <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-emerald-700 font-bold shadow-sm">
               {{ annuncio['prezzo'] }}{% if '€' not in (annuncio['prezzo'] ~ '') %} €{% endif %}
             </span>
           {% endif %}
         </div>
       </div>
-
+      
       <!-- recensioni -->
       {% if annuncio['media_recensioni'] and annuncio['media_recensioni'] > 0 %}
         <div class="mt-4.5 flex justify-center">
