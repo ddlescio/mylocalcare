@@ -140,63 +140,91 @@
 </form>
 {% endif %}
 
-<!-- 🧭 Titolo categoria + Bottoni -->
-<div class="header-cerca flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+<!-- 🧭 HERO BAR CATEGORIA -->
+<div class="header-cerca mb-6">
+  <div class="relative overflow-hidden rounded-[30px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(239,246,255,0.88),rgba(250,245,255,0.92))] shadow-[0_18px_40px_rgba(15,23,42,0.08)] ring-1 ring-white/70 px-5 py-5 sm:px-6 sm:py-6">
 
-  <!-- SINISTRA: Titolo + Filtri -->
-  <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+    <!-- luci decorative -->
+    <div class="pointer-events-none absolute -top-10 left-10 h-28 w-28 rounded-full bg-blue-200/30 blur-3xl"></div>
+    <div class="pointer-events-none absolute -bottom-12 right-8 h-28 w-28 rounded-full bg-fuchsia-200/20 blur-3xl"></div>
 
-    <!-- Titolo -->
-    <h2 class="text-xl sm:text-2xl font-semibold text-blue-700 inline-flex items-center gap-2
-               bg-blue-50 px-4 py-2 rounded-md shadow-sm">
-      {% if categoria == 'operatori benessere' %}🧘 Operatori Benessere
-      {% elif categoria == 'babysitter' %}👶 Babysitter
-      {% elif categoria == 'petsitter' %}🐾 Pet-sitter
-      {% elif categoria == 'caregiver' %}👵 Caregiver
-      {% elif categoria == 'ripetizioni' %}📚 Ripetizioni
-      {% elif categoria == 'aiuto-in-casa' %}🏠 Aiuto in Casa
-      {% elif categoria == 'escursioni & sport' %}🥾 Escursioni & Sport
-      {% elif categoria == 'biglietti spettacoli' %}🎟️ Biglietti Spettacoli
-      {% elif categoria == 'libri scuola' %}📖 Libri Scuola
-      {% else %}{{ categoria|capitalize }}
-      {% endif %}
-    </h2>
+    <div class="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
-    <!-- Filtri desktop -->
-    <div class="filtri-wrapper hidden sm:flex gap-3">
-      <button type="button" id="toggle-filtri"
-              class="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-semibold
-                     bg-gradient-to-r from-blue-500 to-indigo-500
-                     text-white rounded-full shadow-md
-                     hover:shadow-lg hover:scale-[1.02]
-                     transition-all duration-150">
-        🔍 <span>Filtri</span>
-      </button>
+      <!-- lato sinistro -->
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 shadow-[0_8px_20px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/70 text-lg">
+            {% if categoria == 'operatori benessere' %}🧘
+            {% elif categoria == 'babysitter' %}👶
+            {% elif categoria == 'petsitter' %}🐾
+            {% elif categoria == 'caregiver' %}👵
+            {% elif categoria == 'ripetizioni' %}📚
+            {% elif categoria == 'aiuto-in-casa' %}🏠
+            {% elif categoria == 'escursioni & sport' %}🥾
+            {% elif categoria == 'biglietti spettacoli' %}🎟️
+            {% elif categoria == 'libri scuola' %}📖
+            {% else %}✨
+            {% endif %}
+          </span>
 
-      <button type="button" id="reset-filtri"
-              class="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-semibold
-                     bg-white border border-red-300 text-red-600
-                     rounded-full shadow-sm
-                     hover:bg-red-50 hover:shadow-md hover:scale-[1.02]
-                     transition-all duration-150">
-        ✕ <span>Azzera</span>
-      </button>
+          <div class="min-w-0">
+            <h2 class="text-[1.65rem] sm:text-[2rem] leading-none font-extrabold tracking-[-0.04em] text-slate-950">
+              {% if categoria == 'operatori benessere' %}Operatori Benessere
+              {% elif categoria == 'babysitter' %}Babysitter
+              {% elif categoria == 'petsitter' %}Pet-sitter
+              {% elif categoria == 'caregiver' %}Caregiver
+              {% elif categoria == 'ripetizioni' %}Ripetizioni
+              {% elif categoria == 'aiuto-in-casa' %}Aiuto in Casa
+              {% elif categoria == 'escursioni & sport' %}Escursioni & Sport
+              {% elif categoria == 'biglietti spettacoli' %}Biglietti Spettacoli
+              {% elif categoria == 'libri scuola' %}Libri Scuola
+              {% else %}{{ categoria|capitalize }}
+              {% endif %}
+            </h2>
 
+            <p class="mt-2 text-sm sm:text-[15px] text-slate-500">
+              Esplora annunci e profili in un ambiente curato, chiaro e facile da filtrare.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- lato destro -->
+      <div class="flex flex-wrap items-center gap-3 lg:justify-end">
+
+        <button type="button" id="toggle-filtri"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
+                       bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500
+                       text-white shadow-[0_10px_24px_rgba(59,130,246,0.28)]
+                       hover:shadow-[0_14px_28px_rgba(59,130,246,0.34)]
+                       hover:-translate-y-0.5 transition-all duration-200">
+          <span>🔎</span>
+          <span>Filtri</span>
+        </button>
+
+        <button type="button" id="reset-filtri"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
+                       bg-white/88 text-rose-600 border border-rose-200
+                       shadow-[0_8px_20px_rgba(15,23,42,0.06)]
+                       hover:bg-rose-50 hover:border-rose-300 hover:-translate-y-0.5 transition-all duration-200">
+          <span>✕</span>
+          <span>Azzera</span>
+        </button>
+
+        <a href="{{ url_for('nuovo_annuncio') }}"
+           id="btn-pubblica-annuncio"
+           class="hidden lg:inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
+                  bg-white/90 text-blue-700 border border-blue-200
+                  shadow-[0_8px_20px_rgba(15,23,42,0.06)]
+                  hover:bg-blue-50 hover:border-blue-300 hover:-translate-y-0.5 transition-all duration-200">
+          <span>➕</span>
+          <span>Pubblica annuncio</span>
+        </a>
+
+      </div>
     </div>
-
   </div>
-
-  <!-- DESTRA: Pubblica annuncio -->
-  <a href="{{ url_for('nuovo_annuncio') }}"
-     id="btn-pubblica-annuncio"
-     class="hidden sm:inline-flex items-center gap-1 px-4 py-1.5
-            text-blue-700 bg-white/70 backdrop-blur-sm border border-blue-200
-            rounded-full font-medium text-sm shadow-sm hover:bg-blue-50 transition">
-    ➕ Pubblica annuncio
-  </a>
-
 </div>
-
 
 <!-- 🎯 Filtri attivi -->
 {% if filtri %}
@@ -946,38 +974,6 @@
 
 </style>
 <style>
-  /* Bottoni filtri – stile App Store */
-  .filtri-wrapper {
-    display: flex;
-    gap: 12px;
-  }
-
-  /* Desktop, iPad verticale/orizzontale, mobile orizzontale */
-  @media (min-width: 640px) {
-
-    /* Il titolo occupa la larghezza disponibile */
-    .page-cerca h2 {
-      margin-right: 20px; /* distanza naturale dal gruppetto bottoni */
-    }
-
-    /* I bottoni si posizionano subito dopo il titolo, NON attaccati a destra */
-    .filtri-wrapper {
-      margin-left: 0;      /* elimina spinta verso destra */
-      justify-content: flex-start;
-    }
-
-  }
-
-  /* Mobile verticale: bottoni sotto il titolo centrati */
-  @media (max-width: 639px) {
-    .filtri-wrapper {
-      width: 100%;
-      justify-content: center;
-      margin-top: 12px;
-    }
-  }
-</style>
-<style>
 .page-cerca {
   padding-bottom: 160px;
 }
@@ -1296,7 +1292,7 @@ document.addEventListener("DOMContentLoaded", function () {
               hasSelected = true;
               hideList();
             });
-            
+
             suggerimentiBox.appendChild(el);
           });
 
