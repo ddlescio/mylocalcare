@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-
+{% set body_class = "offset-navbar" %}
 {% block content %}
 
 
-<div class="max-w-3xl mx-auto mt-8 sm:mt-10 px-4 sm:px-0">
+<div class="max-w-3xl mx-auto mt-14 sm:mt-10 md:mt-12 px-4 sm:px-0">
   <div class="glass-card rounded-[32px] shadow-[0_18px_50px_rgba(15,23,42,0.10)] p-4 sm:p-6 md:p-7 border border-slate-200/80">
 
   <!-- 🔵 HEADER ANNUNCIO -->
@@ -54,16 +54,21 @@
       </div>
 
       <!-- avatar -->
-      <div class="flex justify-center mb-5">
-        <div class="relative">
+      <div class="flex justify-center mb-6">
+        <button
+          type="button"
+          onclick="apriZoom('{{ url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) }}')"
+          class="relative group rounded-full focus:outline-none focus:ring-4 focus:ring-blue-100"
+          aria-label="Apri immagine profilo">
           <div class="absolute inset-0 rounded-full bg-gradient-to-br from-blue-200 to-indigo-200 blur-md opacity-60 scale-105"></div>
           <img
             src="{{ url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) }}"
-            class="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover object-top border-4 border-white shadow-2xl ring-4 ring-blue-50"
+            alt="Foto profilo"
+            class="relative w-40 h-40 sm:w-48 sm:h-48 lg:w-52 lg:h-52 rounded-full object-cover object-top border-4 border-white shadow-2xl ring-4 ring-blue-50 transition duration-200 group-hover:scale-[1.02] cursor-zoom-in"
           />
-        </div>
+        </button>
       </div>
-
+      
       <!-- titolo -->
       <div class="text-center max-w-2xl mx-auto">
         <h1 class="ugc-text-strong text-3xl sm:text-4xl leading-tight drop-shadow-[0_1px_0_rgba(255,255,255,0.7)]">
