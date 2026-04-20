@@ -572,6 +572,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const isNuovo = {{ 'true' if modalità != 'modifica' else 'false' }};
   const storageKey = "localcare_nuovo_annuncio_draft";
 
+  // La bozza non deve restare quando l'utente lascia la pagina e poi torna.
+  // La usiamo solo come recupero temporaneo durante il tentativo di invio.
+  if (isNuovo) {
+    sessionStorage.removeItem(storageKey);
+  }
+
   function collectDraftData() {
     const data = {};
     const fields = form.querySelectorAll("input, textarea, select");
@@ -660,15 +666,6 @@ document.addEventListener("DOMContentLoaded", function () {
       applyDraftData(data);
     } catch (e) {}
   }
-
-  restoreDraft();
-
-  form.addEventListener("input", saveDraft);
-  form.addEventListener("change", saveDraft);
-  form.addEventListener("keyup", saveDraft);
-  form.addEventListener("blur", saveDraft, true);
-
-  window.addEventListener("pageshow", restoreDraft);
 
   const submitBtn = document.getElementById("submit-annuncio-btn");
 
