@@ -1,174 +1,187 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="max-w-xl mx-auto glass-card rounded-3xl shadow-lg p-5 md:p-6 mt-6">
+<div class="max-w-3xl mx-auto glass-card rounded-[32px] shadow-lg p-4 sm:p-6 md:p-7 mt-6">
 
   <!-- 🔵 HEADER ANNUNCIO -->
-  <div class="
-        relative text-center rounded-3xl p-4
-        bg-gradient-to-br from-blue-50/50 via-white to-pink-50/30
-        border border-blue-100/60
-        shadow-sm
-        backdrop-blur-md
-      ">
-
-    <!-- FOTO -->
-    <div class="flex justify-center mb-4">
-      <img
-        src="{{ url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) }}"
-        class="
-          w-40 h-40 sm:w-44 sm:h-44
-          rounded-full object-cover object-top
-          border-4 border-white
-          shadow-xl
-          ring-2 ring-indigo-200/50
-          hover:scale-105 transition-transform duration-200
-        "
-      />
-    </div>
-
-    {% if annuncio.get('affidabilita_top') == 1 %}
-    <div class="flex justify-center mb-2">
-      <div class="
-        inline-flex items-center gap-1.5
-        px-3 py-1.5
-        rounded-full
-        bg-white/90
-        border border-amber-300
-        shadow-sm
-        backdrop-blur
-      ">
-        <span class="text-sm">🏅</span>
-        <span class="text-xs font-semibold text-amber-700">
-          Fiducia Top
-        </span>
-      </div>
-    </div>
+  {% set categoria_label = annuncio['categoria'] %}
+  {% if annuncio['categoria'] == 'operatori-benessere' %}
+    {% set categoria_label = 'Operatori benessere' %}
+  {% elif annuncio['categoria'] == 'pet-sitter' %}
+    {% set categoria_label = 'Pet-Sitter' %}
+  {% elif annuncio['categoria'] == 'aiuto-in-casa' %}
+    {% set categoria_label = 'Aiuto in casa' %}
+  {% elif annuncio['categoria'] == 'escursioni-sport' %}
+    {% set categoria_label = 'Gite / Compagni di allenamento' %}
+  {% elif annuncio['categoria'] == 'biglietti-spettacoli' %}
+    {% set categoria_label = 'Biglietti spettacoli' %}
+  {% elif annuncio['categoria'] == 'libri-scuola' %}
+    {% set categoria_label = 'Libri scuola' %}
+  {% elif annuncio['categoria'] == 'caffe-parole' %}
+    {% set categoria_label = 'Caffè & parole' %}
   {% endif %}
 
-    <!-- TITOLO + TIPO ANNUNCIO -->
-    <div class="flex flex-col items-center gap-2 mb-1">
+  <div class="relative overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+    <!-- sfondo decorativo -->
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50"></div>
+    <div class="absolute -top-20 -right-16 h-56 w-56 rounded-full bg-blue-100/50 blur-3xl"></div>
+    <div class="absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-pink-100/40 blur-3xl"></div>
 
-      <!-- BADGE OFFRO / CERCO -->
-      {% if annuncio['tipo_annuncio'] == 'offro' %}
-      <span class="
-        inline-flex items-center gap-1 text-xs font-medium
-        bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200/50
-      ">
-        🟢 Offro
-      </span>
-
-      {% elif annuncio['tipo_annuncio'] == 'cerco' %}
-      <span class="
-        inline-flex items-center gap-1 text-xs font-medium
-        bg-blue-50 text-blue-700 border-blue-200/50 px-3 py-1 rounded-full border border-green-200/50
-      ">
-
-          🔵 Cerco
-        </span>
-      {% endif %}
-
-      <!-- TITOLO -->
-      <h1 class="text-xl sm:text-2xl font-bold text-blue-800 text-center tracking-tight">
-        {{ annuncio['titolo'] }}
-      </h1>
-
-    </div>
-
-    <!-- AUTORE -->
-    <p class="text-base font-semibold text-gray-800 mb-1">
-      {{ annuncio['username'] or annuncio['nome'] }}
-    </p>
-
-    <!-- ⭐ STELLINE -->
-    {% if annuncio['media_recensioni'] and annuncio['media_recensioni'] > 0 %}
-      {% if not g.utente or g.utente['id'] != annuncio['utente_id'] %}
-        <a href="{{ url_for('recensioni_utente', user_id=annuncio['utente_id']) }}"
-           class="flex justify-center items-center gap-1 mb-2 text-yellow-500 text-sm hover:opacity-80 transition">
-      {% else %}
-        <div class="flex justify-center items-center gap-1 mb-2 text-yellow-500 text-sm">
-      {% endif %}
-
-      <span class="font-semibold text-sm text-gray-800 mr-1">
-        {{ annuncio['media_recensioni']|round(1) }}
-      </span>
-
-        {% for i in range(1,6) %}
-          {% if i <= annuncio['media_recensioni']|round(0, 'floor') %}
-            ⭐
-          {% elif i - annuncio['media_recensioni'] < 1 %}
-            🌟
-          {% else %}
-            ☆
+    <div class="relative px-5 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-8">
+      <!-- badge stato -->
+      <div class="flex items-center justify-between gap-3 mb-5">
+        <div>
+          {% if annuncio['tipo_annuncio'] == 'offro' %}
+            <span class="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-1.5 text-sm font-semibold text-green-700 shadow-sm">
+              <span class="text-base">🟢</span> Offro
+            </span>
+          {% elif annuncio['tipo_annuncio'] == 'cerco' %}
+            <span class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-semibold text-blue-700 shadow-sm">
+              <span class="text-base">🔵</span> Cerco
+            </span>
           {% endif %}
-        {% endfor %}
+        </div>
 
-        {% if annuncio['numero_recensioni'] %}
-        <span class="ml-1 text-gray-500 text-xs">
-          • {{ annuncio['numero_recensioni'] }} recensione/i
-        </span>
+        {% if annuncio.get('affidabilita_top') == 1 %}
+          <div class="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white/90 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm">
+            <span>🏅</span>
+            <span>Fiducia Top</span>
+          </div>
         {% endif %}
+      </div>
 
-      {% if not g.utente or g.utente['id'] != annuncio['utente_id'] %}
-        </a>
-      {% else %}
+      <!-- avatar -->
+      <div class="flex justify-center mb-5">
+        <div class="relative">
+          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-blue-200 to-indigo-200 blur-md opacity-60 scale-105"></div>
+          <img
+            src="{{ url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) }}"
+            class="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover object-top border-4 border-white shadow-2xl ring-4 ring-blue-50"
+          />
+        </div>
+      </div>
+
+      <!-- titolo -->
+      <div class="text-center max-w-2xl mx-auto">
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">
+          {{ annuncio['titolo'] }}
+        </h1>
+
+        <p class="mt-3 text-lg sm:text-xl font-bold text-blue-700">
+          {{ annuncio['username'] or annuncio['nome'] }}
+        </p>
+
+        <div class="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-slate-700 font-medium">
+            {{ categoria_label }}
+          </span>
+
+          {% if annuncio['zona'] %}
+            <span class="inline-flex items-center rounded-full bg-white border border-slate-200 px-3 py-1 text-slate-600 font-medium">
+              📍 {{ annuncio['zona'] }}
+            </span>
+          {% endif %}
+
+          {% if annuncio['prezzo'] %}
+            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-emerald-700 font-semibold">
+              {{ annuncio['prezzo'] }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- recensioni -->
+      {% if annuncio['media_recensioni'] and annuncio['media_recensioni'] > 0 %}
+        <div class="mt-5 flex justify-center">
+          {% if not g.utente or g.utente['id'] != annuncio['utente_id'] %}
+            <a href="{{ url_for('recensioni_utente', user_id=annuncio['utente_id']) }}"
+               class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm hover:shadow-md transition">
+          {% else %}
+            <div class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm">
+          {% endif %}
+
+              <span class="font-bold text-slate-900">{{ annuncio['media_recensioni']|round(1) }}</span>
+              <span class="text-yellow-500">
+                {% for i in range(1,6) %}
+                  {% if i <= annuncio['media_recensioni']|round(0, 'floor') %}
+                    ⭐
+                  {% elif i - annuncio['media_recensioni'] < 1 %}
+                    🌟
+                  {% else %}
+                    ☆
+                  {% endif %}
+                {% endfor %}
+              </span>
+
+              {% if annuncio['numero_recensioni'] %}
+                <span class="text-slate-500 text-xs sm:text-sm">
+                  {{ annuncio['numero_recensioni'] }} recensione/i
+                </span>
+              {% endif %}
+
+          {% if not g.utente or g.utente['id'] != annuncio['utente_id'] %}
+            </a>
+          {% else %}
+            </div>
+          {% endif %}
         </div>
       {% endif %}
-    {% endif %}
 
-    <!-- CATEGORIA -->
-    <p class="text-sm text-gray-600 mt-2">
-      {{ annuncio['categoria'] }}
-      {% if annuncio['zona'] %} · {{ annuncio['zona'] }}{% endif %}
-    </p>
-
-    <!-- TAG -->
-    {% if annuncio['filtri_categoria'] %}
-      <div class="flex flex-wrap justify-center gap-2 mt-3">
-        {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
-        <span class="
-          bg-white text-blue-800 text-xs font-medium
-          px-3 py-1.5 rounded-full border border-blue-200/50
-        ">
-
-            {{ f.strip() }}
-          </span>
-        {% endfor %}
-      </div>
-    {% endif %}
+      <!-- tag -->
+      {% if annuncio['filtri_categoria'] %}
+        <div class="mt-5 flex flex-wrap justify-center gap-2">
+          {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
+            <span class="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 shadow-sm">
+              {{ f.strip() }}
+            </span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
   </div>
-
 
   <!-- 📄 DESCRIZIONE -->
   {% if annuncio['descrizione'] %}
-  <div class="
-    mt-6 p-6 rounded-3xl
-    bg-white/95 backdrop-blur
-    border border-gray-200
-    shadow-xl text-left
-  ">
-    <h2 class="text-lg font-semibold text-blue-700 mb-2">📄 Descrizione</h2>
-    <p class="text-gray-700 leading-relaxed whitespace-pre-line">
-      {{ annuncio['descrizione'] }}
-    </p>
+  <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)]">
+    <div class="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-4 sm:px-6">
+      <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm text-xl">
+        📄
+      </div>
+      <div>
+        <h2 class="text-lg sm:text-xl font-bold text-slate-900">Descrizione</h2>
+        <p class="text-xs sm:text-sm text-slate-500">Dettagli dell’annuncio</p>
+      </div>
+    </div>
+
+    <div class="px-5 py-5 sm:px-6 sm:py-6">
+      <p class="text-[15px] sm:text-base leading-8 text-slate-700 whitespace-pre-line">
+        {{ annuncio['descrizione'] }}
+      </p>
+    </div>
   </div>
   {% endif %}
 
   <!-- 🙋 BIO -->
   {% if annuncio['bio_utente'] %}
-  <div class="
-    mt-6 p-6 rounded-3xl
-    bg-white/95 backdrop-blur
-    border border-gray-200
-    shadow-xl text-center
-  ">
-    <h2 class="text-lg font-semibold text-blue-700 mb-2">🙋‍♂️ Su di me</h2>
-    <p class="text-gray-700 leading-relaxed whitespace-pre-line">
-      {{ annuncio['bio_utente'] }}
-    </p>
+  <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)]">
+    <div class="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-fuchsia-50 px-5 py-4 sm:px-6">
+      <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm text-xl">
+        🙋‍♂️
+      </div>
+      <div>
+        <h2 class="text-lg sm:text-xl font-bold text-slate-900">Su di me</h2>
+        <p class="text-xs sm:text-sm text-slate-500">Qualche informazione in più</p>
+      </div>
+    </div>
+
+    <div class="px-5 py-5 sm:px-6 sm:py-6 text-center">
+      <p class="text-[15px] sm:text-base leading-8 text-slate-700 whitespace-pre-line">
+        {{ annuncio['bio_utente'] }}
+      </p>
+    </div>
   </div>
   {% endif %}
-
+  
   <!-- 📸 IMMAGINI -->
   {% if annuncio['media'] %}
   <div class="
@@ -1588,7 +1601,7 @@ document.addEventListener("DOMContentLoaded", () => {
           "Stato aggiornato",
           "Abbiamo ricevuto un aggiornamento sul pagamento. Verifica che il servizio risulti attivo."
         );
-      }      
+      }
     } catch (err) {
       console.error("Errore lettura esito pagamento:", err);
       showPaymentToast(
