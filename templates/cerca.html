@@ -152,41 +152,19 @@
 
       <!-- lato sinistro -->
       <div class="min-w-0">
-        <div class="flex flex-wrap items-center gap-3">
-          <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 shadow-[0_8px_20px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/70 text-lg">
-            {% if categoria == 'operatori benessere' %}🧘
-            {% elif categoria == 'babysitter' %}👶
-            {% elif categoria == 'petsitter' %}🐾
-            {% elif categoria == 'caregiver' %}👵
-            {% elif categoria == 'ripetizioni' %}📚
-            {% elif categoria == 'aiuto-in-casa' %}🏠
-            {% elif categoria == 'escursioni & sport' %}🥾
-            {% elif categoria == 'biglietti spettacoli' %}🎟️
-            {% elif categoria == 'libri scuola' %}📖
-            {% else %}✨
-            {% endif %}
-          </span>
-
-          <div class="min-w-0">
-            <h2 class="text-[1.65rem] sm:text-[2rem] leading-none font-extrabold tracking-[-0.04em] text-slate-950">
-              {% if categoria == 'operatori benessere' %}Operatori Benessere
-              {% elif categoria == 'babysitter' %}Babysitter
-              {% elif categoria == 'petsitter' %}Pet-sitter
-              {% elif categoria == 'caregiver' %}Caregiver
-              {% elif categoria == 'ripetizioni' %}Ripetizioni
-              {% elif categoria == 'aiuto-in-casa' %}Aiuto in Casa
-              {% elif categoria == 'escursioni & sport' %}Escursioni & Sport
-              {% elif categoria == 'biglietti spettacoli' %}Biglietti Spettacoli
-              {% elif categoria == 'libri scuola' %}Libri Scuola
-              {% else %}{{ categoria|capitalize }}
-              {% endif %}
-            </h2>
-
-            <p class="mt-2 text-sm sm:text-[15px] text-slate-500">
-              Esplora annunci e profili in un ambiente curato, chiaro e facile da filtrare.
-            </p>
-          </div>
-        </div>
+        <h2 class="text-[1.9rem] sm:text-[2.25rem] leading-[1.02] font-bold tracking-[-0.045em] text-blue-700">
+          {% if categoria == 'operatori benessere' %}Operatori Benessere
+          {% elif categoria == 'babysitter' %}Babysitter
+          {% elif categoria == 'petsitter' %}Pet-sitter
+          {% elif categoria == 'caregiver' %}Caregiver
+          {% elif categoria == 'ripetizioni' %}Ripetizioni
+          {% elif categoria == 'aiuto-in-casa' %}Aiuto in Casa
+          {% elif categoria == 'escursioni & sport' %}Escursioni & Sport
+          {% elif categoria == 'biglietti spettacoli' %}Biglietti Spettacoli
+          {% elif categoria == 'libri scuola' %}Libri Scuola
+          {% else %}{{ categoria|capitalize }}
+          {% endif %}
+        </h2>
       </div>
 
       <!-- lato destro -->
@@ -1059,14 +1037,6 @@
     }
 }
 
-/* Mobile centratura filtri */
-@media (max-width: 639px) {
-    .filtri-wrapper {
-        width: 100%;
-        justify-content: center;
-        margin-top: 12px;
-    }
-}
 /* 📱💙 Fix FAB su iPad verticale */
 @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
     .fab-pubblica-annuncio {
