@@ -168,37 +168,42 @@
 
   <!-- 📄 DESCRIZIONE -->
   {% if annuncio['descrizione'] %}
-  <div class="mt-5 overflow-hidden rounded-[28px] border border-slate-300/75 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.09)] mx-[calc(50%-50vw+1mm)] sm:mx-0">
+  <div class="mt-5 overflow-hidden rounded-[30px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,255,0.96))] shadow-[0_20px_46px_rgba(15,23,42,0.10)] ring-1 ring-white/70 mx-[calc(50%-50vw+1mm)] sm:mx-0">
 
-    <div class="relative px-5 pt-5 pb-4 sm:px-6 sm:pt-5 sm:pb-4 border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(219,234,254,0.55),rgba(238,242,255,0.72),rgba(255,255,255,0.95))]">
-      <div class="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-blue-400 via-indigo-400 to-sky-300"></div>
+    <div class="relative border-b border-slate-200/70 px-5 pt-5 pb-4 sm:px-6 sm:pt-5 sm:pb-4 bg-[linear-gradient(135deg,rgba(219,234,254,0.72),rgba(238,242,255,0.88),rgba(255,255,255,0.98))]">
+      <div class="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-sky-400 via-blue-400 to-indigo-300"></div>
+      <div class="absolute inset-x-0 top-0 h-px bg-white/80"></div>
+      <div class="absolute -top-8 right-10 h-24 w-24 rounded-full bg-blue-100/45 blur-2xl pointer-events-none"></div>
 
-      <div class="flex items-start gap-4 pl-2">
-        <div class="shrink-0 flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-[0_8px_20px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/70 text-xl">
-          📄
+      <div class="relative flex items-start gap-4 pl-2">
+        <div class="relative shrink-0">
+          <div class="absolute inset-0 rounded-2xl bg-blue-100/70 blur-md scale-110"></div>
+          <div class="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] shadow-[0_10px_24px_rgba(15,23,42,0.10)] ring-1 ring-white text-[1.1rem]">
+            📄
+          </div>
         </div>
 
         <div class="min-w-0 flex-1">
-          <h2 class="text-[1.55rem] sm:text-[1.65rem] leading-none font-extrabold tracking-[-0.03em] text-slate-950">
+          <h2 class="text-[1.58rem] sm:text-[1.72rem] leading-none font-extrabold tracking-[-0.035em] text-slate-950">
             Descrizione
           </h2>
-          <p class="mt-1 text-sm sm:text-[15px] text-slate-500">
+          <p class="mt-1.5 text-sm sm:text-[15px] font-medium text-slate-500">
             Dettagli dell’annuncio
           </p>
         </div>
       </div>
     </div>
 
-    <div class="px-6 py-6 sm:px-7 sm:py-7">
-      <div class="max-w-none">
-        <p class="ugc-text text-left text-[1.08rem] sm:text-[1.1rem] leading-[1.95] text-slate-700 whitespace-pre-line break-words">
+    <div class="px-5 py-5 sm:px-6 sm:py-6">
+      <div class="rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 py-5 sm:px-6 sm:py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+        <p class="ugc-text text-left text-[1.04rem] sm:text-[1.08rem] leading-[1.9] text-slate-700 whitespace-pre-line break-words">
           {{ annuncio['descrizione'] }}
         </p>
       </div>
     </div>
   </div>
   {% endif %}
-
+  
   <!-- 🙋 BIO -->
   {% if annuncio['bio_utente'] %}
   <div class="mt-5 overflow-hidden rounded-[28px] border border-slate-300/75 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.09)] mx-[calc(50%-50vw+1mm)] sm:mx-0">
