@@ -156,28 +156,40 @@
         📄
       </div>
       <div>
+        <h2 class="text-[17px] sm:text-lg font-bold text-slate-900">Descrizione</h2>
+        <p class="text-xs sm:text-sm text-slate-500">Dettagli dell’annuncio</p>
+      </div>
+    </div>
 
-        <!-- 🙋 BIO -->
-        {% if annuncio['bio_utente'] %}
-        <div class="mt-5 overflow-hidden rounded-[26px] border border-slate-300/70 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)] mx-[calc(50%-50vw+1mm)] sm:mx-0">
-          <div class="flex flex-col items-center justify-center gap-1.5 border-b border-slate-200 bg-gradient-to-r from-violet-100/75 to-fuchsia-100/70 px-5 py-3.5 sm:px-6 sm:py-4 text-center">
-            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-sm text-lg">
-              🙋‍♂️
-            </div>
-            <div>
-              <h2 class="text-[17px] sm:text-lg font-bold text-slate-900">Su di me</h2>
-              <p class="text-xs sm:text-sm text-slate-500">Qualche informazione in più</p>
-            </div>
-          </div>
+    <div class="px-5 py-4 sm:px-6 sm:py-5 text-center">
+      <p class="ugc-text max-w-2xl mx-auto text-[16px] sm:text-[17px] leading-8 whitespace-pre-line">
+        {{ annuncio['descrizione'] }}
+      </p>
+    </div>
+  </div>
+  {% endif %}
 
-          <div class="px-5 py-4 sm:px-6 sm:py-5 text-center">
-            <p class="ugc-text max-w-2xl mx-auto text-[16px] sm:text-[17px] leading-8 whitespace-pre-line">
-              {{ annuncio['bio_utente'] }}
-            </p>
-          </div>
-        </div>
-        {% endif %}
-        
+  <!-- 🙋 BIO -->
+  {% if annuncio['bio_utente'] %}
+  <div class="mt-5 overflow-hidden rounded-[26px] border border-slate-300/70 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)] mx-[calc(50%-50vw+1mm)] sm:mx-0">
+    <div class="flex flex-col items-center justify-center gap-1.5 border-b border-slate-200 bg-gradient-to-r from-violet-100/75 to-fuchsia-100/70 px-5 py-3.5 sm:px-6 sm:py-4 text-center">
+      <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-sm text-lg">
+        🙋‍♂️
+      </div>
+      <div>
+        <h2 class="text-[17px] sm:text-lg font-bold text-slate-900">Su di me</h2>
+        <p class="text-xs sm:text-sm text-slate-500">Qualche informazione in più</p>
+      </div>
+    </div>
+
+    <div class="px-5 py-4 sm:px-6 sm:py-5 text-center">
+      <p class="ugc-text max-w-2xl mx-auto text-[16px] sm:text-[17px] leading-8 whitespace-pre-line">
+        {{ annuncio['bio_utente'] }}
+      </p>
+    </div>
+  </div>
+  {% endif %}
+          
   <!-- 📸 IMMAGINI -->
   {% if annuncio['media'] %}
   <div class="
