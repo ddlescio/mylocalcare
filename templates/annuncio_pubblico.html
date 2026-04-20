@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
+{% set body_class = "offset-navbar" %}
+
 
 <div class="max-w-3xl mx-auto glass-card rounded-[32px] shadow-lg p-4 sm:p-6 md:p-7 mt-6">
 
@@ -84,7 +86,7 @@
 
           {% if annuncio['prezzo'] %}
             <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-emerald-700 font-semibold">
-              {{ annuncio['prezzo'] }}
+              {{ annuncio['prezzo'] }}{% if '€' not in (annuncio['prezzo'] ~ '') %} €{% endif %}
             </span>
           {% endif %}
         </div>
@@ -143,7 +145,7 @@
   <!-- 📄 DESCRIZIONE -->
   {% if annuncio['descrizione'] %}
   <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)]">
-    <div class="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-4 sm:px-6">
+    <div class="flex flex-col items-center justify-center gap-2 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-4 sm:px-6 text-center">
       <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm text-xl">
         📄
       </div>
@@ -153,8 +155,8 @@
       </div>
     </div>
 
-    <div class="px-5 py-5 sm:px-6 sm:py-6">
-      <p class="text-[15px] sm:text-base leading-8 text-slate-700 whitespace-pre-line">
+    <div class="px-5 py-5 sm:px-6 sm:py-6 text-center">
+      <p class="max-w-2xl mx-auto text-[15px] sm:text-base leading-8 text-slate-700 whitespace-pre-line">
         {{ annuncio['descrizione'] }}
       </p>
     </div>
@@ -164,7 +166,7 @@
   <!-- 🙋 BIO -->
   {% if annuncio['bio_utente'] %}
   <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)]">
-    <div class="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-fuchsia-50 px-5 py-4 sm:px-6">
+    <div class="flex flex-col items-center justify-center gap-2 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-fuchsia-50 px-5 py-4 sm:px-6 text-center">
       <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm text-xl">
         🙋‍♂️
       </div>
@@ -175,13 +177,13 @@
     </div>
 
     <div class="px-5 py-5 sm:px-6 sm:py-6 text-center">
-      <p class="text-[15px] sm:text-base leading-8 text-slate-700 whitespace-pre-line">
+      <p class="max-w-2xl mx-auto text-[15px] sm:text-base leading-8 text-slate-700 whitespace-pre-line">
         {{ annuncio['bio_utente'] }}
       </p>
     </div>
   </div>
   {% endif %}
-  
+
   <!-- 📸 IMMAGINI -->
   {% if annuncio['media'] %}
   <div class="
