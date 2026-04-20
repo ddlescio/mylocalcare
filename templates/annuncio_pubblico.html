@@ -4,7 +4,7 @@
 
 
 <div class="max-w-3xl mx-auto mt-8 sm:mt-10 px-4 sm:px-0">
-  <div class="glass-card rounded-[32px] shadow-lg p-4 sm:p-6 md:p-7">
+  <div class="glass-card rounded-[32px] shadow-[0_18px_50px_rgba(15,23,42,0.10)] p-4 sm:p-6 md:p-7 border border-slate-200/80">
 
   <!-- 🔵 HEADER ANNUNCIO -->
   {% set categoria_label = annuncio['categoria'] %}
@@ -24,11 +24,11 @@
     {% set categoria_label = 'Caffè & parole' %}
   {% endif %}
 
-  <div class="relative overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+  <div class="relative overflow-hidden rounded-[30px] border border-slate-300/70 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.10)]">
     <!-- sfondo decorativo -->
-    <div class="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50"></div>
-    <div class="absolute -top-20 -right-16 h-56 w-56 rounded-full bg-blue-100/50 blur-3xl"></div>
-    <div class="absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-pink-100/40 blur-3xl"></div>
+    <<div class="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-blue-50"></div>
+    <div class="absolute -top-20 -right-16 h-56 w-56 rounded-full bg-blue-200/55 blur-3xl"></div>
+    <div class="absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-fuchsia-200/35 blur-3xl"></div>
 
     <div class="relative px-5 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-8">
       <!-- badge stato -->
@@ -66,11 +66,11 @@
 
       <!-- titolo -->
       <div class="text-center max-w-2xl mx-auto">
-        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 leading-tight drop-shadow-[0_1px_0_rgba(255,255,255,0.7)]">
           {{ annuncio['titolo'] }}
         </h1>
 
-        <p class="mt-3 text-lg sm:text-xl font-bold text-blue-700">
+        <p class="mt-3 text-lg sm:text-xl font-extrabold text-blue-700 tracking-tight">
           {{ annuncio['username'] or annuncio['nome'] }}
         </p>
 
@@ -145,8 +145,8 @@
 
   <!-- 📄 DESCRIZIONE -->
   {% if annuncio['descrizione'] %}
-  <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)]">
-    <div class="flex flex-col items-center justify-center gap-2 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-4 sm:px-6 text-center">
+  <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-300/70 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.10)]">
+    <div class="flex flex-col items-center justify-center gap-2 border-b border-slate-200 bg-gradient-to-r from-blue-100/80 to-indigo-100/70 px-5 py-4 sm:px-6 text-center">
       <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm text-xl">
         📄
       </div>
@@ -157,7 +157,7 @@
     </div>
 
     <div class="px-5 py-5 sm:px-6 sm:py-6 text-center">
-      <p class="max-w-2xl mx-auto text-[15px] sm:text-base leading-8 text-slate-700 whitespace-pre-line">
+      <p class="max-w-2xl mx-auto text-[15px] sm:text-base leading-8 text-slate-800 whitespace-pre-line">
         {{ annuncio['descrizione'] }}
       </p>
     </div>
@@ -166,8 +166,8 @@
 
   <!-- 🙋 BIO -->
   {% if annuncio['bio_utente'] %}
-  <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)]">
-    <div class="flex flex-col items-center justify-center gap-2 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-fuchsia-50 px-5 py-4 sm:px-6 text-center">
+  <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-300/70 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.10)]">
+    <div class="flex flex-col items-center justify-center gap-2 border-b border-slate-200 bg-gradient-to-r from-violet-100/75 to-fuchsia-100/70 px-5 py-4 sm:px-6 text-center">
       <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm text-xl">
         🙋‍♂️
       </div>
@@ -178,7 +178,7 @@
     </div>
 
     <div class="px-5 py-5 sm:px-6 sm:py-6 text-center">
-      <p class="max-w-2xl mx-auto text-[15px] sm:text-base leading-8 text-slate-700 whitespace-pre-line">
+      <p class="max-w-2xl mx-auto text-[15px] sm:text-base leading-8 text-slate-800 whitespace-pre-line">
         {{ annuncio['bio_utente'] }}
       </p>
     </div>
