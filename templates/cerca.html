@@ -788,9 +788,10 @@
 
   .card-hero-badge-row {
     position: absolute;
-    left: 14px;
-    right: 14px;
-    bottom: 12px;
+    top: 12px;
+    left: 12px;
+    right: auto;
+    bottom: auto;
     display: flex;
     justify-content: flex-start;
     z-index: 3;
@@ -799,20 +800,24 @@
   .card-hero-username {
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
+    min-height: 30px;
+    max-width: 72%;
     padding: 6px 12px;
     border-radius: 9999px;
-    background: rgba(255,255,255,0.80);
-    border: 1px solid rgba(255,255,255,0.68);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.74);
+    border: 1px solid rgba(255,255,255,0.62);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: #334155;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     box-shadow:
-      0 8px 18px rgba(15, 23, 42, 0.12),
-      inset 0 1px 0 rgba(255,255,255,0.72);
+      0 6px 14px rgba(15, 23, 42, 0.10),
+      inset 0 1px 0 rgba(255,255,255,0.68);
   }
 
   /* BLOCCO TESTO */
@@ -858,7 +863,7 @@
   .card-head-premium {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
   }
 
   .card-title-premium {
@@ -1081,25 +1086,27 @@
     }
 
     .card-hero-badge-row {
-      left: 12px;
-      right: 12px;
-      bottom: 12px;
+      top: 10px;
+      left: 10px;
+      right: auto;
+      bottom: auto;
     }
 
     .card-hero-username {
-      min-height: 34px;
-      font-size: 0.84rem;
-      padding: 7px 12px;
+      min-height: 30px;
+      max-width: 74%;
+      font-size: 0.80rem;
+      padding: 6px 11px;
       box-shadow:
-        0 8px 18px rgba(15, 23, 42, 0.14),
-        inset 0 1px 0 rgba(255,255,255,0.72);
+        0 6px 14px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255,255,255,0.70);
     }
-
+    
     .mini-card-dati {
       padding: 38px 18px 18px;
       border-radius: 26px;
     }
-        
+
     .card-content-premium {
       gap: 14px;
     }
