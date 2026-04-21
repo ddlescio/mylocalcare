@@ -728,10 +728,40 @@
     height: 240px;
     border-radius: 28px;
     overflow: hidden;
-    margin-bottom: -20px;
+    margin-bottom: -22px;
+    border: 1px solid rgba(255,255,255,0.78);
     box-shadow:
-      0 18px 38px rgba(15, 23, 42, 0.12),
-      0 6px 16px rgba(15, 23, 42, 0.07);
+      0 20px 42px rgba(15, 23, 42, 0.14),
+      0 8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  .card-hero-premium::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.75),
+      inset 0 -1px 0 rgba(255,255,255,0.18);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .card-hero-premium::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 38%;
+    background: linear-gradient(
+      180deg,
+      rgba(15, 23, 42, 0) 0%,
+      rgba(15, 23, 42, 0.10) 55%,
+      rgba(15, 23, 42, 0.22) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
   }
 
   .card-hero-image {
@@ -739,17 +769,21 @@
     height: 100%;
     display: block;
     object-fit: cover;
+    transform: scale(1.01);
   }
 
   .card-hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      180deg,
-      rgba(15, 23, 42, 0.04) 0%,
-      rgba(15, 23, 42, 0.10) 100%
-    );
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255,255,255,0.06) 0%,
+        rgba(255,255,255,0.00) 26%,
+        rgba(15, 23, 42, 0.02) 100%
+      );
     pointer-events: none;
+    z-index: 1;
   }
 
   .card-hero-badge-row {
@@ -759,22 +793,26 @@
     bottom: 14px;
     display: flex;
     justify-content: flex-start;
+    z-index: 3;
   }
 
   .card-hero-username {
     display: inline-flex;
     align-items: center;
-    min-height: 34px;
-    padding: 7px 12px;
+    min-height: 36px;
+    padding: 8px 14px;
     border-radius: 9999px;
-    background: rgba(255,255,255,0.82);
-    border: 1px solid rgba(255,255,255,0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.86);
+    border: 1px solid rgba(255,255,255,0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: #334155;
     font-size: 0.92rem;
-    font-weight: 700;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.10);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.16),
+      inset 0 1px 0 rgba(255,255,255,0.75);
   }
 
   /* BLOCCO TESTO */
@@ -1031,7 +1069,7 @@
     .card-hero-premium {
       height: 210px;
       border-radius: 24px;
-      margin-bottom: -14px;
+      margin-bottom: -16px;
     }
 
     .card-hero-badge-row {
@@ -1041,15 +1079,19 @@
     }
 
     .card-hero-username {
-      font-size: 0.86rem;
-      padding: 6px 11px;
+      min-height: 34px;
+      font-size: 0.84rem;
+      padding: 7px 12px;
+      box-shadow:
+        0 8px 18px rgba(15, 23, 42, 0.14),
+        inset 0 1px 0 rgba(255,255,255,0.72);
     }
 
     .mini-card-dati {
-      padding: 34px 18px 18px;
+      padding: 38px 18px 18px;
       border-radius: 26px;
     }
-
+    
     .card-content-premium {
       gap: 14px;
     }
@@ -1074,7 +1116,7 @@
     .card-location-category {
       font-size: 0.86rem;
     }
-    
+
     .card-description-premium {
       font-size: 0.97rem;
       line-height: 1.42;
