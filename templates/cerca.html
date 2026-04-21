@@ -488,9 +488,9 @@
         </div>
 
         <div class="mini-card-dati">
-          <div class="space-y-4">
+          <div class="card-content-premium">
 
-            <div class="space-y-2">
+            <div class="card-head-premium">
               <h4 class="card-title-premium">
                 {{ a['titolo'] }}
               </h4>
@@ -536,27 +536,25 @@
               </div>
             {% endif %}
 
-            <div class="card-meta-stack">
+            <div class="card-divider-premium"></div>
 
+            <div class="card-meta-premium">
               {% if a['prezzo'] %}
-                <div class="card-meta-row">
+                <div class="card-price-row">
                   <span class="card-meta-label">Prezzo indicativo</span>
                   <span class="card-price-badge">da {{ a['prezzo'] }} €</span>
                 </div>
               {% endif %}
 
-              <div class="card-meta-row card-meta-row-center">
-                <span class="card-location-line">
-                  📍 <strong>{{ a['zona'] or 'n/d' }}</strong>
-                  <span class="card-meta-separator">—</span>
-                  <span>{{ a['categoria'] }}</span>
-                </span>
-              </div>
+              <p class="card-location-line">
+                📍 <strong>{{ a['zona'] or 'n/d' }}</strong>
+                <span class="card-meta-separator">—</span>
+                <span>{{ a['categoria'] }}</span>
+              </p>
 
               {% if a['tipo_annuncio'] %}
-                <div class="card-meta-row card-meta-row-center">
-                  <span class="card-type-line
-                    {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
+                <div class="card-type-wrap">
+                  <span class="card-type-line {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
                     {% if a['tipo_annuncio'] == 'offro' %}
                       🟢 Offro
                     {% elif a['tipo_annuncio'] == 'cerco' %}
@@ -567,15 +565,15 @@
               {% endif %}
             </div>
 
-            <div class="pt-2">
-              {% if a.get('id_operatore') %}
+            {% if a.get('id_operatore') %}
+              <div class="card-cta-wrap">
                 <a href="{{ url_for('profilo_pubblico', id=a['utente_id']) }}"
                    onclick="event.stopPropagation()"
                    class="btn-profilo-ios">
                   👤 Vai al profilo
                 </a>
-              {% endif %}
-            </div>
+              </div>
+            {% endif %}
 
           </div>
         </div>
@@ -679,17 +677,27 @@
     transition: transform 0.22s ease, filter 0.22s ease;
   }
 
+  .card-ios:hover {
+    transform: translateY(-6px);
+    filter: saturate(1.02);
+  }
+
   .card-ios-shell {
     position: relative;
     padding: 20px 20px 18px;
     border-radius: 34px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,255,0.96));
+    background: linear-gradient(180deg, rgba(255,255,255,0.985), rgba(247,250,255,0.965));
     border: 1px solid rgba(214, 223, 238, 0.95);
     box-shadow:
       0 14px 38px rgba(15, 23, 42, 0.08),
       0 32px 70px rgba(15, 23, 42, 0.08);
     overflow: visible;
+  }
+
+  .card-ios:hover .card-ios-shell {
+    box-shadow:
+      0 18px 44px rgba(15, 23, 42, 0.11),
+      0 36px 76px rgba(15, 23, 42, 0.11);
   }
 
   .card-ios-shell::before {
@@ -701,14 +709,112 @@
     width: 78%;
     height: 190px;
     border-radius: 999px;
-    background:
-      radial-gradient(circle,
-        rgba(255,255,255,0.96) 0%,
-        rgba(219,234,254,0.38) 38%,
-        rgba(191,219,254,0.12) 62%,
-        transparent 78%);
+    background: radial-gradient(
+      circle,
+      rgba(255,255,255,0.96) 0%,
+      rgba(219,234,254,0.38) 38%,
+      rgba(191,219,254,0.12) 62%,
+      transparent 78%
+    );
     filter: blur(10px);
     pointer-events: none;
+  }
+
+  /* FOTO */
+  .card-ios-photo-stage {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: -66px;
+  }
+
+  .card-ios-photo-stage::before {
+    content: "";
+    position: absolute;
+    width: 290px;
+    height: 290px;
+    border-radius: 9999px;
+    background: radial-gradient(
+      circle,
+      rgba(219, 234, 254, 0.55) 0%,
+      rgba(191, 219, 254, 0.22) 45%,
+      rgba(255, 255, 255, 0) 72%
+    );
+    filter: blur(12px);
+    pointer-events: none;
+  }
+
+  .card-ios-photo-ring {
+    position: relative;
+    z-index: 2;
+    padding: 8px;
+    border-radius: 9999px;
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.98),
+      rgba(241,245,249,0.94)
+    );
+    box-shadow:
+      0 18px 40px rgba(15, 23, 42, 0.12),
+      0 4px 14px rgba(15, 23, 42, 0.08);
+  }
+
+  .card-ios-photo {
+    width: 238px;
+    height: 238px;
+    display: block;
+    border-radius: 9999px;
+    object-fit: cover;
+    border: 4px solid rgba(255,255,255,0.96);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+  }
+
+  /* BLOCCO TESTO */
+  .mini-card-dati {
+    position: relative;
+    z-index: 2;
+    background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(252,253,255,0.975));
+    border-radius: 30px;
+    border: 1px solid rgba(218, 226, 239, 0.95);
+    padding: 82px 24px 22px;
+    text-align: center;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      0 10px 22px rgba(15, 23, 42, 0.05);
+  }
+
+  .mini-card-dati::before {
+    content: "";
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 46px;
+    height: 4px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(96,165,250,0.9), rgba(167,139,250,0.82));
+    opacity: 0.85;
+  }
+
+  .card-ios:hover .mini-card-dati {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.98),
+      0 14px 28px rgba(15, 23, 42, 0.07);
+  }
+
+  /* STRUTTURA CONTENUTI */
+  .card-content-premium {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .card-head-premium {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .card-title-premium {
@@ -718,6 +824,8 @@
     font-weight: 800;
     color: #0f172a;
     text-wrap: balance;
+    max-width: 11ch;
+    margin: 0 auto;
   }
 
   .card-username-premium {
@@ -783,22 +891,28 @@
     color: #2563eb;
   }
 
-  .card-meta-stack {
+  .card-divider-premium {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(203, 213, 225, 0.8),
+      transparent
+    );
+  }
+
+  .card-meta-premium {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding-top: 2px;
   }
 
-  .card-meta-row {
+  .card-price-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-  }
-
-  .card-meta-row-center {
-    justify-content: center;
+    gap: 12px;
   }
 
   .card-meta-label {
@@ -816,12 +930,14 @@
     font-size: 0.95rem;
     font-weight: 800;
     color: #047857;
+    white-space: nowrap;
   }
 
   .card-location-line {
     font-size: 0.95rem;
     color: #64748b;
     text-align: center;
+    margin: 0;
   }
 
   .card-location-line strong {
@@ -831,6 +947,11 @@
   .card-meta-separator {
     color: #94a3b8;
     margin: 0 4px;
+  }
+
+  .card-type-wrap {
+    display: flex;
+    justify-content: center;
   }
 
   .card-type-line {
@@ -849,101 +970,8 @@
     color: #2563eb;
   }
 
-  .card-ios:hover {
-    transform: translateY(-6px);
-    filter: saturate(1.02);
-  }
-
-  .card-ios:hover .card-ios-shell {
-    box-shadow:
-      0 18px 44px rgba(15, 23, 42, 0.11),
-      0 36px 76px rgba(15, 23, 42, 0.11);
-  }
-
-  /* FOTO */
-  .card-ios-photo-stage {
-    position: relative;
-    z-index: 3;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: -66px;
-  }
-
-  .card-ios-photo-stage::before {
-    content: "";
-    position: absolute;
-    width: 290px;
-    height: 290px;
-    border-radius: 9999px;
-    background: radial-gradient(
-      circle,
-      rgba(219, 234, 254, 0.55) 0%,
-      rgba(191, 219, 254, 0.22) 45%,
-      rgba(255, 255, 255, 0) 72%
-    );
-    filter: blur(12px);
-    pointer-events: none;
-  }
-
-  .card-ios-photo-ring {
-    position: relative;
-    z-index: 2;
-    padding: 8px;
-    border-radius: 9999px;
-    background: linear-gradient(
-      180deg,
-      rgba(255,255,255,0.98),
-      rgba(241,245,249,0.94)
-    );
-    box-shadow:
-      0 18px 40px rgba(15, 23, 42, 0.12),
-      0 4px 14px rgba(15, 23, 42, 0.08);
-  }
-
-  .card-ios-photo {
-    width: 238px;
-    height: 238px;
-    display: block;
-    border-radius: 9999px;
-    object-fit: cover;
-    border: 4px solid rgba(255,255,255,0.96);
-    box-shadow:
-      0 10px 24px rgba(15, 23, 42, 0.10);
-  }
-
-  /* BLOCCO TESTO */
-  .mini-card-dati {
-    position: relative;
-    z-index: 2;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.985), rgba(252,253,255,0.97));
-    border-radius: 30px;
-    border: 1px solid rgba(218, 226, 239, 0.95);
-    padding: 94px 24px 24px;
-    text-align: center;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.95),
-      0 12px 28px rgba(15, 23, 42, 0.06);
-  }
-
-  .mini-card-dati::before {
-    content: "";
-    position: absolute;
-    top: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 56px;
-    height: 4px;
-    border-radius: 9999px;
-    background: linear-gradient(90deg, rgba(96,165,250,0.95), rgba(167,139,250,0.90));
-    opacity: 0.9;
-  }
-
-  .card-ios:hover .mini-card-dati {
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.98),
-      0 16px 32px rgba(15, 23, 42, 0.08);
+  .card-cta-wrap {
+    padding-top: 4px;
   }
 
   /* CTA */
@@ -1000,272 +1028,255 @@
       height: 214px;
     }
 
-    .card-title-premium {
-      font-size: 1.72rem;
+    .mini-card-dati {
+      padding: 74px 18px 18px;
+      border-radius: 26px;
     }
 
-    .card-description-premium {
+    .card-content-premium {
+      gap: 14px;
+    }
+
+    .card-head-premium {
+      gap: 6px;
+    }
+
+    .card-title-premium {
+      font-size: 1.64rem;
+      max-width: 12ch;
+    }
+
+    .card-username-premium {
       font-size: 0.98rem;
     }
 
-    .card-meta-row {
+    .card-description-premium {
+      font-size: 0.97rem;
+      line-height: 1.42;
+      max-width: 28ch;
+      -webkit-line-clamp: 2;
+    }
+
+    .card-pill-premium {
+      font-size: 0.81rem;
+      padding: 7px 12px;
+    }
+
+    .card-price-row {
       flex-direction: column;
       justify-content: center;
       gap: 8px;
     }
 
-    .card-ios-photo {
-      width: 214px;
-      height: 214px;
-    }
-
-    .mini-card-dati {
-      padding: 84px 18px 20px;
-      border-radius: 26px;
+    .card-type-line {
+      font-size: 0.98rem;
     }
   }
 
-/* ⭐ CARD IN EVIDENZA */
-.card-evidenza {
-  border: 2px solid rgba(251, 191, 36, 0.85); /* amber-400 */
-  box-shadow:
-    0 0 0 1px rgba(251, 191, 36, 0.25),
-    0 8px 22px rgba(251, 191, 36, 0.25),
-    0 20px 40px rgba(0, 0, 0, 0.18);
-}
-
-/* Hover leggermente più deciso */
-.card-evidenza:hover {
-  transform: translateY(-6px);
-  box-shadow:
-    0 0 0 2px rgba(251, 191, 36, 0.45),
-    0 12px 28px rgba(251, 191, 36, 0.35),
-    0 28px 50px rgba(0, 0, 0, 0.22);
-}
-.card-evidenza {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 251, 235, 0.95),
-    rgba(255, 255, 255, 0.85)
-  );
-}
-/* 🏅 Badge Affidabilità Top (reputazione) */
-.badge-affidabilita-top {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-
-  padding: 6px 10px;
-  border-radius: 9999px;
-
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.45); /* slate soft */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  box-shadow: 0 6px 14px rgba(0,0,0,0.10);
-}
-
-.badge-affidabilita-icona {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.badge-affidabilita-testo {
-  font-size: 12px;
-  font-weight: 700;
-  color: #0f172a; /* slate-900 */
-  letter-spacing: 0.2px;
-}
-/* 🟡 CARD VETRINA */
-.card-vetrina {
-  position: relative;
-  background: rgba(255,255,255,0.9);
-  border: 1px solid rgba(250,204,21,0.5);
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-  transition: all 0.25s ease;
-}
-
-.card-vetrina:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 26px rgba(0,0,0,0.18);
-}
-
-/* Badge vetrina */
-.badge-vetrina {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 9999px;
-
-  background: linear-gradient(to right, #facc15, #fde047);
-  color: #78350f;
-
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-/* 🚨 BADGE URGENTE – slot evidenza */
-.badge-urgente-top {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 20;
-
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-
-  padding: 6px 12px;
-  border-radius: 9999px;
-
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: #fff;
-
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-
-  box-shadow:
-    0 6px 18px rgba(239, 68, 68, 0.45),
-    0 0 0 1px rgba(255,255,255,0.25);
-
-  animation: urgentPulse 2.6s ease-in-out infinite;
-}
-
-/* Pallino */
-.badge-urgente-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 8px rgba(255,255,255,0.9);
-}
-
-/* Animazione molto soft */
-@keyframes urgentPulse {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-/* 🚨 VETRINA URGENTE (rosso più soft della lista) */
-.card-vetrina-urgente {
-  border: 1.5px solid rgba(239, 68, 68, 0.65);
-  box-shadow:
-    0 4px 14px rgba(239, 68, 68, 0.25),
-    0 10px 26px rgba(0, 0, 0, 0.18);
-
-  background: linear-gradient(
-    180deg,
-    rgba(254, 226, 226, 0.45),
-    rgba(255, 255, 255, 0.9)
-  );
-}
-/* 🚨 CARD URGENTE */
-.card-urgente {
-  border: 2px solid rgba(239, 68, 68, 0.85);
-  box-shadow:
-    0 0 0 1px rgba(239, 68, 68, 0.25),
-    0 8px 22px rgba(239, 68, 68, 0.30),
-    0 20px 40px rgba(0, 0, 0, 0.18);
-
+  /* ⭐ CARD IN EVIDENZA */
+  .card-evidenza {
+    border: 2px solid rgba(251, 191, 36, 0.85);
+    box-shadow:
+      0 0 0 1px rgba(251, 191, 36, 0.25),
+      0 8px 22px rgba(251, 191, 36, 0.25),
+      0 20px 40px rgba(0, 0, 0, 0.18);
     background: linear-gradient(
       180deg,
-      rgba(254, 226, 226, 0.30), /* ⬅️ prima era 0.55 */
+      rgba(255, 251, 235, 0.95),
+      rgba(255, 255, 255, 0.85)
+    );
+  }
+
+  .card-evidenza:hover {
+    transform: translateY(-6px);
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0.45),
+      0 12px 28px rgba(251, 191, 36, 0.35),
+      0 28px 50px rgba(0, 0, 0, 0.22);
+  }
+
+  /* 🚨 CARD URGENTE */
+  .card-urgente {
+    border: 2px solid rgba(239, 68, 68, 0.85);
+    box-shadow:
+      0 0 0 1px rgba(239, 68, 68, 0.25),
+      0 8px 22px rgba(239, 68, 68, 0.30),
+      0 20px 40px rgba(0, 0, 0, 0.18);
+    background: linear-gradient(
+      180deg,
+      rgba(254, 226, 226, 0.30),
       rgba(255, 255, 255, 0.90)
     );
   }
 
-/* Hover più deciso dell’evidenza */
-.card-urgente:hover {
-  transform: translateY(-6px);
-  box-shadow:
-    0 0 0 2px rgba(239, 68, 68, 0.45),
-    0 12px 28px rgba(239, 68, 68, 0.40),
-    0 28px 50px rgba(0, 0, 0, 0.22);
-}
-
-/* 🏅 Badge Affidabilità – VETRINA (solo icona) */
-.badge-affidabilita-vetrina {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 20;
-
-  width: 30px;
-  height: 30px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  font-size: 16px;
-
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-
-  border-radius: 9999px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-
-  box-shadow: 0 4px 10px rgba(0,0,0,0.10);
-}
-/* ============================
-   SEPARAZIONE VETRINA / LISTA
-============================ */
-
-/* Contenitore vetrina: piano superiore */
-.vetrina-wrapper {
-  position: relative;
-  margin: 0 auto 56px auto;
-  padding: 24px 16px 32px;
-
-  background: linear-gradient(
-    180deg,
-    rgba(255, 252, 235, 0.65),
-    rgba(255, 255, 255, 0)
-  );
-
-  border-radius: 28px;
-
-  box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.06);
-
-  z-index: 2;
-}
-
-/* Desktop spacing più ariosa */
-@media (min-width: 768px) {
-  .vetrina-wrapper {
-    padding: 32px 24px 40px;
-    margin-bottom: 72px;
+  .card-urgente:hover {
+    transform: translateY(-6px);
+    box-shadow:
+      0 0 0 2px rgba(239, 68, 68, 0.45),
+      0 12px 28px rgba(239, 68, 68, 0.40),
+      0 28px 50px rgba(0, 0, 0, 0.22);
   }
-}
 
-/* Separatore morbido sotto la vetrina */
-.vetrina-wrapper::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -18px;
-  transform: translateX(-50%);
+  /* 🏅 Badge Affidabilità Top */
+  .badge-affidabilita-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+  }
 
-  width: 70%;
-  height: 1px;
+  .badge-affidabilita-icona {
+    font-size: 16px;
+    line-height: 1;
+  }
 
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(0, 0, 0, 0.12),
-    transparent
-  );
-}
+  .badge-affidabilita-testo {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.2px;
+  }
 
+  /* 🚨 BADGE URGENTE */
+  .badge-urgente-top {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    box-shadow:
+      0 6px 18px rgba(239, 68, 68, 0.45),
+      0 0 0 1px rgba(255,255,255,0.25);
+    animation: urgentPulse 2.6s ease-in-out infinite;
+  }
+
+  .badge-urgente-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 8px rgba(255,255,255,0.9);
+  }
+
+  @keyframes urgentPulse {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+
+  /* 🟡 CARD VETRINA */
+  .card-vetrina {
+    position: relative;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(250,204,21,0.5);
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    transition: all 0.25s ease;
+  }
+
+  .card-vetrina:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.18);
+  }
+
+  .badge-vetrina {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 9999px;
+    background: linear-gradient(to right, #facc15, #fde047);
+    color: #78350f;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+
+  .card-vetrina-urgente {
+    border: 1.5px solid rgba(239, 68, 68, 0.65);
+    box-shadow:
+      0 4px 14px rgba(239, 68, 68, 0.25),
+      0 10px 26px rgba(0, 0, 0, 0.18);
+    background: linear-gradient(
+      180deg,
+      rgba(254, 226, 226, 0.45),
+      rgba(255, 255, 255, 0.9)
+    );
+  }
+
+  .badge-affidabilita-vetrina {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 20;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 9999px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+  }
+
+  /* SEPARAZIONE VETRINA / LISTA */
+  .vetrina-wrapper {
+    position: relative;
+    margin: 0 auto 56px auto;
+    padding: 24px 16px 32px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 252, 235, 0.65),
+      rgba(255, 255, 255, 0)
+    );
+    border-radius: 28px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+    z-index: 2;
+  }
+
+  @media (min-width: 768px) {
+    .vetrina-wrapper {
+      padding: 32px 24px 40px;
+      margin-bottom: 72px;
+    }
+  }
+
+  .vetrina-wrapper::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -18px;
+    transform: translateX(-50%);
+    width: 70%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(0, 0, 0, 0.12),
+      transparent
+    );
+  }
 </style>
 <style>
 .page-cerca {
