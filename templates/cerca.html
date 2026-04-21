@@ -440,12 +440,11 @@
 
 <!-- ✅ GRIGLIA CARD OPERATORI -->
 <div class="max-w-7xl mx-auto px-2 sm:px-4">
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 justify-items-center">
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7 justify-items-center">
     {% for a in annunci %}
-    <!-- ✅ CARD OPERATORE -->
     <div
-      class="relative group card-ios rounded-2xl p-5 flex flex-col items-center text-center gap-5 cursor-pointer js-open-annuncio
-             min-h-[480px] w-full max-w-[380px]
+      class="relative group card-ios cursor-pointer js-open-annuncio
+             w-full max-w-[390px]
              {% if a.get('has_urgente', 0) == 1 %}
                card-urgente
              {% elif a.get('has_evidenza', 0) == 1 %}
@@ -453,141 +452,143 @@
              {% endif %}"
       data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
     >
-    {% if a.get('affidabilita_top', 0) == 1 %}
-      <div class="absolute top-3 left-3 z-10">
-        <div class="badge-affidabilita-top" title="Basato su recensioni verificate">
-          <span class="badge-affidabilita-icona" aria-hidden="true">🏅</span>
-          <span class="badge-affidabilita-testo">Fiducia Top</span>
+      {% if a.get('affidabilita_top', 0) == 1 %}
+        <div class="absolute top-4 left-4 z-20">
+          <div class="badge-affidabilita-top" title="Basato su recensioni verificate">
+            <span class="badge-affidabilita-icona" aria-hidden="true">🏅</span>
+            <span class="badge-affidabilita-testo">Fiducia Top</span>
+          </div>
         </div>
-      </div>
-    {% endif %}
+      {% endif %}
 
-    {% if a.get('has_urgente', 0) == 1 %}
-      <div class="badge-urgente-top">
-        <span class="badge-urgente-dot"></span>
-        Urgente
-      </div>
+      {% if a.get('has_urgente', 0) == 1 %}
+        <div class="badge-urgente-top z-20">
+          <span class="badge-urgente-dot"></span>
+          Urgente
+        </div>
+      {% elif a.get('has_evidenza', 0) == 1 %}
+        <div class="absolute top-4 right-4 z-20">
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-900 shadow-md">
+            ⭐ In evidenza
+          </span>
+        </div>
+      {% endif %}
 
-    {% elif a.get('has_evidenza', 0) == 1 %}
-      <div class="absolute top-3 right-3 z-10">
-        <span class="inline-flex items-center gap-1
-                     px-3 py-1 rounded-full
-                     text-xs font-semibold
-                     bg-gradient-to-r from-amber-400 to-yellow-300
-                     text-amber-900
-                     shadow-md">
-          ⭐ In evidenza
-        </span>
-      </div>
-    {% endif %}
+      {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
 
-      <!-- FOTO PROFILO -->
-      <div class="relative flex justify-center mb-[-150px] z-10">
-        {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
-        <img
-          src="{{ url_for('static', filename=foto) }}"
-          class="
-            w-52 h-52
-            sm:w-56 sm:h-56
-            rounded-full object-cover
-            border-[4px] border-white/80
-            shadow-2xl
-          "
-        >
-      </div>
-      <!-- TESTO -->
-    <div class="w-full mt-24 px-2 sm:px-4">
+      <div class="card-ios-shell">
+        <!-- FOTO -->
+        <div class="card-ios-photo-wrap">
+          <img
+            src="{{ url_for('static', filename=foto) }}"
+            alt="{{ a['titolo'] }}"
+            class="card-ios-photo"
+          >
+        </div>
+
+        <!-- BLOCCO TESTO -->
         <div class="mini-card-dati">
-          <!-- contenuto testuale ESISTENTE qui dentro -->
-        <!-- 🔹 Titolo + stelle recensioni -->
-        <div class="flex flex-col items-center gap-2 mb-1">
-          <h4 class="text-lg font-semibold text-gray-900 leading-snug tracking-tight group-hover:text-blue-700 transition break-words">
-            {{ a['titolo'] }}
-          </h4>
+          <div class="space-y-3.5">
+            <!-- Titolo -->
+            <div class="space-y-1.5">
+              <h4 class="text-[1.75rem] sm:text-[1.95rem] font-bold leading-[1.02] tracking-[-0.04em] text-slate-900 break-words">
+                {{ a['titolo'] }}
+              </h4>
 
-          {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
-            <div class="flex items-center justify-center sm:justify-end text-yellow-500 text-sm mt-0.5">
-              {% for i in range(1,6) %}
-                {% if i <= a['media_recensioni']|round(0, 'floor') %}
-                  ⭐
-                {% elif i - a['media_recensioni'] < 1 %}
-                  🌟
-                {% else %}
-                  ☆
+              <p class="text-[1rem] sm:text-[1.04rem] text-slate-500 font-medium">
+                {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
+              </p>
+            </div>
+
+            <!-- Stelle -->
+            {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+              <div class="flex items-center justify-center gap-2 text-sm">
+                <span class="font-semibold text-slate-900">{{ a['media_recensioni']|round(1) }}</span>
+                <span class="text-yellow-500 tracking-tight">
+                  {% for i in range(1,6) %}
+                    {% if i <= a['media_recensioni']|round(0, 'floor') %}
+                      ⭐
+                    {% elif i - a['media_recensioni'] < 1 %}
+                      🌟
+                    {% else %}
+                      ☆
+                    {% endif %}
+                  {% endfor %}
+                </span>
+                {% if a['numero_recensioni'] %}
+                  <span class="text-xs text-slate-500">({{ a['numero_recensioni'] }})</span>
                 {% endif %}
-              {% endfor %}
-              {% if a['numero_recensioni'] %}
-                <span class="ml-1 text-gray-500 text-xs">({{ a['numero_recensioni'] }})</span>
+              </div>
+            {% endif %}
+
+            <!-- Descrizione -->
+            {% if a['descrizione'] %}
+              <p class="text-[1rem] sm:text-[1.03rem] leading-[1.45] text-slate-700 line-clamp-3 max-w-[30ch] mx-auto">
+                {{ a['descrizione'] }}
+              </p>
+            {% endif %}
+
+            <!-- Filtri categoria -->
+            {% if a['filtri_categoria'] %}
+              <div class="flex flex-wrap justify-center gap-2 pt-1">
+                {% for filtro in a['filtri_categoria'].split(',') if filtro.strip() %}
+                  <span class="inline-flex items-center rounded-full border border-blue-200/80 bg-blue-50/80 px-3 py-1 text-[0.82rem] font-semibold text-blue-700">
+                    {{ filtro.strip() }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <!-- Prezzo -->
+            {% if a['prezzo'] %}
+              <div class="pt-1">
+                <p class="text-[1rem] text-slate-700 font-medium">
+                  Prezzo indicativo:
+                  <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[0.92rem] font-semibold text-emerald-700 ml-2">
+                    da {{ a['prezzo'] }} €
+                  </span>
+                </p>
+              </div>
+            {% endif %}
+
+            <!-- Zona + categoria -->
+            <div class="pt-1 space-y-1.5">
+              <p class="text-[0.95rem] text-slate-500">
+                📍 <span class="font-semibold text-slate-700">{{ a['zona'] or 'n/d' }}</span>
+                <span class="text-slate-400">—</span>
+                <span>{{ a['categoria'] }}</span>
+              </p>
+
+              {% if a['tipo_annuncio'] %}
+                <div class="flex justify-center">
+                  <span class="inline-flex items-center gap-1 text-[0.95rem] font-semibold
+                               {% if a['tipo_annuncio'] == 'offro' %}
+                                 text-green-600
+                               {% elif a['tipo_annuncio'] == 'cerco' %}
+                                 text-blue-600
+                               {% endif %}">
+                    {% if a['tipo_annuncio'] == 'offro' %}
+                      🟢 Offro
+                    {% elif a['tipo_annuncio'] == 'cerco' %}
+                      🔵 Cerco
+                    {% endif %}
+                  </span>
+                </div>
               {% endif %}
             </div>
-          {% endif %}
-        </div>
 
-        <p class="text-sm text-gray-500 mb-2">
-          {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
-        </p>
-
-        {% if a['descrizione'] %}
-          <p class="text-sm text-gray-700 mb-3 line-clamp-2 sm:line-clamp-3 leading-snug">
-            {{ a['descrizione'] }}
-          </p>
-        {% endif %}
-
-        {% if a['filtri_categoria'] %}
-          <div class="flex flex-wrap justify-center gap-2 mb-3">
-            {% for filtro in a['filtri_categoria'].split(',') if filtro.strip() %}
-              <span class="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200">
-                {{ filtro.strip() }}
-              </span>
-            {% endfor %}
+            <!-- CTA -->
+            <div class="pt-3">
+              {% if a.get('id_operatore') %}
+                <a href="{{ url_for('profilo_pubblico', id=a['utente_id']) }}"
+                   onclick="event.stopPropagation()"
+                   class="btn-profilo-ios">
+                  👤 Vai al profilo
+                </a>
+              {% endif %}
+            </div>
           </div>
-        {% endif %}
-
-        {% if a['prezzo'] %}
-          <p class="text-sm text-gray-700 font-medium mb-2">
-            Prezzo indicativo:
-            <span class="inline-flex items-center gap-1
-            px-3 py-1 rounded-full
-            bg-emerald-50 text-emerald-700
-            text-xs font-semibold">
-           da {{ a['prezzo'] }} €
-          </span>
-          </p>
-        {% endif %}
-
-        <p class="text-xs text-gray-500 mt-auto text-center">
-          📍 <b>{{ a['zona'] or 'n/d' }}</b> — {{ a['categoria'] }}
-        </p>
-
-        {% if a['tipo_annuncio'] %}
-        <div class="mt-1 flex justify-center">
-          <span class="inline-flex items-center gap-1 text-xs font-medium
-                       {% if a['tipo_annuncio'] == 'offro' %}
-                         text-green-600
-                       {% elif a['tipo_annuncio'] == 'cerco' %}
-                         text-blue-600
-                       {% endif %}">
-            {% if a['tipo_annuncio'] == 'offro' %}
-              🟢 Offro
-            {% elif a['tipo_annuncio'] == 'cerco' %}
-              🔵 Cerco
-            {% endif %}
-          </span>
         </div>
-        {% endif %}
-
-        <!-- 🔗 LINK AZIONI -->
-        <div class="flex flex-wrap justify-center items-center gap-4 mt-3">
-
-          {% if a.get('id_operatore') %}
-          <a href="{{ url_for('profilo_pubblico', id=a['utente_id']) }}"
-             onclick="event.stopPropagation()"
-             class="btn-profilo-ios">
-             👤 Vai al profilo
-          </a>
-          {% endif %}
-        </div>
-      </div>
       </div>
     </div>
     {% endfor %}
@@ -681,47 +682,132 @@
 }
 </style>
 <style>
-/* 🌟 CARD iOS-style */
-.card-ios {
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(18px);
-  border: 1px solid rgba(210,220,255,0.55);
+  /* 🌟 CARD PRINCIPALE LISTA */
+  .card-ios {
+    position: relative;
+    border-radius: 34px;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+  }
 
-  box-shadow:
-    0 4px 16px rgba(0,0,0,0.08),
-    0 12px 32px rgba(0,0,0,0.12);
+  .card-ios-shell {
+    position: relative;
+    padding: 22px 20px 18px;
+    border-radius: 34px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,255,0.88));
+    border: 1px solid rgba(210,220,255,0.72);
+    box-shadow:
+      0 10px 30px rgba(15,23,42,0.08),
+      0 24px 54px rgba(15,23,42,0.10);
+    overflow: visible;
+  }
 
-  transition: all 0.25s ease;
-}
+  .card-ios:hover {
+    transform: translateY(-4px);
+  }
 
-.card-ios:hover {
-  transform: translateY(-4px);
-  box-shadow:
-    0 6px 20px rgba(0,0,0,0.12),
-    0 18px 40px rgba(0,0,0,0.18);
-}
+  .card-ios:hover .card-ios-shell {
+    box-shadow:
+      0 14px 34px rgba(15,23,42,0.10),
+      0 28px 60px rgba(15,23,42,0.13);
+  }
 
-/* Pulsante Vai al profilo — stile iOS */
-.btn-profilo-ios {
-  padding: 6px 14px;
-  border-radius: 9999px;
-  background: rgba(255,255,255,0.75);
-  border: 1px solid rgba(200,210,255,0.8);
-  backdrop-filter: blur(8px);
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #2563eb;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.25s ease;
-}
+  /* FOTO */
+  .card-ios-photo-wrap {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    margin-bottom: -72px;
+  }
 
-.btn-profilo-ios:hover {
-  background: rgba(230,240,255,1);
-  border-color: rgba(180,200,255,1);
-  color: #1e40af;
-}
+  .card-ios-photo {
+    width: 260px;
+    height: 260px;
+    border-radius: 9999px;
+    object-fit: cover;
+    border: 6px solid rgba(255,255,255,0.96);
+    box-shadow:
+      0 18px 40px rgba(15,23,42,0.16),
+      0 4px 14px rgba(15,23,42,0.10);
+  }
+
+  /* BLOCCO TESTO */
+  .mini-card-dati {
+    position: relative;
+    z-index: 1;
+    background: rgba(255,255,255,0.96);
+    border-radius: 30px;
+    border: 1px solid rgba(210,220,255,0.82);
+    padding: 98px 24px 24px;
+    text-align: center;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.92),
+      0 10px 28px rgba(15,23,42,0.07);
+  }
+
+  .card-ios:hover .mini-card-dati {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.96),
+      0 14px 30px rgba(15,23,42,0.09);
+  }
+
+  .mini-card-dati::before {
+    content: "";
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 54px;
+    height: 4px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(96,165,250,0.9), rgba(167,139,250,0.85));
+    opacity: 0.9;
+  }
+
+  /* CTA */
+  .btn-profilo-ios {
+    padding: 8px 16px;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(191,219,254,0.95);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 8px 18px rgba(37,99,235,0.08);
+  }
+
+  .btn-profilo-ios:hover {
+    background: rgba(239,246,255,0.95);
+    border-color: rgba(147,197,253,1);
+    color: #1d4ed8;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .card-ios-shell {
+      padding: 18px 16px 16px;
+      border-radius: 30px;
+    }
+
+    .card-ios-photo-wrap {
+      margin-bottom: -62px;
+    }
+
+    .card-ios-photo {
+      width: 224px;
+      height: 224px;
+    }
+
+    .mini-card-dati {
+      padding: 88px 18px 20px;
+      border-radius: 26px;
+    }
+  }
+    
 /* ⭐ CARD IN EVIDENZA */
 .card-evidenza {
   border: 2px solid rgba(251, 191, 36, 0.85); /* amber-400 */
@@ -1091,41 +1177,6 @@
   box-shadow:
     0 12px 26px rgba(0, 0, 0, 0.16),
     0 4px 10px rgba(0, 0, 0, 0.08);
-}
-.mini-card-dati {
-  position: relative;
-}
-
-.mini-card-dati::after {
-  content: "";
-  position: absolute;
-  top: 28px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 48px;
-  height: 4px;
-  border-radius: 9999px;
-  background: linear-gradient(90deg, #60a5fa, #34d399);
-}
-
-.mini-card-dati::before {
-  content: "";
-  position: absolute;
-  top: 16px;
-  left: 12px;
-  right: 12px;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(96,165,250,0.45),
-    transparent
-  );
-}
-.card-ios img {
-  box-shadow:
-    0 12px 28px rgba(0,0,0,0.25),
-    0 0 0 1px rgba(255,255,255,0.6);
 }
 
 </style>
