@@ -499,6 +499,7 @@
               </span>
             </div>
           {% endif %}
+
         </div>
 
         <div class="mini-card-dati">
@@ -510,36 +511,28 @@
                   {{ a['titolo'] }}
                 </h4>
 
-                {% if a['tipo_annuncio'] %}
-                  <span class="card-type-chip card-type-chip-head {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
-                    {% if a['tipo_annuncio'] == 'offro' %}
-                      Offro
-                    {% elif a['tipo_annuncio'] == 'cerco' %}
-                      Cerco
-                    {% endif %}
-                  </span>
-                {% endif %}
-              </div>
-
-              {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
-                <div class="card-rating-row">
-                  <span class="card-rating-value">{{ a['media_recensioni']|round(1) }}</span>
-                  <span class="card-rating-stars">
-                    {% for i in range(1,6) %}
-                      {% if i <= a['media_recensioni']|round(0, 'floor') %}
-                        ⭐
-                      {% elif i - a['media_recensioni'] < 1 %}
-                        🌟
-                      {% else %}
-                        ☆
+                <div class="card-side-meta">
+                  {% if a['tipo_annuncio'] %}
+                    <span class="card-type-chip card-type-chip-head {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
+                      {% if a['tipo_annuncio'] == 'offro' %}
+                        Offro
+                      {% elif a['tipo_annuncio'] == 'cerco' %}
+                        Cerco
                       {% endif %}
-                    {% endfor %}
-                  </span>
-                  {% if a['numero_recensioni'] %}
-                    <span class="card-rating-count">({{ a['numero_recensioni'] }})</span>
+                    </span>
+                  {% endif %}
+
+                  {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+                    <div class="card-rating-mini">
+                      <span class="card-rating-mini-value">{{ a['media_recensioni']|round(1) }}</span>
+                      <span class="card-rating-mini-star">★</span>
+                      {% if a['numero_recensioni'] %}
+                        <span class="card-rating-mini-count">({{ a['numero_recensioni'] }})</span>
+                      {% endif %}
+                    </div>
                   {% endif %}
                 </div>
-              {% endif %}
+              </div>
             </div>
 
             {% if a['descrizione'] %}
@@ -714,7 +707,7 @@
   .card-hero-premium {
     position: relative;
     z-index: 3;
-    height: 210px;
+    height: 228px; /* desktop più alta */
     border-radius: 20px;
     overflow: hidden;
     margin-bottom: -6px;
@@ -742,7 +735,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 32%;
+    height: 34%;
     background: linear-gradient(
       180deg,
       rgba(15, 23, 42, 0) 0%,
@@ -789,7 +782,7 @@
     position: absolute;
     left: 9px;
     right: 9px;
-    bottom: 9px;
+    bottom: 10px;
     z-index: 3;
     display: flex;
     justify-content: flex-start;
@@ -798,45 +791,45 @@
   .card-hero-username {
     display: inline-flex;
     align-items: center;
-    min-height: 24px;
-    max-width: 56%;
+    min-height: 23px;
+    max-width: 54%;
     padding: 3px 9px;
     border-radius: 9999px;
-    background: rgba(255,255,255,0.14);
-    border: 1px solid rgba(255,255,255,0.18);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: rgba(255,255,255,0.92);
-    font-size: 0.72rem;
-    font-weight: 650;
-    letter-spacing: -0.01em;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.14);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: rgba(255,255,255,0.88);
+    font-size: 0.70rem;
+    font-weight: 560;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.22);
-    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.20);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.10);
   }
 
   .card-hero-location {
     display: inline-flex;
     align-items: center;
-    min-height: 24px;
-    max-width: 48%;
-    padding: 3px 9px;
-    border-radius: 9999px;
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.16);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: rgba(255,255,255,0.90);
-    font-size: 0.71rem;
-    font-weight: 600;
+    max-width: 52%;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    color: rgba(255,255,255,0.98);
+    font-size: 0.90rem;
+    font-weight: 700;
     letter-spacing: -0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.22);
-    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.42);
+    box-shadow: none;
   }
 
   /* BLOCCO TESTO */
@@ -889,7 +882,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
   }
 
   .card-title-premium {
@@ -901,6 +894,14 @@
     color: #0f172a;
     margin: 0;
     text-wrap: balance;
+  }
+
+  .card-side-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   .card-type-chip {
@@ -934,6 +935,35 @@
     border-color: rgba(147, 197, 253, 0.95);
   }
 
+  /* rating compatto sotto offro/cerco */
+  .card-rating-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    min-height: 18px;
+  }
+
+  .card-rating-mini-value {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #334155;
+    line-height: 1;
+  }
+
+  .card-rating-mini-star {
+    font-size: 0.90rem;
+    color: #f59e0b;
+    line-height: 1;
+  }
+
+  .card-rating-mini-count {
+    font-size: 0.72rem;
+    color: #64748b;
+    line-height: 1;
+  }
+
+  /* mantengo queste classi nel caso l'HTML vecchio sia ancora presente */
   .card-rating-row {
     display: flex;
     align-items: center;
@@ -1002,7 +1032,6 @@
     display: none;
   }
 
-  /* CTA */
   .btn-profilo-ios {
     display: none;
   }
@@ -1040,17 +1069,16 @@
     }
 
     .card-hero-username {
-      min-height: 25px;
+      min-height: 24px;
       max-width: 72%;
-      font-size: 0.75rem;
+      font-size: 0.73rem;
       padding: 4px 9px;
     }
 
     .card-hero-location {
-      min-height: 25px;
-      max-width: 52%;
-      font-size: 0.74rem;
-      padding: 4px 9px;
+      max-width: 58%;
+      font-size: 0.82rem;
+      padding: 0;
     }
 
     .mini-card-dati {
@@ -1080,23 +1108,30 @@
       line-height: 1.05;
     }
 
+    .card-side-meta {
+      gap: 5px;
+    }
+
     .card-type-chip {
       min-width: 68px;
       padding: 5px 9px;
       font-size: 0.73rem;
     }
 
-    .card-rating-row {
-      gap: 5px;
+    .card-rating-mini {
+      gap: 4px;
     }
 
-    .card-rating-value,
-    .card-rating-stars {
-      font-size: 0.83rem;
+    .card-rating-mini-value {
+      font-size: 0.78rem;
     }
 
-    .card-rating-count {
-      font-size: 0.72rem;
+    .card-rating-mini-star {
+      font-size: 0.84rem;
+    }
+
+    .card-rating-mini-count {
+      font-size: 0.70rem;
     }
 
     .card-description-premium {
@@ -1320,7 +1355,6 @@
     );
   }
 </style>
-
 <style>
 .page-cerca {
   padding-bottom: 160px;
