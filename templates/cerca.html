@@ -485,12 +485,6 @@
           >
 
           <div class="card-hero-overlay"></div>
-
-          <div class="card-hero-badge-row">
-            <span class="card-hero-username">
-              {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
-            </span>
-          </div>
         </div>
 
         <div class="mini-card-dati">
@@ -500,6 +494,10 @@
               <h4 class="card-title-premium">
                 {{ a['titolo'] }}
               </h4>
+
+              <p class="card-username-inline">
+                {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
+              </p>
 
               {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
                 <div class="card-rating-row">
@@ -863,7 +861,7 @@
   .card-head-premium {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
   }
 
   .card-title-premium {
@@ -876,6 +874,16 @@
     max-width: 12ch;
     margin: 0 auto;
   }
+
+  .card-username-inline {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.15;
+  color: #64748b;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
 
   .card-username-premium {
     font-size: 1.02rem;
@@ -890,6 +898,7 @@
     justify-content: center;
     gap: 8px;
     min-height: 22px;
+    margin-top: 2px;
   }
 
   .card-rating-value {
@@ -1101,7 +1110,7 @@
         0 6px 14px rgba(15, 23, 42, 0.12),
         inset 0 1px 0 rgba(255,255,255,0.70);
     }
-    
+
     .mini-card-dati {
       padding: 38px 18px 18px;
       border-radius: 26px;
@@ -1124,6 +1133,10 @@
       font-size: 0.98rem;
     }
 
+    .card-username-inline {
+      font-size: 0.82rem;
+    }
+    
     .card-location-main {
       font-size: 0.96rem;
     }
