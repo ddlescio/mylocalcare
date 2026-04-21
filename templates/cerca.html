@@ -477,13 +477,19 @@
       {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
 
       <div class="card-ios-shell">
-        <div class="card-ios-photo-stage">
-          <div class="card-ios-photo-ring">
-            <img
-              src="{{ url_for('static', filename=foto) }}"
-              alt="{{ a['titolo'] }}"
-              class="card-ios-photo"
-            >
+        <div class="card-hero-premium">
+          <img
+            src="{{ url_for('static', filename=foto) }}"
+            alt="{{ a['titolo'] }}"
+            class="card-hero-image"
+          >
+
+          <div class="card-hero-overlay"></div>
+
+          <div class="card-hero-badge-row">
+            <span class="card-hero-username">
+              {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
+            </span>
           </div>
         </div>
 
@@ -494,10 +500,6 @@
               <h4 class="card-title-premium">
                 {{ a['titolo'] }}
               </h4>
-
-              <p class="card-username-premium">
-                {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
-              </p>
 
               {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
                 <div class="card-rating-row">
@@ -720,55 +722,60 @@
     pointer-events: none;
   }
 
-  /* FOTO */
-  .card-ios-photo-stage {
+  /* HERO FOTO */
+  .card-hero-premium {
     position: relative;
     z-index: 3;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: -66px;
+    height: 290px;
+    border-radius: 28px;
+    overflow: hidden;
+    margin-bottom: -34px;
+    box-shadow:
+      0 20px 44px rgba(15, 23, 42, 0.14),
+      0 6px 18px rgba(15, 23, 42, 0.08);
   }
 
-  .card-ios-photo-stage::before {
-    content: "";
+  .card-hero-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  .card-hero-overlay {
     position: absolute;
-    width: 290px;
-    height: 290px;
-    border-radius: 9999px;
-    background: radial-gradient(
-      circle,
-      rgba(219, 234, 254, 0.55) 0%,
-      rgba(191, 219, 254, 0.22) 45%,
-      rgba(255, 255, 255, 0) 72%
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(15, 23, 42, 0.04) 0%,
+      rgba(15, 23, 42, 0.10) 100%
     );
-    filter: blur(12px);
     pointer-events: none;
   }
 
-  .card-ios-photo-ring {
-    position: relative;
-    z-index: 2;
-    padding: 8px;
-    border-radius: 9999px;
-    background: linear-gradient(
-      180deg,
-      rgba(255,255,255,0.98),
-      rgba(241,245,249,0.94)
-    );
-    box-shadow:
-      0 18px 40px rgba(15, 23, 42, 0.12),
-      0 4px 14px rgba(15, 23, 42, 0.08);
+  .card-hero-badge-row {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 14px;
+    display: flex;
+    justify-content: flex-start;
   }
 
-  .card-ios-photo {
-    width: 238px;
-    height: 238px;
-    display: block;
+  .card-hero-username {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 7px 12px;
     border-radius: 9999px;
-    object-fit: cover;
-    border: 4px solid rgba(255,255,255,0.96);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+    background: rgba(255,255,255,0.82);
+    border: 1px solid rgba(255,255,255,0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #334155;
+    font-size: 0.92rem;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.10);
   }
 
   /* BLOCCO TESTO */
@@ -778,7 +785,7 @@
     background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(252,253,255,0.975));
     border-radius: 30px;
     border: 1px solid rgba(218, 226, 239, 0.95);
-    padding: 82px 24px 22px;
+    padding: 56px 24px 22px;
     text-align: center;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.95),
@@ -818,13 +825,13 @@
   }
 
   .card-title-premium {
-    font-size: 2.05rem;
+    font-size: 2rem;
     line-height: 0.98;
     letter-spacing: -0.055em;
     font-weight: 800;
     color: #0f172a;
     text-wrap: balance;
-    max-width: 11ch;
+    max-width: 12ch;
     margin: 0 auto;
   }
 
@@ -1010,26 +1017,25 @@
       height: 160px;
     }
 
-    .card-ios-photo-stage {
-      margin-bottom: -48px;
+    .card-hero-premium {
+      height: 250px;
+      border-radius: 24px;
+      margin-bottom: -28px;
     }
 
-    .card-ios-photo-stage::before {
-      width: 248px;
-      height: 248px;
+    .card-hero-badge-row {
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
     }
 
-    .card-ios-photo-ring {
-      padding: 7px;
-    }
-
-    .card-ios-photo {
-      width: 214px;
-      height: 214px;
+    .card-hero-username {
+      font-size: 0.86rem;
+      padding: 6px 11px;
     }
 
     .mini-card-dati {
-      padding: 74px 18px 18px;
+      padding: 48px 18px 18px;
       border-radius: 26px;
     }
 
@@ -1278,6 +1284,7 @@
     );
   }
 </style>
+
 <style>
 .page-cerca {
   padding-bottom: 160px;
