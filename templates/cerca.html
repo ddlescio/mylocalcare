@@ -12,11 +12,24 @@
              shadow-2xl backdrop-blur-lg">
   <input type="hidden" name="categoria" value="{{ categoria }}">
 
-  <div class="flex items-center gap-2 mb-4 pb-3 border-b border-indigo-100">
-  <span class="text-lg">✨</span>
-  <h3 class="text-base font-semibold bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 bg-clip-text text-transparent">
-    Filtri di ricerca
-  </h3>
+  <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-indigo-100">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="text-lg">✨</span>
+      <h3 class="text-base font-semibold bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 bg-clip-text text-transparent">
+        Filtri di ricerca
+      </h3>
+    </div>
+
+    <button
+      type="button"
+      id="close-filtri"
+      class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full
+             bg-white/90 text-slate-600 border border-slate-200
+             shadow-sm hover:bg-slate-50 hover:text-slate-800 transition-all duration-150 shrink-0"
+      aria-label="Chiudi filtri">
+      <span class="text-sm">✕</span>
+      <span class="text-sm font-semibold">Chiudi</span>
+    </button>
   </div>
 
   <!-- 📍 Campo ZONA con autocomplete -->
@@ -1130,10 +1143,17 @@ document.addEventListener("DOMContentLoaded", function () {
   const toggleBtn = document.getElementById("toggle-filtri");
   const container = document.getElementById("filtri-container");
   const resetBtn = document.getElementById("reset-filtri");
+  const closeBtn = document.getElementById("close-filtri");
 
   if (toggleBtn && container) {
     toggleBtn.addEventListener("click", () => {
       container.classList.toggle("hidden");
+    });
+  }
+
+  if (closeBtn && container) {
+    closeBtn.addEventListener("click", () => {
+      container.classList.add("hidden");
     });
   }
 
