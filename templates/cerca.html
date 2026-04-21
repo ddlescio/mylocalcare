@@ -478,11 +478,13 @@
 
       <div class="card-ios-shell">
         <div class="card-ios-photo-stage">
-          <img
-            src="{{ url_for('static', filename=foto) }}"
-            alt="{{ a['titolo'] }}"
-            class="card-ios-photo"
-          >
+          <div class="card-ios-photo-ring">
+            <img
+              src="{{ url_for('static', filename=foto) }}"
+              alt="{{ a['titolo'] }}"
+              class="card-ios-photo"
+            >
+          </div>
         </div>
 
         <div class="mini-card-dati">
@@ -859,18 +861,55 @@
   }
 
   /* FOTO */
+  .card-ios-photo-stage {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: -66px;
+  }
+
+  .card-ios-photo-stage::before {
+    content: "";
+    position: absolute;
+    width: 290px;
+    height: 290px;
+    border-radius: 9999px;
+    background: radial-gradient(
+      circle,
+      rgba(219, 234, 254, 0.55) 0%,
+      rgba(191, 219, 254, 0.22) 45%,
+      rgba(255, 255, 255, 0) 72%
+    );
+    filter: blur(12px);
+    pointer-events: none;
+  }
+
+  .card-ios-photo-ring {
+    position: relative;
+    z-index: 2;
+    padding: 8px;
+    border-radius: 9999px;
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.98),
+      rgba(241,245,249,0.94)
+    );
+    box-shadow:
+      0 18px 40px rgba(15, 23, 42, 0.12),
+      0 4px 14px rgba(15, 23, 42, 0.08);
+  }
 
   .card-ios-photo {
     width: 238px;
     height: 238px;
+    display: block;
     border-radius: 9999px;
     object-fit: cover;
-    border: 6px solid rgba(255,255,255,0.98);
+    border: 4px solid rgba(255,255,255,0.96);
     box-shadow:
-      0 20px 42px rgba(15, 23, 42, 0.16),
-      0 6px 16px rgba(15, 23, 42, 0.10);
-    position: relative;
-    z-index: 2;
+      0 10px 24px rgba(15, 23, 42, 0.10);
   }
 
   /* BLOCCO TESTO */
@@ -952,6 +991,15 @@
       height: 248px;
     }
 
+    .card-ios-photo-ring {
+      padding: 7px;
+    }
+
+    .card-ios-photo {
+      width: 214px;
+      height: 214px;
+    }
+
     .card-title-premium {
       font-size: 1.72rem;
     }
@@ -965,7 +1013,7 @@
       justify-content: center;
       gap: 8px;
     }
-    
+
     .card-ios-photo {
       width: 214px;
       height: 214px;
