@@ -477,8 +477,7 @@
       {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
 
       <div class="card-ios-shell">
-        <!-- FOTO -->
-        <div class="card-ios-photo-wrap">
+        <div class="card-ios-photo-stage">
           <img
             src="{{ url_for('static', filename=foto) }}"
             alt="{{ a['titolo'] }}"
@@ -486,87 +485,76 @@
           >
         </div>
 
-        <!-- BLOCCO TESTO -->
         <div class="mini-card-dati">
-          <div class="space-y-3.5">
-            <!-- Titolo -->
-            <div class="space-y-1.5">
-              <h4 class="text-[1.75rem] sm:text-[1.95rem] font-bold leading-[1.02] tracking-[-0.04em] text-slate-900 break-words">
+          <div class="space-y-4">
+
+            <div class="space-y-2">
+              <h4 class="card-title-premium">
                 {{ a['titolo'] }}
               </h4>
 
-              <p class="text-[1rem] sm:text-[1.04rem] text-slate-500 font-medium">
+              <p class="card-username-premium">
                 {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
               </p>
+
+              {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+                <div class="card-rating-row">
+                  <span class="card-rating-value">{{ a['media_recensioni']|round(1) }}</span>
+                  <span class="card-rating-stars">
+                    {% for i in range(1,6) %}
+                      {% if i <= a['media_recensioni']|round(0, 'floor') %}
+                        ⭐
+                      {% elif i - a['media_recensioni'] < 1 %}
+                        🌟
+                      {% else %}
+                        ☆
+                      {% endif %}
+                    {% endfor %}
+                  </span>
+                  {% if a['numero_recensioni'] %}
+                    <span class="card-rating-count">({{ a['numero_recensioni'] }})</span>
+                  {% endif %}
+                </div>
+              {% endif %}
             </div>
 
-            <!-- Stelle -->
-            {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
-              <div class="flex items-center justify-center gap-2 text-sm">
-                <span class="font-semibold text-slate-900">{{ a['media_recensioni']|round(1) }}</span>
-                <span class="text-yellow-500 tracking-tight">
-                  {% for i in range(1,6) %}
-                    {% if i <= a['media_recensioni']|round(0, 'floor') %}
-                      ⭐
-                    {% elif i - a['media_recensioni'] < 1 %}
-                      🌟
-                    {% else %}
-                      ☆
-                    {% endif %}
-                  {% endfor %}
-                </span>
-                {% if a['numero_recensioni'] %}
-                  <span class="text-xs text-slate-500">({{ a['numero_recensioni'] }})</span>
-                {% endif %}
-              </div>
-            {% endif %}
-
-            <!-- Descrizione -->
             {% if a['descrizione'] %}
-              <p class="text-[1rem] sm:text-[1.03rem] leading-[1.45] text-slate-700 line-clamp-3 max-w-[30ch] mx-auto">
+              <p class="card-description-premium">
                 {{ a['descrizione'] }}
               </p>
             {% endif %}
 
-            <!-- Filtri categoria -->
             {% if a['filtri_categoria'] %}
-              <div class="flex flex-wrap justify-center gap-2 pt-1">
+              <div class="card-pill-wrap">
                 {% for filtro in a['filtri_categoria'].split(',') if filtro.strip() %}
-                  <span class="inline-flex items-center rounded-full border border-blue-200/80 bg-blue-50/80 px-3 py-1 text-[0.82rem] font-semibold text-blue-700">
+                  <span class="card-pill-premium">
                     {{ filtro.strip() }}
                   </span>
                 {% endfor %}
               </div>
             {% endif %}
 
-            <!-- Prezzo -->
-            {% if a['prezzo'] %}
-              <div class="pt-1">
-                <p class="text-[1rem] text-slate-700 font-medium">
-                  Prezzo indicativo:
-                  <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[0.92rem] font-semibold text-emerald-700 ml-2">
-                    da {{ a['prezzo'] }} €
-                  </span>
-                </p>
-              </div>
-            {% endif %}
+            <div class="card-meta-stack">
 
-            <!-- Zona + categoria -->
-            <div class="pt-1 space-y-1.5">
-              <p class="text-[0.95rem] text-slate-500">
-                📍 <span class="font-semibold text-slate-700">{{ a['zona'] or 'n/d' }}</span>
-                <span class="text-slate-400">—</span>
-                <span>{{ a['categoria'] }}</span>
-              </p>
+              {% if a['prezzo'] %}
+                <div class="card-meta-row">
+                  <span class="card-meta-label">Prezzo indicativo</span>
+                  <span class="card-price-badge">da {{ a['prezzo'] }} €</span>
+                </div>
+              {% endif %}
+
+              <div class="card-meta-row card-meta-row-center">
+                <span class="card-location-line">
+                  📍 <strong>{{ a['zona'] or 'n/d' }}</strong>
+                  <span class="card-meta-separator">—</span>
+                  <span>{{ a['categoria'] }}</span>
+                </span>
+              </div>
 
               {% if a['tipo_annuncio'] %}
-                <div class="flex justify-center">
-                  <span class="inline-flex items-center gap-1 text-[0.95rem] font-semibold
-                               {% if a['tipo_annuncio'] == 'offro' %}
-                                 text-green-600
-                               {% elif a['tipo_annuncio'] == 'cerco' %}
-                                 text-blue-600
-                               {% endif %}">
+                <div class="card-meta-row card-meta-row-center">
+                  <span class="card-type-line
+                    {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
                     {% if a['tipo_annuncio'] == 'offro' %}
                       🟢 Offro
                     {% elif a['tipo_annuncio'] == 'cerco' %}
@@ -577,8 +565,7 @@
               {% endif %}
             </div>
 
-            <!-- CTA -->
-            <div class="pt-3">
+            <div class="pt-2">
               {% if a.get('id_operatore') %}
                 <a href="{{ url_for('profilo_pubblico', id=a['utente_id']) }}"
                    onclick="event.stopPropagation()"
@@ -587,6 +574,7 @@
                 </a>
               {% endif %}
             </div>
+
           </div>
         </div>
       </div>
@@ -721,6 +709,144 @@
     pointer-events: none;
   }
 
+  .card-title-premium {
+    font-size: 2.05rem;
+    line-height: 0.98;
+    letter-spacing: -0.055em;
+    font-weight: 800;
+    color: #0f172a;
+    text-wrap: balance;
+  }
+
+  .card-username-premium {
+    font-size: 1.02rem;
+    line-height: 1.2;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .card-rating-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 22px;
+  }
+
+  .card-rating-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .card-rating-stars {
+    font-size: 0.95rem;
+    letter-spacing: -0.02em;
+  }
+
+  .card-rating-count {
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+
+  .card-description-premium {
+    font-size: 1.02rem;
+    line-height: 1.5;
+    color: #334155;
+    max-width: 29ch;
+    margin: 0 auto;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-pill-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 2px;
+  }
+
+  .card-pill-premium {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    border: 1px solid rgba(191, 219, 254, 0.95);
+    background: linear-gradient(180deg, rgba(239,246,255,0.9), rgba(248,250,252,0.95));
+    padding: 7px 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  .card-meta-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 2px;
+  }
+
+  .card-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .card-meta-row-center {
+    justify-content: center;
+  }
+
+  .card-meta-label {
+    font-size: 0.95rem;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  .card-price-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    background: #ecfdf5;
+    padding: 7px 14px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #047857;
+  }
+
+  .card-location-line {
+    font-size: 0.95rem;
+    color: #64748b;
+    text-align: center;
+  }
+
+  .card-location-line strong {
+    color: #334155;
+  }
+
+  .card-meta-separator {
+    color: #94a3b8;
+    margin: 0 4px;
+  }
+
+  .card-type-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .card-type-line.is-offro {
+    color: #16a34a;
+  }
+
+  .card-type-line.is-cerco {
+    color: #2563eb;
+  }
+
   .card-ios:hover {
     transform: translateY(-6px);
     filter: saturate(1.02);
@@ -733,28 +859,6 @@
   }
 
   /* FOTO */
-  .card-ios-photo-wrap {
-    position: relative;
-    z-index: 3;
-    display: flex;
-    justify-content: center;
-    margin-bottom: -72px;
-  }
-
-  .card-ios-photo-wrap::before {
-    content: "";
-    position: absolute;
-    inset: 12px;
-    border-radius: 9999px;
-    background:
-      radial-gradient(circle,
-        rgba(255,255,255,0.78) 0%,
-        rgba(255,255,255,0.28) 52%,
-        transparent 74%);
-    transform: scale(1.12);
-    filter: blur(10px);
-    pointer-events: none;
-  }
 
   .card-ios-photo {
     width: 238px;
@@ -839,10 +943,29 @@
       height: 160px;
     }
 
-    .card-ios-photo-wrap {
-      margin-bottom: -64px;
+    .card-ios-photo-stage {
+      margin-bottom: -48px;
     }
 
+    .card-ios-photo-stage::before {
+      width: 248px;
+      height: 248px;
+    }
+
+    .card-title-premium {
+      font-size: 1.72rem;
+    }
+
+    .card-description-premium {
+      font-size: 0.98rem;
+    }
+
+    .card-meta-row {
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+    
     .card-ios-photo {
       width: 214px;
       height: 214px;
@@ -852,7 +975,7 @@
       padding: 84px 18px 20px;
       border-radius: 26px;
     }
-  }  
+  }
 
 /* ⭐ CARD IN EVIDENZA */
 .card-evidenza {
