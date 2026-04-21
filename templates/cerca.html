@@ -548,19 +548,18 @@
                 </div>
               {% endif %}
 
-              <p class="card-location-line">
-                📍 <strong>{{ a['zona'] or 'n/d' }}</strong>
-                <span class="card-meta-separator">—</span>
-                <span>{{ a['categoria'] }}</span>
-              </p>
+              <div class="card-location-row">
+                <span class="card-location-main">📍 {{ a['zona'] or 'n/d' }}</span>
+                <span class="card-location-category">{{ a['categoria'] }}</span>
+              </div>
 
               {% if a['tipo_annuncio'] %}
                 <div class="card-type-wrap">
-                  <span class="card-type-line {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
+                  <span class="card-type-chip {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
                     {% if a['tipo_annuncio'] == 'offro' %}
-                      🟢 Offro
+                      Offro
                     {% elif a['tipo_annuncio'] == 'cerco' %}
-                      🔵 Cerco
+                      Cerco
                     {% endif %}
                   </span>
                 </div>
@@ -940,20 +939,23 @@
     white-space: nowrap;
   }
 
-  .card-location-line {
-    font-size: 0.95rem;
-    color: #64748b;
-    text-align: center;
-    margin: 0;
+  .card-location-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
   }
 
-  .card-location-line strong {
+  .card-location-main {
+    font-size: 1rem;
+    font-weight: 700;
     color: #334155;
   }
 
-  .card-meta-separator {
-    color: #94a3b8;
-    margin: 0 4px;
+  .card-location-category {
+    font-size: 0.9rem;
+    color: #64748b;
+    letter-spacing: 0.01em;
   }
 
   .card-type-wrap {
@@ -961,20 +963,29 @@
     justify-content: center;
   }
 
-  .card-type-line {
+  .card-type-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 1rem;
-    font-weight: 700;
+    justify-content: center;
+    min-width: 96px;
+    padding: 8px 14px;
+    border-radius: 9999px;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    border: 1px solid transparent;
   }
 
-  .card-type-line.is-offro {
-    color: #16a34a;
+  .card-type-chip.is-offro {
+    color: #15803d;
+    background: rgba(220, 252, 231, 0.9);
+    border-color: rgba(134, 239, 172, 0.9);
   }
 
-  .card-type-line.is-cerco {
-    color: #2563eb;
+  .card-type-chip.is-cerco {
+    color: #1d4ed8;
+    background: rgba(219, 234, 254, 0.9);
+    border-color: rgba(147, 197, 253, 0.9);
   }
 
   .card-cta-wrap {
@@ -1056,6 +1067,14 @@
       font-size: 0.98rem;
     }
 
+    .card-location-main {
+      font-size: 0.96rem;
+    }
+
+    .card-location-category {
+      font-size: 0.86rem;
+    }
+    
     .card-description-premium {
       font-size: 0.97rem;
       line-height: 1.42;
