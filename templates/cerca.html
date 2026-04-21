@@ -566,23 +566,6 @@
               </div>
             {% endif %}
 
-            <div class="card-divider-premium"></div>
-
-            <div class="card-meta-premium">
-              {% if a['prezzo'] %}
-                <div class="card-price-row">
-                  <span class="card-meta-label">Prezzo indicativo</span>
-                  <span class="card-price-badge">da {{ a['prezzo'] }} €</span>
-                </div>
-              {% endif %}
-
-              {% if a['categoria'] %}
-                <div class="card-category-row">
-                  <span class="card-location-category">{{ a['categoria'] }}</span>
-                </div>
-              {% endif %}
-            </div>
-
             {% if a.get('id_operatore') %}
               <div class="card-cta-wrap">
                 <a href="{{ url_for('profilo_pubblico', id=a['utente_id']) }}"
