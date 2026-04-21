@@ -6764,39 +6764,41 @@ def cerca():
         )
         return redirect(url_for("home"))
 
-        raw_cat = request.args.get("categoria", "").strip()
-        cat_slug = to_slug(raw_cat)
+    raw_cat = request.args.get("categoria", "").strip()
+    cat_slug = to_slug(raw_cat)
 
-        categoria_label = raw_cat
+    categoria_label = raw_cat
 
-        # lookup filtri: prova prima il valore originale, poi lo slug,
-        # poi alcune equivalenze note usate in /cerca
-        json_key_aliases = [
-            raw_cat,
-            cat_slug,
-            raw_cat.lower(),
-            cat_slug.lower()
-        ]
+    # lookup filtri: prova prima il valore originale, poi lo slug,
+    # poi alcune equivalenze note usate in /cerca
+    json_key_aliases = [
+        raw_cat,
+        cat_slug,
+        raw_cat.lower(),
+        cat_slug.lower()
+    ]
 
-        alias_map = {
-            "operatori-benessere": "operatori benessere",
-            "pet-sitter": "petsitter",
-            "escursioni-sport": "escursioni & sport",
-            "biglietti-spettacoli": "biglietti spettacoli",
-            "libri-scuola": "libri scuola",
-            "caffe-parole": "caffe & parole",
-            "caffe-e-parole": "caffe & parole",
-        }
+    alias_map = {
+        "operatori-benessere": "operatori benessere",
+        "pet-sitter": "petsitter",
+        "escursioni-sport": "escursioni & sport",
+        "biglietti-spettacoli": "biglietti spettacoli",
+        "libri-scuola": "libri scuola",
+        "caffe-parole": "caffe & parole",
+        "caffe-e-parole": "caffe & parole",
+    }
 
-        if cat_slug in alias_map:
-            json_key_aliases.append(alias_map[cat_slug])
+    if cat_slug in alias_map:
+        json_key_aliases.append(alias_map[cat_slug])
 
-        if raw_cat.lower() in alias_map:
-            json_key_aliases.append(alias_map[raw_cat.lower()])
+    if raw_cat.lower() in alias_map:
+        json_key_aliases.append(alias_map[raw_cat.lower()])
+
+    json_key = cat_slug
 
     zona = request.args.get("zona", "").strip()
     provincia_filtro = request.args.get("provincia", "").strip()
-    filtri_attivi = request.args.getlist("filtri")
+    filtri_attivi = request.args.getlist("filtri")    
 
     # 🔹 NUOVO: tipo annuncio (offro / cerco)
     tipo_annuncio = request.args.get("tipo_annuncio", "").strip().lower()
