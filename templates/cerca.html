@@ -495,7 +495,7 @@
           {% if a['zona'] %}
             <div class="card-hero-bottom">
               <span class="card-hero-location">
-                📍 {{ a['zona'] }}
+                {{ a['zona'] }}
               </span>
             </div>
           {% endif %}
@@ -714,7 +714,7 @@
   .card-hero-premium {
     position: relative;
     z-index: 3;
-    height: 168px;
+    height: 210px;
     border-radius: 20px;
     overflow: hidden;
     margin-bottom: -6px;
@@ -795,27 +795,48 @@
     justify-content: flex-start;
   }
 
-  .card-hero-username,
-  .card-hero-location {
+  .card-hero-username {
     display: inline-flex;
     align-items: center;
-    min-height: 26px;
-    max-width: 72%;
-    padding: 4px 10px;
+    min-height: 24px;
+    max-width: 56%;
+    padding: 3px 9px;
     border-radius: 9999px;
-    background: rgba(255,255,255,0.18);
-    border: 1px solid rgba(255,255,255,0.22);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: #ffffff;
-    font-size: 0.78rem;
-    font-weight: 700;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(255,255,255,0.92);
+    font-size: 0.72rem;
+    font-weight: 650;
     letter-spacing: -0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.28);
-    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.22);
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+  }
+
+  .card-hero-location {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    max-width: 48%;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(255,255,255,0.90);
+    font-size: 0.71rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.22);
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
   }
 
   /* BLOCCO TESTO */
@@ -1018,11 +1039,17 @@
       bottom: 8px;
     }
 
-    .card-hero-username,
+    .card-hero-username {
+      min-height: 25px;
+      max-width: 72%;
+      font-size: 0.75rem;
+      padding: 4px 9px;
+    }
+
     .card-hero-location {
       min-height: 25px;
-      max-width: 78%;
-      font-size: 0.75rem;
+      max-width: 52%;
+      font-size: 0.74rem;
       padding: 4px 9px;
     }
 
