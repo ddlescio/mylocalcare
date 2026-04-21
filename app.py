@@ -709,7 +709,7 @@ def dt_roma_admin(value):
 
     except Exception:
         return str(value)
-        
+
 @app.template_filter("fromjson")
 def fromjson_filter(value):
     if not value:
@@ -6764,11 +6764,35 @@ def cerca():
         )
         return redirect(url_for("home"))
 
-    raw_cat = request.args.get("categoria", "").strip()
-    cat_slug = to_slug(raw_cat)
+        raw_cat = request.args.get("categoria", "").strip()
+        cat_slug = to_slug(raw_cat)
 
-    json_key = cat_slug
-    categoria_label = raw_cat
+        categoria_label = raw_cat
+
+        # lookup filtri: prova prima il valore originale, poi lo slug,
+        # poi alcune equivalenze note usate in /cerca
+        json_key_aliases = [
+            raw_cat,
+            cat_slug,
+            raw_cat.lower(),
+            cat_slug.lower()
+        ]
+
+        alias_map = {
+            "operatori-benessere": "operatori benessere",
+            "pet-sitter": "petsitter",
+            "escursioni-sport": "escursioni & sport",
+            "biglietti-spettacoli": "biglietti spettacoli",
+            "libri-scuola": "libri scuola",
+            "caffe-parole": "caffe & parole",
+            "caffe-e-parole": "caffe & parole",
+        }
+
+        if cat_slug in alias_map:
+            json_key_aliases.append(alias_map[cat_slug])
+
+        if raw_cat.lower() in alias_map:
+            json_key_aliases.append(alias_map[raw_cat.lower()])
 
     zona = request.args.get("zona", "").strip()
     provincia_filtro = request.args.get("provincia", "").strip()
@@ -6805,7 +6829,11 @@ def cerca():
     with open("static/data/filtri_categoria.json", "r", encoding="utf-8") as f:
         filtri_per_categoria = json.load(f)
 
-    filtri_possibili = filtri_per_categoria.get(json_key, [])
+    filtri_possibili = []
+    for key in json_key_aliases:
+        if key in filtri_per_categoria:
+            filtri_possibili = filtri_per_categoria[key]
+            break
 
     # =========================================================
     # DB
