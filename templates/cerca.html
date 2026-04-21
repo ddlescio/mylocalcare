@@ -485,19 +485,41 @@
           >
 
           <div class="card-hero-overlay"></div>
+
+          <div class="card-hero-top">
+            <span class="card-hero-username">
+              {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
+            </span>
+          </div>
+
+          {% if a['zona'] %}
+            <div class="card-hero-bottom">
+              <span class="card-hero-location">
+                📍 {{ a['zona'] }}
+              </span>
+            </div>
+          {% endif %}
         </div>
 
         <div class="mini-card-dati">
           <div class="card-content-premium">
 
             <div class="card-head-premium">
-              <h4 class="card-title-premium">
-                {{ a['titolo'] }}
-              </h4>
+              <div class="card-title-row">
+                <h4 class="card-title-premium">
+                  {{ a['titolo'] }}
+                </h4>
 
-              <p class="card-username-inline">
-                {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
-              </p>
+                {% if a['tipo_annuncio'] %}
+                  <span class="card-type-chip card-type-chip-head {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
+                    {% if a['tipo_annuncio'] == 'offro' %}
+                      Offro
+                    {% elif a['tipo_annuncio'] == 'cerco' %}
+                      Cerco
+                    {% endif %}
+                  </span>
+                {% endif %}
+              </div>
 
               {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
                 <div class="card-rating-row">
@@ -527,12 +549,20 @@
             {% endif %}
 
             {% if a['filtri_categoria'] %}
+              {% set filtri_lista = a['filtri_categoria'].split(',') %}
               <div class="card-pill-wrap">
-                {% for filtro in a['filtri_categoria'].split(',') if filtro.strip() %}
+                {% for filtro in filtri_lista[:4] if filtro.strip() %}
                   <span class="card-pill-premium">
                     {{ filtro.strip() }}
                   </span>
                 {% endfor %}
+
+                {% set filtri_puliti = filtri_lista | select('string') | list %}
+                {% if filtri_lista|length > 4 %}
+                  <span class="card-pill-premium card-pill-more">
+                    +{{ filtri_lista|length - 4 }}
+                  </span>
+                {% endif %}
               </div>
             {% endif %}
 
@@ -546,20 +576,9 @@
                 </div>
               {% endif %}
 
-              <div class="card-location-row">
-                <span class="card-location-main">📍 {{ a['zona'] or 'n/d' }}</span>
-                <span class="card-location-category">{{ a['categoria'] }}</span>
-              </div>
-
-              {% if a['tipo_annuncio'] %}
-                <div class="card-type-wrap">
-                  <span class="card-type-chip {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
-                    {% if a['tipo_annuncio'] == 'offro' %}
-                      Offro
-                    {% elif a['tipo_annuncio'] == 'cerco' %}
-                      Cerco
-                    {% endif %}
-                  </span>
+              {% if a['categoria'] %}
+                <div class="card-category-row">
+                  <span class="card-location-category">{{ a['categoria'] }}</span>
                 </div>
               {% endif %}
             </div>
@@ -672,48 +691,48 @@
   /* 🌟 CARD PRINCIPALE LISTA */
   .card-ios {
     position: relative;
-    border-radius: 34px;
-    transition: transform 0.22s ease, filter 0.22s ease;
+    border-radius: 30px;
+    transition: transform 0.20s ease, filter 0.20s ease;
   }
 
   .card-ios:hover {
-    transform: translateY(-6px);
+    transform: translateY(-4px);
     filter: saturate(1.02);
   }
 
   .card-ios-shell {
     position: relative;
-    padding: 20px 20px 18px;
-    border-radius: 34px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.985), rgba(247,250,255,0.965));
+    padding: 16px 16px 14px;
+    border-radius: 30px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.985), rgba(247,250,255,0.97));
     border: 1px solid rgba(214, 223, 238, 0.95);
     box-shadow:
-      0 14px 38px rgba(15, 23, 42, 0.08),
-      0 32px 70px rgba(15, 23, 42, 0.08);
+      0 12px 30px rgba(15, 23, 42, 0.07),
+      0 24px 56px rgba(15, 23, 42, 0.06);
     overflow: visible;
   }
 
   .card-ios:hover .card-ios-shell {
     box-shadow:
-      0 18px 44px rgba(15, 23, 42, 0.11),
-      0 36px 76px rgba(15, 23, 42, 0.11);
+      0 16px 34px rgba(15, 23, 42, 0.09),
+      0 28px 62px rgba(15, 23, 42, 0.08);
   }
 
   .card-ios-shell::before {
     content: "";
     position: absolute;
-    top: 26px;
+    top: 20px;
     left: 50%;
     transform: translateX(-50%);
     width: 78%;
-    height: 190px;
+    height: 150px;
     border-radius: 999px;
     background: radial-gradient(
       circle,
-      rgba(255,255,255,0.96) 0%,
-      rgba(219,234,254,0.38) 38%,
-      rgba(191,219,254,0.12) 62%,
-      transparent 78%
+      rgba(255,255,255,0.94) 0%,
+      rgba(219,234,254,0.28) 40%,
+      rgba(191,219,254,0.10) 65%,
+      transparent 80%
     );
     filter: blur(10px);
     pointer-events: none;
@@ -723,14 +742,14 @@
   .card-hero-premium {
     position: relative;
     z-index: 3;
-    height: 190px;
-    border-radius: 24px;
+    height: 180px;
+    border-radius: 22px;
     overflow: hidden;
-    margin-bottom: -10px;
-    border: 1px solid rgba(255,255,255,0.82);
+    margin-bottom: -8px;
+    border: 1px solid rgba(255,255,255,0.84);
     box-shadow:
-      0 12px 26px rgba(15, 23, 42, 0.10),
-      0 4px 12px rgba(15, 23, 42, 0.06);
+      0 10px 22px rgba(15, 23, 42, 0.09),
+      0 4px 10px rgba(15, 23, 42, 0.05);
   }
 
   .card-hero-premium::before {
@@ -740,7 +759,7 @@
     border-radius: inherit;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.78),
-      inset 0 -1px 0 rgba(255,255,255,0.14);
+      inset 0 -1px 0 rgba(255,255,255,0.12);
     pointer-events: none;
     z-index: 2;
   }
@@ -751,12 +770,12 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 30%;
+    height: 34%;
     background: linear-gradient(
       180deg,
       rgba(15, 23, 42, 0) 0%,
-      rgba(15, 23, 42, 0.07) 58%,
-      rgba(15, 23, 42, 0.16) 100%
+      rgba(15, 23, 42, 0.06) 55%,
+      rgba(15, 23, 42, 0.20) 100%
     );
     pointer-events: none;
     z-index: 1;
@@ -767,7 +786,7 @@
     height: 100%;
     display: block;
     object-fit: cover;
-    transform: scale(1.005);
+    transform: scale(1.01);
   }
 
   .card-hero-overlay {
@@ -776,139 +795,169 @@
     background:
       linear-gradient(
         180deg,
-        rgba(255,255,255,0.05) 0%,
+        rgba(255,255,255,0.06) 0%,
         rgba(255,255,255,0.00) 24%,
-        rgba(15, 23, 42, 0.015) 100%
+        rgba(15, 23, 42, 0.02) 100%
       );
     pointer-events: none;
     z-index: 1;
   }
 
-  .card-hero-badge-row {
+  .card-hero-top {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    right: auto;
-    bottom: auto;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    z-index: 3;
     display: flex;
     justify-content: flex-start;
-    z-index: 3;
   }
 
-  .card-hero-username {
+  .card-hero-bottom {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 3;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .card-hero-username,
+  .card-hero-location {
     display: inline-flex;
     align-items: center;
-    min-height: 30px;
-    max-width: 72%;
-    padding: 6px 12px;
+    min-height: 28px;
+    max-width: 78%;
+    padding: 5px 11px;
     border-radius: 9999px;
-    background: rgba(255,255,255,0.74);
-    border: 1px solid rgba(255,255,255,0.62);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    color: #334155;
-    font-size: 0.82rem;
+    background: rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.24);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #ffffff;
+    font-size: 0.80rem;
     font-weight: 700;
     letter-spacing: -0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    box-shadow:
-      0 6px 14px rgba(15, 23, 42, 0.10),
-      inset 0 1px 0 rgba(255,255,255,0.68);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.28);
+    box-shadow: 0 5px 12px rgba(15, 23, 42, 0.14);
   }
 
   /* BLOCCO TESTO */
   .mini-card-dati {
     position: relative;
     z-index: 2;
-    background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(252,253,255,0.975));
-    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.995), rgba(252,253,255,0.98));
+    border-radius: 26px;
     border: 1px solid rgba(218, 226, 239, 0.95);
-    padding: 42px 22px 18px;
-    text-align: center;
+    padding: 22px 18px 16px;
+    text-align: left;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.95),
-      0 8px 18px rgba(15, 23, 42, 0.045);
+      0 8px 18px rgba(15, 23, 42, 0.04);
   }
 
   .mini-card-dati::before {
     content: "";
     position: absolute;
-    top: 16px;
+    top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    width: 46px;
+    width: 42px;
     height: 4px;
     border-radius: 9999px;
     background: linear-gradient(90deg, rgba(96,165,250,0.9), rgba(167,139,250,0.82));
-    opacity: 0.85;
+    opacity: 0.8;
   }
 
   .card-ios:hover .mini-card-dati {
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.98),
-      0 14px 28px rgba(15, 23, 42, 0.07);
+      0 12px 24px rgba(15, 23, 42, 0.06);
   }
 
   /* STRUTTURA CONTENUTI */
   .card-content-premium {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
   }
 
   .card-head-premium {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 5px;
+  }
+
+  .card-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
   }
 
   .card-title-premium {
-    font-size: 1.58rem;
-    line-height: 1.02;
-    letter-spacing: -0.045em;
+    flex: 1 1 auto;
+    font-size: 1.36rem;
+    line-height: 1.04;
+    letter-spacing: -0.04em;
     font-weight: 750;
     color: #0f172a;
+    margin: 0;
     text-wrap: balance;
-    max-width: 13ch;
-    margin: 0 auto;
   }
 
-  .card-username-inline {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.15;
-  color: #64748b;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
-}
+  .card-type-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    padding: 7px 12px;
+    border-radius: 9999px;
+    font-size: 0.83rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 
-  .card-username-premium {
-    font-size: 1.02rem;
-    line-height: 1.2;
-    color: #64748b;
-    font-weight: 500;
+  .card-type-chip-head {
+    margin-top: 1px;
+  }
+
+  .card-type-chip.is-offro {
+    color: #15803d;
+    background: rgba(220, 252, 231, 0.92);
+    border-color: rgba(134, 239, 172, 0.95);
+  }
+
+  .card-type-chip.is-cerco {
+    color: #1d4ed8;
+    background: rgba(219, 234, 254, 0.92);
+    border-color: rgba(147, 197, 253, 0.95);
   }
 
   .card-rating-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 22px;
-    margin-top: 2px;
+    justify-content: flex-start;
+    gap: 7px;
+    min-height: 20px;
+    margin-top: 0;
   }
 
   .card-rating-value {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 700;
     color: #0f172a;
   }
 
   .card-rating-stars {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     letter-spacing: -0.02em;
   }
 
@@ -918,11 +967,10 @@
   }
 
   .card-description-premium {
-    font-size: 0.96rem;
+    font-size: 0.94rem;
     line-height: 1.42;
     color: #334155;
-    max-width: 30ch;
-    margin: 0 auto;
+    margin: 0;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -932,9 +980,10 @@
   .card-pill-wrap {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
     gap: 8px;
-    padding-top: 2px;
+    align-items: flex-start;
+    max-height: calc(2 * 34px + 8px);
+    overflow: hidden;
   }
 
   .card-pill-premium {
@@ -942,11 +991,18 @@
     align-items: center;
     border-radius: 9999px;
     border: 1px solid rgba(191, 219, 254, 0.95);
-    background: linear-gradient(180deg, rgba(239,246,255,0.9), rgba(248,250,252,0.95));
-    padding: 7px 12px;
-    font-size: 0.82rem;
+    background: linear-gradient(180deg, rgba(239,246,255,0.92), rgba(248,250,252,0.96));
+    padding: 6px 11px;
+    font-size: 0.79rem;
     font-weight: 700;
     color: #2563eb;
+    max-width: 100%;
+  }
+
+  .card-pill-more {
+    color: #475569;
+    border-color: rgba(203, 213, 225, 0.95);
+    background: linear-gradient(180deg, rgba(241,245,249,0.95), rgba(248,250,252,0.98));
   }
 
   .card-divider-premium {
@@ -955,7 +1011,7 @@
     background: linear-gradient(
       to right,
       transparent,
-      rgba(203, 213, 225, 0.8),
+      rgba(203, 213, 225, 0.72),
       transparent
     );
   }
@@ -963,7 +1019,7 @@
   .card-meta-premium {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 9px;
   }
 
   .card-price-row {
@@ -974,9 +1030,9 @@
   }
 
   .card-meta-label {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     color: #475569;
-    font-weight: 600;
+    font-weight: 650;
   }
 
   .card-price-badge {
@@ -984,73 +1040,35 @@
     align-items: center;
     border-radius: 9999px;
     background: #ecfdf5;
-    padding: 7px 14px;
-    font-size: 0.95rem;
+    padding: 6px 12px;
+    font-size: 0.92rem;
     font-weight: 800;
     color: #047857;
     white-space: nowrap;
   }
 
-  .card-location-row {
+  .card-category-row {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .card-location-main {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #334155;
+    justify-content: flex-start;
   }
 
   .card-location-category {
-    font-size: 0.9rem;
+    font-size: 0.86rem;
     color: #64748b;
     letter-spacing: 0.01em;
   }
 
-  .card-type-wrap {
-    display: flex;
-    justify-content: center;
-  }
-
-  .card-type-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 96px;
-    padding: 8px 14px;
-    border-radius: 9999px;
-    font-size: 0.92rem;
-    font-weight: 800;
-    letter-spacing: 0.01em;
-    border: 1px solid transparent;
-  }
-
-  .card-type-chip.is-offro {
-    color: #15803d;
-    background: rgba(220, 252, 231, 0.9);
-    border-color: rgba(134, 239, 172, 0.9);
-  }
-
-  .card-type-chip.is-cerco {
-    color: #1d4ed8;
-    background: rgba(219, 234, 254, 0.9);
-    border-color: rgba(147, 197, 253, 0.9);
-  }
-
   .card-cta-wrap {
-    padding-top: 4px;
+    padding-top: 2px;
   }
 
   /* CTA */
   .btn-profilo-ios {
-    padding: 8px 16px;
+    padding: 8px 14px;
     border-radius: 9999px;
     background: rgba(255,255,255,0.94);
     border: 1px solid rgba(191, 219, 254, 0.95);
-    font-size: 0.9rem;
+    font-size: 0.86rem;
     font-weight: 600;
     color: #2563eb;
     display: inline-flex;
@@ -1070,102 +1088,128 @@
   /* RESPONSIVE */
   @media (max-width: 640px) {
     .card-ios-shell {
-      padding: 18px 16px 16px;
-      border-radius: 30px;
+      padding: 14px 14px 14px;
+      border-radius: 28px;
     }
 
     .card-ios-shell::before {
-      top: 22px;
+      top: 18px;
       width: 86%;
-      height: 160px;
+      height: 130px;
     }
 
     .card-hero-premium {
       height: auto;
       aspect-ratio: 4 / 3;
-      border-radius: 22px;
-      margin-bottom: -12px;
+      border-radius: 20px;
+      margin-bottom: -8px;
     }
 
-    .card-hero-image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center center;
+    .card-hero-top {
+      top: 9px;
+      left: 9px;
+      right: 9px;
     }
 
-    .card-hero-badge-row {
-      top: 10px;
-      left: 10px;
-      right: auto;
-      bottom: auto;
+    .card-hero-bottom {
+      left: 9px;
+      right: 9px;
+      bottom: 9px;
     }
 
-    .card-hero-username {
-      min-height: 30px;
-      max-width: 74%;
-      font-size: 0.80rem;
-      padding: 6px 11px;
-      box-shadow:
-        0 6px 14px rgba(15, 23, 42, 0.12),
-        inset 0 1px 0 rgba(255,255,255,0.70);
+    .card-hero-username,
+    .card-hero-location {
+      min-height: 28px;
+      max-width: 78%;
+      font-size: 0.78rem;
+      padding: 5px 10px;
     }
 
     .mini-card-dati {
-      padding: 30px 16px 16px;
-      border-radius: 24px;
+      padding: 20px 14px 14px;
+      border-radius: 22px;
+    }
+
+    .mini-card-dati::before {
+      top: 9px;
+      width: 38px;
     }
 
     .card-content-premium {
-      gap: 12px;
+      gap: 11px;
     }
 
     .card-head-premium {
-      gap: 6px;
+      gap: 5px;
     }
 
-    .card-title-premium {
-      font-size: 1.38rem;
-      line-height: 1.04;
-      max-width: 13ch;
-    }
-
-    .card-username-premium {
-      font-size: 0.98rem;
-    }
-
-    .card-username-inline {
-      font-size: 0.82rem;
-    }
-
-    .card-location-main {
-      font-size: 0.96rem;
-    }
-
-    .card-location-category {
-      font-size: 0.86rem;
-    }
-
-    .card-description-premium {
-      font-size: 0.97rem;
-      line-height: 1.42;
-      max-width: 28ch;
-      -webkit-line-clamp: 2;
-    }
-
-    .card-pill-premium {
-      font-size: 0.81rem;
-      padding: 7px 12px;
-    }
-
-    .card-price-row {
-      flex-direction: column;
-      justify-content: center;
+    .card-title-row {
       gap: 8px;
     }
 
-    .card-type-line {
-      font-size: 0.98rem;
+    .card-title-premium {
+      font-size: 1.24rem;
+      line-height: 1.05;
+    }
+
+    .card-type-chip {
+      min-width: 76px;
+      padding: 6px 10px;
+      font-size: 0.77rem;
+    }
+
+    .card-rating-row {
+      gap: 6px;
+    }
+
+    .card-rating-value,
+    .card-rating-stars {
+      font-size: 0.88rem;
+    }
+
+    .card-rating-count {
+      font-size: 0.75rem;
+    }
+
+    .card-description-premium {
+      font-size: 0.91rem;
+      line-height: 1.4;
+      -webkit-line-clamp: 2;
+    }
+
+    .card-pill-wrap {
+      gap: 7px;
+      max-height: calc(2 * 32px + 7px);
+    }
+
+    .card-pill-premium {
+      font-size: 0.76rem;
+      padding: 6px 10px;
+    }
+
+    .card-price-row {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .card-meta-label {
+      font-size: 0.88rem;
+    }
+
+    .card-price-badge {
+      font-size: 0.88rem;
+      padding: 6px 11px;
+    }
+
+    .card-location-category {
+      font-size: 0.82rem;
+    }
+
+    .btn-profilo-ios {
+      font-size: 0.83rem;
+      padding: 7px 12px;
     }
   }
 
@@ -1173,44 +1217,44 @@
   .card-evidenza {
     border: 2px solid rgba(251, 191, 36, 0.85);
     box-shadow:
-      0 0 0 1px rgba(251, 191, 36, 0.25),
-      0 8px 22px rgba(251, 191, 36, 0.25),
-      0 20px 40px rgba(0, 0, 0, 0.18);
+      0 0 0 1px rgba(251, 191, 36, 0.22),
+      0 8px 20px rgba(251, 191, 36, 0.20),
+      0 18px 34px rgba(0, 0, 0, 0.12);
     background: linear-gradient(
       180deg,
       rgba(255, 251, 235, 0.95),
-      rgba(255, 255, 255, 0.85)
+      rgba(255, 255, 255, 0.88)
     );
   }
 
   .card-evidenza:hover {
-    transform: translateY(-6px);
+    transform: translateY(-4px);
     box-shadow:
-      0 0 0 2px rgba(251, 191, 36, 0.45),
-      0 12px 28px rgba(251, 191, 36, 0.35),
-      0 28px 50px rgba(0, 0, 0, 0.22);
+      0 0 0 2px rgba(251, 191, 36, 0.38),
+      0 12px 24px rgba(251, 191, 36, 0.28),
+      0 22px 40px rgba(0, 0, 0, 0.16);
   }
 
   /* 🚨 CARD URGENTE */
   .card-urgente {
-    border: 2px solid rgba(239, 68, 68, 0.85);
+    border: 2px solid rgba(239, 68, 68, 0.82);
     box-shadow:
-      0 0 0 1px rgba(239, 68, 68, 0.25),
-      0 8px 22px rgba(239, 68, 68, 0.30),
-      0 20px 40px rgba(0, 0, 0, 0.18);
+      0 0 0 1px rgba(239, 68, 68, 0.22),
+      0 8px 20px rgba(239, 68, 68, 0.24),
+      0 18px 34px rgba(0, 0, 0, 0.12);
     background: linear-gradient(
       180deg,
-      rgba(254, 226, 226, 0.30),
+      rgba(254, 226, 226, 0.26),
       rgba(255, 255, 255, 0.90)
     );
   }
 
   .card-urgente:hover {
-    transform: translateY(-6px);
+    transform: translateY(-4px);
     box-shadow:
-      0 0 0 2px rgba(239, 68, 68, 0.45),
-      0 12px 28px rgba(239, 68, 68, 0.40),
-      0 28px 50px rgba(0, 0, 0, 0.22);
+      0 0 0 2px rgba(239, 68, 68, 0.40),
+      0 12px 24px rgba(239, 68, 68, 0.32),
+      0 22px 40px rgba(0, 0, 0, 0.16);
   }
 
   /* 🏅 Badge Affidabilità Top */
@@ -1374,7 +1418,6 @@
     );
   }
 </style>
-
 <style>
 .page-cerca {
   padding-bottom: 160px;
