@@ -240,91 +240,93 @@
   </div>
 
   <!-- Mobile: scroll orizzontale -->
-  <div class="flex gap-4 overflow-x-auto pb-4 md:hidden">
-    {% for a in annunci_vetrina %}
-    <div class="min-w-[292px] max-w-[292px] card-vetrina js-open-annuncio
-         {% if a.get('has_urgente', 0) == 1 %}card-vetrina-urgente{% endif %}"
-         data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}">
+  <div class="vetrina-mobile-wrap md:hidden">
+    <div class="vetrina-mobile-scroll">
+      {% for a in annunci_vetrina %}
+      <div class="min-w-[292px] max-w-[292px] card-vetrina js-open-annuncio
+           {% if a.get('has_urgente', 0) == 1 %}card-vetrina-urgente{% endif %}"
+           data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}">
 
-      {% set foto_vetrina = a['foto_profilo'] or 'img/user_default.png' %}
+        {% set foto_vetrina = a['foto_profilo'] or 'img/user_default.png' %}
 
-      {% if a.get('affidabilita_top', 0) == 1 %}
-        <div class="badge-affidabilita-vetrina" title="Affidabilità Top">
-          🏅
-        </div>
-      {% endif %}
+        {% if a.get('affidabilita_top', 0) == 1 %}
+          <div class="badge-affidabilita-vetrina" title="Affidabilità Top">
+            🏅
+          </div>
+        {% endif %}
 
-      {% if a.get('has_urgente', 0) == 1 %}
-        <div class="badge-urgente-top">Urgente</div>
-      {% else %}
-        <div class="badge-vetrina">In vetrina</div>
-      {% endif %}
+        {% if a.get('has_urgente', 0) == 1 %}
+          <div class="badge-urgente-top">Urgente</div>
+        {% else %}
+          <div class="badge-vetrina">In vetrina</div>
+        {% endif %}
 
-      <div class="vetrina-card-shell">
-        <div class="vetrina-avatar-wrap">
-          <img src="{{ url_for('static', filename=foto_vetrina) }}"
-               alt="{{ a['titolo'] }}"
-               class="vetrina-avatar">
-        </div>
-
-        <div class="vetrina-content">
-          <h4 class="vetrina-title">
-            {{ a['titolo'] }}
-          </h4>
-
-          {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
-            <div class="vetrina-rating">
-              <span class="vetrina-rating-value">{{ a['media_recensioni']|round(1) }}</span>
-              <span class="vetrina-rating-star">★</span>
-              {% if a['numero_recensioni'] %}
-                <span class="vetrina-rating-count">({{ a['numero_recensioni'] }})</span>
-              {% endif %}
-            </div>
-          {% endif %}
-
-          <div class="vetrina-meta-row">
-            {% if a['zona'] %}
-              <span class="vetrina-meta-location">{{ a['zona'] }}</span>
-            {% endif %}
-
-            {% if a['tipo_annuncio'] %}
-              <span class="vetrina-meta-dot">•</span>
-              <span class="vetrina-meta-type {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
-                {% if a['tipo_annuncio'] == 'offro' %}
-                  Offro
-                {% else %}
-                  Cerco
-                {% endif %}
-              </span>
-            {% endif %}
+        <div class="vetrina-card-shell">
+          <div class="vetrina-avatar-wrap">
+            <img src="{{ url_for('static', filename=foto_vetrina) }}"
+                 alt="{{ a['titolo'] }}"
+                 class="vetrina-avatar">
           </div>
 
-          <div class="vetrina-pill-wrap">
-            {% if a['categoria'] %}
-              <span class="vetrina-pill vetrina-pill-category">
-                {{ a['categoria'] }}
-              </span>
+          <div class="vetrina-content">
+            <h4 class="vetrina-title">
+              {{ a['titolo'] }}
+            </h4>
+
+            {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+              <div class="vetrina-rating">
+                <span class="vetrina-rating-value">{{ a['media_recensioni']|round(1) }}</span>
+                <span class="vetrina-rating-star">★</span>
+                {% if a['numero_recensioni'] %}
+                  <span class="vetrina-rating-count">({{ a['numero_recensioni'] }})</span>
+                {% endif %}
+              </div>
             {% endif %}
 
-            {% if a['filtri_categoria'] %}
-              {% set filtri = a['filtri_categoria'].split(',') %}
-              {% for filtro in filtri[:2] if filtro.strip() %}
-                <span class="vetrina-pill">
-                  {{ filtro.strip() }}
-                </span>
-              {% endfor %}
+            <div class="vetrina-meta-row">
+              {% if a['zona'] %}
+                <span class="vetrina-meta-location">{{ a['zona'] }}</span>
+              {% endif %}
 
-              {% if filtri|length > 2 %}
-                <span class="vetrina-pill vetrina-pill-more">
-                  +{{ filtri|length - 2 }}
+              {% if a['tipo_annuncio'] %}
+                <span class="vetrina-meta-dot">•</span>
+                <span class="vetrina-meta-type {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
+                  {% if a['tipo_annuncio'] == 'offro' %}
+                    Offro
+                  {% else %}
+                    Cerco
+                  {% endif %}
                 </span>
               {% endif %}
-            {% endif %}
+            </div>
+
+            <div class="vetrina-pill-wrap">
+              {% if a['categoria'] %}
+                <span class="vetrina-pill vetrina-pill-category">
+                  {{ a['categoria'] }}
+                </span>
+              {% endif %}
+
+              {% if a['filtri_categoria'] %}
+                {% set filtri = a['filtri_categoria'].split(',') %}
+                {% for filtro in filtri[:2] if filtro.strip() %}
+                  <span class="vetrina-pill">
+                    {{ filtro.strip() }}
+                  </span>
+                {% endfor %}
+
+                {% if filtri|length > 2 %}
+                  <span class="vetrina-pill vetrina-pill-more">
+                    +{{ filtri|length - 2 }}
+                  </span>
+                {% endif %}
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
+      {% endfor %}
     </div>
-    {% endfor %}
   </div>
 
   <!-- Desktop: griglia -->
@@ -1055,6 +1057,31 @@
     display: none;
   }
 
+  .vetrina-mobile-wrap {
+    position: relative;
+    overflow: visible;
+    padding: 2px 2px 18px;
+  }
+
+  .vetrina-mobile-scroll {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 4px 18px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .vetrina-mobile-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .vetrina-mobile-scroll .card-vetrina {
+    flex: 0 0 auto;
+    margin-bottom: 6px;
+  }  
+
   /* RESPONSIVE */
   @media (max-width: 640px) {
     .card-ios-shell {
@@ -1494,7 +1521,7 @@
       opacity: 0.82;
     }
   }
-    
+
   .card-vetrina-urgente {
     border-color: rgba(239, 68, 68, 0.34);
     background:
