@@ -452,14 +452,6 @@
              {% endif %}"
       data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
     >
-      {% if a.get('affidabilita_top', 0) == 1 %}
-        <div class="absolute top-4 left-4 z-20">
-          <div class="badge-affidabilita-top" title="Basato su recensioni verificate">
-            <span class="badge-affidabilita-icona" aria-hidden="true">🏅</span>
-            <span class="badge-affidabilita-testo">Fiducia Top</span>
-          </div>
-        </div>
-      {% endif %}
 
       {% if a.get('has_urgente', 0) == 1 %}
         <div class="badge-urgente-top z-20">
@@ -477,7 +469,7 @@
       {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
 
       <div class="card-ios-shell">
-        <div class="card-hero-premium">
+        <div class="card-hero-premium {% if a.get('affidabilita_top', 0) == 1 %}has-trust-badge{% endif %}">
           <img
             src="{{ url_for('static', filename=foto) }}"
             alt="{{ a['titolo'] }}"
@@ -485,6 +477,15 @@
           >
 
           <div class="card-hero-overlay"></div>
+
+          {% if a.get('affidabilita_top', 0) == 1 %}
+            <div class="card-trust-edge-badge-wrap">
+              <div class="badge-affidabilita-top badge-affidabilita-top-edge" title="Basato su recensioni verificate">
+                <span class="badge-affidabilita-icona" aria-hidden="true">🏅</span>
+                <span class="badge-affidabilita-testo">Fiducia Top</span>
+              </div>
+            </div>
+          {% endif %}
 
           <div class="card-hero-top">
             <span class="card-hero-username">
@@ -807,6 +808,30 @@
     justify-content: flex-start;
   }
 
+  .card-hero-premium.has-trust-badge .card-hero-top {
+  top: 34px;
+}
+
+.card-trust-edge-badge-wrap {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  z-index: 5;
+  transform: translateY(-42%);
+  pointer-events: none;
+}
+
+.badge-affidabilita-top-edge {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  box-shadow:
+    0 10px 22px rgba(15, 23, 42, 0.16),
+    0 2px 6px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
   .card-hero-username {
     display: inline-flex;
     align-items: center;
@@ -1102,6 +1127,20 @@
       bottom: 8px;
     }
 
+    .card-hero-premium.has-trust-badge .card-hero-top {
+      top: 32px;
+    }
+
+    .card-trust-edge-badge-wrap {
+      left: 10px;
+      transform: translateY(-38%);
+    }
+
+    .badge-affidabilita-top-edge {
+      transform: scale(0.94);
+      transform-origin: left center;
+    }
+    
     .card-hero-username {
       min-height: 24px;
       max-width: 72%;
