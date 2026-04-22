@@ -1492,7 +1492,7 @@
       0 24px 44px rgba(15, 23, 42, 0.06),
       inset 0 1px 0 rgba(255,255,255,0.92);
   }
-  
+
   .vetrina-card-shell {
     position: relative;
     z-index: 2;
@@ -1800,21 +1800,23 @@
   .card-vetrina-desktop::after {
     content: "";
     position: absolute;
-    left: 18px;
-    right: 18px;
-    bottom: -10px;
-    height: 22px;
+    left: 50%;
+    bottom: -12px;
+    transform: translateX(-50%);
+    width: 72%;
+    max-width: 220px;
+    height: 20px;
     border-radius: 999px;
     background: radial-gradient(
       ellipse at center,
-      rgba(250, 204, 21, 0.18) 0%,
-      rgba(15, 23, 42, 0.06) 42%,
-      transparent 78%
+      rgba(250, 204, 21, 0.16) 0%,
+      rgba(15, 23, 42, 0.07) 46%,
+      transparent 80%
     );
-    filter: blur(10px);
+    filter: blur(12px);
     pointer-events: none;
-    z-index: 0;
-  }
+    z-index: -1;
+  }  
 </style>
 <style>
 .page-cerca {
