@@ -1080,7 +1080,7 @@
   .vetrina-mobile-scroll .card-vetrina {
     flex: 0 0 auto;
     margin-bottom: 6px;
-  }  
+  }
 
   /* RESPONSIVE */
   @media (max-width: 640px) {
@@ -1511,17 +1511,35 @@
     z-index: -1;
   }
 
-  @media (max-width: 767px) {
+  /* Safari + contenitore scroll mobile/tablet: niente pseudo-ombra blur */
+  @media (max-width: 1023px) {
     .card-vetrina::after {
-      width: 60%;
-      max-width: 170px;
-      height: 15px;
-      bottom: -9px;
-      filter: blur(9px);
-      opacity: 0.82;
+      display: none;
+    }
+
+    .card-vetrina {
+      box-shadow:
+        0 16px 28px rgba(15, 23, 42, 0.09),
+        0 10px 18px rgba(15, 23, 42, 0.05),
+        inset 0 1px 0 rgba(255,255,255,0.92);
+    }
+
+    .card-vetrina:hover {
+      box-shadow:
+        0 20px 34px rgba(15, 23, 42, 0.12),
+        0 12px 22px rgba(15, 23, 42, 0.07),
+        0 0 0 1px rgba(250, 204, 21, 0.10),
+        inset 0 1px 0 rgba(255,255,255,0.96);
+    }
+
+    .card-vetrina-urgente {
+      box-shadow:
+        0 16px 30px rgba(239, 68, 68, 0.12),
+        0 10px 18px rgba(15, 23, 42, 0.05),
+        inset 0 1px 0 rgba(255,255,255,0.92);
     }
   }
-
+  
   .card-vetrina-urgente {
     border-color: rgba(239, 68, 68, 0.34);
     background:
