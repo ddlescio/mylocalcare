@@ -1539,7 +1539,7 @@
         inset 0 1px 0 rgba(255,255,255,0.92);
     }
   }
-  
+
   .card-vetrina-urgente {
     border-color: rgba(239, 68, 68, 0.34);
     background:
@@ -1799,9 +1799,10 @@
       0 18px 42px rgba(15, 23, 42, 0.06),
       0 2px 0 rgba(250, 204, 21, 0.10);
     z-index: 2;
-    overflow: hidden;
+    overflow: visible;
+    isolation: isolate;
   }
-
+  
   .vetrina-wrapper::before {
     content: "";
     position: absolute;
