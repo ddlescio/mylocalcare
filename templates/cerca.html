@@ -1579,32 +1579,12 @@
     min-height: 0;
     padding: 18px 14px 18px;
     border-radius: 24px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.995), rgba(252,252,249,0.985));
-    border: 1px solid rgba(244, 244, 240, 0.98);
-    box-shadow:
-      0 12px 26px rgba(15, 23, 42, 0.06),
-      inset 0 1px 0 rgba(255,255,255,0.98);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
     overflow: hidden;
   }
-
-  .vetrina-card-shell::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 118px;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 240, 186, 0.82) 0%,
-        rgba(255, 248, 220, 0.42) 48%,
-        rgba(255,255,255,0) 100%
-      );
-    pointer-events: none;
-    z-index: 0;
-  }
-
+  
   .vetrina-card-shell::after {
     content: "";
     position: absolute;
