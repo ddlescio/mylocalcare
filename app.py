@@ -6798,7 +6798,7 @@ def cerca():
 
     zona = request.args.get("zona", "").strip()
     provincia_filtro = request.args.get("provincia", "").strip()
-    filtri_attivi = request.args.getlist("filtri")    
+    filtri_attivi = request.args.getlist("filtri")
 
     # 🔹 NUOVO: tipo annuncio (offro / cerco)
     tipo_annuncio = request.args.get("tipo_annuncio", "").strip().lower()
@@ -6897,14 +6897,14 @@ def cerca():
     bucket = int(time.time() // 30)
 
     query_vetrina = f"""
-        SELECT
-            a.*,
-            u.id AS utente_id,
-            u.username AS utente_username,
-            u.nome AS nome_utente,
-            u.cognome AS cognome_utente,
-            u.foto_profilo,
-
+            SELECT DISTINCT
+                a.*,
+                u.id AS utente_id,
+                u.username AS utente_username,
+                u.nome AS nome_utente,
+                u.cognome AS cognome_utente,
+                u.foto_profilo,
+            
             {has_urgente_sql},
             {affidabilita_top_sql},
 
