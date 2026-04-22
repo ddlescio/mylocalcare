@@ -468,8 +468,17 @@
 
       {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
 
+      {% if a.get('affidabilita_top', 0) == 1 %}
+        <div class="card-trust-clip-wrap">
+          <div class="badge-affidabilita-top badge-affidabilita-top-clip" title="Basato su recensioni verificate">
+            <span class="badge-affidabilita-icona" aria-hidden="true">🏅</span>
+            <span class="badge-affidabilita-testo">Fiducia Top</span>
+          </div>
+        </div>
+      {% endif %}
+
       <div class="card-ios-shell">
-        <div class="card-hero-premium {% if a.get('affidabilita_top', 0) == 1 %}has-trust-badge{% endif %}">
+        <div class="card-hero-premium">
           <img
             src="{{ url_for('static', filename=foto) }}"
             alt="{{ a['titolo'] }}"
@@ -477,15 +486,6 @@
           >
 
           <div class="card-hero-overlay"></div>
-
-          {% if a.get('affidabilita_top', 0) == 1 %}
-            <div class="card-trust-edge-badge-wrap">
-              <div class="badge-affidabilita-top badge-affidabilita-top-edge" title="Basato su recensioni verificate">
-                <span class="badge-affidabilita-icona" aria-hidden="true">🏅</span>
-                <span class="badge-affidabilita-testo">Fiducia Top</span>
-              </div>
-            </div>
-          {% endif %}
 
           <div class="card-hero-top">
             <span class="card-hero-username">
@@ -808,30 +808,6 @@
     justify-content: flex-start;
   }
 
-  .card-hero-premium.has-trust-badge .card-hero-top {
-  top: 34px;
-}
-
-.card-trust-edge-badge-wrap {
-  position: absolute;
-  top: 0;
-  left: 14px;
-  z-index: 5;
-  transform: translateY(-42%);
-  pointer-events: none;
-}
-
-.badge-affidabilita-top-edge {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(203, 213, 225, 0.82);
-  box-shadow:
-    0 10px 22px rgba(15, 23, 42, 0.16),
-    0 2px 6px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 rgba(255,255,255,0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
   .card-hero-username {
     display: inline-flex;
     align-items: center;
@@ -1127,20 +1103,6 @@
       bottom: 8px;
     }
 
-    .card-hero-premium.has-trust-badge .card-hero-top {
-      top: 32px;
-    }
-
-    .card-trust-edge-badge-wrap {
-      left: 10px;
-      transform: translateY(-38%);
-    }
-
-    .badge-affidabilita-top-edge {
-      transform: scale(0.94);
-      transform-origin: left center;
-    }
-    
     .card-hero-username {
       min-height: 24px;
       max-width: 72%;
@@ -1221,6 +1183,44 @@
       font-size: 0.72rem;
       padding: 5px 9px;
     }
+
+    .card-trust-clip-wrap {
+      top: -16px;
+      left: -12px;
+    }
+
+    .badge-affidabilita-top-clip {
+      min-height: 38px;
+      padding: 8px 13px 8px 12px;
+      border-radius: 15px 16px 16px 15px;
+    }
+
+    .badge-affidabilita-top-clip::before {
+      left: 16px;
+      width: 24px;
+      height: 10px;
+      bottom: -7px;
+    }
+
+    .badge-affidabilita-top-clip::after {
+      left: 20px;
+      width: 16px;
+      height: 7px;
+      bottom: -4px;
+    }
+
+    .badge-affidabilita-top {
+      gap: 7px;
+      padding: 7px 12px;
+    }
+
+    .badge-affidabilita-icona {
+      font-size: 14px;
+    }
+
+    .badge-affidabilita-testo {
+      font-size: 12px;
+    }
   }
 
   /* ⭐ CARD IN EVIDENZA */
@@ -1267,30 +1267,97 @@
       0 22px 40px rgba(0, 0, 0, 0.16);
   }
 
+  /* 🧷 Badge Fiducia Top stile graffetta premium */
+  .card-trust-clip-wrap {
+    position: absolute;
+    top: -18px;
+    left: -16px;
+    z-index: 40;
+    pointer-events: none;
+  }
+
+  .badge-affidabilita-top-clip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    padding: 9px 16px 9px 14px;
+    border-radius: 16px 18px 18px 16px;
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.98) 0%,
+      rgba(248,250,252,0.97) 100%
+    );
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    box-shadow:
+      0 14px 26px rgba(15, 23, 42, 0.16),
+      0 4px 10px rgba(15, 23, 42, 0.10),
+      inset 0 1px 0 rgba(255,255,255,0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .badge-affidabilita-top-clip::before {
+    content: "";
+    position: absolute;
+    left: 18px;
+    bottom: -8px;
+    width: 28px;
+    height: 12px;
+    border-radius: 0 0 10px 10px;
+    background: linear-gradient(
+      180deg,
+      rgba(226, 232, 240, 0.72) 0%,
+      rgba(255,255,255,0.10) 100%
+    );
+    filter: blur(1px);
+    opacity: 0.72;
+    z-index: -1;
+  }
+
+  .badge-affidabilita-top-clip::after {
+    content: "";
+    position: absolute;
+    left: 22px;
+    bottom: -4px;
+    width: 18px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.10);
+    filter: blur(6px);
+    opacity: 0.22;
+    z-index: -2;
+  }
+
   /* 🏅 Badge Affidabilità Top */
   .badge-affidabilita-top {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
+    gap: 9px;
+    padding: 8px 14px;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(148, 163, 184, 0.45);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(203, 213, 225, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      0 8px 18px rgba(0,0,0,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.85);
   }
 
   .badge-affidabilita-icona {
     font-size: 16px;
     line-height: 1;
+    filter: saturate(1.04);
   }
 
   .badge-affidabilita-testo {
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 760;
     color: #0f172a;
-    letter-spacing: 0.2px;
+    letter-spacing: -0.01em;
+    line-height: 1;
   }
 
   /* 🚨 BADGE URGENTE */
