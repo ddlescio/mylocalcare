@@ -1417,23 +1417,33 @@
   /* 🟡 CARD VETRINA */
   .card-vetrina {
     position: relative;
-    border-radius: 24px;
-    padding: 14px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(252,252,250,0.96));
-    border: 1px solid rgba(250, 204, 21, 0.34);
+    border-radius: 28px;
+    padding: 16px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.995), rgba(252,252,250,0.975)),
+      linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,248,220,0.18));
+    border: 1px solid rgba(250, 204, 21, 0.26);
     box-shadow:
-      0 10px 24px rgba(15, 23, 42, 0.08),
-      0 18px 34px rgba(15, 23, 42, 0.06);
-    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      0 14px 30px rgba(15, 23, 42, 0.07),
+      0 24px 44px rgba(15, 23, 42, 0.05),
+      inset 0 1px 0 rgba(255,255,255,0.92);
+    transition:
+      transform 0.22s ease,
+      box-shadow 0.22s ease,
+      border-color 0.22s ease,
+      filter 0.22s ease;
     overflow: visible;
   }
 
   .card-vetrina:hover {
-    transform: translateY(-4px);
+    transform: translateY(-5px);
+    border-color: rgba(250, 204, 21, 0.42);
     box-shadow:
-      0 14px 28px rgba(15, 23, 42, 0.10),
-      0 24px 40px rgba(15, 23, 42, 0.08);
-    border-color: rgba(250, 204, 21, 0.52);
+      0 18px 34px rgba(15, 23, 42, 0.10),
+      0 28px 50px rgba(15, 23, 42, 0.07),
+      0 0 0 1px rgba(250, 204, 21, 0.10),
+      inset 0 1px 0 rgba(255,255,255,0.96);
+    filter: saturate(1.02);
   }
 
   .card-vetrina::before {
@@ -1441,27 +1451,48 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(
-      180deg,
-      rgba(255,255,255,0.40) 0%,
-      rgba(255,255,255,0.00) 28%,
-      rgba(255,255,255,0.00) 100%
-    );
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255,255,255,0.50) 0%,
+        rgba(255,255,255,0.12) 22%,
+        rgba(255,255,255,0.00) 42%,
+        rgba(255,255,255,0.00) 100%
+      );
     pointer-events: none;
+    z-index: 0;
+  }
+
+  .card-vetrina::after {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: -10px;
+    height: 24px;
+    border-radius: 999px;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(250, 204, 21, 0.14) 0%,
+      rgba(15, 23, 42, 0.06) 42%,
+      transparent 76%
+    );
+    filter: blur(10px);
+    pointer-events: none;
+    z-index: -1;
   }
 
   .card-vetrina-urgente {
-    border-color: rgba(239, 68, 68, 0.45);
+    border-color: rgba(239, 68, 68, 0.34);
+    background:
+      linear-gradient(180deg, rgba(255,252,252,0.995), rgba(255,255,255,0.975)),
+      linear-gradient(135deg, rgba(254,226,226,0.18), rgba(255,255,255,0.00));
     box-shadow:
-      0 10px 24px rgba(239, 68, 68, 0.12),
-      0 18px 34px rgba(15, 23, 42, 0.08);
-    background: linear-gradient(
-      180deg,
-      rgba(255, 250, 250, 0.98),
-      rgba(255, 255, 255, 0.95)
-    );
+      0 14px 30px rgba(239, 68, 68, 0.11),
+      0 24px 44px rgba(15, 23, 42, 0.06),
+      inset 0 1px 0 rgba(255,255,255,0.92);
   }
-
+  
   .vetrina-card-shell {
     position: relative;
     z-index: 2;
@@ -1752,7 +1783,7 @@
     filter: blur(14px);
     pointer-events: none;
   }
-  
+
   .vetrina-grid-desktop {
     position: relative;
     z-index: 2;
