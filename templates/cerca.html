@@ -240,7 +240,7 @@
   </div>
 
   <!-- Mobile: scroll orizzontale -->
-  <div class="flex gap-4 overflow-x-auto pb-4 sm:hidden">
+  <div class="flex gap-4 overflow-x-auto pb-4 md:hidden">
     {% for a in annunci_vetrina %}
     <div class="min-w-[292px] max-w-[292px] card-vetrina js-open-annuncio
          {% if a.get('has_urgente', 0) == 1 %}card-vetrina-urgente{% endif %}"
@@ -328,7 +328,7 @@
   </div>
 
   <!-- Desktop: griglia -->
-  <div class="hidden sm:grid vetrina-grid-desktop">
+  <div class="hidden md:grid vetrina-grid-desktop">
     {% for a in annunci_vetrina %}
     <div
       class="cursor-pointer card-vetrina card-vetrina-desktop js-open-annuncio
