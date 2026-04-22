@@ -1505,23 +1505,6 @@
     z-index: 0;
   }
 
-  .card-vetrina > .vetrina-card-shell::before {
-    content: "";
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    top: 8px;
-    bottom: 10px;
-    border-radius: 24px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0.14));
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.60),
-      inset 0 -1px 0 rgba(250, 204, 21, 0.06);
-    pointer-events: none;
-    z-index: -1;
-  }
-
   .card-vetrina::after {
     content: "";
     position: absolute;
@@ -1592,10 +1575,52 @@
     text-align: center;
     gap: 14px;
     min-height: 284px;
-    padding: 12px 12px 10px;
+    padding: 18px 14px 14px;
     border-radius: 24px;
-    background: transparent;
-    box-shadow: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.995), rgba(252,252,249,0.985));
+    border: 1px solid rgba(244, 244, 240, 0.98);
+    box-shadow:
+      0 12px 26px rgba(15, 23, 42, 0.06),
+      inset 0 1px 0 rgba(255,255,255,0.98);
+    overflow: hidden;
+  }
+
+  .vetrina-card-shell::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 118px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 240, 186, 0.82) 0%,
+        rgba(255, 248, 220, 0.42) 48%,
+        rgba(255,255,255,0) 100%
+      );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vetrina-card-shell::after {
+    content: "";
+    position: absolute;
+    top: 44px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 150px;
+    border-radius: 999px;
+    background: radial-gradient(
+      circle,
+      rgba(250, 204, 21, 0.16) 0%,
+      rgba(250, 204, 21, 0.05) 48%,
+      transparent 78%
+    );
+    filter: blur(12px);
+    pointer-events: none;
+    z-index: 0;
   }
 
   .vetrina-avatar-wrap {
