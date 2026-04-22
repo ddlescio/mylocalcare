@@ -1466,22 +1466,35 @@
   .card-vetrina::after {
     content: "";
     position: absolute;
-    left: 18px;
-    right: 18px;
-    bottom: -10px;
-    height: 24px;
+    left: 50%;
+    bottom: -11px;
+    transform: translateX(-50%);
+    width: 68%;
+    max-width: 210px;
+    height: 18px;
     border-radius: 999px;
     background: radial-gradient(
       ellipse at center,
-      rgba(250, 204, 21, 0.14) 0%,
-      rgba(15, 23, 42, 0.06) 42%,
-      transparent 76%
+      rgba(250, 204, 21, 0.13) 0%,
+      rgba(15, 23, 42, 0.055) 46%,
+      transparent 80%
     );
-    filter: blur(10px);
+    filter: blur(11px);
     pointer-events: none;
     z-index: -1;
   }
 
+  @media (max-width: 767px) {
+    .card-vetrina::after {
+      width: 60%;
+      max-width: 170px;
+      height: 15px;
+      bottom: -9px;
+      filter: blur(9px);
+      opacity: 0.82;
+    }
+  }
+    
   .card-vetrina-urgente {
     border-color: rgba(239, 68, 68, 0.34);
     background:
@@ -1816,7 +1829,7 @@
     filter: blur(12px);
     pointer-events: none;
     z-index: -1;
-  }  
+  }
 </style>
 <style>
 .page-cerca {
