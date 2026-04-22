@@ -242,96 +242,88 @@
   <!-- Mobile: scroll orizzontale -->
   <div class="flex gap-4 overflow-x-auto pb-4 sm:hidden">
     {% for a in annunci_vetrina %}
-    <div class="min-w-[260px] max-w-[260px] card-vetrina js-open-annuncio
+    <div class="min-w-[292px] max-w-[292px] card-vetrina js-open-annuncio
          {% if a.get('has_urgente', 0) == 1 %}card-vetrina-urgente{% endif %}"
          data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}">
 
-           {% if a.get('affidabilita_top', 0) == 1 %}
-             <div class="badge-affidabilita-vetrina" title="Affidabilità Top">
-               🏅
-             </div>
-           {% endif %}
+      {% set foto_vetrina = a['foto_profilo'] or 'img/user_default.png' %}
 
-           {% if a.get('has_urgente', 0) == 1 %}
-             <div class="badge-urgente-top">Urgente</div>
-           {% else %}
-             <div class="badge-vetrina">In vetrina</div>
-           {% endif %}
+      {% if a.get('affidabilita_top', 0) == 1 %}
+        <div class="badge-affidabilita-vetrina" title="Affidabilità Top">
+          🏅
+        </div>
+      {% endif %}
 
-        <img src="{{ url_for('static', filename=a['foto_profilo']) }}"
-             class="w-20 h-20 rounded-full object-cover mx-auto mb-3">
+      {% if a.get('has_urgente', 0) == 1 %}
+        <div class="badge-urgente-top">Urgente</div>
+      {% else %}
+        <div class="badge-vetrina">In vetrina</div>
+      {% endif %}
 
-        <h4 class="text-sm font-semibold text-center mb-1 line-clamp-2">
-          {{ a['titolo'] }}
-        </h4>
-
-        <!-- ⭐ RECENSIONI -->
-        {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
-          <div class="flex justify-center text-yellow-500 text-sm mb-1">
-            {% for i in range(1,6) %}
-              {% if i <= a['media_recensioni']|round(0, 'floor') %}
-                ⭐
-              {% elif i - a['media_recensioni'] < 1 %}
-                🌟
-              {% else %}
-                ☆
-              {% endif %}
-            {% endfor %}
-            {% if a['numero_recensioni'] %}
-              <span class="ml-1 text-gray-400 text-xs">({{ a['numero_recensioni'] }})</span>
-            {% endif %}
-          </div>
-        {% endif %}
-
-        <!-- 📍 ZONA + 🔁 TIPO ANNUNCIO -->
-        <div class="flex justify-center items-center gap-1 text-xs text-gray-500">
-          <span>{{ a['zona'] or '—' }}</span>
-
-          {% if a['tipo_annuncio'] %}
-            <span class="mx-1">•</span>
-            <span class="font-semibold
-              {% if a['tipo_annuncio'] == 'offro' %}
-                text-green-600
-              {% elif a['tipo_annuncio'] == 'cerco' %}
-                text-blue-600
-              {% endif %}">
-              {% if a['tipo_annuncio'] == 'offro' %}
-                🟢 Offro
-              {% else %}
-                🔵 Cerco
-              {% endif %}
-            </span>
-          {% endif %}
+      <div class="vetrina-card-shell">
+        <div class="vetrina-avatar-wrap">
+          <img src="{{ url_for('static', filename=foto_vetrina) }}"
+               alt="{{ a['titolo'] }}"
+               class="vetrina-avatar">
         </div>
 
-        {% if a['categoria'] %}
-          <div class="mt-2 flex flex-wrap justify-center gap-2">
+        <div class="vetrina-content">
+          <h4 class="vetrina-title">
+            {{ a['titolo'] }}
+          </h4>
 
-            <!-- Categoria -->
-            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
-                         bg-blue-50 text-blue-700 border border-blue-100">
-              {{ a['categoria'] }}
-            </span>
+          {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+            <div class="vetrina-rating">
+              <span class="vetrina-rating-value">{{ a['media_recensioni']|round(1) }}</span>
+              <span class="vetrina-rating-star">★</span>
+              {% if a['numero_recensioni'] %}
+                <span class="vetrina-rating-count">({{ a['numero_recensioni'] }})</span>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <div class="vetrina-meta-row">
+            {% if a['zona'] %}
+              <span class="vetrina-meta-location">{{ a['zona'] }}</span>
+            {% endif %}
+
+            {% if a['tipo_annuncio'] %}
+              <span class="vetrina-meta-dot">•</span>
+              <span class="vetrina-meta-type {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
+                {% if a['tipo_annuncio'] == 'offro' %}
+                  Offro
+                {% else %}
+                  Cerco
+                {% endif %}
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="vetrina-pill-wrap">
+            {% if a['categoria'] %}
+              <span class="vetrina-pill vetrina-pill-category">
+                {{ a['categoria'] }}
+              </span>
+            {% endif %}
 
             {% if a['filtri_categoria'] %}
               {% set filtri = a['filtri_categoria'].split(',') %}
               {% for filtro in filtri[:2] if filtro.strip() %}
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-medium
-                             bg-gray-100 text-gray-700 border border-gray-200">
+                <span class="vetrina-pill">
                   {{ filtro.strip() }}
                 </span>
               {% endfor %}
 
               {% if filtri|length > 2 %}
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
-                             bg-gray-200 text-gray-600 border border-gray-300">
+                <span class="vetrina-pill vetrina-pill-more">
                   +{{ filtri|length - 2 }}
                 </span>
               {% endif %}
             {% endif %}
           </div>
-        {% endif %}
+        </div>
       </div>
+    </div>
     {% endfor %}
   </div>
 
@@ -345,93 +337,85 @@
         {% endif %}"
       data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}">
 
-            {% if a.get('affidabilita_top', 0) == 1 %}
-              <div class="badge-affidabilita-vetrina" title="Affidabilità Top">
-                🏅
-              </div>
-            {% endif %}
+      {% set foto_vetrina = a['foto_profilo'] or 'img/user_default.png' %}
 
-           {% if a.get('has_urgente', 0) == 1 %}
-             <div class="badge-urgente-top">Urgente</div>
-           {% else %}
-             <div class="badge-vetrina">In vetrina</div>
-           {% endif %}
+      {% if a.get('affidabilita_top', 0) == 1 %}
+        <div class="badge-affidabilita-vetrina" title="Affidabilità Top">
+          🏅
+        </div>
+      {% endif %}
 
-        <img src="{{ url_for('static', filename=a['foto_profilo']) }}"
-             class="w-20 h-20 rounded-full object-cover mx-auto mb-3">
+      {% if a.get('has_urgente', 0) == 1 %}
+        <div class="badge-urgente-top">Urgente</div>
+      {% else %}
+        <div class="badge-vetrina">In vetrina</div>
+      {% endif %}
 
-        <h4 class="text-sm font-semibold text-center mb-1 line-clamp-2">
-          {{ a['titolo'] }}
-        </h4>
-
-        <!-- ⭐ RECENSIONI -->
-        {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
-          <div class="flex justify-center text-yellow-500 text-sm mb-1">
-            {% for i in range(1,6) %}
-              {% if i <= a['media_recensioni']|round(0, 'floor') %}
-                ⭐
-              {% elif i - a['media_recensioni'] < 1 %}
-                🌟
-              {% else %}
-                ☆
-              {% endif %}
-            {% endfor %}
-            {% if a['numero_recensioni'] %}
-              <span class="ml-1 text-gray-400 text-xs">({{ a['numero_recensioni'] }})</span>
-            {% endif %}
-          </div>
-        {% endif %}
-
-        <!-- 📍 ZONA + 🔁 TIPO ANNUNCIO -->
-        <div class="flex justify-center items-center gap-1 text-xs text-gray-500">
-          <span>{{ a['zona'] or '—' }}</span>
-
-          {% if a['tipo_annuncio'] %}
-            <span class="mx-1">•</span>
-            <span class="font-semibold
-              {% if a['tipo_annuncio'] == 'offro' %}
-                text-green-600
-              {% elif a['tipo_annuncio'] == 'cerco' %}
-                text-blue-600
-              {% endif %}">
-              {% if a['tipo_annuncio'] == 'offro' %}
-                🟢 Offro
-              {% else %}
-                🔵 Cerco
-              {% endif %}
-            </span>
-          {% endif %}
+      <div class="vetrina-card-shell">
+        <div class="vetrina-avatar-wrap">
+          <img src="{{ url_for('static', filename=foto_vetrina) }}"
+               alt="{{ a['titolo'] }}"
+               class="vetrina-avatar">
         </div>
 
-        {% if a['categoria'] %}
-          <div class="mt-2 flex flex-wrap justify-center gap-2">
+        <div class="vetrina-content">
+          <h4 class="vetrina-title">
+            {{ a['titolo'] }}
+          </h4>
 
-            <!-- Categoria -->
-            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
-                         bg-blue-50 text-blue-700 border border-blue-100">
-              {{ a['categoria'] }}
-            </span>
+          {% if a['media_recensioni'] and a['media_recensioni'] > 0 %}
+            <div class="vetrina-rating">
+              <span class="vetrina-rating-value">{{ a['media_recensioni']|round(1) }}</span>
+              <span class="vetrina-rating-star">★</span>
+              {% if a['numero_recensioni'] %}
+                <span class="vetrina-rating-count">({{ a['numero_recensioni'] }})</span>
+              {% endif %}
+            </div>
+          {% endif %}
 
-            <!-- Primo filtro -->
+          <div class="vetrina-meta-row">
+            {% if a['zona'] %}
+              <span class="vetrina-meta-location">{{ a['zona'] }}</span>
+            {% endif %}
+
+            {% if a['tipo_annuncio'] %}
+              <span class="vetrina-meta-dot">•</span>
+              <span class="vetrina-meta-type {% if a['tipo_annuncio'] == 'offro' %}is-offro{% elif a['tipo_annuncio'] == 'cerco' %}is-cerco{% endif %}">
+                {% if a['tipo_annuncio'] == 'offro' %}
+                  Offro
+                {% else %}
+                  Cerco
+                {% endif %}
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="vetrina-pill-wrap">
+            {% if a['categoria'] %}
+              <span class="vetrina-pill vetrina-pill-category">
+                {{ a['categoria'] }}
+              </span>
+            {% endif %}
+
             {% if a['filtri_categoria'] %}
               {% set filtri = a['filtri_categoria'].split(',') %}
               {% for filtro in filtri[:2] if filtro.strip() %}
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-medium
-                             bg-gray-100 text-gray-700 border border-gray-200">
+                <span class="vetrina-pill">
                   {{ filtro.strip() }}
                 </span>
               {% endfor %}
 
               {% if filtri|length > 2 %}
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
-                             bg-gray-200 text-gray-600 border border-gray-300">
+                <span class="vetrina-pill vetrina-pill-more">
                   +{{ filtri|length - 2 }}
                 </span>
               {% endif %}
             {% endif %}
           </div>
-        {% endif %}
+        </div>
       </div>
+    </div>
+
     {% endfor %}
   </div>
 
@@ -1433,42 +1417,221 @@
   /* 🟡 CARD VETRINA */
   .card-vetrina {
     position: relative;
-    background: rgba(255,255,255,0.9);
-    border: 1px solid rgba(250,204,21,0.5);
-    border-radius: 18px;
+    border-radius: 24px;
     padding: 14px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-    transition: all 0.25s ease;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(252,252,250,0.96));
+    border: 1px solid rgba(250, 204, 21, 0.34);
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.08),
+      0 18px 34px rgba(15, 23, 42, 0.06);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    overflow: visible;
   }
 
   .card-vetrina:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.18);
+    box-shadow:
+      0 14px 28px rgba(15, 23, 42, 0.10),
+      0 24px 40px rgba(15, 23, 42, 0.08);
+    border-color: rgba(250, 204, 21, 0.52);
+  }
+
+  .card-vetrina::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.40) 0%,
+      rgba(255,255,255,0.00) 28%,
+      rgba(255,255,255,0.00) 100%
+    );
+    pointer-events: none;
+  }
+
+  .card-vetrina-urgente {
+    border-color: rgba(239, 68, 68, 0.45);
+    box-shadow:
+      0 10px 24px rgba(239, 68, 68, 0.12),
+      0 18px 34px rgba(15, 23, 42, 0.08);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 250, 250, 0.98),
+      rgba(255, 255, 255, 0.95)
+    );
+  }
+
+  .vetrina-card-shell {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    min-height: 284px;
+    padding: 10px 10px 8px;
+  }
+
+  .vetrina-avatar-wrap {
+    position: relative;
+    width: 108px;
+    height: 108px;
+    border-radius: 9999px;
+    padding: 4px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,245,249,0.96));
+    box-shadow:
+      0 8px 18px rgba(15, 23, 42, 0.10),
+      inset 0 1px 0 rgba(255,255,255,0.95);
+  }
+
+  .vetrina-avatar {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 9999px;
+  }
+
+  .vetrina-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    align-items: center;
+  }
+
+  .vetrina-title {
+    margin: 0;
+    font-size: 1.02rem;
+    line-height: 1.15;
+    font-weight: 720;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+    max-width: 92%;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .vetrina-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 20px;
+  }
+
+  .vetrina-rating-value {
+    font-size: 0.94rem;
+    font-weight: 740;
+    color: #0f172a;
+    line-height: 1;
+  }
+
+  .vetrina-rating-star {
+    font-size: 1rem;
+    color: #f59e0b;
+    line-height: 1;
+  }
+
+  .vetrina-rating-count {
+    font-size: 0.82rem;
+    color: #64748b;
+    line-height: 1;
+  }
+
+  .vetrina-meta-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-height: 22px;
+  }
+
+  .vetrina-meta-location {
+    font-size: 0.86rem;
+    font-weight: 560;
+    color: #475569;
+  }
+
+  .vetrina-meta-dot {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    line-height: 1;
+  }
+
+  .vetrina-meta-type {
+    font-size: 0.90rem;
+    font-weight: 760;
+    line-height: 1;
+  }
+
+  .vetrina-meta-type.is-offro {
+    color: #16a34a;
+  }
+
+  .vetrina-meta-type.is-cerco {
+    color: #2563eb;
+  }
+
+  .vetrina-pill-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  .vetrina-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 13px;
+    border-radius: 9999px;
+    border: 1px solid rgba(203, 213, 225, 0.78);
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(241,245,249,0.96));
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      0 1px 2px rgba(15,23,42,0.03);
+  }
+
+  .vetrina-pill-category {
+    color: #2563eb;
+    border-color: rgba(191, 219, 254, 0.95);
+    background: linear-gradient(180deg, rgba(239,246,255,0.96), rgba(248,250,252,0.98));
+  }
+
+  .vetrina-pill-more {
+    color: #475569;
+    font-weight: 760;
   }
 
   .badge-vetrina {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 8px;
+    top: 12px;
+    right: 12px;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 7px 12px;
     border-radius: 9999px;
-    background: linear-gradient(to right, #facc15, #fde047);
-    color: #78350f;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  }
-
-  .card-vetrina-urgente {
-    border: 1.5px solid rgba(239, 68, 68, 0.65);
+    font-size: 0.84rem;
+    font-weight: 760;
+    color: #7c5200;
+    background: linear-gradient(180deg, #fde68a, #facc15);
     box-shadow:
-      0 4px 14px rgba(239, 68, 68, 0.25),
-      0 10px 26px rgba(0, 0, 0, 0.18);
-    background: linear-gradient(
-      180deg,
-      rgba(254, 226, 226, 0.45),
-      rgba(255, 255, 255, 0.9)
-    );
+      0 8px 16px rgba(250, 204, 21, 0.28),
+      inset 0 1px 0 rgba(255,255,255,0.7);
   }
 
   .badge-affidabilita-vetrina {
@@ -1476,20 +1639,61 @@
     top: 12px;
     left: 12px;
     z-index: 20;
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
-    background: rgba(255, 255, 255, 0.75);
-    border: 1px solid rgba(148, 163, 184, 0.35);
+    font-size: 18px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid rgba(203, 213, 225, 0.82);
     border-radius: 9999px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    box-shadow:
+      0 8px 16px rgba(15,23,42,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
+  @media (max-width: 640px) {
+    .card-vetrina {
+      padding: 12px;
+      border-radius: 22px;
+    }
+
+    .vetrina-card-shell {
+      min-height: 270px;
+      gap: 11px;
+      padding: 10px 8px 8px;
+    }
+
+    .vetrina-avatar-wrap {
+      width: 96px;
+      height: 96px;
+    }
+
+    .vetrina-title {
+      font-size: 0.98rem;
+    }
+
+    .vetrina-pill {
+      font-size: 0.79rem;
+      padding: 7px 12px;
+    }
+
+    .badge-vetrina {
+      min-height: 32px;
+      font-size: 0.80rem;
+      padding: 6px 11px;
+    }
+
+    .badge-affidabilita-vetrina {
+      width: 34px;
+      height: 34px;
+      font-size: 17px;
+    }
+  }
+  
   /* SEPARAZIONE VETRINA / LISTA */
   .vetrina-wrapper {
     position: relative;
