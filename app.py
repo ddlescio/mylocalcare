@@ -6904,7 +6904,7 @@ def cerca():
                 u.nome AS nome_utente,
                 u.cognome AS cognome_utente,
                 u.foto_profilo,
-            
+
             {has_urgente_sql},
             {affidabilita_top_sql},
 
@@ -6924,20 +6924,24 @@ def cerca():
 
         FROM annunci a
         JOIN utenti u ON a.utente_id = u.id
-        JOIN attivazioni_servizi act ON act.annuncio_id = a.id
-        JOIN servizi s ON s.id = act.servizio_id
         WHERE
-            s.codice = 'vetrina_annuncio'
-            AND act.stato = 'attivo'
-            AND act.data_inizio <= {now_sql()}
-            AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
-            AND a.stato = 'approvato'
+            a.stato = 'approvato'
             AND u.attivo = 1
             AND u.sospeso = 0
             AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
             AND a.provincia = ?
+            AND EXISTS (
+                SELECT 1
+                FROM attivazioni_servizi act
+                JOIN servizi s ON s.id = act.servizio_id
+                WHERE act.annuncio_id = a.id
+                  AND act.stato = 'attivo'
+                  AND act.data_inizio <= {now_sql()}
+                  AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
+                  AND s.codice IN ('vetrina_annuncio', 'annuncio_urgente')
+            )
     """
-
+    
     params_vetrina = [provincia_query]
 
     if json_key:
