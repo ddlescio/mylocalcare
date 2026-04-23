@@ -524,18 +524,29 @@
                       </span>
                     {% endif %}
 
-                    <h4 class="text-blue-800 font-semibold text-[15px] sm:text-[16px] mb-1.5 pr-16 line-clamp-2">
-                      {{ a['titolo'] }}
-                    </h4>
-                    <p class="text-[12px] text-gray-500 mb-2 flex items-center gap-1">
-                      <span>📍</span>
-                      <span class="truncate">{{ a['zona'] or 'n/d' }} · {{ a['categoria'] }}</span>
-                    </p>
-                    {% if a['descrizione'] %}
-                      <p class="text-[13px] text-gray-700 leading-snug line-clamp-3">
-                        {{ a['descrizione'] }}
-                      </p>
-                    {% endif %}
+                    <div class="relative z-[1]">
+                      <h4 class="text-blue-800 font-semibold text-[16px] sm:text-[17px] leading-tight mb-2 pr-16 line-clamp-2 tracking-[-0.01em]">
+                        {{ a['titolo'] }}
+                      </h4>
+
+                      <div class="flex flex-wrap items-center gap-2 mb-2.5">
+                        <div class="inline-flex items-center gap-1.5 text-[12px] text-slate-500 min-w-0 max-w-full">
+                          <span class="text-[13px]">📍</span>
+                          <span class="truncate">{{ a['zona'] or 'n/d' }}</span>
+                        </div>
+
+                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium
+                                     bg-blue-50 text-blue-700 border border-blue-100">
+                          {{ a['categoria'] }}
+                        </span>
+                      </div>
+
+                      {% if a['descrizione'] %}
+                        <p class="text-[13px] sm:text-[13.5px] text-slate-700 leading-relaxed line-clamp-3">
+                          {{ a['descrizione'] }}
+                        </p>
+                      {% endif %}
+                    </div>                    
                   </a>
 
                   {% if not pubblico %}
