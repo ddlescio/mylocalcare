@@ -1090,34 +1090,43 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    gap: 0.55rem;
+    gap: 0.38rem;
+    text-align: center;
   }
 
   .hero-name-row {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: center;
+    gap: 0.7rem;
     flex-wrap: wrap;
   }
 
   .hero-username {
     margin: 0;
-    font-size: clamp(1.8rem, 3.2vw, 2.9rem);
-    line-height: 0.98;
-    font-weight: 800;
-    letter-spacing: -0.045em;
+    font-size: clamp(2rem, 3.6vw, 3.1rem);
+    line-height: 0.94;
+    font-weight: 900;
+    letter-spacing: -0.055em;
     color: #2563eb;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.55);
   }
 
   .hero-rating-row {
     display: flex;
     align-items: center;
+    justify-content: center;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    font-size: 0.98rem;
+    gap: 0.28rem;
+    font-size: 1rem;
+  }
+
+  .hero-review-link a {
+    display: inline-block;
+    margin-top: 0.15rem;
   }
 
   .hero-review-link {
@@ -1131,24 +1140,25 @@
   .hero-cta-col {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
   }
 
   .hero-primary-cta {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    min-width: 178px;
-    padding: 0.82rem 1.15rem;
+    gap: 0.55rem;
+    min-width: 250px;
+    padding: 0.95rem 1.5rem;
     border-radius: 9999px;
-    background: linear-gradient(135deg, #2563eb, #4f46e5 55%, #ec4899);
+    background: linear-gradient(135deg, #2563eb, #4f46e5 52%, #ec4899);
     color: #fff;
-    font-size: 0.92rem;
-    font-weight: 700;
+    font-size: 0.98rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
     box-shadow:
-      0 12px 24px rgba(79,70,229,0.22),
-      0 5px 14px rgba(37,99,235,0.14);
+      0 14px 28px rgba(79,70,229,0.24),
+      0 8px 18px rgba(37,99,235,0.16);
     transition: transform .22s ease, box-shadow .22s ease, opacity .22s ease;
   }
 
@@ -1244,9 +1254,9 @@
     .hero-primary-cta {
       width: 100%;
       min-width: 0;
-      padding: 0.82rem 1rem;
-      font-size: 0.9rem;
-    }
+      padding: 0.9rem 1rem;
+      font-size: 0.95rem;
+    }    
     }
 
     /* ============================================================
