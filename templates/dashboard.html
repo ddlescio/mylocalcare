@@ -1213,7 +1213,7 @@
       inset 0 1px 0 rgba(255,255,255,0.34);
     filter: saturate(1.04) brightness(1.02);
   }
-  
+
   @media (max-width: 767px) {
     .hero-bottom-card {
       grid-template-columns: 1fr;
@@ -1384,36 +1384,63 @@ aside p.text-sm.text-gray-500.font-medium {
    TABS
 ---------------------------------- */
 nav {
-  background:rgba(255,255,255,.72);
-  backdrop-filter:blur(10px);
-  border:1px solid rgba(221,230,250,.8);
+  background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,250,252,0.88) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226,232,240,0.95);
+  box-shadow:
+    0 10px 24px rgba(15,23,42,0.05),
+    0 18px 40px rgba(15,23,42,0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 40%);
+  pointer-events: none;
 }
 
 .tab-btn {
-  border-radius:.75rem;
-  overflow:hidden;
-  transition:all .25s ease;
+  border-radius: 0.95rem;
+  overflow: hidden;
+  transition: all .22s ease;
+  position: relative;
+  font-weight: 600;
 }
+
+.tab-btn:hover {
+  transform: translateY(-1px);
+}
+
 .tab-btn.active {
-  background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%);
-  color:#1d4ed8 !important;
-  box-shadow:inset 0 0 0 1.5px #93c5fd, 0 2px 4px rgba(59,130,246,.18);
-  font-weight:600;
+  background: linear-gradient(180deg, #e0edff 0%, #cfe3ff 100%);
+  color: #1d4ed8 !important;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(147,197,253,0.95),
+    0 6px 14px rgba(59,130,246,0.16),
+    0 2px 5px rgba(59,130,246,0.10);
+  font-weight: 700;
 }
+
 .tab-btn .tab-underline {
-  position:absolute;
-  bottom:.15rem;
-  left:50%;
-  transform:translateX(-50%);
-  height:2.5px;
-  width:0;
-  opacity:0;
-  background:#2563eb;
-  transition:all .25s ease;
+  position: absolute;
+  bottom: .18rem;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 3px;
+  width: 0;
+  opacity: 0;
+  background: linear-gradient(90deg, #2563eb, #4f46e5);
+  border-radius: 9999px;
+  transition: all .25s ease;
 }
+
 .tab-btn.active .tab-underline {
-  width:65%;
-  opacity:1;
+  width: 62%;
+  opacity: 1;
 }
 
 /* ----------------------------------
