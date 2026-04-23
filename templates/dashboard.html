@@ -1359,22 +1359,14 @@ nav {
 @media (max-width: 640px) {
 
   /* Eliminazione totale margini/padding wrapper */
-  .max-w-6xl {
+  .profilo-content-wrapper.max-w-6xl {
     max-width:100% !important;
     width:100% !important;
-    margin:0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
     border-radius:0 !important;
     box-shadow:none !important;
   }
-
-  body[data-page="profilo"] .container,
-  body[data-page="profilo"] .container > *,
-  body[data-page="profilo"] .max-w-6xl,
-  body[data-page="profilo"] .max-w-6xl > * {
-    padding:0 !important;
-    margin:0 !important;
-  }
-
 
   /* Tabs più compatti su mobile */
   nav .tab-btn {
