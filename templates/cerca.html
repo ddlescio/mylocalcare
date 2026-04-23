@@ -846,6 +846,24 @@
     opacity: 0.95;
   }
 
+  .card-hero-username::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 2px;
+    height: 42%;
+    border-radius: 9999px;
+    background: linear-gradient(
+      0deg,
+      rgba(255,255,255,0.42) 0%,
+      rgba(255,255,255,0.14) 58%,
+      rgba(255,255,255,0.00) 100%
+    );
+    pointer-events: none;
+    opacity: 0.90;
+  }
+  
   .card-hero-location {
     display: inline-flex;
     align-items: center;
