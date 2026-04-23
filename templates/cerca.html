@@ -795,26 +795,56 @@
   }
 
   .card-hero-username {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    min-height: 22px;
-    max-width: 54%;
-    padding: 3px 9px;
+    min-height: 28px;
+    max-width: 58%;
+    padding: 5px 12px;
     border-radius: 9999px;
-    background: rgba(255,255,255,0.10);
-    border: 1px solid rgba(255,255,255,0.14);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    color: rgba(255,255,255,0.84);
-    font-size: 0.68rem;
-    font-weight: 540;
-    letter-spacing: 0.035em;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255,255,255,0.28) 0%,
+        rgba(255,255,255,0.16) 52%,
+        rgba(255,255,255,0.10) 100%
+      );
+    border: 1px solid rgba(255,255,255,0.24);
+    backdrop-filter: blur(10px) saturate(1.08);
+    -webkit-backdrop-filter: blur(10px) saturate(1.08);
+    color: rgba(255,255,255,0.96);
+    font-size: 0.72rem;
+    font-weight: 760;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.18);
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    text-shadow:
+      0 1px 2px rgba(0,0,0,0.24),
+      0 0 8px rgba(255,255,255,0.08);
+    box-shadow:
+      0 8px 18px rgba(15, 23, 42, 0.14),
+      inset 0 1px 0 rgba(255,255,255,0.34),
+      inset 0 -1px 0 rgba(255,255,255,0.08);
+  }
+
+  .card-hero-username::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    top: 2px;
+    height: 42%;
+    border-radius: 9999px;
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.50) 0%,
+      rgba(255,255,255,0.18) 58%,
+      rgba(255,255,255,0.00) 100%
+    );
+    pointer-events: none;
+    opacity: 0.95;
   }
 
   .card-hero-location {
@@ -1115,12 +1145,12 @@
     }
 
     .card-hero-username {
-      min-height: 24px;
-      max-width: 72%;
+      min-height: 26px;
+      max-width: 76%;
       font-size: 0.72rem;
-      padding: 4px 9px;
+      padding: 4px 10px;
     }
-
+    
     .card-hero-location {
       max-width: 58%;
       font-size: 0.82rem;
@@ -1645,7 +1675,7 @@
     text-overflow: ellipsis;
     line-height: 1.2;
   }
-  
+
   .vetrina-card-shell::after {
     content: "";
     position: absolute;
