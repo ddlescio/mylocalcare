@@ -1242,10 +1242,10 @@
 
     .vetrina-username-wrap.has-badge {
       top: -14px;
-      left: 38px;
-      right: 90px;
+      left: 36px;
+      right: 84px;
     }
-    
+
     .vetrina-username {
       min-height: 24px;
       padding: 0 10px;
@@ -1616,17 +1616,17 @@
 
   .vetrina-username-wrap.has-badge {
     top: -18px;
-    left: 44px;
-    right: 104px;
+    left: 42px;
+    right: 98px;
     z-index: 6;
   }
 
   .vetrina-username {
-    display: inline-flex;
-    align-items: center;
+    display: block;
+    width: 100%;
+    min-width: 0;
     min-height: 26px;
-    max-width: 100%;
-    padding: 0 12px;
+    padding: 4px 12px 0;
     border-radius: 9999px;
     background: rgba(255,255,255,0.72);
     border: 1px solid rgba(255,255,255,0.88);
@@ -1643,8 +1643,9 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.2;
   }
-
+  
   .vetrina-card-shell::after {
     content: "";
     position: absolute;
