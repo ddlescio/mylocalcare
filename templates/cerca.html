@@ -846,7 +846,7 @@
     pointer-events: none;
     opacity: 0.95;
   }
-    
+
   .card-hero-location {
     display: inline-flex;
     align-items: center;
@@ -2336,56 +2336,86 @@ function updatePillRows() {
 
     if (!items.length || !more) return;
 
+    // reset completo
     items.forEach((el) => el.classList.remove("hidden"));
     more.classList.add("hidden");
     more.textContent = "";
 
-    const tops = [];
-    let visibleCount = 0;
+    // 1) mostro tutte le pill vere e tengo solo le prime 2 righe
+    const rowTops = [];
+    let visibleItems = [];
 
-    for (let i = 0; i < items.length; i++) {
-      const el = items[i];
+    items.forEach((el) => {
       const top = el.offsetTop;
 
-      if (!tops.includes(top)) {
-        tops.push(top);
+      if (!rowTops.includes(top)) {
+        rowTops.push(top);
       }
 
-      if (tops.length <= 2) {
-        visibleCount++;
+      if (rowTops.length <= 2) {
+        visibleItems.push(el);
       } else {
         el.classList.add("hidden");
       }
+    });
+
+    // 2) quante pill sono state nascoste?
+    let hiddenCount = items.filter((el) => el.classList.contains("hidden")).length;
+
+    // se non ci sono elementi nascosti, niente +x
+    if (hiddenCount <= 0) {
+      more.classList.add("hidden");
+      more.textContent = "";
+      return;
     }
 
-    const hiddenCount = items.length - visibleCount;
+    // 3) mostro il +x
+    more.textContent = `+${hiddenCount}`;
+    more.classList.remove("hidden");
 
-    if (hiddenCount > 0) {
+    // 4) se il +x finisce su una terza riga, nascondo altre pill dall'ultima visibile
+    let visibleRowTops = [...new Set(
+      items
+        .filter((el) => !el.classList.contains("hidden"))
+        .map((el) => el.offsetTop)
+    )];
+
+    while (visibleRowTops.length > 2) {
+      const lastVisible = [...items].reverse().find((el) => !el.classList.contains("hidden"));
+      if (!lastVisible) break;
+
+      lastVisible.classList.add("hidden");
+
+      hiddenCount = items.filter((el) => el.classList.contains("hidden")).length;
       more.textContent = `+${hiddenCount}`;
-      more.classList.remove("hidden");
 
-      const allowedTopValues = [...new Set(
+      visibleRowTops = [...new Set(
         items
           .filter((el) => !el.classList.contains("hidden"))
           .map((el) => el.offsetTop)
       )];
+    }
 
-      while (
-        more.offsetTop !== 0 &&
-        allowedTopValues.length > 2 &&
-        !items.every((el) => el.classList.contains("hidden"))
-      ) {
-        for (let i = items.length - 1; i >= 0; i--) {
-          if (!items[i].classList.contains("hidden")) {
-            items[i].classList.add("hidden");
-            break;
-          }
-        }
+    // 5) ulteriore sicurezza:
+    // anche se le pill sono su 2 righe, controllo che il +x non abbia creato overflow grafico
+    const secondRowTop = visibleRowTops[1];
 
-        const stillVisible = items.filter((el) => !el.classList.contains("hidden")).length;
-        const newHidden = items.length - stillVisible;
-        more.textContent = `+${newHidden}`;
-      }
+    while (
+      typeof secondRowTop !== "undefined" &&
+      more.offsetTop > secondRowTop
+    ) {
+      const lastVisible = [...items].reverse().find((el) => !el.classList.contains("hidden"));
+      if (!lastVisible) break;
+
+      lastVisible.classList.add("hidden");
+
+      hiddenCount = items.filter((el) => el.classList.contains("hidden")).length;
+      more.textContent = `+${hiddenCount}`;
+    }
+
+    // 6) se per qualsiasi motivo il testo del more è vuoto, lo nascondo
+    if (!more.textContent.trim()) {
+      more.classList.add("hidden");
     }
   });
 }
