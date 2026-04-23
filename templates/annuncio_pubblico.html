@@ -87,9 +87,9 @@
       <div class="text-center max-w-2xl mx-auto">
         <div class="flex justify-center">
           <a href="{{ url_for('profilo_pubblico', id=annuncio['utente_id']) }}"
-             class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/90 px-3.5 py-1.5 shadow-sm backdrop-blur-sm text-blue-700 hover:bg-blue-50 hover:border-blue-200 transition">
-            <span class="text-sm">👤</span>
-            <span class="text-[0.78rem] sm:text-[0.82rem] font-semibold uppercase tracking-[0.12em]">
+             class="inline-flex max-w-full items-center gap-2 rounded-full border border-blue-100 bg-white/90 px-3.5 py-1.5 shadow-sm backdrop-blur-sm text-blue-700 hover:bg-blue-50 hover:border-blue-200 transition">
+            <span class="shrink-0 text-sm">👤</span>
+            <span class="min-w-0 truncate text-[0.8rem] sm:text-[0.86rem] font-semibold">
               Visualizza profilo di {{ annuncio['username'] or annuncio['nome'] }}
             </span>
           </a>
@@ -147,20 +147,17 @@
             💬 Contatta
           </a>
         </div>
+        {% if annuncio['filtri_categoria'] %}
+          <div class="mt-4 flex flex-wrap justify-center gap-2.5">
+            {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
+              <span class="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 shadow-sm">
+                {{ f.strip() }}
+              </span>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
-      </div>
-
-      <!-- tag -->
-      {% if annuncio['filtri_categoria'] %}
-        <div class="mt-4 flex flex-wrap justify-center gap-2.5">
-          {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
-            <span class="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 shadow-sm">
-              {{ f.strip() }}
-            </span>
-          {% endfor %}
-        </div>
-      {% endif %}
-    </div>
+    </div>    
   </div>
 
   <!-- 📄 DESCRIZIONE -->
