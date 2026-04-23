@@ -7,248 +7,202 @@
   <!-- HEADER PROFILO STILE FACEBOOK -->
 
   <!-- ▼ NUOVO WRAPPER: SOLO HERO (copertina + riga profilo) -->
-  <section id="profilo-hero" class="relative w-full">
+  <section id="profilo-hero" class="profilo-hero-premium">
+    <div class="hero-shell">
 
-    <!-- COPERTINA -->
-    <div id="copertina-wrapper" class="relative">
-      <div id="copertina" class="relative">
-      <img
-        id="copertina-img"
-        src="{{ url_for('static', filename=(utente.get('copertina') or 'img/copertina_default_localcare.png')) }}"
-        alt="Copertina"
-        class="block w-full h-full object-cover"
-      />
+      <!-- COPERTINA -->
+      <div id="copertina-wrapper" class="hero-cover-wrap">
+        <div id="copertina" class="hero-cover-card">
+          <img
+            id="copertina-img"
+            src="{{ url_for('static', filename=(utente.get('copertina') or 'img/copertina_default_localcare.png')) }}"
+            alt="Copertina"
+            class="block w-full h-full object-cover"
+          />
 
-      {% if not pubblico %}
-      <!-- MENU COPERTINA (centrato) -->
-      <div id="menuOptions"
-           class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                  z-[90] flex items-center justify-center">
+          {% if not pubblico %}
+          <!-- MENU COPERTINA (centrato) -->
+          <div id="menuOptions"
+               class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[90] flex items-center justify-center">
+            <div class="w-56 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+              <form id="formCopertina"
+                    action="{{ url_for('upload_copertina') }}"
+                    method="post"
+                    enctype="multipart/form-data">
 
-        <div class="w-56 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-          <form id="formCopertina"
-                action="{{ url_for('upload_copertina') }}"
-                method="post"
-                enctype="multipart/form-data">
+                <label for="fileCopertina"
+                       class="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-50 cursor-pointer">
+                  📸 Cambia copertina
+                </label>
 
-            <label for="fileCopertina"
-                   class="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-50 cursor-pointer">
-              📸 Cambia copertina
-            </label>
+                <input id="fileCopertina"
+                       name="file"
+                       type="file"
+                       accept="image/*"
+                       class="hidden"
+                       onchange="document.getElementById('formCopertina').submit()">
+              </form>
 
-            <input id="fileCopertina"
-                   name="file"
-                   type="file"
-                   accept="image/*"
-                   class="hidden"
-                   onchange="document.getElementById('formCopertina').submit()">
-          </form>
-
-          {% if utente.get('copertina') %}
-          <form action="{{ url_for('rimuovi_copertina') }}" method="post">
-            <button type="submit"
-                    class="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50">
-              🗑️ Rimuovi copertina
-            </button>
-          </form>
+              {% if utente.get('copertina') %}
+              <form action="{{ url_for('rimuovi_copertina') }}" method="post">
+                <button type="submit"
+                        class="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50">
+                  🗑️ Rimuovi copertina
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
           {% endif %}
         </div>
-      </div>
-      {% endif %}
-    </div>
-
-    {% if not pubblico %}
-
-      {# 🔐 BOTTONE ADMIN — SOLO SE ADMIN #}
-      {% if session.get('is_admin') or utente.get('is_admin') or utente.get('ruolo') == 'admin' or utente.get('username') == 'ADMIN' %}
-      <a href="{{ url_for('admin_dashboard') }}"
-         id="btn-admin-dashboard"
-         class="btn-floating-admin"
-         title="Admin dashboard">
-         <span>🛠️</span>
-      </a>
-      {% endif %}
-
-      {# ⚙️ IMPOSTAZIONI #}
-      <a href="{{ url_for('impostazioni') }}"
-         id="btn-impostazioni"
-         class="bg-white/90 backdrop-blur-md border border-gray-300
-                text-gray-700 hover:text-blue-700 hover:bg-white transition
-                flex items-center justify-center rounded-full shadow-lg">
-        <span class="text-xl">⚙️</span>
-      </a>
-
-    {% endif %}
-
-    </div> <!-- chiude #copertina-wrapper -->
-
-
-    <!-- FOTO PROFILO + INFO -->
-
-      <!-- FOTO PROFILO -->
-      <div id="wrapper-foto-profilo"
-           class="absolute left-6 sm:left-10 -bottom-14 sm:-bottom-16 z-[90]">
 
         {% if not pubblico %}
-        <a href="{{ url_for('upload_foto') }}" class="group block relative w-fit">
-
-          {% if not utente.get('foto_profilo') %}
-            <!-- 🔥 PLACEHOLDER ANIMATO QUANDO NON C’È LA FOTO -->
-            <div class="placeholder-foto-profilo w-36 h-36 sm:w-40 sm:h-40 rounded-full ring-4 ring-white shadow-lg
-                        flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100
-                        cursor-pointer relative overflow-visible">
-
-              <span class="testo-foto-profilo text-sm font-semibold text-blue-700 text-center leading-tight">
-                Carica la tua<br>foto profilo
-              </span>
-
-              <!-- 👆 MANINA ANIMATA -->
-              <div class="manina-animata absolute -right-6 bottom-2 text-3xl select-none pointer-events-none">
-                👆
-              </div>
-            </div>
-
-          {% else %}
-            <!-- FOTO NORMALE -->
-            <img src="{{ url_for('static', filename=utente.get('foto_profilo')) }}"
-                 class="foto-profilo w-36 h-36 sm:w-40 sm:h-40 rounded-full object-cover ring-4 ring-white shadow-lg"
-                 alt="Foto profilo">
+          {% if session.get('is_admin') or utente.get('is_admin') or utente.get('ruolo') == 'admin' or utente.get('username') == 'ADMIN' %}
+          <a href="{{ url_for('admin_dashboard') }}"
+             id="btn-admin-dashboard"
+             class="hero-floating-btn hero-admin-btn"
+             title="Admin dashboard">
+            <span>🛠️</span>
+          </a>
           {% endif %}
 
-        </a>
-        {% else %}
-        <img src="{{ url_for('static', filename=(utente.get('foto_profilo') or 'img/user_default.png')) }}"
-             id="fotoProfiloPubblica"
-             class="foto-profilo w-36 h-36 sm:w-40 sm:h-40 rounded-full object-cover ring-4 ring-white shadow-lg cursor-pointer"
-             alt="Foto profilo">
+          <a href="{{ url_for('impostazioni') }}"
+             id="btn-impostazioni"
+             class="hero-floating-btn hero-settings-btn"
+             title="Impostazioni">
+            <span class="text-xl">⚙️</span>
+          </a>
         {% endif %}
       </div>
-      <div class="info-profilo relative max-w-6xl mx-auto px-6 sm:px-10">
 
-        <!-- BLOCCHI TESTO -->
-        <div class="pt-20 pb-6 mb-6{% if utente['username']|length >= 17 %} username-lungo{% endif %}">
+      <!-- CARD INFERIORE HERO -->
+      <div class="hero-bottom-card">
 
-          <!-- WRAPPER ORIZZONTALE per DESKTOP -->
-          <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 xl:gap-8">
+        <!-- FOTO PROFILO -->
+        <div id="wrapper-foto-profilo" class="hero-avatar-slot">
+          {% if not pubblico %}
+            <a href="{{ url_for('upload_foto') }}" class="group block relative w-fit">
 
-            <!-- COLONNA SINISTRA: username + visibilità + stelle + link -->
-            <div class="w-full colonna-info blocco-info-prof">
+              {% if not utente.get('foto_profilo') %}
+                <div class="placeholder-foto-profilo hero-avatar placeholder-foto-profilo-premium rounded-full ring-4 ring-white shadow-lg
+                            flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100
+                            cursor-pointer relative overflow-visible">
+                  <span class="testo-foto-profilo text-sm font-semibold text-blue-700 text-center leading-tight">
+                    Carica la tua<br>foto profilo
+                  </span>
 
-              <!-- USERNAME + VISIBILITÀ -->
-              <div class="flex items-center justify-center sm:justify-start gap-4 riga-username">
-                <h1 id="usernameTitolo" class="text-2xl sm:text-3xl font-semibold text-blue-700 flex items-center">
-                  <span class="text-gray-500">@</span>{{ utente['username'] }}
-                </h1>
-
-                {% if not pubblico %}
-                <form action="{{ url_for('toggle_visibilita') }}" method="post"
-                      class="casella-visibilita flex items-center gap-2">
-
-                  <label for="visibile" class="flex items-center cursor-pointer select-none">
-
-                    <!-- Input reale (nascosto ma attivo) -->
-                    <input type="checkbox"
-                           id="visibile"
-                           name="visibile"
-                           class="peer sr-only"
-                           onchange="this.form.submit()"
-                           {% if utente.get('visibile_pubblicamente', 1) == 1 %}checked{% endif %}>
-
-                    <!-- SLIDER -->
-                    <div class="w-11 h-6 rounded-full bg-gray-300
-                                peer-checked:bg-blue-500
-                                transition-all duration-300 relative">
-
-                      <!-- PALLINA -->
-                      <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow
-                                  transition-all duration-300
-                                  peer-checked:translate-x-5"></div>
-                    </div>
-
-                  </label>
-
-                  <span class="text-sm text-gray-700 ml-1">Visibile</span>
-
-                </form>
-                {% endif %}
-              </div>
-
-              {% set media = media_recensioni|default(0) %}
-              {% set totale = totale_recensioni|default(0) %}
-
-              <!-- STELLINE -->
-              <div class="mt-1 flex items-center justify-center sm:justify-start gap-1 text-[15px]">
-                {% if totale > 0 %}
-                  {% if pubblico %}
-                    <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
-                       class="inline-flex items-center gap-1 text-yellow-500 hover:text-yellow-600">
-                  {% else %}
-                    <a href="{{ url_for('mie_recensioni_ricevute') }}"
-                       class="inline-flex items-center gap-1 text-yellow-500 hover:text-yellow-600">
-                  {% endif %}
-                    {% for i in range(1, 6) %}
-                      {% if i <= media|round(0, 'floor') %}
-                      <span>★</span>
-                      {% else %}
-                      <span class="text-gray-300">★</span>
-                      {% endif %}
-                    {% endfor %}
-                    <span class="font-semibold text-gray-800 ml-1">{{ (media or 0)|round(1) }}/5</span>
-                    <span class="text-gray-500 ml-1 text-sm">({{ totale }} recension{{ 'e' if totale == 1 else 'i' }})</span>
-                  </a>
-                {% else %}
-                  {% if pubblico %}
-                    <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
-                       class="text-gray-400 hover:text-yellow-600">
-                      ☆☆☆☆☆ <span class="text-sm">(nessuna recensione)</span>
-                    </a>
-                  {% else %}
-                    <a href="{{ url_for('mie_recensioni_ricevute') }}"
-                       class="text-gray-400 hover:text-yellow-600">
-                      ☆☆☆☆☆ <span class="text-sm">(nessuna recensione)</span>
-                    </a>
-                  {% endif %}
-                {% endif %}
-              </div>
-
-              {% if not pubblico %}
-              <div class="mt-3 flex justify-center sm:justify-start">
-                  <a href="{{ url_for('nuovo_annuncio') }}"
-                     class="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold
-                            text-blue-600 bg-blue-50 border border-blue-200 shadow-sm
-                            hover:bg-blue-100 hover:border-blue-300 transition-all duration-200">
-                      <span class="text-base leading-none">＋</span>
-                      <span>Crea annuncio</span>
-                  </a>
-              </div>
-              {% endif %}
-
-              <!-- LINK SOTTO LE STELLINE -->
-              {% if pubblico and session.get('utente_id') != utente['id'] %}
-                <div class="mt-2 text-center sm:text-left">
-                  <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
-                     class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">
-                    Lascia una recensione
-                  </a>
+                  <div class="manina-animata absolute -right-6 bottom-2 text-3xl select-none pointer-events-none">
+                    👆
+                  </div>
                 </div>
+              {% else %}
+                <img src="{{ url_for('static', filename=utente.get('foto_profilo')) }}"
+                     class="foto-profilo hero-avatar rounded-full object-cover ring-4 ring-white shadow-lg"
+                     alt="Foto profilo">
+              {% endif %}
+            </a>
+          {% else %}
+            <img src="{{ url_for('static', filename=(utente.get('foto_profilo') or 'img/user_default.png')) }}"
+                 id="fotoProfiloPubblica"
+                 class="foto-profilo hero-avatar rounded-full object-cover ring-4 ring-white shadow-lg cursor-pointer"
+                 alt="Foto profilo">
+          {% endif %}
+        </div>
+
+        <!-- INFO PROFILO -->
+        <div class="hero-main-info">
+          <div class="hero-name-row">
+            <h1 id="usernameTitolo" class="hero-username">
+              <span class="text-slate-400">@</span>{{ utente['username'] }}
+            </h1>
+
+            {% if not pubblico %}
+            <form action="{{ url_for('toggle_visibilita') }}" method="post"
+                  class="casella-visibilita hero-visible-toggle flex items-center gap-2">
+              <label for="visibile" class="flex items-center cursor-pointer select-none">
+                <input type="checkbox"
+                       id="visibile"
+                       name="visibile"
+                       class="peer sr-only"
+                       onchange="this.form.submit()"
+                       {% if utente.get('visibile_pubblicamente', 1) == 1 %}checked{% endif %}>
+
+                <div class="w-11 h-6 rounded-full bg-gray-300 peer-checked:bg-blue-500 transition-all duration-300 relative">
+                  <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 peer-checked:translate-x-5"></div>
+                </div>
+              </label>
+
+              <span class="text-sm text-gray-700 ml-1">Visibile</span>
+            </form>
+            {% endif %}
+          </div>
+
+          {% set media = media_recensioni|default(0) %}
+          {% set totale = totale_recensioni|default(0) %}
+
+          <div class="hero-rating-row">
+            {% if totale > 0 %}
+              {% if pubblico %}
+                <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
+                   class="inline-flex items-center gap-1 text-yellow-500 hover:text-yellow-600">
+              {% else %}
+                <a href="{{ url_for('mie_recensioni_ricevute') }}"
+                   class="inline-flex items-center gap-1 text-yellow-500 hover:text-yellow-600">
               {% endif %}
 
-            </div> <!-- /w-full colonna-info -->
+                {% for i in range(1, 6) %}
+                  {% if i <= media|round(0, 'floor') %}
+                    <span>★</span>
+                  {% else %}
+                    <span class="text-gray-300">★</span>
+                  {% endif %}
+                {% endfor %}
 
-            <!-- COLONNA DESTRA: bottone chat / crea annuncio -->
-            <div class="btn-chat-wrapper mt-4 sm:mt-0 flex items-center justify-center sm:justify-end gap-3">
-                {% if not session.get('utente_id') or session.get('utente_id') != utente['id'] %}
-                <a href="{{ url_for('chat_conversazione_view', other_id=utente['id']) }}"
-                   class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition shadow">
-                   💬 Scrivi in chat
+                <span class="font-semibold text-slate-800 ml-1">{{ (media or 0)|round(1) }}/5</span>
+                <span class="text-slate-500 ml-1 text-sm">({{ totale }} recension{{ 'e' if totale == 1 else 'i' }})</span>
+              </a>
+            {% else %}
+              {% if pubblico %}
+                <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
+                   class="text-gray-400 hover:text-yellow-600">
+                  ☆☆☆☆☆ <span class="text-sm">(nessuna recensione)</span>
                 </a>
-                {% else %}
-                <div class="h-6" style="width:210px;"></div>
-                {% endif %}
-            </div>
+              {% else %}
+                <a href="{{ url_for('mie_recensioni_ricevute') }}"
+                   class="text-gray-400 hover:text-yellow-600">
+                  ☆☆☆☆☆ <span class="text-sm">(nessuna recensione)</span>
+                </a>
+              {% endif %}
+            {% endif %}
+          </div>
 
-          </div> <!-- /flex orizzontale -->
-        </div>   <!-- /pt-20 -->
+          {% if pubblico and session.get('utente_id') != utente['id'] %}
+          <div class="hero-review-link">
+            <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
+               class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">
+              Lascia una recensione
+            </a>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- CTA LATO DESTRO -->
+        <div class="btn-chat-wrapper hero-cta-col">
+          {% if not session.get('utente_id') or session.get('utente_id') != utente['id'] %}
+            <a href="{{ url_for('chat_conversazione_view', other_id=utente['id']) }}"
+               class="hero-primary-cta">
+              💬 Scrivi in chat
+            </a>
+          {% else %}
+            <a href="{{ url_for('nuovo_annuncio') }}"
+               class="hero-primary-cta">
+              ＋ Crea annuncio
+            </a>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
   </section>
 
   <!-- 🖼️ MODALE FOTO PROFILO PUBBLICA (versione tonda) -->
@@ -987,6 +941,278 @@
   </div>
 
 <style>
+  /* ============================================================
+     HERO PROFILO PREMIUM — NUOVA VERSIONE
+     ============================================================ */
+
+  .profilo-hero-premium {
+    width: 100%;
+    padding: 1.2rem 1rem 0;
+  }
+
+  .hero-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .hero-cover-wrap {
+    position: relative;
+  }
+
+  .hero-cover-card {
+    position: relative;
+    width: 100%;
+    min-height: 270px;
+    aspect-ratio: 16 / 5.4;
+    border-radius: 2rem;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    box-shadow:
+      0 14px 34px rgba(15, 23, 42, 0.08),
+      0 28px 60px rgba(15, 23, 42, 0.10);
+  }
+
+  .hero-cover-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02) 30%, rgba(15,23,42,0.06) 100%);
+    pointer-events: none;
+  }
+
+  .hero-floating-btn {
+    position: absolute;
+    right: 1.2rem;
+    bottom: 1.2rem;
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    z-index: 120;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 10px 24px rgba(15,23,42,0.14);
+  }
+
+  .hero-settings-btn {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(203,213,225,0.95);
+    color: #475569;
+  }
+
+  .hero-settings-btn:hover {
+    background: #fff;
+    color: #2563eb;
+  }
+
+  .hero-admin-btn {
+    right: 4.6rem;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(239,68,68,0.35);
+    color: #dc2626;
+  }
+
+  .hero-admin-btn:hover {
+    background: #fff1f2;
+    color: #b91c1c;
+  }
+
+  .hero-bottom-card {
+    position: relative;
+    margin: -72px auto 0;
+    width: calc(100% - 40px);
+    min-height: 170px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid rgba(226,232,240,0.92);
+    border-radius: 2rem;
+    box-shadow:
+      0 18px 40px rgba(15,23,42,0.10),
+      0 34px 70px rgba(15,23,42,0.10);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1.4rem 1.6rem 1.4rem 1.4rem;
+    z-index: 40;
+  }
+
+  .hero-avatar-slot {
+    position: relative;
+    z-index: 3;
+  }
+
+  .hero-avatar {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border: 5px solid #fff;
+    box-shadow:
+      0 10px 24px rgba(15,23,42,0.12),
+      0 24px 40px rgba(15,23,42,0.10);
+  }
+
+  .placeholder-foto-profilo-premium {
+    width: 150px;
+    height: 150px;
+    border: 5px solid #fff;
+  }
+
+  .hero-main-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.55rem;
+  }
+
+  .hero-name-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-username {
+    margin: 0;
+    font-size: clamp(2rem, 3.8vw, 3.2rem);
+    line-height: 0.98;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: #2563eb;
+  }
+
+  .hero-rating-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    font-size: 0.98rem;
+  }
+
+  .hero-review-link {
+    margin-top: 0.1rem;
+  }
+
+  .hero-visible-toggle {
+    margin-top: 0.1rem;
+  }
+
+  .hero-cta-col {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .hero-primary-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-width: 190px;
+    padding: 0.95rem 1.35rem;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #2563eb, #4f46e5 55%, #ec4899);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    box-shadow:
+      0 14px 30px rgba(79,70,229,0.24),
+      0 6px 16px rgba(37,99,235,0.16);
+    transition: transform .22s ease, box-shadow .22s ease, opacity .22s ease;
+  }
+
+  .hero-primary-cta:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 18px 34px rgba(79,70,229,0.28),
+      0 10px 18px rgba(37,99,235,0.18);
+  }
+
+  @media (max-width: 1024px) {
+    .hero-bottom-card {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      text-align: center;
+      gap: 1rem;
+      padding: 1.15rem 1.1rem 1.25rem;
+    }
+
+    .hero-main-info {
+      align-items: center;
+    }
+
+    .hero-name-row {
+      justify-content: center;
+    }
+
+    .hero-cta-col {
+      justify-content: center;
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .profilo-hero-premium {
+      padding: 0.6rem 0 0;
+    }
+
+    .hero-shell {
+      width: 100%;
+    }
+
+    .hero-cover-card {
+      border-radius: 0;
+      min-height: 210px;
+      aspect-ratio: auto;
+      height: 210px;
+    }
+
+    .hero-floating-btn {
+      width: 42px;
+      height: 42px;
+      bottom: 0.9rem;
+      right: 0.9rem;
+    }
+
+    .hero-admin-btn {
+      right: 4rem;
+    }
+
+    .hero-bottom-card {
+      width: calc(100% - 20px);
+      margin-top: -52px;
+      border-radius: 1.6rem;
+      padding: 1rem 0.95rem 1.15rem;
+      gap: 0.85rem;
+    }
+
+    .hero-avatar,
+    .placeholder-foto-profilo-premium {
+      width: 116px;
+      height: 116px;
+      border-width: 4px;
+    }
+
+    .hero-username {
+      font-size: 2.15rem;
+    }
+
+    .hero-primary-cta {
+      width: 100%;
+      min-width: 0;
+      padding: 0.9rem 1.15rem;
+    }
+  }
+
+
 /* ============================================================
    🌟 LOCALCARE — PROFILO UTENTE (DESKTOP + MOBILE APP STYLE)
    ============================================================ */
@@ -997,237 +1223,24 @@
    GENERALE
 ---------------------------------- */
 .input {
-  @apply w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 0.75rem;
+  outline: none;
 }
+
+.input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
+}
+
 input[disabled], textarea[disabled], select[disabled] {
   background-color: #f9fafb !important;
   color: #555 !important;
   border-color: #e5e7eb !important;
   cursor: not-allowed !important;
 }
-
-/* ----------------------------------
-   HERO DESKTOP
----------------------------------- */
-#profilo-hero {
-  position: relative;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-
-#profilo-hero {
-  margin-top: 4rem !important;   /* 64px */
-}
-
-/* mobile: navbar leggermente più bassa → puoi lasciare comunque 4rem */
-@media (max-width: 640px) {
-  #profilo-hero {
-    margin-top: 4rem !important;
-  }
-}
-
-@media (max-width: 640px) {
-  body:not([data-pubblico="false"]) #profilo-hero {
-      margin-bottom: -1rem !important;
-  }
-}
-
-/* Copertina — Desktop FIX DEFINITIVO */
-body[data-pubblico="false"] #copertina-img {
-  transition: opacity .3s ease-in, transform .2s ease;
-}
-body[data-pubblico="false"] #copertina:hover #copertina-img {
-  transform: scale(1.01);
-}
-body[data-pubblico="false"] #copertina,
-body[data-pubblico="false"] #copertina-img {
-  cursor: pointer;
-}
-
-#copertina {
-  position: relative;
-  width: min(92%, 1100px);
-  margin: 0 auto;
-
-  aspect-ratio: 16 / 9;   /* ⭐ rapporto ideale tipo Facebook */
-  min-height: 300px;
-  max-height: 420px;
-
-  background-color: #fff;
-  border-radius: 2rem;
-  overflow: hidden;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-
-#copertina-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center center; /* esplicito */
-  opacity: 0;
-  transition: opacity .3s ease-in;
-}
-
-#copertina-img.loaded { opacity: 1; }
-
-/* Foto profilo — Desktop */
-.foto-profilo {
-  transition: transform .25s ease;
-}
-.foto-profilo:hover {
-  transform: scale(1.02);
-}
-
-/* FOTO PROFILO — POSIZIONE DESKTOP PERFETTA */
-@media (min-width: 641px) {
-
-  #wrapper-foto-profilo {
-    position: absolute;
-    z-index: 95;
-
-    /* POSIZIONE PERFETTA COME NEL TUO SCREENSHOT */
-    left: calc(50% - 475px);   /* allinea esattamente con bordo copertina */
-    top: calc(23rem - 180px);  /* metà sopra, metà sotto la copertina */
-
-    /* puoi aumentare o diminuire regolando -180px */
-  }
-
-  #wrapper-foto-profilo img {
-    width: 260px;
-    height: 260px;
-    border-radius: 9999px;
-    border-width: 6px;
-    object-fit: cover;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-  }
-}
-
-/* DESKTOP ≥ 1200px → layout orizzontale */
-@media (min-width: 1200px) {
-  .info-profilo > div.pt-20 {
-      display: flex !important;
-      flex-direction: row !important;
-      align-items: flex-end !important;
-      gap: 3rem !important;
-  }
-}
-
-/* TABLET (641–1199px) → layout normale MA bottone mobile-style */
-@media (min-width: 641px) and (max-width: 1199px) {
-  .info-profilo > div.pt-20 {
-      display: block !important;   /* impedisce l’allineamento orizzontale */
-  }
-}
-
-/* MOBILE → resta tutto mobile */
-@media (max-width: 640px) {
-  .info-profilo > div.pt-20 {
-      display: block !important;
-  }
-}
-
-/* 🔵 riduzione spazio sotto il blocco profilo prima della barra tabs - solo pubblico desktop */
-@media (min-width: 641px) {
-  body[data-pubblico="true"] .info-profilo > div.pt-20 {
-      padding-bottom: 0.75rem !important; /* era pb-6 → molto più compatto */
-      margin-bottom: 0.75rem !important;  /* era mb-6 */
-  }
-}
-
-/* ===============================
-   📱 TABLET (iPad, 641px → 1024px)
-   =============================== */
-@media (min-width: 641px) and (max-width: 1024px) {
-
-  #copertina {
-    width: min(82%, 760px);        /* ✅ meno larga su iPad verticale */
-    aspect-ratio: 16 / 8.6;        /* ✅ più alta (non banner) */
-    min-height: 360px;             /* ✅ presenza reale */
-    max-height: 460px;
-  }
-
-  /* Foto profilo su tablet — intermedia */
-  #wrapper-foto-profilo img {
-    width: 235px !important;
-    height: 235px !important;
-    border-width: 5px !important;
-  }
-
-  /* Posizionamento perfetto su tablet */
-  #wrapper-foto-profilo {
-    left: calc(50% - 330px) !important; /* prima era 475px */
-    top: calc(19rem - 150px) !important; /* centrata su copertina tablet */
-  }
-
-  /* Spaziatura sotto la foto */
-  .info-profilo > div.pt-20 {
-    padding-top: 7rem !important;
-  }
-
-
-}
-
-/* ------------------------------------------
-   FIX iPad 13" — ripristina margini laterali
-   su display 1024–1366 px di larghezza
-------------------------------------------- */
-@media (min-width: 1024px) and (max-width: 1366px) {
-  .max-w-6xl {
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
-  }
-
-  #profilo-hero,
-  section {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-}
-
-/* ===============================================
-   IPAD VERTICALE (641–1024px)
-   Centra TUTTO il blocco username + stelle + link
-   così si allinea perfettamente al bottone “Scrivi in chat”
-   =============================================== */
-   @media (min-width: 641px) and (max-width: 1024px) {
-
-     /* Colonna sinistra centrata su iPad verticale */
-     .info-profilo > div.pt-20 > .flex > .w-full {
-         display: flex !important;
-         flex-direction: column !important;
-         align-items: center !important;
-         text-align: center !important;
-     }
-
-     /* Titolo @username centrato */
-     .info-profilo h1 {
-         text-align: center !important;
-         justify-content: center !important;
-         width: 100% !important;
-     }
-
-     /* Stelle centrate (già ok per il blocco esistente) */
-     .info-profilo .flex.items-center.gap-1 {
-         justify-content: center !important;
-         width: 100% !important;
-     }
-
-     /* Link “Lascia una recensione” centrato */
-     .info-profilo .mt-2 {
-         text-align: center !important;
-         width: 100% !important;
-     }
-   }
-
-
 
 
 /* ----------------------------------
@@ -1353,51 +1366,6 @@ nav {
     margin:0 !important;
   }
 
-  /* Copertina mobile */
-  #copertina {
-    width:100% !important;
-    height:15rem !important;   /* +1rem come richiesto */
-    border-radius:0 !important;
-    margin:0 !important;
-  }
-
-  #copertina-img {
-    border-radius:1rem !important;
-    object-fit:cover !important;
-  }
-
-  /* Foto profilo mobile */
-  #wrapper-foto-profilo {
-    left:0rem !important;
-    top:calc(15rem - 55px) !important;  /* offset perfetto */
-    bottom:auto !important;
-  }
-
-  #wrapper-foto-profilo img {
-    width:175px !important;
-    height:175px !important;
-    border-width:1px !important;
-  }
-
-
-
-  /* Spazio sotto la foto */
-  .info-profilo > div.pt-20 {
-    padding-top:6rem !important;
-  }
-
-  /* Tabs full-width mobile */
-  .tab-btn { flex:1 !important; }
-
-  nav {
-    border-radius:0 !important;
-  }
-
-  /* Menu tre puntini mobile */
-  .copertina-menu {
-    top:.6rem !important;
-    right:.6rem !important;
-  }
 
   /* Tabs più compatti su mobile */
   nav .tab-btn {
@@ -1434,244 +1402,6 @@ nav {
     }
 
 }
-</style>
-<style>
-  /* =====================================================
-     POSIZIONAMENTO RESPONSIVE DEL BOTTONE "Scrivi in chat"
-     ===================================================== */
-
-  /* --- DESKTOP ≥1200px (NON 1025px!) --- */
-  @media (min-width: 1200px) {
-    .btn-chat-wrapper {
-      position: relative;
-      top: 8px;
-      margin-left: 3rem;
-      justify-content: flex-end !important;
-    }
-  }
-
-  /* --- TABLET (641px → 1199px) E MOBILE (≤640px) ---
-       → Il bottone deve stare SOTTO e CENTRATO
-  */
-  @media (max-width: 1199px) {
-    .btn-chat-wrapper {
-      width: 100%;
-      justify-content: center !important;
-      margin-top: 1.2rem !important;
-      margin-bottom: 0.5rem !important;
-      top: 0 !important;
-    }
-  }
-
-  @media (max-width: 640px) {
-  .btn-chat-wrapper {
-    margin-top: 0.6rem !important;     /* prima 1.2rem → ora MOLTO più su */
-    margin-bottom: 0rem !important;
-  }
-}
-
-  /* ============================================================
-   🔵 ALLINEAMENTO PERFETTO CHAT SU DESKTOP ≥ 1000px
-   ============================================================ */
-@media (min-width: 1000px) {
-
-    /* Alza leggermente il bottone chat */
-    .btn-chat-wrapper {
-        position: relative !important;
-        margin-left: 0 !important;  /* evita spostamenti laterali */
-    }
-
-}
-
-  /* =====================================================
-     POSIZIONAMENTO BUTTON CHAT — SOLO TABLET VERTICALE
-     (mantiene layout tablet ma mobile-izza SOLO quella riga)
-     ===================================================== */
-
-     /* 🔥 SOLO iPad verticale — Chat mobile, MA layout desktop */
-     @media (min-width: 641px) and (max-width: 1024px) {
-
-       /* Mantiene la riga orizzontale, MA la porta più in alto come desktop */
-       .info-profilo > div.pt-20 {
-           padding-top: 3rem !important;   /* come desktop */
-           margin-bottom: 2rem !important;
-       }
-
-       /* Centra perfettamente USERNAME + STELLE + LASCIA RECENSIONE */
-       .info-profilo > div.pt-20 > .flex {
-           justify-content: center !important;
-           text-align: center !important;
-           width: 100%;
-       }
-
-       /* Fa comportare il bottone come su mobile */
-       .btn-chat-wrapper {
-           width: 100%;
-           justify-content: center !important;
-           margin-top: 1rem !important;
-           position: relative !important;
-           top: 0 !important;
-       }
-     }
-
-     /* ===== MOBILE small fix ===== */
-     @media (max-width: 640px) {
-       .info-profilo > div.pt-20 {
-          padding-top: 5.3rem !important;  /* era 6rem → leggermente più vicino */
-       }
-     }
-
-     /* ============================================================
-        🔵 SISTEMAZIONE TOGGLE "Visibile"
-        Mobile (≤640) + Tablet verticale (641–1024)
-        ============================================================ */
-
-     /* MOBILE e TABLET VERTICALE */
-     @media (max-width: 1024px) {
-
-         /* sposta il toggle sotto alle stelline */
-         .casella-visibilita {
-             width: 100%;
-             display: flex;
-             justify-content: center;
-             margin-top: 0.4rem !important;
-             margin-bottom: 0.2rem !important;
-         }
-
-         /* la riga username+toggle non deve essere orizzontale */
-         .riga-username {
-             flex-direction: column !important;
-             align-items: center !important;
-             gap: 0.4rem !important;
-         }
-     }
-     /* --------------------------------------------
-        FIX SLIDER VISIBILITÀ — Priorità massima
-     --------------------------------------------- */
-
-     .casella-visibilita input.peer:checked ~ div {
-         background-color: #3b82f6 !important; /* blu acceso */
-     }
-
-     .casella-visibilita input.peer:checked ~ div > div {
-         transform: translateX(20px) !important; /* scorrimento pallina */
-     }
-
-     /* Stato OFF pallina */
-     .casella-visibilita div > div {
-         transform: translateX(0px) !important;
-     }
-     /* ============================================================
-        📏 DISTANZA ADATTATIVA FINALE — OVERRIDE TOTALE
-        Funziona SEMPRE su mobile + tablet verticale
-        ============================================================ */
-
-        @media (max-width: 640px) {
-
-          /* default */
-          .info-profilo > div.pt-20 {
-              padding-top: 6rem !important;
-          }
-        }
-
-        @media (min-width: 641px) and (max-width: 1024px) {
-
-          /* default */
-          .info-profilo > div.pt-20 {
-              padding-top: 5rem !important;
-          }
-        }
-
-</style>
-<style>
-  /* ============================================================
-     🌟 SISTEMAZIONE BLOCCO USER — SOLO DESKTOP ≥ 1200px
-     ============================================================ */
-  @media (min-width: 1000px) {
-
-    /* Wrapper verticale centrato */
-    .info-profilo > div.pt-20 > .flex {
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        width: 100% !important;
-        gap: 0.75rem !important;
-        margin-top: -1.5rem !important; /* 🔥 SALE di 1.5rem */
-    }
-
-    /* Colonna-info centrata */
-    .info-profilo .colonna-info {
-        width: 100% !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-    }
-
-    /* Username centrato */
-    .info-profilo h1 {
-        justify-content: center !important;
-        text-align: center !important;
-        width: 100% !important;
-    }
-
-    /* Slider “Visibile” centrato */
-    .riga-username {
-        justify-content: center !important;
-        width: 100% !important;
-        text-align: center !important;
-    }
-
-    /* Stelle centrate */
-    .info-profilo .flex.items-center.gap-1 {
-        justify-content: center !important;
-        width: 100% !important;
-    }
-
-    /* Bottone "Crea annuncio" centrato */
-    .info-profilo .mt-3 {
-        display: flex !important;
-        justify-content: center !important;
-        width: 100% !important;
-        margin-top: 0.75rem !important;
-    }
-
-  }
-</style>
-<style>
-/* HERO auto-height SOLO nella pagina profilo */
-body[data-page="profilo"] #profilo-hero {
-    height: auto !important;
-    min-height: unset !important;
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
-}
-
-/* Blocca gli spazi verticali e lascia crescere solo in base al contenuto */
-body[data-page="profilo"] .info-profilo > div.pt-20 {
-    padding-bottom: 0.5rem !important;
-    margin-bottom: 0.5rem !important;
-}
-
-
-
-</style>
-<style>
-  /* ======================================================
-     ⚙️ POSIZIONAMENTO BOTTONE IMPOSTAZIONI
-     /* 📱 MOBILE — bottone impostazioni sotto la copertina */
-     @media (max-width: 640px) {
-
-
-       /* wrapper dedicato */
-       #copertina-wrapper {
-         display: flex;
-         flex-direction: column;
-         align-items: stretch;
-       }
-     }
 </style>
 <style>
 #copertina-wrapper {
@@ -1741,45 +1471,6 @@ body[data-page="profilo"] .info-profilo > div.pt-20 {
     70%  { transform: translateY(-3px) rotate(6deg); }
     100% { transform: translateY(0) rotate(0deg); }
   }
-</style>
-<style>
-  #btn-admin-dashboard {
-    position: absolute;
-    right: 4.75rem; /* ← accanto al bottone impostazioni */
-    bottom: -2.75rem;
-
-    width: 44px;
-    height: 44px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(239, 68, 68, 0.4);
-    border-radius: 9999px;
-
-    color: #dc2626;
-    font-size: 1.2rem;
-
-    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-    transition: all 0.2s ease;
-    z-index: 120;
-  }
-
-  #btn-admin-dashboard:hover {
-    background: #fee2e2;
-    color: #b91c1c;
-    transform: translateY(-1px) scale(1.05);
-  }
-
-  @media (max-width: 640px) {
-    #btn-admin-dashboard {
-      right: 8.5rem;
-      bottom: -3rem;
-    }
-  }
-
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -1865,16 +1556,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const img = document.getElementById("copertina-img");
-  if (img.complete) {
-    img.classList.add("loaded");
-  } else {
-    img.addEventListener("load", () => img.classList.add("loaded"));
-  }
-});
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
   const copertina = document.getElementById("copertina");
   const menu = document.getElementById("menuOptions");
 
@@ -1936,15 +1617,6 @@ document.addEventListener("DOMContentLoaded", () => {
 <script src="https://js.stripe.com/v3/"></script>
 <script>
 let ANNUNCIO_ID_CORRENTE = null;
-</script>
-<script>
-function apriZoom(src) {
-  document.getElementById("zoom-img").src = src;
-  document.getElementById("zoom-overlay").classList.remove("hidden");
-}
-function chiudiZoom() {
-  document.getElementById("zoom-overlay").classList.add("hidden");
-}
 </script>
 <script>
   function apriVisibilita(id) {
