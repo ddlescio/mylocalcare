@@ -1371,13 +1371,36 @@ aside p.text-sm.text-gray-500.font-medium {
 
 /* Card unica stile pannello iOS */
 .profilo-card {
-  border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  position: relative;
+  border-radius: 1.45rem;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(248,250,252,0.94) 100%);
+  border: 1px solid rgba(226,232,240,0.95);
   box-shadow:
-    0 10px 25px rgba(15, 23, 42, 0.06),
-    0 24px 55px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(14px);
+    0 12px 28px rgba(15,23,42,0.06),
+    0 26px 60px rgba(15,23,42,0.10);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.profilo-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.26), rgba(255,255,255,0) 42%);
+  pointer-events: none;
+}
+
+.profilo-card::after {
+  content: "";
+  position: absolute;
+  left: 1.1rem;
+  right: 1.1rem;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.92), transparent);
+  pointer-events: none;
 }
 
 /* ----------------------------------
