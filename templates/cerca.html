@@ -535,7 +535,6 @@
                     {{ filtro.strip() }}
                   </span>
                 {% endfor %}
-                <span class="card-pill-premium card-pill-more js-pill-more hidden"></span>
               </div>
             {% endif %}
           </div>
@@ -2332,19 +2331,17 @@ function updatePillRows() {
 
   wraps.forEach((wrap) => {
     const items = Array.from(wrap.querySelectorAll(".js-pill-item"));
-    const more = wrap.querySelector(".js-pill-more");
 
-    if (!items.length || !more) return;
+    if (!items.length) return;
 
-    // reset completo
+    // rimuove eventuale +x creato in precedenza
+    wrap.querySelectorAll(".js-pill-more-generated").forEach((el) => el.remove());
+
+    // reset
     items.forEach((el) => el.classList.remove("hidden"));
-    more.classList.add("hidden");
-    more.textContent = "";
 
-    // 1) mostro tutte le pill vere e tengo solo le prime 2 righe
-    const rowTops = [];
-    let visibleItems = [];
-
+    // prima passata: tengo solo le pill che entrano nelle prime 2 righe
+    let rowTops = [];
     items.forEach((el) => {
       const top = el.offsetTop;
 
@@ -2352,75 +2349,53 @@ function updatePillRows() {
         rowTops.push(top);
       }
 
-      if (rowTops.length <= 2) {
-        visibleItems.push(el);
-      } else {
+      if (rowTops.length > 2) {
         el.classList.add("hidden");
       }
     });
 
-    // 2) quante pill sono state nascoste?
     let hiddenCount = items.filter((el) => el.classList.contains("hidden")).length;
 
-    // se non ci sono elementi nascosti, niente +x
-    if (hiddenCount <= 0) {
-      more.classList.add("hidden");
-      more.textContent = "";
-      return;
-    }
+    // se non ho nascosto nulla, fine
+    if (hiddenCount <= 0) return;
 
-    // 3) mostro il +x
+    // crea dinamicamente il +x
+    const more = document.createElement("span");
+    more.className = "card-pill-premium card-pill-more js-pill-more-generated";
     more.textContent = `+${hiddenCount}`;
-    more.classList.remove("hidden");
+    wrap.appendChild(more);
 
-    // 4) se il +x finisce su una terza riga, nascondo altre pill dall'ultima visibile
-    let visibleRowTops = [...new Set(
-      items
-        .filter((el) => !el.classList.contains("hidden"))
-        .map((el) => el.offsetTop)
-    )];
+    // se il +x va a capo o sfora, nascondo pill vere finché rientra in 2 righe
+    while (true) {
+      const visibleItems = items.filter((el) => !el.classList.contains("hidden"));
+      const visibleTops = [...new Set(visibleItems.map((el) => el.offsetTop))];
+      const secondRowTop = visibleTops[1];
 
-    while (visibleRowTops.length > 2) {
+      const tooManyRows = visibleTops.length > 2;
+      const moreOverflowsRow =
+        typeof secondRowTop !== "undefined" && more.offsetTop > secondRowTop;
+
+      if (!tooManyRows && !moreOverflowsRow) {
+        break;
+      }
+
       const lastVisible = [...items].reverse().find((el) => !el.classList.contains("hidden"));
       if (!lastVisible) break;
 
       lastVisible.classList.add("hidden");
-
-      hiddenCount = items.filter((el) => el.classList.contains("hidden")).length;
-      more.textContent = `+${hiddenCount}`;
-
-      visibleRowTops = [...new Set(
-        items
-          .filter((el) => !el.classList.contains("hidden"))
-          .map((el) => el.offsetTop)
-      )];
-    }
-
-    // 5) ulteriore sicurezza:
-    // anche se le pill sono su 2 righe, controllo che il +x non abbia creato overflow grafico
-    const secondRowTop = visibleRowTops[1];
-
-    while (
-      typeof secondRowTop !== "undefined" &&
-      more.offsetTop > secondRowTop
-    ) {
-      const lastVisible = [...items].reverse().find((el) => !el.classList.contains("hidden"));
-      if (!lastVisible) break;
-
-      lastVisible.classList.add("hidden");
-
       hiddenCount = items.filter((el) => el.classList.contains("hidden")).length;
       more.textContent = `+${hiddenCount}`;
     }
 
-    // 6) se per qualsiasi motivo il testo del more è vuoto, lo nascondo
-    if (!more.textContent.trim()) {
-      more.classList.add("hidden");
+    // sicurezza finale
+    if (!more.textContent.trim() || more.textContent === "+0") {
+      more.remove();
     }
   });
 }
 
 updatePillRows();
+window.addEventListener("load", updatePillRows);
 window.addEventListener("resize", updatePillRows);
 
 </script>
