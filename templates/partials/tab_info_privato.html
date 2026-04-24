@@ -297,89 +297,141 @@
       <!-- 🟧 Sezione: Contatti e presenza online -->
       <section data-section="contacts" class="hidden">
 
-      {% if pubblico %}
+        {% if pubblico %}
+
+          {% set email_pubblica = utente.get('email_pubblica','')|trim %}
+          {% set telefono = utente.get('telefono','')|trim %}
+          {% set indirizzo_studio = utente.get('indirizzo_studio','')|trim %}
+          {% set sito_web = utente.get('sito_web','')|trim %}
+          {% set instagram = utente.get('instagram','')|trim %}
+          {% set facebook = utente.get('facebook','')|trim %}
+          {% set linkedin = utente.get('linkedin','')|trim %}
+          {% set orari = utente.get('orari','')|trim %}
+          {% set preferenze_contatto = utente.get('preferenze_contatto','')|trim %}
+
+          {% set ha_contatti = email_pubblica or telefono or indirizzo_studio
+                                or sito_web or instagram or facebook
+                                or linkedin or orari or preferenze_contatto %}
+
+          <div class="pub-head">
+            <h4 class="pub-title">Contatti</h4>
+            <p class="pub-subtitle">Se disponibili, puoi contattarlo anche fuori da LocalCare.</p>
+          </div>
 
           {% if not servizio_contatti_attivo %}
-              <!-- 🔒 CONTATTI BLOCCATI -->
-              <div class="form-box text-center">
-                  <p class="text-gray-600 text-sm mb-2">
-                      📞 Scrivi in chat per metterti in contatto
-                  </p>
-                  <p class="text-xs text-gray-500 italic">
-                      Contatti diretti non disponibili
-                  </p>
+            <div class="pub-card pub-card-muted">
+              <div class="pub-empty">
+                <div class="pub-empty-title">📞 Scrivi in Chat per metterti in contatto</div>
+                <div class="pub-empty-sub">Contatti non disponibili</div>
+              </div>
+            </div>
+
+          {% elif not ha_contatti %}
+            <div class="pub-card pub-card-muted">
+              <div class="pub-empty">
+                <div class="pub-empty-title">Nessun contatto disponibile</div>
+                <div class="pub-empty-sub">Questo utente non ha ancora inserito riferimenti pubblici.</div>
+              </div>
+            </div>
+
+          {% else %}
+
+            {% if email_pubblica or telefono or indirizzo_studio %}
+            <div class="pub-card">
+              <div class="pub-card-head">
+                <h5 class="pub-card-title">Contatti diretti</h5>
               </div>
 
-          {% else %}
-
-              {% set email_pubblica = utente.get('email_pubblica','')|trim %}
-              {% set telefono = utente.get('telefono','')|trim %}
-              {% set indirizzo_studio = utente.get('indirizzo_studio','')|trim %}
-              {% set sito_web = utente.get('sito_web','')|trim %}
-              {% set instagram = utente.get('instagram','')|trim %}
-              {% set facebook = utente.get('facebook','')|trim %}
-              {% set linkedin = utente.get('linkedin','')|trim %}
-              {% set orari = utente.get('orari','')|trim %}
-              {% set preferenze_contatto = utente.get('preferenze_contatto','')|trim %}
-
-              {% set ha_contatti = email_pubblica or telefono or indirizzo_studio
-                                    or sito_web or instagram or facebook
-                                    or linkedin or orari or preferenze_contatto %}
-
-              {% if not ha_contatti %}
-                  <p class="text-gray-500 text-sm italic py-3 text-center">
-                      L’utente non ha ancora fornito contatti o informazioni.
-                  </p>
-              {% else %}
-
-                  <div class="form-box">
-                      <label class="label-strong">Contatti diretti</label>
-                      {% if email_pubblica %}
-                        <p class="input-modern" disabled>Email: {{ email_pubblica }}</p>
-                      {% endif %}
-                      {% if telefono %}
-                        <p class="input-modern" disabled>Telefono / WhatsApp: {{ telefono }}</p>
-                      {% endif %}
-                      {% if indirizzo_studio %}
-                        <p class="input-modern" disabled>Studio o sede: {{ indirizzo_studio }}</p>
-                      {% endif %}
+              <div class="pub-list">
+                {% if email_pubblica %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">Email pubblica</span>
+                    <span class="pub-item-value">{{ email_pubblica }}</span>
                   </div>
+                {% endif %}
 
-                  {% if sito_web or instagram or facebook or linkedin %}
-                  <div class="form-box">
-                      <label class="label-strong">Presenza online</label>
-                      {% if sito_web %}
-                        <p class="input-modern" disabled>Sito web: {{ sito_web }}</p>
-                      {% endif %}
-                      {% if instagram %}
-                        <p class="input-modern" disabled>Instagram: {{ instagram }}</p>
-                      {% endif %}
-                      {% if facebook %}
-                        <p class="input-modern" disabled>Facebook: {{ facebook }}</p>
-                      {% endif %}
-                      {% if linkedin %}
-                        <p class="input-modern" disabled>LinkedIn: {{ linkedin }}</p>
-                      {% endif %}
+                {% if telefono %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">Telefono / WhatsApp</span>
+                    <span class="pub-item-value">{{ telefono }}</span>
                   </div>
-                  {% endif %}
+                {% endif %}
 
-                  {% if orari or preferenze_contatto %}
-                  <div class="form-box">
-                      <label class="label-strong">Disponibilità</label>
-                      {% if orari %}
-                        <p class="input-modern" disabled>Orari indicativi: {{ orari }}</p>
-                      {% endif %}
-                      {% if preferenze_contatto %}
-                        <p class="input-modern" disabled>Modalità di contatto preferita: {{ preferenze_contatto }}</p>
-                      {% endif %}
+                {% if indirizzo_studio %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">Studio o sede</span>
+                    <span class="pub-item-value">{{ indirizzo_studio }}</span>
                   </div>
-                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
 
-              {% endif %}
+            {% if sito_web or instagram or facebook or linkedin %}
+            <div class="pub-card">
+              <div class="pub-card-head">
+                <h5 class="pub-card-title">Presenza online</h5>
+              </div>
+
+              <div class="pub-list">
+                {% if sito_web %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">Sito web</span>
+                    <span class="pub-item-value">{{ sito_web }}</span>
+                  </div>
+                {% endif %}
+
+                {% if instagram %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">Instagram</span>
+                    <span class="pub-item-value">{{ instagram }}</span>
+                  </div>
+                {% endif %}
+
+                {% if facebook %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">Facebook</span>
+                    <span class="pub-item-value">{{ facebook }}</span>
+                  </div>
+                {% endif %}
+
+                {% if linkedin %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">LinkedIn</span>
+                    <span class="pub-item-value">{{ linkedin }}</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+            {% if orari or preferenze_contatto %}
+            <div class="pub-card">
+              <div class="pub-card-head">
+                <h5 class="pub-card-title">Disponibilità</h5>
+              </div>
+
+              <div class="pub-list">
+                {% if orari %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">Orari indicativi</span>
+                    <span class="pub-item-value">{{ orari }}</span>
+                  </div>
+                {% endif %}
+
+                {% if preferenze_contatto %}
+                  <div class="pub-item">
+                    <span class="pub-item-label">Modalità di contatto</span>
+                    <span class="pub-item-value">{{ preferenze_contatto }}</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
           {% endif %}
 
-          {% else %}
-
+        {% else %}
             <form method="post"
                   action="{{ url_for('utente_update_contatti') }}"
                   class="space-y-6">
@@ -519,22 +571,30 @@
       <section data-section="description" class="hidden">
 
         {% if pubblico %}
-          {# --- Modalità PUBBLICA --- #}
 
           {% set descrizione = utente.get('descrizione','')|trim %}
 
+          <div class="pub-head">
+            <h4 class="pub-title">Chi sono</h4>
+            <p class="pub-subtitle">Una descrizione più completa.</p>
+          </div>
+
           {% if not descrizione %}
-            <p class="text-gray-500 text-sm italic py-3 text-center">
-              L’utente non ha ancora aggiunto una descrizione personale.
-            </p>
+            <div class="pub-card pub-card-muted">
+              <div class="pub-empty">
+                <div class="pub-empty-title">Descrizione non disponibile</div>
+                <div class="pub-empty-sub">Questo utente non ha ancora aggiunto una presentazione personale.</div>
+              </div>
+            </div>
           {% else %}
-            <div class="form-box">
-              <label class="label-strong">Descrizione personale</label>
-              <p class="input-modern" disabled>{{ descrizione }}</p>
+            <div class="pub-card">
+              <div class="pub-description">
+                {{ descrizione }}
+              </div>
             </div>
           {% endif %}
 
-          {% else %}
+        {% else %}
 
             <form method="post" action="{{ url_for('utente_update_descrizione') }}" class="space-y-6">
               <div class="ds-head">
@@ -717,29 +777,6 @@
   main#info-content section {
     padding: 1.2rem 1.4rem !important;
   }
-
-  .input-modern[disabled],
-  textarea[disabled] {
-    background: #f9fafb !important;
-    border: 1px solid #d1d5db !important;
-    font-weight: 500;
-  }
-
-  .input-modern[disabled],
-.input[disabled],
-textarea[disabled] {
-    cursor: default !important;
-    pointer-events: none !important;
-    background: #f9fafb !important;
-    border: 1px solid #d1d5db !important;
-    font-weight: 500;
-    color: #475569 !important; /* testo leggermente più scuro, come annunci */
-}
-
-/* Disabilita anche il cursore su tutto il box */
-.form-box:has(.input-modern[disabled]) {
-    cursor: default !important;
-}
 
   {% endif %}
 
@@ -1272,6 +1309,162 @@ textarea[disabled] {
 
     .ds-actions{
       justify-content:stretch;
+    }
+  }
+
+  /* ============================================================
+     PREMIUM — SEZIONI PUBBLICHE INFO
+  ============================================================ */
+  .pub-head{
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+    margin-bottom:1.1rem;
+  }
+
+  .pub-title{
+    margin:0;
+    font-size:1.2rem;
+    font-weight:800;
+    letter-spacing:-0.03em;
+    color:#1e3a8a;
+  }
+
+  .pub-subtitle{
+    margin:0;
+    font-size:.92rem;
+    color:#6b7280;
+    line-height:1.45;
+  }
+
+  .pub-card{
+    position:relative;
+    border-radius:1.35rem;
+    background:linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%);
+    border:1px solid rgba(226,232,240,0.95);
+    box-shadow:
+      0 8px 20px rgba(15,23,42,0.04),
+      0 18px 40px rgba(15,23,42,0.07);
+    padding:1rem 1rem 1.05rem;
+    overflow:hidden;
+  }
+
+  .pub-card + .pub-card{
+    margin-top:1rem;
+  }
+
+  .pub-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0) 44%);
+    pointer-events:none;
+  }
+
+  .pub-card-head{
+    position:relative;
+    z-index:1;
+    margin-bottom:.8rem;
+  }
+
+  .pub-card-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:750;
+    color:#1f2937;
+    letter-spacing:-0.02em;
+  }
+
+  .pub-list{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    gap:.75rem;
+  }
+
+  .pub-item{
+    display:flex;
+    flex-direction:column;
+    gap:.22rem;
+    padding:.85rem 1rem;
+    border-radius:1rem;
+    border:1px solid #dbe2ea;
+    background:rgba(255,255,255,0.92);
+  }
+
+  .pub-item-label{
+    font-size:.82rem;
+    font-weight:650;
+    color:#64748b;
+  }
+
+  .pub-item-value{
+    font-size:.98rem;
+    font-weight:500;
+    color:#1f2937;
+    line-height:1.45;
+    word-break:break-word;
+  }
+
+  .pub-description{
+    position:relative;
+    z-index:1;
+    font-size:1rem;
+    line-height:1.7;
+    color:#1f2937;
+    white-space:pre-line;
+  }
+
+  .pub-card-muted{
+    background:linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(245,247,250,0.94) 100%);
+  }
+
+  .pub-empty{
+    position:relative;
+    z-index:1;
+    border:1px dashed #d1d5db;
+    border-radius:1.2rem;
+    padding:1.1rem 1rem;
+    text-align:center;
+    background:rgba(255,255,255,0.55);
+  }
+
+  .pub-empty-title{
+    font-size:1rem;
+    font-weight:700;
+    color:#6b7280;
+    line-height:1.4;
+  }
+
+  .pub-empty-sub{
+    margin-top:.25rem;
+    font-size:.82rem;
+    color:#6b7280;
+    font-style:italic;
+  }
+
+  @media (max-width:640px){
+    .pub-title{
+      font-size:1.06rem;
+    }
+
+    .pub-subtitle{
+      font-size:.86rem;
+    }
+
+    .pub-card{
+      border-radius:1.2rem;
+      padding:.9rem .9rem .95rem;
+    }
+
+    .pub-item{
+      padding:.8rem .9rem;
+    }
+
+    .pub-item-value,
+    .pub-description{
+      font-size:.95rem;
     }
   }
 </style>
