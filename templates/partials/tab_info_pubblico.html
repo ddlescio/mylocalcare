@@ -334,40 +334,52 @@
 <style>
   @media (max-width: 640px) {
     .info-wrapper {
-      padding: 0.7rem !important;
-      border-radius: 1.15rem !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0.15rem 0 !important;
+      border-radius: 0 !important;
     }
 
     .wrapper-info,
     .wrapper-info-public,
     .wrapper-info-private {
-      gap: 0.85rem !important;
+      gap: 0.65rem !important;
+      width: 100% !important;
     }
 
     .info-sidebar {
-      width: 100%;
+      width: calc(100% + 0.5rem) !important;
       min-width: 0 !important;
-      padding: 0.7rem 0.7rem !important;
-      border-radius: 1.1rem !important;
+      margin-left: -0.25rem !important;
+      margin-right: -0.25rem !important;
+      padding: 0.65rem 0.65rem !important;
+      border-radius: 1rem !important;
+    }
+
+    .info-sidebar-nav {
+      width: 100%;
     }
 
     .section-btn {
-      padding: 0.7rem 0.8rem !important;
-      font-size: 0.96rem !important;
+      padding: 0.72rem 0.8rem !important;
+      font-size: 0.98rem !important;
     }
 
     .info-content-public,
     .info-content-private,
     main#info-content {
-      width: 100%;
-      min-width: 0;
+      width: calc(100% + 0.5rem) !important;
+      min-width: 0 !important;
+      margin-left: -0.25rem !important;
+      margin-right: -0.25rem !important;
     }
 
     main#info-content section,
     .info-card {
-      padding: 1rem 0.95rem !important;
-      border-radius: 1.1rem !important;
-      margin-bottom: 0.9rem !important;
+      padding: 0.95rem 0.85rem !important;
+      border-radius: 1rem !important;
+      margin-bottom: 0.75rem !important;
     }
 
     .info-card-head,
@@ -375,7 +387,7 @@
     .we-head,
     .cp-head,
     .ds-head {
-      margin-bottom: 0.8rem !important;
+      margin-bottom: 0.75rem !important;
     }
 
     .info-row,
@@ -384,31 +396,37 @@
     .we-card,
     .cp-card,
     .ds-card {
-      border-radius: 1rem !important;
+      border-radius: 0.95rem !important;
     }
 
     .info-row,
     .info-block,
     .pub-card {
-      padding: 0.85rem 0.85rem !important;
+      padding: 0.8rem 0.8rem !important;
     }
 
     .we-card,
     .cp-card,
     .ds-card {
-      padding: 0.85rem 0.85rem 0.9rem !important;
+      padding: 0.8rem 0.8rem 0.85rem !important;
     }
 
     .info-grid {
-      gap: 0.75rem !important;
+      gap: 0.7rem !important;
     }
 
     .pub-item {
-      padding: 0.78rem 0.8rem !important;
+      padding: 0.72rem 0.75rem !important;
+    }
+
+    .pub-description,
+    .info-paragraph,
+    .info-value,
+    .pub-item-value {
+      word-break: break-word;
     }
   }
 </style>
-
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
