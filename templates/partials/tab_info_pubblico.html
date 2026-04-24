@@ -4,8 +4,8 @@
   <div class="wrapper-info">
 
     <!-- 🔹 COLONNA SINISTRA: menu categorie -->
-    <aside class="md:col-span-1">
-      <nav class="space-y-1">
+    <aside class="info-sidebar">
+      <nav class="info-sidebar-nav space-y-1">
         {% set sezioni = {
           'overview': 'Informazioni di base',
           'work_education': 'Esperienze e formazione',
@@ -245,7 +245,7 @@
   .wrapper-info { display:flex; flex-direction:column; gap:1.5rem; align-items:stretch; }
   @media (min-width:768px){ .wrapper-info{ flex-direction:row; } }
 
-  aside.md\:col-span-1{
+  .info-sidebar{
     background: linear-gradient(160deg, rgba(255,255,255,.96), rgba(244,246,255,.90));
     border: 1px solid rgba(226,232,240,.9);
     border-radius: 1.35rem;
@@ -253,9 +253,19 @@
     box-shadow: 0 6px 14px rgba(15,23,42,.06), 0 18px 40px rgba(15,23,42,.12);
     backdrop-filter: blur(12px);
     min-width: 210px;
+    flex-shrink: 0;
   }
-  @media (min-width:768px){ aside.md\:col-span-1{ flex:0 0 230px; } main#info-content{ flex:1; } }
 
+  .info-sidebar-nav{
+    display:flex;
+    flex-direction:column;
+  }
+
+  @media (min-width:768px){
+    .info-sidebar{ flex:0 0 230px; }
+    main#info-content{ flex:1; min-width:0; }
+  }
+  
   .section-btn{ font-size:.92rem; padding:.55rem .9rem; border-radius:12px; border:1px solid transparent; }
   .section-btn.bg-blue-100{ background:#e8f1ff !important; border-color:#c7ddff !important; color:#1e40af !important; font-weight:600; }
 

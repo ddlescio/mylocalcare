@@ -4,9 +4,8 @@
   <div class="wrapper-info {% if not pubblico %}wrapper-info-private{% else %}wrapper-info-public{% endif %}">
 
     <!-- 🔹 COLONNA SINISTRA: menu categorie -->
-    {% if pubblico %}
     <aside class="info-sidebar">
-      <nav class="space-y-1">
+      <nav class="info-sidebar-nav space-y-1">
         {% set sezioni = {
           'overview': 'Informazioni di base',
           'work_education': 'Esperienze e formazione',
@@ -24,7 +23,6 @@
         {% endfor %}
       </nav>
     </aside>
-  {% endif %}
 
     <!-- 🔹 COLONNA DESTRA: contenuto -->
     <main class="{% if pubblico %}info-content-public{% else %}info-content-private{% endif %}" id="info-content">
@@ -670,6 +668,11 @@
     min-width: 210px;
   }
 
+  .info-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+  }
+  
   .info-content-public,
   .info-content-private {
     width: 100%;
