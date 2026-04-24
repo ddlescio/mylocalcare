@@ -239,14 +239,35 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function gestisciSubmitManualeRimozioni() {
-    if (!btnSalvaRimozioni) return;
+    if (!btnSalvaRimozioni || !formGalleria) return;
 
-    btnSalvaRimozioni.addEventListener("click", () => {
-      if (uploadInCorso) return;
+    btnSalvaRimozioni.addEventListener("click", (e) => {
+      e.preventDefault();
+
+      if (uploadInCorso) {
+        mostraAlert("info", "⏳ È già in corso un'operazione. Attendi il completamento.");
+        return;
+      }
+
+      const checkboxSelezionate = formGalleria.querySelectorAll('input[name="remove"]:checked');
+
+      if (!checkboxSelezionate.length) {
+        mostraAlert("warning", "Seleziona almeno una foto da rimuovere prima di continuare.");
+        return;
+      }
+
       bloccaUIUpload();
+
+      setTimeout(() => {
+        if (typeof formGalleria.requestSubmit === "function") {
+          formGalleria.requestSubmit();
+        } else {
+          formGalleria.submit();
+        }
+      }, 50);
     });
   }
-
+  
   inputFoto.addEventListener("click", (e) => {
     if (uploadInCorso) {
       e.preventDefault();
