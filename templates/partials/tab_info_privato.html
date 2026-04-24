@@ -378,101 +378,140 @@
               {% endif %}
           {% endif %}
 
-      {% else %}
+          {% else %}
 
-          <!-- 🔓 MODALITÀ PRIVATA -->
-          <h4 class="text-base font-semibold text-gray-800 mb-4">
-              Contatti e presenza online
-          </h4>
+            <form method="post"
+                  action="{{ url_for('utente_update_contatti') }}"
+                  class="space-y-6">
 
-          <form method="post"
-                action="{{ url_for('utente_update_contatti') }}"
-                class="grid sm:grid-cols-2 gap-5">
-
-              <!-- Contatti diretti -->
-              <div class="sm:col-span-2">
-                  <h5 class="text-sm font-semibold text-gray-700 mb-2">
-                      Contatti diretti
-                  </h5>
+              <div class="cp-head">
+                <h4 class="cp-title">📞 Contatti e presenza online</h4>
+                <p class="cp-subtitle">Inserisci i riferimenti utili per farti contattare e trovarti online.</p>
               </div>
 
-              <div>
-                  <label class="text-sm text-gray-600">Email pubblica</label>
-                  <input name="email_pubblica" class="input"
-                         value="{{ utente.get('email_pubblica') or '' }}">
-              </div>
+              <div class="cp-stack">
 
-              <div>
-                  <label class="text-sm text-gray-600">Telefono / WhatsApp</label>
-                  <input name="telefono" class="input"
-                         value="{{ utente.get('telefono') or '' }}">
-              </div>
+                <!-- CONTATTI DIRETTI -->
+                <div class="cp-card">
+                  <div class="cp-card-head">
+                    <h5 class="cp-card-title">Contatti diretti</h5>
+                    <p class="cp-card-sub">Email, telefono e sede operativa o studio.</p>
+                  </div>
 
-              <div class="sm:col-span-2">
-                  <label class="text-sm text-gray-600">Studio o sede</label>
-                  <input name="indirizzo_studio" class="input"
-                         value="{{ utente.get('indirizzo_studio') or '' }}">
-              </div>
+                  <div class="cp-grid cp-grid-2">
+                    <div class="cp-field">
+                      <label class="cp-label">Email pubblica</label>
+                      <input
+                        name="email_pubblica"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('email_pubblica') or '' }}"
+                        placeholder="Es. nome@email.it">
+                    </div>
 
-              <!-- Presenza online -->
-              <div class="sm:col-span-2 mt-4">
-                  <h5 class="text-sm font-semibold text-gray-700 mb-2">
-                      Presenza online
-                  </h5>
-              </div>
+                    <div class="cp-field">
+                      <label class="cp-label">Telefono / WhatsApp</label>
+                      <input
+                        name="telefono"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('telefono') or '' }}"
+                        placeholder="Es. 3331234567">
+                    </div>
 
-              <div>
-                  <label class="text-sm text-gray-600">Sito web</label>
-                  <input name="sito_web" class="input"
-                         value="{{ utente.get('sito_web') or '' }}">
-              </div>
+                    <div class="cp-field cp-span-2">
+                      <label class="cp-label">Studio o sede</label>
+                      <input
+                        name="indirizzo_studio"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('indirizzo_studio') or '' }}"
+                        placeholder="Es. Via Roma 10, Milano">
+                    </div>
+                  </div>
+                </div>
 
-              <div>
-                  <label class="text-sm text-gray-600">Instagram</label>
-                  <input name="instagram" class="input"
-                         value="{{ utente.get('instagram') or '' }}">
-              </div>
+                <!-- PRESENZA ONLINE -->
+                <div class="cp-card">
+                  <div class="cp-card-head">
+                    <h5 class="cp-card-title">Presenza online</h5>
+                    <p class="cp-card-sub">Sito e profili social o professionali.</p>
+                  </div>
 
-              <div>
-                  <label class="text-sm text-gray-600">Facebook</label>
-                  <input name="facebook" class="input"
-                         value="{{ utente.get('facebook') or '' }}">
-              </div>
+                  <div class="cp-grid cp-grid-2">
+                    <div class="cp-field">
+                      <label class="cp-label">Sito web</label>
+                      <input
+                        name="sito_web"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('sito_web') or '' }}"
+                        placeholder="Es. www.miosito.it">
+                    </div>
 
-              <div>
-                  <label class="text-sm text-gray-600">LinkedIn</label>
-                  <input name="linkedin" class="input"
-                         value="{{ utente.get('linkedin') or '' }}">
-              </div>
+                    <div class="cp-field">
+                      <label class="cp-label">Instagram</label>
+                      <input
+                        name="instagram"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('instagram') or '' }}"
+                        placeholder="Es. https://instagram.com/...">
+                    </div>
 
-              <!-- Disponibilità -->
-              <div class="sm:col-span-2 mt-4">
-                  <h5 class="text-sm font-semibold text-gray-700 mb-2">
-                      Disponibilità
-                  </h5>
-              </div>
+                    <div class="cp-field">
+                      <label class="cp-label">Facebook</label>
+                      <input
+                        name="facebook"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('facebook') or '' }}"
+                        placeholder="Es. https://facebook.com/...">
+                    </div>
 
-              <div>
-                  <label class="text-sm text-gray-600">Orari indicativi</label>
-                  <input name="orari" class="input"
-                         value="{{ utente.get('orari') or '' }}">
-              </div>
+                    <div class="cp-field">
+                      <label class="cp-label">LinkedIn</label>
+                      <input
+                        name="linkedin"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('linkedin') or '' }}"
+                        placeholder="Es. https://linkedin.com/in/...">
+                    </div>
+                  </div>
+                </div>
 
-              <div>
-                  <label class="text-sm text-gray-600">Modalità di contatto</label>
-                  <input name="preferenze_contatto" class="input"
-                         value="{{ utente.get('preferenze_contatto') or '' }}">
-              </div>
+                <!-- DISPONIBILITÀ -->
+                <div class="cp-card">
+                  <div class="cp-card-head">
+                    <h5 class="cp-card-title">Disponibilità</h5>
+                    <p class="cp-card-sub">Specifica quando e come preferisci essere contattato.</p>
+                  </div>
 
-              <div class="sm:col-span-2 flex justify-end mt-4">
-                  <button class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
-                      Salva
+                  <div class="cp-grid cp-grid-2">
+                    <div class="cp-field">
+                      <label class="cp-label">Orari indicativi</label>
+                      <input
+                        name="orari"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('orari') or '' }}"
+                        placeholder="Es. Lun-Ven 9:00 - 18:00">
+                    </div>
+
+                    <div class="cp-field">
+                      <label class="cp-label">Modalità di contatto</label>
+                      <input
+                        name="preferenze_contatto"
+                        class="input-modern cp-input"
+                        value="{{ utente.get('preferenze_contatto') or '' }}"
+                        placeholder="Es. Meglio WhatsApp nel pomeriggio">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cp-actions">
+                  <button class="cp-save-btn">
+                    💾 Salva modifiche
                   </button>
+                </div>
+
               </div>
+            </form>
 
-          </form>
-
-      {% endif %}
+          {% endif %}
 
       </section>
 
@@ -497,24 +536,35 @@
 
           {% else %}
 
-          {# --- Modalità PRIVATA --- #}
+            <form method="post" action="{{ url_for('utente_update_descrizione') }}" class="space-y-6">
+              <div class="ds-head">
+                <h4 class="ds-title">🧾 Chi sono</h4>
+                <p class="ds-subtitle">Descriviti in modo autentico, chiaro e professionale.</p>
+              </div>
 
-          <form method="post" action="{{ url_for('utente_update_descrizione') }}" class="grid gap-4">
-            <div class="form-box">
-              <label class="label-strong">Descrizione personale</label>
-              <textarea
-                  name="descrizione"
-                  class="auto-expand w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500"
-                  rows="4"
-                  data-min-rows="4"
-              >{{ utente.get('descrizione') or '' }}</textarea>
-            </div>
+              <div class="ds-card">
+                <div class="ds-card-head">
+                  <h5 class="ds-card-title">Descrizione personale</h5>
+                  <p class="ds-card-sub">Puoi raccontare il tuo percorso, il tuo approccio e cosa ti distingue.</p>
+                </div>
 
-            <div class="flex justify-end mt-3">
-              <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">💾 Salva</button>
-            </div>
-          </form>
-        {% endif %}
+                <div class="ds-field">
+                  <label class="ds-label">Parla di te</label>
+                  <textarea
+                    name="descrizione"
+                    class="input-modern ds-input ds-textarea auto-expand"
+                    rows="5"
+                    data-min-rows="5"
+                    placeholder="Es. Mi piace aiutare le persone con serietà, empatia e attenzione. Ho maturato esperienza sul campo e cerco sempre di offrire un servizio affidabile e umano.">{{ utente.get('descrizione') or '' }}</textarea>
+                </div>
+              </div>
+
+              <div class="ds-actions">
+                <button class="ds-save-btn">💾 Salva descrizione</button>
+              </div>
+            </form>
+
+          {% endif %}
       </section>
 
     </main>
@@ -608,9 +658,7 @@
           0 24px 55px rgba(15,23,42,0.12);
       backdrop-filter: blur(14px);
       padding: 1.35rem 1.6rem;
-      margin-bottom: 1.5rem;
   }
-
 
   /* ------------------------------------------------------------------
      📌 BOX INTERNI (form-box) – versione più pulita
@@ -869,6 +917,360 @@ textarea[disabled] {
     }
 
     .we-actions{
+      justify-content:stretch;
+    }
+  }
+  /* ============================================================
+     PREMIUM — CONTACTS PRIVATO
+  ============================================================ */
+  .cp-head{
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+    margin-bottom:1.1rem;
+  }
+
+  .cp-title{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    font-size:1.2rem;
+    font-weight:800;
+    letter-spacing:-0.03em;
+    color:#1d4ed8;
+    margin:0;
+  }
+
+  .cp-subtitle{
+    margin:0;
+    font-size:.92rem;
+    color:#6b7280;
+    line-height:1.45;
+  }
+
+  .cp-stack{
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+  }
+
+  .cp-card{
+    position:relative;
+    border-radius:1.35rem;
+    background:linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%);
+    border:1px solid rgba(226,232,240,0.95);
+    box-shadow:
+      0 8px 20px rgba(15,23,42,0.04),
+      0 18px 40px rgba(15,23,42,0.07);
+    padding:1rem 1rem 1.05rem;
+    overflow:hidden;
+  }
+
+  .cp-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0) 44%);
+    pointer-events:none;
+  }
+
+  .cp-card-head{
+    position:relative;
+    z-index:1;
+    margin-bottom:.9rem;
+  }
+
+  .cp-card-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:750;
+    color:#1f2937;
+    letter-spacing:-0.02em;
+  }
+
+  .cp-card-sub{
+    margin:.2rem 0 0;
+    font-size:.82rem;
+    color:#6b7280;
+    line-height:1.4;
+  }
+
+  .cp-grid{
+    position:relative;
+    z-index:1;
+    display:grid;
+    gap:.9rem 1rem;
+  }
+
+  .cp-grid-2{
+    grid-template-columns:1fr;
+  }
+
+  .cp-field{
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+  }
+
+  .cp-label{
+    font-size:.84rem;
+    font-weight:650;
+    color:#475569;
+  }
+
+  .cp-input{
+    font-size:.98rem;
+    border-radius:1rem !important;
+    padding:.82rem 1rem !important;
+    border:1px solid #d6dbe5 !important;
+    background:#ffffff !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+  }
+
+  .cp-input:focus{
+    border-color:#93c5fd !important;
+    box-shadow:
+      0 0 0 3px rgba(96,165,250,0.18),
+      0 6px 16px rgba(59,130,246,0.08) !important;
+  }
+
+  .cp-actions{
+    display:flex;
+    justify-content:flex-end;
+    padding-top:.2rem;
+  }
+
+  .cp-save-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    padding:.82rem 1.2rem;
+    border:none;
+    border-radius:9999px;
+    background:linear-gradient(135deg, #2563eb, #4f46e5 52%, #ec4899);
+    color:#fff;
+    font-size:.93rem;
+    font-weight:750;
+    letter-spacing:-0.01em;
+    box-shadow:
+      0 10px 22px rgba(79,70,229,0.18),
+      0 6px 14px rgba(37,99,235,0.12),
+      inset 0 1px 0 rgba(255,255,255,0.22);
+    transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+  }
+
+  .cp-save-btn:hover{
+    transform:translateY(-1px);
+    box-shadow:
+      0 14px 28px rgba(79,70,229,0.22),
+      0 8px 16px rgba(37,99,235,0.14),
+      inset 0 1px 0 rgba(255,255,255,0.28);
+    filter:saturate(1.02) brightness(1.01);
+  }
+
+  @media (min-width: 768px){
+    .cp-grid-2{
+      grid-template-columns:1fr 1fr;
+    }
+
+    .cp-span-2{
+      grid-column:1 / -1;
+    }
+  }
+
+  @media (max-width:640px){
+    .cp-title{
+      font-size:1.06rem;
+    }
+
+    .cp-subtitle{
+      font-size:.86rem;
+    }
+
+    .cp-card{
+      border-radius:1.2rem;
+      padding:.9rem .9rem .95rem;
+    }
+
+    .cp-input{
+      font-size:.95rem;
+      padding:.78rem .9rem !important;
+    }
+
+    .cp-save-btn{
+      width:100%;
+    }
+
+    .cp-actions{
+      justify-content:stretch;
+    }
+  }
+
+  /* ============================================================
+     PREMIUM — DESCRIPTION PRIVATO
+  ============================================================ */
+  .ds-head{
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+    margin-bottom:1.1rem;
+  }
+
+  .ds-title{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    font-size:1.2rem;
+    font-weight:800;
+    letter-spacing:-0.03em;
+    color:#1d4ed8;
+    margin:0;
+  }
+
+  .ds-subtitle{
+    margin:0;
+    font-size:.92rem;
+    color:#6b7280;
+    line-height:1.45;
+  }
+
+  .ds-card{
+    position:relative;
+    border-radius:1.35rem;
+    background:linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%);
+    border:1px solid rgba(226,232,240,0.95);
+    box-shadow:
+      0 8px 20px rgba(15,23,42,0.04),
+      0 18px 40px rgba(15,23,42,0.07);
+    padding:1rem 1rem 1.05rem;
+    overflow:hidden;
+  }
+
+  .ds-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0) 44%);
+    pointer-events:none;
+  }
+
+  .ds-card-head{
+    position:relative;
+    z-index:1;
+    margin-bottom:.9rem;
+  }
+
+  .ds-card-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:750;
+    color:#1f2937;
+    letter-spacing:-0.02em;
+  }
+
+  .ds-card-sub{
+    margin:.2rem 0 0;
+    font-size:.82rem;
+    color:#6b7280;
+    line-height:1.4;
+  }
+
+  .ds-field{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+  }
+
+  .ds-label{
+    font-size:.84rem;
+    font-weight:650;
+    color:#475569;
+  }
+
+  .ds-input{
+    font-size:.98rem;
+    border-radius:1rem !important;
+    padding:.9rem 1rem !important;
+    border:1px solid #d6dbe5 !important;
+    background:#ffffff !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+  }
+
+  .ds-input:focus{
+    border-color:#93c5fd !important;
+    box-shadow:
+      0 0 0 3px rgba(96,165,250,0.18),
+      0 6px 16px rgba(59,130,246,0.08) !important;
+  }
+
+  .ds-textarea{
+    min-height:170px;
+    resize:vertical;
+    line-height:1.55;
+  }
+
+  .ds-actions{
+    display:flex;
+    justify-content:flex-end;
+    padding-top:.2rem;
+  }
+
+  .ds-save-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    padding:.82rem 1.2rem;
+    border:none;
+    border-radius:9999px;
+    background:linear-gradient(135deg, #2563eb, #4f46e5 52%, #ec4899);
+    color:#fff;
+    font-size:.93rem;
+    font-weight:750;
+    letter-spacing:-0.01em;
+    box-shadow:
+      0 10px 22px rgba(79,70,229,0.18),
+      0 6px 14px rgba(37,99,235,0.12),
+      inset 0 1px 0 rgba(255,255,255,0.22);
+    transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+  }
+
+  .ds-save-btn:hover{
+    transform:translateY(-1px);
+    box-shadow:
+      0 14px 28px rgba(79,70,229,0.22),
+      0 8px 16px rgba(37,99,235,0.14),
+      inset 0 1px 0 rgba(255,255,255,0.28);
+    filter:saturate(1.02) brightness(1.01);
+  }
+
+  @media (max-width:640px){
+    .ds-title{
+      font-size:1.06rem;
+    }
+
+    .ds-subtitle{
+      font-size:.86rem;
+    }
+
+    .ds-card{
+      border-radius:1.2rem;
+      padding:.9rem .9rem .95rem;
+    }
+
+    .ds-input{
+      font-size:.95rem;
+      padding:.82rem .9rem !important;
+    }
+
+    .ds-save-btn{
+      width:100%;
+    }
+
+    .ds-actions{
       justify-content:stretch;
     }
   }
