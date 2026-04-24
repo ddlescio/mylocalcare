@@ -1,10 +1,11 @@
 
 <!-- TAB INFO PRIVATO -->
 <div class="info-wrapper border border-gray-100 rounded-2xl shadow-sm p-5">
-  <div class="wrapper-info">
+  <div class="wrapper-info {% if not pubblico %}wrapper-info-private{% else %}wrapper-info-public{% endif %}">
 
     <!-- 🔹 COLONNA SINISTRA: menu categorie -->
-    <aside class="md:col-span-1">
+    {% if pubblico %}
+    <aside class="info-sidebar">
       <nav class="space-y-1">
         {% set sezioni = {
           'overview': 'Informazioni di base',
@@ -23,10 +24,10 @@
         {% endfor %}
       </nav>
     </aside>
+  {% endif %}
 
     <!-- 🔹 COLONNA DESTRA: contenuto -->
-    <main class="md:col-span-2" id="info-content">
-
+    <main class="{% if pubblico %}info-content-public{% else %}info-content-private{% endif %}" id="info-content">
       <!-- Sezione: Info di base -->
       <section data-section="overview">
 
@@ -638,23 +639,22 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    width: 100%;
+  }
+
+  .wrapper-info-public {
     align-items: flex-start;
   }
 
-  @media (min-width: 768px) {
-    .wrapper-info {
-      flex-direction: row;
-    }
+  .wrapper-info-private {
+    display: block;
   }
 
   .info-wrapper {
     background: #f5f7ff !important;
   }
 
-  /* ------------------------------------------------------------------
-     📌 SIDEBAR STILE iOS
-  ------------------------------------------------------------------ */
-  aside.md\:col-span-1 {
+  .info-sidebar {
     background: linear-gradient(
         160deg,
         rgba(255,255,255,0.96),
@@ -670,16 +670,24 @@
     min-width: 210px;
   }
 
-  /* Desktop: sidebar fissa + contenuto che prende tutto lo spazio */
-  @media (min-width: 768px) {
-    aside.md\:col-span-1 {
-      flex: 0 0 230px;   /* 👈 larghezza fissa colonna sinistra */
-    }
-    main#info-content {
-      flex: 1;           /* 👈 la colonna di destra prende tutto il resto */
-    }
+  .info-content-public,
+  .info-content-private {
+    width: 100%;
   }
 
+  @media (min-width: 768px) {
+    .wrapper-info-public {
+      flex-direction: row;
+    }
+
+    .info-sidebar {
+      flex: 0 0 230px;
+    }
+
+    .info-content-public {
+      flex: 1;
+    }
+  }
   /* ------------------------------------------------------------------
      📌 BOTTONI SIDEBAR – pill stile iOS
   ------------------------------------------------------------------ */
