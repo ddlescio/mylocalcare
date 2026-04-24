@@ -58,6 +58,10 @@
           {% endif %}
         </div>
 
+      </div>
+
+      <div class="hero-bottom-card">
+
         {% if not pubblico %}
           <div class="hero-actions-cluster">
             {% if session.get('is_admin') or utente.get('is_admin') or utente.get('ruolo') == 'admin' or utente.get('username') == 'ADMIN' %}
@@ -77,10 +81,6 @@
             </a>
           </div>
         {% endif %}
-      </div>
-
-      <!-- CARD INFERIORE HERO -->
-      <div class="hero-bottom-card">
 
         <!-- FOTO PROFILO -->
         <div id="wrapper-foto-profilo" class="hero-avatar-slot">
@@ -1009,8 +1009,8 @@
 
   .hero-actions-cluster {
     position: absolute;
-    right: 1.2rem;
-    bottom: -1.35rem;
+    top: 1rem;
+    right: 1rem;
     z-index: 130;
     display: flex;
     align-items: center;
@@ -1337,17 +1337,17 @@
     }
 
     .hero-actions-cluster {
-      right: 0.95rem;
-      bottom: -1.15rem;
-      gap: 0.55rem;
+      top: 0.85rem;
+      right: 0.85rem;
+      gap: 0.5rem;
     }
 
     .hero-actions-cluster .hero-floating-btn {
       width: 42px;
       height: 42px;
       flex: 0 0 42px;
-    }    
-
+    }
+    
     .hero-bottom-card {
       width: calc(100% - 16px);
       margin-top: -30px;
