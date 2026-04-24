@@ -255,11 +255,11 @@
     <div id="tab-annunci" class="tab-pane">
       <!-- Shell in stile app iOS: sfondo soft + contenuto centrato -->
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-7">
+        <div class="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-6 lg:gap-7 items-start">
 
           <!-- SINISTRA: Intro (card sticky) -->
           <aside class="lg:col-span-1">
-            <div class="profilo-card intro-panel p-4 sm:p-5 lg:sticky lg:top-32 space-y-4">
+            <div class="profilo-card intro-panel p-4 sm:p-5 space-y-4">
               <div class="flex items-start justify-between gap-3 mb-4">
                 <div class="min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
@@ -523,7 +523,7 @@
               </div>
 
               {% if annunci and annunci|length %}
-              <div class="grid md:grid-cols-2 gap-4 sm:gap-5 mt-3">
+              <div class="grid grid-cols-1 {% if annunci and annunci|length > 1 %}2xl:grid-cols-2{% endif %} gap-4 sm:gap-5 mt-3">
                 {% for a in annunci %}
                 <div class="annuncio-card-premium relative flex flex-col rounded-[1.6rem] border border-[rgba(226,232,240,0.95)]
                             bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))]
