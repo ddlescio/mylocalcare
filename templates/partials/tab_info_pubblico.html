@@ -265,7 +265,7 @@
     .info-sidebar{ flex:0 0 230px; }
     main#info-content{ flex:1; min-width:0; }
   }
-  
+
   .section-btn{ font-size:.92rem; padding:.55rem .9rem; border-radius:12px; border:1px solid transparent; }
   .section-btn.bg-blue-100{ background:#e8f1ff !important; border-color:#c7ddff !important; color:#1e40af !important; font-weight:600; }
 
@@ -331,6 +331,84 @@
   .info-minirow{ display:flex; gap:.5rem; align-items:flex-start; color:#374151; font-size:.92rem; }
   .info-miniico{ width: 1.2rem; text-align:center; }
 </style>
+<style>
+  @media (max-width: 640px) {
+    .info-wrapper {
+      padding: 0.7rem !important;
+      border-radius: 1.15rem !important;
+    }
+
+    .wrapper-info,
+    .wrapper-info-public,
+    .wrapper-info-private {
+      gap: 0.85rem !important;
+    }
+
+    .info-sidebar {
+      width: 100%;
+      min-width: 0 !important;
+      padding: 0.7rem 0.7rem !important;
+      border-radius: 1.1rem !important;
+    }
+
+    .section-btn {
+      padding: 0.7rem 0.8rem !important;
+      font-size: 0.96rem !important;
+    }
+
+    .info-content-public,
+    .info-content-private,
+    main#info-content {
+      width: 100%;
+      min-width: 0;
+    }
+
+    main#info-content section,
+    .info-card {
+      padding: 1rem 0.95rem !important;
+      border-radius: 1.1rem !important;
+      margin-bottom: 0.9rem !important;
+    }
+
+    .info-card-head,
+    .pub-head,
+    .we-head,
+    .cp-head,
+    .ds-head {
+      margin-bottom: 0.8rem !important;
+    }
+
+    .info-row,
+    .info-block,
+    .pub-card,
+    .we-card,
+    .cp-card,
+    .ds-card {
+      border-radius: 1rem !important;
+    }
+
+    .info-row,
+    .info-block,
+    .pub-card {
+      padding: 0.85rem 0.85rem !important;
+    }
+
+    .we-card,
+    .cp-card,
+    .ds-card {
+      padding: 0.85rem 0.85rem 0.9rem !important;
+    }
+
+    .info-grid {
+      gap: 0.75rem !important;
+    }
+
+    .pub-item {
+      padding: 0.78rem 0.8rem !important;
+    }
+  }
+</style>
+
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
