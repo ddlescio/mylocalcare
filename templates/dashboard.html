@@ -259,7 +259,7 @@
 
           <!-- SINISTRA: Intro (card sticky) -->
           <aside class="lg:col-span-1">
-            <div class="profilo-card p-4 sm:p-5 lg:sticky lg:top-32 space-y-4">
+            <div class="profilo-card intro-panel p-4 sm:p-5 lg:sticky lg:top-32 space-y-4">
               <div class="flex items-start justify-between gap-3 mb-4">
                 <div class="min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
@@ -490,7 +490,7 @@
 
           <!-- DESTRA: feed annunci -->
           <div class="lg:col-span-2">
-            <div class="profilo-card p-4 sm:p-5">
+            <div class="profilo-card annunci-panel p-4 sm:p-5">
               <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                 <div class="min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
@@ -525,7 +525,7 @@
               {% if annunci and annunci|length %}
               <div class="grid md:grid-cols-2 gap-4 sm:gap-5 mt-3">
                 {% for a in annunci %}
-                <div class="relative flex flex-col rounded-[1.6rem] border border-[rgba(226,232,240,0.95)]
+                <div class="annuncio-card-premium relative flex flex-col rounded-[1.6rem] border border-[rgba(226,232,240,0.95)]
                             bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))]
                             shadow-[0_10px_22px_rgba(15,23,42,0.05),_0_24px_50px_rgba(15,23,42,0.09)]
                             hover:shadow-[0_14px_30px_rgba(15,23,42,0.07),_0_30px_60px_rgba(15,23,42,0.12)]
@@ -1380,7 +1380,7 @@
       min-width: 0;
       padding: 0.82rem 1rem;
       font-size: 0.91rem;
-    }    
+    }
     }
 
     /* ============================================================
@@ -1480,6 +1480,95 @@ aside p.text-sm.text-gray-500.font-medium {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.92), transparent);
   pointer-events: none;
+}
+
+/* ============================================================
+   STEP 3 — UNIFORMAZIONE CARD SOTTO HERO
+   ============================================================ */
+
+.intro-panel,
+.annunci-panel {
+  border-radius: 1.6rem;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.985) 0%, rgba(248,250,252,0.955) 100%);
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow:
+    0 10px 24px rgba(15,23,42,0.05),
+    0 22px 48px rgba(15,23,42,0.08);
+}
+
+.intro-panel::before,
+.annunci-panel::before {
+  background: linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0) 44%);
+}
+
+.intro-panel h3,
+.annunci-panel h3 {
+  letter-spacing: -0.03em;
+}
+
+.intro-panel p,
+.annunci-panel p {
+  letter-spacing: -0.01em;
+}
+
+.annuncio-card-premium {
+  border-radius: 1.45rem !important;
+  border: 1px solid rgba(226,232,240,0.88) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.995) 0%, rgba(249,251,255,0.965) 100%) !important;
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.04),
+    0 18px 38px rgba(15,23,42,0.07) !important;
+  transform: translateY(0);
+}
+
+.annuncio-card-premium:hover {
+  transform: translateY(-3px) !important;
+  box-shadow:
+    0 12px 26px rgba(15,23,42,0.06),
+    0 24px 48px rgba(15,23,42,0.10) !important;
+}
+
+.annuncio-card-premium > a {
+  padding: 1.05rem 1.1rem 0.95rem !important;
+}
+
+.annuncio-card-premium h4 {
+  color: #1d4ed8 !important;
+  letter-spacing: -0.025em;
+}
+
+.annuncio-card-premium p {
+  color: #334155 !important;
+}
+
+.annuncio-card-premium > div:last-child {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.88), rgba(248,250,252,0.96)) !important;
+  border-top: 1px solid rgba(226,232,240,0.8) !important;
+}
+
+.annuncio-card-premium .absolute.top-3.right-4 {
+  box-shadow: 0 4px 10px rgba(15,23,42,0.05);
+}
+
+@media (max-width: 640px) {
+  .intro-panel,
+  .annunci-panel {
+    border-radius: 1.45rem;
+    box-shadow:
+      0 8px 20px rgba(15,23,42,0.05),
+      0 18px 36px rgba(15,23,42,0.08);
+  }
+
+  .annuncio-card-premium {
+    border-radius: 1.3rem !important;
+  }
+
+  .annuncio-card-premium > a {
+    padding: 0.95rem 1rem 0.9rem !important;
+  }
 }
 
 /* ----------------------------------
