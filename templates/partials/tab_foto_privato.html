@@ -4,12 +4,12 @@
 
   <!-- 🔹 Messaggio dinamico -->
   <div id="alert-galleria"
-       class="hidden opacity-0 transition-opacity duration-300 mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 text-sm flex justify-between items-start">
-    <div>
+       class="hidden opacity-0 transition-opacity duration-300 mb-4 rounded-xl p-3 text-sm flex justify-between items-start">
+    <div id="alert-galleria-text">
       📸 Hai raggiunto il limite massimo di 4 foto.<br>
-      Per aggiungerne di nuove, <b>seleziona le foto da rimuovere</b> e premi <b>💾 Salva</b>.
+      Per aggiungerne di nuove, seleziona le foto da rimuovere.
     </div>
-    <button id="chiudi-alert" class="ml-3 text-yellow-700 hover:text-yellow-900 font-bold text-lg leading-none">×</button>
+    <button id="chiudi-alert" class="ml-3 font-bold text-lg leading-none">×</button>
   </div>
 
   {% set foto_list = [] %}
@@ -68,8 +68,7 @@
       {% endif %}
 
       {% if not pubblico %}
-        <!-- 🟢 Area pulsanti -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+        <div class="flex flex-col gap-3 mt-4">
           <label class="text-sm text-gray-700 flex items-center gap-2">
             <input
               type="file"
@@ -82,30 +81,43 @@
             >
           </label>
 
-          <button type="submit"
-                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm flex items-center gap-2">
-            💾 Salva
-          </button>
+          <div id="upload-status-galleria"
+               class="hidden rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm px-3 py-2">
+            ⏳ Caricamento foto in corso... Attendi senza chiudere la pagina.
+          </div>
+
+          <div id="azioni-rimozione-galleria" class="flex justify-end">
+            <button type="submit"
+                    id="btn-salva-rimozioni"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm flex items-center gap-2">
+              🗑️ Conferma rimozione
+            </button>
+          </div>
         </div>
 
         <p class="text-xs text-gray-500 mt-2">
-          Seleziona una o più foto da eliminare, poi premi <b>Salva</b> per confermare.
+          Le nuove foto si caricano automaticamente appena le selezioni.
+          Se invece selezioni foto da eliminare, premi <b>Conferma rimozione</b>.
         </p>
       {% endif %}
     </form>
 
   {% else %}
-    {% if not pubblico %}
-      <p class="text-gray-500 mb-4">Nessuna foto in galleria.</p>
-      <form method="post" action="{{ url_for('utente_update_galleria') }}" enctype="multipart/form-data"
-            class="flex flex-col sm:flex-row justify-between items-center gap-3">
-        <label class="text-sm text-gray-700">
-          📸 Aggiungi foto (massimo {{ max_foto }}):
-          <input type="file" name="foto_galleria" multiple accept="image/*" class="mt-1" id="input-foto">
-        </label>
-        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Carica</button>
-      </form>
-    {% else %}
+  {% if not pubblico %}
+    <p class="text-gray-500 mb-4">Nessuna foto in galleria.</p>
+    <form id="form-galleria-empty" method="post" action="{{ url_for('utente_update_galleria') }}" enctype="multipart/form-data"
+          class="flex flex-col gap-3">
+      <label class="text-sm text-gray-700">
+        📸 Aggiungi foto (massimo {{ max_foto }}):
+        <input type="file" name="foto_galleria" multiple accept="image/*" class="mt-1" id="input-foto" data-foto-count="0">
+      </label>
+
+      <div id="upload-status-galleria"
+           class="hidden rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm px-3 py-2">
+        ⏳ Caricamento foto in corso... Attendi senza chiudere la pagina.
+      </div>
+    </form>
+  {% else %}
       <p class="text-gray-500">Nessuna foto disponibile.</p>
     {% endif %}
   {% endif %}
@@ -157,51 +169,132 @@
 document.addEventListener("DOMContentLoaded", () => {
   const inputFoto = document.getElementById("input-foto");
   const alertBox = document.getElementById("alert-galleria");
+  const alertText = document.getElementById("alert-galleria-text");
   const chiudiBtn = document.getElementById("chiudi-alert");
+  const uploadStatus = document.getElementById("upload-status-galleria");
+  const formGalleria = document.getElementById("form-galleria") || document.getElementById("form-galleria-empty");
+  const btnSalvaRimozioni = document.getElementById("btn-salva-rimozioni");
 
-  if (!inputFoto || !alertBox) return;
+  if (!inputFoto || !alertBox || !formGalleria) return;
 
   const maxFoto = 4;
-  const fotoEsistenti = parseInt(inputFoto.dataset.fotoCount || "0");
+  const fotoEsistenti = parseInt(inputFoto.dataset.fotoCount || "0", 10);
+  let uploadInCorso = false;
 
-  // Funzione per mostrare con transizione
-  function mostraMessaggio() {
-    alertBox.classList.remove("hidden");
-    requestAnimationFrame(() => { alertBox.classList.add("opacity-100"); });
-    alertBox.scrollIntoView({ behavior: "smooth", block: "center" });
+  function mostraAlert(tipo, html) {
+    alertBox.classList.remove(
+      "hidden",
+      "bg-yellow-50", "border-yellow-200", "text-yellow-800",
+      "bg-red-50", "border-red-200", "text-red-800",
+      "bg-blue-50", "border-blue-200", "text-blue-800"
+    );
 
-    clearTimeout(window.alertTimeout);
-    window.alertTimeout = setTimeout(() => {
+    chiudiBtn.classList.remove(
+      "text-yellow-700", "hover:text-yellow-900",
+      "text-red-700", "hover:text-red-900",
+      "text-blue-700", "hover:text-blue-900"
+    );
+
+    if (tipo === "errore") {
+      alertBox.classList.add("bg-red-50", "border", "border-red-200", "text-red-800");
+      chiudiBtn.classList.add("text-red-700", "hover:text-red-900");
+    } else if (tipo === "info") {
+      alertBox.classList.add("bg-blue-50", "border", "border-blue-200", "text-blue-800");
+      chiudiBtn.classList.add("text-blue-700", "hover:text-blue-900");
+    } else {
+      alertBox.classList.add("bg-yellow-50", "border", "border-yellow-200", "text-yellow-800");
+      chiudiBtn.classList.add("text-yellow-700", "hover:text-yellow-900");
+    }
+
+    if (alertText) {
+      alertText.innerHTML = html;
+    }
+
+    requestAnimationFrame(() => {
+      alertBox.classList.add("opacity-100");
+    });
+
+    clearTimeout(window.alertTimeoutGalleria);
+    window.alertTimeoutGalleria = setTimeout(() => {
       alertBox.classList.remove("opacity-100");
       setTimeout(() => alertBox.classList.add("hidden"), 300);
     }, 5000);
   }
 
-  // Intercetta click
+  function bloccaUIUpload() {
+    uploadInCorso = true;
+    inputFoto.disabled = true;
+    inputFoto.classList.add("opacity-50", "cursor-not-allowed");
+
+    if (btnSalvaRimozioni) {
+      btnSalvaRimozioni.disabled = true;
+      btnSalvaRimozioni.classList.add("opacity-50", "cursor-not-allowed");
+    }
+
+    if (uploadStatus) {
+      uploadStatus.classList.remove("hidden");
+    }
+
+    mostraAlert("info", "⏳ Caricamento foto in corso... Attendi il completamento prima di fare altre operazioni.");
+  }
+
+  function gestisciSubmitManualeRimozioni() {
+    if (!btnSalvaRimozioni) return;
+
+    btnSalvaRimozioni.addEventListener("click", () => {
+      if (uploadInCorso) return;
+      bloccaUIUpload();
+    });
+  }
+
   inputFoto.addEventListener("click", (e) => {
+    if (uploadInCorso) {
+      e.preventDefault();
+      mostraAlert("info", "⏳ È già in corso un caricamento. Attendi qualche secondo.");
+      return;
+    }
+
     if (fotoEsistenti >= maxFoto) {
       e.preventDefault();
-      mostraMessaggio();
+      mostraAlert(
+        "warning",
+        "📸 Hai raggiunto il limite massimo di 4 foto.<br>Per aggiungerne di nuove, seleziona prima le foto da rimuovere."
+      );
     }
   });
 
-  // Blocca anche eventuale "change"
   inputFoto.addEventListener("change", (e) => {
-      const nuoviFile = e.target.files.length;
-      const totale = fotoEsistenti + nuoviFile;
+    if (uploadInCorso) {
+      inputFoto.value = "";
+      mostraAlert("info", "⏳ È già in corso un caricamento. Attendi il completamento.");
+      return;
+    }
 
-      if (totale > maxFoto) {
-          e.preventDefault();
-          inputFoto.value = "";  // reset selezione
-          mostraMessaggio();     // mostra avviso
-      }
-  });  
+    const nuoviFile = e.target.files ? e.target.files.length : 0;
+    if (!nuoviFile) return;
 
-  // Chiusura manuale
-  chiudiBtn.addEventListener("click", () => {
+    const totale = fotoEsistenti + nuoviFile;
+
+    if (totale > maxFoto) {
+      e.preventDefault();
+      inputFoto.value = "";
+      mostraAlert(
+        "warning",
+        `📸 Puoi avere massimo ${maxFoto} foto in galleria.<br>Quelle attuali: ${fotoEsistenti}. Selezione annullata.`
+      );
+      return;
+    }
+
+    bloccaUIUpload();
+    formGalleria.submit();
+  });
+
+  chiudiBtn?.addEventListener("click", () => {
     alertBox.classList.remove("opacity-100");
     setTimeout(() => alertBox.classList.add("hidden"), 300);
   });
+
+  gestisciSubmitManualeRimozioni();
 });
 </script>
 {% if pubblico %}

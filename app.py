@@ -5206,12 +5206,15 @@ def utente_update_galleria():
     print("📘 DATI RICEVUTI:", dict(request.form))
     print("📸 FILES:", request.files)
 
+    MAX_FOTO_GALLERIA = 4
+
     conn = get_db_connection()
     c = get_cursor(conn)
 
     # --- Recupera galleria esistente ---
     c.execute(sql("SELECT foto_galleria FROM utenti WHERE id = ?"), (g.utente['id'],))
     row = c.fetchone()
+
     correnti = []
     if row and row['foto_galleria']:
         try:
@@ -5219,33 +5222,70 @@ def utente_update_galleria():
         except Exception:
             correnti = [p for p in row['foto_galleria'].split(',') if p.strip()]
 
+    # normalizza eventuali vuoti / duplicati
+    correnti = [p.strip() for p in correnti if p and str(p).strip()]
+    correnti = list(dict.fromkeys(correnti))
+
     # --- Rimuovi selezionate ---
     to_remove = request.form.getlist("remove")
+    to_remove = [p.strip() for p in to_remove if p and str(p).strip()]
     correnti = [p for p in correnti if p not in to_remove]
 
-    # --- Aggiungi nuove immagini ---
+    # --- Calcola slot disponibili DOPO le rimozioni ---
+    slot_disponibili = max(0, MAX_FOTO_GALLERIA - len(correnti))
+
+    # --- Aggiungi nuove immagini SOLO entro il limite ---
     uploaded_files = request.files.getlist("foto_galleria")
     upload_dir = os.path.join("/uploads", "profili", "galleria")
     os.makedirs(upload_dir, exist_ok=True)
 
+    file_validi = []
     for file in uploaded_files:
-        if file and file.filename:
-            estensione = file.filename.rsplit('.', 1)[-1].lower()
-            if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
-                continue
-            nome_file = f"u{g.utente['id']}_{uuid.uuid4().hex}.{estensione}"
-            percorso = os.path.join(upload_dir, nome_file)
-            file.save(percorso)
-            correnti.append(f"uploads/profili/galleria/{nome_file}")
+        if not file or not file.filename:
+            continue
 
-    # --- Salva nel DB (come JSON per maggiore flessibilità) ---
-    c.execute(sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"), (json.dumps(correnti), g.utente['id']))
+        estensione = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
+            continue
+
+        file_validi.append((file, estensione))
+
+    # se stanno provando a caricare più del consentito, tieni solo i primi disponibili
+    file_da_salvare = file_validi[:slot_disponibili]
+    file_scartati = len(file_validi) - len(file_da_salvare)
+
+    for file, estensione in file_da_salvare:
+        nome_file = f"u{g.utente['id']}_{uuid.uuid4().hex}.{estensione}"
+        percorso = os.path.join(upload_dir, nome_file)
+        file.save(percorso)
+        correnti.append(f"uploads/profili/galleria/{nome_file}")
+
+    # sicurezza finale assoluta lato server
+    correnti = correnti[:MAX_FOTO_GALLERIA]
+
+    # --- Salva nel DB ---
+    c.execute(
+        sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"),
+        (json.dumps(correnti), g.utente['id'])
+    )
     conn.commit()
 
+    # --- Messaggi utente ---
+    if file_scartati > 0:
+        flash(
+            f"⚠️ Hai raggiunto il limite massimo di {MAX_FOTO_GALLERIA} foto. "
+            f"Alcuni file non sono stati caricati.",
+            "warning"
+        )
+    elif to_remove and not file_da_salvare:
+        flash("✅ Foto rimosse correttamente.", "success")
+    elif file_da_salvare or to_remove:
+        flash("✅ Galleria aggiornata correttamente 📸", "success")
+    else:
+        flash("ℹ️ Nessuna modifica effettuata.", "info")
 
-    flash("✅ Galleria aggiornata correttamente 📸", "success")
     return redirect(url_for("dashboard") + "#tab-foto")
-
+    
 @app.route("/annuncio/<int:id>/elimina")
 @login_required
 def elimina_annuncio(id):
@@ -6941,7 +6981,7 @@ def cerca():
                   AND s.codice IN ('vetrina_annuncio', 'annuncio_urgente')
             )
     """
-    
+
     params_vetrina = [provincia_query]
 
     if json_key:
