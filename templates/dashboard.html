@@ -635,11 +635,15 @@
 
     <!-- 🟩 TAB: INFO -->
     <div id="tab-info" class="tab-pane hidden">
-      {% if pubblico %}
-        {% include 'partials/tab_info_pubblico.html' %}
-      {% else %}
-        {% include 'partials/tab_info_privato.html' %}
-      {% endif %}
+      <div class="tab-info-shell max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div class="tab-info-panel">
+          {% if pubblico %}
+            {% include 'partials/tab_info_pubblico.html' %}
+          {% else %}
+            {% include 'partials/tab_info_privato.html' %}
+          {% endif %}
+        </div>
+      </div>
     </div>
 
     <!-- 🟨 TAB: FOTO -->
@@ -1111,13 +1115,6 @@
     overflow: hidden;
   }
 
-  {% if pubblico %}
-  .hero-bottom-card {
-    padding-top: 1.35rem !important;
-    padding-right: 0.95rem !important;
-  }
-  {% endif %}
-
   .hero-bottom-card::before {
     content: "";
     position: absolute;
@@ -1371,6 +1368,14 @@
         0 20px 42px rgba(15,23,42,0.10);
     }
 
+    {% if pubblico %}
+    .hero-bottom-card {
+      padding-top: 1.15rem !important;
+      padding-right: 0.95rem !important;
+      padding-left: 0.95rem !important;
+    }
+    {% endif %}
+
     .hero-avatar,
     .placeholder-foto-profilo-premium {
       width: 104px;
@@ -1434,25 +1439,59 @@ aside p.text-sm.text-gray-500.font-medium {
 
 /* Margini laterali SOLO per Intro Profilo e Annunci pubblicati */
 #tab-annunci aside > div,
-#tab-annunci .lg\:col-span-2 > div {
-    margin-left: 1.5rem;   /* desktop */
+#tab-annunci .min-w-0 > div {
+    margin-left: 1.5rem;
     margin-right: 1.5rem;
 }
 
-/* MOBILE */
-@media (max-width: 640px) {
-  #tab-annunci aside > div,
-  #tab-annunci .lg\:col-span-2 > div {
-      margin-left: 0.75rem;   /* mobile */
-      margin-right: 0.75rem;
-  }
-}
 
 /* ----------------------------------
    SEZIONE CONTENUTI PROFILO (APPLE STYLE)
 ---------------------------------- */
 #tab-annunci {
   background: #f5f7ff; /* soft iOS background */
+}
+
+#tab-info {
+  background: #f5f7ff;
+}
+
+.tab-info-shell {
+  position: relative;
+}
+
+.tab-info-panel {
+  position: relative;
+  border-radius: 1.6rem;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.985) 0%, rgba(248,250,252,0.955) 100%);
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow:
+    0 10px 24px rgba(15,23,42,0.05),
+    0 22px 48px rgba(15,23,42,0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+  padding: 1.5rem;
+}
+
+.tab-info-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0) 44%);
+  pointer-events: none;
+}
+
+.tab-info-panel::after {
+  content: "";
+  position: absolute;
+  left: 1.1rem;
+  right: 1.1rem;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.92), transparent);
+  pointer-events: none;
 }
 
 /* Card unica stile pannello iOS */
@@ -1693,21 +1732,35 @@ nav::before {
       font-size: 1.3rem !important;
   }
 
-  #tab-annunci .lg\:col-span-2 > div:first-child {
+  #tab-annunci .min-w-0 > div:first-child {
       margin-bottom: 0.75rem;
   }
 
-  #tab-annunci .lg\:col-span-2 > div,
+  #tab-annunci .min-w-0 > div,
   #tab-annunci aside > div {
       margin-left: 1rem !important;
       margin-right: 1rem !important;
-      }
+  }
+
   #tab-annunci {
       background: #fafbff; /* leggerissimo */
       padding-top: 1rem;
       padding-bottom: 1.5rem;
     }
 
+    #tab-info {
+      background: #fafbff;
+      padding-top: 1rem;
+      padding-bottom: 1.5rem;
+    }
+
+    .tab-info-panel {
+      border-radius: 1.45rem;
+      padding: 1rem;
+      box-shadow:
+        0 8px 20px rgba(15,23,42,0.05),
+        0 18px 36px rgba(15,23,42,0.08);
+    }
 }
 </style>
 <style>
