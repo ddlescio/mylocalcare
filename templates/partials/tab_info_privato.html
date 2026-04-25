@@ -69,22 +69,23 @@
             {% set lingue_salvate = (utente.get('lingue') or '').split(',') %}
             {% set lingue_salvate = lingue_salvate | map('trim') | reject('equalto', '') | list %}
 
-            <input
-              type="hidden"
-              name="lingue"
-              id="lingue_hidden"
-              value="{{ utente.get('lingue') or '' }}"
-              data-autosave="1"
-              {% if pubblico %}disabled{% endif %}
-            >
+            <div class="lingue-selector-wrap">
+              <input
+                type="hidden"
+                name="lingue"
+                id="lingue_hidden"
+                value="{{ utente.get('lingue') or '' }}"
+                data-autosave="1"
+                {% if pubblico %}disabled{% endif %}
+              >
 
-            <button
-              type="button"
-              id="lingue-toggle"
-              class="lingue-toggle input-modern text-left flex items-center justify-between gap-3 {% if pubblico %}opacity-100 cursor-default{% endif %}"
-              data-autosave-ui="lingue"
-              {% if pubblico %}disabled{% endif %}
-            >
+              <button
+                type="button"
+                id="lingue-toggle"
+                class="lingue-toggle input-modern text-left flex items-center justify-between gap-3 {% if pubblico %}opacity-100 cursor-default{% endif %}"
+                data-autosave-ui="lingue"
+                {% if pubblico %}disabled{% endif %}
+              >
                 <span id="lingue-toggle-text" class="truncate">
                   {% if lingue_salvate %}
                     {{ lingue_salvate | join(', ') }}
@@ -126,7 +127,7 @@
             <p class="text-xs text-gray-500 mt-1">Puoi selezionare più lingue.</p>
             {% endif %}
           </div>
-
+          
           <!-- 🔹 Frase personale -->
           <div class="form-box">
             <label class="label-strong">Frase personale</label>
