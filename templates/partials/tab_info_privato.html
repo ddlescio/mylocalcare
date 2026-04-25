@@ -1731,13 +1731,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const input = document.querySelector(`input[name='${btn.dataset.target}']`);
       if (input) {
         input.value = active;
-        input.dispatchEvent(new Event("change", { bubbles: true }));
       }
 
       if (active === "1") {
         btn.classList.add("bg-blue-600", "text-white", "border-blue-600");
       } else {
         btn.classList.remove("bg-blue-600", "text-white", "border-blue-600");
+      }
+
+      if (typeof window.scheduleInfoBaseAutosave === "function") {
+        window.scheduleInfoBaseAutosave(150);
       }
     });
   });
@@ -1817,7 +1820,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function setStatus(type, text) {
     if (!statusBox) return;
 
-    statusBox.classList.remove("hidden", "text-gray-500", "text-blue-600", "text-red-600", "text-green-600");
+    statusBox.classList.remove(
+      "hidden",
+      "text-gray-500",
+      "text-blue-600",
+      "text-red-600",
+      "text-green-600"
+    );
 
     if (type === "saving") {
       statusBox.classList.add("text-blue-600");
@@ -1832,6 +1841,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function clearStatusLater() {
     if (!statusBox) return;
+
     setTimeout(() => {
       if (!autosaveInCorso) {
         statusBox.classList.add("hidden");
@@ -1886,21 +1896,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }, delay);
   }
 
-  form.querySelectorAll("[data-autosave='1']").forEach(el => {
-    const tag = el.tagName.toLowerCase();
+  window.scheduleInfoBaseAutosave = pianificaAutosave;
 
-    if (tag === "textarea" || (tag === "input" && el.type !== "hidden")) {
-      el.addEventListener("input", () => pianificaAutosave(900));
-      el.addEventListener("blur", () => pianificaAutosave(250));
-    } else {
-      el.addEventListener("change", () => pianificaAutosave(250));
-    }
+  const fraseTextarea = form.querySelector("textarea[name='frase']");
+  if (fraseTextarea) {
+    fraseTextarea.addEventListener("input", () => pianificaAutosave(900));
+    fraseTextarea.addEventListener("blur", () => pianificaAutosave(250));
+  }
+
+  const hiddenAutosaveFields = form.querySelectorAll(
+    "input[type='hidden'][data-autosave='1']"
+  );
+  hiddenAutosaveFields.forEach(el => {
+    el.addEventListener("change", () => pianificaAutosave(200));
   });
 
   const cittaInputVisibile = document.getElementById("citta-autocomplete");
-  const cittaHidden = document.getElementById("citta_hidden");
-
-  if (cittaInputVisibile && cittaHidden) {
+  if (cittaInputVisibile) {
     cittaInputVisibile.addEventListener("blur", () => {
       pianificaAutosave(250);
     });
