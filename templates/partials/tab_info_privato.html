@@ -345,12 +345,6 @@
               </div>
             </div>
 
-            <div class="we-actions">
-              <button type="submit" class="we-save-btn">
-                💾 Salva modifiche
-              </button>
-            </div>
-
             <div id="autosave-work-education-status"
                  class="hidden text-xs text-gray-500 text-right">
               Modifiche salvate
@@ -498,9 +492,10 @@
           {% endif %}
 
         {% else %}
-            <form method="post"
-                  action="{{ url_for('utente_update_contatti') }}"
-                  class="space-y-6">
+        <form method="post"
+              action="{{ url_for('utente_update_contatti') }}"
+              class="space-y-6"
+              id="form-contacts">
 
               <div class="cp-head">
                 <h4 class="cp-title">📞 Contatti e presenza online</h4>
@@ -523,6 +518,7 @@
                         name="email_pubblica"
                         class="input-modern cp-input"
                         value="{{ utente.get('email_pubblica') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. nome@email.it">
                     </div>
 
@@ -532,6 +528,7 @@
                         name="telefono"
                         class="input-modern cp-input"
                         value="{{ utente.get('telefono') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. 3331234567">
                     </div>
 
@@ -541,6 +538,7 @@
                         name="indirizzo_studio"
                         class="input-modern cp-input"
                         value="{{ utente.get('indirizzo_studio') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. Via Roma 10, Milano">
                     </div>
                   </div>
@@ -560,6 +558,7 @@
                         name="sito_web"
                         class="input-modern cp-input"
                         value="{{ utente.get('sito_web') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. www.miosito.it">
                     </div>
 
@@ -569,6 +568,7 @@
                         name="instagram"
                         class="input-modern cp-input"
                         value="{{ utente.get('instagram') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. https://instagram.com/...">
                     </div>
 
@@ -578,6 +578,7 @@
                         name="facebook"
                         class="input-modern cp-input"
                         value="{{ utente.get('facebook') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. https://facebook.com/...">
                     </div>
 
@@ -587,6 +588,7 @@
                         name="linkedin"
                         class="input-modern cp-input"
                         value="{{ utente.get('linkedin') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. https://linkedin.com/in/...">
                     </div>
                   </div>
@@ -606,6 +608,7 @@
                         name="orari"
                         class="input-modern cp-input"
                         value="{{ utente.get('orari') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. Lun-Ven 9:00 - 18:00">
                     </div>
 
@@ -615,17 +618,16 @@
                         name="preferenze_contatto"
                         class="input-modern cp-input"
                         value="{{ utente.get('preferenze_contatto') or '' }}"
+                        data-autosave="1"
                         placeholder="Es. Meglio WhatsApp nel pomeriggio">
                     </div>
                   </div>
                 </div>
 
-                <div class="cp-actions">
-                  <button class="cp-save-btn">
-                    💾 Salva modifiche
-                  </button>
+                <div id="autosave-contacts-status"
+                     class="hidden text-xs text-gray-500 text-right">
+                  Modifiche salvate
                 </div>
-
               </div>
             </form>
 
@@ -662,7 +664,10 @@
 
         {% else %}
 
-            <form method="post" action="{{ url_for('utente_update_descrizione') }}" class="space-y-6">
+        <form method="post"
+              action="{{ url_for('utente_update_descrizione') }}"
+              class="space-y-6"
+              id="form-description">
               <div class="ds-head">
                 <h4 class="ds-title">🧾 Chi sono</h4>
                 <p class="ds-subtitle">Descriviti in modo autentico, chiaro e professionale.</p>
@@ -681,12 +686,14 @@
                     class="input-modern ds-input ds-textarea auto-expand"
                     rows="5"
                     data-min-rows="5"
+                    data-autosave="1"
                     placeholder="Es. Mi piace aiutare le persone con serietà, empatia e attenzione. Ho maturato esperienza sul campo e cerco sempre di offrire un servizio affidabile e umano.">{{ utente.get('descrizione') or '' }}</textarea>
                 </div>
               </div>
 
-              <div class="ds-actions">
-                <button class="ds-save-btn">💾 Salva descrizione</button>
+              <div id="autosave-description-status"
+                   class="hidden text-xs text-gray-500 text-right">
+                Modifiche salvate
               </div>
             </form>
 
@@ -2034,6 +2041,200 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (err) {
       console.error("Errore autosave work_education:", err);
+      setStatus("error", "Errore di salvataggio");
+    } finally {
+      autosaveInCorso = false;
+
+      if (queuedAutosave) {
+        queuedAutosave = false;
+        eseguiAutosave();
+      }
+    }
+  }
+
+  function pianificaAutosave(delay = 700) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      eseguiAutosave();
+    }, delay);
+  }
+
+  form.querySelectorAll("[data-autosave='1']").forEach(el => {
+    el.addEventListener("input", () => pianificaAutosave(900));
+    el.addEventListener("blur", () => pianificaAutosave(250));
+    el.addEventListener("change", () => pianificaAutosave(250));
+  });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("form-contacts");
+  const statusBox = document.getElementById("autosave-contacts-status");
+
+  if (!form) return;
+
+  let autosaveTimer = null;
+  let autosaveInCorso = false;
+  let queuedAutosave = false;
+
+  function setStatus(type, text) {
+    if (!statusBox) return;
+
+    statusBox.classList.remove(
+      "hidden",
+      "text-gray-500",
+      "text-blue-600",
+      "text-red-600",
+      "text-green-600"
+    );
+
+    if (type === "saving") {
+      statusBox.classList.add("text-blue-600");
+    } else if (type === "error") {
+      statusBox.classList.add("text-red-600");
+    } else {
+      statusBox.classList.add("text-green-600");
+    }
+
+    statusBox.textContent = text;
+  }
+
+  function clearStatusLater() {
+    if (!statusBox) return;
+
+    setTimeout(() => {
+      if (!autosaveInCorso) {
+        statusBox.classList.add("hidden");
+      }
+    }, 1800);
+  }
+
+  async function eseguiAutosave() {
+    if (autosaveInCorso) {
+      queuedAutosave = true;
+      return;
+    }
+
+    autosaveInCorso = true;
+    setStatus("saving", "Salvataggio...");
+
+    try {
+      const formData = new FormData(form);
+
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      setStatus("success", "Modifiche salvate");
+      clearStatusLater();
+
+    } catch (err) {
+      console.error("Errore autosave contacts:", err);
+      setStatus("error", "Errore di salvataggio");
+    } finally {
+      autosaveInCorso = false;
+
+      if (queuedAutosave) {
+        queuedAutosave = false;
+        eseguiAutosave();
+      }
+    }
+  }
+
+  function pianificaAutosave(delay = 700) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      eseguiAutosave();
+    }, delay);
+  }
+
+  form.querySelectorAll("[data-autosave='1']").forEach(el => {
+    el.addEventListener("input", () => pianificaAutosave(900));
+    el.addEventListener("blur", () => pianificaAutosave(250));
+    el.addEventListener("change", () => pianificaAutosave(250));
+  });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("form-description");
+  const statusBox = document.getElementById("autosave-description-status");
+
+  if (!form) return;
+
+  let autosaveTimer = null;
+  let autosaveInCorso = false;
+  let queuedAutosave = false;
+
+  function setStatus(type, text) {
+    if (!statusBox) return;
+
+    statusBox.classList.remove(
+      "hidden",
+      "text-gray-500",
+      "text-blue-600",
+      "text-red-600",
+      "text-green-600"
+    );
+
+    if (type === "saving") {
+      statusBox.classList.add("text-blue-600");
+    } else if (type === "error") {
+      statusBox.classList.add("text-red-600");
+    } else {
+      statusBox.classList.add("text-green-600");
+    }
+
+    statusBox.textContent = text;
+  }
+
+  function clearStatusLater() {
+    if (!statusBox) return;
+
+    setTimeout(() => {
+      if (!autosaveInCorso) {
+        statusBox.classList.add("hidden");
+      }
+    }, 1800);
+  }
+
+  async function eseguiAutosave() {
+    if (autosaveInCorso) {
+      queuedAutosave = true;
+      return;
+    }
+
+    autosaveInCorso = true;
+    setStatus("saving", "Salvataggio...");
+
+    try {
+      const formData = new FormData(form);
+
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      setStatus("success", "Modifiche salvate");
+      clearStatusLater();
+
+    } catch (err) {
+      console.error("Errore autosave description:", err);
       setStatus("error", "Errore di salvataggio");
     } finally {
       autosaveInCorso = false;
