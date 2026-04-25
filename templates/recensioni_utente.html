@@ -98,64 +98,72 @@
   {% if recensioni %}
     <div class="space-y-4">
       {% for r in recensioni %}
-        <div id="recensione-{{ r.id }}" class="p-4 border border-gray-100 rounded-xl bg-gray-50 hover:shadow-md transition">
-          <div class="flex items-center justify-between mb-1">
-            <div class="flex items-center gap-2">
-              {% if r.foto_profilo %}
-                <img src="{{ url_for('static', filename=r.foto_profilo) }}" class="w-9 h-9 rounded-full object-cover border border-gray-200">
-              {% else %}
-                <div class="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-lg">👤</div>
-              {% endif %}
+      <div id="recensione-{{ r.id }}" class="review-card-premium">
+        <div class="review-card-head">
+          <div class="review-author-block">
+            {% if r.foto_profilo %}
+              <img src="{{ url_for('static', filename=r.foto_profilo) }}"
+                   class="review-avatar-premium"
+                   alt="@{{ r.autore_username }}">
+            {% else %}
+              <div class="review-avatar-fallback">👤</div>
+            {% endif %}
+
+            <div class="review-author-meta">
               <a href="{{ url_for('profilo_pubblico', id=r.id_autore) }}"
-                 class="font-medium text-blue-600 hover:text-blue-800 underline">
+                 class="review-author-link">
                 @{{ r.autore_username }}
               </a>
-            </div>
 
-            <div class="text-yellow-400 text-lg">
-              {% for i in range(r.voto) %}★{% endfor %}
+              <div class="review-status-line">
+                <span class="review-status-badge">✔ Approvata</span>
+                <span class="review-status-date">{{ (r.ultima_modifica or r.data)|datetimeformat }}</span>
+              </div>
             </div>
           </div>
 
-          {% if r.testo and r.testo|trim != '' %}
-            <p class="text-gray-700 text-sm mt-2 leading-snug">{{ r.testo }}</p>
-          {% else %}
-            <p class="text-gray-400 text-sm mt-2 italic">(Nessun commento)</p>
-          {% endif %}
-
-          <p class="text-xs text-gray-500 mt-1">
-            ✔️ Approvata · {{ (r.ultima_modifica or r.data)|datetimeformat }}
-          </p>
-
-          {% if session.get('utente_id') and session.get('utente_id')|int == r.id_autore|int %}
-            <div class="flex items-center gap-2 mt-3 text-xs border-t border-gray-200 pt-3 justify-end">
-              <button
-                type="button"
-                class="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-150 cursor-pointer"
-                onclick='toggleEdit({{ {"id": r.id, "voto": r.voto, "testo": r.testo or ""}|tojson|safe }})'>
-                Modifica
-              </button>
-            </div>
-          {% endif %}
+          <div class="review-stars-premium" aria-label="Valutazione {{ r.voto }} su 5">
+            {% for i in range(r.voto) %}★{% endfor %}
+          </div>
         </div>
+
+        {% if r.testo and r.testo|trim != '' %}
+          <p class="review-text-premium">{{ r.testo }}</p>
+        {% else %}
+          <p class="review-text-empty">(Nessun commento)</p>
+        {% endif %}
+
+        {% if session.get('utente_id') and session.get('utente_id')|int == r.id_autore|int %}
+          <div class="review-actions-premium">
+            <button
+              type="button"
+              class="review-action-link"
+              onclick='toggleEdit({{ {"id": r.id, "voto": r.voto, "testo": r.testo or ""}|tojson|safe }})'>
+              Modifica
+            </button>
+          </div>
+        {% endif %}
+      </div>
 
         {% set risposta = get_risposta_by_recensione(r.id) %}
         {% if risposta %}
-          <div class="ml-6 mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm">
-            <p class="font-medium text-blue-700">
-              💬 Risposta di
-              <a href="{{ url_for('profilo_pubblico', id=risposta.id_autore) }}"
-                 class="text-blue-600 hover:text-blue-800 underline">
-                @{{ risposta.autore_username }}
-              </a>
-            </p>
-            <p class="text-gray-700 mt-1">{{ risposta.testo }}</p>
-            {% if risposta.stato == 'in_attesa' %}
-              <p class="text-xs text-yellow-600 mt-1">⏳ In attesa di approvazione</p>
-            {% elif risposta.stato == 'rifiutato' %}
-              <p class="text-xs text-red-600 mt-1">❌ Rifiutata dall’amministratore</p>
-            {% endif %}
-          </div>
+        <div class="review-reply-premium">
+          <p class="review-reply-head">
+            <span>💬 Risposta di</span>
+            <a href="{{ url_for('profilo_pubblico', id=risposta.id_autore) }}"
+               class="review-reply-link">
+              @{{ risposta.autore_username }}
+            </a>
+          </p>
+
+          <p class="review-reply-text">{{ risposta.testo }}</p>
+
+          {% if risposta.stato == 'in_attesa' %}
+            <p class="review-reply-note is-pending">⏳ In attesa di approvazione</p>
+          {% elif risposta.stato == 'rifiutato' %}
+            <p class="review-reply-note is-rejected">❌ Rifiutata dall’amministratore</p>
+          {% endif %}
+        </div>
         {% endif %}
       {% endfor %}
     </div>
@@ -498,6 +506,264 @@ aggiornaStelle({{ mia_recensione.voto if mia_recensione else 0 }});
   .reviews-backlink {
     padding: 0.68rem 0.9rem;
     font-size: 0.9rem;
+  }
+}
+</style>
+<style>
+.review-card-premium {
+  position: relative;
+  padding: 1.15rem 1.2rem;
+  border-radius: 1.45rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.96),
+    rgba(248,250,255,0.94)
+  );
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow:
+    0 10px 26px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.review-card-premium:hover {
+  transform: translateY(-2px);
+  border-color: rgba(191,219,254,0.95);
+  box-shadow:
+    0 14px 30px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.98);
+}
+
+.review-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.review-author-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.review-avatar-premium,
+.review-avatar-fallback {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 9999px;
+  border: 1px solid rgba(226,232,240,0.95);
+  box-shadow:
+    0 6px 14px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.review-avatar-premium {
+  object-fit: cover;
+  background: #fff;
+}
+
+.review-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #f1f5f9, #e2e8f0);
+  font-size: 1.05rem;
+}
+
+.review-author-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.review-author-link {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1.15;
+  font-weight: 760;
+  color: #2563eb;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.review-author-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.review-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.review-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.58rem;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(240,253,244,0.95), rgba(220,252,231,0.95));
+  border: 1px solid rgba(134,239,172,0.85);
+  color: #15803d;
+  font-size: 0.72rem;
+  font-weight: 760;
+}
+
+.review-status-date {
+  font-size: 0.76rem;
+  color: #64748b;
+  line-height: 1.25;
+}
+
+.review-stars-premium {
+  flex: 0 0 auto;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #fbbf24;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.review-text-premium {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-line;
+}
+
+.review-text-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.review-actions-premium {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(226,232,240,0.9);
+}
+
+.review-action-link {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color .15s ease;
+}
+
+.review-action-link:hover {
+  color: #2563eb;
+}
+
+.review-reply-premium {
+  margin-left: 1.4rem;
+  margin-top: 0.8rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1.15rem;
+  background: linear-gradient(
+    180deg,
+    rgba(239,246,255,0.92),
+    rgba(248,250,255,0.96)
+  );
+  border: 1px solid rgba(191,219,254,0.9);
+  box-shadow:
+    0 8px 18px rgba(59,130,246,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.review-reply-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.review-reply-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.review-reply-link:hover {
+  text-decoration: underline;
+}
+
+.review-reply-text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #334155;
+  white-space: pre-line;
+}
+
+.review-reply-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.review-reply-note.is-pending {
+  color: #ca8a04;
+}
+
+.review-reply-note.is-rejected {
+  color: #dc2626;
+}
+
+@media (max-width: 640px) {
+  .review-card-premium {
+    padding: 0.95rem 0.95rem 1rem;
+    border-radius: 1.2rem;
+  }
+
+  .review-card-head {
+    gap: 0.7rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .review-avatar-premium,
+  .review-avatar-fallback {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .review-author-link {
+    font-size: 0.95rem;
+  }
+
+  .review-status-date {
+    font-size: 0.72rem;
+  }
+
+  .review-stars-premium {
+    font-size: 1.18rem;
+  }
+
+  .review-text-premium {
+    font-size: 0.92rem;
+  }
+
+  .review-reply-premium {
+    margin-left: 0.8rem;
+    padding: 0.82rem 0.88rem;
+    border-radius: 1rem;
   }
 }
 </style>
