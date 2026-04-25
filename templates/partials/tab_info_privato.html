@@ -1710,24 +1710,28 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const sectionBtns = document.querySelectorAll(".section-btn");
-  const contentSections = document.querySelectorAll("main [data-section]");
+  const infoBox = document.querySelector(".info-wrapper");
+  if (!infoBox) return;
+
+  const sectionBtns = infoBox.querySelectorAll(".section-btn");
+  const contentSections = infoBox.querySelectorAll("#info-content > section[data-section]");
 
   function mostraSezione(key) {
-    sectionBtns.forEach(b => b.classList.remove("bg-blue-100","text-blue-700"));
+    sectionBtns.forEach(b => b.classList.remove("bg-blue-100", "text-blue-700"));
+
     const btn = Array.from(sectionBtns).find(b => b.dataset.section === key);
-    if (btn) btn.classList.add("bg-blue-100","text-blue-700");
+    if (btn) btn.classList.add("bg-blue-100", "text-blue-700");
+
     contentSections.forEach(s => s.classList.add("hidden"));
-    const target = document.querySelector(`main [data-section="${key}"]`);
+
+    const target = infoBox.querySelector(`#info-content > section[data-section="${key}"]`);
     if (target) target.classList.remove("hidden");
   }
 
-  // 🔹 Clic su bottoni laterali
   sectionBtns.forEach(btn => {
     btn.addEventListener("click", () => mostraSezione(btn.dataset.section));
   });
 
-  // 🔹 Forza apertura “Info di base” anche in pubblico
   mostraSezione("overview");
 });
 </script>
@@ -1931,7 +1935,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pianificaAutosave(250);
     });
   }
-  
+
   const hiddenAutosaveFields = form.querySelectorAll(
     "input[type='hidden'][data-autosave='1']"
   );
