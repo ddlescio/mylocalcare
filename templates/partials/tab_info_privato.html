@@ -51,6 +51,7 @@
                 name="citta"
                 id="citta_hidden"
                 value="{{ utente.get('citta') or '' }}"
+                data-autosave="1"
               >
 
               <!-- lista suggerimenti -->
@@ -73,16 +74,17 @@
               name="lingue"
               id="lingue_hidden"
               value="{{ utente.get('lingue') or '' }}"
+              data-autosave="1"
               {% if pubblico %}disabled{% endif %}
             >
 
-            <div class="lingue-selector-wrap {% if pubblico %}is-public{% endif %}">
-              <button
-                type="button"
-                id="lingue-toggle"
-                class="lingue-toggle input-modern text-left flex items-center justify-between gap-3 {% if pubblico %}opacity-100 cursor-default{% endif %}"
-                {% if pubblico %}disabled{% endif %}
-              >
+            <button
+              type="button"
+              id="lingue-toggle"
+              class="lingue-toggle input-modern text-left flex items-center justify-between gap-3 {% if pubblico %}opacity-100 cursor-default{% endif %}"
+              data-autosave-ui="lingue"
+              {% if pubblico %}disabled{% endif %}
+            >
                 <span id="lingue-toggle-text" class="truncate">
                   {% if lingue_salvate %}
                     {{ lingue_salvate | join(', ') }}
@@ -131,12 +133,12 @@
             <textarea
               name="frase"
               class="input-modern"
+              data-autosave="1"
               maxlength="120"
               rows="3"
               style="resize:none; min-height: 70px;"
               placeholder="{% if not pubblico %}Es. Amo aiutare le persone.. prendermi cura degli animali.. sono un tuttofare.. anni di esperienza in..{% endif %}"
               {% if pubblico %}disabled{% endif %}>{{ utente.get('frase') or '' }}</textarea>
-
             {% if not pubblico %}
             <p class="text-xs text-gray-500 mt-1">Facoltativo (max 120 caratteri)</p>
             {% endif %}
@@ -167,12 +169,13 @@
                   <p class="text-sm font-semibold text-gray-800 mb-3">{{ cat }}</p>
 
                   <div class="flex flex-wrap gap-2">
-                    <input type="hidden" name="offro_{{ loop.index }}" value="{{ 1 if utente.get('offro_' ~ loop.index) else 0 }}">
-                    <input type="hidden" name="cerco_{{ loop.index }}" value="{{ 1 if utente.get('cerco_' ~ loop.index) else 0 }}">
+                    <input type="hidden" name="offro_{{ loop.index }}" value="{{ 1 if utente.get('offro_' ~ loop.index) else 0 }}" data-autosave="1">
+                    <input type="hidden" name="cerco_{{ loop.index }}" value="{{ 1 if utente.get('cerco_' ~ loop.index) else 0 }}" data-autosave="1">
 
                     <button type="button"
                             class="pill"
                             data-target="offro_{{ loop.index }}"
+                            data-autosave-ui="pill"
                             {% if utente.get('offro_' ~ loop.index) %}data-active="1"{% endif %}>
                       Offro
                     </button>
@@ -180,6 +183,7 @@
                     <button type="button"
                             class="pill"
                             data-target="cerco_{{ loop.index }}"
+                            data-autosave-ui="pill"
                             {% if utente.get('cerco_' ~ loop.index) %}data-active="1"{% endif %}>
                       Cerco
                     </button>
@@ -191,10 +195,9 @@
           {% endif %}
 
           {% if not pubblico %}
-          <div class="flex justify-end">
-            <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm">
-              Salva modifiche
-            </button>
+          <div id="autosave-info-base-status"
+               class="hidden text-xs text-gray-500 text-right">
+            Modifiche salvate
           </div>
           {% endif %}
         </form>
@@ -1724,9 +1727,13 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => {
       const active = btn.dataset.active === "1" ? "0" : "1";
       btn.dataset.active = active;
+
       const input = document.querySelector(`input[name='${btn.dataset.target}']`);
-      if (input) input.value = active;
-      // Aggiorna visivamente
+      if (input) {
+        input.value = active;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
       if (active === "1") {
         btn.classList.add("bg-blue-600", "text-white", "border-blue-600");
       } else {
@@ -1753,12 +1760,16 @@ document.addEventListener("DOMContentLoaded", () => {
       .map(p => p.dataset.lingua.trim());
   }
 
-  function updateLingueValue() {
+  function updateLingueValue(triggerSave = false) {
     const selected = getSelectedLingue();
     hiddenInput.value = selected.join(", ");
     toggleText.textContent = selected.length
       ? selected.join(", ")
       : "Seleziona una o più lingue";
+
+    if (triggerSave) {
+      hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
   }
 
   if (dropdown) {
@@ -1774,7 +1785,7 @@ document.addEventListener("DOMContentLoaded", () => {
     pills.forEach(pill => {
       pill.addEventListener("click", () => {
         pill.classList.toggle("active");
-        updateLingueValue();
+        updateLingueValue(true);
       });
     });
 
@@ -1790,6 +1801,110 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   updateLingueValue();
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("form-info-base");
+  const statusBox = document.getElementById("autosave-info-base-status");
+
+  if (!form) return;
+
+  let autosaveTimer = null;
+  let autosaveInCorso = false;
+  let queuedAutosave = false;
+
+  function setStatus(type, text) {
+    if (!statusBox) return;
+
+    statusBox.classList.remove("hidden", "text-gray-500", "text-blue-600", "text-red-600", "text-green-600");
+
+    if (type === "saving") {
+      statusBox.classList.add("text-blue-600");
+    } else if (type === "error") {
+      statusBox.classList.add("text-red-600");
+    } else {
+      statusBox.classList.add("text-green-600");
+    }
+
+    statusBox.textContent = text;
+  }
+
+  function clearStatusLater() {
+    if (!statusBox) return;
+    setTimeout(() => {
+      if (!autosaveInCorso) {
+        statusBox.classList.add("hidden");
+      }
+    }, 1800);
+  }
+
+  async function eseguiAutosave() {
+    if (autosaveInCorso) {
+      queuedAutosave = true;
+      return;
+    }
+
+    autosaveInCorso = true;
+    setStatus("saving", "Salvataggio...");
+
+    try {
+      const formData = new FormData(form);
+
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      setStatus("success", "Modifiche salvate");
+      clearStatusLater();
+
+    } catch (err) {
+      console.error("Errore autosave overview:", err);
+      setStatus("error", "Errore di salvataggio");
+    } finally {
+      autosaveInCorso = false;
+
+      if (queuedAutosave) {
+        queuedAutosave = false;
+        eseguiAutosave();
+      }
+    }
+  }
+
+  function pianificaAutosave(delay = 700) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      eseguiAutosave();
+    }, delay);
+  }
+
+  form.querySelectorAll("[data-autosave='1']").forEach(el => {
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === "textarea" || (tag === "input" && el.type !== "hidden")) {
+      el.addEventListener("input", () => pianificaAutosave(900));
+      el.addEventListener("blur", () => pianificaAutosave(250));
+    } else {
+      el.addEventListener("change", () => pianificaAutosave(250));
+    }
+  });
+
+  const cittaInputVisibile = document.getElementById("citta-autocomplete");
+  const cittaHidden = document.getElementById("citta_hidden");
+
+  if (cittaInputVisibile && cittaHidden) {
+    cittaInputVisibile.addEventListener("blur", () => {
+      pianificaAutosave(250);
+    });
+  }
 });
 </script>
 <script src="{{ url_for('static', filename='js/autocomplete_citta.js') }}"></script>
