@@ -3,156 +3,173 @@
 {% set body_class = "page-recensioni-ricevute" %}
 {% block content %}
 
-<div class="max-w-5xl mx-auto mt-8 bg-white rounded-2xl shadow-sm hover:shadow-md transition p-6">
-  <!-- 🔙 Torna alla dashboard -->
-  <div class="mb-5">
-    <a href="javascript:history.back()"
-       class="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-           stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-      </svg>
-      Torna
-    </a>
-  </div>
-  <h2 class="text-2xl font-bold text-blue-700 mb-4 flex items-center gap-2">
-    💬 <span>Recensioni ricevute</span>
-  </h2>
-  <p class="text-gray-600 mb-6">
-    Qui puoi leggere le recensioni che hai ricevuto e rispondere ai tuoi utenti.
-  </p>
+<div class="reviews-page-shell max-w-5xl mx-auto mt-8">
+  <div class="reviews-page-card">
 
-  {% if recensioni and recensioni|length > 0 %}
-    <div class="space-y-6">
-      {% for r in recensioni %}
-        <div class="border border-gray-200 rounded-xl p-5 bg-gray-50 hover:bg-white hover:shadow-md transition">
+    <div class="reviews-topbar">
+      <a href="javascript:history.back()" class="reviews-backlink">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+             stroke-width="2" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span>Torna</span>
+      </a>
+    </div>
 
-          <div class="flex justify-between items-start gap-4">
-            <div class="flex-1">
-              <p class="font-semibold text-gray-800">
-                Da:
-                <a href="{{ url_for('profilo_operatore', id=r['id_autore']) }}"
-                   class="text-blue-600 hover:text-blue-800 underline">
-                  @{{ r['autore_username'] }}
-                </a>
-              </p>
+    <div class="reviews-hero">
+      <div class="reviews-hero-glow reviews-hero-glow-left"></div>
+      <div class="reviews-hero-glow reviews-hero-glow-right"></div>
 
-              <!-- ⭐ Stelle -->
-              <div class="text-yellow-400 text-lg leading-none mt-1">
-                {% for i in range(r.voto) %}★{% endfor %}
-                {% for i in range(5 - r.voto) %}☆{% endfor %}
+      <div class="reviews-hero-inner">
+        <div class="reviews-hero-badge">💬 Feedback ricevuti</div>
+        <h1 class="reviews-title">Recensioni ricevute</h1>
+        <p class="reviews-subtitle">
+          Qui puoi leggere le recensioni che hai ricevuto e rispondere ai tuoi utenti.
+        </p>
+      </div>
+    </div>
+
+    {% if recensioni and recensioni|length > 0 %}
+      <div class="reviews-list-premium">
+        {% for r in recensioni %}
+          <div class="review-card-premium">
+
+            <div class="review-card-head">
+              <div class="review-author-block">
+                <div class="review-author-meta">
+                  <p class="review-label">
+                    Da:
+                    <a href="{{ url_for('profilo_operatore', id=r['id_autore']) }}"
+                       class="review-author-link">
+                      @{{ r['autore_username'] }}
+                    </a>
+                  </p>
+
+                  <div class="review-stars-premium" aria-label="Valutazione {{ r.voto }} su 5">
+                    {% for i in range(r.voto) %}★{% endfor %}
+                    {% for i in range(5 - r.voto) %}☆{% endfor %}
+                  </div>
+                </div>
               </div>
 
-              {% if r.testo and r.testo|trim != '' %}
-                  <p class="text-gray-700 text-sm mt-2">{{ r.testo }}</p>
-              {% else %}
-                  <p class="text-gray-400 text-sm mt-2 italic">(Nessun commento)</p>
-              {% endif %}
-
-              <p class="text-xs text-gray-400 mt-2">
+              <div class="review-date-premium">
                 {{ r.data|fmt_it_smart }}
-              </p>
+              </div>
             </div>
-          </div>
 
-          <!-- 🔹 Se esiste una risposta già salvata -->
-          {% set risposta = get_risposta_by_recensione(r.id, solo_approvate=False) %}
-          {% if risposta %}
-            <div class="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-              <p class="font-medium text-blue-700">
-                💬 La tua risposta
-              </p>
-              <p class="text-gray-700 text-sm mt-1">{{ risposta['testo'] }}</p>
-              <p class="text-xs text-gray-400 mt-1">
-                {{ risposta['data']|fmt_it_smart }}
-              </p>
+            {% if r.testo and r.testo|trim != '' %}
+              <p class="review-text-premium">{{ r.testo }}</p>
+            {% else %}
+              <p class="review-text-empty">(Nessun commento)</p>
+            {% endif %}
 
-              {% if risposta['stato'] == 'in_attesa' %}
-                <p class="text-xs text-yellow-600 mt-1">⏳ In approvazione</p>
-              {% elif risposta['stato'] == 'rifiutato' %}
-                <p class="text-xs text-red-600 mt-1">❌ Rifiutata dall’amministratore</p>
-              {% endif %}
+            {% set risposta = get_risposta_by_recensione(r.id, solo_approvate=False) %}
+            {% if risposta %}
+              <div class="review-response-card">
+                <div class="review-response-head">
+                  <div>
+                    <p class="review-response-title">💬 La tua risposta</p>
+                    <p class="review-response-date">{{ risposta['data']|fmt_it_smart }}</p>
+                  </div>
 
-              {% if session.get('utente_id')|int == risposta['id_autore']|int %}
-                <div class="flex items-center gap-2 mt-3 text-xs border-t border-blue-100 pt-3 justify-end">
-                  <!-- Modifica -->
-                  <button type="button"
-                          onclick="toggleModifica('{{ r.id }}')"
-                          class="text-gray-600 hover:text-blue-600 font-medium transition">
-                    Modifica
-                  </button>
-
-                  <!-- Separatore -->
-                  <span class="text-gray-300">•</span>
-
-                  <!-- Elimina -->
-                  <form action="{{ url_for('elimina_risposta_route', id=risposta['id']) }}"
-                        method="post"
-                        onsubmit="return confirm('Vuoi davvero eliminare questa risposta?');"
-                        class="inline">
-                    <button type="submit"
-                            class="text-gray-600 hover:text-red-600 font-medium transition">
-                      Elimina
-                    </button>
-                  </form>
+                  <div class="review-response-state-wrap">
+                    {% if risposta['stato'] == 'in_attesa' %}
+                      <span class="review-state-badge is-pending">⏳ In approvazione</span>
+                    {% elif risposta['stato'] == 'rifiutato' %}
+                      <span class="review-state-badge is-rejected">❌ Rifiutata</span>
+                    {% else %}
+                      <span class="review-state-badge is-approved">✔ Approvata</span>
+                    {% endif %}
+                  </div>
                 </div>
 
-                <!-- 🔧 Form di modifica nascosto -->
-                <form id="form-modifica-{{ r.id }}" method="POST"
-                      action="{{ url_for('mie_recensioni_ricevute') }}"
-                      class="hidden mt-3 border-t pt-3">
-                  <input type="hidden" name="azione" value="modifica_risposta">
-                  <input type="hidden" name="id_risposta" value="{{ risposta['id'] }}">
-                  <textarea name="testo_risposta"
-                            rows="2"
-                            class="w-full border rounded-xl p-2 text-sm focus:ring focus:ring-blue-200">{{ risposta['testo'] }}</textarea>
-                  <div class="text-right mt-2">
-                    <button type="submit"
-                            class="bg-blue-600 text-white px-4 py-1 rounded-xl text-sm hover:bg-blue-700 transition">
-                      💾 Salva
-                    </button>
+                <p class="review-response-text">{{ risposta['testo'] }}</p>
+
+                {% if session.get('utente_id')|int == risposta['id_autore']|int %}
+                  <div class="review-actions-premium">
                     <button type="button"
                             onclick="toggleModifica('{{ r.id }}')"
-                            class="ml-2 text-sm text-gray-500 hover:underline">
-                      Annulla
+                            class="review-action-link">
+                      Modifica
                     </button>
+
+                    <span class="review-action-divider">•</span>
+
+                    <form action="{{ url_for('elimina_risposta_route', id=risposta['id']) }}"
+                          method="post"
+                          onsubmit="return confirm('Vuoi davvero eliminare questa risposta?');"
+                          class="inline">
+                      <button type="submit" class="review-action-link is-danger">
+                        Elimina
+                      </button>
+                    </form>
                   </div>
-                </form>
-              {% endif %}
-            </div>
 
-          {% else %}
-            <!-- 🔹 Form di risposta -->
-            <form method="POST"
-                  action="{{ url_for('mie_recensioni_ricevute') }}"
-                  class="mt-4 border-t pt-3">
-              <input type="hidden" name="azione" value="rispondi">
-              <input type="hidden" name="id_recensione" value="{{ r.id }}">
-              <textarea name="testo_risposta"
-                        rows="2"
-                        class="w-full border rounded-xl p-2 text-sm focus:ring focus:ring-blue-200"
-                        placeholder="Scrivi una risposta..."></textarea>
-              <div class="flex items-center justify-end gap-3 mt-2 text-xs">
-                <button type="submit"
-                        class="text-gray-600 hover:text-blue-600 font-medium transition">
-                  💬 Invia risposta
-                </button>
-                <button type="reset"
-                        class="text-gray-400 hover:text-gray-600 font-medium transition">
-                  Annulla
-                </button>
+                  <form id="form-modifica-{{ r.id }}"
+                        method="POST"
+                        action="{{ url_for('mie_recensioni_ricevute') }}"
+                        class="review-edit-form hidden">
+                    <input type="hidden" name="azione" value="modifica_risposta">
+                    <input type="hidden" name="id_risposta" value="{{ risposta['id'] }}">
+
+                    <textarea name="testo_risposta"
+                              rows="3"
+                              class="review-textarea-premium">{{ risposta['testo'] }}</textarea>
+
+                    <div class="review-form-actions">
+                      <button type="submit" class="review-submit-btn">
+                        💾 Salva
+                      </button>
+
+                      <button type="button"
+                              onclick="toggleModifica('{{ r.id }}')"
+                              class="review-cancel-btn">
+                        Annulla
+                      </button>
+                    </div>
+                  </form>
+                {% endif %}
               </div>
-            </form>
-          {% endif %}
-        </div>
-      {% endfor %}
-    </div>
 
-  {% else %}
-    <div class="text-center py-10 text-gray-500">
-      <p class="italic">Non hai ancora ricevuto recensioni.</p>
-    </div>
-  {% endif %}
+            {% else %}
+              <form method="POST"
+                    action="{{ url_for('mie_recensioni_ricevute') }}"
+                    class="review-response-form">
+                <input type="hidden" name="azione" value="rispondi">
+                <input type="hidden" name="id_recensione" value="{{ r.id }}">
+
+                <div class="review-response-form-head">
+                  <p class="review-response-title">💬 Rispondi a questa recensione</p>
+                  <p class="review-response-subtitle">
+                    La tua risposta sarà visibile all’utente dopo la moderazione, se prevista.
+                  </p>
+                </div>
+
+                <textarea name="testo_risposta"
+                          rows="3"
+                          class="review-textarea-premium"
+                          placeholder="Scrivi una risposta..."></textarea>
+
+                <div class="review-form-actions">
+                  <button type="submit" class="review-submit-btn">
+                    💬 Invia risposta
+                  </button>
+
+                  <button type="reset" class="review-cancel-btn">
+                    Annulla
+                  </button>
+                </div>
+              </form>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="reviews-empty-card">
+        <p class="reviews-empty-text">Non hai ancora ricevuto recensioni.</p>
+      </div>
+    {% endif %}
+  </div>
 </div>
 
 <script>
@@ -161,5 +178,536 @@ function toggleModifica(id) {
   if (form) form.classList.toggle('hidden');
 }
 </script>
+
+<style>
+.reviews-page-shell {
+  position: relative;
+}
+
+.reviews-page-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+  padding: 1.4rem;
+  background: linear-gradient(
+    160deg,
+    rgba(255,255,255,0.98),
+    rgba(244,247,255,0.94)
+  );
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow:
+    0 18px 45px rgba(15,23,42,0.08),
+    0 4px 14px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.reviews-page-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0) 28%),
+    radial-gradient(circle at top left, rgba(96,165,250,0.10), transparent 28%),
+    radial-gradient(circle at top right, rgba(244,114,182,0.08), transparent 24%);
+  pointer-events: none;
+}
+
+.reviews-topbar {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 1rem;
+}
+
+.reviews-backlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 1rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(191,219,254,0.9);
+  color: #2563eb;
+  font-size: 0.95rem;
+  font-weight: 650;
+  text-decoration: none;
+  box-shadow:
+    0 8px 20px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.reviews-backlink:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.92);
+  box-shadow:
+    0 12px 24px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.98);
+}
+
+.reviews-hero {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 1.7rem;
+  padding: 2rem 1.2rem 1.8rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,0.92),
+      rgba(239,246,255,0.92),
+      rgba(250,245,255,0.90)
+    );
+  border: 1px solid rgba(219,234,254,0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.94),
+    0 14px 30px rgba(15,23,42,0.05);
+}
+
+.reviews-hero-inner {
+  position: relative;
+  z-index: 2;
+}
+
+.reviews-hero-glow {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 9999px;
+  filter: blur(40px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.reviews-hero-glow-left {
+  top: -45px;
+  left: -35px;
+  background: rgba(96,165,250,0.22);
+}
+
+.reviews-hero-glow-right {
+  right: -35px;
+  bottom: -55px;
+  background: rgba(244,114,182,0.16);
+}
+
+.reviews-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.9rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.82);
+  border: 1px solid rgba(226,232,240,0.95);
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 6px 16px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+.reviews-title {
+  margin: 0 0 0.55rem;
+  font-size: 2.45rem;
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.reviews-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.reviews-list-premium {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.review-card-premium {
+  position: relative;
+  padding: 1.2rem;
+  border-radius: 1.45rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.96),
+    rgba(248,250,255,0.94)
+  );
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow:
+    0 10px 26px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.review-card-premium:hover {
+  transform: translateY(-2px);
+  border-color: rgba(191,219,254,0.95);
+  box-shadow:
+    0 14px 30px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.98);
+}
+
+.review-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.review-author-block {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.review-author-meta {
+  min-width: 0;
+}
+
+.review-label {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.review-author-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.review-author-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.review-stars-premium {
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #fbbf24;
+  letter-spacing: 0.04em;
+}
+
+.review-date-premium {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #94a3b8;
+  text-align: right;
+}
+
+.review-text-premium {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-line;
+}
+
+.review-text-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.review-response-card,
+.review-response-form {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 1.2rem;
+  background: linear-gradient(
+    180deg,
+    rgba(239,246,255,0.92),
+    rgba(248,250,255,0.96)
+  );
+  border: 1px solid rgba(191,219,254,0.9);
+  box-shadow:
+    0 8px 18px rgba(59,130,246,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.review-response-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.review-response-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 760;
+  color: #1d4ed8;
+}
+
+.review-response-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.review-response-date {
+  margin: 0.2rem 0 0;
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.review-response-text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #334155;
+  white-space: pre-line;
+}
+
+.review-state-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.review-state-badge.is-approved {
+  background: linear-gradient(180deg, rgba(240,253,244,0.95), rgba(220,252,231,0.95));
+  border: 1px solid rgba(134,239,172,0.85);
+  color: #15803d;
+}
+
+.review-state-badge.is-pending {
+  background: linear-gradient(180deg, rgba(254,249,195,0.96), rgba(253,224,71,0.22));
+  border: 1px solid rgba(250,204,21,0.62);
+  color: #a16207;
+}
+
+.review-state-badge.is-rejected {
+  background: linear-gradient(180deg, rgba(254,226,226,0.95), rgba(254,242,242,0.95));
+  border: 1px solid rgba(252,165,165,0.9);
+  color: #dc2626;
+}
+
+.review-actions-premium {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(191,219,254,0.55);
+}
+
+.review-action-link {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color .15s ease;
+}
+
+.review-action-link:hover {
+  color: #2563eb;
+}
+
+.review-action-link.is-danger:hover {
+  color: #dc2626;
+}
+
+.review-action-divider {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+.review-edit-form {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(191,219,254,0.55);
+}
+
+.review-textarea-premium {
+  width: 100%;
+  min-height: 104px;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid #dbe2ea;
+  background: rgba(255,255,255,0.96);
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: #334155;
+  resize: vertical;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.review-textarea-premium:focus {
+  outline: none;
+  border-color: #93c5fd;
+  background: rgba(255,255,255,1);
+  box-shadow:
+    0 0 0 3px rgba(96,165,250,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.96);
+}
+
+.review-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+
+.review-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.78rem 1rem;
+  border: 1px solid rgba(147,197,253,0.95);
+  border-radius: 0.95rem;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 760;
+  box-shadow:
+    0 10px 22px rgba(59,130,246,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.review-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 28px rgba(59,130,246,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+  filter: saturate(1.03);
+}
+
+.review-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.78rem 1rem;
+  border: 1px solid rgba(203,213,225,0.95);
+  border-radius: 0.95rem;
+  background: rgba(255,255,255,0.92);
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.review-cancel-btn:hover {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.reviews-empty-card {
+  padding: 2rem 1rem;
+  border-radius: 1.4rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,255,0.92));
+  border: 1px solid rgba(226,232,240,0.9);
+  text-align: center;
+}
+
+.reviews-empty-text {
+  margin: 0;
+  font-size: 1rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+@media (max-width: 640px) {
+  .reviews-page-card {
+    border-radius: 1.5rem;
+    padding: 1rem;
+  }
+
+  .reviews-hero {
+    border-radius: 1.35rem;
+    padding: 1.45rem 0.95rem 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .reviews-title {
+    font-size: 2rem;
+  }
+
+  .reviews-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .reviews-backlink {
+    padding: 0.68rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .review-card-premium {
+    padding: 1rem;
+    border-radius: 1.2rem;
+  }
+
+  .review-card-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .review-date-premium {
+    text-align: left;
+  }
+
+  .review-response-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .review-form-actions {
+    flex-direction: column;
+  }
+
+  .review-submit-btn,
+  .review-cancel-btn {
+    width: 100%;
+  }
+}
+</style>
+
+<style>
+body.page-recensioni-ricevute .reviews-page-shell {
+  margin-top: 6.5rem !important;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  body.page-recensioni-ricevute .reviews-page-shell {
+    margin-top: 7.2rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body.page-recensioni-ricevute .reviews-page-shell {
+    margin-top: 6rem !important;
+  }
+}
+</style>
 
 {% endblock %}
