@@ -131,36 +131,47 @@
                 {% endif %}
               </div>
 
-            {% else %}
-              <form method="POST"
-                    action="{{ url_for('mie_recensioni_ricevute') }}"
-                    class="review-response-form">
-                <input type="hidden" name="azione" value="rispondi">
-                <input type="hidden" name="id_recensione" value="{{ r.id }}">
-
-                <div class="review-response-form-head">
-                  <p class="review-response-title">💬 Rispondi a questa recensione</p>
-                  <p class="review-response-subtitle">
-                    La tua risposta sarà visibile all’utente dopo la moderazione, se prevista.
-                  </p>
-                </div>
-
-                <textarea name="testo_risposta"
-                          rows="3"
-                          class="review-textarea-premium"
-                          placeholder="Scrivi una risposta..."></textarea>
-
-                <div class="review-form-actions">
-                  <button type="submit" class="review-submit-btn">
-                    💬 Invia risposta
-                  </button>
-
-                  <button type="reset" class="review-cancel-btn">
-                    Annulla
+              {% else %}
+                <div class="review-reply-toggle-wrap">
+                  <button type="button"
+                          class="review-toggle-btn"
+                          onclick="toggleRisposta('{{ r.id }}')">
+                    💬 Rispondi
                   </button>
                 </div>
-              </form>
-            {% endif %}
+
+                <form method="POST"
+                      action="{{ url_for('mie_recensioni_ricevute') }}"
+                      id="form-risposta-{{ r.id }}"
+                      class="review-response-form hidden">
+                  <input type="hidden" name="azione" value="rispondi">
+                  <input type="hidden" name="id_recensione" value="{{ r.id }}">
+
+                  <div class="review-response-form-head">
+                    <p class="review-response-title">💬 Rispondi a questa recensione</p>
+                    <p class="review-response-subtitle">
+                      La tua risposta sarà visibile all’utente dopo la moderazione, se prevista.
+                    </p>
+                  </div>
+
+                  <textarea name="testo_risposta"
+                            rows="3"
+                            class="review-textarea-premium"
+                            placeholder="Scrivi una risposta..."></textarea>
+
+                  <div class="review-form-actions">
+                    <button type="submit" class="review-submit-btn">
+                      💬 Invia risposta
+                    </button>
+
+                    <button type="button"
+                            class="review-cancel-btn"
+                            onclick="toggleRisposta('{{ r.id }}')">
+                      Annulla
+                    </button>
+                  </div>
+                </form>
+              {% endif %}
           </div>
         {% endfor %}
       </div>
@@ -177,8 +188,12 @@ function toggleModifica(id) {
   const form = document.getElementById('form-modifica-' + id);
   if (form) form.classList.toggle('hidden');
 }
-</script>
 
+function toggleRisposta(id) {
+  const form = document.getElementById('form-risposta-' + id);
+  if (form) form.classList.toggle('hidden');
+}
+</script>
 <style>
 .reviews-page-shell {
   position: relative;
@@ -422,6 +437,41 @@ function toggleModifica(id) {
   line-height: 1.5;
   color: #94a3b8;
   font-style: italic;
+}
+
+.review-reply-toggle-wrap {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.review-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0.72rem 1rem;
+  border: 1px solid rgba(147,197,253,0.95);
+  border-radius: 9999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,255,0.96));
+  color: #2563eb;
+  font-size: 0.88rem;
+  font-weight: 760;
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.review-toggle-btn:hover {
+  transform: translateY(-1px);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.99), rgba(239,246,255,0.98));
+  box-shadow:
+    0 12px 24px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.98);
 }
 
 .review-response-card,
