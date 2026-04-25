@@ -4598,7 +4598,8 @@ def segna_notifica_letta(notifica_id, user_id):
     conn = get_db_connection()
     conn.execute(sql(f"""
         UPDATE notifiche
-        SET data_lettura = {now_sql()}
+        SET letta = 1,
+            data_lettura = {now_sql()}
         WHERE id = ? AND id_utente = ?
     """), (notifica_id, user_id))
     conn.commit()
@@ -4626,6 +4627,21 @@ def elimina_tutte_notifiche_route():
 
     # 🔔 Aggiorna il badge in tempo reale
     emit_update_notifications(session["utente_id"])
+
+    return jsonify({"success": True})
+
+@app.route("/notifiche/elimina/<int:id>", methods=["POST"])
+@login_required
+def elimina_notifica_singola_route(id):
+    conn = get_db_connection()
+    conn.execute(
+        sql("DELETE FROM notifiche WHERE id = ? AND id_utente = ?"),
+        (id, g.utente["id"])
+    )
+    conn.commit()
+
+    # 🔔 aggiorna il badge realtime
+    emit_update_notifications(g.utente["id"])
 
     return jsonify({"success": True})
 
@@ -5285,7 +5301,7 @@ def utente_update_galleria():
         flash("ℹ️ Nessuna modifica effettuata.", "info")
 
     return redirect(url_for("dashboard") + "#tab-foto")
-    
+
 @app.route("/annuncio/<int:id>/elimina")
 @login_required
 def elimina_annuncio(id):
@@ -7164,9 +7180,14 @@ def apri_notifica(id):
         return redirect(url_for("notifiche"))
 
     # Segna come letta
-    conn.execute(sql("UPDATE notifiche SET letta = 1 WHERE id = ?"), (id,))
+    conn.execute(sql(f"""
+        UPDATE notifiche
+        SET letta = 1,
+            data_lettura = {now_sql()}
+        WHERE id = ? AND id_utente = ?
+    """), (id, g.utente["id"]))
     conn.commit()
-
+    
 
     # 🔔 aggiorna il badge
     emit_update_notifications(g.utente["id"])

@@ -121,9 +121,8 @@
                   {% endif %}
 
                   <button type="button"
-                          class="notification-inline-btn is-delete is-disabled"
-                          onclick="event.stopPropagation();"
-                          title="Da attivare appena colleghiamo la route backend di eliminazione singola">
+                          class="notification-inline-btn is-delete"
+                          onclick="event.stopPropagation(); deleteSingleNotification({{ n['id'] }});">
                     Elimina
                   </button>
                 </div>
@@ -380,12 +379,6 @@
   color: #b91c1c;
 }
 
-.notification-inline-btn.is-disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
 .notifications-list {
   display: flex;
   flex-direction: column;
@@ -621,7 +614,7 @@ body.offset-navbar {
   .notification-card-actions {
     width: 100%;
   }
-  
+
   .notification-card-premium {
     padding: 1rem;
     border-radius: 1.2rem;
@@ -658,29 +651,62 @@ body.offset-navbar {
 document.getElementById("markAllRead")?.addEventListener("click", async () => {
   const resp = await fetch("/notifiche/segna_tutte_lette", { method: "POST" });
   const data = await resp.json();
-  if (data.success) {
-    document.querySelectorAll(".notification-card-premium.is-unread").forEach(div => {
-      div.classList.remove("is-unread");
-      div.classList.add("is-read");
 
-      const badge = div.querySelector(".notification-unread-badge");
+  if (data.success) {
+    document.querySelectorAll(".notification-card-premium.is-unread").forEach(card => {
+      card.classList.remove("is-unread");
+      card.classList.add("is-read");
+
+      const badge = card.querySelector(".notification-unread-badge");
       if (badge) badge.remove();
 
-      const btn = div.querySelector("form");
-      if (btn) btn.remove();
+      const form = card.querySelector("form[action*='/notifiche/leggi/']");
+      if (form) form.remove();
     });
   }
 });
 
 document.getElementById("deleteAll")?.addEventListener("click", async () => {
   if (!confirm("Vuoi davvero eliminare tutte le notifiche?")) return;
+
   const resp = await fetch("/notifiche/elimina_tutte", { method: "POST" });
   const data = await resp.json();
+
   if (data.success) {
     document.querySelector(".notifications-list").innerHTML =
       '<div class="notifications-empty-card"><p class="notifications-empty-text">Nessuna notifica.</p></div>';
   }
 });
-</script>
 
+async function deleteSingleNotification(id) {
+  if (!confirm("Vuoi davvero eliminare questa notifica?")) return;
+
+  try {
+    const resp = await fetch(`/notifiche/elimina/${id}`, { method: "POST" });
+    const data = await resp.json();
+
+    if (data.success) {
+      const deleteBtn = document.querySelector(
+        `button[onclick="event.stopPropagation(); deleteSingleNotification(${id});"]`
+      );
+
+      const card = deleteBtn?.closest(".notification-card-premium");
+
+      if (card) {
+        card.remove();
+      }
+
+      if (!document.querySelector(".notification-card-premium")) {
+        document.querySelector(".notifications-list").innerHTML =
+          '<div class="notifications-empty-card"><p class="notifications-empty-text">Nessuna notifica.</p></div>';
+      }
+    } else {
+      alert("Errore durante l'eliminazione della notifica.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Errore di rete.");
+  }
+}
+</script>
 {% endblock %}
