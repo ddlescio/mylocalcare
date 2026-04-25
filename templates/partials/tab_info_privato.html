@@ -174,17 +174,17 @@
               'Caffe & parole'
             ] %}
 
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="attivita-grid grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {% for cat in categorie %}
-                <div class="border border-gray-200 rounded-xl bg-gray-50 p-4 shadow-sm">
-                  <p class="text-sm font-semibold text-gray-800 mb-3">{{ cat }}</p>
+                <div class="attivita-card border border-gray-200 rounded-xl bg-gray-50 p-4 shadow-sm">
+                  <p class="attivita-card-title text-sm font-semibold text-gray-800 mb-3">{{ cat }}</p>
 
-                  <div class="flex flex-wrap gap-2">
+                  <div class="attivita-actions flex flex-wrap gap-2">
                     <input type="hidden" name="offro_{{ loop.index }}" value="{{ 1 if utente.get('offro_' ~ loop.index) else 0 }}" data-autosave="1">
                     <input type="hidden" name="cerco_{{ loop.index }}" value="{{ 1 if utente.get('cerco_' ~ loop.index) else 0 }}" data-autosave="1">
 
                     <button type="button"
-                            class="pill"
+                            class="pill attivita-pill"
                             data-target="offro_{{ loop.index }}"
                             data-autosave-ui="pill"
                             {% if utente.get('offro_' ~ loop.index) %}data-active="1"{% endif %}>
@@ -192,7 +192,7 @@
                     </button>
 
                     <button type="button"
-                            class="pill"
+                            class="pill attivita-pill"
                             data-target="cerco_{{ loop.index }}"
                             data-autosave-ui="pill"
                             {% if utente.get('cerco_' ~ loop.index) %}data-active="1"{% endif %}>
@@ -1551,6 +1551,33 @@
     .pub-description{
       font-size:.95rem;
     }
+
+    .attivita-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 0.7rem !important;
+    }
+
+    .attivita-card {
+      padding: 0.8rem 0.7rem !important;
+      border-radius: 0.95rem !important;
+      min-height: auto !important;
+    }
+
+    .attivita-card-title {
+      font-size: 0.9rem !important;
+      line-height: 1.2 !important;
+      margin-bottom: 0.65rem !important;
+    }
+
+    .attivita-actions {
+      gap: 0.45rem !important;
+    }
+
+    .attivita-pill {
+      padding: 0.32rem 0.72rem !important;
+      font-size: 0.78rem !important;
+      min-width: 0 !important;
+    }    
   }
 </style>
 <style>
