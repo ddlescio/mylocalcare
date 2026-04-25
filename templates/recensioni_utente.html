@@ -3,32 +3,43 @@
 {% set body_class = "page-recensioni-pubbliche" %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6 mt-8">
-  <!-- 🔙 Torna al profilo -->
-  <div class="mb-5">
-    <a href="{{ url_for('profilo_pubblico', id=user_id) }}"
-       class="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-           stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-      </svg>
-      Torna al profilo
-    </a>
-  </div>
+<div class="reviews-page-shell max-w-4xl mx-auto mt-8">
+  <div class="reviews-page-card">
+    <!-- 🔙 Torna al profilo -->
+    <div class="reviews-topbar">
+      <a href="{{ url_for('profilo_pubblico', id=user_id) }}"
+         class="reviews-backlink">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+             stroke-width="2" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span>Torna al profilo</span>
+      </a>
+    </div>
 
-  <!-- TITOLO + MEDIA -->
-  <div class="mb-6 text-center">
-    <h2 class="text-2xl font-bold text-blue-700 mb-2">Recensioni utente</h2>
+    <!-- HEADER PREMIUM -->
+    <div class="reviews-hero">
+      <div class="reviews-hero-glow reviews-hero-glow-left"></div>
+      <div class="reviews-hero-glow reviews-hero-glow-right"></div>
 
-    {% if totale > 0 %}
-      <p class="text-gray-600 text-sm">
-        ⭐ <span class="font-semibold text-lg text-yellow-500">{{ "%.1f"|format(media) }}</span>
-        su 5 — {{ totale }} recension{{ 'e' if totale == 1 else 'i' }}
-      </p>
-    {% else %}
-      <p class="text-gray-400 italic text-sm">Nessuna recensione disponibile</p>
-    {% endif %}
-  </div>
+      <div class="reviews-hero-inner">
+        <div class="reviews-hero-badge">⭐ Feedback verificati</div>
+
+        <h1 class="reviews-title">Recensioni utente</h1>
+
+        {% if totale > 0 %}
+          <div class="reviews-summary">
+            <span class="reviews-summary-star">★</span>
+            <span class="reviews-summary-value">{{ "%.1f"|format(media) }}</span>
+            <span class="reviews-summary-text">
+              su 5 — {{ totale }} recension{{ 'e' if totale == 1 else 'i' }}
+            </span>
+          </div>
+        {% else %}
+          <p class="reviews-empty-summary">Nessuna recensione disponibile</p>
+        {% endif %}
+      </div>
+    </div>
 
   <!-- FORM INSERIMENTO / MODIFICA -->
   {% if session.get('utente_id') and session['utente_id'] != user_id %}
@@ -282,26 +293,231 @@ aggiornaStelle({{ mia_recensione.voto if mia_recensione else 0 }});
   animation: fadeIn 0.25s ease-in-out;
 }
 </style>
-
 <style>
-/* 🔵 Offset specifico solo per questa pagina (recensioni utente pubblico) */
-body.page-recensioni-pubbliche .max-w-2xl {
-  margin-top: 6.5rem !important;
+.reviews-page-shell {
+  position: relative;
 }
 
-/* iPad verticale/orizzontale */
-@media (min-width: 641px) and (max-width: 1024px) {
-  body.page-recensioni-pubbliche .max-w-2xl {
-    margin-top: 7.2rem !important;
-  }
+.reviews-page-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+  padding: 1.4rem;
+  background: linear-gradient(
+    160deg,
+    rgba(255,255,255,0.98),
+    rgba(244,247,255,0.94)
+  );
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow:
+    0 18px 45px rgba(15,23,42,0.08),
+    0 4px 14px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.92);
 }
 
-/* Mobile: navbar più alta */
+.reviews-page-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0) 28%),
+    radial-gradient(circle at top left, rgba(96,165,250,0.10), transparent 28%),
+    radial-gradient(circle at top right, rgba(244,114,182,0.08), transparent 24%);
+  pointer-events: none;
+}
+
+.reviews-topbar {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 1rem;
+}
+
+.reviews-backlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 1rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(191,219,254,0.9);
+  color: #2563eb;
+  font-size: 0.95rem;
+  font-weight: 650;
+  text-decoration: none;
+  box-shadow:
+    0 8px 20px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.reviews-backlink:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.92);
+  box-shadow:
+    0 12px 24px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.98);
+}
+
+.reviews-hero {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 1.7rem;
+  padding: 2rem 1.2rem 1.8rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,0.92),
+      rgba(239,246,255,0.92),
+      rgba(250,245,255,0.90)
+    );
+  border: 1px solid rgba(219,234,254,0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.94),
+    0 14px 30px rgba(15,23,42,0.05);
+}
+
+.reviews-hero-inner {
+  position: relative;
+  z-index: 2;
+}
+
+.reviews-hero-glow {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 9999px;
+  filter: blur(40px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.reviews-hero-glow-left {
+  top: -45px;
+  left: -35px;
+  background: rgba(96,165,250,0.22);
+}
+
+.reviews-hero-glow-right {
+  right: -35px;
+  bottom: -55px;
+  background: rgba(244,114,182,0.16);
+}
+
+.reviews-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.9rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.82);
+  border: 1px solid rgba(226,232,240,0.95);
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 6px 16px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+.reviews-title {
+  margin: 0 0 0.55rem;
+  font-size: 2.5rem;
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.reviews-summary {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+  color: #475569;
+}
+
+.reviews-summary-star {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #fbbf24;
+}
+
+.reviews-summary-value {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #eab308;
+}
+
+.reviews-summary-text {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  color: #475569;
+}
+
+.reviews-empty-summary {
+  margin: 0;
+  font-size: 1rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
 @media (max-width: 640px) {
-  body.page-recensioni-pubbliche .max-w-2xl {
-    margin-top: 6rem !important;
+  .reviews-page-card {
+    border-radius: 1.5rem;
+    padding: 1rem;
+  }
+
+  .reviews-hero {
+    border-radius: 1.35rem;
+    padding: 1.45rem 0.95rem 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .reviews-title {
+    font-size: 2rem;
+  }
+
+  .reviews-summary-value {
+    font-size: 1.6rem;
+  }
+
+  .reviews-summary-text {
+    font-size: 1rem;
+  }
+
+  .reviews-backlink {
+    padding: 0.68rem 0.9rem;
+    font-size: 0.9rem;
   }
 }
 </style>
 
+<style>
+/* 🔵 Offset specifico solo per questa pagina */
+body.page-recensioni-pubbliche .reviews-page-shell {
+  margin-top: 6.5rem !important;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  body.page-recensioni-pubbliche .reviews-page-shell {
+    margin-top: 7.2rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body.page-recensioni-pubbliche .reviews-page-shell {
+    margin-top: 6rem !important;
+  }
+}
+</style>
 {% endblock %}
