@@ -127,7 +127,7 @@
             <p class="text-xs text-gray-500 mt-1">Puoi selezionare più lingue.</p>
             {% endif %}
           </div>
-          
+
           <!-- 🔹 Frase personale -->
           <div class="form-box">
             <label class="label-strong">Frase personale</label>
@@ -217,8 +217,10 @@
       <!-- 🟩 Sezione: Esperienza e formazione -->
       <section data-section="work_education" class="hidden">
 
-        <form method="post" action="{{ url_for('utente_update_esperienza') }}"
-              class="space-y-6">
+        <form method="post"
+              action="{{ url_for('utente_update_esperienza') }}"
+              class="space-y-6"
+              id="form-work-education">
 
           {% set esperienze = [utente.get('esperienza_1',''), utente.get('esperienza_2',''), utente.get('esperienza_3','')] %}
           {% set formazioni = [utente.get('studio_1',''), utente.get('studio_2',''), utente.get('studio_3','')] %}
@@ -284,6 +286,7 @@
                       name="esperienza_{{ i }}"
                       class="input-modern we-input"
                       value="{{ utente.get('esperienza_' ~ i) or '' }}"
+                      data-autosave="1"
                       {% if i == 1 %}
                         placeholder="Es. Babysitter 2 anni"
                       {% elif i == 2 %}
@@ -311,6 +314,7 @@
                       name="studio_{{ i }}"
                       class="input-modern we-input"
                       value="{{ utente.get('studio_' ~ i) or '' }}"
+                      data-autosave="1"
                       {% if i == 1 %}
                         placeholder="Es. Diploma liceo, laurea.."
                       {% elif i == 2 %}
@@ -336,14 +340,20 @@
                   name="certificazioni"
                   class="input-modern we-input we-textarea"
                   rows="3"
+                  data-autosave="1"
                   placeholder="Es. Primo soccorso • Corso OSS • Certificazione linguistica • Corso professionale">{{ utente.get('certificazioni') or '' }}</textarea>
               </div>
             </div>
 
             <div class="we-actions">
-              <button class="we-save-btn">
+              <button type="submit" class="we-save-btn">
                 💾 Salva modifiche
               </button>
+            </div>
+
+            <div id="autosave-work-education-status"
+                 class="hidden text-xs text-gray-500 text-right">
+              Modifiche salvate
             </div>
           </div>
           {% endif %}
@@ -1950,6 +1960,103 @@ document.addEventListener("DOMContentLoaded", () => {
       pianificaAutosave(250);
     });
   }
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("form-work-education");
+  const statusBox = document.getElementById("autosave-work-education-status");
+
+  if (!form) return;
+
+  let autosaveTimer = null;
+  let autosaveInCorso = false;
+  let queuedAutosave = false;
+
+  function setStatus(type, text) {
+    if (!statusBox) return;
+
+    statusBox.classList.remove(
+      "hidden",
+      "text-gray-500",
+      "text-blue-600",
+      "text-red-600",
+      "text-green-600"
+    );
+
+    if (type === "saving") {
+      statusBox.classList.add("text-blue-600");
+    } else if (type === "error") {
+      statusBox.classList.add("text-red-600");
+    } else {
+      statusBox.classList.add("text-green-600");
+    }
+
+    statusBox.textContent = text;
+  }
+
+  function clearStatusLater() {
+    if (!statusBox) return;
+
+    setTimeout(() => {
+      if (!autosaveInCorso) {
+        statusBox.classList.add("hidden");
+      }
+    }, 1800);
+  }
+
+  async function eseguiAutosave() {
+    if (autosaveInCorso) {
+      queuedAutosave = true;
+      return;
+    }
+
+    autosaveInCorso = true;
+    setStatus("saving", "Salvataggio...");
+
+    try {
+      const formData = new FormData(form);
+
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      setStatus("success", "Modifiche salvate");
+      clearStatusLater();
+
+    } catch (err) {
+      console.error("Errore autosave work_education:", err);
+      setStatus("error", "Errore di salvataggio");
+    } finally {
+      autosaveInCorso = false;
+
+      if (queuedAutosave) {
+        queuedAutosave = false;
+        eseguiAutosave();
+      }
+    }
+  }
+
+  function pianificaAutosave(delay = 700) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      eseguiAutosave();
+    }, delay);
+  }
+
+  form.querySelectorAll("[data-autosave='1']").forEach(el => {
+    el.addEventListener("input", () => pianificaAutosave(900));
+    el.addEventListener("blur", () => pianificaAutosave(250));
+    el.addEventListener("change", () => pianificaAutosave(250));
+  });
 });
 </script>
 <script src="{{ url_for('static', filename='js/autocomplete_citta.js') }}"></script>
