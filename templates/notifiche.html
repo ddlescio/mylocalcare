@@ -26,12 +26,12 @@
     </div>
 
     <div class="notifications-actions-bar">
-      <button id="markAllRead" class="notifications-action-btn is-primary" type="button">
-        Segna tutte come lette
+      <button id="markAllRead" class="notifications-action-btn is-primary is-compact" type="button">
+        ✓ Tutte lette
       </button>
 
-      <button id="deleteAll" class="notifications-action-btn is-danger" type="button">
-        Elimina tutte
+      <button id="deleteAll" class="notifications-action-btn is-danger is-compact" type="button">
+        🗑 Elimina tutto
       </button>
     </div>
 
@@ -108,15 +108,25 @@
                   {{ n['data'] | fmt_it_smart }}
                 </p>
 
-                {% if n['letta'] == 0 %}
-                  <form method="post"
-                        action="{{ url_for('leggi_notifica', id=n['id']) }}"
-                        onsubmit="event.stopPropagation();">
-                    <button type="submit" class="notification-read-btn">
-                      Segna letta
-                    </button>
-                  </form>
-                {% endif %}
+                <div class="notification-card-actions">
+                  {% if n['letta'] == 0 %}
+                    <form method="post"
+                          action="{{ url_for('leggi_notifica', id=n['id']) }}"
+                          onsubmit="event.stopPropagation();"
+                          class="inline">
+                      <button type="submit" class="notification-inline-btn is-read">
+                        Segna letta
+                      </button>
+                    </form>
+                  {% endif %}
+
+                  <button type="button"
+                          class="notification-inline-btn is-delete is-disabled"
+                          onclick="event.stopPropagation();"
+                          title="Da attivare appena colleghiamo la route backend di eliminazione singola">
+                    Elimina
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -313,6 +323,67 @@
   box-shadow:
     0 8px 20px rgba(239,68,68,0.08),
     inset 0 1px 0 rgba(255,255,255,0.75);
+}
+
+.notifications-action-btn.is-compact {
+  min-height: 36px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.notification-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.notification-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.38rem 0.72rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(203,213,225,0.95);
+  background: rgba(255,255,255,0.92);
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: background .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.notification-inline-btn:hover {
+  transform: translateY(-1px);
+}
+
+.notification-inline-btn.is-read {
+  border-color: rgba(147,197,253,0.95);
+  background: rgba(219,234,254,0.75);
+  color: #2563eb;
+}
+
+.notification-inline-btn.is-read:hover {
+  background: rgba(219,234,254,0.95);
+  color: #1d4ed8;
+}
+
+.notification-inline-btn.is-delete {
+  border-color: rgba(252,165,165,0.95);
+  background: rgba(254,226,226,0.72);
+  color: #dc2626;
+}
+
+.notification-inline-btn.is-delete:hover {
+  background: rgba(254,226,226,0.92);
+  color: #b91c1c;
+}
+
+.notification-inline-btn.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 .notifications-list {
@@ -530,13 +601,27 @@ body.offset-navbar {
   }
 
   .notifications-actions-bar {
-    justify-content: stretch;
+    justify-content: flex-start;
+    gap: 0.55rem;
   }
 
   .notifications-action-btn {
-    width: 100%;
+    width: auto;
   }
 
+  .notifications-action-btn.is-compact {
+    flex: 0 0 auto;
+  }
+
+  .notification-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .notification-card-actions {
+    width: 100%;
+  }
+  
   .notification-card-premium {
     padding: 1rem;
     border-radius: 1.2rem;
