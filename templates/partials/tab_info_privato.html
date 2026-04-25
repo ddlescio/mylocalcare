@@ -130,15 +130,25 @@
           <!-- 🔹 Frase personale -->
           <div class="form-box">
             <label class="label-strong">Frase personale</label>
-            <textarea
+
+            <input
+              type="hidden"
               name="frase"
-              class="input-modern"
+              id="frase_hidden"
+              value="{{ utente.get('frase') or '' }}"
               data-autosave="1"
+              {% if pubblico %}disabled{% endif %}
+            >
+
+            <textarea
+              id="frase_textarea"
+              class="input-modern"
               maxlength="120"
               rows="3"
               style="resize:none; min-height: 70px;"
               placeholder="{% if not pubblico %}Es. Amo aiutare le persone.. prendermi cura degli animali.. sono un tuttofare.. anni di esperienza in..{% endif %}"
               {% if pubblico %}disabled{% endif %}>{{ utente.get('frase') or '' }}</textarea>
+
             {% if not pubblico %}
             <p class="text-xs text-gray-500 mt-1">Facoltativo (max 120 caratteri)</p>
             {% endif %}
@@ -1898,12 +1908,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.scheduleInfoBaseAutosave = pianificaAutosave;
 
-  const fraseTextarea = form.querySelector("textarea[name='frase']");
-  if (fraseTextarea) {
-    fraseTextarea.addEventListener("input", () => pianificaAutosave(900));
-    fraseTextarea.addEventListener("blur", () => pianificaAutosave(250));
-  }
+  const fraseTextarea = document.getElementById("frase_textarea");
+  const fraseHidden = document.getElementById("frase_hidden");
 
+  if (fraseTextarea && fraseHidden) {
+    const syncFrase = () => {
+      fraseHidden.value = fraseTextarea.value;
+    };
+
+    fraseTextarea.addEventListener("input", () => {
+      syncFrase();
+      pianificaAutosave(900);
+    });
+
+    fraseTextarea.addEventListener("blur", () => {
+      syncFrase();
+      pianificaAutosave(250);
+    });
+
+    fraseTextarea.addEventListener("change", () => {
+      syncFrase();
+      pianificaAutosave(250);
+    });
+  }
+  
   const hiddenAutosaveFields = form.querySelectorAll(
     "input[type='hidden'][data-autosave='1']"
   );
