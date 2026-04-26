@@ -326,11 +326,21 @@ button, input[type="submit"] {
                href="{{ url_for('utente_messaggi') }}"
                class="relative icon-hover text-2xl md:text-[28px] leading-none text-gray-700 hover:text-blue-600">
               💬
-              <span id="chatBadge"
-                    data-unread="{{ unread_chat()|default(0) }}"
-                    class="badge-pop absolute -top-1 -right-2 bg-red-600 text-white text-[10px] md:text-xs rounded-full px-1.5">
-                {{ unread_chat() if unread_chat() > 0 else '' }}
-              </span>
+
+              {% set chat_n = unread_chat()|default(0) %}
+
+              {% if chat_n > 0 %}
+                <span id="chatBadge"
+                      data-unread="{{ chat_n }}"
+                      class="badge-pop absolute -top-1 -right-2 bg-red-600 text-white text-[10px] md:text-xs rounded-full px-1.5">
+                  {{ chat_n }}
+                </span>
+              {% else %}
+                <span id="chatBadge"
+                      data-unread="0"
+                      style="display:none;"
+                      class="badge-pop absolute -top-1 -right-2 bg-red-600 text-white text-[10px] md:text-xs rounded-full px-1.5"></span>
+              {% endif %}
             </a>
 
             <!-- 👤 Profilo -->
@@ -1512,27 +1522,56 @@ nav .max-w-7xl {
   gap: 1rem !important;
 }
 
-/* Logo più integrato nella UI */
+/* Logo come vero pulsante premium */
 .logo-wrapper {
+  position: relative;
   border-radius: 9999px;
-  padding: 0.22rem 0.45rem 0.22rem 0.12rem;
+  padding: 0.34rem 0.85rem 0.34rem 0.42rem;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.84), rgba(248,250,252,0.62));
+  border: 1px solid rgba(226,232,240,0.82);
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.92);
   transition:
-    background .18s ease,
-    transform .18s ease,
-    filter .18s ease;
+    transform .16s ease,
+    background .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease,
+    filter .16s ease;
+}
+
+.logo-wrapper::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.55), transparent 46%);
+  pointer-events: none;
+  opacity: 0.75;
 }
 
 .logo-wrapper:hover {
-  background: rgba(239,246,255,0.68);
   transform: translateY(-1px);
+  background:
+    linear-gradient(180deg, rgba(239,246,255,0.98), rgba(255,255,255,0.76));
+  border-color: rgba(147,197,253,0.78);
+  box-shadow:
+    0 11px 24px rgba(37,99,235,0.09),
+    inset 0 1px 0 rgba(255,255,255,0.96);
 }
 
 .logo-wrapper img {
+  position: relative;
+  z-index: 2;
   margin-right: -2px;
-  filter: drop-shadow(0 5px 8px rgba(37,99,235,0.10));
+  filter: drop-shadow(0 5px 8px rgba(37,99,235,0.12));
 }
 
 .logo-wrapper span {
+  position: relative;
+  z-index: 2;
   letter-spacing: -0.045em;
 }
 
@@ -1567,18 +1606,29 @@ nav .icon-hover:hover {
     inset 0 1px 0 rgba(255,255,255,0.95);
 }
 
-/* Badge notifiche più curato */
+/* Badge notifiche/chat leggibile */
 nav .badge-pop {
-  min-width: 1.05rem;
-  height: 1.05rem;
-  display: inline-flex;
+  min-width: 1.18rem;
+  height: 1.18rem;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  padding: 0 0.28rem !important;
+  padding: 0 0.32rem !important;
+  border-radius: 9999px;
   border: 2px solid rgba(255,255,255,0.96);
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  font-size: 0.68rem !important;
+  line-height: 1 !important;
+  font-weight: 850 !important;
+  text-align: center;
   box-shadow:
     0 5px 12px rgba(220,38,38,0.24),
     inset 0 1px 0 rgba(255,255,255,0.32);
+}
+
+nav .badge-pop:empty {
+  display: none !important;
 }
 
 /* Avatar coerente con le icone */
@@ -1654,10 +1704,16 @@ nav .username-link {
 @media (max-width: 480px) {
   .logo-wrapper {
     margin-left: -4px !important;
+    padding: 0.28rem 0.58rem 0.28rem 0.30rem;
+  }
+
+  .logo-wrapper img {
+    width: 2rem !important;
+    height: 2rem !important;
   }
 
   .logo-wrapper span {
-    font-size: 1.22rem !important;
+    font-size: 1.18rem !important;
   }
 
   nav .icon-hover {
@@ -1669,6 +1725,13 @@ nav .username-link {
     width: 2.18rem;
     height: 2.18rem;
     font-size: 1.35rem !important;
+  }
+
+  nav .badge-pop {
+    min-width: 1.08rem;
+    height: 1.08rem;
+    font-size: 0.62rem !important;
+    padding: 0 0.26rem !important;
   }
 }
 </style>
