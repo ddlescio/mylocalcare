@@ -316,12 +316,18 @@
 }
 
 .notifications-action-btn.is-danger {
-  background: rgba(254,226,226,0.75);
-  border: 1px solid rgba(252,165,165,0.95);
-  color: #dc2626;
+  background: rgba(248,250,252,0.92);
+  border: 1px solid rgba(203,213,225,0.95);
+  color: #64748b;
   box-shadow:
-    0 8px 20px rgba(239,68,68,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.75);
+    0 6px 16px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+}
+
+.notifications-action-btn.is-danger:hover {
+  background: rgba(241,245,249,0.98);
+  border-color: rgba(148,163,184,0.85);
+  color: #475569;
 }
 
 .notifications-action-btn.is-compact {
@@ -369,14 +375,15 @@
 }
 
 .notification-inline-btn.is-delete {
-  border-color: rgba(252,165,165,0.95);
-  background: rgba(254,226,226,0.72);
-  color: #dc2626;
+  border-color: rgba(203,213,225,0.9);
+  background: rgba(248,250,252,0.9);
+  color: #64748b;
 }
 
 .notification-inline-btn.is-delete:hover {
-  background: rgba(254,226,226,0.92);
-  color: #b91c1c;
+  background: rgba(241,245,249,0.98);
+  border-color: rgba(148,163,184,0.9);
+  color: #475569;
 }
 
 .notifications-list {
@@ -594,8 +601,9 @@ body.offset-navbar {
   }
 
   .notifications-actions-bar {
-    justify-content: flex-start;
-    gap: 0.55rem;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
   }
 
   .notifications-action-btn {
@@ -604,15 +612,10 @@ body.offset-navbar {
 
   .notifications-action-btn.is-compact {
     flex: 0 0 auto;
-  }
-
-  .notification-card-footer {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .notification-card-actions {
-    width: 100%;
+    min-height: 32px;
+    padding: 0.42rem 0.68rem;
+    font-size: 0.74rem;
+    box-shadow: none;
   }
 
   .notification-card-premium {
@@ -639,6 +642,29 @@ body.offset-navbar {
   .notification-card-footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .notification-card-actions {
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  .notification-inline-btn {
+    min-height: 28px;
+    padding: 0.28rem 0.55rem;
+    font-size: 0.72rem;
+    box-shadow: none;
+  }
+
+  .notification-inline-btn.is-delete {
+    background: transparent;
+    border-color: rgba(203,213,225,0.8);
+    color: #94a3b8;
+  }
+
+  .notification-inline-btn.is-delete:hover {
+    background: rgba(248,250,252,0.95);
+    color: #64748b;
   }
 
   body.offset-navbar {

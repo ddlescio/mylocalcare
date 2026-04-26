@@ -2006,12 +2006,25 @@ async function registerPush() {
 
 window.addEventListener("load", async () => {
   try {
+    /*
+      🔔 Push browser/PWA:
+      per ora NON avviamo registerPush() automaticamente al caricamento pagina.
+
+      Motivo:
+      - la route backend /push/subscribe non è ancora attiva;
+      - l'avvio automatico genera POST /push/subscribe 404;
+      - la richiesta permesso notifiche deve partire da un gesto esplicito dell'utente,
+        ad esempio un pulsante "Attiva notifiche".
+    */
+
     if (!("serviceWorker" in navigator)) return;
 
     await navigator.serviceWorker.ready;
-    await registerPush();
+
+    console.log("🔔 Push pronte ma non avviate automaticamente");
+
   } catch (err) {
-    console.warn("⚠️ Avvio registerPush fallito:", err);
+    console.warn("⚠️ Preparazione push fallita:", err);
   }
 });
 </script>
