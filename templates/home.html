@@ -1,87 +1,350 @@
 {% extends "base.html" %}
 {% set body_class = "home offset-navbar" %}
-{% set body_class = "offset-navbar" %}
 
 {% block content %}
 
 <style>
   body.home {
-    background: linear-gradient(
-      180deg,
-      rgba(230, 238, 255, 1),   /* blu chiarissimo */
-      rgba(255, 235, 245, 0.9), /* rosa chiarissimo */
-      #ffffff
-    );
+    background:
+      radial-gradient(circle at top left, rgba(96,165,250,0.18), transparent 34%),
+      radial-gradient(circle at top right, rgba(244,114,182,0.14), transparent 30%),
+      linear-gradient(180deg, #f8fbff 0%, #f9fafb 52%, #ffffff 100%) !important;
   }
-</style>
 
+  .home-premium-wrapper {
+    max-width: 78rem;
+    margin: 0 auto;
+    padding: 6.1rem 1rem 5rem;
+  }
 
-<div class="page-wrapper mt-20">
+  .home-hero-premium {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2rem;
+    padding: 2.2rem 1.4rem;
+    margin-bottom: 1.35rem;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.96), rgba(239,246,255,0.92), rgba(250,245,255,0.88));
+    border: 1px solid rgba(219,234,254,0.95);
+    box-shadow:
+      0 18px 45px rgba(15,23,42,0.07),
+      inset 0 1px 0 rgba(255,255,255,0.95);
+  }
 
-<style>
-  .chat-card {
-    transition: all 0.2s ease;
+  .home-hero-premium::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 16% 8%, rgba(96,165,250,0.18), transparent 26%),
+      radial-gradient(circle at 82% 22%, rgba(244,114,182,0.14), transparent 25%);
+    pointer-events: none;
   }
-  .chat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    background-color: #fdfdfd;
+
+  .home-hero-inner {
+    position: relative;
+    z-index: 2;
+    text-align: center;
   }
-  .unread-dot {
-    width: 10px;
-    height: 10px;
-    background: #3b82f6;
-    border-radius: 50%;
+
+  .home-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin-bottom: 0.8rem;
+    padding: 0.42rem 0.85rem;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.82);
+    border: 1px solid rgba(226,232,240,0.95);
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 750;
+    box-shadow:
+      0 8px 18px rgba(15,23,42,0.05),
+      inset 0 1px 0 rgba(255,255,255,0.95);
   }
-  /* Spazio finale scroll — desktop & tablet */
+
+  .home-title {
+    margin: 0;
+    font-size: clamp(2.15rem, 5vw, 4.2rem);
+    line-height: 0.98;
+    letter-spacing: -0.065em;
+    font-weight: 850;
+    color: #0f172a;
+  }
+
+  .home-title span {
+    color: #2563eb;
+  }
+
+  .home-subtitle {
+    max-width: 42rem;
+    margin: 1rem auto 0;
+    color: #64748b;
+    font-size: clamp(0.98rem, 2vw, 1.15rem);
+    line-height: 1.55;
+    font-weight: 500;
+  }
+
+  .home-grid-premium {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .home-category-card {
+    --accent: #2563eb;
+    --accent-soft: rgba(37,99,235,0.12);
+
+    position: relative;
+    overflow: hidden;
+    min-height: 13.5rem;
+    border-radius: 1.6rem;
+    padding: 1.35rem 1rem;
+    text-decoration: none;
+    background:
+      linear-gradient(160deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
+    border: 1px solid rgba(226,232,240,0.95);
+    box-shadow:
+      0 10px 28px rgba(15,23,42,0.055),
+      inset 0 1px 0 rgba(255,255,255,0.94);
+    transition:
+      transform .2s ease,
+      box-shadow .2s ease,
+      border-color .2s ease,
+      background .2s ease;
+  }
+
+  .home-category-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at top center, var(--accent-soft), transparent 42%),
+      linear-gradient(120deg, rgba(255,255,255,0.42), transparent 45%);
+    opacity: 0.75;
+    pointer-events: none;
+    transition: opacity .2s ease;
+  }
+
+  .home-category-card::after {
+    content: "";
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    bottom: 0;
+    height: 3px;
+    border-radius: 9999px 9999px 0 0;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity .2s ease;
+  }
+
+  .home-category-card:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--accent) 34%, rgba(226,232,240,0.95));
+    box-shadow:
+      0 18px 38px rgba(15,23,42,0.09),
+      inset 0 1px 0 rgba(255,255,255,0.98);
+  }
+
+  .home-category-card:hover::before,
+  .home-category-card:hover::after {
+    opacity: 1;
+  }
+
+  .home-category-content {
+    position: relative;
+    z-index: 2;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    text-align: center;
+  }
+
+  .home-category-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.1rem;
+    height: 4.1rem;
+    border-radius: 1.35rem;
+    font-size: 2.15rem;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.86));
+    border: 1px solid rgba(226,232,240,0.9);
+    box-shadow:
+      0 10px 22px rgba(15,23,42,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.95);
+    transition: transform .2s ease;
+  }
+
+  .home-category-card:hover .home-category-emoji {
+    transform: translateY(-2px) scale(1.06);
+  }
+
+  .home-category-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    font-weight: 820;
+    letter-spacing: -0.025em;
+  }
+
+  .home-category-text {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.92rem;
+    line-height: 1.42;
+    font-weight: 500;
+    max-width: 17rem;
+  }
+
+  .home-category-cta {
+    margin-top: 0.25rem;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .2s ease, transform .2s ease;
+  }
+
+  .home-category-card:hover .home-category-cta {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .theme-blue { --accent: #2563eb; --accent-soft: rgba(37,99,235,0.13); }
+  .theme-pink { --accent: #db2777; --accent-soft: rgba(219,39,119,0.12); }
+  .theme-green { --accent: #16a34a; --accent-soft: rgba(22,163,74,0.12); }
+  .theme-yellow { --accent: #ca8a04; --accent-soft: rgba(202,138,4,0.12); }
+  .theme-purple { --accent: #7c3aed; --accent-soft: rgba(124,58,237,0.12); }
+  .theme-orange { --accent: #ea580c; --accent-soft: rgba(234,88,12,0.12); }
+  .theme-sky { --accent: #0284c7; --accent-soft: rgba(2,132,199,0.12); }
+  .theme-red { --accent: #dc2626; --accent-soft: rgba(220,38,38,0.10); }
+  .theme-emerald { --accent: #059669; --accent-soft: rgba(5,150,105,0.12); }
+  .theme-amber { --accent: #d97706; --accent-soft: rgba(217,119,6,0.12); }
+
   @media (min-width: 768px) {
-    .page-wrapper {
-      padding-bottom: 4rem;
+    .home-premium-wrapper {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+
+    .home-grid-premium {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.25rem;
     }
   }
 
+  @media (min-width: 1180px) {
+    .home-grid-premium {
+      gap: 1.45rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .home-premium-wrapper {
+      padding: 5.4rem 0.9rem 4.5rem;
+    }
+
+    .home-hero-premium {
+      border-radius: 1.55rem;
+      padding: 1.55rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .home-title {
+      font-size: 2.1rem;
+    }
+
+    .home-subtitle {
+      font-size: 0.92rem;
+      line-height: 1.45;
+      margin-top: 0.75rem;
+    }
+
+    .home-grid-premium {
+      gap: 0.75rem;
+    }
+
+    .home-category-card {
+      min-height: 11.8rem;
+      border-radius: 1.25rem;
+      padding: 1rem 0.75rem;
+    }
+
+    .home-category-emoji {
+      width: 3.35rem;
+      height: 3.35rem;
+      border-radius: 1.1rem;
+      font-size: 1.75rem;
+    }
+
+    .home-category-title {
+      font-size: 0.92rem;
+    }
+
+    .home-category-text {
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
+    .home-category-cta {
+      display: none;
+    }
+  }
 </style>
 
-<h1 class="text-3xl font-bold text-center mb-8 text-gray-800 tracking-tight mt-6 sm:mt-8">
-  Benvenuto su <span class="text-blue-600">{{ brand_name }}</span>
-</h1>
+<div class="home-premium-wrapper">
 
-<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+  <section class="home-hero-premium">
+    <div class="home-hero-inner">
+      <div class="home-eyebrow">✨ Servizi locali di fiducia</div>
 
-  {% set categorie = [
-    {"emoji": "🧘", "nome": "Operatori Benessere", "colore": "blue", "descrizione": "Servizi e Trattamenti orientati al Benessere e alla Cura.", "link": "operatori%20benessere"},
-    {"emoji": "👶", "nome": "Babysitter", "colore": "pink", "descrizione": "Servizi affidabili per la cura dei più piccoli, anche occasionali.", "link": "babysitter"},
-    {"emoji": "🐾", "nome": "Pet-Sitter", "colore": "green", "descrizione": "Assistenza per cani, gatti e altri animali domestici.", "link": "petsitter"},
-    {"emoji": "🧓", "nome": "Caregiver", "colore": "yellow", "descrizione": "Supporto e compagnia per anziani o persone fragili.", "link": "caregiver"},
-    {"emoji": "📚", "nome": "Ripetizioni", "colore": "purple", "descrizione": "Lezioni private e sostegno scolastico in varie materie.", "link": "ripetizioni"},
-    {"emoji": "🏠", "nome": "Aiuto in Casa", "colore": "orange", "descrizione": "Pulizie, spesa, stiro, babysitting occasionale e altro.", "link": "aiuto%20in%20casa"},
-    {"emoji": "🥾⚽🚴", "nome": "Escursioni & Sport", "colore": "sky", "descrizione": "Compagni per allenamenti, passeggiate o attività outdoor.", "link": "escursioni%20%26%20sport"},
-    {"emoji": "🎭🎶", "nome": "Biglietti Spettacoli", "colore": "red", "descrizione": "Scambio o acquisto di biglietti per concerti ed eventi.", "link": "biglietti%20spettacoli"},
-    {"emoji": "📖", "nome": "Libri Scuola", "colore": "emerald", "descrizione": "Libri scolastici usati e materiale didattico.", "link": "libri%20scuola"},
-    {"emoji": "☕", "nome": "Caffè & Parole", "colore": "amber", "descrizione": "Incontra persone per praticare le lingue e scambiare idee davanti a un caffè, anche online.", "link": "caffe-parole"}
-    ] %}
+      <h1 class="home-title">
+        Benvenuto su <span>{{ brand_name }}</span>
+      </h1>
 
-  {% for c in categorie %}
-    <a href="/cerca?categoria={{ c.link }}"
-     class="group relative overflow-hidden bg-white rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg
-            transition-all duration-300 border border-gray-100 hover:border-{{ c.colore }}-300 hover:-translate-y-0.5 p-4 sm:p-5">
-
-    <div class="flex flex-col items-center text-center space-y-1 sm:space-y-2 relative z-10">
-      <div class="text-3xl sm:text-4xl md:text-5xl mb-1 sm:mb-2 transition-transform duration-300 group-hover:scale-125 tracking-tight">
-        {{ c.emoji }}
-      </div>
-      <h2 class="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-{{ c.colore }}-600 transition-colors duration-200 leading-snug">
-          {{ c.nome }}
-      </h2>
-      <p class="text-xs sm:text-sm text-gray-500 leading-snug">
-        {{ c.descrizione }}
+      <p class="home-subtitle">
+        Trova persone, servizi e opportunità vicino a te con un’esperienza semplice, curata e affidabile.
       </p>
     </div>
+  </section>
 
-    <div class="absolute inset-0 bg-{{ c.colore }}-50 opacity-0 group-hover:opacity-50 transition-opacity duration-300 rounded-xl sm:rounded-2xl"></div>
-  </a>
-  {% endfor %}
+  <div class="home-grid-premium">
+    {% set categorie = [
+      {"emoji": "🧘", "nome": "Operatori Benessere", "colore": "blue", "descrizione": "Servizi e trattamenti orientati al benessere e alla cura.", "link": "operatori%20benessere"},
+      {"emoji": "👶", "nome": "Babysitter", "colore": "pink", "descrizione": "Servizi affidabili per la cura dei più piccoli, anche occasionali.", "link": "babysitter"},
+      {"emoji": "🐾", "nome": "Pet-Sitter", "colore": "green", "descrizione": "Assistenza per cani, gatti e altri animali domestici.", "link": "petsitter"},
+      {"emoji": "🧓", "nome": "Caregiver", "colore": "yellow", "descrizione": "Supporto e compagnia per anziani o persone fragili.", "link": "caregiver"},
+      {"emoji": "📚", "nome": "Ripetizioni", "colore": "purple", "descrizione": "Lezioni private e sostegno scolastico in varie materie.", "link": "ripetizioni"},
+      {"emoji": "🏠", "nome": "Aiuto in Casa", "colore": "orange", "descrizione": "Pulizie, spesa, stiro, babysitting occasionale e altro.", "link": "aiuto%20in%20casa"},
+      {"emoji": "🥾⚽🚴", "nome": "Escursioni & Sport", "colore": "sky", "descrizione": "Compagni per allenamenti, passeggiate o attività outdoor.", "link": "escursioni%20%26%20sport"},
+      {"emoji": "🎭🎶", "nome": "Biglietti Spettacoli", "colore": "red", "descrizione": "Scambio o acquisto di biglietti per concerti ed eventi.", "link": "biglietti%20spettacoli"},
+      {"emoji": "📖", "nome": "Libri Scuola", "colore": "emerald", "descrizione": "Libri scolastici usati e materiale didattico.", "link": "libri%20scuola"},
+      {"emoji": "☕", "nome": "Caffè & Parole", "colore": "amber", "descrizione": "Incontra persone per praticare le lingue e scambiare idee davanti a un caffè.", "link": "caffe-parole"}
+    ] %}
+
+    {% for c in categorie %}
+      <a href="/cerca?categoria={{ c.link }}"
+         class="home-category-card theme-{{ c.colore }}">
+        <div class="home-category-content">
+          <div class="home-category-emoji">{{ c.emoji }}</div>
+          <h2 class="home-category-title">{{ c.nome }}</h2>
+          <p class="home-category-text">{{ c.descrizione }}</p>
+          <div class="home-category-cta">Esplora →</div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
 
 </div>
-</div>
+
 {% endblock %}
