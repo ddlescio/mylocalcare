@@ -1072,166 +1072,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* 🚫 Niente override sulle card — restano quelle originali di Tailwind */
 </style>
-<style>
-/* 🌿 RESET BASE */
-html, body {
-  margin: 0;
-  padding: 0;
-  background: #f8fafc !important;
-  background-image: none !important;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  color: #1e293b;
-}
-
-/* Riduci leggermente il padding top sotto la navbar */
-.pt-20 {
-  padding-top: 4.2rem !important;
-}
-
-/* 💎 CARD — Effetto vetro perlato avanzato e coerente */
-
-.grid a.group {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-  background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(245,247,252,0.85));
-  backdrop-filter: blur(14px) saturate(160%);
-  border: 1px solid rgba(220, 230, 255, 0.8);
-  border-radius: 1rem;
-  box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.04),
-    0 8px 18px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transition: all 0.35s ease;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* ✨ Micro texture perlata */
-.grid a.group::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    125deg,
-    rgba(255,255,255,0.4) 0%,
-    rgba(255,255,255,0.15) 25%,
-    rgba(255,255,255,0.25) 50%,
-    rgba(255,255,255,0.05) 75%,
-    transparent 100%
-  );
-  mix-blend-mode: soft-light;
-  opacity: 0.7;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-.grid a.group:hover::before { opacity: 1; }
-
-/* 💡 Luce direzionale */
-.grid a.group::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle at top left, rgba(255,255,255,0.8) 0%, transparent 70%);
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-/* 🪩 Hover raffinato */
-.grid a.group:hover {
-  transform: translateY(-3px);
-  background: linear-gradient(160deg, rgba(255,255,255,0.96), rgba(240,243,255,0.92));
-  border-color: rgba(180,200,255,0.9);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.08),
-    0 10px 26px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
-}
-
-/* 🪶 Tipografia */
-.grid a.group h2 {
-  color: #1e293b;
-  font-weight: 600;
-  margin-bottom: 0.4rem;
-}
-.grid a.group p {
-  color: #475569;
-  font-size: 0.93rem;
-}
-.grid a.group span {
-  font-size: 1.6rem;
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-/* 🌙 Dark mode */
-@media (prefers-color-scheme: dark) {
-  .grid a.group {
-    background: linear-gradient(150deg, rgba(30,31,34,0.85), rgba(45,47,50,0.75));
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow:
-      0 3px 8px rgba(0,0,0,0.6),
-      inset 0 1px 0 rgba(255,255,255,0.05);
-  }
-  .grid a.group::before {
-    background: linear-gradient(
-      125deg,
-      rgba(255,255,255,0.1) 0%,
-      rgba(255,255,255,0.03) 50%,
-      transparent 100%
-    );
-  }
-  .grid a.group h2 { color: #f1f5f9; }
-  .grid a.group p  { color: #cbd5e1; }
-}
-
-/* 📱 Effetto pressione naturale su mobile */
-@media (hover: none) and (pointer: coarse) {
-  .grid a.group:active {
-    transform: scale(0.97);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.1),
-      0 2px 4px rgba(0, 0, 0, 0.08),
-      inset 0 1px 1px rgba(255, 255, 255, 0.6);
-    transition: transform 0.05s ease, box-shadow 0.05s ease;
-  }
-}
-
-/* 🔹 Correzione residuo blu sopra la navbar (Safari/iOS) */
-nav::before {
-  content: none !important;
-  background: none !important;
-  border: none !important;
-}
-</style>
-<style>
-/* ✅ Layout coerente e responsivo per la homepage */
-body.home .grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  justify-content: center;
-  align-items: start;
-}
-
-@media (min-width: 768px) {
-  body.home .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.25rem;
-  }
-}
-
-body.home .grid a.group {
-  max-width: 100%;
-  min-height: 150px;
-  padding: 1.25rem;
-  transition: all 0.25s ease;
-}
-</style>
 
 <style>
 footer {
@@ -1645,6 +1485,194 @@ body[data-chat="true"] #mobile-search-container {
   }
 }
 </style>
+<style>
+/* =========================================================
+   ✨ NAVBAR PREMIUM FINAL — MyLocalCare
+   Solo estetica. Non modifica struttura, JS o comportamento.
+========================================================= */
+
+nav {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.86)) !important;
+  backdrop-filter: blur(18px) saturate(165%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(165%) !important;
+  border-bottom: 1px solid rgba(226,232,240,0.78) !important;
+  box-shadow:
+    0 10px 30px rgba(15,23,42,0.055),
+    inset 0 1px 0 rgba(255,255,255,0.92) !important;
+  isolation: isolate !important;
+  z-index: 10000 !important;
+  overflow: visible !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Contenitore navbar più compatto e ordinato */
+nav .max-w-7xl {
+  gap: 1rem !important;
+}
+
+/* Logo più integrato nella UI */
+.logo-wrapper {
+  border-radius: 9999px;
+  padding: 0.22rem 0.45rem 0.22rem 0.12rem;
+  transition:
+    background .18s ease,
+    transform .18s ease,
+    filter .18s ease;
+}
+
+.logo-wrapper:hover {
+  background: rgba(239,246,255,0.68);
+  transform: translateY(-1px);
+}
+
+.logo-wrapper img {
+  margin-right: -2px;
+  filter: drop-shadow(0 5px 8px rgba(37,99,235,0.10));
+}
+
+.logo-wrapper span {
+  letter-spacing: -0.045em;
+}
+
+/* Icone navbar come micro-pulsanti premium */
+nav .icon-hover {
+  width: 2.35rem;
+  height: 2.35rem;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.76), rgba(248,250,252,0.58));
+  border: 1px solid rgba(226,232,240,0.82);
+  box-shadow:
+    0 7px 16px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  transition:
+    transform .16s ease,
+    background .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease;
+}
+
+nav .icon-hover:hover {
+  transform: translateY(-1px) scale(1.04);
+  background:
+    linear-gradient(180deg, rgba(239,246,255,0.98), rgba(255,255,255,0.76));
+  border-color: rgba(147,197,253,0.78);
+  box-shadow:
+    0 10px 20px rgba(37,99,235,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+/* Badge notifiche più curato */
+nav .badge-pop {
+  min-width: 1.05rem;
+  height: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.28rem !important;
+  border: 2px solid rgba(255,255,255,0.96);
+  box-shadow:
+    0 5px 12px rgba(220,38,38,0.24),
+    inset 0 1px 0 rgba(255,255,255,0.32);
+}
+
+/* Avatar coerente con le icone */
+nav .user-info img {
+  border: 1px solid rgba(226,232,240,0.95) !important;
+  box-shadow:
+    0 7px 16px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+/* Username meno pesante */
+nav .username-link {
+  color: #334155 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em;
+}
+
+/* Hamburger allineato al linguaggio premium */
+#nav-toggle {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.76), rgba(248,250,252,0.58));
+  border: 1px solid rgba(226,232,240,0.82);
+  box-shadow:
+    0 7px 16px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  font-size: 1.45rem !important;
+  line-height: 1;
+  transition:
+    transform .16s ease,
+    background .16s ease,
+    border-color .16s ease;
+}
+
+#nav-toggle:hover {
+  transform: translateY(-1px);
+  background:
+    linear-gradient(180deg, rgba(239,246,255,0.98), rgba(255,255,255,0.76));
+  border-color: rgba(147,197,253,0.78);
+}
+
+/* Menu mobile più coerente con navbar */
+#nav-menu {
+  background: rgba(255,255,255,0.94) !important;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-top: 1px solid rgba(226,232,240,0.72) !important;
+  box-shadow:
+    0 18px 38px rgba(15,23,42,0.09),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+/* Su tablet/mobile alleggerisce la navbar: resta avatar, sparisce username */
+@media (max-width: 900px) {
+  nav .user-info .username-link {
+    display: none !important;
+  }
+
+  nav .flex.items-center.gap-4 {
+    gap: 0.48rem !important;
+  }
+
+  nav .max-w-7xl {
+    gap: 0.7rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-wrapper {
+    margin-left: -4px !important;
+  }
+
+  .logo-wrapper span {
+    font-size: 1.22rem !important;
+  }
+
+  nav .icon-hover {
+    width: 2.12rem;
+    height: 2.12rem;
+  }
+
+  #nav-toggle {
+    width: 2.18rem;
+    height: 2.18rem;
+    font-size: 1.35rem !important;
+  }
+}
+</style>
+
 <!-- 🔒 Footer legale Iubenda -->
 <footer class="mt-16 md:mt-10 py-6 text-center text-sm text-gray-500 border-t bg-white space-x-6">
 
