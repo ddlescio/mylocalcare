@@ -4947,6 +4947,10 @@ def dashboard():
     # Calcoli recensioni
     media, totale = calcola_media_recensioni(utente['id'])
 
+    # 🔹 Carica recensioni ricevute e scritte per la tab "Recensioni"
+    recensioni_ricevute = get_recensioni_utente(utente['id'])
+    recensioni_scritte = get_recensioni_scritte(utente['id'])
+
     # 🔹 Carica gli annunci dell'utente loggato
     conn = get_db_connection()
 
@@ -4969,9 +4973,12 @@ def dashboard():
         annunci=annunci,
         media_recensioni=media,
         totale_recensioni=totale,
+        recensioni_ricevute=recensioni_ricevute,
+        recensioni_scritte=recensioni_scritte,
         pubblico=False,
         page="profilo"
     )
+
 # --- Aggiorna INFO (tab) ---
 @app.route("/utente/update_info", methods=["POST"])
 @login_required
@@ -7187,7 +7194,7 @@ def apri_notifica(id):
         WHERE id = ? AND id_utente = ?
     """), (id, g.utente["id"]))
     conn.commit()
-    
+
 
     # 🔔 aggiorna il badge
     emit_update_notifications(g.utente["id"])
