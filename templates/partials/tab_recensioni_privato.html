@@ -1,7 +1,8 @@
 <!-- TAB RECENSIONI PRIVATO -->
 <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
 
-  {% set tot_ricevute = recensioni_ricevute|length if recensioni_ricevute else 0 %}
+  {% set tot_ricevute_lista = recensioni_ricevute|length if recensioni_ricevute else 0 %}
+  {% set tot_ricevute = tot_ricevute_lista if tot_ricevute_lista > 0 else totale_recensioni|default(0) %}
   {% set tot_scritte = recensioni_scritte|length if recensioni_scritte else 0 %}
 
   <div class="flex items-center justify-between mb-4">
@@ -84,9 +85,14 @@
         </div>
       </div>
     {% endif %}
-  {% else %}
-    <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-sm text-gray-500">
-      Non hai ancora recensioni ricevute o scritte.
-    </div>
-  {% endif %}
+    {% else %}
+      <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-sm text-gray-500">
+        {% if tot_ricevute > 0 or tot_scritte > 0 %}
+          Hai recensioni registrate, ma il dettaglio non è disponibile in questa scheda.
+          Usa i pulsanti <strong>Ricevute</strong> o <strong>Scritte</strong> per visualizzarle.
+        {% else %}
+          Non hai ancora recensioni ricevute o scritte.
+        {% endif %}
+      </div>
+    {% endif %}  
 </div>
