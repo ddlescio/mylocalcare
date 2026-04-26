@@ -1,18 +1,42 @@
 <!-- TAB RECENSIONI PRIVATO -->
 <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
 
+  {% set tot_ricevute = recensioni_ricevute|length if recensioni_ricevute else 0 %}
+  {% set tot_scritte = recensioni_scritte|length if recensioni_scritte else 0 %}
+
   <div class="flex items-center justify-between mb-4">
-    <h3 class="text-base font-semibold text-gray-800">Le mie recensioni</h3>
+    <div>
+      <h3 class="text-base font-semibold text-gray-800">Le mie recensioni</h3>
+
+      <p class="mt-1 text-sm text-gray-500">
+        {% if tot_ricevute > 0 or tot_scritte > 0 %}
+          Hai ricevuto
+          <span class="font-semibold text-blue-700">{{ tot_ricevute }}</span>
+          recension{{ 'e' if tot_ricevute == 1 else 'i' }}
+          e ne hai scritt{{ 'a' if tot_scritte == 1 else 'e' }}
+          <span class="font-semibold text-blue-700">{{ tot_scritte }}</span>.
+        {% else %}
+          Non hai ancora recensioni ricevute o scritte.
+        {% endif %}
+      </p>
+    </div>
   </div>
 
   <div class="flex flex-wrap gap-3 mb-6">
     <a href="{{ url_for('mie_recensioni_ricevute') }}"
        class="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
        📥 Ricevute
+       <span class="ml-1 text-xs font-semibold bg-white/80 border border-blue-100 rounded-full px-2 py-0.5">
+         {{ tot_ricevute }}
+       </span>
     </a>
+
     <a href="{{ url_for('mie_recensioni') }}"
        class="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
        ✍️ Scritte
+       <span class="ml-1 text-xs font-semibold bg-white/80 border border-blue-100 rounded-full px-2 py-0.5">
+         {{ tot_scritte }}
+       </span>
     </a>
   </div>
 
@@ -61,6 +85,8 @@
       </div>
     {% endif %}
   {% else %}
-    <p class="text-gray-500">Non hai ancora recensioni scritte o ricevute.</p>
+    <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-sm text-gray-500">
+      Non hai ancora recensioni ricevute o scritte.
+    </div>
   {% endif %}
 </div>
