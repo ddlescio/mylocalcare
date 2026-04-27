@@ -62,7 +62,7 @@
       background-image: url("{{ url_for('static', filename='img/sfondo_card_hero_desktop.png') }}");
     }
   }
-    
+
   .home-hero-premium .home-hero-bg::after {
     content: "";
     position: absolute;
@@ -303,10 +303,28 @@
 
     .home-grid-premium {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 1.25rem;
+      gap: 1.35rem;
+    }
+
+    .home-category-card {
+      min-height: 14.4rem;
+      padding: 1.65rem 1.25rem;
+    }
+
+    .home-category-content {
+      gap: 0.78rem;
+    }
+
+    .home-category-title {
+      font-size: 1.15rem;
+    }
+
+    .home-category-text {
+      font-size: 0.96rem;
+      line-height: 1.42;
     }
   }
-
+  
   @media (min-width: 1180px) {
     .home-grid-premium {
       gap: 1.45rem;
