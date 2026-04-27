@@ -1795,12 +1795,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const attivaTab = (key) => {
     tabs.forEach(b => {
       const attivo = b.dataset.tab === key;
+
       b.classList.toggle("active", attivo);
       b.classList.toggle("bg-blue-600", attivo);
       b.classList.toggle("text-white", attivo);
       b.classList.toggle("text-gray-600", !attivo);
       b.classList.toggle("hover:text-blue-700", !attivo);
       b.classList.toggle("hover:bg-blue-50", !attivo);
+
+      const underline = b.querySelector(".tab-underline");
+      if (underline) {
+        underline.classList.toggle("w-2/3", attivo);
+        underline.classList.toggle("opacity-100", attivo);
+        underline.classList.toggle("w-0", !attivo);
+        underline.classList.toggle("opacity-0", !attivo);
+      }
     });
 
     panes.forEach(p => {
@@ -1808,23 +1817,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // 🔹 Quando clicchi una tab → salvi quale è attiva
+  // 🔹 Elimina eventuale memoria salvata in precedenza
+  localStorage.removeItem("ultima_tab_profilo");
+
+  // 🔹 Al caricamento del profilo apre sempre la prima tab: Annunci
+  attivaTab("annunci");
+
+  // 🔹 Cambio tab solo durante la navigazione corrente, senza salvarla
   tabs.forEach(btn => {
     btn.addEventListener("click", () => {
-      const key = btn.dataset.tab;
-      attivaTab(key);
-      localStorage.setItem("ultima_tab_profilo", key);
+      attivaTab(btn.dataset.tab);
     });
   });
-
-  // 🔹 Ripristina la tab corretta dopo refresh
-  const salvata = localStorage.getItem("ultima_tab_profilo");
-  if (salvata) {
-    attivaTab(salvata);
-  }
 });
 </script>
-
 <script>
   document.addEventListener("DOMContentLoaded", () => {
 
