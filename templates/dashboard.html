@@ -15,32 +15,14 @@
       <!-- COPERTINA -->
       <div id="copertina-wrapper" class="hero-cover-wrap">
         <div id="copertina" class="hero-cover-card">
-          {% if utente.get('copertina') %}
-            <!-- Copertina caricata dall'utente: sfondo blur + immagine intera -->
-            <div class="cover-user-frame">
-              <img
-                src="{{ url_for('static', filename=utente.get('copertina')) }}"
-                alt=""
-                class="cover-user-bg"
-                aria-hidden="true"
-              >
+          {% set ha_copertina_utente = utente.get('copertina') %}
 
-              <img
-                id="copertina-img"
-                src="{{ url_for('static', filename=utente.get('copertina')) }}"
-                alt="Copertina"
-                class="cover-user-img"
-              >
-            </div>
-          {% else %}
-            <!-- Copertina default MyLocalCare -->
-            <img
-              id="copertina-img"
-              src="{{ url_for('static', filename='img/copertina_default_localcare.png') }}"
-              alt="Copertina"
-              class="cover-default-img"
-            />
-          {% endif %}
+          <img
+            id="copertina-img"
+            src="{{ url_for('static', filename=(ha_copertina_utente or 'img/copertina_default_localcare.png')) }}"
+            alt="Copertina"
+            class="profilo-cover-img {% if ha_copertina_utente %}cover-user-img{% else %}cover-default-img{% endif %}"
+          />
 
           {% if not pubblico %}
           <!-- MENU COPERTINA (centrato) -->
@@ -1065,86 +1047,36 @@
   }
 
   /* ============================================================
-     COPERTINA PROFILO — DEFAULT + IMMAGINI UTENTE
+     COPERTINA PROFILO — BANNER PIENO
      ============================================================ */
 
-  /* Default MyLocalCare: immagine ottimizzata come banner */
+  .profilo-cover-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Default MyLocalCare: teniamo logo e grafiche più in alto */
   .cover-default-img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center 34%;
+    object-position: center 30%;
   }
 
-  /* Immagini caricate dall'utente: niente taglio aggressivo */
-  .cover-user-frame {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #eef4ff;
-  }
-
-  /* Sfondo sfocato riempitivo */
-  .cover-user-bg {
-    position: absolute;
-    inset: -18px;
-    width: calc(100% + 36px);
-    height: calc(100% + 36px);
-    object-fit: cover;
-    object-position: center center;
-    filter: blur(18px);
-    transform: scale(1.08);
-    opacity: 0.58;
-  }
-
-  /* Immagine reale: visibile per intero */
+  /* Foto caricate dagli utenti: comportamento da vera cover */
   .cover-user-img {
-    position: relative;
-    z-index: 2;
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center center;
-  }
-
-  /* Leggero velo per mantenere stile chiaro/premium */
-  .cover-user-frame::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255,255,255,0.10) 0%,
-        rgba(255,255,255,0.02) 45%,
-        rgba(255,255,255,0.16) 100%
-      );
-    pointer-events: none;
+    object-position: center 38%;
   }
 
   @media (max-width: 640px) {
     .cover-default-img {
-      object-position: center 28%;
-    }
-
-    .cover-user-bg {
-      inset: -14px;
-      width: calc(100% + 28px);
-      height: calc(100% + 28px);
-      filter: blur(14px);
-      transform: scale(1.06);
+      object-position: center 26%;
     }
 
     .cover-user-img {
-      object-fit: contain;
-      object-position: center center;
+      object-position: center 34%;
     }
   }
-  
+    
   .hero-cover-card::after {
     content: "";
     position: absolute;
