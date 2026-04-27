@@ -1047,44 +1047,35 @@
   }
 
   /* ============================================================
-     COPERTINA PROFILO — DEFAULT + FOTO UTENTE
+     COPERTINA PROFILO — BANNER PIENO
      ============================================================ */
 
   .profilo-cover-img {
     display: block;
     width: 100%;
     height: 100%;
-  }
-
-  /*
-     Default MyLocalCare:
-     deve vedersi tutta, perché contiene logo/testo/grafiche.
-  */
-  .cover-default-img {
-    object-fit: contain;
-    object-position: center center;
-    background: #eef6ff;
-  }
-
-  /*
-     Foto caricate dagli utenti:
-     devono comportarsi come una vera copertina.
-  */
-  .cover-user-img {
     object-fit: cover;
+  }
+
+  /* Default MyLocalCare: teniamo logo e grafiche più in alto */
+  .cover-default-img {
+    object-position: center 30%;
+  }
+
+  /* Foto caricate dagli utenti: comportamento da vera cover */
+  .cover-user-img {
     object-position: center 38%;
   }
 
   @media (max-width: 640px) {
     .cover-default-img {
-      object-fit: cover;
-      object-position: center 30%;
+      object-position: center 26%;
     }
 
     .cover-user-img {
       object-position: center 34%;
     }
-  }  
+  }
 
   .hero-cover-card::after {
     content: "";
