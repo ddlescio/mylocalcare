@@ -14,8 +14,9 @@
 
       <!-- COPERTINA -->
       <div id="copertina-wrapper" class="hero-cover-wrap">
-        <div id="copertina" class="hero-cover-card">
-          {% set ha_copertina_utente = utente.get('copertina') %}
+        {% set ha_copertina_utente = utente.get('copertina') %}
+
+        <div id="copertina" class="hero-cover-card {% if not ha_copertina_utente %}hero-cover-card-default{% endif %}">
 
           {% if ha_copertina_utente %}
             <img
@@ -1062,6 +1063,11 @@
       0 28px 60px rgba(15, 23, 42, 0.10);
   }
 
+  @media (min-width: 641px) {
+    .hero-cover-card-default {
+      aspect-ratio: 5 / 2;
+    }
+  }
   /* ============================================================
      COPERTINA PROFILO — BANNER PIENO
      ============================================================ */
@@ -1078,7 +1084,7 @@
     width: 100%;
     height: 100%;
   }
-  
+
   /* Default MyLocalCare: teniamo logo e grafiche più in alto */
   .cover-default-img {
     object-position: center 30%;
