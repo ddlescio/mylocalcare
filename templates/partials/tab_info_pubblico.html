@@ -7,7 +7,6 @@
     <aside class="info-sidebar">
       <nav class="info-sidebar-nav space-y-1">
         {% set sezioni = {
-          'overview': 'Informazioni di base',
           'work_education': 'Esperienze e formazione',
           'contacts': 'Contatti',
           'description': 'Chi sono'
@@ -25,53 +24,6 @@
 
     <!-- 🔹 COLONNA DESTRA: contenuto -->
     <main class="md:col-span-2" id="info-content">
-
-      <!-- ✅ INFO DI BASE -->
-      <section data-section="overview" class="info-card">
-        <div class="info-card-head">
-          <h4 class="info-card-title">Informazioni di base</h4>
-          <p class="info-card-sub">Dettagli rapidi per capire subito chi è {{ utente['username'] }}.</p>
-        </div>
-
-        {% set lingue = utente.get('lingue')|default('', true)|trim %}
-        {% set frase = utente.get('frase')|default('', true)|trim %}
-
-        <div class="info-grid">
-
-          {# 🔹 CITTÀ — sempre presente (obbligatoria) #}
-          <div class="info-row">
-            <div class="info-ico">📍</div>
-            <div class="info-txt">
-              <div class="info-label">Città</div>
-              <div class="info-value">{{ utente.get('citta') }}</div>
-            </div>
-          </div>
-
-          {# 🔹 LINGUE — solo se presenti #}
-          {% if lingue %}
-          <div class="info-row">
-            <div class="info-ico">🗣️</div>
-            <div class="info-txt">
-              <div class="info-label">Lingue parlate</div>
-              <div class="info-value">{{ lingue }}</div>
-            </div>
-          </div>
-          {% endif %}
-
-          {# 🔹 FRASE PERSONALE — solo se presente #}
-          {% if frase %}
-          <div class="info-row info-row-full">
-            <div class="info-ico">💬</div>
-            <div class="info-txt">
-              <div class="info-label">Frase personale</div>
-              <div class="info-quote">“{{ frase }}”</div>
-            </div>
-          </div>
-          {% endif %}
-
-        </div>
-      </section>
-
 
       <!-- ✅ ESPERIENZE / FORMAZIONE -->
       <section data-section="work_education" class="info-card hidden">
@@ -444,6 +396,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   sectionBtns.forEach(btn => btn.addEventListener("click", () => mostraSezione(btn.dataset.section)));
-  mostraSezione("overview");
+  mostraSezione("work_education");
 });
 </script>
