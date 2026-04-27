@@ -1057,9 +1057,9 @@
     object-fit: cover;
   }
 
-  /* Default MyLocalCare: teniamo logo e grafiche più in alto */
+  /* Default MyLocalCare: agganciata al bordo alto del riquadro */
   .cover-default-img {
-    object-position: center 30%;
+    object-position: center top;
   }
 
   /* Foto caricate dagli utenti: comportamento da vera cover */
@@ -1069,14 +1069,14 @@
 
   @media (max-width: 640px) {
     .cover-default-img {
-      object-position: center 26%;
+      object-position: center top;
     }
 
     .cover-user-img {
       object-position: center 34%;
     }
   }
-
+  
   .hero-cover-card::after {
     content: "";
     position: absolute;
