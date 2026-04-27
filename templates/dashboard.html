@@ -17,12 +17,28 @@
         <div id="copertina" class="hero-cover-card">
           {% set ha_copertina_utente = utente.get('copertina') %}
 
-          <img
-            id="copertina-img"
-            src="{{ url_for('static', filename=(ha_copertina_utente or 'img/copertina_default_localcare.png')) }}"
-            alt="Copertina"
-            class="profilo-cover-img {% if ha_copertina_utente %}cover-user-img{% else %}cover-default-img{% endif %}"
-          />
+          {% if ha_copertina_utente %}
+            <img
+              id="copertina-img"
+              src="{{ url_for('static', filename=ha_copertina_utente) }}"
+              alt="Copertina"
+              class="profilo-cover-img cover-user-img"
+            />
+          {% else %}
+            <picture>
+              <source
+                media="(min-width: 641px)"
+                srcset="{{ url_for('static', filename='img/copertina_default_localcare_desktop.png') }}"
+              >
+
+              <img
+                id="copertina-img"
+                src="{{ url_for('static', filename='img/copertina_default_localcare.png') }}"
+                alt="Copertina"
+                class="profilo-cover-img cover-default-img"
+              />
+            </picture>
+          {% endif %}
 
           {% if not pubblico %}
           <!-- MENU COPERTINA (centrato) -->
@@ -1057,6 +1073,12 @@
     object-fit: cover;
   }
 
+  .hero-cover-card picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  
   /* Default MyLocalCare: teniamo logo e grafiche più in alto */
   .cover-default-img {
     object-position: center 30%;
