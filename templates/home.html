@@ -56,7 +56,13 @@
     pointer-events: none;
     z-index: 0;
   }
-  
+
+  @media (min-width: 768px) {
+    .home-hero-premium .home-hero-bg {
+      background-image: url("{{ url_for('static', filename='img/sfondo_card_hero_desktop.png') }}");
+    }
+  }
+    
   .home-hero-premium .home-hero-bg::after {
     content: "";
     position: absolute;
