@@ -130,7 +130,15 @@
 
           <!-- 🔹 Frase personale -->
           <div class="form-box">
-            <label class="label-strong">Frase personale</label>
+            <label class="label-strong">La tua frase</label>
+
+            {% if not pubblico %}
+              <p class="text-xs text-gray-500 mt-1 mb-2 leading-relaxed">
+                Sarà una delle prime cose che gli altri vedranno sul tuo profilo.
+                Puoi scrivere una frase che ti racconta, una citazione, una frase di una canzone
+                o qualcosa che ti rappresenta.
+              </p>
+            {% endif %}
 
             <input
               type="hidden"
@@ -147,19 +155,19 @@
               maxlength="120"
               rows="3"
               style="resize:none; min-height: 70px;"
-              placeholder="{% if not pubblico %}Es. Amo aiutare le persone.. prendermi cura degli animali.. sono un tuttofare.. anni di esperienza in..{% endif %}"
+              placeholder="{% if not pubblico %}Es. “Mi piace aiutare con il sorriso” oppure “It's only rock and roll but I like it”{% endif %}"
               {% if pubblico %}disabled{% endif %}>{{ utente.get('frase') or '' }}</textarea>
-
-            {% if not pubblico %}
-            <p class="text-xs text-gray-500 mt-1">Facoltativo (max 120 caratteri)</p>
-            {% endif %}
           </div>
 
           {% if not pubblico %}
           <!-- 🔹 Attività LocalCare -->
           <div class="form-box">
-            <label class="label-strong">Attività su LocalCare</label>
-            <p class="text-xs text-gray-500 mb-3">Seleziona in quali ambiti offri o cerchi aiuto.</p>
+            <label class="label-strong">Cosa offri o cerchi?</label>
+
+            <p class="text-xs text-gray-500 mt-1 mb-3 leading-relaxed">
+              ✨ Dicci cosa offri e cosa cerchi: così MyLocalCare può avvisarti quando trova persone
+              o annunci che possono interessarti nella tua zona.
+            </p>
 
             {% set categorie = [
               'Operatori benessere',
@@ -1577,7 +1585,7 @@
       padding: 0.32rem 0.72rem !important;
       font-size: 0.78rem !important;
       min-width: 0 !important;
-    }    
+    }
   }
 </style>
 <style>
