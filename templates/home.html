@@ -104,12 +104,14 @@
     padding: 1.35rem 1rem;
     text-decoration: none;
     background:
-      linear-gradient(160deg, rgba(255,255,255,0.88), rgba(248,250,252,0.62));
-    border: 1px solid rgba(255,255,255,0.84);
+      radial-gradient(circle at 50% -8%, var(--accent-soft), transparent 58%),
+      linear-gradient(160deg, rgba(255,255,255,0.96), rgba(248,250,252,0.76));
+    border: 1px solid rgba(255,255,255,0.92);
     box-shadow:
-      0 16px 38px rgba(15,23,42,0.065),
-      0 1px 0 rgba(255,255,255,0.86) inset,
-      0 0 0 1px rgba(226,232,240,0.46) inset;
+      0 20px 46px rgba(15,23,42,0.105),
+      0 6px 16px rgba(15,23,42,0.045),
+      0 1px 0 rgba(255,255,255,0.95) inset,
+      0 0 0 1px color-mix(in srgb, var(--accent) 13%, rgba(226,232,240,0.55)) inset;
     backdrop-filter: blur(14px) saturate(145%);
     -webkit-backdrop-filter: blur(14px) saturate(145%);
     transition:
@@ -124,9 +126,9 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at 50% 0%, var(--accent-soft), transparent 46%),
-      linear-gradient(120deg, rgba(255,255,255,0.50), rgba(255,255,255,0.08) 42%, transparent 72%);
-    opacity: 0.9;
+      radial-gradient(circle at 50% 0%, var(--accent-soft), transparent 44%),
+      linear-gradient(135deg, rgba(255,255,255,0.58), rgba(255,255,255,0.10) 46%, transparent 74%);
+    opacity: 1;
     pointer-events: none;
     transition: opacity .22s ease;
   }
@@ -134,16 +136,16 @@
   .home-category-card::after {
     content: "";
     position: absolute;
-    left: 1.15rem;
-    right: 1.15rem;
+    left: 0.95rem;
+    right: 0.95rem;
     bottom: 0;
-    height: 3px;
+    height: 4px;
     border-radius: 9999px 9999px 0 0;
     background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    opacity: 0.28;
+    opacity: 0.58;
     transition: opacity .22s ease, left .22s ease, right .22s ease;
   }
-
+  
   .home-category-card:hover {
     transform: translateY(-4px);
     border-color: color-mix(in srgb, var(--accent) 24%, rgba(255,255,255,0.88));
@@ -342,7 +344,7 @@
     .home-category-content {
       gap: 0.68rem;
     }
-    
+
     .home-category-emoji {
       width: auto;
       min-width: 3.75rem;
