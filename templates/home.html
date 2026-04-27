@@ -46,12 +46,13 @@
 
   .home-hero-premium .home-hero-bg {
     position: absolute;
-    inset: 0;
+    inset: -2px;
     background-image: url("{{ url_for('static', filename='img/sfondo_card_hero_milano.png') }}");
-    background-size: cover;
+    background-size: 118% auto;
     background-position: center center;
-    opacity: 0.58;
-    filter: saturate(1.08) contrast(1.02);
+    background-repeat: no-repeat;
+    opacity: 0.68;
+    filter: saturate(1.12) contrast(1.04);
     pointer-events: none;
     z-index: 0;
   }
@@ -61,10 +62,14 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at 50% 42%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.78) 30%, rgba(255,255,255,0.34) 58%, rgba(255,255,255,0.16) 100%),
-      linear-gradient(135deg, rgba(255,255,255,0.36), rgba(255,255,255,0.20));
+      radial-gradient(circle at 50% 42%,
+        rgba(255,255,255,0.90) 0%,
+        rgba(255,255,255,0.82) 30%,
+        rgba(255,255,255,0.36) 54%,
+        rgba(255,255,255,0.08) 100%
+      );
   }
-
+  
   .home-hero-premium::before {
     content: "";
     position: absolute;
@@ -311,7 +316,7 @@
     .home-grid-premium {
       width: calc(100% - 1.1rem);
     }
-    
+
     .home-hero-premium {
       border-radius: 1.55rem;
       padding: 1.45rem 0.95rem;
