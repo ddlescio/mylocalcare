@@ -106,14 +106,11 @@
 
                 <div class="notification-card-actions">
                   {% if n['letta'] == 0 %}
-                    <form method="post"
-                          action="{{ url_for('leggi_notifica', id=n['id']) }}"
-                          onsubmit="event.stopPropagation();"
-                          class="inline">
-                      <button type="submit" class="notification-inline-btn is-read">
-                        Segna letta
-                      </button>
-                    </form>
+                    <button type="button"
+                            class="notification-inline-btn is-read"
+                            onclick="event.stopPropagation(); markSingleNotificationRead({{ n['id'] }}, this);">
+                      Segna letta
+                    </button>
                   {% endif %}
 
                   <button type="button"
@@ -765,6 +762,9 @@ document.getElementById("markAllRead")?.addEventListener("click", async () => {
 
       const form = card.querySelector("form[action*='/notifiche/leggi/']");
       if (form) form.remove();
+
+      const readBtn = card.querySelector(".notification-inline-btn.is-read");
+      if (readBtn) readBtn.remove();
     });
   }
 });
@@ -780,6 +780,32 @@ document.getElementById("deleteAll")?.addEventListener("click", async () => {
       '<div class="notifications-empty-card"><p class="notifications-empty-text">Nessuna notifica.</p></div>';
   }
 });
+
+async function markSingleNotificationRead(id, button) {
+  try {
+    const resp = await fetch(`/notifiche/leggi/${id}`, {
+      method: "POST"
+    });
+
+    if (!resp.ok) {
+      alert("Errore durante l'aggiornamento della notifica.");
+      return;
+    }
+
+    const card = button.closest(".notification-card-premium");
+
+    if (card) {
+      card.classList.remove("is-unread");
+      card.classList.add("is-read");
+    }
+
+    button.remove();
+
+  } catch (err) {
+    console.error(err);
+    alert("Errore di rete.");
+  }
+}
 
 async function deleteSingleNotification(id) {
   if (!confirm("Vuoi davvero eliminare questa notifica?")) return;
