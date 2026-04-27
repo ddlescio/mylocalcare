@@ -1087,7 +1087,7 @@
         object-position: center center !important;
       }
     }
-      
+
   /* ============================================================
      COPERTINA PROFILO — BANNER PIENO
      ============================================================ */
@@ -1898,11 +1898,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // 🔹 Elimina eventuale memoria salvata in precedenza
-  localStorage.removeItem("ultima_tab_profilo");
+  // 🔹 Se arriviamo dalle pagine recensioni, riapri la tab Recensioni
+  const tabRichiesta = sessionStorage.getItem("lc_profilo_tab_da_aprire");
+  sessionStorage.removeItem("lc_profilo_tab_da_aprire");
 
-  // 🔹 Al caricamento del profilo apre sempre la prima tab: Annunci
-  attivaTab("annunci");
+  const tabIniziale =
+    tabRichiesta && document.querySelector(`.tab-btn[data-tab="${tabRichiesta}"]`)
+      ? tabRichiesta
+      : "annunci";
+
+  attivaTab(tabIniziale);
 
   // 🔹 Cambio tab solo durante la navigazione corrente, senza salvarla
   tabs.forEach(btn => {

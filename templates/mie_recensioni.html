@@ -7,7 +7,9 @@
   <div class="reviews-page-card">
 
     <div class="reviews-topbar">
-      <a href="javascript:history.back()" class="reviews-backlink">
+      <a href="javascript:void(0)"
+         onclick="tornaAlProfiloTabRecensioni(event)"
+         class="reviews-backlink">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
              stroke-width="2" stroke="currentColor" class="w-5 h-5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -117,6 +119,14 @@
 
   </div>
 </div>
+<script>
+function tornaAlProfiloTabRecensioni(event) {
+  if (event) event.preventDefault();
+
+  sessionStorage.setItem("lc_profilo_tab_da_aprire", "recensioni");
+  history.back();
+}
+</script>
 
 <script>
 function toggleEdit(data) {
