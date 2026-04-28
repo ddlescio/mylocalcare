@@ -1508,22 +1508,20 @@ body[data-chat="true"] #mobile-search-container {
 }
 </style>
 <style>
-<style>
 /* =========================================================
    ✨ NAVBAR PREMIUM FINAL — MyLocalCare
-   Solo estetica. Non modifica struttura, JS o comportamento.
-   Versione più incisiva, senza aumentare l'altezza navbar.
+   Effetto vetro gommoso/lucido, senza aumentare l'altezza navbar.
 ========================================================= */
 
 nav {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.90)) !important;
-  backdrop-filter: blur(22px) saturate(185%) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(185%) !important;
-  border-bottom: 1px solid rgba(191,219,254,0.78) !important;
+    linear-gradient(180deg, rgba(255,255,255,0.985), rgba(246,250,255,0.90)) !important;
+  backdrop-filter: blur(24px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(195%) !important;
+  border-bottom: 1px solid rgba(191,219,254,0.85) !important;
   box-shadow:
-    0 14px 34px rgba(15,23,42,0.075),
-    0 2px 10px rgba(37,99,235,0.045),
+    0 16px 36px rgba(15,23,42,0.085),
+    0 4px 14px rgba(37,99,235,0.055),
     inset 0 1px 0 rgba(255,255,255,1) !important;
   isolation: isolate !important;
   z-index: 10000 !important;
@@ -1532,41 +1530,43 @@ nav {
   padding-top: 0 !important;
 }
 
-/* Sottilissima luce brand sotto navbar */
+/* Luce brand sotto navbar */
 nav::after {
   content: "";
   position: absolute;
-  left: 1.25rem;
-  right: 1.25rem;
+  left: 1rem;
+  right: 1rem;
   bottom: -1px;
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(59,130,246,0.34),
-    rgba(244,114,182,0.28),
+    rgba(59,130,246,0.42),
+    rgba(244,114,182,0.34),
     transparent
   );
   pointer-events: none;
 }
 
-/* Contenitore navbar più compatto e ordinato */
+/* Contenitore navbar compatto */
 nav .max-w-7xl {
   gap: 1rem !important;
 }
 
-/* Logo come pulsante premium più presente */
+/* Logo: pill più gommosa, lucida, premium */
 .logo-wrapper {
   position: relative;
-  border-radius: 9999px;
-  padding: 0.36rem 0.92rem 0.36rem 0.44rem;
+  border-radius: 1.35rem;
+  padding: 0.36rem 0.94rem 0.36rem 0.44rem;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.72));
-  border: 1.5px solid rgba(219,234,254,0.95);
+    radial-gradient(circle at 18% 0%, rgba(255,255,255,0.98), rgba(255,255,255,0.08) 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.70));
+  border: 1.5px solid rgba(219,234,254,0.98);
   box-shadow:
-    0 10px 22px rgba(15,23,42,0.065),
-    0 4px 12px rgba(37,99,235,0.055),
-    inset 0 1px 0 rgba(255,255,255,1);
+    0 11px 22px rgba(15,23,42,0.075),
+    0 5px 14px rgba(37,99,235,0.075),
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(147,197,253,0.18);
   transition:
     transform .16s ease,
     background .16s ease,
@@ -1575,25 +1575,49 @@ nav .max-w-7xl {
     filter .16s ease;
 }
 
+/* Riflesso lucido superiore */
+.logo-wrapper::before {
+  content: "";
+  position: absolute;
+  left: 0.55rem;
+  right: 0.55rem;
+  top: 0.22rem;
+  height: 42%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.82),
+    rgba(255,255,255,0.18)
+  );
+  pointer-events: none;
+  opacity: 0.8;
+  z-index: 1;
+}
+
+/* Luce diagonale */
 .logo-wrapper::after {
   content: "";
   position: absolute;
   inset: 1px;
   border-radius: inherit;
   background:
-    linear-gradient(120deg, rgba(255,255,255,0.72), transparent 48%);
+    linear-gradient(125deg, rgba(255,255,255,0.72), transparent 46%);
   pointer-events: none;
-  opacity: 0.88;
+  opacity: 0.86;
+  z-index: 1;
 }
 
 .logo-wrapper:hover {
   transform: translateY(-1px);
   background:
-    linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.84));
-  border-color: rgba(147,197,253,0.95);
+    radial-gradient(circle at 18% 0%, rgba(255,255,255,1), rgba(255,255,255,0.10) 42%),
+    linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.82));
+  border-color: rgba(147,197,253,0.98);
   box-shadow:
-    0 13px 26px rgba(37,99,235,0.105),
-    inset 0 1px 0 rgba(255,255,255,1);
+    0 14px 28px rgba(37,99,235,0.12),
+    0 5px 16px rgba(15,23,42,0.055),
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(147,197,253,0.24);
 }
 
 .logo-wrapper img {
@@ -1601,23 +1625,24 @@ nav .max-w-7xl {
   z-index: 2;
   margin-right: -2px;
   filter:
-    drop-shadow(0 5px 8px rgba(37,99,235,0.16))
-    saturate(1.08);
+    drop-shadow(0 5px 9px rgba(37,99,235,0.18))
+    saturate(1.12);
 }
 
 .logo-wrapper span {
   position: relative;
   z-index: 2;
-  letter-spacing: -0.052em;
-  text-shadow: 0 5px 12px rgba(37,99,235,0.10);
+  letter-spacing: -0.055em;
+  text-shadow: 0 5px 12px rgba(37,99,235,0.12);
 }
 
-/* Link Accedi / Registrati più leggibili ma non invasivi */
+/* Link Accedi / Registrati più solidi */
 nav a[href*="login"],
 nav a[href*="register"] {
-  font-weight: 720 !important;
-  letter-spacing: -0.02em;
+  font-weight: 760 !important;
+  letter-spacing: -0.025em;
   text-decoration: none !important;
+  text-shadow: 0 4px 10px rgba(37,99,235,0.08);
 }
 
 nav a[href*="login"]:hover,
@@ -1625,21 +1650,23 @@ nav a[href*="register"]:hover {
   color: #1d4ed8 !important;
 }
 
-/* Icone navbar come micro-pulsanti premium più pieni */
+/* Icone: vetro gommoso più evidente */
 nav .icon-hover {
-  width: 2.38rem;
-  height: 2.38rem;
+  width: 2.44rem;
+  height: 2.44rem;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  border-radius: 1.05rem;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.70));
-  border: 1.5px solid rgba(226,232,240,0.95);
+    radial-gradient(circle at 32% 15%, rgba(255,255,255,1), rgba(255,255,255,0.20) 38%, transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.68));
+  border: 1.5px solid rgba(226,232,240,0.98);
   box-shadow:
-    0 9px 18px rgba(15,23,42,0.065),
-    0 3px 9px rgba(37,99,235,0.04),
-    inset 0 1px 0 rgba(255,255,255,1);
+    0 10px 20px rgba(15,23,42,0.075),
+    0 4px 10px rgba(37,99,235,0.05),
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(148,163,184,0.12);
   transition:
     transform .16s ease,
     background .16s ease,
@@ -1647,17 +1674,38 @@ nav .icon-hover {
     box-shadow .16s ease;
 }
 
+/* Riflesso superiore sulle icone */
+nav .icon-hover::before {
+  content: "";
+  position: absolute;
+  left: 0.48rem;
+  right: 0.48rem;
+  top: 0.28rem;
+  height: 34%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.86),
+    rgba(255,255,255,0.14)
+  );
+  pointer-events: none;
+  opacity: 0.78;
+}
+
 nav .icon-hover:hover {
   transform: translateY(-1px) scale(1.045);
   background:
+    radial-gradient(circle at 32% 15%, rgba(255,255,255,1), rgba(255,255,255,0.22) 38%, transparent 62%),
     linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.82));
-  border-color: rgba(147,197,253,0.92);
+  border-color: rgba(147,197,253,0.96);
   box-shadow:
-    0 12px 22px rgba(37,99,235,0.10),
-    inset 0 1px 0 rgba(255,255,255,1);
+    0 13px 24px rgba(37,99,235,0.12),
+    0 5px 12px rgba(15,23,42,0.055),
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(147,197,253,0.22);
 }
 
-/* Badge notifiche/chat leggibile */
+/* Badge notifiche/chat */
 nav .badge-pop {
   min-width: 1.18rem;
   height: 1.18rem;
@@ -1682,37 +1730,39 @@ nav .badge-pop:empty {
   display: none !important;
 }
 
-/* Avatar coerente con le icone */
+/* Avatar coerente */
 nav .user-info img {
   border: 1.5px solid rgba(255,255,255,0.98) !important;
   box-shadow:
-    0 8px 18px rgba(15,23,42,0.10),
-    0 0 0 1px rgba(226,232,240,0.9),
+    0 9px 19px rgba(15,23,42,0.11),
+    0 0 0 1px rgba(226,232,240,0.95),
     inset 0 1px 0 rgba(255,255,255,1);
 }
 
-/* Username meno pesante */
+/* Username */
 nav .username-link {
   color: #334155 !important;
-  font-weight: 740 !important;
+  font-weight: 760 !important;
   letter-spacing: -0.025em;
 }
 
-/* Hamburger più glass e coerente */
+/* Hamburger gommoso */
 #nav-toggle {
-  width: 2.42rem;
-  height: 2.42rem;
-  border-radius: 9999px;
+  width: 2.46rem;
+  height: 2.46rem;
+  border-radius: 1.05rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.70));
-  border: 1.5px solid rgba(226,232,240,0.95);
+    radial-gradient(circle at 32% 15%, rgba(255,255,255,1), rgba(255,255,255,0.20) 38%, transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.68));
+  border: 1.5px solid rgba(226,232,240,0.98);
   box-shadow:
-    0 9px 18px rgba(15,23,42,0.065),
-    0 3px 9px rgba(37,99,235,0.04),
-    inset 0 1px 0 rgba(255,255,255,1);
+    0 10px 20px rgba(15,23,42,0.075),
+    0 4px 10px rgba(37,99,235,0.05),
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(148,163,184,0.12);
   font-size: 1.45rem !important;
   line-height: 1;
   transition:
@@ -1722,35 +1772,55 @@ nav .username-link {
     box-shadow .16s ease;
 }
 
+#nav-toggle::before {
+  content: "";
+  position: absolute;
+  left: 0.48rem;
+  right: 0.48rem;
+  top: 0.28rem;
+  height: 34%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.86),
+    rgba(255,255,255,0.14)
+  );
+  pointer-events: none;
+  opacity: 0.78;
+}
+
 #nav-toggle:hover {
   transform: translateY(-1px);
   background:
+    radial-gradient(circle at 32% 15%, rgba(255,255,255,1), rgba(255,255,255,0.22) 38%, transparent 62%),
     linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.82));
-  border-color: rgba(147,197,253,0.92);
+  border-color: rgba(147,197,253,0.96);
   box-shadow:
-    0 12px 22px rgba(37,99,235,0.10),
-    inset 0 1px 0 rgba(255,255,255,1);
+    0 13px 24px rgba(37,99,235,0.12),
+    0 5px 12px rgba(15,23,42,0.055),
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(147,197,253,0.22);
 }
 
-/* Menu mobile più coerente con navbar */
+/* Menu mobile coerente */
 #nav-menu {
-  background: rgba(255,255,255,0.96) !important;
-  backdrop-filter: blur(22px) saturate(175%);
-  -webkit-backdrop-filter: blur(22px) saturate(175%);
-  border-top: 1px solid rgba(191,219,254,0.72) !important;
+  background: rgba(255,255,255,0.965) !important;
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  border-top: 1px solid rgba(191,219,254,0.78) !important;
   box-shadow:
-    0 20px 42px rgba(15,23,42,0.105),
+    0 22px 44px rgba(15,23,42,0.115),
     inset 0 1px 0 rgba(255,255,255,1);
 }
 
-/* Tablet/mobile: resta compatta */
+/* Tablet/mobile compatto */
 @media (max-width: 900px) {
   nav .user-info .username-link {
     display: none !important;
   }
 
   nav .flex.items-center.gap-4 {
-    gap: 0.48rem !important;
+    gap: 0.50rem !important;
   }
 
   nav .max-w-7xl {
@@ -1758,11 +1828,12 @@ nav .username-link {
   }
 }
 
-/* Smartphone piccoli: non aumentare ingombro */
+/* Smartphone piccoli: resta dentro h-16 */
 @media (max-width: 480px) {
   .logo-wrapper {
     margin-left: -4px !important;
-    padding: 0.28rem 0.62rem 0.28rem 0.30rem;
+    padding: 0.28rem 0.64rem 0.28rem 0.30rem;
+    border-radius: 1.15rem;
   }
 
   .logo-wrapper img {
@@ -1775,13 +1846,15 @@ nav .username-link {
   }
 
   nav .icon-hover {
-    width: 2.14rem;
-    height: 2.14rem;
+    width: 2.18rem;
+    height: 2.18rem;
+    border-radius: 0.95rem;
   }
 
   #nav-toggle {
-    width: 2.2rem;
-    height: 2.2rem;
+    width: 2.22rem;
+    height: 2.22rem;
+    border-radius: 0.95rem;
     font-size: 1.35rem !important;
   }
 
