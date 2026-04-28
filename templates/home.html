@@ -4,35 +4,54 @@
 {% block content %}
 
 {% set hero_city_images = {
-  'MilanoCare': 'sfondo_card_hero_milano.png',
-  'RomaCare': 'sfondo_card_hero_roma.png',
-  'NapoliCare': 'sfondo_card_hero_napoli.png',
-  'FirenzeCare': 'sfondo_card_hero_firenze.png',
-  'VeneziaCare': 'sfondo_card_hero_venezia.png',
-  'BolzanoCare': 'sfondo_card_hero_bolzano.png',
-  'TorinoCare': 'sfondo_card_hero_torino.png',
-  'GenovaCare': 'sfondo_card_hero_genova.png',
-  'CagliariCare': 'sfondo_card_hero_cagliari.png',
-  'PalermoCare': 'sfondo_card_hero_palermo.png',
+  'AlessandriaCare': 'sfondo_card_hero_alessandria.png',
   'AostaCare': 'sfondo_card_hero_aosta.png',
-  'VeronaCare': 'sfondo_card_hero_verona.png',
-  'BresciaCare': 'sfondo_card_hero_brescia.png',
-  'BolognaCare': 'sfondo_card_hero_bologna.png',
-  'PadovaCare': 'sfondo_card_hero_padova.png',
-  'TrentoCare': 'sfondo_card_hero_trento.png',
-  'PaviaCare': 'sfondo_card_hero_pavia.png',
-  'ComoCare': 'sfondo_card_hero_como.png',
-  'LeccoCare': 'sfondo_card_hero_lecco.png',
-  'VareseCare': 'sfondo_card_hero_varese.png',
-  'MonzaBrianzaCare': 'sfondo_card_hero_monza_brianza.png',
+  'Valle d'AostaCare': 'sfondo_card_hero_aosta.png',
+  'AstiCare': 'sfondo_card_hero_asti.png',
+  'BariCare': 'sfondo_card_hero_bari.png',
   'BergamoCare': 'sfondo_card_hero_bergamo.png',
+  'BiellaCare': 'sfondo_card_hero_biella.png',
+  'BolognaCare': 'sfondo_card_hero_bologna.png',
+  'BolzanoCare': 'sfondo_card_hero_bolzano.png',
+  'BresciaCare': 'sfondo_card_hero_brescia.png',
+  'CagliariCare': 'sfondo_card_hero_cagliari.png',
+  'CatanzaroCare': 'sfondo_card_hero_catanzaro.png',
+  'ComoCare': 'sfondo_card_hero_como.png',
+  'CremonaCare': 'sfondo_card_hero_cremona.png',
+  'CuneoCare': 'sfondo_card_hero_cuneo.png',
+  'FirenzeCare': 'sfondo_card_hero_firenze.png',
+  'GenovaCare': 'sfondo_card_hero_genova.png',
+  'LaSpeziaCare': 'sfondo_card_hero_la_spezia.png',
+  'La SpeziaCare': 'sfondo_card_hero_la_spezia.png',
+  'LeccoCare': 'sfondo_card_hero_lecco.png',
+  'LecceCare': 'sfondo_card_hero_lecce.png',
+  'LodiCare': 'sfondo_card_hero_lodi.png',
+  'MantovaCare': 'sfondo_card_hero_mantova.png',
+  'MilanoCare': 'sfondo_card_hero_milano.png',
+  'MonzaCare': 'sfondo_card_hero_monza.png',
+  'MonzaBrianzaCare': 'sfondo_card_hero_monza_brianza.png',
+  'Monza e BrianzaCare': 'sfondo_card_hero_monza_brianza.png',
+  'NapoliCare': 'sfondo_card_hero_napoli.png',
+  'NovaraCare': 'sfondo_card_hero_novara.png',
+  'PadovaCare': 'sfondo_card_hero_padova.png',
+  'PalermoCare': 'sfondo_card_hero_palermo.png',
+  'ParmaCare': 'sfondo_card_hero_parma.png',
+  'PaviaCare': 'sfondo_card_hero_pavia.png',
+  'PerugiaCare': 'sfondo_card_hero_perugia.png',
+  'PiacenzaCare': 'sfondo_card_hero_piacenza.png',
   'PisaCare': 'sfondo_card_hero_pisa.png',
+  'RomaCare': 'sfondo_card_hero_roma.png',
+  'SalernoCare': 'sfondo_card_hero_salerno.png',
+  'SavonaCare': 'sfondo_card_hero_savona.png',
+  'SondrioCare': 'sfondo_card_hero_sondrio.png',
+  'TorinoCare': 'sfondo_card_hero_torino.png',
+  'TrentoCare': 'sfondo_card_hero_trento.png',
   'TrevisoCare': 'sfondo_card_hero_treviso.png',
   'TriesteCare': 'sfondo_card_hero_trieste.png',
-  'BariCare': 'sfondo_card_hero_bari.png',
-  'CatanzaroCare': 'sfondo_card_hero_catanzaro.png',
-  'LecceCare': 'sfondo_card_hero_lecce.png',
-  'SalernoCare': 'sfondo_card_hero_salerno.png'
+  'VareseCare': 'sfondo_card_hero_varese.png',
+  'VeneziaCare': 'sfondo_card_hero_venezia.png',
+  'VercelliCare': 'sfondo_card_hero_vercelli.png',
+  'VeronaCare': 'sfondo_card_hero_verona.png'
 } %}
 
 {% set hero_bg_file = hero_city_images.get(brand_name, 'sfondo_card_hero.png') %}
@@ -94,7 +113,7 @@
     inset: -10px;
     background-size: 108% 112%;
   }
-      
+
   @media (min-width: 768px) {
     .home-hero-premium .home-hero-bg {
       background-image: url("{{ url_for('static', filename='img/sfondo_card_hero_desktop.png') }}");
