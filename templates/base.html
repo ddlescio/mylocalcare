@@ -249,7 +249,7 @@ button, input[type="submit"] {
   {% endif %}
 
   <!-- ✅ Navbar fissa in alto -->
-  <nav class="fixed top-0 left-0 right-0 bg-white shadow z-50 transition-all duration-300 ease-in-out">
+  <nav id="main-navbar" class="fixed top-0 left-0 right-0 bg-white shadow z-50 transition-all duration-300 ease-in-out">
     <div class="w-full px-4 sm:px-6 lg:px-8 h-16 flex justify-center">
       <div class="max-w-7xl w-full flex items-center justify-between gap-6 overflow-visible">
 
@@ -1509,22 +1509,36 @@ body[data-chat="true"] #mobile-search-container {
 </style>
 <style>
 /* =========================================================
-   ✨ NAVBAR PREMIUM FINAL — MyLocalCare
-   Effetto vetro gommoso/lucido, senza aumentare l'altezza navbar.
+   ✨ NAVBAR ULTRA GLASS — MyLocalCare
+   Effetto vetro bombato / mezze sfere appoggiate.
+   Solo estetica: non modifica struttura o JS.
 ========================================================= */
 
-nav {
+/* Barra principale: piano di vetro spesso */
+#main-navbar {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.985), rgba(246,250,255,0.90)) !important;
-  backdrop-filter: blur(24px) saturate(195%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(195%) !important;
-  border-bottom: 1px solid rgba(191,219,254,0.85) !important;
-  border-bottom-left-radius: 1.35rem !important;
-  border-bottom-right-radius: 1.35rem !important;
+    radial-gradient(circle at 18% 0%, rgba(255,255,255,0.98), rgba(255,255,255,0.34) 30%, transparent 58%),
+    radial-gradient(circle at 82% 0%, rgba(219,234,254,0.82), rgba(255,255,255,0.18) 36%, transparent 62%),
+    linear-gradient(180deg,
+      rgba(255,255,255,0.99) 0%,
+      rgba(250,253,255,0.96) 42%,
+      rgba(232,242,255,0.86) 100%
+    ) !important;
+
+  backdrop-filter: blur(28px) saturate(215%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(215%) !important;
+
+  border-bottom: 1px solid rgba(147,197,253,0.58) !important;
+  border-bottom-left-radius: 1.75rem !important;
+  border-bottom-right-radius: 1.75rem !important;
+
   box-shadow:
-    0 18px 38px rgba(15,23,42,0.095),
-    0 5px 16px rgba(37,99,235,0.065),
-    inset 0 1px 0 rgba(255,255,255,1) !important;
+    0 20px 42px rgba(15,23,42,0.11),
+    0 8px 20px rgba(37,99,235,0.085),
+    0 1px 0 rgba(255,255,255,0.98) inset,
+    0 -10px 24px rgba(147,197,253,0.16) inset,
+    0 -1px 0 rgba(37,99,235,0.16) inset !important;
+
   isolation: isolate !important;
   z-index: 10000 !important;
   overflow: visible !important;
@@ -1532,44 +1546,87 @@ nav {
   padding-top: 0 !important;
 }
 
-/* Luce brand sotto navbar */
-nav::after {
+/* Grande riflesso superiore sulla barra */
+#main-navbar::before {
   content: "";
   position: absolute;
-  left: 1.35rem;
-  right: 1.35rem;
+  left: 1.1rem;
+  right: 1.1rem;
+  top: 0.28rem;
+  height: 54%;
+  border-radius: 9999px;
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,0.88) 0%,
+      rgba(255,255,255,0.38) 45%,
+      rgba(255,255,255,0.04) 100%
+    );
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.82;
+}
+
+/* Bordo luminoso inferiore */
+#main-navbar::after {
+  content: "";
+  position: absolute;
+  left: 1.75rem;
+  right: 1.75rem;
   bottom: -1px;
-  height: 1px;
+  height: 2px;
   border-radius: 9999px;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(59,130,246,0.46),
-    rgba(244,114,182,0.36),
+    rgba(59,130,246,0.50),
+    rgba(244,114,182,0.40),
     transparent
   );
   pointer-events: none;
+  z-index: 2;
 }
 
-/* Contenitore navbar compatto */
-nav .max-w-7xl {
+/* Contenitore interno sopra i riflessi */
+#main-navbar > div {
+  position: relative;
+  z-index: 3;
+}
+
+#main-navbar .max-w-7xl {
   gap: 1rem !important;
 }
 
-/* Logo: pill più gommosa, lucida, premium */
+/* =========================================================
+   LOGO — capsula di vetro bombata
+========================================================= */
 .logo-wrapper {
   position: relative;
-  border-radius: 1.35rem;
-  padding: 0.36rem 0.94rem 0.36rem 0.44rem;
+  border-radius: 1.55rem;
+  padding: 0.38rem 0.98rem 0.38rem 0.46rem;
+
   background:
-    radial-gradient(circle at 18% 0%, rgba(255,255,255,0.98), rgba(255,255,255,0.08) 42%),
-    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.70));
-  border: 1.5px solid rgba(219,234,254,0.98);
+    radial-gradient(circle at 30% 12%,
+      rgba(255,255,255,1) 0%,
+      rgba(255,255,255,0.76) 26%,
+      rgba(219,234,254,0.36) 54%,
+      rgba(219,234,254,0.18) 100%
+    ),
+    linear-gradient(180deg,
+      rgba(255,255,255,0.99) 0%,
+      rgba(246,250,255,0.90) 48%,
+      rgba(224,238,255,0.74) 100%
+    );
+
+  border: 1.5px solid rgba(219,234,254,1);
+
   box-shadow:
-    0 11px 22px rgba(15,23,42,0.075),
-    0 5px 14px rgba(37,99,235,0.075),
-    inset 0 1px 1px rgba(255,255,255,1),
-    inset 0 -1px 0 rgba(147,197,253,0.18);
+    0 13px 24px rgba(15,23,42,0.09),
+    0 6px 16px rgba(37,99,235,0.10),
+    0 1px 0 rgba(255,255,255,1) inset,
+    0 -8px 16px rgba(147,197,253,0.18) inset,
+    0 -1px 0 rgba(37,99,235,0.12) inset;
+
+  transform: translateZ(0);
   transition:
     transform .16s ease,
     background .16s ease,
@@ -1578,49 +1635,52 @@ nav .max-w-7xl {
     filter .16s ease;
 }
 
-/* Riflesso lucido superiore */
+/* Riflesso bombato alto del logo */
 .logo-wrapper::before {
   content: "";
   position: absolute;
-  left: 0.55rem;
-  right: 0.55rem;
-  top: 0.22rem;
-  height: 42%;
+  left: 0.62rem;
+  right: 0.62rem;
+  top: 0.24rem;
+  height: 48%;
   border-radius: 9999px;
-  background: linear-gradient(
-    180deg,
-    rgba(255,255,255,0.82),
-    rgba(255,255,255,0.18)
-  );
+  background:
+    radial-gradient(circle at 35% 0%,
+      rgba(255,255,255,0.96),
+      rgba(255,255,255,0.54) 46%,
+      rgba(255,255,255,0.06) 100%
+    );
   pointer-events: none;
-  opacity: 0.8;
+  opacity: 0.92;
   z-index: 1;
 }
 
-/* Luce diagonale */
+/* Riflesso diagonale del logo */
 .logo-wrapper::after {
   content: "";
   position: absolute;
   inset: 1px;
   border-radius: inherit;
   background:
-    linear-gradient(125deg, rgba(255,255,255,0.72), transparent 46%);
+    linear-gradient(128deg,
+      rgba(255,255,255,0.78) 0%,
+      rgba(255,255,255,0.30) 32%,
+      transparent 58%
+    );
   pointer-events: none;
-  opacity: 0.86;
+  opacity: 0.88;
   z-index: 1;
 }
 
 .logo-wrapper:hover {
-  transform: translateY(-1px);
-  background:
-    radial-gradient(circle at 18% 0%, rgba(255,255,255,1), rgba(255,255,255,0.10) 42%),
-    linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.82));
-  border-color: rgba(147,197,253,0.98);
+  transform: translateY(-1px) scale(1.012);
+  border-color: rgba(147,197,253,1);
   box-shadow:
-    0 14px 28px rgba(37,99,235,0.12),
-    0 5px 16px rgba(15,23,42,0.055),
-    inset 0 1px 1px rgba(255,255,255,1),
-    inset 0 -1px 0 rgba(147,197,253,0.24);
+    0 16px 30px rgba(37,99,235,0.14),
+    0 7px 18px rgba(15,23,42,0.07),
+    0 1px 0 rgba(255,255,255,1) inset,
+    0 -9px 18px rgba(147,197,253,0.22) inset,
+    0 -1px 0 rgba(37,99,235,0.16) inset;
 }
 
 .logo-wrapper img {
@@ -1628,88 +1688,136 @@ nav .max-w-7xl {
   z-index: 2;
   margin-right: -2px;
   filter:
-    drop-shadow(0 5px 9px rgba(37,99,235,0.18))
-    saturate(1.12);
+    drop-shadow(0 5px 9px rgba(37,99,235,0.20))
+    saturate(1.14);
 }
 
 .logo-wrapper span {
   position: relative;
   z-index: 2;
-  letter-spacing: -0.055em;
-  text-shadow: 0 5px 12px rgba(37,99,235,0.12);
+  letter-spacing: -0.058em;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.75),
+    0 5px 12px rgba(37,99,235,0.12);
 }
 
-/* Link Accedi / Registrati più solidi */
-nav a[href*="login"],
-nav a[href*="register"] {
-  font-weight: 760 !important;
+/* Link Accedi / Registrati */
+#main-navbar a[href*="login"],
+#main-navbar a[href*="register"] {
+  font-weight: 780 !important;
   letter-spacing: -0.025em;
   text-decoration: none !important;
-  text-shadow: 0 4px 10px rgba(37,99,235,0.08);
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.75),
+    0 4px 10px rgba(37,99,235,0.10);
 }
 
-nav a[href*="login"]:hover,
-nav a[href*="register"]:hover {
+#main-navbar a[href*="login"]:hover,
+#main-navbar a[href*="register"]:hover {
   color: #1d4ed8 !important;
 }
 
-/* Icone: vetro gommoso più evidente */
-nav .icon-hover {
-  width: 2.44rem;
-  height: 2.44rem;
+/* =========================================================
+   ICONE — mezze sfere di vetro appoggiate
+========================================================= */
+#main-navbar .icon-hover {
+  position: relative;
+  width: 2.52rem;
+  height: 2.52rem;
+
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  border-radius: 1.05rem;
+
+  border-radius: 1.18rem;
+
   background:
-    radial-gradient(circle at 32% 15%, rgba(255,255,255,1), rgba(255,255,255,0.20) 38%, transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.68));
+    radial-gradient(circle at 34% 16%,
+      rgba(255,255,255,1) 0%,
+      rgba(255,255,255,0.78) 24%,
+      rgba(239,246,255,0.48) 52%,
+      rgba(226,232,240,0.24) 100%
+    ),
+    linear-gradient(180deg,
+      rgba(255,255,255,0.99) 0%,
+      rgba(248,250,252,0.88) 48%,
+      rgba(226,236,250,0.70) 100%
+    );
+
   border: 1.5px solid rgba(226,232,240,0.98);
+
   box-shadow:
-    0 10px 20px rgba(15,23,42,0.075),
-    0 4px 10px rgba(37,99,235,0.05),
-    inset 0 1px 1px rgba(255,255,255,1),
-    inset 0 -1px 0 rgba(148,163,184,0.12);
+    0 11px 20px rgba(15,23,42,0.09),
+    0 5px 12px rgba(37,99,235,0.065),
+    0 1px 0 rgba(255,255,255,1) inset,
+    0 -8px 15px rgba(148,163,184,0.16) inset,
+    0 -1px 0 rgba(100,116,139,0.12) inset;
+
   transition:
     transform .16s ease,
     background .16s ease,
     border-color .16s ease,
-    box-shadow .16s ease;
+    box-shadow .16s ease,
+    filter .16s ease;
 }
 
-/* Riflesso superiore sulle icone */
-nav .icon-hover::before {
+/* grande macchia lucida alta */
+#main-navbar .icon-hover::before {
   content: "";
   position: absolute;
   left: 0.48rem;
   right: 0.48rem;
   top: 0.28rem;
-  height: 34%;
+  height: 42%;
   border-radius: 9999px;
-  background: linear-gradient(
-    180deg,
-    rgba(255,255,255,0.86),
-    rgba(255,255,255,0.14)
-  );
+  background:
+    radial-gradient(circle at 35% 0%,
+      rgba(255,255,255,0.98),
+      rgba(255,255,255,0.55) 45%,
+      rgba(255,255,255,0.05) 100%
+    );
   pointer-events: none;
-  opacity: 0.78;
+  opacity: 0.94;
+  z-index: 1;
 }
 
-nav .icon-hover:hover {
-  transform: translateY(-1px) scale(1.045);
+/* luce di bordo laterale */
+#main-navbar .icon-hover::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
   background:
-    radial-gradient(circle at 32% 15%, rgba(255,255,255,1), rgba(255,255,255,0.22) 38%, transparent 62%),
-    linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.82));
-  border-color: rgba(147,197,253,0.96);
+    linear-gradient(135deg,
+      rgba(255,255,255,0.58),
+      transparent 45%,
+      rgba(147,197,253,0.10) 100%
+    );
+  pointer-events: none;
+  opacity: 0.8;
+  z-index: 1;
+}
+
+#main-navbar .icon-hover:hover {
+  transform: translateY(-1px) scale(1.055);
+  border-color: rgba(147,197,253,0.98);
+  filter: saturate(1.05);
   box-shadow:
-    0 13px 24px rgba(37,99,235,0.12),
-    0 5px 12px rgba(15,23,42,0.055),
-    inset 0 1px 1px rgba(255,255,255,1),
-    inset 0 -1px 0 rgba(147,197,253,0.22);
+    0 15px 26px rgba(37,99,235,0.14),
+    0 6px 14px rgba(15,23,42,0.07),
+    0 1px 0 rgba(255,255,255,1) inset,
+    0 -9px 17px rgba(147,197,253,0.22) inset,
+    0 -1px 0 rgba(37,99,235,0.15) inset;
+}
+
+/* Il contenuto delle icone deve stare sopra i riflessi */
+#main-navbar .icon-hover > * {
+  position: relative;
+  z-index: 2;
 }
 
 /* Badge notifiche/chat */
-nav .badge-pop {
+#main-navbar .badge-pop {
   min-width: 1.18rem;
   height: 1.18rem;
   display: inline-flex !important;
@@ -1725,54 +1833,75 @@ nav .badge-pop {
   font-weight: 850 !important;
   text-align: center;
   box-shadow:
-    0 5px 12px rgba(220,38,38,0.24),
-    inset 0 1px 0 rgba(255,255,255,0.32);
+    0 6px 13px rgba(220,38,38,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.36);
+  z-index: 5;
 }
 
-nav .badge-pop:empty {
+#main-navbar .badge-pop:empty {
   display: none !important;
 }
 
-/* Avatar coerente */
-nav .user-info img {
+/* Avatar dentro navbar */
+#main-navbar .user-info img {
   border: 1.5px solid rgba(255,255,255,0.98) !important;
   box-shadow:
-    0 9px 19px rgba(15,23,42,0.11),
-    0 0 0 1px rgba(226,232,240,0.95),
-    inset 0 1px 0 rgba(255,255,255,1);
+    0 10px 20px rgba(15,23,42,0.12),
+    0 0 0 1px rgba(226,232,240,0.96),
+    0 -4px 10px rgba(148,163,184,0.16) inset;
 }
 
-/* Username */
-nav .username-link {
+#main-navbar .username-link {
   color: #334155 !important;
-  font-weight: 760 !important;
+  font-weight: 780 !important;
   letter-spacing: -0.025em;
 }
 
-/* Hamburger gommoso */
+/* =========================================================
+   HAMBURGER — mezzo vetro
+========================================================= */
 #nav-toggle {
-  width: 2.46rem;
-  height: 2.46rem;
-  border-radius: 1.05rem;
+  position: relative;
+  width: 2.54rem;
+  height: 2.54rem;
+
+  border-radius: 1.18rem;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
   background:
-    radial-gradient(circle at 32% 15%, rgba(255,255,255,1), rgba(255,255,255,0.20) 38%, transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.68));
+    radial-gradient(circle at 34% 16%,
+      rgba(255,255,255,1) 0%,
+      rgba(255,255,255,0.78) 24%,
+      rgba(239,246,255,0.48) 52%,
+      rgba(226,232,240,0.24) 100%
+    ),
+    linear-gradient(180deg,
+      rgba(255,255,255,0.99) 0%,
+      rgba(248,250,252,0.88) 48%,
+      rgba(226,236,250,0.70) 100%
+    );
+
   border: 1.5px solid rgba(226,232,240,0.98);
+
   box-shadow:
-    0 10px 20px rgba(15,23,42,0.075),
-    0 4px 10px rgba(37,99,235,0.05),
-    inset 0 1px 1px rgba(255,255,255,1),
-    inset 0 -1px 0 rgba(148,163,184,0.12);
+    0 11px 20px rgba(15,23,42,0.09),
+    0 5px 12px rgba(37,99,235,0.065),
+    0 1px 0 rgba(255,255,255,1) inset,
+    0 -8px 15px rgba(148,163,184,0.16) inset,
+    0 -1px 0 rgba(100,116,139,0.12) inset;
+
   font-size: 1.45rem !important;
   line-height: 1;
+
   transition:
     transform .16s ease,
     background .16s ease,
     border-color .16s ease,
-    box-shadow .16s ease;
+    box-shadow .16s ease,
+    filter .16s ease;
 }
 
 #nav-toggle::before {
@@ -1781,35 +1910,50 @@ nav .username-link {
   left: 0.48rem;
   right: 0.48rem;
   top: 0.28rem;
-  height: 34%;
+  height: 42%;
   border-radius: 9999px;
-  background: linear-gradient(
-    180deg,
-    rgba(255,255,255,0.86),
-    rgba(255,255,255,0.14)
-  );
+  background:
+    radial-gradient(circle at 35% 0%,
+      rgba(255,255,255,0.98),
+      rgba(255,255,255,0.55) 45%,
+      rgba(255,255,255,0.05) 100%
+    );
   pointer-events: none;
-  opacity: 0.78;
+  opacity: 0.94;
+}
+
+#nav-toggle::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg,
+      rgba(255,255,255,0.58),
+      transparent 45%,
+      rgba(147,197,253,0.10) 100%
+    );
+  pointer-events: none;
+  opacity: 0.8;
 }
 
 #nav-toggle:hover {
-  transform: translateY(-1px);
-  background:
-    radial-gradient(circle at 32% 15%, rgba(255,255,255,1), rgba(255,255,255,0.22) 38%, transparent 62%),
-    linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.82));
-  border-color: rgba(147,197,253,0.96);
+  transform: translateY(-1px) scale(1.045);
+  border-color: rgba(147,197,253,0.98);
+  filter: saturate(1.05);
   box-shadow:
-    0 13px 24px rgba(37,99,235,0.12),
-    0 5px 12px rgba(15,23,42,0.055),
-    inset 0 1px 1px rgba(255,255,255,1),
-    inset 0 -1px 0 rgba(147,197,253,0.22);
+    0 15px 26px rgba(37,99,235,0.14),
+    0 6px 14px rgba(15,23,42,0.07),
+    0 1px 0 rgba(255,255,255,1) inset,
+    0 -9px 17px rgba(147,197,253,0.22) inset,
+    0 -1px 0 rgba(37,99,235,0.15) inset;
 }
 
 /* Menu mobile coerente */
 #nav-menu {
-  background: rgba(255,255,255,0.965) !important;
-  backdrop-filter: blur(24px) saturate(185%);
-  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  background: rgba(255,255,255,0.97) !important;
+  backdrop-filter: blur(26px) saturate(195%);
+  -webkit-backdrop-filter: blur(26px) saturate(195%);
   border-top: 1px solid rgba(191,219,254,0.78) !important;
   box-shadow:
     0 22px 44px rgba(15,23,42,0.115),
@@ -1818,15 +1962,15 @@ nav .username-link {
 
 /* Tablet/mobile compatto */
 @media (max-width: 900px) {
-  nav .user-info .username-link {
+  #main-navbar .user-info .username-link {
     display: none !important;
   }
 
-  nav .flex.items-center.gap-4 {
+  #main-navbar .flex.items-center.gap-4 {
     gap: 0.50rem !important;
   }
 
-  nav .max-w-7xl {
+  #main-navbar .max-w-7xl {
     gap: 0.7rem !important;
   }
 }
@@ -1835,8 +1979,8 @@ nav .username-link {
 @media (max-width: 480px) {
   .logo-wrapper {
     margin-left: -4px !important;
-    padding: 0.28rem 0.64rem 0.28rem 0.30rem;
-    border-radius: 1.15rem;
+    padding: 0.30rem 0.66rem 0.30rem 0.30rem;
+    border-radius: 1.28rem;
   }
 
   .logo-wrapper img {
@@ -1848,20 +1992,20 @@ nav .username-link {
     font-size: 1.18rem !important;
   }
 
-  nav .icon-hover {
-    width: 2.18rem;
-    height: 2.18rem;
-    border-radius: 0.95rem;
+  #main-navbar .icon-hover {
+    width: 2.24rem;
+    height: 2.24rem;
+    border-radius: 1.02rem;
   }
 
   #nav-toggle {
-    width: 2.22rem;
-    height: 2.22rem;
-    border-radius: 0.95rem;
+    width: 2.26rem;
+    height: 2.26rem;
+    border-radius: 1.02rem;
     font-size: 1.35rem !important;
   }
 
-  nav .badge-pop {
+  #main-navbar .badge-pop {
     min-width: 1.08rem;
     height: 1.08rem;
     font-size: 0.62rem !important;
