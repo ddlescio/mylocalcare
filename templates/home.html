@@ -55,7 +55,12 @@
     pointer-events: none;
     z-index: 0;
   }
-  
+
+  .home-hero-premium .home-hero-bg-milano {
+    inset: -10px;
+    background-size: 108% 112%;
+  }
+    
   @media (min-width: 768px) {
     .home-hero-premium .home-hero-bg {
       background-image: url("{{ url_for('static', filename='img/sfondo_card_hero_desktop.png') }}");
@@ -442,7 +447,7 @@
 
   <section class="home-hero-premium">
     <div
-      class="home-hero-bg"
+      class="home-hero-bg {% if brand_name == 'MilanoCare' %}home-hero-bg-milano{% endif %}"
       style="
         background-image: url('{% if brand_name == 'MilanoCare' %}{{ url_for('static', filename='img/sfondo_card_hero_milano.png') }}{% else %}{{ url_for('static', filename='img/sfondo_card_hero.png') }}{% endif %}');
       ">
