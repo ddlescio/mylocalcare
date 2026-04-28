@@ -1519,9 +1519,11 @@ nav {
   backdrop-filter: blur(24px) saturate(195%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(195%) !important;
   border-bottom: 1px solid rgba(191,219,254,0.85) !important;
+  border-bottom-left-radius: 1.35rem !important;
+  border-bottom-right-radius: 1.35rem !important;
   box-shadow:
-    0 16px 36px rgba(15,23,42,0.085),
-    0 4px 14px rgba(37,99,235,0.055),
+    0 18px 38px rgba(15,23,42,0.095),
+    0 5px 16px rgba(37,99,235,0.065),
     inset 0 1px 0 rgba(255,255,255,1) !important;
   isolation: isolate !important;
   z-index: 10000 !important;
@@ -1534,15 +1536,16 @@ nav {
 nav::after {
   content: "";
   position: absolute;
-  left: 1rem;
-  right: 1rem;
+  left: 1.35rem;
+  right: 1.35rem;
   bottom: -1px;
   height: 1px;
+  border-radius: 9999px;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(59,130,246,0.42),
-    rgba(244,114,182,0.34),
+    rgba(59,130,246,0.46),
+    rgba(244,114,182,0.36),
     transparent
   );
   pointer-events: none;
