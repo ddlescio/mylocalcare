@@ -1359,6 +1359,65 @@
     filter: saturate(1.03) brightness(1.01);
   }
 
+  /* ============================================================
+     FIX TABLET / SCHERMI MEDI — evita sovrapposizione CTA recensioni
+     ============================================================ */
+  @media (min-width: 768px) and (max-width: 1100px) {
+    .hero-bottom-card {
+      width: calc(100% - 40px);
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas:
+        "avatar info"
+        "cta cta";
+      gap: 0.8rem 1rem;
+      padding: 1rem 1.15rem 1.15rem;
+    }
+
+    .hero-avatar-slot {
+      grid-area: avatar;
+    }
+
+    .hero-main-info {
+      grid-area: info;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .hero-name-row {
+      justify-content: flex-start;
+    }
+
+    .hero-rating-row {
+      justify-content: flex-start;
+    }
+
+    .hero-review-link {
+      text-align: left;
+    }
+
+    .hero-cta-col {
+      grid-area: cta;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .hero-primary-cta {
+      width: min(100%, 360px);
+      min-width: 0;
+      padding: 0.78rem 1.2rem;
+    }
+
+    .hero-avatar,
+    .placeholder-foto-profilo-premium {
+      width: 108px;
+      height: 108px;
+    }
+
+    .hero-username {
+      font-size: clamp(1.7rem, 3.6vw, 2.25rem);
+    }
+  }  
+
   @media (max-width: 767px) {
     .hero-bottom-card {
       grid-template-columns: 1fr;
