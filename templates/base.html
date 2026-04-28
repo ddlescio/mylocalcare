@@ -1509,35 +1509,32 @@ body[data-chat="true"] #mobile-search-container {
 </style>
 <style>
 /* =========================================================
-   ✨ NAVBAR ULTRA GLASS — MyLocalCare
-   Effetto vetro bombato / mezze sfere appoggiate.
+   ✨ NAVBAR SCULPTED GLASS — MyLocalCare
+   Effetto vetro bombato reale, con bottoni separati dal piano.
    Solo estetica: non modifica struttura o JS.
 ========================================================= */
 
-/* Barra principale: piano di vetro spesso */
+/* Piano principale: vetro pulito, meno alone azzurro */
 #main-navbar {
   background:
-    radial-gradient(circle at 18% 0%, rgba(255,255,255,0.98), rgba(255,255,255,0.34) 30%, transparent 58%),
-    radial-gradient(circle at 82% 0%, rgba(219,234,254,0.82), rgba(255,255,255,0.18) 36%, transparent 62%),
     linear-gradient(180deg,
-      rgba(255,255,255,0.99) 0%,
-      rgba(250,253,255,0.96) 42%,
-      rgba(232,242,255,0.86) 100%
+      rgba(255,255,255,0.98) 0%,
+      rgba(255,255,255,0.93) 46%,
+      rgba(243,247,252,0.90) 100%
     ) !important;
 
-  backdrop-filter: blur(28px) saturate(215%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(215%) !important;
+  backdrop-filter: blur(24px) saturate(165%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(165%) !important;
 
-  border-bottom: 1px solid rgba(147,197,253,0.58) !important;
-  border-bottom-left-radius: 1.75rem !important;
-  border-bottom-right-radius: 1.75rem !important;
+  border-bottom: 1px solid rgba(203,213,225,0.72) !important;
+  border-bottom-left-radius: 1.65rem !important;
+  border-bottom-right-radius: 1.65rem !important;
 
   box-shadow:
-    0 20px 42px rgba(15,23,42,0.11),
-    0 8px 20px rgba(37,99,235,0.085),
-    0 1px 0 rgba(255,255,255,0.98) inset,
-    0 -10px 24px rgba(147,197,253,0.16) inset,
-    0 -1px 0 rgba(37,99,235,0.16) inset !important;
+    0 18px 34px rgba(15,23,42,0.095),
+    0 4px 10px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.98),
+    inset 0 -10px 20px rgba(148,163,184,0.10) !important;
 
   isolation: isolate !important;
   z-index: 10000 !important;
@@ -1546,47 +1543,46 @@ body[data-chat="true"] #mobile-search-container {
   padding-top: 0 !important;
 }
 
-/* Grande riflesso superiore sulla barra */
+/* riflesso superiore sottile della barra, non azzurro */
 #main-navbar::before {
   content: "";
   position: absolute;
-  left: 1.1rem;
-  right: 1.1rem;
-  top: 0.28rem;
-  height: 54%;
+  left: 1.2rem;
+  right: 1.2rem;
+  top: 0.25rem;
+  height: 44%;
   border-radius: 9999px;
   background:
     linear-gradient(180deg,
-      rgba(255,255,255,0.88) 0%,
-      rgba(255,255,255,0.38) 45%,
-      rgba(255,255,255,0.04) 100%
+      rgba(255,255,255,0.78),
+      rgba(255,255,255,0.20),
+      rgba(255,255,255,0)
     );
   pointer-events: none;
   z-index: 0;
-  opacity: 0.82;
+  opacity: 0.78;
 }
 
-/* Bordo luminoso inferiore */
+/* filo inferiore molto fine, non alone */
 #main-navbar::after {
   content: "";
   position: absolute;
-  left: 1.75rem;
-  right: 1.75rem;
+  left: 1.65rem;
+  right: 1.65rem;
   bottom: -1px;
-  height: 2px;
+  height: 1px;
   border-radius: 9999px;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(59,130,246,0.50),
-    rgba(244,114,182,0.40),
+    rgba(37,99,235,0.24),
+    rgba(219,39,119,0.18),
     transparent
   );
   pointer-events: none;
   z-index: 2;
 }
 
-/* Contenitore interno sopra i riflessi */
 #main-navbar > div {
   position: relative;
   z-index: 3;
@@ -1597,130 +1593,118 @@ body[data-chat="true"] #mobile-search-container {
 }
 
 /* =========================================================
-   LOGO — capsula di vetro bombata
+   LOGO — bottone vetro spesso e separato
 ========================================================= */
+
 .logo-wrapper {
   position: relative;
   border-radius: 1.55rem;
   padding: 0.38rem 0.98rem 0.38rem 0.46rem;
 
   background:
-    radial-gradient(circle at 30% 12%,
+    radial-gradient(ellipse at 50% 0%,
       rgba(255,255,255,1) 0%,
-      rgba(255,255,255,0.76) 26%,
-      rgba(219,234,254,0.36) 54%,
-      rgba(219,234,254,0.18) 100%
-    ),
-    linear-gradient(180deg,
-      rgba(255,255,255,0.99) 0%,
-      rgba(246,250,255,0.90) 48%,
-      rgba(224,238,255,0.74) 100%
+      rgba(255,255,255,0.88) 24%,
+      rgba(246,250,255,0.78) 48%,
+      rgba(229,238,250,0.78) 100%
     );
 
-  border: 1.5px solid rgba(219,234,254,1);
+  border: 1px solid rgba(203,213,225,0.92);
 
   box-shadow:
-    0 13px 24px rgba(15,23,42,0.09),
-    0 6px 16px rgba(37,99,235,0.10),
     0 1px 0 rgba(255,255,255,1) inset,
-    0 -8px 16px rgba(147,197,253,0.18) inset,
-    0 -1px 0 rgba(37,99,235,0.12) inset;
+    0 -10px 16px rgba(100,116,139,0.12) inset,
+    0 -1px 0 rgba(100,116,139,0.18) inset,
+    0 10px 14px rgba(15,23,42,0.105),
+    0 2px 3px rgba(15,23,42,0.08);
 
-  transform: translateZ(0);
+  transform: translateY(0);
   transition:
     transform .16s ease,
-    background .16s ease,
-    border-color .16s ease,
     box-shadow .16s ease,
+    border-color .16s ease,
     filter .16s ease;
 }
 
-/* Riflesso bombato alto del logo */
+/* ombra di contatto sotto il logo: lo fa sembrare appoggiato */
 .logo-wrapper::before {
   content: "";
   position: absolute;
-  left: 0.62rem;
-  right: 0.62rem;
-  top: 0.24rem;
-  height: 48%;
+  left: 0.42rem;
+  right: 0.42rem;
+  bottom: -0.34rem;
+  height: 0.62rem;
   border-radius: 9999px;
-  background:
-    radial-gradient(circle at 35% 0%,
-      rgba(255,255,255,0.96),
-      rgba(255,255,255,0.54) 46%,
-      rgba(255,255,255,0.06) 100%
-    );
+  background: radial-gradient(
+    ellipse at center,
+    rgba(15,23,42,0.20) 0%,
+    rgba(15,23,42,0.08) 42%,
+    transparent 74%
+  );
   pointer-events: none;
-  opacity: 0.92;
-  z-index: 1;
+  z-index: -1;
+  filter: blur(2px);
 }
 
-/* Riflesso diagonale del logo */
+/* highlight ovale alto: vera superficie curva */
 .logo-wrapper::after {
   content: "";
   position: absolute;
-  inset: 1px;
-  border-radius: inherit;
+  left: 0.58rem;
+  right: 0.58rem;
+  top: 0.22rem;
+  height: 46%;
+  border-radius: 9999px;
   background:
-    linear-gradient(128deg,
-      rgba(255,255,255,0.78) 0%,
-      rgba(255,255,255,0.30) 32%,
-      transparent 58%
+    radial-gradient(ellipse at 50% 0%,
+      rgba(255,255,255,0.96) 0%,
+      rgba(255,255,255,0.70) 38%,
+      rgba(255,255,255,0.18) 68%,
+      rgba(255,255,255,0) 100%
     );
   pointer-events: none;
-  opacity: 0.88;
   z-index: 1;
 }
 
-.logo-wrapper:hover {
-  transform: translateY(-1px) scale(1.012);
-  border-color: rgba(147,197,253,1);
-  box-shadow:
-    0 16px 30px rgba(37,99,235,0.14),
-    0 7px 18px rgba(15,23,42,0.07),
-    0 1px 0 rgba(255,255,255,1) inset,
-    0 -9px 18px rgba(147,197,253,0.22) inset,
-    0 -1px 0 rgba(37,99,235,0.16) inset;
-}
-
-.logo-wrapper img {
-  position: relative;
-  z-index: 2;
-  margin-right: -2px;
-  filter:
-    drop-shadow(0 5px 9px rgba(37,99,235,0.20))
-    saturate(1.14);
-}
-
+/* contenuto logo sopra il vetro */
+.logo-wrapper img,
 .logo-wrapper span {
   position: relative;
   z-index: 2;
-  letter-spacing: -0.058em;
-  text-shadow:
-    0 1px 0 rgba(255,255,255,0.75),
-    0 5px 12px rgba(37,99,235,0.12);
 }
 
-/* Link Accedi / Registrati */
-#main-navbar a[href*="login"],
-#main-navbar a[href*="register"] {
-  font-weight: 780 !important;
-  letter-spacing: -0.025em;
-  text-decoration: none !important;
-  text-shadow:
-    0 1px 0 rgba(255,255,255,0.75),
-    0 4px 10px rgba(37,99,235,0.10);
+.logo-wrapper img {
+  margin-right: -2px;
+  filter:
+    drop-shadow(0 3px 5px rgba(15,23,42,0.10))
+    saturate(1.08);
 }
 
-#main-navbar a[href*="login"]:hover,
-#main-navbar a[href*="register"]:hover {
-  color: #1d4ed8 !important;
+.logo-wrapper span {
+  letter-spacing: -0.056em;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.88),
+    0 4px 8px rgba(37,99,235,0.10);
+}
+
+.logo-wrapper:hover {
+  transform: translateY(-1px);
+  border-color: rgba(147,197,253,0.95);
+  filter: saturate(1.03);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,1) inset,
+    0 -11px 18px rgba(37,99,235,0.12) inset,
+    0 -1px 0 rgba(37,99,235,0.18) inset,
+    0 13px 18px rgba(37,99,235,0.13),
+    0 2px 4px rgba(15,23,42,0.08);
 }
 
 /* =========================================================
-   ICONE — mezze sfere di vetro appoggiate
+   ICONE — mezze sfere/cupole di vetro appoggiate
 ========================================================= */
-#main-navbar .icon-hover {
+
+#main-navbar .icon-hover,
+#nav-toggle {
   position: relative;
   width: 2.52rem;
   height: 2.52rem;
@@ -1729,91 +1713,96 @@ body[data-chat="true"] #mobile-search-container {
   align-items: center;
   justify-content: center;
 
-  border-radius: 1.18rem;
+  border-radius: 50%;
 
   background:
-    radial-gradient(circle at 34% 16%,
+    radial-gradient(circle at 48% 18%,
       rgba(255,255,255,1) 0%,
-      rgba(255,255,255,0.78) 24%,
-      rgba(239,246,255,0.48) 52%,
-      rgba(226,232,240,0.24) 100%
-    ),
-    linear-gradient(180deg,
-      rgba(255,255,255,0.99) 0%,
-      rgba(248,250,252,0.88) 48%,
-      rgba(226,236,250,0.70) 100%
+      rgba(255,255,255,0.92) 18%,
+      rgba(248,250,252,0.78) 42%,
+      rgba(226,232,240,0.72) 72%,
+      rgba(203,213,225,0.64) 100%
     );
 
-  border: 1.5px solid rgba(226,232,240,0.98);
+  border: 1px solid rgba(203,213,225,0.88);
 
   box-shadow:
-    0 11px 20px rgba(15,23,42,0.09),
-    0 5px 12px rgba(37,99,235,0.065),
-    0 1px 0 rgba(255,255,255,1) inset,
-    0 -8px 15px rgba(148,163,184,0.16) inset,
-    0 -1px 0 rgba(100,116,139,0.12) inset;
+    inset 0 2px 2px rgba(255,255,255,1),
+    inset -4px -7px 12px rgba(100,116,139,0.18),
+    inset 3px 4px 9px rgba(255,255,255,0.72),
+    0 10px 13px rgba(15,23,42,0.15),
+    0 2px 3px rgba(15,23,42,0.09);
 
+  color: #334155;
+  transform: translateY(0);
   transition:
     transform .16s ease,
-    background .16s ease,
-    border-color .16s ease,
     box-shadow .16s ease,
+    border-color .16s ease,
     filter .16s ease;
 }
 
-/* grande macchia lucida alta */
-#main-navbar .icon-hover::before {
+/* ombra di contatto sotto ogni cupola */
+#main-navbar .icon-hover::before,
+#nav-toggle::before {
   content: "";
   position: absolute;
-  left: 0.48rem;
-  right: 0.48rem;
-  top: 0.28rem;
-  height: 42%;
+  left: 16%;
+  right: 16%;
+  bottom: -0.38rem;
+  height: 0.58rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(15,23,42,0.24) 0%,
+    rgba(15,23,42,0.10) 45%,
+    transparent 76%
+  );
+  filter: blur(2px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* riflesso superiore curvo, molto visibile */
+#main-navbar .icon-hover::after,
+#nav-toggle::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 13%;
+  height: 34%;
   border-radius: 9999px;
   background:
-    radial-gradient(circle at 35% 0%,
-      rgba(255,255,255,0.98),
-      rgba(255,255,255,0.55) 45%,
-      rgba(255,255,255,0.05) 100%
+    radial-gradient(ellipse at 50% 0%,
+      rgba(255,255,255,0.98) 0%,
+      rgba(255,255,255,0.74) 42%,
+      rgba(255,255,255,0.20) 72%,
+      rgba(255,255,255,0) 100%
     );
   pointer-events: none;
-  opacity: 0.94;
   z-index: 1;
 }
 
-/* luce di bordo laterale */
-#main-navbar .icon-hover::after {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border-radius: inherit;
-  background:
-    linear-gradient(135deg,
-      rgba(255,255,255,0.58),
-      transparent 45%,
-      rgba(147,197,253,0.10) 100%
-    );
-  pointer-events: none;
-  opacity: 0.8;
-  z-index: 1;
-}
-
-#main-navbar .icon-hover:hover {
-  transform: translateY(-1px) scale(1.055);
-  border-color: rgba(147,197,253,0.98);
-  filter: saturate(1.05);
-  box-shadow:
-    0 15px 26px rgba(37,99,235,0.14),
-    0 6px 14px rgba(15,23,42,0.07),
-    0 1px 0 rgba(255,255,255,1) inset,
-    0 -9px 17px rgba(147,197,253,0.22) inset,
-    0 -1px 0 rgba(37,99,235,0.15) inset;
-}
-
-/* Il contenuto delle icone deve stare sopra i riflessi */
-#main-navbar .icon-hover > * {
+/* contenuto sopra i riflessi */
+#main-navbar .icon-hover > *,
+#nav-toggle > * {
   position: relative;
   z-index: 2;
+}
+
+#main-navbar .icon-hover:hover,
+#nav-toggle:hover {
+  transform: translateY(-1px) scale(1.045);
+  border-color: rgba(147,197,253,0.90);
+  filter: saturate(1.05) brightness(1.015);
+
+  box-shadow:
+    inset 0 2px 2px rgba(255,255,255,1),
+    inset -4px -8px 13px rgba(37,99,235,0.14),
+    inset 3px 4px 9px rgba(255,255,255,0.78),
+    0 13px 16px rgba(37,99,235,0.15),
+    0 2px 4px rgba(15,23,42,0.08);
 }
 
 /* Badge notifiche/chat */
@@ -1833,8 +1822,8 @@ body[data-chat="true"] #mobile-search-container {
   font-weight: 850 !important;
   text-align: center;
   box-shadow:
-    0 6px 13px rgba(220,38,38,0.28),
-    inset 0 1px 0 rgba(255,255,255,0.36);
+    0 5px 11px rgba(220,38,38,0.26),
+    inset 0 1px 0 rgba(255,255,255,0.34);
   z-index: 5;
 }
 
@@ -1842,13 +1831,13 @@ body[data-chat="true"] #mobile-search-container {
   display: none !important;
 }
 
-/* Avatar dentro navbar */
+/* Avatar coerente col resto */
 #main-navbar .user-info img {
-  border: 1.5px solid rgba(255,255,255,0.98) !important;
+  border: 1px solid rgba(255,255,255,0.98) !important;
   box-shadow:
-    0 10px 20px rgba(15,23,42,0.12),
-    0 0 0 1px rgba(226,232,240,0.96),
-    0 -4px 10px rgba(148,163,184,0.16) inset;
+    inset 0 1px 1px rgba(255,255,255,0.9),
+    0 9px 13px rgba(15,23,42,0.14),
+    0 0 0 1px rgba(203,213,225,0.88);
 }
 
 #main-navbar .username-link {
@@ -1857,106 +1846,30 @@ body[data-chat="true"] #mobile-search-container {
   letter-spacing: -0.025em;
 }
 
-/* =========================================================
-   HAMBURGER — mezzo vetro
-========================================================= */
-#nav-toggle {
-  position: relative;
-  width: 2.54rem;
-  height: 2.54rem;
-
-  border-radius: 1.18rem;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  background:
-    radial-gradient(circle at 34% 16%,
-      rgba(255,255,255,1) 0%,
-      rgba(255,255,255,0.78) 24%,
-      rgba(239,246,255,0.48) 52%,
-      rgba(226,232,240,0.24) 100%
-    ),
-    linear-gradient(180deg,
-      rgba(255,255,255,0.99) 0%,
-      rgba(248,250,252,0.88) 48%,
-      rgba(226,236,250,0.70) 100%
-    );
-
-  border: 1.5px solid rgba(226,232,240,0.98);
-
-  box-shadow:
-    0 11px 20px rgba(15,23,42,0.09),
-    0 5px 12px rgba(37,99,235,0.065),
-    0 1px 0 rgba(255,255,255,1) inset,
-    0 -8px 15px rgba(148,163,184,0.16) inset,
-    0 -1px 0 rgba(100,116,139,0.12) inset;
-
-  font-size: 1.45rem !important;
-  line-height: 1;
-
-  transition:
-    transform .16s ease,
-    background .16s ease,
-    border-color .16s ease,
-    box-shadow .16s ease,
-    filter .16s ease;
+/* Link Accedi / Registrati */
+#main-navbar a[href*="login"],
+#main-navbar a[href*="register"] {
+  font-weight: 780 !important;
+  letter-spacing: -0.025em;
+  text-decoration: none !important;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.85),
+    0 3px 7px rgba(37,99,235,0.10);
 }
 
-#nav-toggle::before {
-  content: "";
-  position: absolute;
-  left: 0.48rem;
-  right: 0.48rem;
-  top: 0.28rem;
-  height: 42%;
-  border-radius: 9999px;
-  background:
-    radial-gradient(circle at 35% 0%,
-      rgba(255,255,255,0.98),
-      rgba(255,255,255,0.55) 45%,
-      rgba(255,255,255,0.05) 100%
-    );
-  pointer-events: none;
-  opacity: 0.94;
+#main-navbar a[href*="login"]:hover,
+#main-navbar a[href*="register"]:hover {
+  color: #1d4ed8 !important;
 }
 
-#nav-toggle::after {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border-radius: inherit;
-  background:
-    linear-gradient(135deg,
-      rgba(255,255,255,0.58),
-      transparent 45%,
-      rgba(147,197,253,0.10) 100%
-    );
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-#nav-toggle:hover {
-  transform: translateY(-1px) scale(1.045);
-  border-color: rgba(147,197,253,0.98);
-  filter: saturate(1.05);
-  box-shadow:
-    0 15px 26px rgba(37,99,235,0.14),
-    0 6px 14px rgba(15,23,42,0.07),
-    0 1px 0 rgba(255,255,255,1) inset,
-    0 -9px 17px rgba(147,197,253,0.22) inset,
-    0 -1px 0 rgba(37,99,235,0.15) inset;
-}
-
-/* Menu mobile coerente */
+/* Menu mobile */
 #nav-menu {
   background: rgba(255,255,255,0.97) !important;
-  backdrop-filter: blur(26px) saturate(195%);
-  -webkit-backdrop-filter: blur(26px) saturate(195%);
-  border-top: 1px solid rgba(191,219,254,0.78) !important;
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  border-top: 1px solid rgba(203,213,225,0.70) !important;
   box-shadow:
-    0 22px 44px rgba(15,23,42,0.115),
+    0 22px 44px rgba(15,23,42,0.11),
     inset 0 1px 0 rgba(255,255,255,1);
 }
 
@@ -1967,20 +1880,20 @@ body[data-chat="true"] #mobile-search-container {
   }
 
   #main-navbar .flex.items-center.gap-4 {
-    gap: 0.50rem !important;
+    gap: 0.52rem !important;
   }
 
   #main-navbar .max-w-7xl {
-    gap: 0.7rem !important;
+    gap: 0.72rem !important;
   }
 }
 
-/* Smartphone piccoli: resta dentro h-16 */
+/* Smartphone piccoli */
 @media (max-width: 480px) {
   .logo-wrapper {
     margin-left: -4px !important;
     padding: 0.30rem 0.66rem 0.30rem 0.30rem;
-    border-radius: 1.28rem;
+    border-radius: 1.35rem;
   }
 
   .logo-wrapper img {
@@ -1992,16 +1905,13 @@ body[data-chat="true"] #mobile-search-container {
     font-size: 1.18rem !important;
   }
 
-  #main-navbar .icon-hover {
-    width: 2.24rem;
-    height: 2.24rem;
-    border-radius: 1.02rem;
-  }
-
+  #main-navbar .icon-hover,
   #nav-toggle {
     width: 2.26rem;
     height: 2.26rem;
-    border-radius: 1.02rem;
+  }
+
+  #nav-toggle {
     font-size: 1.35rem !important;
   }
 
