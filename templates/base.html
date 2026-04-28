@@ -1508,20 +1508,23 @@ body[data-chat="true"] #mobile-search-container {
 }
 </style>
 <style>
+<style>
 /* =========================================================
    ✨ NAVBAR PREMIUM FINAL — MyLocalCare
    Solo estetica. Non modifica struttura, JS o comportamento.
+   Versione più incisiva, senza aumentare l'altezza navbar.
 ========================================================= */
 
 nav {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.86)) !important;
-  backdrop-filter: blur(18px) saturate(165%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(165%) !important;
-  border-bottom: 1px solid rgba(226,232,240,0.78) !important;
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.90)) !important;
+  backdrop-filter: blur(22px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(185%) !important;
+  border-bottom: 1px solid rgba(191,219,254,0.78) !important;
   box-shadow:
-    0 10px 30px rgba(15,23,42,0.055),
-    inset 0 1px 0 rgba(255,255,255,0.92) !important;
+    0 14px 34px rgba(15,23,42,0.075),
+    0 2px 10px rgba(37,99,235,0.045),
+    inset 0 1px 0 rgba(255,255,255,1) !important;
   isolation: isolate !important;
   z-index: 10000 !important;
   overflow: visible !important;
@@ -1529,22 +1532,41 @@ nav {
   padding-top: 0 !important;
 }
 
+/* Sottilissima luce brand sotto navbar */
+nav::after {
+  content: "";
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(59,130,246,0.34),
+    rgba(244,114,182,0.28),
+    transparent
+  );
+  pointer-events: none;
+}
+
 /* Contenitore navbar più compatto e ordinato */
 nav .max-w-7xl {
   gap: 1rem !important;
 }
 
-/* Logo come vero pulsante premium */
+/* Logo come pulsante premium più presente */
 .logo-wrapper {
   position: relative;
   border-radius: 9999px;
-  padding: 0.34rem 0.85rem 0.34rem 0.42rem;
+  padding: 0.36rem 0.92rem 0.36rem 0.44rem;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.84), rgba(248,250,252,0.62));
-  border: 1px solid rgba(226,232,240,0.82);
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.72));
+  border: 1.5px solid rgba(219,234,254,0.95);
   box-shadow:
-    0 8px 18px rgba(15,23,42,0.045),
-    inset 0 1px 0 rgba(255,255,255,0.92);
+    0 10px 22px rgba(15,23,42,0.065),
+    0 4px 12px rgba(37,99,235,0.055),
+    inset 0 1px 0 rgba(255,255,255,1);
   transition:
     transform .16s ease,
     background .16s ease,
@@ -1559,48 +1581,65 @@ nav .max-w-7xl {
   inset: 1px;
   border-radius: inherit;
   background:
-    linear-gradient(120deg, rgba(255,255,255,0.55), transparent 46%);
+    linear-gradient(120deg, rgba(255,255,255,0.72), transparent 48%);
   pointer-events: none;
-  opacity: 0.75;
+  opacity: 0.88;
 }
 
 .logo-wrapper:hover {
   transform: translateY(-1px);
   background:
-    linear-gradient(180deg, rgba(239,246,255,0.98), rgba(255,255,255,0.76));
-  border-color: rgba(147,197,253,0.78);
+    linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.84));
+  border-color: rgba(147,197,253,0.95);
   box-shadow:
-    0 11px 24px rgba(37,99,235,0.09),
-    inset 0 1px 0 rgba(255,255,255,0.96);
+    0 13px 26px rgba(37,99,235,0.105),
+    inset 0 1px 0 rgba(255,255,255,1);
 }
 
 .logo-wrapper img {
   position: relative;
   z-index: 2;
   margin-right: -2px;
-  filter: drop-shadow(0 5px 8px rgba(37,99,235,0.12));
+  filter:
+    drop-shadow(0 5px 8px rgba(37,99,235,0.16))
+    saturate(1.08);
 }
 
 .logo-wrapper span {
   position: relative;
   z-index: 2;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.052em;
+  text-shadow: 0 5px 12px rgba(37,99,235,0.10);
 }
 
-/* Icone navbar come micro-pulsanti premium */
+/* Link Accedi / Registrati più leggibili ma non invasivi */
+nav a[href*="login"],
+nav a[href*="register"] {
+  font-weight: 720 !important;
+  letter-spacing: -0.02em;
+  text-decoration: none !important;
+}
+
+nav a[href*="login"]:hover,
+nav a[href*="register"]:hover {
+  color: #1d4ed8 !important;
+}
+
+/* Icone navbar come micro-pulsanti premium più pieni */
 nav .icon-hover {
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.38rem;
+  height: 2.38rem;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.76), rgba(248,250,252,0.58));
-  border: 1px solid rgba(226,232,240,0.82);
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.70));
+  border: 1.5px solid rgba(226,232,240,0.95);
   box-shadow:
-    0 7px 16px rgba(15,23,42,0.045),
-    inset 0 1px 0 rgba(255,255,255,0.9);
+    0 9px 18px rgba(15,23,42,0.065),
+    0 3px 9px rgba(37,99,235,0.04),
+    inset 0 1px 0 rgba(255,255,255,1);
   transition:
     transform .16s ease,
     background .16s ease,
@@ -1609,13 +1648,13 @@ nav .icon-hover {
 }
 
 nav .icon-hover:hover {
-  transform: translateY(-1px) scale(1.04);
+  transform: translateY(-1px) scale(1.045);
   background:
-    linear-gradient(180deg, rgba(239,246,255,0.98), rgba(255,255,255,0.76));
-  border-color: rgba(147,197,253,0.78);
+    linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.82));
+  border-color: rgba(147,197,253,0.92);
   box-shadow:
-    0 10px 20px rgba(37,99,235,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.95);
+    0 12px 22px rgba(37,99,235,0.10),
+    inset 0 1px 0 rgba(255,255,255,1);
 }
 
 /* Badge notifiche/chat leggibile */
@@ -1627,7 +1666,7 @@ nav .badge-pop {
   justify-content: center;
   padding: 0 0.32rem !important;
   border-radius: 9999px;
-  border: 2px solid rgba(255,255,255,0.96);
+  border: 2px solid rgba(255,255,255,0.98);
   background: #dc2626 !important;
   color: #ffffff !important;
   font-size: 0.68rem !important;
@@ -1645,60 +1684,66 @@ nav .badge-pop:empty {
 
 /* Avatar coerente con le icone */
 nav .user-info img {
-  border: 1px solid rgba(226,232,240,0.95) !important;
+  border: 1.5px solid rgba(255,255,255,0.98) !important;
   box-shadow:
-    0 7px 16px rgba(15,23,42,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.9);
+    0 8px 18px rgba(15,23,42,0.10),
+    0 0 0 1px rgba(226,232,240,0.9),
+    inset 0 1px 0 rgba(255,255,255,1);
 }
 
 /* Username meno pesante */
 nav .username-link {
   color: #334155 !important;
-  font-weight: 700 !important;
+  font-weight: 740 !important;
   letter-spacing: -0.025em;
 }
 
-/* Hamburger allineato al linguaggio premium */
+/* Hamburger più glass e coerente */
 #nav-toggle {
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.42rem;
+  height: 2.42rem;
   border-radius: 9999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.76), rgba(248,250,252,0.58));
-  border: 1px solid rgba(226,232,240,0.82);
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.70));
+  border: 1.5px solid rgba(226,232,240,0.95);
   box-shadow:
-    0 7px 16px rgba(15,23,42,0.045),
-    inset 0 1px 0 rgba(255,255,255,0.9);
+    0 9px 18px rgba(15,23,42,0.065),
+    0 3px 9px rgba(37,99,235,0.04),
+    inset 0 1px 0 rgba(255,255,255,1);
   font-size: 1.45rem !important;
   line-height: 1;
   transition:
     transform .16s ease,
     background .16s ease,
-    border-color .16s ease;
+    border-color .16s ease,
+    box-shadow .16s ease;
 }
 
 #nav-toggle:hover {
   transform: translateY(-1px);
   background:
-    linear-gradient(180deg, rgba(239,246,255,0.98), rgba(255,255,255,0.76));
-  border-color: rgba(147,197,253,0.78);
+    linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.82));
+  border-color: rgba(147,197,253,0.92);
+  box-shadow:
+    0 12px 22px rgba(37,99,235,0.10),
+    inset 0 1px 0 rgba(255,255,255,1);
 }
 
 /* Menu mobile più coerente con navbar */
 #nav-menu {
-  background: rgba(255,255,255,0.94) !important;
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border-top: 1px solid rgba(226,232,240,0.72) !important;
+  background: rgba(255,255,255,0.96) !important;
+  backdrop-filter: blur(22px) saturate(175%);
+  -webkit-backdrop-filter: blur(22px) saturate(175%);
+  border-top: 1px solid rgba(191,219,254,0.72) !important;
   box-shadow:
-    0 18px 38px rgba(15,23,42,0.09),
-    inset 0 1px 0 rgba(255,255,255,0.92);
+    0 20px 42px rgba(15,23,42,0.105),
+    inset 0 1px 0 rgba(255,255,255,1);
 }
 
-/* Su tablet/mobile alleggerisce la navbar: resta avatar, sparisce username */
+/* Tablet/mobile: resta compatta */
 @media (max-width: 900px) {
   nav .user-info .username-link {
     display: none !important;
@@ -1713,10 +1758,11 @@ nav .username-link {
   }
 }
 
+/* Smartphone piccoli: non aumentare ingombro */
 @media (max-width: 480px) {
   .logo-wrapper {
     margin-left: -4px !important;
-    padding: 0.28rem 0.58rem 0.28rem 0.30rem;
+    padding: 0.28rem 0.62rem 0.28rem 0.30rem;
   }
 
   .logo-wrapper img {
@@ -1729,13 +1775,13 @@ nav .username-link {
   }
 
   nav .icon-hover {
-    width: 2.12rem;
-    height: 2.12rem;
+    width: 2.14rem;
+    height: 2.14rem;
   }
 
   #nav-toggle {
-    width: 2.18rem;
-    height: 2.18rem;
+    width: 2.2rem;
+    height: 2.2rem;
     font-size: 1.35rem !important;
   }
 
