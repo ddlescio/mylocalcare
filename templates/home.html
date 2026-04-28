@@ -3,6 +3,40 @@
 
 {% block content %}
 
+{% set hero_city_images = {
+  'MilanoCare': 'sfondo_card_hero_milano.png',
+  'RomaCare': 'sfondo_card_hero_roma.png',
+  'NapoliCare': 'sfondo_card_hero_napoli.png',
+  'FirenzeCare': 'sfondo_card_hero_firenze.png',
+  'VeneziaCare': 'sfondo_card_hero_venezia.png',
+  'BolzanoCare': 'sfondo_card_hero_bolzano.png',
+  'TorinoCare': 'sfondo_card_hero_torino.png',
+  'GenovaCare': 'sfondo_card_hero_genova.png',
+  'CagliariCare': 'sfondo_card_hero_cagliari.png',
+  'PalermoCare': 'sfondo_card_hero_palermo.png',
+  'AostaCare': 'sfondo_card_hero_aosta.png',
+  'VeronaCare': 'sfondo_card_hero_verona.png',
+  'BresciaCare': 'sfondo_card_hero_brescia.png',
+  'BolognaCare': 'sfondo_card_hero_bologna.png',
+  'PadovaCare': 'sfondo_card_hero_padova.png',
+  'TrentoCare': 'sfondo_card_hero_trento.png',
+  'PaviaCare': 'sfondo_card_hero_pavia.png',
+  'ComoCare': 'sfondo_card_hero_como.png',
+  'LeccoCare': 'sfondo_card_hero_lecco.png',
+  'VareseCare': 'sfondo_card_hero_varese.png',
+  'MonzaBrianzaCare': 'sfondo_card_hero_monza_brianza.png',
+  'BergamoCare': 'sfondo_card_hero_bergamo.png',
+  'PisaCare': 'sfondo_card_hero_pisa.png',
+  'TrevisoCare': 'sfondo_card_hero_treviso.png',
+  'TriesteCare': 'sfondo_card_hero_trieste.png',
+  'BariCare': 'sfondo_card_hero_bari.png',
+  'CatanzaroCare': 'sfondo_card_hero_catanzaro.png',
+  'LecceCare': 'sfondo_card_hero_lecce.png',
+  'SalernoCare': 'sfondo_card_hero_salerno.png'
+} %}
+
+{% set hero_bg_file = hero_city_images.get(brand_name, 'sfondo_card_hero.png') %}
+
 <style>
   body.home {
     background:
@@ -56,11 +90,11 @@
     z-index: 0;
   }
 
-  .home-hero-premium .home-hero-bg-milano {
+  .home-hero-premium .home-hero-bg-city {
     inset: -10px;
     background-size: 108% 112%;
   }
-    
+      
   @media (min-width: 768px) {
     .home-hero-premium .home-hero-bg {
       background-image: url("{{ url_for('static', filename='img/sfondo_card_hero_desktop.png') }}");
@@ -447,10 +481,8 @@
 
   <section class="home-hero-premium">
     <div
-      class="home-hero-bg {% if brand_name == 'MilanoCare' %}home-hero-bg-milano{% endif %}"
-      style="
-        background-image: url('{% if brand_name == 'MilanoCare' %}{{ url_for('static', filename='img/sfondo_card_hero_milano.png') }}{% else %}{{ url_for('static', filename='img/sfondo_card_hero.png') }}{% endif %}');
-      ">
+      class="home-hero-bg {% if hero_bg_file != 'sfondo_card_hero.png' %}home-hero-bg-city{% endif %}"
+      style="background-image: url('{{ url_for('static', filename='img/' ~ hero_bg_file) }}');">
     </div>
 
     <div class="home-hero-inner">
