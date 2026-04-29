@@ -1988,15 +1988,29 @@
     pointer-events: none;
   }
 
+  /* Desktop: griglia vetrina visibile SOLO da 1024px in su */
   .vetrina-grid-desktop {
     position: relative;
     z-index: 2;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 22px;
-    align-items: stretch;
   }
 
+  /* sotto 1024px il blocco desktop deve restare sempre nascosto */
+  @media (max-width: 1023px) {
+    .vetrina-grid-desktop {
+      display: none !important;
+    }
+  }
+
+  /* da desktop in su attivo la griglia */
+  @media (min-width: 1024px) {
+    .vetrina-grid-desktop {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 22px;
+      align-items: stretch;
+    }
+  }
+  
   /* Desktop: card vetrina nuova, non più avatar-card vecchia */
   .vetrina-ticket-desktop {
     position: relative;
