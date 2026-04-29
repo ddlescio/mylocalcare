@@ -1056,15 +1056,21 @@
     aspect-ratio: 16 / 5.4;
     border-radius: 2rem;
     overflow: hidden;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(246,250,255,0.84));
-    border: 1.5px solid rgba(255,255,255,0.98);
+    background: #fff;
+
+    border: 2px solid rgba(255,255,255,0.98);
+
+    outline: 1.5px solid rgba(203,213,225,0.72);
+    outline-offset: -0.5px;
+
     box-shadow:
-      0 30px 68px rgba(15,23,42,0.13),
-      0 14px 34px rgba(37,99,235,0.075),
-      inset 0 1px 0 rgba(255,255,255,1),
-      inset 0 -16px 30px rgba(15,23,42,0.045),
-      inset 0 0 0 1px rgba(37,99,235,0.12);
+      0 0 0 4px rgba(255,255,255,0.92),
+      0 0 0 5.5px rgba(203,213,225,0.42),
+      0 18px 42px rgba(15,23,42,0.10),
+      0 30px 70px rgba(15,23,42,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      inset 0 0 0 1px rgba(255,255,255,0.42);
+
     isolation: isolate;
   }
 
@@ -1128,52 +1134,6 @@
     .cover-user-img {
       object-position: center 34%;
     }
-  }
-
-  .hero-cover-card::before {
-    content: "";
-    position: absolute;
-    inset: 2px;
-    border-radius: calc(2rem - 2px);
-    pointer-events: none;
-    z-index: 9;
-
-    background:
-      linear-gradient(90deg,
-        rgba(37,99,235,0.98) 0%,
-        rgba(96,165,250,0.78) 22%,
-        rgba(191,219,254,0.48) 45%,
-        rgba(255,255,255,0.25) 68%,
-        transparent 100%
-      ) top left / 50% 3px no-repeat,
-
-      linear-gradient(180deg,
-        rgba(37,99,235,0.82) 0%,
-        rgba(96,165,250,0.58) 28%,
-        rgba(191,219,254,0.34) 52%,
-        rgba(255,255,255,0.18) 74%,
-        transparent 100%
-      ) top left / 3px 46% no-repeat,
-
-      linear-gradient(270deg,
-        rgba(219,39,119,0.96) 0%,
-        rgba(244,114,182,0.74) 22%,
-        rgba(251,207,232,0.46) 45%,
-        rgba(255,255,255,0.24) 70%,
-        transparent 100%
-      ) bottom right / 52% 3px no-repeat,
-
-      linear-gradient(0deg,
-        rgba(219,39,119,0.78) 0%,
-        rgba(244,114,182,0.56) 28%,
-        rgba(251,207,232,0.34) 52%,
-        rgba(255,255,255,0.18) 74%,
-        transparent 100%
-      ) bottom right / 3px 46% no-repeat;
-
-    filter:
-      drop-shadow(0 0 7px rgba(96,165,250,0.38))
-      drop-shadow(0 0 7px rgba(244,114,182,0.32));
   }
 
   .hero-floating-btn {
@@ -1506,15 +1466,19 @@
       height: 210px;
     }
 
-    .hero-cover-card::before {
-      border-radius: calc(1.25rem - 2px);
-      background-size:
-        54% 2.5px,
-        2.5px 46%,
-        54% 2.5px,
-        2.5px 46%;
+    .hero-cover-card {
+      border: 2px solid rgba(255,255,255,0.98);
+      outline: 1.25px solid rgba(203,213,225,0.72);
+      outline-offset: -0.5px;
+      box-shadow:
+        0 0 0 3px rgba(255,255,255,0.92),
+        0 0 0 4.5px rgba(203,213,225,0.40),
+        0 14px 34px rgba(15,23,42,0.10),
+        0 24px 52px rgba(15,23,42,0.10),
+        inset 0 1px 0 rgba(255,255,255,0.95),
+        inset 0 0 0 1px rgba(255,255,255,0.38);
     }
-    
+        
     .hero-floating-btn {
       width: 42px;
       height: 42px;
