@@ -240,7 +240,7 @@
   </div>
 
   <!-- Mobile: vetrina premium compatta -->
-  <div class="vetrina-mobile-wrap md:hidden">
+  <div class="vetrina-mobile-wrap lg:hidden">
     <div class="vetrina-mobile-scroll">
       {% for a in annunci_vetrina %}
 
@@ -339,7 +339,7 @@
   </div>
 
   <!-- Desktop: griglia -->
-  <div class="hidden md:grid vetrina-grid-desktop">
+  <div class="hidden lg:grid vetrina-grid-desktop">
     {% for a in annunci_vetrina %}
     <div
       class="cursor-pointer card-vetrina card-vetrina-desktop js-open-annuncio
@@ -2403,7 +2403,7 @@ body.page-cerca .container {
 /* ------------------------------
    MOBILE
 ------------------------------ */
-@media (max-width: 640px) {
+@media (max-width: 1023px) {
 
   /* Riduce l'effetto "pagina staccata" sotto navbar */
   body.page-cerca .container {
@@ -2469,6 +2469,7 @@ body.page-cerca .container {
   .vetrina-wrapper {
     margin: 0 auto 1.55rem auto !important;
     padding: 0.9rem 0.75rem 1rem !important;
+    max-width: 760px !important;
     border-radius: 1.6rem !important;
     background:
       radial-gradient(circle at 12% 8%, rgba(250, 204, 21, 0.16), transparent 28%),
@@ -2534,9 +2535,9 @@ body.page-cerca .container {
 
   .vetrina-ticket-mobile {
     position: relative;
-    flex: 0 0 92%;
-    min-width: 92%;
-    max-width: 92%;
+    flex: 0 0 min(92%, 430px);
+    min-width: min(92%, 430px);
+    max-width: 430px;
     min-height: 142px;
     display: grid;
     grid-template-columns: 82px minmax(0, 1fr);
