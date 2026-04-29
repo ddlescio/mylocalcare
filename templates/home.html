@@ -167,26 +167,38 @@
         rgba(15,23,42,0.025) 100%
       );
   }
-        
+
   .home-hero-premium::before {
     content: "";
     position: absolute;
     inset: 0;
     background:
+      /* riflesso obliquo molto leggero, mantiene effetto premium */
       linear-gradient(115deg,
-        rgba(255,255,255,0.58) 0%,
-        rgba(255,255,255,0.18) 34%,
-        transparent 68%
+        rgba(255,255,255,0.46) 0%,
+        rgba(255,255,255,0.16) 32%,
+        transparent 66%
       ),
-      radial-gradient(ellipse at 50% 0%,
+
+      /* microluce superiore: fa sembrare la card più lucida e spessa */
+      linear-gradient(180deg,
         rgba(255,255,255,0.72) 0%,
-        rgba(255,255,255,0.18) 38%,
-        transparent 72%
+        rgba(255,255,255,0.28) 8%,
+        rgba(255,255,255,0.08) 16%,
+        transparent 30%
+      ),
+
+      /* micro-ombra inferiore interna: dà profondità senza sporcare */
+      linear-gradient(0deg,
+        rgba(15,23,42,0.070) 0%,
+        rgba(15,23,42,0.030) 7%,
+        rgba(15,23,42,0.010) 14%,
+        transparent 26%
       );
     pointer-events: none;
     z-index: 1;
   }
-
+  
   .home-hero-premium::after {
     content: "";
     position: absolute;
