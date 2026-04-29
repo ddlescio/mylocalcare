@@ -112,17 +112,19 @@
     padding: 2.15rem 1.35rem;
     margin-bottom: 1.55rem;
     background:
-      linear-gradient(135deg, rgba(255,255,255,0.84), rgba(248,250,252,0.66)),
-      radial-gradient(circle at 18% 0%, rgba(96,165,250,0.20), transparent 34%),
-      radial-gradient(circle at 88% 20%, rgba(244,114,182,0.17), transparent 32%);
+      radial-gradient(circle at 0% 50%, rgba(37,99,235,0.24), transparent 42%),
+      radial-gradient(circle at 100% 48%, rgba(219,39,119,0.20), transparent 42%),
+      radial-gradient(circle at 50% 100%, rgba(14,165,233,0.10), transparent 48%),
+      linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,250,255,0.82));
     border: 1.5px solid rgba(255,255,255,0.98);
     box-shadow:
-      0 26px 62px rgba(15,23,42,0.105),
-      0 10px 26px rgba(37,99,235,0.055),
-      0 1px 0 rgba(255,255,255,1) inset,
-      0 0 0 1px rgba(37,99,235,0.10) inset;
-    backdrop-filter: blur(18px) saturate(150%);
-    -webkit-backdrop-filter: blur(18px) saturate(150%);
+      0 28px 64px rgba(15,23,42,0.12),
+      0 12px 30px rgba(37,99,235,0.065),
+      inset 0 1px 0 rgba(255,255,255,1),
+      inset 0 -14px 26px rgba(15,23,42,0.035),
+      inset 0 0 0 1px rgba(37,99,235,0.11);
+    backdrop-filter: blur(18px) saturate(155%);
+    -webkit-backdrop-filter: blur(18px) saturate(155%);
   }
 
   .home-hero-premium .home-hero-bg {
@@ -131,8 +133,8 @@
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.68;
-    filter: saturate(1.12) contrast(1.04);
+    opacity: 0.76;
+    filter: saturate(1.18) contrast(1.06);
     pointer-events: none;
     z-index: 0;
   }
@@ -153,11 +155,18 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at 50% 42%,
-        rgba(255,255,255,0.90) 0%,
-        rgba(255,255,255,0.82) 30%,
-        rgba(255,255,255,0.36) 54%,
-        rgba(255,255,255,0.08) 100%
+      radial-gradient(circle at 50% 43%,
+        rgba(255,255,255,0.94) 0%,
+        rgba(255,255,255,0.88) 28%,
+        rgba(255,255,255,0.48) 52%,
+        rgba(255,255,255,0.10) 78%,
+        rgba(255,255,255,0.02) 100%
+      ),
+      linear-gradient(90deg,
+        rgba(37,99,235,0.10) 0%,
+        transparent 22%,
+        transparent 78%,
+        rgba(219,39,119,0.10) 100%
       );
   }
 
@@ -166,8 +175,18 @@
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(115deg, rgba(255,255,255,0.42), rgba(255,255,255,0.05) 42%, transparent 70%);
+      linear-gradient(115deg,
+        rgba(255,255,255,0.58) 0%,
+        rgba(255,255,255,0.18) 34%,
+        transparent 68%
+      ),
+      radial-gradient(ellipse at 50% 0%,
+        rgba(255,255,255,0.72) 0%,
+        rgba(255,255,255,0.18) 38%,
+        transparent 72%
+      );
     pointer-events: none;
+    z-index: 1;
   }
 
   .home-hero-premium::after {
@@ -205,13 +224,18 @@
     font-weight: 880;
     color: #0f172a;
     text-wrap: balance;
+    text-shadow:
+      0 1px 0 rgba(255,255,255,0.92),
+      0 10px 24px rgba(15,23,42,0.08);
   }
 
   .home-title span {
     color: #2563eb;
-    text-shadow: 0 8px 22px rgba(37,99,235,0.10);
+    text-shadow:
+      0 1px 0 rgba(255,255,255,0.9),
+      0 9px 22px rgba(37,99,235,0.16);
   }
-
+  
   .home-subtitle {
     max-width: 42rem;
     margin: 1rem auto 0;
@@ -549,7 +573,7 @@
       </h1>
 
       <p class="home-subtitle">
-        Trova persone e opportunità vicino a te in modo semplice.
+        Trova servizi e persone di fiducia vicino a te.
       </p>
     </div>
   </section>
