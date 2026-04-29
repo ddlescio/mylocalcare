@@ -2458,21 +2458,22 @@ body.page-cerca .container {
       ) !important;
   }
 
-  /* VETRINA MOBILE — versione premium ticket */
+  /* VETRINA MOBILE — versione premium stabile */
   .vetrina-wrapper {
     margin: 0 auto 1.45rem auto !important;
-    padding: 0.85rem 0.75rem 0.95rem !important;
+    padding: 0.85rem 0.8rem 0.95rem !important;
     border-radius: 1.55rem !important;
     background:
       linear-gradient(
         145deg,
-        rgba(255, 255, 255, 0.92),
-        rgba(255, 250, 228, 0.72)
+        rgba(255, 255, 255, 0.94),
+        rgba(255, 252, 232, 0.76)
       ) !important;
     border: 1px solid rgba(250, 204, 21, 0.18) !important;
     box-shadow:
       0 8px 20px rgba(15, 23, 42, 0.05),
       0 16px 34px rgba(15, 23, 42, 0.04) !important;
+    overflow: hidden !important;
   }
 
   .vetrina-wrapper::before,
@@ -2482,12 +2483,12 @@ body.page-cerca .container {
 
   .vetrina-wrapper > .flex.items-center {
     margin-bottom: 0.65rem !important;
-    padding: 0 0.2rem !important;
+    padding: 0 0.15rem !important;
   }
 
   .vetrina-wrapper h3 {
     font-size: 0.98rem !important;
-    font-weight: 750 !important;
+    font-weight: 760 !important;
     color: #334155 !important;
   }
 
@@ -2503,50 +2504,51 @@ body.page-cerca .container {
 
   .vetrina-mobile-scroll {
     display: flex !important;
-    gap: 0.75rem !important;
+    gap: 0.85rem !important;
     overflow-x: auto !important;
-    overflow-y: visible !important;
-    padding: 0.15rem 0.1rem 0.45rem !important;
+    overflow-y: hidden !important;
+    padding: 0.15rem 0.05rem 0.5rem !important;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
   }
 
   .vetrina-mobile-scroll .card-vetrina {
-    flex: 0 0 86% !important;
-    min-width: 86% !important;
-    max-width: 86% !important;
+    flex: 0 0 72% !important;
+    min-width: 72% !important;
+    max-width: 72% !important;
     scroll-snap-align: start;
-    padding: 0 !important;
+    padding: 0.75rem 0.65rem 0.7rem !important;
     border-radius: 1.35rem !important;
     background:
       linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.98),
-        rgba(248, 250, 252, 0.96)
+        180deg,
+        rgba(255, 255, 255, 0.985),
+        rgba(248, 250, 252, 0.965)
       ) !important;
     border: 1px solid rgba(226, 232, 240, 0.95) !important;
     box-shadow:
-      0 10px 24px rgba(15, 23, 42, 0.08),
+      0 10px 24px rgba(15, 23, 42, 0.075),
       inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   .vetrina-mobile-scroll .card-vetrina-urgente {
-    border-color: rgba(239, 68, 68, 0.32) !important;
+    border-color: rgba(239, 68, 68, 0.34) !important;
     box-shadow:
       0 0 0 1px rgba(239, 68, 68, 0.12),
       0 10px 24px rgba(15, 23, 42, 0.08) !important;
   }
 
   .vetrina-card-shell {
-    display: grid !important;
-    grid-template-columns: 82px minmax(0, 1fr) !important;
+    min-height: 218px !important;
+    display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
-    min-height: 132px !important;
-    gap: 0.85rem !important;
-    padding: 1rem 0.95rem !important;
-    border-radius: 1.35rem !important;
-    text-align: left !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+    padding: 1.45rem 0.55rem 0.7rem !important;
+    border-radius: 1.15rem !important;
+    text-align: center !important;
     background: transparent !important;
   }
 
@@ -2555,35 +2557,31 @@ body.page-cerca .container {
   }
 
   .vetrina-avatar-wrap {
-    width: 82px !important;
-    height: 82px !important;
+    width: 86px !important;
+    height: 86px !important;
     padding: 4px !important;
-    grid-column: 1 !important;
-    grid-row: 1 !important;
     box-shadow:
       0 8px 18px rgba(15, 23, 42, 0.10),
       inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
   }
 
   .vetrina-content {
-    grid-column: 2 !important;
-    grid-row: 1 !important;
-    align-items: flex-start !important;
-    text-align: left !important;
+    width: 100% !important;
+    align-items: center !important;
+    text-align: center !important;
     gap: 0.42rem !important;
-    min-width: 0 !important;
   }
 
   .vetrina-title {
-    font-size: 0.95rem !important;
-    line-height: 1.1 !important;
-    max-width: 100% !important;
+    font-size: 0.9rem !important;
+    line-height: 1.12 !important;
+    max-width: 96% !important;
     font-weight: 780 !important;
     -webkit-line-clamp: 2 !important;
   }
 
   .vetrina-meta-row {
-    justify-content: flex-start !important;
+    justify-content: center !important;
     gap: 0.35rem !important;
     min-height: auto !important;
   }
@@ -2603,9 +2601,9 @@ body.page-cerca .container {
   }
 
   .vetrina-pill-wrap {
-    justify-content: flex-start !important;
+    justify-content: center !important;
     gap: 0.35rem !important;
-    margin-top: 0.1rem !important;
+    margin-top: 0.05rem !important;
   }
 
   .vetrina-pill {
@@ -2614,7 +2612,7 @@ body.page-cerca .container {
   }
 
   .vetrina-rating {
-    justify-content: flex-start !important;
+    justify-content: center !important;
   }
 
   .vetrina-rating-value {
@@ -2636,29 +2634,28 @@ body.page-cerca .container {
     min-height: 26px !important;
     padding: 0.3rem 0.62rem !important;
     font-size: 0.66rem !important;
-    z-index: 8 !important;
+    z-index: 20 !important;
   }
 
   .vetrina-username-wrap,
   .vetrina-username-wrap.has-badge {
-    top: 0.55rem !important;
-    left: 0.75rem !important;
-    right: auto !important;
-    max-width: 7.4rem !important;
-    z-index: 8 !important;
+    top: -0.45rem !important;
+    left: 0.55rem !important;
+    right: 4.55rem !important;
+    z-index: 21 !important;
   }
 
   .vetrina-username {
     min-height: 21px !important;
     font-size: 0.58rem !important;
     padding: 0.24rem 0.55rem 0.12rem !important;
-    background: rgba(255, 255, 255, 0.82) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
   }
 
   .badge-affidabilita-vetrina {
     display: none !important;
   }
-  
+    
   /* LISTA CARD: un filo più stretta e più respirata */
   .max-w-7xl.mx-auto.px-2 {
     padding-left: 0.55rem !important;
