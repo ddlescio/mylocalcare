@@ -1968,7 +1968,7 @@
       padding-bottom: 20px;
     }
   }
-  
+
   .vetrina-wrapper::before {
     content: "";
     position: absolute;
@@ -2405,4 +2405,200 @@ window.addEventListener("load", updatePillRows);
 window.addEventListener("resize", updatePillRows);
 
 </script>
+<style>
+/* ============================================================
+   PATCH MOBILE /CERCA — riallineamento visivo con HOME
+   ============================================================ */
+
+/* Sfondo pagina più coerente con home */
+body.page-cerca {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(230, 238, 255, 1) 0%,
+      rgba(255, 238, 247, 0.92) 42%,
+      #ffffff 100%
+    ) !important;
+}
+
+/* Contenitore generale della pagina cerca */
+body.page-cerca .container {
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+}
+
+/* ------------------------------
+   MOBILE
+------------------------------ */
+@media (max-width: 640px) {
+
+  /* Riduce l'effetto "pagina staccata" sotto navbar */
+  body.page-cerca .container {
+    padding-top: calc(70px + 0.35rem) !important;
+  }
+
+  /* HEADER CATEGORIA: più basso, più simile a una sezione home */
+  .header-cerca {
+    margin-bottom: 1.1rem !important;
+  }
+
+  .header-cerca > div {
+    border-radius: 1.6rem !important;
+    padding: 1.15rem 1.1rem !important;
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.055),
+      0 18px 42px rgba(15, 23, 42, 0.045) !important;
+  }
+
+  .header-cerca h2 {
+    font-size: 1.85rem !important;
+    line-height: 0.98 !important;
+    letter-spacing: -0.055em !important;
+  }
+
+  .header-cerca .relative.flex {
+    gap: 0.95rem !important;
+  }
+
+  .header-cerca button {
+    padding: 0.62rem 1rem !important;
+    font-size: 0.88rem !important;
+  }
+
+  /* VETRINA: meno alta e più leggera */
+  .vetrina-wrapper {
+    margin: 0 auto 1.7rem auto !important;
+    padding: 1rem 0.85rem 1.1rem !important;
+    border-radius: 1.65rem !important;
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.055),
+      0 18px 42px rgba(15, 23, 42, 0.045) !important;
+  }
+
+  .vetrina-wrapper > .flex.items-center {
+    margin-bottom: 0.7rem !important;
+  }
+
+  .vetrina-wrapper h3 {
+    font-size: 1rem !important;
+  }
+
+  .vetrina-wrapper > .flex.items-center > span {
+    font-size: 0.72rem !important;
+  }
+
+  .vetrina-mobile-wrap {
+    padding-bottom: 0.25rem !important;
+  }
+
+  .vetrina-mobile-scroll {
+    gap: 0.8rem !important;
+    padding: 0.25rem 0.15rem 0.45rem !important;
+  }
+
+  .vetrina-mobile-scroll .card-vetrina {
+    min-width: 238px !important;
+    max-width: 238px !important;
+    padding: 0.8rem 0.7rem 0.75rem !important;
+    border-radius: 1.35rem !important;
+  }
+
+  .vetrina-card-shell {
+    min-height: 205px !important;
+    gap: 0.5rem !important;
+    padding: 1.35rem 0.45rem 0.65rem !important;
+    border-radius: 1.15rem !important;
+  }
+
+  .vetrina-avatar-wrap {
+    width: 74px !important;
+    height: 74px !important;
+    padding: 4px !important;
+  }
+
+  .vetrina-title {
+    font-size: 0.88rem !important;
+    line-height: 1.12 !important;
+    max-width: 94% !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .vetrina-meta-row {
+    gap: 0.35rem !important;
+    min-height: 18px !important;
+  }
+
+  .vetrina-meta-location {
+    font-size: 0.82rem !important;
+  }
+
+  .vetrina-meta-type {
+    font-size: 0.8rem !important;
+  }
+
+  .vetrina-pill-wrap {
+    gap: 0.35rem !important;
+    margin-top: 0 !important;
+  }
+
+  .vetrina-pill {
+    font-size: 0.68rem !important;
+    padding: 0.35rem 0.6rem !important;
+  }
+
+  .badge-urgente-top,
+  .badge-vetrina {
+    top: 0.6rem !important;
+    right: 0.6rem !important;
+    min-height: 27px !important;
+    padding: 0.32rem 0.65rem !important;
+    font-size: 0.68rem !important;
+  }
+
+  .vetrina-username-wrap,
+  .vetrina-username-wrap.has-badge {
+    top: -0.65rem !important;
+    left: 0.55rem !important;
+    right: 4.7rem !important;
+  }
+
+  .vetrina-username {
+    min-height: 22px !important;
+    font-size: 0.62rem !important;
+    padding: 0.25rem 0.55rem 0 !important;
+  }
+
+  /* LISTA CARD: un filo più stretta e più respirata */
+  .max-w-7xl.mx-auto.px-2 {
+    padding-left: 0.55rem !important;
+    padding-right: 0.55rem !important;
+  }
+
+  .card-ios {
+    max-width: 348px !important;
+  }
+
+  .card-ios-shell {
+    border-radius: 1.45rem !important;
+    padding: 0.65rem !important;
+  }
+
+  .card-hero-premium {
+    border-radius: 1.05rem !important;
+  }
+
+  .mini-card-dati {
+    border-radius: 1.15rem !important;
+  }
+
+  /* FAB meno invasivo */
+  .fab-pubblica-annuncio {
+    right: 1rem !important;
+    bottom: 1.25rem !important;
+    padding: 0.6rem 1rem !important;
+    font-size: 0.9rem !important;
+  }
+}
+</style>
+
 {% endblock %}
