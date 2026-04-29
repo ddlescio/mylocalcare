@@ -171,47 +171,45 @@
   .home-hero-premium::before {
     content: "";
     position: absolute;
-    inset: 0;
-    background:
-      /* riflesso obliquo premium, visibile ma leggero */
-      linear-gradient(115deg,
-        rgba(255,255,255,0.50) 0%,
-        rgba(255,255,255,0.20) 28%,
-        rgba(255,255,255,0.06) 48%,
-        transparent 68%
-      ),
-
-      /* bordo alto luminoso: più netto, effetto lastra di vetro */
-      linear-gradient(180deg,
-        rgba(255,255,255,1) 0%,
-        rgba(255,255,255,0.96) 1.8%,
-        rgba(219,234,254,0.58) 4.5%,
-        rgba(255,255,255,0.32) 8.5%,
-        rgba(255,255,255,0.10) 15%,
-        transparent 26%
-      ),
-
-      /* riflesso colorato sottile alto, blu → rosa */
-      linear-gradient(90deg,
-        rgba(37,99,235,0.22) 0%,
-        rgba(147,197,253,0.16) 22%,
-        rgba(255,255,255,0.10) 50%,
-        rgba(244,114,182,0.18) 78%,
-        rgba(219,39,119,0.24) 100%
-      ),
-
-      /* bordo basso più profondo e luminoso */
-      linear-gradient(0deg,
-        rgba(15,23,42,0.14) 0%,
-        rgba(37,99,235,0.08) 2.5%,
-        rgba(244,114,182,0.065) 5.5%,
-        rgba(15,23,42,0.030) 10%,
-        transparent 21%
-      );
+    inset: 1px;
+    border-radius: calc(2rem - 1px);
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
+
+    background:
+      /* L alta sinistra — tratto orizzontale */
+      linear-gradient(90deg,
+        rgba(37,99,235,0.62) 0%,
+        rgba(96,165,250,0.42) 32%,
+        rgba(255,255,255,0.20) 62%,
+        transparent 100%
+      ) top left / 52% 3px no-repeat,
+
+      /* L alta sinistra — tratto verticale */
+      linear-gradient(180deg,
+        rgba(37,99,235,0.52) 0%,
+        rgba(96,165,250,0.30) 36%,
+        rgba(255,255,255,0.14) 66%,
+        transparent 100%
+      ) top left / 3px 58% no-repeat,
+
+      /* L bassa destra — tratto orizzontale */
+      linear-gradient(270deg,
+        rgba(219,39,119,0.58) 0%,
+        rgba(244,114,182,0.38) 34%,
+        rgba(255,255,255,0.18) 64%,
+        transparent 100%
+      ) bottom right / 54% 3px no-repeat,
+
+      /* L bassa destra — tratto verticale */
+      linear-gradient(0deg,
+        rgba(219,39,119,0.48) 0%,
+        rgba(244,114,182,0.30) 38%,
+        rgba(255,255,255,0.14) 68%,
+        transparent 100%
+      ) bottom right / 3px 58% no-repeat;
   }
-      
+
   .home-hero-premium::after {
     content: "";
     position: absolute;
@@ -231,12 +229,12 @@
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
-    z-index: 3;
+    z-index: 5;
   }
 
   .home-hero-inner {
     position: relative;
-    z-index: 2;
+    z-index: 4;
     text-align: center;
   }
 
