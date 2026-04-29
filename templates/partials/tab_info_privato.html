@@ -1894,6 +1894,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!form) return;
 
+  function aggiornaIntroInfoBase() {
+    const citta = document.getElementById("citta_hidden")?.value?.trim() || "";
+    const lingue = document.getElementById("lingue_hidden")?.value?.trim() || "";
+    const frase = document.getElementById("frase_hidden")?.value?.trim() || "";
+
+    const cittaRow = document.getElementById("intro-citta-row");
+    const cittaValue = document.getElementById("intro-citta-value");
+
+    const lingueRow = document.getElementById("intro-lingue-row");
+    const lingueValue = document.getElementById("intro-lingue-value");
+
+    const fraseRow = document.getElementById("intro-frase-row");
+    const fraseValue = document.getElementById("intro-frase-value");
+
+    if (cittaRow && cittaValue) {
+      cittaValue.textContent = citta;
+      cittaRow.classList.toggle("hidden", !citta);
+    }
+
+    if (lingueRow && lingueValue) {
+      lingueValue.textContent = lingue;
+      lingueRow.classList.toggle("hidden", !lingue);
+    }
+
+    if (fraseRow && fraseValue) {
+      fraseValue.textContent = frase;
+      fraseRow.classList.toggle("hidden", !frase);
+    }
+  }
+
   let autosaveTimer = null;
   let autosaveInCorso = false;
   let queuedAutosave = false;
@@ -1955,6 +1985,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       setStatus("success", "Modifiche salvate");
+      aggiornaIntroInfoBase();
       clearStatusLater();
 
     } catch (err) {

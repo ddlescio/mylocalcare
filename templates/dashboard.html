@@ -303,27 +303,29 @@
               </div>
 
               <!-- 🔹 Info base -->
-              <div class="flex flex-col gap-3 text-[14px] text-gray-700">
-                {% if utente.get('citta') %}
-                  <div class="flex items-center gap-3">
-                    <span class="text-red-500 text-lg">📍</span>
-                    <span class="font-medium">{{ utente['citta'] }}</span>
-                  </div>
-                {% endif %}
-                {% if utente.get('lingue') %}
-                  <div class="flex items-center gap-3">
-                    <span class="text-blue-500 text-lg">🗣️</span>
-                    <span>{{ utente['lingue'] }}</span>
-                  </div>
-                {% endif %}
-                {% if utente.get('frase') %}
-                  <div class="flex items-start gap-3 italic text-gray-600">
-                    <span class="text-gray-400 text-lg">💬</span>
-                    “{{ utente['frase'] }}”
-                  </div>
-                {% endif %}
-              </div>
+              <div id="intro-info-base" class="flex flex-col gap-3 text-[14px] text-gray-700">
 
+                <div id="intro-citta-row"
+                     class="flex items-center gap-3 {% if not utente.get('citta') %}hidden{% endif %}">
+                  <span class="text-red-500 text-lg">📍</span>
+                  <span id="intro-citta-value" class="font-medium">{{ utente.get('citta') or '' }}</span>
+                </div>
+
+                <div id="intro-lingue-row"
+                     class="flex items-center gap-3 {% if not utente.get('lingue') %}hidden{% endif %}">
+                  <span class="text-blue-500 text-lg">🗣️</span>
+                  <span id="intro-lingue-value">{{ utente.get('lingue') or '' }}</span>
+                </div>
+
+                <div id="intro-frase-row"
+                     class="flex items-start gap-3 italic text-gray-600 {% if not utente.get('frase') %}hidden{% endif %}">
+                  <span class="text-gray-400 text-lg">💬</span>
+                  <span>
+                    “<span id="intro-frase-value">{{ utente.get('frase') or '' }}</span>”
+                  </span>
+                </div>
+
+              </div>
 
               <!-- 🔹 Attività Offro / Cerco -->
               {% set categorie = [
@@ -1218,7 +1220,7 @@
       );
     pointer-events: none;
   }
-  
+
   .hero-avatar-slot {
     position: relative;
     z-index: 3;
