@@ -112,28 +112,13 @@
     padding: 2.15rem 1.35rem;
     margin-bottom: 1.55rem;
     background:
-      linear-gradient(90deg,
-        rgba(37,99,235,0.34) 0%,
-        rgba(37,99,235,0.22) 7%,
-        rgba(37,99,235,0.08) 18%,
-        transparent 33%,
-        transparent 67%,
-        rgba(219,39,119,0.08) 82%,
-        rgba(219,39,119,0.22) 93%,
-        rgba(219,39,119,0.34) 100%
-      ),
-      radial-gradient(circle at 0% 50%, rgba(37,99,235,0.22), transparent 40%),
-      radial-gradient(circle at 100% 48%, rgba(219,39,119,0.20), transparent 40%),
-      radial-gradient(circle at 50% 105%, rgba(14,165,233,0.13), transparent 50%),
-      linear-gradient(180deg, rgba(255,255,255,0.95), rgba(246,250,255,0.84));
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(246,250,255,0.84));
     border: 1.5px solid rgba(255,255,255,0.98);
     box-shadow:
       0 30px 68px rgba(15,23,42,0.13),
       0 14px 34px rgba(37,99,235,0.075),
       inset 0 1px 0 rgba(255,255,255,1),
       inset 0 -16px 30px rgba(15,23,42,0.045),
-      inset 24px 0 34px rgba(37,99,235,0.075),
-      inset -24px 0 34px rgba(219,39,119,0.070),
       inset 0 0 0 1px rgba(37,99,235,0.12);
     backdrop-filter: blur(18px) saturate(162%);
     -webkit-backdrop-filter: blur(18px) saturate(162%);
@@ -167,37 +152,44 @@
     position: absolute;
     inset: 0;
     background:
-      /* Centro molto protetto per mantenere leggibile il testo */
+      /* Velo centrale: protegge il testo ma NON copre i bordi */
       radial-gradient(circle at 50% 43%,
         rgba(255,255,255,0.97) 0%,
-        rgba(255,255,255,0.93) 25%,
-        rgba(255,255,255,0.70) 43%,
-        rgba(255,255,255,0.26) 62%,
-        rgba(255,255,255,0.04) 100%
+        rgba(255,255,255,0.92) 26%,
+        rgba(255,255,255,0.72) 42%,
+        rgba(255,255,255,0.34) 56%,
+        rgba(255,255,255,0.08) 68%,
+        transparent 78%
       ),
 
-      /* Fascia colore laterale più viva e più vicina al bordo */
+      /* Bordo sinistro vivo: resta netto vicino al bordo e sfuma verso l’interno */
       linear-gradient(90deg,
         rgba(37,99,235,0.42) 0%,
-        rgba(37,99,235,0.34) 5%,
-        rgba(37,99,235,0.18) 12%,
-        rgba(37,99,235,0.055) 22%,
-        transparent 34%,
-        transparent 66%,
-        rgba(219,39,119,0.060) 78%,
-        rgba(219,39,119,0.20) 88%,
-        rgba(219,39,119,0.36) 95%,
-        rgba(219,39,119,0.44) 100%
+        rgba(37,99,235,0.34) 4%,
+        rgba(37,99,235,0.22) 9%,
+        rgba(37,99,235,0.10) 16%,
+        rgba(37,99,235,0.035) 24%,
+        transparent 34%
       ),
 
-      /* Leggera ombra interna sotto per dare spessore */
+      /* Bordo destro vivo: resta netto vicino al bordo e sfuma verso l’interno */
+      linear-gradient(270deg,
+        rgba(219,39,119,0.42) 0%,
+        rgba(219,39,119,0.34) 4%,
+        rgba(219,39,119,0.22) 9%,
+        rgba(219,39,119,0.10) 16%,
+        rgba(219,39,119,0.035) 24%,
+        transparent 34%
+      ),
+
+      /* Piccola profondità inferiore, molto discreta */
       linear-gradient(180deg,
-        rgba(255,255,255,0.14) 0%,
-        transparent 45%,
-        rgba(15,23,42,0.030) 100%
+        rgba(255,255,255,0.12) 0%,
+        transparent 48%,
+        rgba(15,23,42,0.026) 100%
       );
   }
-    
+      
   .home-hero-premium::before {
     content: "";
     position: absolute;
