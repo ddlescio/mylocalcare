@@ -171,60 +171,60 @@
   .home-hero-premium::before {
     content: "";
     position: absolute;
-    inset: 1px;
-    border-radius: calc(2rem - 1px);
+    inset: 1.5px;
+    border-radius: calc(2rem - 1.5px);
     pointer-events: none;
-    z-index: 2;
+    z-index: 6;
 
     background:
-      /* L alta sinistra — tratto orizzontale */
       linear-gradient(90deg,
-        rgba(37,99,235,0.62) 0%,
-        rgba(96,165,250,0.42) 32%,
-        rgba(255,255,255,0.20) 62%,
+        rgba(37,99,235,0.92) 0%,
+        rgba(96,165,250,0.58) 28%,
+        rgba(255,255,255,0.30) 58%,
         transparent 100%
-      ) top left / 52% 3px no-repeat,
+      ) top left / 50% 2px no-repeat,
 
-      /* L alta sinistra — tratto verticale */
       linear-gradient(180deg,
-        rgba(37,99,235,0.52) 0%,
-        rgba(96,165,250,0.30) 36%,
-        rgba(255,255,255,0.14) 66%,
+        rgba(37,99,235,0.76) 0%,
+        rgba(96,165,250,0.42) 34%,
+        rgba(255,255,255,0.22) 64%,
         transparent 100%
-      ) top left / 3px 58% no-repeat,
+      ) top left / 2px 52% no-repeat,
 
-      /* L bassa destra — tratto orizzontale */
       linear-gradient(270deg,
-        rgba(219,39,119,0.58) 0%,
-        rgba(244,114,182,0.38) 34%,
-        rgba(255,255,255,0.18) 64%,
+        rgba(219,39,119,0.90) 0%,
+        rgba(244,114,182,0.56) 30%,
+        rgba(255,255,255,0.28) 60%,
         transparent 100%
-      ) bottom right / 54% 3px no-repeat,
+      ) bottom right / 52% 2px no-repeat,
 
-      /* L bassa destra — tratto verticale */
       linear-gradient(0deg,
-        rgba(219,39,119,0.48) 0%,
-        rgba(244,114,182,0.30) 38%,
-        rgba(255,255,255,0.14) 68%,
+        rgba(219,39,119,0.72) 0%,
+        rgba(244,114,182,0.40) 34%,
+        rgba(255,255,255,0.22) 64%,
         transparent 100%
-      ) bottom right / 3px 58% no-repeat;
-  }
+      ) bottom right / 2px 52% no-repeat;
 
+    filter:
+      drop-shadow(0 0 4px rgba(96,165,250,0.34))
+      drop-shadow(0 0 4px rgba(244,114,182,0.28));
+  }
+  
   .home-hero-premium::after {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    padding: 2px;
+    padding: 1.5px;
     background:
       linear-gradient(
         135deg,
-        rgba(37,99,235,0.82) 0%,
-        rgba(147,197,253,0.62) 18%,
-        rgba(255,255,255,0.78) 36%,
-        rgba(255,255,255,0.54) 52%,
-        rgba(244,114,182,0.62) 78%,
-        rgba(219,39,119,0.82) 100%
+        rgba(255,255,255,0.98) 0%,
+        rgba(219,234,254,0.78) 18%,
+        rgba(255,255,255,0.92) 42%,
+        rgba(255,255,255,0.78) 62%,
+        rgba(252,231,243,0.78) 84%,
+        rgba(255,255,255,0.98) 100%
       );
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
@@ -234,11 +234,12 @@
     pointer-events: none;
     z-index: 5;
     filter:
-      drop-shadow(0 0 7px rgba(96,165,250,0.24))
-      drop-shadow(0 0 7px rgba(244,114,182,0.20));
-    opacity: 0.92;
+      drop-shadow(0 0 4px rgba(255,255,255,0.72))
+      drop-shadow(0 0 5px rgba(96,165,250,0.12))
+      drop-shadow(0 0 5px rgba(244,114,182,0.10));
+    opacity: 1;
   }
-  
+
   .home-hero-inner {
     position: relative;
     z-index: 4;
