@@ -269,16 +269,16 @@
 
           <div class="vetrina-ticket-body">
 
+            {% if a.get('has_urgente', 0) == 1 %}
+              <span class="vetrina-ticket-badge urgent">
+                Urgente
+              </span>
+            {% endif %}
+
             <div class="vetrina-ticket-top">
               <span class="vetrina-ticket-user">
                 {{ a['utente_username'] or a['nome_utente'] or 'Operatore' }}
               </span>
-
-              {% if a.get('has_urgente', 0) == 1 %}
-                <span class="vetrina-ticket-badge urgent">
-                  Urgente
-                </span>
-              {% endif %}
             </div>
 
             <h4 class="vetrina-ticket-title">
@@ -358,8 +358,6 @@
 
       {% if a.get('has_urgente', 0) == 1 %}
         <div class="badge-urgente-top">Urgente</div>
-      {% else %}
-        <div class="badge-vetrina">In vetrina</div>
       {% endif %}
 
       <div class="vetrina-card-shell">
@@ -2647,13 +2645,9 @@ body.page-cerca .container {
     min-width: 0;
   }
 
-  .vetrina-ticket-mobile.is-urgent .vetrina-ticket-top {
-    justify-content: flex-start;
-  }
-
   .vetrina-ticket-user {
     min-width: 0;
-    max-width: 100%;
+    max-width: calc(100% - 4.9rem);
     display: inline-flex;
     align-items: center;
     min-height: 20px;
@@ -2674,22 +2668,23 @@ body.page-cerca .container {
     text-overflow: ellipsis;
   }
 
-  .vetrina-ticket-mobile.is-urgent .vetrina-ticket-user {
-    max-width: 58%;
-  }
-
   .vetrina-ticket-badge {
-    flex-shrink: 0;
+    position: absolute;
+    top: 0.72rem;
+    right: 0.78rem;
+    z-index: 4;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 22px;
-    padding: 0.24rem 0.52rem;
+    padding: 0.24rem 0.56rem;
     border-radius: 9999px;
     font-size: 0.58rem;
     font-weight: 850;
     letter-spacing: 0.02em;
     text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
     box-shadow:
       0 7px 16px rgba(15,23,42,0.09),
       inset 0 1px 0 rgba(255,255,255,0.45);
@@ -2797,7 +2792,7 @@ body.page-cerca .container {
     color: #64748b;
     font-weight: 820;
   }
-  
+
   /* LISTA CARD: un filo più stretta e più respirata */
   .max-w-7xl.mx-auto.px-2 {
     padding-left: 0.55rem !important;
