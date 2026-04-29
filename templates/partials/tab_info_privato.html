@@ -1898,6 +1898,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const citta = document.getElementById("citta_hidden")?.value?.trim() || "";
     const lingue = document.getElementById("lingue_hidden")?.value?.trim() || "";
     const frase = document.getElementById("frase_hidden")?.value?.trim() || "";
+    const categorieIntro = [
+      "Operatori benessere",
+      "Aiuto in casa",
+      "Ripetizioni",
+      "Babysitter",
+      "Pet-sitter",
+      "Caregiver",
+      "escursioni-sport",
+      "Biglietti spettacoli",
+      "Libri scuola",
+      "Caffe & parole"
+    ];
 
     const cittaRow = document.getElementById("intro-citta-row");
     const cittaValue = document.getElementById("intro-citta-value");
@@ -1922,6 +1934,52 @@ document.addEventListener("DOMContentLoaded", () => {
       fraseValue.textContent = frase;
       fraseRow.classList.toggle("hidden", !frase);
     }
+    const wrapperAttivita = document.getElementById("intro-attivita-wrapper");
+    const offroSection = document.getElementById("intro-offro-section");
+    const cercoSection = document.getElementById("intro-cerco-section");
+    const offroList = document.getElementById("intro-offro-list");
+    const cercoList = document.getElementById("intro-cerco-list");
+
+    const offro = [];
+    const cerco = [];
+
+    categorieIntro.forEach((cat, index) => {
+      const i = index + 1;
+
+      const offroInput = form.querySelector(`input[name="offro_${i}"]`);
+      const cercoInput = form.querySelector(`input[name="cerco_${i}"]`);
+
+      if (offroInput?.value === "1") {
+        offro.push(cat);
+      }
+
+      if (cercoInput?.value === "1") {
+        cerco.push(cat);
+      }
+    });
+
+    function renderIntroPills(container, items, type) {
+      if (!container) return;
+
+      container.innerHTML = "";
+
+      items.forEach(cat => {
+        const pill = document.createElement("span");
+        pill.className = type === "offro"
+          ? "px-2.5 py-1 text-[11px] rounded-full bg-blue-100 text-blue-700 font-medium"
+          : "px-2.5 py-1 text-[11px] rounded-full bg-green-100 text-green-700 font-medium";
+
+        pill.textContent = cat;
+        container.appendChild(pill);
+      });
+    }
+
+    renderIntroPills(offroList, offro, "offro");
+    renderIntroPills(cercoList, cerco, "cerco");
+
+    offroSection?.classList.toggle("hidden", offro.length === 0);
+    cercoSection?.classList.toggle("hidden", cerco.length === 0);
+    wrapperAttivita?.classList.toggle("hidden", offro.length === 0 && cerco.length === 0);    
   }
 
   let autosaveTimer = null;
