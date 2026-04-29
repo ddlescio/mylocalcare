@@ -1002,32 +1002,6 @@
     line-height: 1;
   }
 
-  /* compatibilità con markup vecchio */
-  .card-rating-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    min-height: 18px;
-    margin-top: 0;
-  }
-
-  .card-rating-value {
-    font-size: 0.86rem;
-    font-weight: 700;
-    color: #0f172a;
-  }
-
-  .card-rating-stars {
-    font-size: 0.86rem;
-    letter-spacing: -0.02em;
-  }
-
-  .card-rating-count {
-    font-size: 0.74rem;
-    color: #64748b;
-  }
-
   .card-description-premium {
     font-size: 0.91rem;
     line-height: 1.46;
@@ -1076,14 +1050,6 @@
     border-color: rgba(203,213,225,0.82);
     background: linear-gradient(180deg, rgba(241,245,249,0.96), rgba(248,250,252,0.99));
     font-weight: 700;
-  }
-
-  .card-cta-wrap {
-    display: none;
-  }
-
-  .btn-profilo-ios {
-    display: none;
   }
 
   .vetrina-mobile-wrap {
@@ -2410,16 +2376,16 @@ window.addEventListener("resize", updatePillRows);
    PATCH MOBILE /CERCA — riallineamento visivo con HOME
    ============================================================ */
 
-/* Sfondo pagina più coerente con home */
-body.page-cerca {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(230, 238, 255, 1) 0%,
-      rgba(255, 238, 247, 0.92) 42%,
-      #ffffff 100%
-    ) !important;
-}
+ /* Sfondo pagina più coerente con home, ma senza dominante rosa/rossa */
+ body.page-cerca {
+   background:
+     linear-gradient(
+       180deg,
+       #eef4ff 0%,
+       #f6f8ff 42%,
+       #ffffff 100%
+     ) !important;
+ }
 
 /* Contenitore generale della pagina cerca */
 body.page-cerca .container {
@@ -2463,6 +2429,33 @@ body.page-cerca .container {
   .header-cerca button {
     padding: 0.62rem 1rem !important;
     font-size: 0.88rem !important;
+  }
+
+  /* Evita effetto rosso diffuso quando ci sono annunci urgenti */
+  .card-urgente {
+    box-shadow:
+      0 0 0 1px rgba(239, 68, 68, 0.18),
+      0 8px 18px rgba(239, 68, 68, 0.14),
+      0 16px 30px rgba(15, 23, 42, 0.08) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.96),
+        rgba(248, 250, 252, 0.94)
+      ) !important;
+  }
+
+  .card-vetrina-urgente {
+    box-shadow:
+      0 0 0 1px rgba(239, 68, 68, 0.16),
+      0 10px 22px rgba(239, 68, 68, 0.10),
+      0 16px 30px rgba(15, 23, 42, 0.06) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.98),
+        rgba(250, 252, 255, 0.96)
+      ) !important;
   }
 
   /* VETRINA: meno alta e più leggera */
