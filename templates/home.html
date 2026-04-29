@@ -173,40 +173,45 @@
     position: absolute;
     inset: 0;
     background:
-      /* riflesso obliquo leggero, ma non invadente */
+      /* riflesso obliquo premium, visibile ma leggero */
       linear-gradient(115deg,
-        rgba(255,255,255,0.42) 0%,
-        rgba(255,255,255,0.14) 30%,
-        transparent 62%
+        rgba(255,255,255,0.50) 0%,
+        rgba(255,255,255,0.20) 28%,
+        rgba(255,255,255,0.06) 48%,
+        transparent 68%
       ),
 
-      /* lama superiore più visibile: effetto vetro sul bordo alto */
+      /* bordo alto luminoso: più netto, effetto lastra di vetro */
       linear-gradient(180deg,
-        rgba(255,255,255,0.98) 0%,
-        rgba(255,255,255,0.82) 2.5%,
-        rgba(255,255,255,0.34) 7%,
-        rgba(255,255,255,0.10) 13%,
-        transparent 23%
+        rgba(255,255,255,1) 0%,
+        rgba(255,255,255,0.96) 1.8%,
+        rgba(219,234,254,0.58) 4.5%,
+        rgba(255,255,255,0.32) 8.5%,
+        rgba(255,255,255,0.10) 15%,
+        transparent 26%
       ),
 
-      /* micro bordo colorato superiore, sottilissimo */
-      linear-gradient(180deg,
-        rgba(59,130,246,0.16) 0%,
-        rgba(244,114,182,0.10) 1.5%,
-        transparent 7%
+      /* riflesso colorato sottile alto, blu → rosa */
+      linear-gradient(90deg,
+        rgba(37,99,235,0.22) 0%,
+        rgba(147,197,253,0.16) 22%,
+        rgba(255,255,255,0.10) 50%,
+        rgba(244,114,182,0.18) 78%,
+        rgba(219,39,119,0.24) 100%
       ),
 
-      /* ombra interna bassa più leggibile, ma stretta */
+      /* bordo basso più profondo e luminoso */
       linear-gradient(0deg,
-        rgba(15,23,42,0.115) 0%,
-        rgba(15,23,42,0.060) 4%,
-        rgba(15,23,42,0.022) 9%,
-        transparent 18%
+        rgba(15,23,42,0.14) 0%,
+        rgba(37,99,235,0.08) 2.5%,
+        rgba(244,114,182,0.065) 5.5%,
+        rgba(15,23,42,0.030) 10%,
+        transparent 21%
       );
     pointer-events: none;
     z-index: 1;
   }
-    
+      
   .home-hero-premium::after {
     content: "";
     position: absolute;
