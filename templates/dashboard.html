@@ -1130,33 +1130,50 @@
     }
   }
 
-  .hero-cover-card::after {
+  .hero-cover-card::before {
     content: "";
     position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1.25px;
-    background:
-      linear-gradient(
-        135deg,
-        rgba(255,255,255,0.96) 0%,
-        rgba(219,234,254,0.50) 18%,
-        rgba(255,255,255,0.88) 42%,
-        rgba(255,255,255,0.72) 62%,
-        rgba(252,231,243,0.50) 84%,
-        rgba(255,255,255,0.96) 100%
-      );
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    inset: 2px;
+    border-radius: calc(2rem - 2px);
     pointer-events: none;
-    z-index: 8;
+    z-index: 9;
+
+    background:
+      linear-gradient(90deg,
+        rgba(37,99,235,0.98) 0%,
+        rgba(96,165,250,0.78) 22%,
+        rgba(191,219,254,0.48) 45%,
+        rgba(255,255,255,0.25) 68%,
+        transparent 100%
+      ) top left / 50% 3px no-repeat,
+
+      linear-gradient(180deg,
+        rgba(37,99,235,0.82) 0%,
+        rgba(96,165,250,0.58) 28%,
+        rgba(191,219,254,0.34) 52%,
+        rgba(255,255,255,0.18) 74%,
+        transparent 100%
+      ) top left / 3px 46% no-repeat,
+
+      linear-gradient(270deg,
+        rgba(219,39,119,0.96) 0%,
+        rgba(244,114,182,0.74) 22%,
+        rgba(251,207,232,0.46) 45%,
+        rgba(255,255,255,0.24) 70%,
+        transparent 100%
+      ) bottom right / 52% 3px no-repeat,
+
+      linear-gradient(0deg,
+        rgba(219,39,119,0.78) 0%,
+        rgba(244,114,182,0.56) 28%,
+        rgba(251,207,232,0.34) 52%,
+        rgba(255,255,255,0.18) 74%,
+        transparent 100%
+      ) bottom right / 3px 46% no-repeat;
+
     filter:
-      drop-shadow(0 0 2px rgba(255,255,255,0.70))
-      drop-shadow(0 0 3px rgba(96,165,250,0.10))
-      drop-shadow(0 0 3px rgba(244,114,182,0.10));
+      drop-shadow(0 0 7px rgba(96,165,250,0.38))
+      drop-shadow(0 0 7px rgba(244,114,182,0.32));
   }
 
   .hero-floating-btn {
@@ -1490,9 +1507,14 @@
     }
 
     .hero-cover-card::before {
-      border-radius: calc(1.25rem - 1.5px);
+      border-radius: calc(1.25rem - 2px);
+      background-size:
+        54% 2.5px,
+        2.5px 46%,
+        54% 2.5px,
+        2.5px 46%;
     }
-
+    
     .hero-floating-btn {
       width: 42px;
       height: 42px;
