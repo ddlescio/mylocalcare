@@ -278,10 +278,6 @@
                 <span class="vetrina-ticket-badge urgent">
                   Urgente
                 </span>
-              {% else %}
-                <span class="vetrina-ticket-badge featured">
-                  Vetrina
-                </span>
               {% endif %}
             </div>
 
@@ -2543,19 +2539,19 @@ body.page-cerca .container {
     flex: 0 0 88%;
     min-width: 88%;
     max-width: 88%;
-    min-height: 136px;
+    min-height: 128px;
     display: grid;
-    grid-template-columns: 82px minmax(0, 1fr);
-    gap: 0.85rem;
+    grid-template-columns: 74px minmax(0, 1fr);
+    gap: 0.72rem;
     align-items: center;
     scroll-snap-align: start;
-    padding: 0.82rem 0.85rem;
-    border-radius: 1.45rem;
+    padding: 0.76rem 0.78rem;
+    border-radius: 1.38rem;
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.985), rgba(248,250,252,0.965));
+      linear-gradient(180deg, rgba(255,255,255,0.988), rgba(248,250,252,0.968));
     border: 1px solid rgba(226, 232, 240, 0.96);
     box-shadow:
-      0 12px 26px rgba(15, 23, 42, 0.08),
+      0 12px 26px rgba(15, 23, 42, 0.075),
       inset 0 1px 0 rgba(255,255,255,0.96);
     overflow: hidden;
     cursor: pointer;
@@ -2596,14 +2592,14 @@ body.page-cerca .container {
   .vetrina-ticket-photo-wrap {
     position: relative;
     z-index: 2;
-    width: 82px;
-    height: 82px;
-    border-radius: 1.25rem;
+    width: 74px;
+    height: 74px;
+    border-radius: 1.12rem;
     padding: 4px;
     background:
       linear-gradient(180deg, rgba(255,255,255,0.98), rgba(241,245,249,0.94));
     box-shadow:
-      0 9px 18px rgba(15, 23, 42, 0.10),
+      0 8px 16px rgba(15, 23, 42, 0.10),
       inset 0 1px 0 rgba(255,255,255,0.96);
     overflow: visible;
   }
@@ -2613,7 +2609,7 @@ body.page-cerca .container {
     height: 100%;
     display: block;
     object-fit: cover;
-    border-radius: 1rem;
+    border-radius: 0.88rem;
   }
 
   .vetrina-ticket-trust {
@@ -2640,38 +2636,46 @@ body.page-cerca .container {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.34rem;
+    gap: 0.26rem;
   }
 
   .vetrina-ticket-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 0.45rem;
     min-width: 0;
   }
 
+  .vetrina-ticket-mobile.is-urgent .vetrina-ticket-top {
+    justify-content: space-between;
+  }
+
   .vetrina-ticket-user {
     min-width: 0;
-    max-width: 62%;
+    max-width: 100%;
     display: inline-flex;
     align-items: center;
-    min-height: 21px;
-    padding: 0.2rem 0.5rem;
+    min-height: 20px;
+    padding: 0.18rem 0.48rem;
     border-radius: 9999px;
     background: rgba(255,255,255,0.84);
     border: 1px solid rgba(226,232,240,0.9);
     box-shadow:
-      0 4px 10px rgba(15,23,42,0.055),
+      0 4px 10px rgba(15,23,42,0.05),
       inset 0 1px 0 rgba(255,255,255,0.92);
     color: #475569;
-    font-size: 0.58rem;
+    font-size: 0.56rem;
     font-weight: 800;
     letter-spacing: 0.045em;
     text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .vetrina-ticket-mobile.is-urgent .vetrina-ticket-user {
+    max-width: 52%;
   }
 
   .vetrina-ticket-badge {
@@ -2708,7 +2712,7 @@ body.page-cerca .container {
     margin: 0;
     max-width: 100%;
     color: #0f172a;
-    font-size: 0.94rem;
+    font-size: 0.88rem;
     line-height: 1.08;
     font-weight: 820;
     letter-spacing: -0.035em;
@@ -2735,17 +2739,17 @@ body.page-cerca .container {
   .vetrina-ticket-meta {
     display: flex;
     align-items: center;
-    gap: 0.32rem;
+    gap: 0.28rem;
     min-width: 0;
     color: #64748b;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     line-height: 1.1;
     font-weight: 680;
   }
 
   .vetrina-ticket-location {
     min-width: 0;
-    max-width: 64%;
+    max-width: 68%;
     color: #355c9a;
     font-weight: 760;
     white-space: nowrap;
@@ -2783,17 +2787,17 @@ body.page-cerca .container {
     align-items: center;
     justify-content: center;
     max-width: 100%;
-    padding: 0.32rem 0.56rem;
+    padding: 0.29rem 0.52rem;
     border-radius: 9999px;
     border: 1px solid rgba(203, 213, 225, 0.78);
     background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(241,245,249,0.96));
     color: #475569;
-    font-size: 0.66rem;
+    font-size: 0.64rem;
     font-weight: 720;
     line-height: 1;
     white-space: nowrap;
   }
-
+  
   .vetrina-ticket-pills .more {
     color: #64748b;
     font-weight: 820;
