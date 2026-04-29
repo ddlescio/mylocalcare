@@ -130,8 +130,8 @@
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.76;
-    filter: saturate(1.18) contrast(1.06);
+    opacity: 0.94;
+    filter: saturate(1.16) contrast(1.035);
     pointer-events: none;
     z-index: 0;
   }
@@ -152,44 +152,22 @@
     position: absolute;
     inset: 0;
     background:
-      /* Velo centrale: protegge il testo ma NON copre i bordi */
-      radial-gradient(circle at 50% 43%,
-        rgba(255,255,255,0.97) 0%,
-        rgba(255,255,255,0.92) 26%,
-        rgba(255,255,255,0.72) 42%,
-        rgba(255,255,255,0.34) 56%,
-        rgba(255,255,255,0.08) 68%,
+      radial-gradient(ellipse at 50% 42%,
+        rgba(255,255,255,0.96) 0%,
+        rgba(255,255,255,0.93) 24%,
+        rgba(255,255,255,0.78) 38%,
+        rgba(255,255,255,0.46) 51%,
+        rgba(255,255,255,0.18) 62%,
+        rgba(255,255,255,0.055) 70%,
         transparent 78%
       ),
-
-      /* Bordo sinistro vivo: resta netto vicino al bordo e sfuma verso l’interno */
-      linear-gradient(90deg,
-        rgba(37,99,235,0.42) 0%,
-        rgba(37,99,235,0.34) 4%,
-        rgba(37,99,235,0.22) 9%,
-        rgba(37,99,235,0.10) 16%,
-        rgba(37,99,235,0.035) 24%,
-        transparent 34%
-      ),
-
-      /* Bordo destro vivo: resta netto vicino al bordo e sfuma verso l’interno */
-      linear-gradient(270deg,
-        rgba(219,39,119,0.42) 0%,
-        rgba(219,39,119,0.34) 4%,
-        rgba(219,39,119,0.22) 9%,
-        rgba(219,39,119,0.10) 16%,
-        rgba(219,39,119,0.035) 24%,
-        transparent 34%
-      ),
-
-      /* Piccola profondità inferiore, molto discreta */
       linear-gradient(180deg,
-        rgba(255,255,255,0.12) 0%,
-        transparent 48%,
-        rgba(15,23,42,0.026) 100%
+        rgba(255,255,255,0.08) 0%,
+        transparent 44%,
+        rgba(15,23,42,0.025) 100%
       );
   }
-      
+        
   .home-hero-premium::before {
     content: "";
     position: absolute;
