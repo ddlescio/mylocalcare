@@ -112,21 +112,31 @@
     padding: 2.15rem 1.35rem;
     margin-bottom: 1.55rem;
     background:
-      radial-gradient(circle at -2% 48%, rgba(37,99,235,0.34), transparent 44%),
-      radial-gradient(circle at 102% 48%, rgba(219,39,119,0.30), transparent 44%),
-      radial-gradient(circle at 50% 105%, rgba(14,165,233,0.15), transparent 50%),
-      linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,250,255,0.82));
+      linear-gradient(90deg,
+        rgba(37,99,235,0.34) 0%,
+        rgba(37,99,235,0.22) 7%,
+        rgba(37,99,235,0.08) 18%,
+        transparent 33%,
+        transparent 67%,
+        rgba(219,39,119,0.08) 82%,
+        rgba(219,39,119,0.22) 93%,
+        rgba(219,39,119,0.34) 100%
+      ),
+      radial-gradient(circle at 0% 50%, rgba(37,99,235,0.22), transparent 40%),
+      radial-gradient(circle at 100% 48%, rgba(219,39,119,0.20), transparent 40%),
+      radial-gradient(circle at 50% 105%, rgba(14,165,233,0.13), transparent 50%),
+      linear-gradient(180deg, rgba(255,255,255,0.95), rgba(246,250,255,0.84));
     border: 1.5px solid rgba(255,255,255,0.98);
     box-shadow:
       0 30px 68px rgba(15,23,42,0.13),
       0 14px 34px rgba(37,99,235,0.075),
       inset 0 1px 0 rgba(255,255,255,1),
       inset 0 -16px 30px rgba(15,23,42,0.045),
-      inset 18px 0 34px rgba(37,99,235,0.055),
-      inset -18px 0 34px rgba(219,39,119,0.052),
+      inset 24px 0 34px rgba(37,99,235,0.075),
+      inset -24px 0 34px rgba(219,39,119,0.070),
       inset 0 0 0 1px rgba(37,99,235,0.12);
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(162%);
+    -webkit-backdrop-filter: blur(18px) saturate(162%);
   }
 
   .home-hero-premium .home-hero-bg {
@@ -158,27 +168,29 @@
     inset: 0;
     background:
       radial-gradient(circle at 50% 43%,
-        rgba(255,255,255,0.95) 0%,
-        rgba(255,255,255,0.89) 27%,
-        rgba(255,255,255,0.50) 51%,
-        rgba(255,255,255,0.13) 76%,
+        rgba(255,255,255,0.96) 0%,
+        rgba(255,255,255,0.91) 27%,
+        rgba(255,255,255,0.56) 50%,
+        rgba(255,255,255,0.16) 74%,
         rgba(255,255,255,0.02) 100%
       ),
       linear-gradient(90deg,
-        rgba(37,99,235,0.16) 0%,
-        rgba(37,99,235,0.06) 14%,
-        transparent 28%,
-        transparent 72%,
-        rgba(219,39,119,0.07) 86%,
-        rgba(219,39,119,0.17) 100%
+        rgba(37,99,235,0.24) 0%,
+        rgba(37,99,235,0.12) 10%,
+        rgba(37,99,235,0.035) 23%,
+        transparent 36%,
+        transparent 64%,
+        rgba(219,39,119,0.040) 77%,
+        rgba(219,39,119,0.13) 90%,
+        rgba(219,39,119,0.25) 100%
       ),
       linear-gradient(180deg,
-        rgba(255,255,255,0.10) 0%,
+        rgba(255,255,255,0.12) 0%,
         transparent 46%,
         rgba(15,23,42,0.025) 100%
       );
   }
-
+  
   .home-hero-premium::before {
     content: "";
     position: absolute;
@@ -219,7 +231,7 @@
     pointer-events: none;
     z-index: 3;
   }
-  
+
   .home-hero-inner {
     position: relative;
     z-index: 2;
