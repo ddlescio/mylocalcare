@@ -173,32 +173,40 @@
     position: absolute;
     inset: 0;
     background:
-      /* riflesso obliquo molto leggero, mantiene effetto premium */
+      /* riflesso obliquo leggero, ma non invadente */
       linear-gradient(115deg,
-        rgba(255,255,255,0.46) 0%,
-        rgba(255,255,255,0.16) 32%,
-        transparent 66%
+        rgba(255,255,255,0.42) 0%,
+        rgba(255,255,255,0.14) 30%,
+        transparent 62%
       ),
 
-      /* microluce superiore: fa sembrare la card più lucida e spessa */
+      /* lama superiore più visibile: effetto vetro sul bordo alto */
       linear-gradient(180deg,
-        rgba(255,255,255,0.72) 0%,
-        rgba(255,255,255,0.28) 8%,
-        rgba(255,255,255,0.08) 16%,
-        transparent 30%
+        rgba(255,255,255,0.98) 0%,
+        rgba(255,255,255,0.82) 2.5%,
+        rgba(255,255,255,0.34) 7%,
+        rgba(255,255,255,0.10) 13%,
+        transparent 23%
       ),
 
-      /* micro-ombra inferiore interna: dà profondità senza sporcare */
+      /* micro bordo colorato superiore, sottilissimo */
+      linear-gradient(180deg,
+        rgba(59,130,246,0.16) 0%,
+        rgba(244,114,182,0.10) 1.5%,
+        transparent 7%
+      ),
+
+      /* ombra interna bassa più leggibile, ma stretta */
       linear-gradient(0deg,
-        rgba(15,23,42,0.070) 0%,
-        rgba(15,23,42,0.030) 7%,
-        rgba(15,23,42,0.010) 14%,
-        transparent 26%
+        rgba(15,23,42,0.115) 0%,
+        rgba(15,23,42,0.060) 4%,
+        rgba(15,23,42,0.022) 9%,
+        transparent 18%
       );
     pointer-events: none;
     z-index: 1;
   }
-  
+    
   .home-hero-premium::after {
     content: "";
     position: absolute;
