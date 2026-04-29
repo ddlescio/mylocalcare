@@ -1194,22 +1194,31 @@
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0) 42%),
-      radial-gradient(circle at 50% 0%, rgba(59,130,246,0.055), transparent 42%);
+      linear-gradient(135deg, rgba(255,255,255,0.52), rgba(255,255,255,0) 40%),
+      radial-gradient(circle at 50% -12%, rgba(59,130,246,0.105), transparent 46%),
+      radial-gradient(circle at 50% 0%, rgba(255,255,255,0.72), transparent 34%);
     pointer-events: none;
   }
 
   .hero-bottom-card::after {
     content: "";
     position: absolute;
-    left: 1.4rem;
-    right: 1.4rem;
+    left: 1.2rem;
+    right: 1.2rem;
     top: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.98), transparent);
+    height: 2px;
+    background:
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(191,219,254,0.35) 18%,
+        rgba(255,255,255,0.98) 50%,
+        rgba(191,219,254,0.35) 82%,
+        transparent 100%
+      );
     pointer-events: none;
   }
-
+  
   .hero-avatar-slot {
     position: relative;
     z-index: 3;
@@ -1516,7 +1525,7 @@
         0 15px 32px rgba(15,23,42,0.075),
         0 28px 52px rgba(15,23,42,0.052);
     }
-    
+
     .hero-avatar,
     .placeholder-foto-profilo-premium {
       width: 104px;
