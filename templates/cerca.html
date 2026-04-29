@@ -267,13 +267,13 @@
             {% endif %}
           </div>
 
-          <div class="vetrina-ticket-body">
+          {% if a.get('has_urgente', 0) == 1 %}
+            <span class="vetrina-ticket-badge urgent">
+              Urgente
+            </span>
+          {% endif %}
 
-            {% if a.get('has_urgente', 0) == 1 %}
-              <span class="vetrina-ticket-badge urgent">
-                Urgente
-              </span>
-            {% endif %}
+          <div class="vetrina-ticket-body">
 
             <div class="vetrina-ticket-top">
               <span class="vetrina-ticket-user">
@@ -2637,6 +2637,10 @@ body.page-cerca .container {
     gap: 0.3rem;
   }
 
+  .vetrina-ticket-mobile.is-urgent .vetrina-ticket-body {
+    padding-top: 1.15rem;
+  }
+
   .vetrina-ticket-top {
     display: flex;
     align-items: center;
@@ -2647,7 +2651,7 @@ body.page-cerca .container {
 
   .vetrina-ticket-user {
     min-width: 0;
-    max-width: calc(100% - 4.9rem);
+    max-width: 100%;
     display: inline-flex;
     align-items: center;
     min-height: 20px;
@@ -2671,13 +2675,13 @@ body.page-cerca .container {
   .vetrina-ticket-badge {
     position: absolute;
     top: 0.72rem;
-    right: 0.78rem;
-    z-index: 4;
+    right: 0.72rem;
+    z-index: 8;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 22px;
-    padding: 0.24rem 0.56rem;
+    padding: 0.24rem 0.58rem;
     border-radius: 9999px;
     font-size: 0.58rem;
     font-weight: 850;
