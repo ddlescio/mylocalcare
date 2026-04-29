@@ -2458,109 +2458,207 @@ body.page-cerca .container {
       ) !important;
   }
 
-  /* VETRINA: meno alta e più leggera */
+  /* VETRINA MOBILE — versione premium ticket */
   .vetrina-wrapper {
-    margin: 0 auto 1.7rem auto !important;
-    padding: 1rem 0.85rem 1.1rem !important;
-    border-radius: 1.65rem !important;
+    margin: 0 auto 1.45rem auto !important;
+    padding: 0.85rem 0.75rem 0.95rem !important;
+    border-radius: 1.55rem !important;
+    background:
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.92),
+        rgba(255, 250, 228, 0.72)
+      ) !important;
+    border: 1px solid rgba(250, 204, 21, 0.18) !important;
     box-shadow:
-      0 10px 24px rgba(15, 23, 42, 0.055),
-      0 18px 42px rgba(15, 23, 42, 0.045) !important;
+      0 8px 20px rgba(15, 23, 42, 0.05),
+      0 16px 34px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  .vetrina-wrapper::before,
+  .vetrina-wrapper::after {
+    display: none !important;
   }
 
   .vetrina-wrapper > .flex.items-center {
-    margin-bottom: 0.7rem !important;
+    margin-bottom: 0.65rem !important;
+    padding: 0 0.2rem !important;
   }
 
   .vetrina-wrapper h3 {
-    font-size: 1rem !important;
+    font-size: 0.98rem !important;
+    font-weight: 750 !important;
+    color: #334155 !important;
   }
 
   .vetrina-wrapper > .flex.items-center > span {
-    font-size: 0.72rem !important;
+    font-size: 0.7rem !important;
+    color: #94a3b8 !important;
   }
 
   .vetrina-mobile-wrap {
-    padding-bottom: 0.25rem !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
 
   .vetrina-mobile-scroll {
-    gap: 0.8rem !important;
-    padding: 0.25rem 0.15rem 0.45rem !important;
+    display: flex !important;
+    gap: 0.75rem !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    padding: 0.15rem 0.1rem 0.45rem !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
   }
 
   .vetrina-mobile-scroll .card-vetrina {
-    min-width: 250px !important;
-    max-width: 250px !important;
-    padding: 0.85rem 0.75rem 0.8rem !important;
-    border-radius: 1.4rem !important;
+    flex: 0 0 86% !important;
+    min-width: 86% !important;
+    max-width: 86% !important;
+    scroll-snap-align: start;
+    padding: 0 !important;
+    border-radius: 1.35rem !important;
+    background:
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.98),
+        rgba(248, 250, 252, 0.96)
+      ) !important;
+    border: 1px solid rgba(226, 232, 240, 0.95) !important;
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+    overflow: hidden !important;
+  }
+
+  .vetrina-mobile-scroll .card-vetrina-urgente {
+    border-color: rgba(239, 68, 68, 0.32) !important;
+    box-shadow:
+      0 0 0 1px rgba(239, 68, 68, 0.12),
+      0 10px 24px rgba(15, 23, 42, 0.08) !important;
   }
 
   .vetrina-card-shell {
-    min-height: 232px !important;
-    gap: 0.55rem !important;
-    padding: 1.45rem 0.5rem 0.75rem !important;
-    border-radius: 1.18rem !important;
+    display: grid !important;
+    grid-template-columns: 82px minmax(0, 1fr) !important;
+    align-items: center !important;
+    min-height: 132px !important;
+    gap: 0.85rem !important;
+    padding: 1rem 0.95rem !important;
+    border-radius: 1.35rem !important;
+    text-align: left !important;
+    background: transparent !important;
+  }
+
+  .vetrina-card-shell::after {
+    display: none !important;
   }
 
   .vetrina-avatar-wrap {
-    width: 92px !important;
-    height: 92px !important;
+    width: 82px !important;
+    height: 82px !important;
     padding: 4px !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    box-shadow:
+      0 8px 18px rgba(15, 23, 42, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+  }
+
+  .vetrina-content {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    gap: 0.42rem !important;
+    min-width: 0 !important;
   }
 
   .vetrina-title {
-    font-size: 0.92rem !important;
-    line-height: 1.12 !important;
-    max-width: 94% !important;
+    font-size: 0.95rem !important;
+    line-height: 1.1 !important;
+    max-width: 100% !important;
+    font-weight: 780 !important;
     -webkit-line-clamp: 2 !important;
   }
 
   .vetrina-meta-row {
+    justify-content: flex-start !important;
     gap: 0.35rem !important;
-    min-height: 18px !important;
+    min-height: auto !important;
   }
 
   .vetrina-meta-location {
-    font-size: 0.82rem !important;
+    font-size: 0.8rem !important;
+    font-weight: 720 !important;
+  }
+
+  .vetrina-meta-location::after {
+    height: 1px !important;
   }
 
   .vetrina-meta-type {
-    font-size: 0.8rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 780 !important;
   }
 
   .vetrina-pill-wrap {
+    justify-content: flex-start !important;
     gap: 0.35rem !important;
-    margin-top: 0 !important;
+    margin-top: 0.1rem !important;
   }
 
   .vetrina-pill {
     font-size: 0.68rem !important;
-    padding: 0.35rem 0.6rem !important;
+    padding: 0.34rem 0.58rem !important;
+  }
+
+  .vetrina-rating {
+    justify-content: flex-start !important;
+  }
+
+  .vetrina-rating-value {
+    font-size: 0.8rem !important;
+  }
+
+  .vetrina-rating-star {
+    font-size: 0.85rem !important;
+  }
+
+  .vetrina-rating-count {
+    font-size: 0.7rem !important;
   }
 
   .badge-urgente-top,
   .badge-vetrina {
-    top: 0.6rem !important;
-    right: 0.6rem !important;
-    min-height: 27px !important;
-    padding: 0.32rem 0.65rem !important;
-    font-size: 0.68rem !important;
+    top: 0.55rem !important;
+    right: 0.55rem !important;
+    min-height: 26px !important;
+    padding: 0.3rem 0.62rem !important;
+    font-size: 0.66rem !important;
+    z-index: 8 !important;
   }
 
   .vetrina-username-wrap,
   .vetrina-username-wrap.has-badge {
-    top: -0.65rem !important;
-    left: 0.55rem !important;
-    right: 4.7rem !important;
+    top: 0.55rem !important;
+    left: 0.75rem !important;
+    right: auto !important;
+    max-width: 7.4rem !important;
+    z-index: 8 !important;
   }
 
   .vetrina-username {
-    min-height: 22px !important;
-    font-size: 0.62rem !important;
-    padding: 0.25rem 0.55rem 0 !important;
+    min-height: 21px !important;
+    font-size: 0.58rem !important;
+    padding: 0.24rem 0.55rem 0.12rem !important;
+    background: rgba(255, 255, 255, 0.82) !important;
   }
 
+  .badge-affidabilita-vetrina {
+    display: none !important;
+  }
+  
   /* LISTA CARD: un filo più stretta e più respirata */
   .max-w-7xl.mx-auto.px-2 {
     padding-left: 0.55rem !important;
