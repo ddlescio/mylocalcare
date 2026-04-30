@@ -1768,6 +1768,50 @@
       font-size: 0.8rem !important;
     }
   }
+
+  /* ============================================================
+     MOBILE — HERO + DESCRIZIONE LEGATE VISIVAMENTE
+     La descrizione si appoggia alla hero senza sembrare separata
+     ============================================================ */
+
+  @media (max-width: 640px) {
+    .annuncio-hero-card {
+      padding-bottom: 1.05rem;
+      margin-bottom: -0.95rem;
+      z-index: 2;
+    }
+
+    .annuncio-soft-section-descrizione {
+      position: relative;
+      z-index: 3;
+      margin-top: 0 !important;
+      border-top-color: rgba(219, 234, 254, 0.92) !important;
+      box-shadow:
+        0 -6px 18px rgba(59,130,246,0.055),
+        0 14px 32px rgba(15,23,42,0.065),
+        0 24px 48px rgba(15,23,42,0.055) !important;
+    }
+
+    .annuncio-soft-section-descrizione::before {
+      content: "";
+      position: absolute;
+      left: 1.1rem;
+      right: 1.1rem;
+      top: -0.65rem;
+      height: 1.05rem;
+      border-radius: 9999px;
+      background: linear-gradient(
+        90deg,
+        rgba(191,219,254,0),
+        rgba(191,219,254,0.38),
+        rgba(244,214,255,0.28),
+        rgba(191,219,254,0)
+      );
+      filter: blur(10px);
+      pointer-events: none;
+      z-index: -1;
+    }
+  }  
 </style>
 <script>
   function apriZoom(src) {
