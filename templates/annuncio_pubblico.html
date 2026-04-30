@@ -3,7 +3,7 @@
 {% block content %}
 
 
-<div class="annuncio-page max-w-6xl mx-auto mt-8 md:mt-10 px-3 sm:px-4 lg:px-6">
+<div class="page-wrapper annuncio-page max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
 
   <!-- 🔵 HEADER ANNUNCIO -->
   {% set categoria_label = annuncio['categoria'] %}
@@ -23,7 +23,7 @@
     {% set categoria_label = 'Caffè & parole' %}
   {% endif %}
 
-  <!-- HERO ANNUNCIO PREMIUM -->
+  <!-- HERO ANNUNCIO COMPATTA -->
   <section class="annuncio-hero-card">
 
     <div class="annuncio-hero-bg"></div>
@@ -48,60 +48,48 @@
 
           <div class="annuncio-hero-photo-overlay"></div>
 
+          <div class="annuncio-hero-photo-top">
+            <div class="annuncio-hero-photo-left">
+              <span class="annuncio-hero-username-on-photo">
+                {{ annuncio['username'] or annuncio['nome'] or 'Utente' }}
+              </span>
+
+              {% if annuncio.get('affidabilita_top') == 1 %}
+                <span class="annuncio-photo-mini-badge annuncio-photo-trust">
+                  🏅 Fiducia Top
+                </span>
+              {% endif %}
+            </div>
+
+            {% if annuncio['tipo_annuncio'] == 'offro' %}
+              <span class="annuncio-photo-mini-badge annuncio-photo-offro">
+                🟢 Offro
+              </span>
+            {% elif annuncio['tipo_annuncio'] == 'cerco' %}
+              <span class="annuncio-photo-mini-badge annuncio-photo-cerco">
+                🔵 Cerco
+              </span>
+            {% endif %}
+          </div>
+
           {% if annuncio['zona'] %}
             <div class="annuncio-hero-location-on-photo">
-              {{ annuncio['zona'] }}
+              📍 {{ annuncio['zona'] }}
             </div>
           {% endif %}
-
-          <div class="annuncio-hero-username-on-photo">
-            {{ annuncio['username'] or annuncio['nome'] or 'Utente' }}
-          </div>
         </button>
       </div>
 
       <!-- DATI ANNUNCIO -->
       <div class="annuncio-hero-content">
 
-        <div class="annuncio-hero-badges-row">
-          {% if annuncio['tipo_annuncio'] == 'offro' %}
-            <span class="annuncio-chip annuncio-chip-offro">
-              <span>🟢</span>
-              <span>Offro</span>
-            </span>
-          {% elif annuncio['tipo_annuncio'] == 'cerco' %}
-            <span class="annuncio-chip annuncio-chip-cerco">
-              <span>🔵</span>
-              <span>Cerco</span>
-            </span>
-          {% endif %}
-
-          {% if annuncio.get('affidabilita_top') == 1 %}
-            <span class="annuncio-chip annuncio-chip-trust">
-              <span>🏅</span>
-              <span>Fiducia Top</span>
-            </span>
-          {% endif %}
-        </div>
-
-        {% if annuncio['zona'] %}
-          <div class="annuncio-hero-location-line">
-            <span>📍</span>
-            <span>{{ annuncio['zona'] }}</span>
-          </div>
-        {% endif %}
-
         <div class="annuncio-hero-profile-link-wrap">
           <a href="{{ url_for('profilo_pubblico', id=annuncio['utente_id']) }}"
              class="annuncio-hero-profile-link">
             <span>👤</span>
-            <span>Visualizza profilo di {{ annuncio['username'] or annuncio['nome'] }}</span>
+            <span>Profilo di {{ annuncio['username'] or annuncio['nome'] }}</span>
           </a>
         </div>
-
-        <h1 class="annuncio-hero-title">
-          {{ annuncio['titolo'] }}
-        </h1>
 
         {% if annuncio['media_recensioni'] and annuncio['media_recensioni'] > 0 %}
           <div class="annuncio-hero-rating-wrap">
@@ -142,6 +130,10 @@
           </div>
         {% endif %}
 
+        <h1 class="annuncio-hero-title">
+          {{ annuncio['titolo'] }}
+        </h1>
+
         <div class="annuncio-hero-actions">
           {% if annuncio['prezzo'] %}
             <span class="annuncio-price-chip">
@@ -156,11 +148,9 @@
         </div>
 
         {% if annuncio['filtri_categoria'] %}
-          <div class="annuncio-hero-pills">
+          <div class="annuncio-hero-tags-line">
             {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
-              <span>
-                {{ f.strip() }}
-              </span>
+              <span>{{ f.strip() }}</span>{% if not loop.last %}<em>·</em>{% endif %}
             {% endfor %}
           </div>
         {% endif %}
@@ -485,7 +475,6 @@
     {% endif %}
   </div>
 
-</div>
 </div>
 
 <!-- ZOOM -->
@@ -831,22 +820,29 @@
 <style>
   .annuncio-page {
     padding-bottom: 7rem;
+    padding-top: 5.6rem;
+  }
+
+  @media (max-width: 640px) {
+    .annuncio-page {
+      padding-top: 4.9rem;
+    }
   }
 
   .annuncio-hero-card {
     position: relative;
     overflow: hidden;
-    border-radius: 34px;
+    border-radius: 30px;
     border: 1px solid rgba(203, 213, 225, 0.82);
     background:
       linear-gradient(
         135deg,
         rgba(255,255,255,0.96),
         rgba(239,246,255,0.92),
-        rgba(250,245,255,0.92)
+        rgba(250,245,255,0.90)
       );
     box-shadow:
-      0 18px 44px rgba(15, 23, 42, 0.075),
+      0 14px 34px rgba(15, 23, 42, 0.07),
       inset 0 1px 0 rgba(255,255,255,0.86);
     isolation: isolate;
   }
@@ -855,9 +851,9 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at 18% 12%, rgba(255,255,255,0.92), transparent 32%),
-      radial-gradient(circle at 84% 16%, rgba(219,234,254,0.52), transparent 34%),
-      radial-gradient(circle at 64% 92%, rgba(244,214,255,0.22), transparent 38%);
+      radial-gradient(circle at 16% 10%, rgba(255,255,255,0.92), transparent 30%),
+      radial-gradient(circle at 84% 16%, rgba(219,234,254,0.48), transparent 34%),
+      radial-gradient(circle at 72% 92%, rgba(244,214,255,0.20), transparent 38%);
     pointer-events: none;
     z-index: 0;
   }
@@ -866,34 +862,34 @@
     position: absolute;
     border-radius: 9999px;
     pointer-events: none;
-    filter: blur(34px);
+    filter: blur(32px);
     z-index: 0;
   }
 
   .annuncio-hero-glow-a {
-    width: 220px;
-    height: 220px;
-    left: -80px;
-    top: -80px;
-    background: rgba(191, 219, 254, 0.38);
+    width: 190px;
+    height: 190px;
+    left: -75px;
+    top: -75px;
+    background: rgba(191, 219, 254, 0.34);
   }
 
   .annuncio-hero-glow-b {
-    width: 220px;
-    height: 220px;
-    right: -90px;
-    bottom: -90px;
-    background: rgba(244, 114, 182, 0.16);
+    width: 190px;
+    height: 190px;
+    right: -80px;
+    bottom: -80px;
+    background: rgba(244, 114, 182, 0.14);
   }
 
   .annuncio-hero-inner {
     position: relative;
     z-index: 2;
     display: grid;
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-    gap: 1.5rem;
+    grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+    gap: 1rem;
     align-items: stretch;
-    padding: 1rem;
+    padding: 0.85rem;
   }
 
   .annuncio-hero-media {
@@ -905,12 +901,13 @@
     display: block;
     width: 100%;
     height: 100%;
-    min-height: 430px;
+    min-height: 305px;
+    max-height: 360px;
     overflow: hidden;
-    border-radius: 26px;
+    border-radius: 24px;
     border: 1px solid rgba(255,255,255,0.88);
     box-shadow:
-      0 14px 30px rgba(15, 23, 42, 0.10),
+      0 10px 24px rgba(15, 23, 42, 0.10),
       inset 0 1px 0 rgba(255,255,255,0.72);
     background: rgba(241,245,249,0.88);
     cursor: zoom-in;
@@ -919,7 +916,8 @@
   .annuncio-hero-photo {
     width: 100%;
     height: 100%;
-    min-height: 430px;
+    min-height: 305px;
+    max-height: 360px;
     display: block;
     object-fit: cover;
     object-position: center;
@@ -932,48 +930,101 @@
     background:
       linear-gradient(
         180deg,
-        rgba(15,23,42,0.10) 0%,
-        rgba(15,23,42,0.00) 35%,
-        rgba(15,23,42,0.30) 100%
+        rgba(15,23,42,0.20) 0%,
+        rgba(15,23,42,0.02) 38%,
+        rgba(15,23,42,0.34) 100%
       );
     pointer-events: none;
   }
 
-  .annuncio-hero-location-on-photo {
+  .annuncio-hero-photo-top {
     position: absolute;
-    left: 1rem;
-    bottom: 1rem;
-    max-width: calc(100% - 2rem);
-    color: white;
-    font-size: 1.02rem;
-    font-weight: 780;
-    letter-spacing: -0.02em;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.38);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    top: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    z-index: 4;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.55rem;
+  }
+
+  .annuncio-hero-photo-left {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.38rem;
+    align-items: flex-start;
   }
 
   .annuncio-hero-username-on-photo {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    max-width: calc(100% - 2rem);
-    min-height: 28px;
+    max-width: 190px;
+    min-height: 25px;
     display: inline-flex;
     align-items: center;
-    padding: 0.28rem 0.8rem;
+    padding: 0.22rem 0.65rem;
     border-radius: 9999px;
     background: rgba(255,255,255,0.28);
     border: 1px solid rgba(255,255,255,0.28);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     color: rgba(255,255,255,0.96);
-    font-size: 0.76rem;
+    font-size: 0.66rem;
     font-weight: 820;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     text-shadow: 0 1px 3px rgba(0,0,0,0.24);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .annuncio-photo-mini-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 25px;
+    padding: 0.22rem 0.62rem;
+    border-radius: 9999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      0 7px 16px rgba(15,23,42,0.12),
+      inset 0 1px 0 rgba(255,255,255,0.45);
+  }
+
+  .annuncio-photo-offro {
+    color: #166534;
+    background: rgba(220, 252, 231, 0.88);
+    border: 1px solid rgba(134, 239, 172, 0.82);
+  }
+
+  .annuncio-photo-cerco {
+    color: #1d4ed8;
+    background: rgba(219, 234, 254, 0.90);
+    border: 1px solid rgba(147, 197, 253, 0.84);
+  }
+
+  .annuncio-photo-trust {
+    color: #92400e;
+    background: rgba(255, 251, 235, 0.90);
+    border: 1px solid rgba(251, 191, 36, 0.58);
+  }
+
+  .annuncio-hero-location-on-photo {
+    position: absolute;
+    left: 0.9rem;
+    bottom: 0.85rem;
+    z-index: 4;
+    max-width: calc(100% - 1.8rem);
+    color: white;
+    font-size: 0.94rem;
+    font-weight: 780;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.40);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -984,117 +1035,57 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 1.4rem 1.25rem 1.4rem 0.5rem;
-  }
-
-  .annuncio-hero-badges-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.65rem;
-    align-items: center;
-    margin-bottom: 0.85rem;
-  }
-
-  .annuncio-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.42rem;
-    min-height: 34px;
-    padding: 0.42rem 0.88rem;
-    border-radius: 9999px;
-    font-size: 0.86rem;
-    font-weight: 760;
-    box-shadow:
-      0 7px 18px rgba(15,23,42,0.06),
-      inset 0 1px 0 rgba(255,255,255,0.75);
-  }
-
-  .annuncio-chip-offro {
-    color: #15803d;
-    background: rgba(220, 252, 231, 0.86);
-    border: 1px solid rgba(134, 239, 172, 0.84);
-  }
-
-  .annuncio-chip-cerco {
-    color: #1d4ed8;
-    background: rgba(219, 234, 254, 0.88);
-    border: 1px solid rgba(147, 197, 253, 0.88);
-  }
-
-  .annuncio-chip-trust {
-    color: #92400e;
-    background: rgba(255, 251, 235, 0.92);
-    border: 1px solid rgba(251, 191, 36, 0.52);
-  }
-
-  .annuncio-hero-location-line {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.42rem;
-    color: #475569;
-    font-size: 0.96rem;
-    font-weight: 620;
-    margin-bottom: 0.9rem;
+    padding: 0.75rem 0.85rem 0.75rem 0.35rem;
   }
 
   .annuncio-hero-profile-link-wrap {
-    margin-bottom: 1rem;
+    margin-bottom: 0.58rem;
   }
 
   .annuncio-hero-profile-link {
     max-width: 100%;
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    min-height: 32px;
-    padding: 0.38rem 0.85rem;
+    gap: 0.42rem;
+    min-height: 29px;
+    padding: 0.3rem 0.75rem;
     border-radius: 9999px;
     background: rgba(255,255,255,0.84);
     border: 1px solid rgba(191, 219, 254, 0.82);
     box-shadow:
-      0 6px 16px rgba(15,23,42,0.05),
+      0 5px 14px rgba(15,23,42,0.045),
       inset 0 1px 0 rgba(255,255,255,0.88);
     color: #2563eb;
-    font-size: 0.84rem;
-    font-weight: 700;
+    font-size: 0.78rem;
+    font-weight: 720;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .annuncio-hero-title {
-    margin: 0;
-    color: #0f172a;
-    font-size: clamp(2.3rem, 4vw, 4.25rem);
-    line-height: 0.94;
-    font-weight: 850;
-    letter-spacing: -0.062em;
-    text-wrap: balance;
-  }
-
   .annuncio-hero-rating-wrap {
-    margin-top: 1.15rem;
+    margin-bottom: 0.68rem;
   }
 
   .annuncio-hero-rating {
     display: inline-flex;
     align-items: center;
-    gap: 0.42rem;
+    gap: 0.34rem;
     max-width: 100%;
-    padding: 0.48rem 0.9rem;
+    padding: 0.34rem 0.72rem;
     border-radius: 9999px;
     background: rgba(255,255,255,0.90);
     border: 1px solid rgba(251, 191, 36, 0.42);
     box-shadow:
-      0 7px 18px rgba(15,23,42,0.055),
+      0 6px 16px rgba(15,23,42,0.045),
       inset 0 1px 0 rgba(255,255,255,0.86);
     color: #475569;
-    font-size: 0.88rem;
+    font-size: 0.78rem;
   }
 
   .annuncio-hero-rating-value {
     color: #0f172a;
-    font-weight: 800;
+    font-weight: 820;
   }
 
   .annuncio-hero-stars {
@@ -1104,16 +1095,26 @@
 
   .annuncio-hero-rating-count {
     color: #64748b;
-    font-size: 0.82rem;
+    font-size: 0.74rem;
     white-space: nowrap;
+  }
+
+  .annuncio-hero-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: clamp(1.85rem, 3.1vw, 3.25rem);
+    line-height: 0.98;
+    font-weight: 850;
+    letter-spacing: -0.055em;
+    text-wrap: balance;
   }
 
   .annuncio-hero-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem;
-    margin-top: 1.2rem;
+    gap: 0.58rem;
+    margin-top: 0.82rem;
   }
 
   .annuncio-price-chip,
@@ -1121,15 +1122,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
-    min-height: 38px;
-    padding: 0.55rem 1.05rem;
+    gap: 0.38rem;
+    min-height: 34px;
+    padding: 0.44rem 0.88rem;
     border-radius: 9999px;
-    font-size: 0.95rem;
+    font-size: 0.86rem;
     font-weight: 820;
     box-shadow:
-      0 8px 18px rgba(15,23,42,0.06),
-      inset 0 1px 0 rgba(255,255,255,0.78);
+      0 7px 16px rgba(15,23,42,0.055),
+      inset 0 1px 0 rgba(255,255,255,0.76);
   }
 
   .annuncio-price-chip {
@@ -1143,113 +1144,156 @@
     background: linear-gradient(135deg, #2563eb, #4f46e5, #db2777);
     border: 1px solid rgba(255,255,255,0.22);
     box-shadow:
-      0 12px 26px rgba(79,70,229,0.26),
+      0 10px 22px rgba(79,70,229,0.23),
       inset 0 1px 0 rgba(255,255,255,0.25);
   }
 
-  .annuncio-hero-pills {
+  .annuncio-hero-tags-line {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.62rem;
-    margin-top: 1.1rem;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.8rem;
+    color: #2563eb;
+    font-size: 0.82rem;
+    font-weight: 720;
+    line-height: 1.3;
   }
 
-  .annuncio-hero-pills span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 33px;
-    padding: 0.42rem 0.86rem;
-    border-radius: 9999px;
-    border: 1px solid rgba(191, 219, 254, 0.86);
-    background: rgba(255,255,255,0.88);
-    color: #2563eb;
-    font-size: 0.86rem;
+  .annuncio-hero-tags-line span {
+    white-space: nowrap;
+  }
+
+  .annuncio-hero-tags-line em {
+    color: #94a3b8;
+    font-style: normal;
     font-weight: 700;
-    box-shadow:
-      0 4px 12px rgba(15,23,42,0.04),
-      inset 0 1px 0 rgba(255,255,255,0.88);
   }
 
   @media (max-width: 900px) {
     .annuncio-hero-inner {
       grid-template-columns: 1fr;
       gap: 0;
-      padding: 0.75rem;
+      padding: 0.68rem;
     }
 
     .annuncio-hero-photo-button {
-      min-height: 330px;
-      border-radius: 26px;
+      min-height: 220px;
+      max-height: 245px;
+      border-radius: 22px;
     }
 
     .annuncio-hero-photo {
-      min-height: 330px;
+      min-height: 220px;
+      max-height: 245px;
     }
 
     .annuncio-hero-content {
-      padding: 1.2rem 0.75rem 1.05rem;
+      padding: 0.9rem 0.65rem 0.85rem;
       align-items: center;
       text-align: center;
     }
 
-    .annuncio-hero-badges-row,
-    .annuncio-hero-actions,
-    .annuncio-hero-pills {
-      justify-content: center;
+    .annuncio-hero-profile-link-wrap {
+      margin-bottom: 0.5rem;
     }
 
-    .annuncio-hero-location-line {
-      justify-content: center;
+    .annuncio-hero-rating-wrap {
+      margin-bottom: 0.58rem;
     }
 
     .annuncio-hero-title {
-      font-size: clamp(2rem, 9vw, 2.85rem);
-      line-height: 0.98;
+      font-size: clamp(1.55rem, 7vw, 2.1rem);
+      line-height: 1;
     }
 
-    .annuncio-hero-profile-link {
-      max-width: 100%;
+    .annuncio-hero-actions,
+    .annuncio-hero-tags-line {
+      justify-content: center;
     }
   }
 
   @media (max-width: 640px) {
-    .annuncio-page {
-      margin-top: 0.8rem;
-      padding-left: 0.75rem;
-      padding-right: 0.75rem;
+    .annuncio-hero-card {
+      border-radius: 26px;
     }
 
-    .annuncio-hero-card {
-      border-radius: 28px;
+    .annuncio-hero-inner {
+      padding: 0.58rem;
     }
 
     .annuncio-hero-photo-button {
-      min-height: 300px;
-      border-radius: 22px;
+      min-height: 205px;
+      max-height: 220px;
+      border-radius: 20px;
     }
 
     .annuncio-hero-photo {
-      min-height: 300px;
+      min-height: 205px;
+      max-height: 220px;
     }
 
-    .annuncio-hero-title {
-      font-size: 2.15rem;
-    }
-
-    .annuncio-hero-rating {
-      flex-wrap: wrap;
-      justify-content: center;
-      border-radius: 22px;
-    }
-
-    .annuncio-hero-location-on-photo {
-      font-size: 0.94rem;
+    .annuncio-hero-photo-top {
+      top: 0.62rem;
+      left: 0.62rem;
+      right: 0.62rem;
     }
 
     .annuncio-hero-username-on-photo {
-      font-size: 0.68rem;
-      max-width: calc(100% - 2rem);
+      max-width: 150px;
+      font-size: 0.61rem;
+      min-height: 23px;
+      padding: 0.18rem 0.55rem;
+    }
+
+    .annuncio-photo-mini-badge {
+      min-height: 23px;
+      padding: 0.18rem 0.52rem;
+      font-size: 0.62rem;
+    }
+
+    .annuncio-hero-location-on-photo {
+      left: 0.72rem;
+      bottom: 0.68rem;
+      font-size: 0.84rem;
+    }
+
+    .annuncio-hero-content {
+      padding: 0.82rem 0.48rem 0.75rem;
+    }
+
+    .annuncio-hero-profile-link {
+      max-width: 100%;
+      min-height: 28px;
+      font-size: 0.74rem;
+      padding: 0.28rem 0.68rem;
+    }
+
+    .annuncio-hero-rating {
+      gap: 0.28rem;
+      padding: 0.32rem 0.62rem;
+      font-size: 0.74rem;
+      border-radius: 18px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .annuncio-hero-title {
+      font-size: 1.62rem;
+      letter-spacing: -0.05em;
+    }
+
+    .annuncio-price-chip,
+    .annuncio-contact-chip {
+      min-height: 32px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.82rem;
+    }
+
+    .annuncio-hero-tags-line {
+      margin-top: 0.68rem;
+      font-size: 0.78rem;
+      gap: 0.28rem;
     }
   }
 
