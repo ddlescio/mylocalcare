@@ -50,6 +50,14 @@
 
           <div class="annuncio-hero-photo-top">
             <div class="annuncio-hero-photo-left">
+
+              {% if annuncio.get('affidabilita_top') == 1 %}
+                <span class="annuncio-photo-trust-clip">
+                  <span class="annuncio-photo-trust-medal">🏅</span>
+                  <span>Fiducia Top</span>
+                </span>
+              {% endif %}
+
               <span class="annuncio-hero-username-on-photo">
                 {{ annuncio['username'] or annuncio['nome'] or 'Utente' }}
               </span>
@@ -92,13 +100,6 @@
           </a>
 
           <div class="annuncio-identity-badges">
-
-            {% if annuncio.get('affidabilita_top') == 1 %}
-              <span class="annuncio-trust-badge">
-                <span class="annuncio-trust-icon">🏅</span>
-                <span>Fiducia Top</span>
-              </span>
-            {% endif %}
 
             {% if annuncio['media_recensioni'] and annuncio['media_recensioni'] > 0 %}
               {% if not g.utente or g.utente['id'] != annuncio['utente_id'] %}
@@ -992,6 +993,56 @@
       inset 0 1px 0 rgba(255,255,255,0.20);
   }
 
+  .annuncio-photo-trust-clip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+    min-height: 30px;
+    padding: 0.32rem 0.72rem 0.32rem 0.46rem;
+    border-radius: 16px 9999px 9999px 16px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,251,235,0.96));
+    border: 1px solid rgba(251, 191, 36, 0.68);
+    color: #78350f;
+    font-size: 0.72rem;
+    font-weight: 880;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    box-shadow:
+      0 10px 22px rgba(15,23,42,0.16),
+      0 0 0 1px rgba(255,255,255,0.42) inset;
+  }
+
+  .annuncio-photo-trust-clip::before {
+    content: "";
+    position: absolute;
+    left: -0.48rem;
+    top: 50%;
+    width: 0.95rem;
+    height: 0.95rem;
+    transform: translateY(-50%);
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(251, 191, 36, 0.62);
+    box-shadow:
+      0 5px 12px rgba(15,23,42,0.12),
+      inset 0 1px 0 rgba(255,255,255,0.90);
+  }
+
+  .annuncio-photo-trust-medal {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(251, 191, 36, 0.38);
+    font-size: 0.62rem;
+    line-height: 1;
+  }
+
   .annuncio-photo-mini-badge {
     display: inline-flex;
     align-items: center;
@@ -1048,53 +1099,45 @@
   .annuncio-identity-panel {
     order: 2;
     width: 100%;
-    max-width: 470px;
-    display: flex;
+    max-width: 440px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.42rem;
+    gap: 0.45rem;
     flex-wrap: wrap;
-    margin-top: 0.72rem;
+    margin-top: 0.62rem;
     margin-bottom: 0.72rem;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
+    padding: 0.38rem 0.46rem;
+    border-radius: 9999px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.82), rgba(248,250,252,0.62));
+    border: 1px solid rgba(226,232,240,0.78);
+    box-shadow:
+      0 8px 18px rgba(15,23,42,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 
   .annuncio-identity-main {
     min-width: 0;
-    max-width: 100%;
-    min-height: 34px;
     display: inline-flex;
     align-items: center;
-    gap: 0.48rem;
-    padding: 0.34rem 0.68rem 0.34rem 0.42rem;
-    border-radius: 9999px;
+    gap: 0.42rem;
     color: #0f172a;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92));
-    border: 1px solid rgba(191, 219, 254, 0.72);
-    box-shadow:
-      0 7px 18px rgba(15,23,42,0.055),
-      inset 0 1px 0 rgba(255,255,255,0.92);
   }
 
   .annuncio-identity-avatar {
-    width: 27px;
-    height: 27px;
-    flex: 0 0 27px;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 9999px;
-    background:
-      linear-gradient(180deg, rgba(239,246,255,1), rgba(255,255,255,0.96));
-    border: 1px solid rgba(191, 219, 254, 0.86);
-    box-shadow:
-      0 4px 10px rgba(37,99,235,0.08),
-      inset 0 1px 0 rgba(255,255,255,0.92);
-    font-size: 0.78rem;
+    background: rgba(239,246,255,0.90);
+    border: 1px solid rgba(191,219,254,0.75);
+    font-size: 0.74rem;
   }
 
   .annuncio-identity-copy {
@@ -1106,19 +1149,19 @@
   }
 
   .annuncio-identity-label {
-    font-size: 0.52rem;
-    font-weight: 850;
+    font-size: 0.5rem;
+    font-weight: 820;
     color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.075em;
   }
 
   .annuncio-identity-name {
-    max-width: 150px;
-    margin-top: 0.12rem;
+    max-width: 145px;
+    margin-top: 0.11rem;
     color: #2563eb;
-    font-size: 0.76rem;
-    font-weight: 880;
+    font-size: 0.74rem;
+    font-weight: 860;
     letter-spacing: -0.02em;
     white-space: nowrap;
     overflow: hidden;
@@ -1127,83 +1170,58 @@
 
   .annuncio-identity-badges {
     min-width: 0;
-    display: contents;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 
-  .annuncio-trust-badge,
+  .annuncio-identity-badges:empty {
+    display: none;
+  }
+
   .annuncio-rating-badge {
-    min-height: 34px;
+    min-height: 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.22rem;
+    padding: 0.24rem 0.5rem;
     border-radius: 9999px;
+    background: rgba(255,251,235,0.68);
+    border: 1px solid rgba(251,191,36,0.30);
+    color: #92400e;
+    box-shadow: none;
     white-space: nowrap;
-    box-shadow:
-      0 7px 18px rgba(15,23,42,0.055),
-      inset 0 1px 0 rgba(255,255,255,0.88);
-  }
-
-  .annuncio-trust-badge {
-    gap: 0.34rem;
-    padding: 0.36rem 0.68rem;
-    background:
-      linear-gradient(180deg, rgba(255,251,235,0.98), rgba(255,247,237,0.94));
-    border: 1px solid rgba(251, 191, 36, 0.56);
-    color: #92400e;
-    font-size: 0.73rem;
-    font-weight: 880;
-  }
-
-  .annuncio-trust-icon {
-    width: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    background: rgba(255,255,255,0.78);
-    border: 1px solid rgba(251, 191, 36, 0.36);
-    font-size: 0.62rem;
-    line-height: 1;
-  }
-
-  .annuncio-rating-badge {
-    gap: 0.24rem;
-    padding: 0.34rem 0.58rem;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,251,235,0.92));
-    border: 1px solid rgba(251, 191, 36, 0.42);
-    color: #92400e;
   }
 
   .annuncio-rating-score {
     color: #0f172a;
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 900;
   }
 
   .annuncio-rating-stars {
     display: inline-flex;
     align-items: center;
-    gap: 0.035rem;
+    gap: 0.03rem;
     color: #f59e0b;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     letter-spacing: -0.08em;
     white-space: nowrap;
   }
 
   .annuncio-rating-count {
-    min-width: 17px;
-    height: 17px;
-    padding: 0 0.32rem;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 0.3rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 9999px;
-    background: rgba(255,255,255,0.84);
-    border: 1px solid rgba(251, 191, 36, 0.34);
+    background: rgba(255,255,255,0.78);
+    border: 1px solid rgba(251,191,36,0.26);
     color: #64748b;
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     font-weight: 850;
   }
 
@@ -1349,6 +1367,25 @@
       padding: 0.18rem 0.58rem;
     }
 
+    .annuncio-photo-trust-clip {
+      min-height: 28px;
+      padding: 0.28rem 0.62rem 0.28rem 0.42rem;
+      font-size: 0.66rem;
+      border-radius: 15px 9999px 9999px 15px;
+    }
+
+    .annuncio-photo-trust-clip::before {
+      left: -0.42rem;
+      width: 0.82rem;
+      height: 0.82rem;
+    }
+
+    .annuncio-photo-trust-medal {
+      width: 16px;
+      height: 16px;
+      font-size: 0.56rem;
+    }
+
     .annuncio-photo-mini-badge {
       min-height: 23px;
       padding: 0.18rem 0.52rem;
@@ -1385,63 +1422,50 @@
 
     .annuncio-identity-panel {
       max-width: 100%;
-      justify-content: center;
-      gap: 0.34rem;
-      margin-top: 0.62rem;
-      margin-bottom: 0.7rem;
+      gap: 0.32rem;
+      margin-top: 0.56rem;
+      margin-bottom: 0.66rem;
+      padding: 0.34rem 0.38rem;
     }
 
     .annuncio-identity-main {
-      min-height: 31px;
-      padding: 0.3rem 0.58rem 0.3rem 0.36rem;
+      gap: 0.36rem;
     }
 
     .annuncio-identity-avatar {
-      width: 25px;
-      height: 25px;
-      flex-basis: 25px;
-      font-size: 0.72rem;
+      width: 24px;
+      height: 24px;
+      flex-basis: 24px;
+      font-size: 0.68rem;
     }
 
     .annuncio-identity-label {
-      font-size: 0.48rem;
+      font-size: 0.47rem;
     }
 
     .annuncio-identity-name {
-      max-width: 130px;
-      font-size: 0.7rem;
-    }
-
-    .annuncio-trust-badge {
-      min-height: 31px;
-      padding: 0.3rem 0.56rem;
-      font-size: 0.66rem;
-    }
-
-    .annuncio-trust-icon {
-      width: 16px;
-      height: 16px;
-      font-size: 0.56rem;
+      max-width: 122px;
+      font-size: 0.68rem;
     }
 
     .annuncio-rating-badge {
-      min-height: 31px;
-      padding: 0.3rem 0.5rem;
-      gap: 0.2rem;
+      min-height: 26px;
+      padding: 0.22rem 0.44rem;
+      gap: 0.18rem;
     }
 
     .annuncio-rating-score {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
     }
 
     .annuncio-rating-stars {
-      font-size: 0.66rem;
+      font-size: 0.64rem;
     }
 
     .annuncio-rating-count {
-      min-width: 16px;
-      height: 16px;
-      font-size: 0.58rem;
+      min-width: 15px;
+      height: 15px;
+      font-size: 0.56rem;
     }
   }
 
