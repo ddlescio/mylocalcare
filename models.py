@@ -166,7 +166,7 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
 
     conn.commit()
     return msg_id
-    
+
 def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: int | None = None, before_id: int | None = None):
     """
     Restituisce la conversazione decifrando i messaggi leggibili con la chiave privata X25519.
@@ -1039,7 +1039,7 @@ def aggiungi_o_modifica_risposta(id_recensione=None, id_autore=None, testo=None,
         else:
             cur.execute("""
                 INSERT INTO risposte_recensioni (id_recensione, id_autore, testo, stato, data)
-                VALUES (?, ?, ?, 'in_attesa', datetime('now'))
+                VALUES (?, ?, ?, 'in_attesa', CURRENT_TIMESTAMP)
             """, (id_recensione, id_autore, testo.strip()))
 
     conn.commit()
