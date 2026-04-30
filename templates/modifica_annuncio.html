@@ -141,7 +141,7 @@
             <option value="caffe-parole" {% if current_categoria == 'caffe-parole' %}selected{% endif %}>Caffè & parole</option>
           </select>
         </div>
-        
+
         <!-- Filtri dinamici -->
         <div id="filtri-container" class="hidden mt-2">
           <label class="flex items-center gap-2 text-base font-bold text-slate-800 mb-2">
@@ -349,8 +349,57 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  const categoria = document.getElementById("categoria");
+  const filtriContainer = document.getElementById("filtri-container");
+  const filtriCheckboxes = document.getElementById("filtri-checkboxes");
+
+  if (!categoria || !filtriContainer || !filtriCheckboxes) return;
+
+  let filtriSelezionati = [];
+
+  const jsonFiltri = document.getElementById("filtri-selezionati");
+
+  if (jsonFiltri) {
+    try {
+      filtriSelezionati = JSON.parse(jsonFiltri.textContent || "[]")
+        .map(v => String(v).trim())
+        .filter(Boolean);
+    } catch (e) {
+      filtriSelezionati = [];
+    }
+  }
+
+  function forzaRenderFiltriModifica() {
+    if (!categoria.value) return;
+
+    categoria.dispatchEvent(new Event("change", { bubbles: true }));
+
+    setTimeout(() => {
+      const checkboxes = filtriCheckboxes.querySelectorAll('input[type="checkbox"]');
+
+      if (checkboxes.length > 0) {
+        filtriContainer.classList.remove("hidden");
+      }
+
+      checkboxes.forEach((cb) => {
+        const valore = String(cb.value || "").trim();
+
+        if (filtriSelezionati.includes(valore)) {
+          cb.checked = true;
+        }
+      });
+    }, 120);
+  }
+
+  forzaRenderFiltriModifica();
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {  
   const form = document.getElementById("annuncio-form");
   if (!form) return;
 
