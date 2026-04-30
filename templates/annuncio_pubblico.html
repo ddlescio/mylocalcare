@@ -75,7 +75,7 @@
 
           {% if annuncio['zona'] %}
             <div class="annuncio-hero-location-on-photo">
-              📍 {{ annuncio['zona'] }}
+              {{ annuncio['zona'] }}
             </div>
           {% endif %}
         </button>
@@ -848,7 +848,7 @@
 
   .annuncio-hero-card {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     border-radius: 30px;
     border: 1px solid rgba(203, 213, 225, 0.82);
     background:
@@ -867,6 +867,7 @@
   .annuncio-hero-bg {
     position: absolute;
     inset: 0;
+    border-radius: inherit;
     background:
       radial-gradient(circle at 16% 10%, rgba(255,255,255,0.92), transparent 30%),
       radial-gradient(circle at 84% 16%, rgba(219,234,254,0.48), transparent 34%),
@@ -1007,7 +1008,7 @@
 
   .annuncio-photo-trust-paperclip {
     position: absolute;
-    top: -0.92rem;
+    top: -1.05rem;
     left: -0.42rem;
     z-index: 8;
     display: inline-flex;
@@ -1390,8 +1391,8 @@
     }
 
     .annuncio-photo-trust-paperclip {
-      top: -0.88rem;
-      left: -0.34rem;
+      top: -1rem;
+      left: -0.34rem;      
       min-height: 30px;
       padding: 0.3rem 0.68rem 0.3rem 0.68rem;
       font-size: 0.67rem;
@@ -1408,7 +1409,7 @@
       width: 0.25rem;
       height: 0.25rem;
     }
-    
+
     .annuncio-photo-mini-badge {
       min-height: 23px;
       padding: 0.18rem 0.52rem;
