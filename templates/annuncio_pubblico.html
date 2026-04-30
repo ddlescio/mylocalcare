@@ -178,7 +178,7 @@
 
   <!-- 📄 DESCRIZIONE -->
   {% if annuncio['descrizione'] %}
-  <div class="mt-5 relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,248,255,0.97))] shadow-[0_26px_60px_rgba(15,23,42,0.11)] ring-1 ring-white/80 mx-[calc(50%-50vw+1mm)] sm:mx-0">
+  <div class="annuncio-soft-section annuncio-soft-section-descrizione mt-5 relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,248,255,0.97))] shadow-[0_26px_60px_rgba(15,23,42,0.11)] ring-1 ring-white/80 mx-[calc(50%-50vw+1mm)] sm:mx-0">
 
     <!-- glow decorativo -->
     <div class="pointer-events-none absolute -top-16 right-8 h-36 w-36 rounded-full bg-blue-100/50 blur-3xl"></div>
@@ -226,7 +226,7 @@
 
   <!-- 🙋 BIO -->
   {% if annuncio['bio_utente'] %}
-  <div class="mt-5 relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(253,248,255,0.97))] shadow-[0_26px_60px_rgba(15,23,42,0.11)] ring-1 ring-white/80 mx-[calc(50%-50vw+1mm)] sm:mx-0">
+  <div class="annuncio-soft-section annuncio-soft-section-bio mt-5 relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(253,248,255,0.97))] shadow-[0_26px_60px_rgba(15,23,42,0.11)] ring-1 ring-white/80 mx-[calc(50%-50vw+1mm)] sm:mx-0">
 
     <!-- glow decorativo -->
     <div class="pointer-events-none absolute -top-16 right-10 h-36 w-36 rounded-full bg-fuchsia-100/45 blur-3xl"></div>
@@ -319,7 +319,7 @@
   {% endif %}
 
   <!-- 💬 AREA CONTATTO CHAT -->
-  <div id="sezione-contatto" class="mt-6 mx-[calc(50%-50vw+1mm)] sm:mx-0 scroll-mt-28">
+  <div id="sezione-contatto" class="annuncio-soft-contact mt-6 mx-[calc(50%-50vw+1mm)] sm:mx-0 scroll-mt-28">
     {% if g.utente and g.utente['id'] != annuncio['utente_id'] %}
       <div class="overflow-hidden rounded-[28px] border border-slate-300/75 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.09)]">
         <div class="relative px-5 py-5 sm:px-6 bg-[linear-gradient(135deg,rgba(239,246,255,0.95),rgba(255,255,255,0.98),rgba(250,245,255,0.92))]">
@@ -362,7 +362,7 @@
 
   <!-- 📞 CONTATTI -->
   {% if contatti_attivi and (annuncio['email'] or annuncio['telefono']) %}
-  <div class="mt-5 overflow-hidden rounded-[28px] border border-slate-300/75 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.09)]">
+  <div class="annuncio-soft-direct-contacts mt-5 overflow-hidden rounded-[28px] border border-slate-300/75 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.09)]">
 
     <div class="relative px-5 pt-5 pb-4 sm:px-6 sm:pt-5 sm:pb-4 border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(239,246,255,0.78),rgba(255,255,255,0.98))]">
       <div class="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-blue-500 via-indigo-400 to-sky-300"></div>
@@ -427,7 +427,7 @@
   </div>
 
   {% elif annuncio['email'] or annuncio['telefono'] %}
-  <div class="mt-5 overflow-hidden rounded-[28px] border border-slate-300/75 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.09)]">
+  <div class="annuncio-soft-direct-contacts annuncio-soft-direct-contacts-locked mt-5 overflow-hidden rounded-[28px] border border-slate-300/75 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.09)]">
     <div class="relative px-5 py-5 sm:px-6 border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(241,245,249,0.92),rgba(255,255,255,0.98))]">
       <div class="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-slate-400 via-slate-300 to-slate-200"></div>
 
@@ -826,9 +826,13 @@
   </div>
 </div>
 <style>
+  /* ============================================================
+     PAGINA ANNUNCIO — LAYOUT BASE
+     ============================================================ */
+
   .annuncio-page {
-    padding-bottom: 7rem;
     padding-top: 5.6rem;
+    padding-bottom: 7rem;
   }
 
   @media (max-width: 640px) {
@@ -837,9 +841,15 @@
     }
   }
 
+
+  /* ============================================================
+     HERO ANNUNCIO — CARD PRINCIPALE
+     ============================================================ */
+
   .annuncio-hero-card {
     position: relative;
     overflow: visible;
+    isolation: isolate;
     border-radius: 30px;
     border: 1px solid rgba(203, 213, 225, 0.82);
     background:
@@ -852,27 +862,26 @@
     box-shadow:
       0 14px 34px rgba(15, 23, 42, 0.07),
       inset 0 1px 0 rgba(255,255,255,0.86);
-    isolation: isolate;
   }
 
   .annuncio-hero-bg {
     position: absolute;
     inset: 0;
+    z-index: 0;
     border-radius: inherit;
+    pointer-events: none;
     background:
       radial-gradient(circle at 16% 10%, rgba(255,255,255,0.92), transparent 30%),
       radial-gradient(circle at 84% 16%, rgba(219,234,254,0.48), transparent 34%),
       radial-gradient(circle at 72% 92%, rgba(244,214,255,0.20), transparent 38%);
-    pointer-events: none;
-    z-index: 0;
   }
 
   .annuncio-hero-glow {
     position: absolute;
+    z-index: 0;
     border-radius: 9999px;
     pointer-events: none;
     filter: blur(32px);
-    z-index: 0;
   }
 
   .annuncio-hero-glow-a {
@@ -901,8 +910,15 @@
     padding: 0.85rem;
   }
 
+
+  /* ============================================================
+     HERO — FOTO PRINCIPALE
+     ============================================================ */
+
   .annuncio-hero-media {
+    position: relative;
     min-width: 0;
+    overflow: visible;
   }
 
   .annuncio-hero-photo-button {
@@ -915,19 +931,19 @@
     overflow: hidden;
     border-radius: 24px;
     border: 1px solid rgba(255,255,255,0.88);
+    background: rgba(241,245,249,0.88);
+    cursor: zoom-in;
     box-shadow:
       0 10px 24px rgba(15, 23, 42, 0.10),
       inset 0 1px 0 rgba(255,255,255,0.72);
-    background: rgba(241,245,249,0.88);
-    cursor: zoom-in;
   }
 
   .annuncio-hero-photo {
+    display: block;
     width: 100%;
     height: 100%;
     min-height: 305px;
     max-height: 360px;
-    display: block;
     object-fit: cover;
     object-position: center;
     transform: scale(1.01);
@@ -936,6 +952,7 @@
   .annuncio-hero-photo-overlay {
     position: absolute;
     inset: 0;
+    pointer-events: none;
     background:
       linear-gradient(
         180deg,
@@ -943,7 +960,6 @@
         rgba(15,23,42,0.02) 38%,
         rgba(15,23,42,0.34) 100%
       );
-    pointer-events: none;
   }
 
   .annuncio-hero-photo-top {
@@ -962,7 +978,6 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0;
     align-items: flex-start;
   }
 
@@ -991,11 +1006,26 @@
       inset 0 1px 0 rgba(255,255,255,0.20);
   }
 
-  .annuncio-hero-media {
-    position: relative;
-    min-width: 0;
-    overflow: visible;
+  .annuncio-hero-location-on-photo {
+    position: absolute;
+    left: 0.9rem;
+    bottom: 0.85rem;
+    z-index: 4;
+    max-width: calc(100% - 1.8rem);
+    color: white;
+    font-size: 0.94rem;
+    font-weight: 780;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.40);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
+
+
+  /* ============================================================
+     HERO — BADGE FIDUCIA / OFFRO / CERCO
+     ============================================================ */
 
   .annuncio-photo-trust-paperclip {
     position: absolute;
@@ -1053,10 +1083,10 @@
   }
 
   .annuncio-photo-mini-badge {
+    min-height: 25px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 25px;
     padding: 0.22rem 0.62rem;
     border-radius: 9999px;
     font-size: 0.68rem;
@@ -1081,21 +1111,10 @@
     border: 1px solid rgba(147, 197, 253, 0.84);
   }
 
-  .annuncio-hero-location-on-photo {
-    position: absolute;
-    left: 0.9rem;
-    bottom: 0.85rem;
-    z-index: 4;
-    max-width: calc(100% - 1.8rem);
-    color: white;
-    font-size: 0.94rem;
-    font-weight: 780;
-    letter-spacing: -0.02em;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.40);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+
+  /* ============================================================
+     HERO — CONTENUTO TESTUALE
+     ============================================================ */
 
   .annuncio-hero-content {
     min-width: 0;
@@ -1103,8 +1122,19 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    text-align: center;
     padding: 0.75rem 0.85rem 0.75rem 0.35rem;
+    text-align: center;
+  }
+
+  .annuncio-hero-title {
+    order: 1;
+    margin: 0;
+    color: #0f172a;
+    font-size: clamp(1.85rem, 3.1vw, 3.25rem);
+    line-height: 0.98;
+    font-weight: 850;
+    letter-spacing: -0.055em;
+    text-wrap: balance;
   }
 
   .annuncio-identity-panel {
@@ -1118,13 +1148,6 @@
     flex-wrap: wrap;
     margin-top: 0.48rem;
     margin-bottom: 0.22rem;
-    padding: 0;
-    border-radius: 0;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 
   .annuncio-identity-main {
@@ -1132,9 +1155,9 @@
     display: inline-flex;
     align-items: center;
     gap: 0.42rem;
-    color: #0f172a;
     padding: 0.18rem 0.28rem;
     border-radius: 9999px;
+    color: #0f172a;
   }
 
   .annuncio-identity-avatar {
@@ -1189,6 +1212,11 @@
     display: none;
   }
 
+
+  /* ============================================================
+     HERO — RECENSIONI / CTA / TAG
+     ============================================================ */
+
   .annuncio-rating-badge {
     min-height: 26px;
     display: inline-flex;
@@ -1235,17 +1263,6 @@
     font-weight: 850;
   }
 
-  .annuncio-hero-title {
-    order: 1;
-    margin: 0;
-    color: #0f172a;
-    font-size: clamp(1.85rem, 3.1vw, 3.25rem);
-    line-height: 0.98;
-    font-weight: 850;
-    letter-spacing: -0.055em;
-    text-wrap: balance;
-  }
-
   .annuncio-hero-actions {
     order: 3;
     display: flex;
@@ -1256,30 +1273,17 @@
     margin-top: 0.34rem;
   }
 
-  .annuncio-price-chip,
   .annuncio-contact-chip {
+    min-height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.38rem;
-    min-height: 34px;
     padding: 0.44rem 0.88rem;
     border-radius: 9999px;
+    color: #ffffff;
     font-size: 0.86rem;
     font-weight: 820;
-    box-shadow:
-      0 7px 16px rgba(15,23,42,0.055),
-      inset 0 1px 0 rgba(255,255,255,0.76);
-  }
-
-  .annuncio-price-chip {
-    color: #047857;
-    background: rgba(209, 250, 229, 0.90);
-    border: 1px solid rgba(110, 231, 183, 0.82);
-  }
-
-  .annuncio-contact-chip {
-    color: #ffffff;
     background: linear-gradient(135deg, #2563eb, #4f46e5, #db2777);
     border: 1px solid rgba(255,255,255,0.22);
     box-shadow:
@@ -1316,7 +1320,180 @@
     font-weight: 900 !important;
   }
 
+
+  /* ============================================================
+     TESTI UGC
+     ============================================================ */
+
+  .ugc-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: #334155;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .ugc-text-strong {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+
+  /* ============================================================
+     CARD COMPATTE — DESCRIZIONE / BIO
+     ============================================================ */
+
+  .annuncio-soft-section {
+    border-radius: 28px !important;
+    box-shadow:
+      0 12px 28px rgba(15,23,42,0.055),
+      0 22px 46px rgba(15,23,42,0.055) !important;
+  }
+
+  .annuncio-soft-section > div[class*="border-b"] {
+    padding-top: 0.95rem !important;
+    padding-bottom: 0.82rem !important;
+  }
+
+  .annuncio-soft-section > div[class*="border-b"] .relative.flex {
+    gap: 0.78rem !important;
+  }
+
+  .annuncio-soft-section > div[class*="border-b"] .relative.shrink-0 > div:last-child {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 18px !important;
+    font-size: 0.95rem !important;
+    box-shadow:
+      0 7px 16px rgba(15,23,42,0.075),
+      inset 0 1px 0 rgba(255,255,255,0.88) !important;
+  }
+
+  .annuncio-soft-section h2 {
+    font-size: 1.34rem !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  .annuncio-soft-section h2 + p {
+    margin-top: 0.28rem !important;
+    font-size: 0.82rem !important;
+  }
+
+  .annuncio-soft-section > div.relative.px-4,
+  .annuncio-soft-section > div.relative.px-4.py-3 {
+    padding-top: 0.7rem !important;
+    padding-bottom: 0.78rem !important;
+  }
+
+  .annuncio-soft-section > div.relative.px-4 > div {
+    border-radius: 20px !important;
+    padding-top: 0.72rem !important;
+    padding-bottom: 0.82rem !important;
+    box-shadow:
+      0 5px 15px rgba(15,23,42,0.035),
+      inset 0 1px 0 rgba(255,255,255,0.86) !important;
+  }
+
+  .annuncio-soft-section .ugc-text {
+    font-size: 0.96rem !important;
+    line-height: 1.58 !important;
+  }
+
+
+  /* ============================================================
+     CARD COMPATTE — CHAT / CONTATTO
+     ============================================================ */
+
+  .annuncio-soft-contact > div {
+    border-radius: 26px !important;
+    box-shadow:
+      0 12px 28px rgba(15,23,42,0.055),
+      0 22px 46px rgba(15,23,42,0.055) !important;
+  }
+
+  .annuncio-soft-contact > div > div {
+    padding-top: 1.05rem !important;
+    padding-bottom: 1.1rem !important;
+  }
+
+  .annuncio-soft-contact p {
+    max-width: 34rem !important;
+    font-size: 0.92rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .annuncio-soft-contact a {
+    margin-top: 0.82rem !important;
+    padding-top: 0.78rem !important;
+    padding-bottom: 0.78rem !important;
+    box-shadow:
+      0 10px 24px rgba(79,70,229,0.22) !important;
+  }
+
+
+  /* ============================================================
+     CARD COMPATTE — CONTATTI DIRETTI / BLOCCATI
+     ============================================================ */
+
+  .annuncio-soft-direct-contacts {
+    border-radius: 26px !important;
+    box-shadow:
+      0 12px 28px rgba(15,23,42,0.055),
+      0 22px 46px rgba(15,23,42,0.055) !important;
+  }
+
+  .annuncio-soft-direct-contacts > div[class*="border-b"] {
+    padding-top: 1rem !important;
+    padding-bottom: 0.9rem !important;
+  }
+
+  .annuncio-soft-direct-contacts > div[class*="border-b"] .shrink-0 {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 18px !important;
+    font-size: 1rem !important;
+  }
+
+  .annuncio-soft-direct-contacts h2 {
+    font-size: 1.36rem !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  .annuncio-soft-direct-contacts h2 + p {
+    margin-top: 0.28rem !important;
+    font-size: 0.84rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .annuncio-soft-direct-contacts:not(.annuncio-soft-direct-contacts-locked) > div:last-child {
+    padding-top: 1.05rem !important;
+    padding-bottom: 1.15rem !important;
+  }
+
+
+  /* ============================================================
+     RESPONSIVE — HERO MOBILE/TABLET
+     ============================================================ */
+
   @media (max-width: 700px) {
+    html,
+    body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .annuncio-page {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
+    }
+
     .annuncio-hero-inner {
       grid-template-columns: 1fr;
       gap: 0;
@@ -1335,8 +1512,8 @@
     }
 
     .annuncio-hero-content {
-      padding: 0.9rem 0.65rem 0.85rem;
       align-items: center;
+      padding: 0.9rem 0.65rem 0.85rem;
       text-align: center;
     }
 
@@ -1348,6 +1525,16 @@
     .annuncio-hero-actions,
     .annuncio-hero-tags-line {
       justify-content: center;
+    }
+
+    .annuncio-hero-glow-a {
+      left: -24px;
+      top: -40px;
+    }
+
+    .annuncio-hero-glow-b {
+      right: -24px;
+      bottom: -40px;
     }
   }
 
@@ -1379,16 +1566,16 @@
 
     .annuncio-hero-username-on-photo {
       max-width: 155px;
-      font-size: 0.61rem;
       min-height: 23px;
       padding: 0.18rem 0.58rem;
+      font-size: 0.61rem;
     }
 
     .annuncio-photo-trust-paperclip {
       top: -1rem;
       left: -0.34rem;
       min-height: 30px;
-      padding: 0.3rem 0.68rem 0.3rem 0.68rem;
+      padding: 0.3rem 0.68rem;
       font-size: 0.67rem;
     }
 
@@ -1425,7 +1612,6 @@
       letter-spacing: -0.05em;
     }
 
-    .annuncio-price-chip,
     .annuncio-contact-chip {
       min-height: 32px;
       padding: 0.4rem 0.8rem;
@@ -1434,8 +1620,8 @@
 
     .annuncio-hero-tags-line {
       margin-top: 0.68rem;
-      font-size: 0.78rem;
       gap: 0.28rem;
+      font-size: 0.78rem;
     }
 
     .annuncio-identity-panel {
@@ -1443,7 +1629,6 @@
       gap: 0.42rem;
       margin-top: 0.42rem;
       margin-bottom: 0.14rem;
-      padding: 0;
     }
 
     .annuncio-identity-main {
@@ -1487,52 +1672,102 @@
     }
   }
 
-  .ugc-text {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-weight: 400;
-    letter-spacing: -0.01em;
-    color: #334155;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  .ugc-text-strong {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: #0f172a;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
 
   /* ============================================================
-     FIX MOBILE — BLOCCO SCROLL ORIZZONTALE PAGINA ANNUNCIO
+     RESPONSIVE — CARD COMPATTE MOBILE
      ============================================================ */
-  @media (max-width: 700px) {
-    html,
-    body {
-      width: 100%;
-      max-width: 100%;
-      overflow-x: hidden;
+
+  @media (max-width: 640px) {
+    .annuncio-soft-section {
+      border-radius: 24px !important;
     }
 
-    .annuncio-page {
-      width: 100%;
-      max-width: 100%;
-      overflow-x: clip;
+    .annuncio-soft-section > div[class*="border-b"] {
+      padding: 0.82rem 1rem 0.72rem !important;
     }
 
-    .annuncio-hero-glow-a {
-      left: -24px;
-      top: -40px;
+    .annuncio-soft-section > div[class*="border-b"] .relative.flex {
+      gap: 0.68rem !important;
     }
 
-    .annuncio-hero-glow-b {
-      right: -24px;
-      bottom: -40px;
+    .annuncio-soft-section > div[class*="border-b"] .relative.shrink-0 > div:last-child {
+      width: 38px !important;
+      height: 38px !important;
+      border-radius: 16px !important;
+      font-size: 0.88rem !important;
+    }
+
+    .annuncio-soft-section h2 {
+      font-size: 1.18rem !important;
+    }
+
+    .annuncio-soft-section h2 + p {
+      font-size: 0.78rem !important;
+    }
+
+    .annuncio-soft-section > div.relative.px-4 {
+      padding: 0.62rem 0.75rem 0.72rem !important;
+    }
+
+    .annuncio-soft-section > div.relative.px-4 > div {
+      border-radius: 18px !important;
+      padding: 0.68rem 0.9rem 0.72rem !important;
+    }
+
+    .annuncio-soft-section .ugc-text {
+      font-size: 0.93rem !important;
+      line-height: 1.5 !important;
+    }
+
+    .annuncio-soft-contact {
+      margin-top: 1rem !important;
+    }
+
+    .annuncio-soft-contact > div {
+      border-radius: 24px !important;
+    }
+
+    .annuncio-soft-contact > div > div {
+      padding: 1rem 1.05rem !important;
+    }
+
+    .annuncio-soft-contact p {
+      font-size: 0.9rem !important;
+      line-height: 1.5 !important;
+    }
+
+    .annuncio-soft-contact a {
+      margin-top: 0.78rem !important;
+      padding-top: 0.72rem !important;
+      padding-bottom: 0.72rem !important;
+    }
+
+    .annuncio-soft-direct-contacts {
+      border-radius: 24px !important;
+    }
+
+    .annuncio-soft-direct-contacts > div[class*="border-b"] {
+      padding: 0.95rem 1rem 0.85rem !important;
+    }
+
+    .annuncio-soft-direct-contacts > div[class*="border-b"] .flex.items-start {
+      gap: 0.78rem !important;
+    }
+
+    .annuncio-soft-direct-contacts > div[class*="border-b"] .shrink-0 {
+      width: 38px !important;
+      height: 38px !important;
+      border-radius: 16px !important;
+    }
+
+    .annuncio-soft-direct-contacts h2 {
+      font-size: 1.2rem !important;
+    }
+
+    .annuncio-soft-direct-contacts h2 + p {
+      font-size: 0.8rem !important;
     }
   }
-    
 </style>
 <script>
   function apriZoom(src) {
