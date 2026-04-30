@@ -81,6 +81,12 @@
 
       <div class="hero-bottom-card">
 
+        {% if utente.get('affidabilita_top', 0)|int == 1 %}
+          <div class="profile-trust-paperclip" title="Basato su recensioni verificate">
+            <span>Fiducia Top</span>
+          </div>
+        {% endif %}
+
         {% if not pubblico %}
           <div class="hero-actions-cluster">
             {% if session.get('is_admin') or utente.get('is_admin') or utente.get('ruolo') == 'admin' or utente.get('username') == 'ADMIN' %}
@@ -382,7 +388,7 @@
                 </div>
 
               </div>
-              
+
             {% set contatti_attivi = servizio_attivo_per_utente(utente['id'], 'contatti_profilo') %}
             {% set email_pubblica = utente.get('email_pubblica')|default('', true)|trim %}
             {% set telefono = utente.get('telefono')|default('', true)|trim %}
@@ -1189,6 +1195,83 @@
     padding: 1.05rem 7.2rem 1.05rem 1.2rem;
     z-index: 40;
     overflow: hidden;
+  }
+
+  .profile-trust-paperclip {
+    position: absolute;
+    top: -1.05rem;
+    left: -0.42rem;
+    z-index: 80;
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0.34rem 0.78rem 0.34rem 0.72rem;
+    border-radius: 9999px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(255,251,235,0.97));
+    border: 1px solid rgba(251, 191, 36, 0.68);
+    color: #78350f;
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
+    box-shadow:
+      0 14px 28px rgba(15,23,42,0.16),
+      0 7px 18px rgba(245,158,11,0.16),
+      inset 0 1px 0 rgba(255,255,255,0.94);
+  }
+
+  .profile-trust-paperclip::before {
+    content: "";
+    position: absolute;
+    left: -0.34rem;
+    top: 50%;
+    width: 0.82rem;
+    height: 1.18rem;
+    transform: translateY(-50%);
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.98);
+    border: 1px solid rgba(251,191,36,0.58);
+    box-shadow:
+      0 7px 16px rgba(15,23,42,0.14),
+      inset 0 1px 0 rgba(255,255,255,0.92);
+  }
+
+  .profile-trust-paperclip::after {
+    content: "";
+    position: absolute;
+    left: -0.08rem;
+    top: 50%;
+    width: 0.28rem;
+    height: 0.28rem;
+    transform: translateY(-50%);
+    border-radius: 9999px;
+    background: #f59e0b;
+    box-shadow:
+      0 0 0 2px rgba(254,243,199,0.92),
+      0 4px 10px rgba(245,158,11,0.24);
+  }
+
+  @media (max-width: 640px) {
+    .profile-trust-paperclip {
+      top: -1rem;
+      left: -0.34rem;
+      min-height: 30px;
+      padding: 0.3rem 0.68rem;
+      font-size: 0.67rem;
+    }
+
+    .profile-trust-paperclip::before {
+      left: -0.3rem;
+      width: 0.74rem;
+      height: 1.04rem;
+    }
+
+    .profile-trust-paperclip::after {
+      left: -0.06rem;
+      width: 0.25rem;
+      height: 0.25rem;
+    }
   }
 
   .hero-bottom-card::before {
