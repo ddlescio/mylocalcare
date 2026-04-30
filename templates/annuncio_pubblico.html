@@ -1770,46 +1770,118 @@
   }
 
   /* ============================================================
-     MOBILE — RACCORDO MORBIDO HERO / DESCRIZIONE
-     Riduce la sensazione di card scollegate senza sovrapporle
+     MOBILE — STESSO LINGUAGGIO VISIVO HERO / SEZIONI
+     Le card sotto diventano più simili alla hero:
+     meno pannello, più glass card morbida
      ============================================================ */
 
   @media (max-width: 640px) {
+
     .annuncio-hero-card {
-      margin-bottom: 0.55rem;
-      border-bottom-left-radius: 28px;
-      border-bottom-right-radius: 28px;
+      margin-bottom: 0.85rem;
+    }
+
+    .annuncio-soft-section {
+      border-radius: 26px !important;
+      border: 1px solid rgba(203, 213, 225, 0.82) !important;
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255,255,255,0.96),
+          rgba(239,246,255,0.90),
+          rgba(250,245,255,0.88)
+        ) !important;
       box-shadow:
-        0 10px 24px rgba(15,23,42,0.065),
-        0 18px 38px rgba(59,130,246,0.055),
-        inset 0 1px 0 rgba(255,255,255,0.86);
+        0 14px 34px rgba(15, 23, 42, 0.07),
+        inset 0 1px 0 rgba(255,255,255,0.86) !important;
+      ring: none !important;
     }
 
     .annuncio-soft-section-descrizione {
       margin-top: 0 !important;
-      border-radius: 26px !important;
-      border-color: rgba(191,219,254,0.82) !important;
+    }
+
+    .annuncio-soft-section-bio {
+      margin-top: 0.95rem !important;
+    }
+
+    .annuncio-soft-section > div[class*="border-b"] {
+      border-bottom: 0 !important;
+      background: transparent !important;
+      padding: 1rem 1.05rem 0.35rem !important;
+    }
+
+    .annuncio-soft-section > div[class*="border-b"] .absolute.inset-y-0.left-0 {
+      display: none !important;
+    }
+
+    .annuncio-soft-section > div[class*="border-b"] .relative.flex {
+      align-items: center !important;
+      gap: 0.7rem !important;
+      padding-left: 0 !important;
+    }
+
+    .annuncio-soft-section > div[class*="border-b"] .relative.shrink-0 > div:first-child {
+      display: none !important;
+    }
+
+    .annuncio-soft-section > div[class*="border-b"] .relative.shrink-0 > div:last-child {
+      width: 38px !important;
+      height: 38px !important;
+      border-radius: 9999px !important;
+      background: rgba(255,255,255,0.82) !important;
+      border: 1px solid rgba(226,232,240,0.90) !important;
+      box-shadow:
+        0 8px 18px rgba(15,23,42,0.08),
+        inset 0 1px 0 rgba(255,255,255,0.95) !important;
+    }
+
+    .annuncio-soft-section h2 {
+      font-size: 1.2rem !important;
+      line-height: 1.05 !important;
+      letter-spacing: -0.04em !important;
+    }
+
+    .annuncio-soft-section h2 + p {
+      margin-top: 0.22rem !important;
+      font-size: 0.78rem !important;
+      color: #64748b !important;
+    }
+
+    .annuncio-soft-section > div.relative.px-4 {
+      padding: 0.45rem 0.72rem 0.72rem !important;
+    }
+
+    .annuncio-soft-section > div.relative.px-4 > div {
+      border-radius: 20px !important;
+      border: 1px solid rgba(255,255,255,0.82) !important;
       background:
         linear-gradient(
           180deg,
-          rgba(248,251,255,0.99),
-          rgba(255,255,255,0.985) 36%,
-          rgba(245,248,255,0.97)
+          rgba(255,255,255,0.78),
+          rgba(248,250,252,0.68)
         ) !important;
       box-shadow:
-        0 10px 24px rgba(15,23,42,0.055),
-        0 18px 40px rgba(59,130,246,0.045) !important;
+        0 8px 20px rgba(15,23,42,0.045),
+        inset 0 1px 0 rgba(255,255,255,0.88) !important;
+      padding: 0.82rem 1rem 0.9rem !important;
     }
 
-    .annuncio-soft-section-descrizione > div[class*="border-b"] {
-      border-bottom-color: rgba(219,234,254,0.86) !important;
-      background:
-        linear-gradient(
-          135deg,
-          rgba(219,234,254,0.72),
-          rgba(248,251,255,0.96),
-          rgba(255,255,255,0.98)
-        ) !important;
+    .annuncio-soft-section > div.relative.px-4 > div > div[class*="absolute inset-y"] {
+      display: none !important;
+    }
+
+    .annuncio-soft-section .ugc-text {
+      padding-left: 0 !important;
+      font-size: 0.94rem !important;
+      line-height: 1.52 !important;
+      color: #334155 !important;
+    }
+
+    .annuncio-soft-section .relative.pl-3,
+    .annuncio-soft-section .relative.pl-4,
+    .annuncio-soft-section .sm\:pl-4 {
+      padding-left: 0 !important;
     }
   }
   </style>
