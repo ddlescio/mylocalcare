@@ -209,18 +209,6 @@
                     placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ current_descrizione }}</textarea>
         </div>
 
-        <!-- Bio utente -->
-        <div class="space-y-2">
-          <label for="bio_utente" class="flex items-center gap-2 text-base font-bold text-slate-800">
-            <span>Breve descrizione di te</span>
-            <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
-          </label>
-
-          <textarea id="bio_utente" name="bio_utente" rows="3"
-                    class="block w-full border-2 border-blue-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
-                    placeholder="Parla brevemente di te stesso o della tua attività.">{{ current_bio_utente }}</textarea>
-        </div>
-
       </div>
 
       <!-- SEZIONE 3 -->
@@ -338,10 +326,10 @@
 
 </div>
 
-<!-- ✅ Filtri selezionati per la modalita modifica -->
-{% if modalita == "modifica" and annuncio['filtri_categoria'] %}
+<!-- ✅ Filtri selezionati per la modalità modifica -->
+{% if modalita == "modifica" %}
   <script id="filtri-selezionati" type="application/json">
-    {{ annuncio['filtri_categoria'].split(',') | tojson }}
+    {{ (annuncio['filtri_categoria'].split(',') if annuncio['filtri_categoria'] else []) | tojson }}
   </script>
 {% endif %}
 {% endblock %}
@@ -399,7 +387,7 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {  
+document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("annuncio-form");
   if (!form) return;
 
