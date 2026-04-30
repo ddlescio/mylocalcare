@@ -34,6 +34,14 @@
 
       <!-- FOTO PRINCIPALE -->
       <div class="annuncio-hero-media">
+
+        {% if annuncio.get('affidabilita_top') == 1 %}
+          <div class="annuncio-photo-trust-paperclip">
+            <span class="annuncio-photo-trust-paperclip-pin">🏅</span>
+            <span>Fiducia Top</span>
+          </div>
+        {% endif %}
+
         <button
           type="button"
           onclick="apriZoom('{{ url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) }}')"
@@ -50,14 +58,6 @@
 
           <div class="annuncio-hero-photo-top">
             <div class="annuncio-hero-photo-left">
-
-              {% if annuncio.get('affidabilita_top') == 1 %}
-                <span class="annuncio-photo-trust-clip">
-                  <span class="annuncio-photo-trust-medal">🏅</span>
-                  <span>Fiducia Top</span>
-                </span>
-              {% endif %}
-
               <span class="annuncio-hero-username-on-photo">
                 {{ annuncio['username'] or annuncio['nome'] or 'Utente' }}
               </span>
@@ -146,23 +146,30 @@
         </h1>
 
         <div class="annuncio-hero-actions">
-          {% if annuncio['prezzo'] %}
-            <span class="annuncio-price-chip">
-              {{ annuncio['prezzo'] }}{% if '€' not in (annuncio['prezzo'] ~ '') %} €{% endif %}
-            </span>
-          {% endif %}
-
           <a href="#sezione-contatto" class="annuncio-contact-chip">
             <span>💬</span>
             <span>Contatta</span>
           </a>
         </div>
 
-        {% if annuncio['filtri_categoria'] %}
+        {% if annuncio['prezzo'] or annuncio['filtri_categoria'] %}
           <div class="annuncio-hero-tags-line">
-            {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
-              <span>{{ f.strip() }}</span>{% if not loop.last %}<em>·</em>{% endif %}
-            {% endfor %}
+
+            {% if annuncio['prezzo'] %}
+              <span class="annuncio-tags-price">
+                {{ annuncio['prezzo'] }}{% if '€' not in (annuncio['prezzo'] ~ '') %} €{% endif %}
+              </span>
+              {% if annuncio['filtri_categoria'] %}
+                <em>·</em>
+              {% endif %}
+            {% endif %}
+
+            {% if annuncio['filtri_categoria'] %}
+              {% for f in annuncio['filtri_categoria'].split(',') if f.strip() %}
+                <span>{{ f.strip() }}</span>{% if not loop.last %}<em>·</em>{% endif %}
+              {% endfor %}
+            {% endif %}
+
           </div>
         {% endif %}
 
@@ -950,8 +957,8 @@
 
   .annuncio-hero-photo-top {
     position: absolute;
-    top: 0.75rem;
-    left: 0.75rem;
+    top: 0.78rem;
+    left: 0.85rem;
     right: 0.75rem;
     z-index: 4;
     display: flex;
@@ -964,7 +971,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.38rem;
+    gap: 0;
     align-items: flex-start;
   }
 
@@ -993,44 +1000,69 @@
       inset 0 1px 0 rgba(255,255,255,0.20);
   }
 
-  .annuncio-photo-trust-clip {
+  .annuncio-hero-media {
     position: relative;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .annuncio-photo-trust-paperclip {
+    position: absolute;
+    top: -0.48rem;
+    left: -0.34rem;
+    z-index: 8;
     display: inline-flex;
     align-items: center;
-    gap: 0.34rem;
-    min-height: 30px;
-    padding: 0.32rem 0.72rem 0.32rem 0.46rem;
-    border-radius: 16px 9999px 9999px 16px;
+    gap: 0.36rem;
+    min-height: 34px;
+    padding: 0.38rem 0.78rem 0.38rem 0.54rem;
+    border-radius: 18px 9999px 9999px 18px;
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,251,235,0.96));
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,251,235,0.97));
     border: 1px solid rgba(251, 191, 36, 0.68);
     color: #78350f;
-    font-size: 0.72rem;
-    font-weight: 880;
-    letter-spacing: -0.01em;
+    font-size: 0.76rem;
+    font-weight: 900;
+    letter-spacing: -0.015em;
     white-space: nowrap;
     box-shadow:
-      0 10px 22px rgba(15,23,42,0.16),
-      0 0 0 1px rgba(255,255,255,0.42) inset;
+      0 14px 28px rgba(15,23,42,0.16),
+      0 7px 18px rgba(245,158,11,0.16),
+      inset 0 1px 0 rgba(255,255,255,0.94);
   }
 
-  .annuncio-photo-trust-clip::before {
+  .annuncio-photo-trust-paperclip::before {
     content: "";
     position: absolute;
-    left: -0.48rem;
+    left: -0.42rem;
     top: 50%;
-    width: 0.95rem;
-    height: 0.95rem;
+    width: 0.9rem;
+    height: 1.28rem;
     transform: translateY(-50%);
     border-radius: 9999px;
-    background: rgba(255,255,255,0.92);
-    border: 1px solid rgba(251, 191, 36, 0.62);
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(226,232,240,0.92);
     box-shadow:
-      0 5px 12px rgba(15,23,42,0.12),
-      inset 0 1px 0 rgba(255,255,255,0.90);
+      0 7px 16px rgba(15,23,42,0.14),
+      inset 0 1px 0 rgba(255,255,255,0.92);
   }
 
-  .annuncio-photo-trust-medal {
+  .annuncio-photo-trust-paperclip::after {
+    content: "";
+    position: absolute;
+    left: -0.18rem;
+    top: 50%;
+    width: 0.38rem;
+    height: 0.38rem;
+    transform: translateY(-50%);
+    border-radius: 9999px;
+    background: rgba(251,191,36,0.95);
+    box-shadow:
+      0 0 0 3px rgba(254,243,199,0.95),
+      0 4px 10px rgba(245,158,11,0.24);
+  }
+
+  .annuncio-photo-trust-paperclip-pin {
     width: 18px;
     height: 18px;
     display: inline-flex;
@@ -1038,7 +1070,7 @@
     justify-content: center;
     border-radius: 9999px;
     background: rgba(255,255,255,0.88);
-    border: 1px solid rgba(251, 191, 36, 0.38);
+    border: 1px solid rgba(251,191,36,0.38);
     font-size: 0.62rem;
     line-height: 1;
   }
@@ -1103,20 +1135,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    gap: 0.62rem;
     flex-wrap: wrap;
-    margin-top: 0.62rem;
-    margin-bottom: 0.72rem;
-    padding: 0.38rem 0.46rem;
-    border-radius: 9999px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.82), rgba(248,250,252,0.62));
-    border: 1px solid rgba(226,232,240,0.78);
-    box-shadow:
-      0 8px 18px rgba(15,23,42,0.04),
-      inset 0 1px 0 rgba(255,255,255,0.88);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    margin-top: 0.58rem;
+    margin-bottom: 0.7rem;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .annuncio-identity-main {
@@ -1125,6 +1154,8 @@
     align-items: center;
     gap: 0.42rem;
     color: #0f172a;
+    padding: 0.18rem 0.28rem;
+    border-radius: 9999px;
   }
 
   .annuncio-identity-avatar {
@@ -1180,15 +1211,15 @@
   }
 
   .annuncio-rating-badge {
-    min-height: 28px;
+    min-height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.22rem;
-    padding: 0.24rem 0.5rem;
+    gap: 0.24rem;
+    padding: 0.16rem 0.34rem;
     border-radius: 9999px;
-    background: rgba(255,251,235,0.68);
-    border: 1px solid rgba(251,191,36,0.30);
+    background: transparent;
+    border: 0;
     color: #92400e;
     box-shadow: none;
     white-space: nowrap;
@@ -1299,6 +1330,11 @@
     font-weight: 700;
   }
 
+  .annuncio-tags-price {
+    color: #047857 !important;
+    font-weight: 900 !important;
+  }
+
   @media (max-width: 900px) {
     .annuncio-hero-inner {
       grid-template-columns: 1fr;
@@ -1367,20 +1403,27 @@
       padding: 0.18rem 0.58rem;
     }
 
-    .annuncio-photo-trust-clip {
-      min-height: 28px;
-      padding: 0.28rem 0.62rem 0.28rem 0.42rem;
-      font-size: 0.66rem;
-      border-radius: 15px 9999px 9999px 15px;
+    .annuncio-photo-trust-paperclip {
+      top: -0.42rem;
+      left: -0.28rem;
+      min-height: 31px;
+      padding: 0.32rem 0.66rem 0.32rem 0.5rem;
+      font-size: 0.68rem;
     }
 
-    .annuncio-photo-trust-clip::before {
-      left: -0.42rem;
-      width: 0.82rem;
-      height: 0.82rem;
+    .annuncio-photo-trust-paperclip::before {
+      left: -0.38rem;
+      width: 0.8rem;
+      height: 1.12rem;
     }
 
-    .annuncio-photo-trust-medal {
+    .annuncio-photo-trust-paperclip::after {
+      left: -0.16rem;
+      width: 0.34rem;
+      height: 0.34rem;
+    }
+
+    .annuncio-photo-trust-paperclip-pin {
       width: 16px;
       height: 16px;
       font-size: 0.56rem;
@@ -1422,10 +1465,10 @@
 
     .annuncio-identity-panel {
       max-width: 100%;
-      gap: 0.32rem;
-      margin-top: 0.56rem;
-      margin-bottom: 0.66rem;
-      padding: 0.34rem 0.38rem;
+      gap: 0.48rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.62rem;
+      padding: 0;
     }
 
     .annuncio-identity-main {
