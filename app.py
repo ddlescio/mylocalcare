@@ -4947,6 +4947,19 @@ def dashboard():
     # Calcoli recensioni
     media, totale = calcola_media_recensioni(utente['id'])
 
+    # 🟡 Badge Fiducia Top automatico / manuale
+    utente["affidabilita_top"] = 1 if (
+        servizio_attivo_per_utente(
+            utente_id=utente["id"],
+            codice_servizio="badge_affidabilita"
+        )
+        or
+        (
+            float(media or 0) >= 4
+            and int(totale or 0) >= 4
+        )
+    ) else 0
+
     # 🔹 Carica recensioni ricevute e scritte per la tab "Recensioni"
     recensioni_ricevute = get_recensioni_utente(utente['id'])
     recensioni_scritte = get_recensioni_scritte(utente['id'])
@@ -8778,6 +8791,19 @@ def profilo_pubblico(id):
     # 🔹 Recensioni
     recensioni = get_recensioni_utente(id)
     media, totale = calcola_media_recensioni(id)
+
+    # 🟡 Badge Fiducia Top automatico / manuale
+    utente["affidabilita_top"] = 1 if (
+        servizio_attivo_per_utente(
+            utente_id=utente["id"],
+            codice_servizio="badge_affidabilita"
+        )
+        or
+        (
+            float(media or 0) >= 4
+            and int(totale or 0) >= 4
+        )
+    ) else 0
 
     # 🔹 Annunci
     c.execute(sql("""
