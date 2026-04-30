@@ -1504,6 +1504,35 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* ============================================================
+     FIX MOBILE — BLOCCO SCROLL ORIZZONTALE PAGINA ANNUNCIO
+     ============================================================ */
+  @media (max-width: 700px) {
+    html,
+    body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .annuncio-page {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
+    }
+
+    .annuncio-hero-glow-a {
+      left: -24px;
+      top: -40px;
+    }
+
+    .annuncio-hero-glow-b {
+      right: -24px;
+      bottom: -40px;
+    }
+  }
+    
 </style>
 <script>
   function apriZoom(src) {
