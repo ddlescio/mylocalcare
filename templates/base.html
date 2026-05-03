@@ -2638,11 +2638,14 @@ window.addEventListener("beforeunload", () => {
 
 <style>
 /* =========================================================
-   🍎 FIX iPhone PWA — rispetto area ora/batteria/status bar
-   Vale solo quando l'app è installata come PWA
+   🍎 FIX iPhone PWA — safe area dinamica anche dopo rotazione
 ========================================================= */
 
 @supports (padding-top: env(safe-area-inset-top)) {
+
+  html.pwa-installed {
+    background: #ffffff;
+  }
 
   html.pwa-installed body {
     padding-top: env(safe-area-inset-top) !important;
@@ -2665,9 +2668,67 @@ window.addEventListener("beforeunload", () => {
     pointer-events: none;
   }
 
+  /*
+    In orizzontale molti iPhone hanno safe-area-top diversa o pari a 0.
+    Qui evitiamo di mantenere padding vecchi quando il telefono ruota.
+  */
+  @media (orientation: landscape) {
+    html.pwa-installed body {
+      padding-top: env(safe-area-inset-top) !important;
+    }
+
+    html.pwa-installed #main-navbar {
+      top: env(safe-area-inset-top) !important;
+    }
+
+    html.pwa-installed body::before {
+      height: env(safe-area-inset-top);
+    }
+  }
 }
 </style>
 
+<script>
+/* =========================================================
+   🍎 Refresh layout iOS PWA dopo cambio orientamento
+   Serve perché iOS a volte non ricalcola subito la safe-area.
+========================================================= */
+(function () {
+  function isStandalonePwa() {
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+  }
+
+  function refreshPwaSafeArea() {
+    if (!isStandalonePwa()) return;
+
+    document.documentElement.classList.remove("pwa-installed");
+
+    // Forza reflow
+    void document.documentElement.offsetHeight;
+
+    document.documentElement.classList.add("pwa-installed");
+
+    const navbar = document.getElementById("main-navbar");
+    if (navbar) {
+      navbar.style.transform = "translateZ(0)";
+      setTimeout(() => {
+        navbar.style.transform = "";
+      }, 80);
+    }
+  }
+
+  window.addEventListener("orientationchange", () => {
+    setTimeout(refreshPwaSafeArea, 120);
+    setTimeout(refreshPwaSafeArea, 450);
+    setTimeout(refreshPwaSafeArea, 900);
+  });
+
+  window.addEventListener("resize", () => {
+    setTimeout(refreshPwaSafeArea, 120);
+  });
+})();
+</script>
 
 </body>
 </html>
