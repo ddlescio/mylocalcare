@@ -253,13 +253,22 @@ button, input[type="submit"] {
     <div class="w-full px-4 sm:px-6 lg:px-8 h-16 flex justify-center">
       <div class="max-w-7xl w-full flex items-center justify-between gap-6 overflow-visible">
 
-        <!-- 🔹 Logo -->
+        <!-- 🔹 Logo / Home -->
         <a href="{{ url_for('home') }}"
-           class="flex items-center gap-1 sm:gap-2 select-none logo-wrapper">
+           class="flex items-center gap-1 sm:gap-2 select-none logo-wrapper"
+           aria-label="Vai alla Home">
           <img src="{{ url_for('static', filename='img/logo.png') }}"
-               alt="LocalCare Logo"
+               alt="MyLocalCare"
                class="w-9 h-9 md:w-11 md:h-11 object-contain">
-          <span class="text-xl sm:text-2xl font-bold tracking-tight text-blue-700">MyLocalCare</span>
+
+          <span class="logo-text-stack">
+            <span class="logo-main-text text-xl sm:text-2xl font-bold tracking-tight text-blue-700">
+              MyLocalCare
+            </span>
+            <span class="logo-home-label">
+              HOME
+            </span>
+          </span>
         </a>
 
         {% set current_path = g.path|string if g.path is defined else request.path %}
@@ -2528,6 +2537,58 @@ window.addEventListener("beforeunload", () => {
 
 });
 </script>
+
+<style>
+/* Etichetta HOME discreta dentro il tasto logo */
+.logo-text-stack {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+}
+
+.logo-main-text {
+  display: block;
+  line-height: 0.95;
+}
+
+.logo-home-label {
+  display: inline-flex;
+  margin-top: 0.14rem;
+  padding: 0.08rem 0.36rem;
+  border-radius: 9999px;
+
+  font-size: 0.48rem;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+
+  color: #2563eb;
+  background: rgba(219,234,254,0.72);
+  border: 1px solid rgba(147,197,253,0.55);
+
+  text-shadow: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.8),
+    0 1px 2px rgba(37,99,235,0.08);
+}
+
+.logo-wrapper:hover .logo-home-label {
+  background: rgba(191,219,254,0.9);
+  color: #1d4ed8;
+}
+
+@media (max-width: 480px) {
+  .logo-home-label {
+    font-size: 0.44rem;
+    padding: 0.07rem 0.3rem;
+    margin-top: 0.12rem;
+    letter-spacing: 0.12em;
+  }
+}
+</style>
 
 </body>
 </html>
