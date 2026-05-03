@@ -2543,49 +2543,71 @@ window.addEventListener("beforeunload", () => {
 .logo-text-stack {
   position: relative;
   z-index: 2;
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 
 .logo-main-text {
   display: block;
-  line-height: 0.95;
+  line-height: 0.9;
+  white-space: nowrap;
 }
 
 .logo-home-label {
   display: inline-flex;
-  margin-top: 0.14rem;
-  padding: 0.08rem 0.36rem;
+  align-items: center;
+  justify-content: center;
+
+  margin-top: 0.12rem;
+  padding: 0.06rem 0.32rem;
   border-radius: 9999px;
 
-  font-size: 0.48rem;
+  font-size: 0.46rem;
   line-height: 1;
   font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
 
   color: #2563eb;
-  background: rgba(219,234,254,0.72);
-  border: 1px solid rgba(147,197,253,0.55);
+  background: rgba(219,234,254,0.68);
+  border: 1px solid rgba(147,197,253,0.48);
 
   text-shadow: none;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.8),
-    0 1px 2px rgba(37,99,235,0.08);
+    inset 0 1px 0 rgba(255,255,255,0.75),
+    0 1px 2px rgba(37,99,235,0.06);
 }
 
 .logo-wrapper:hover .logo-home-label {
-  background: rgba(191,219,254,0.9);
+  background: rgba(191,219,254,0.85);
   color: #1d4ed8;
 }
 
+/* Mobile: logo più compatto */
 @media (max-width: 480px) {
+  .logo-wrapper {
+    padding: 0.34rem 0.62rem 0.32rem 0.42rem !important;
+    gap: 0.18rem !important;
+  }
+
+  .logo-wrapper img {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  .logo-main-text {
+    font-size: 1rem !important;
+    line-height: 0.88;
+    letter-spacing: -0.055em;
+  }
+
   .logo-home-label {
-    font-size: 0.44rem;
-    padding: 0.07rem 0.3rem;
-    margin-top: 0.12rem;
-    letter-spacing: 0.12em;
+    margin-top: 0.08rem;
+    padding: 0.045rem 0.26rem;
+    font-size: 0.38rem;
+    letter-spacing: 0.11em;
   }
 }
 </style>
