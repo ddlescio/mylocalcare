@@ -1,54 +1,496 @@
 <!-- TAB RECENSIONI PRIVATO -->
-<div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+<div class="private-reviews-shell">
 
   {% set tot_ricevute_lista = recensioni_ricevute|length if recensioni_ricevute else 0 %}
   {% set tot_ricevute = tot_ricevute_lista if tot_ricevute_lista > 0 else totale_recensioni|default(0) %}
   {% set tot_scritte = recensioni_scritte|length if recensioni_scritte else 0 %}
+  {% set ha_recensioni = (tot_ricevute > 0 or tot_scritte > 0) %}
 
-  <div class="flex items-center justify-between mb-4">
-    <div>
-      <h3 class="text-base font-semibold text-gray-800">Le mie recensioni</h3>
+  <div class="private-reviews-card">
 
-      <p class="mt-1 text-sm text-gray-500">
-        {% if tot_ricevute > 0 or tot_scritte > 0 %}
-          Hai ricevuto
-          <span class="font-semibold text-blue-700">{{ tot_ricevute }}</span>
-          recension{{ 'e' if tot_ricevute == 1 else 'i' }}
-          e ne hai scritt{{ 'a' if tot_scritte == 1 else 'e' }}
-          <span class="font-semibold text-blue-700">{{ tot_scritte }}</span>.
+    <div class="private-reviews-hero">
+      <div class="private-reviews-glow private-reviews-glow-left"></div>
+      <div class="private-reviews-glow private-reviews-glow-right"></div>
+
+      <div class="private-reviews-hero-inner">
+        <div class="private-reviews-badge">
+          <span class="private-reviews-badge-dot"></span>
+          Area feedback
+        </div>
+
+        <h3 class="private-reviews-title">Le mie recensioni</h3>
+
+        {% if ha_recensioni %}
+          <p class="private-reviews-subtitle">
+            Hai ricevuto
+            <strong>{{ tot_ricevute }}</strong>
+            recension{{ 'e' if tot_ricevute == 1 else 'i' }}
+            e ne hai scritt{{ 'a' if tot_scritte == 1 else 'e' }}
+            <strong>{{ tot_scritte }}</strong>.
+          </p>
         {% else %}
-          Non hai ancora recensioni ricevute o scritte.
+          <p class="private-reviews-subtitle">
+            Qui troverai le recensioni ricevute e quelle che hai lasciato ad altri utenti.
+          </p>
         {% endif %}
-      </p>
+      </div>
     </div>
+
+    <div class="private-reviews-actions">
+
+      <a href="{{ url_for('mie_recensioni_ricevute') }}"
+         class="private-review-action-card">
+        <span class="private-review-action-icon is-received">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 4v10m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+
+        <span class="private-review-action-content">
+          <span class="private-review-action-title">Ricevute</span>
+          <span class="private-review-action-text">
+            Recensioni lasciate sul tuo profilo
+          </span>
+        </span>
+
+        <span class="private-review-action-count">{{ tot_ricevute }}</span>
+      </a>
+
+      <a href="{{ url_for('mie_recensioni') }}"
+         class="private-review-action-card">
+        <span class="private-review-action-icon is-written">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 20h4l10.5-10.5a2.12 2.12 0 0 0-3-3L5 17v3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            <path d="m14 7 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+
+        <span class="private-review-action-content">
+          <span class="private-review-action-title">Scritte</span>
+          <span class="private-review-action-text">
+            Feedback che hai inviato ad altri utenti
+          </span>
+        </span>
+
+        <span class="private-review-action-count">{{ tot_scritte }}</span>
+      </a>
+
+    </div>
+
+    {% if ha_recensioni %}
+      <div class="private-reviews-info-box">
+        <div class="private-reviews-info-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 8v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 16h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </div>
+
+        <div>
+          <p class="private-reviews-info-title">Gestisci i tuoi feedback</p>
+          <p class="private-reviews-info-text">
+            Puoi leggere le recensioni ricevute, rispondere agli utenti e controllare lo stato delle recensioni che hai scritto.
+          </p>
+        </div>
+      </div>
+    {% else %}
+      <div class="private-reviews-empty-box">
+        <div class="private-reviews-empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 17.3 6.8 20l1-5.8-4.2-4.1 5.8-.8L12 4l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 17.3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <p class="private-reviews-empty-title">Ancora nessun feedback</p>
+        <p class="private-reviews-empty-text">
+          Quando riceverai o scriverai recensioni, le troverai organizzate in questa sezione.
+        </p>
+      </div>
+    {% endif %}
+
   </div>
-
-  <div class="flex flex-wrap gap-3 mb-6">
-    <a href="{{ url_for('mie_recensioni_ricevute') }}"
-       class="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
-       📥 Ricevute
-       <span class="ml-1 text-xs font-semibold bg-white/80 border border-blue-100 rounded-full px-2 py-0.5">
-         {{ tot_ricevute }}
-       </span>
-    </a>
-
-    <a href="{{ url_for('mie_recensioni') }}"
-       class="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
-       ✍️ Scritte
-       <span class="ml-1 text-xs font-semibold bg-white/80 border border-blue-100 rounded-full px-2 py-0.5">
-         {{ tot_scritte }}
-       </span>
-    </a>
-  </div>
-
-  {% if tot_ricevute > 0 or tot_scritte > 0 %}
-    <div class="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-blue-800 leading-relaxed">
-      Controlla le tue recensioni ricevute o scritte usando i pulsanti qui sopra.
-    </div>
-  {% else %}
-    <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-sm text-gray-500">
-      Non hai ancora recensioni ricevute o scritte.
-    </div>
-  {% endif %}
-
 </div>
+
+<style>
+.private-reviews-shell {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 1.6rem;
+}
+
+.private-reviews-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+  padding: 1rem;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.985), rgba(244,247,255,0.95));
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow:
+    0 18px 45px rgba(15,23,42,0.08),
+    0 4px 14px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+.private-reviews-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 30%),
+    radial-gradient(circle at top left, rgba(96,165,250,0.12), transparent 28%),
+    radial-gradient(circle at top right, rgba(236,72,153,0.08), transparent 24%);
+  pointer-events: none;
+}
+
+.private-reviews-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.65rem;
+  padding: 1.65rem 1rem 1.45rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,0.94),
+      rgba(239,246,255,0.94),
+      rgba(250,245,255,0.90)
+    );
+  border: 1px solid rgba(219,234,254,0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.94),
+    0 14px 30px rgba(15,23,42,0.05);
+}
+
+.private-reviews-hero-inner {
+  position: relative;
+  z-index: 2;
+}
+
+.private-reviews-glow {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 9999px;
+  filter: blur(40px);
+  opacity: 0.52;
+  pointer-events: none;
+}
+
+.private-reviews-glow-left {
+  top: -55px;
+  left: -45px;
+  background: rgba(96,165,250,0.24);
+}
+
+.private-reviews-glow-right {
+  right: -45px;
+  bottom: -60px;
+  background: rgba(236,72,153,0.15);
+}
+
+.private-reviews-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+  padding: 0.42rem 0.9rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.86);
+  border: 1px solid rgba(226,232,240,0.95);
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+  box-shadow:
+    0 6px 16px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+.private-reviews-badge-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #2563eb, #db2777);
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+}
+
+.private-reviews-title {
+  margin: 0;
+  font-size: clamp(1.65rem, 4vw, 2.35rem);
+  line-height: 1.03;
+  letter-spacing: -0.05em;
+  font-weight: 900;
+  color: #1d4ed8;
+}
+
+.private-reviews-subtitle {
+  margin: 0.7rem auto 0;
+  max-width: 36rem;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.private-reviews-subtitle strong {
+  color: #1d4ed8;
+  font-weight: 900;
+}
+
+.private-reviews-actions {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.private-review-action-card {
+  position: relative;
+  min-height: 104px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem;
+  border-radius: 1.45rem;
+  text-decoration: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,255,0.95));
+  border: 1px solid rgba(226,232,240,0.92);
+  box-shadow:
+    0 10px 26px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.private-review-action-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(147,197,253,0.98);
+  box-shadow:
+    0 14px 30px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.98);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,1), rgba(239,246,255,0.96));
+}
+
+.private-review-action-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.75);
+}
+
+.private-review-action-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.private-review-action-icon.is-received {
+  color: #2563eb;
+  background:
+    linear-gradient(135deg, rgba(219,234,254,0.98), rgba(239,246,255,0.96));
+  border: 1px solid rgba(147,197,253,0.88);
+}
+
+.private-review-action-icon.is-written {
+  color: #9333ea;
+  background:
+    linear-gradient(135deg, rgba(243,232,255,0.98), rgba(250,245,255,0.96));
+  border: 1px solid rgba(216,180,254,0.88);
+}
+
+.private-review-action-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.private-review-action-title {
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.private-review-action-text {
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.private-review-action-count {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #1d4ed8;
+  background: rgba(239,246,255,0.96);
+  border: 1px solid rgba(191,219,254,0.95);
+  font-size: 0.9rem;
+  font-weight: 900;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.private-reviews-info-box,
+.private-reviews-empty-box {
+  position: relative;
+  z-index: 2;
+  border-radius: 1.35rem;
+  padding: 1rem;
+}
+
+.private-reviews-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background:
+    linear-gradient(180deg, rgba(239,246,255,0.92), rgba(248,250,255,0.96));
+  border: 1px solid rgba(191,219,254,0.9);
+  box-shadow:
+    0 8px 18px rgba(59,130,246,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.private-reviews-info-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #2563eb;
+  background: rgba(219,234,254,0.95);
+  border: 1px solid rgba(147,197,253,0.8);
+}
+
+.private-reviews-info-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.private-reviews-info-title {
+  margin: 0;
+  color: #1d4ed8;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.private-reviews-info-text {
+  margin: 0.25rem 0 0;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.private-reviews-empty-box {
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,255,0.92));
+  border: 1px dashed rgba(203,213,225,0.95);
+}
+
+.private-reviews-empty-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #94a3b8;
+  background: rgba(241,245,249,0.95);
+  border: 1px solid rgba(226,232,240,0.9);
+}
+
+.private-reviews-empty-icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.private-reviews-empty-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.private-reviews-empty-text {
+  margin: 0.35rem auto 0;
+  max-width: 28rem;
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .private-reviews-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .private-reviews-shell {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .private-reviews-card {
+    border-radius: 1.5rem;
+    padding: 0.75rem;
+  }
+
+  .private-reviews-hero {
+    border-radius: 1.25rem;
+    padding: 1.35rem 0.85rem 1.2rem;
+  }
+
+  .private-review-action-card {
+    min-height: 92px;
+    border-radius: 1.25rem;
+    padding: 0.9rem;
+  }
+
+  .private-review-action-icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .private-review-action-title {
+    font-size: 0.96rem;
+  }
+
+  .private-review-action-text {
+    font-size: 0.78rem;
+  }
+
+  .private-reviews-info-box {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
+</style>
