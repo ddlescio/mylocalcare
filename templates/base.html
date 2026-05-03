@@ -2637,9 +2637,15 @@ window.addEventListener("beforeunload", () => {
 </style>
 <style>
 /* =========================================================
-   iOS PWA — blocco orizzontale + ripristino layout
-   Serve per evitare il bug della status bar dopo rotazione.
+   iOS PWA — blocco orizzontale + riparazione status bar
+   Versione SENZA reload.
+   All'avvio non aggiunge spazio.
+   Applica offset solo dopo landscape -> portrait.
 ========================================================= */
+
+:root {
+  --lc-ios-repair-top: 44px;
+}
 
 #lc-orientation-guard {
   display: none;
@@ -2723,21 +2729,35 @@ html.lc-ios-pwa-standalone.lc-landscape-lock #lc-orientation-guard {
   max-width: 17rem;
 }
 
-html.lc-pwa-reloading body {
-  opacity: 0.35 !important;
-  transition: opacity 0.12s ease !important;
+/*
+   Riparazione applicata SOLO dopo essere tornati da orizzontale a verticale.
+   Non agisce all'avvio normale della PWA.
+*/
+html.lc-ios-pwa-standalone.lc-ios-statusbar-repair body {
+  padding-top: var(--lc-ios-repair-top) !important;
+}
+
+html.lc-ios-pwa-standalone.lc-ios-statusbar-repair #main-navbar {
+  top: var(--lc-ios-repair-top) !important;
+}
+
+/* fascia bianca dietro ora/batteria */
+html.lc-ios-pwa-standalone.lc-ios-statusbar-repair body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--lc-ios-repair-top);
+  background: #ffffff;
+  z-index: 10001;
+  pointer-events: none;
 }
 </style>
 
 <script>
 /* =========================================================
-   iOS PWA — workaround reale per bug status bar dopo rotazione
-
-   Logica:
-   - Solo iPhone/iPad in modalità PWA installata.
-   - Se il telefono va in orizzontale: blocca l'interfaccia con overlay.
-   - Quando torna verticale: ricarica una volta la pagina per ripulire
-     il layout WebKit/status bar.
+   iOS PWA — blocco landscape + repair portrait senza reload
 ========================================================= */
 (function () {
   function isIOSDevice() {
@@ -2757,8 +2777,8 @@ html.lc-pwa-reloading body {
   const root = document.documentElement;
   root.classList.add("lc-ios-pwa-standalone");
 
-  let reloadInProgress = false;
-  let initialized = false;
+  let hasBeenLandscape = false;
+  let firstRunDone = false;
 
   function isLandscape() {
     return window.innerWidth > window.innerHeight;
@@ -2790,34 +2810,49 @@ html.lc-pwa-reloading body {
     const landscape = isLandscape();
 
     if (landscape) {
+      hasBeenLandscape = true;
+      sessionStorage.setItem("lc_ios_pwa_rotated_landscape", "1");
+
       ensureOrientationGuard();
       root.classList.add("lc-landscape-lock");
-      sessionStorage.setItem("lc_ios_pwa_was_landscape", "1");
-      initialized = true;
+
+      /*
+        Mentre sei in orizzontale NON applichiamo repair portrait.
+        Verrà applicato solo quando torni verticale.
+      */
+      root.classList.remove("lc-ios-statusbar-repair");
+
+      firstRunDone = true;
       return;
     }
 
     root.classList.remove("lc-landscape-lock");
 
+    const rotatedBefore =
+      hasBeenLandscape ||
+      sessionStorage.getItem("lc_ios_pwa_rotated_landscape") === "1";
+
     /*
-      Se arriviamo qui dopo essere stati in orizzontale,
-      ricarichiamo una sola volta.
-      Questo è il punto chiave: forza WebKit a ricostruire correttamente
-      viewport, fixed navbar e status bar.
+      Punto chiave:
+      - all'avvio verticale normale: niente offset;
+      - dopo landscape -> portrait: offset di riparazione.
     */
-    const wasLandscape = sessionStorage.getItem("lc_ios_pwa_was_landscape") === "1";
+    if (firstRunDone && rotatedBefore) {
+      root.classList.add("lc-ios-statusbar-repair");
 
-    if (initialized && wasLandscape && !reloadInProgress) {
-      reloadInProgress = true;
-      sessionStorage.removeItem("lc_ios_pwa_was_landscape");
-      root.classList.add("lc-pwa-reloading");
+      const navbar = document.getElementById("main-navbar");
+      if (navbar) {
+        navbar.style.transform = "translate3d(0,0,0)";
+        navbar.style.webkitTransform = "translate3d(0,0,0)";
 
-      setTimeout(function () {
-        window.location.replace(window.location.href);
-      }, 180);
+        setTimeout(function () {
+          navbar.style.transform = "";
+          navbar.style.webkitTransform = "";
+        }, 120);
+      }
     }
 
-    initialized = true;
+    firstRunDone = true;
   }
 
   function scheduleOrientationCheck() {
@@ -2825,6 +2860,7 @@ html.lc-pwa-reloading body {
     setTimeout(applyOrientationGuard, 120);
     setTimeout(applyOrientationGuard, 360);
     setTimeout(applyOrientationGuard, 700);
+    setTimeout(applyOrientationGuard, 1200);
   }
 
   window.addEventListener("load", scheduleOrientationCheck);
@@ -2838,7 +2874,6 @@ html.lc-pwa-reloading body {
   });
 })();
 </script>
-
 
 </body>
 </html>
