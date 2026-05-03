@@ -43,12 +43,23 @@
 
   <!-- FORM INSERIMENTO / MODIFICA -->
   {% if session.get('utente_id') and session['utente_id'] != user_id %}
-    <div class="reviews-write-wrap">
-      <button id="toggle-recensione" class="reviews-toggle-btn" type="button">
-        <span class="reviews-toggle-btn-icon">✍️</span>
-        <span>Lascia una recensione</span>
-      </button>
-    </div>
+  <div class="reviews-write-wrap">
+    <button id="toggle-recensione" class="reviews-toggle-btn" type="button">
+      <span class="reviews-toggle-icon-circle" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="reviews-toggle-icon-svg" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 17.25L6.82 20.08C6.12 20.46 5.31 19.86 5.45 19.08L6.44 13.25L2.2 9.12C1.63 8.56 1.94 7.59 2.73 7.48L8.58 6.63L11.19 1.33C11.54 0.62 12.46 0.62 12.81 1.33L15.42 6.63L21.27 7.48C22.06 7.59 22.37 8.56 21.8 9.12L17.56 13.25L18.55 19.08C18.69 19.86 17.88 20.46 17.18 20.08L12 17.25Z"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linejoin="round"/>
+        </svg>
+      </span>
+
+      <span class="reviews-toggle-text-block">
+        <span class="reviews-toggle-main-text">Lascia una recensione</span>
+        <span class="reviews-toggle-sub-text">Condividi la tua esperienza</span>
+      </span>
+    </button>
+  </div>
 
     <div id="form-recensione" class="hidden animate-fade-in reviews-form-shell">
       <form method="POST" class="reviews-form-premium">
@@ -210,16 +221,38 @@ if (toggleBtn && formRec) {
 
     if (formRec.classList.contains('hidden')) {
       toggleBtn.innerHTML = `
-        <span class="reviews-toggle-btn-icon">✍️</span>
-        <span>Lascia una recensione</span>
+        <span class="reviews-toggle-icon-circle" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="reviews-toggle-icon-svg" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 17.25L6.82 20.08C6.12 20.46 5.31 19.86 5.45 19.08L6.44 13.25L2.2 9.12C1.63 8.56 1.94 7.59 2.73 7.48L8.58 6.63L11.19 1.33C11.54 0.62 12.46 0.62 12.81 1.33L15.42 6.63L21.27 7.48C22.06 7.59 22.37 8.56 21.8 9.12L17.56 13.25L18.55 19.08C18.69 19.86 17.88 20.46 17.18 20.08L12 17.25Z"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linejoin="round"/>
+          </svg>
+        </span>
+
+        <span class="reviews-toggle-text-block">
+          <span class="reviews-toggle-main-text">Lascia una recensione</span>
+          <span class="reviews-toggle-sub-text">Condividi la tua esperienza</span>
+        </span>
       `;
       toggleBtn.className = 'reviews-toggle-btn';
     } else {
       toggleBtn.innerHTML = `
-        <span class="reviews-toggle-btn-icon">✖</span>
-        <span>Chiudi modulo</span>
+        <span class="reviews-toggle-icon-circle is-close" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="reviews-toggle-icon-svg" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 7L17 17M17 7L7 17"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"/>
+          </svg>
+        </span>
+
+        <span class="reviews-toggle-text-block">
+          <span class="reviews-toggle-main-text">Chiudi modulo</span>
+          <span class="reviews-toggle-sub-text">Torna alle recensioni</span>
+        </span>
       `;
-      toggleBtn.className = 'reviews-toggle-btn';
+      toggleBtn.className = 'reviews-toggle-btn is-open';
     }
   });
 }
@@ -507,38 +540,115 @@ aggiornaStelle({{ mia_recensione.voto if mia_recensione else 0 }});
 }
 
 .reviews-toggle-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.65rem;
-  min-height: 52px;
-  padding: 0.9rem 1.35rem;
+  gap: 0.85rem;
+  min-height: 64px;
+  padding: 0.72rem 1.35rem 0.72rem 0.78rem;
   border-radius: 9999px;
   border: 1px solid rgba(147,197,253,0.95);
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,255,0.96));
-  color: #2563eb;
-  font-size: 1rem;
-  font-weight: 760;
-  letter-spacing: -0.02em;
+    linear-gradient(135deg, rgba(255,255,255,0.98), rgba(239,246,255,0.96));
+  color: #1d4ed8;
   box-shadow:
-    0 10px 24px rgba(15,23,42,0.06),
-    inset 0 1px 0 rgba(255,255,255,0.96);
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+    0 14px 30px rgba(37,99,235,0.10),
+    0 5px 14px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.98);
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease,
+    background .18s ease;
+}
+
+.reviews-toggle-btn::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      120deg,
+      rgba(255,255,255,0.55),
+      rgba(255,255,255,0) 42%
+    );
+  pointer-events: none;
+  z-index: -1;
 }
 
 .reviews-toggle-btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  border-color: rgba(96,165,250,0.95);
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.99), rgba(239,246,255,0.98));
+    linear-gradient(135deg, rgba(255,255,255,1), rgba(219,234,254,0.98));
   box-shadow:
-    0 14px 28px rgba(15,23,42,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.98);
+    0 18px 38px rgba(37,99,235,0.14),
+    0 8px 18px rgba(15,23,42,0.06),
+    inset 0 1px 0 rgba(255,255,255,1);
 }
 
-.reviews-toggle-btn-icon {
-  font-size: 1.05rem;
-  line-height: 1;
+.reviews-toggle-btn.is-open {
+  border-color: rgba(203,213,225,0.95);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+  color: #475569;
+}
+
+.reviews-toggle-icon-circle {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, #2563eb, #4f46e5, #db2777);
+  box-shadow:
+    0 10px 20px rgba(79,70,229,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+.reviews-toggle-icon-circle.is-close {
+  background:
+    linear-gradient(135deg, #64748b, #334155);
+  box-shadow:
+    0 10px 20px rgba(51,65,85,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.reviews-toggle-icon-svg {
+  width: 21px;
+  height: 21px;
+}
+
+.reviews-toggle-text-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  text-align: left;
+}
+
+.reviews-toggle-main-text {
+  font-size: 0.98rem;
+  line-height: 1.15;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+}
+
+.reviews-toggle-sub-text {
+  margin-top: 0.12rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  font-weight: 650;
+  color: #64748b;
 }
 
 .reviews-form-shell {
@@ -741,11 +851,29 @@ aggiornaStelle({{ mia_recensione.voto if mia_recensione else 0 }});
   .reviews-toggle-btn {
     width: 100%;
     max-width: 100%;
-    min-height: 48px;
-    padding: 0.82rem 1rem;
-    font-size: 0.95rem;
+    min-height: 58px;
+    padding: 0.66rem 1rem 0.66rem 0.7rem;
   }
 
+  .reviews-toggle-icon-circle {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .reviews-toggle-icon-svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .reviews-toggle-main-text {
+    font-size: 0.94rem;
+  }
+
+  .reviews-toggle-sub-text {
+    font-size: 0.7rem;
+  }
+  
   .reviews-form-premium {
     border-radius: 1.25rem;
     padding: 1rem 0.9rem 0.95rem;
