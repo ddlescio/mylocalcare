@@ -3,7 +3,7 @@
 <head>
 
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <script>
   var _iub = _iub || [];
@@ -2636,131 +2636,6 @@ window.addEventListener("beforeunload", () => {
 }
 </style>
 
-<style>
-/* =========================================================
-   🍎 iPhone PWA — safe area gestita manualmente dopo rotazione
-   Non si affida solo a env(), perché su iOS PWA può bloccarsi.
-========================================================= */
-
-:root {
-  --lc-pwa-safe-top: 0px;
-}
-
-/* Solo PWA installata */
-html.pwa-installed {
-  background: #ffffff;
-}
-
-/* Spazio reale sopra la pagina */
-html.pwa-installed body {
-  padding-top: var(--lc-pwa-safe-top) !important;
-  background: #ffffff !important;
-}
-
-/* Navbar sotto area ora/batteria */
-html.pwa-installed #main-navbar {
-  top: var(--lc-pwa-safe-top) !important;
-}
-
-/* Fascia bianca dietro ora/batteria */
-html.pwa-installed body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--lc-pwa-safe-top);
-  background: #ffffff;
-  z-index: 10001;
-  pointer-events: none;
-}
-
-/* In orizzontale evitiamo padding vecchi bloccati */
-html.pwa-installed.pwa-landscape body {
-  padding-top: 0px !important;
-}
-
-html.pwa-installed.pwa-landscape #main-navbar {
-  top: 0px !important;
-}
-
-html.pwa-installed.pwa-landscape body::before {
-  height: 0px !important;
-}
-</style>
-
-<script>
-/* =========================================================
-   🍎 Fix robusto iPhone PWA dopo rotazione
-========================================================= */
-(function () {
-  function isStandalonePwa() {
-    return window.matchMedia("(display-mode: standalone)").matches
-      || window.navigator.standalone === true;
-  }
-
-  function isIOS() {
-    return /iphone|ipad|ipod/i.test(navigator.userAgent);
-  }
-
-  function applyPwaSafeAreaFix() {
-    if (!isStandalonePwa() || !isIOS()) return;
-
-    const root = document.documentElement;
-    const isLandscape = window.innerWidth > window.innerHeight;
-
-    root.classList.add("pwa-installed");
-    root.classList.toggle("pwa-landscape", isLandscape);
-    root.classList.toggle("pwa-portrait", !isLandscape);
-
-    /*
-      In verticale su iPhone PWA lasciamo spazio fisso alla status bar.
-      Questo evita il bug per cui env(safe-area-inset-top) torna a 0
-      dopo rotazione orizzontale → verticale.
-    */
-    const safeTop = isLandscape ? 0 : 44;
-
-    root.style.setProperty("--lc-pwa-safe-top", safeTop + "px");
-
-    const navbar = document.getElementById("main-navbar");
-    if (navbar) {
-      navbar.style.top = safeTop + "px";
-
-      /*
-        Forza repaint della navbar: iOS PWA a volte mantiene
-        il vecchio layer grafico anche se il CSS cambia.
-      */
-      navbar.style.transform = "translate3d(0,0,0)";
-      navbar.style.webkitTransform = "translate3d(0,0,0)";
-
-      setTimeout(() => {
-        navbar.style.transform = "";
-        navbar.style.webkitTransform = "";
-      }, 120);
-    }
-
-    document.body.style.paddingTop = safeTop + "px";
-  }
-
-  function schedulePwaSafeAreaFix() {
-    applyPwaSafeAreaFix();
-    setTimeout(applyPwaSafeAreaFix, 120);
-    setTimeout(applyPwaSafeAreaFix, 350);
-    setTimeout(applyPwaSafeAreaFix, 700);
-    setTimeout(applyPwaSafeAreaFix, 1100);
-  }
-
-  window.addEventListener("load", schedulePwaSafeAreaFix);
-  window.addEventListener("resize", schedulePwaSafeAreaFix);
-  window.addEventListener("orientationchange", schedulePwaSafeAreaFix);
-
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      schedulePwaSafeAreaFix();
-    }
-  });
-})();
-</script>
 
 </body>
 </html>
