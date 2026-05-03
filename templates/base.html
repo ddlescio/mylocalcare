@@ -2539,10 +2539,12 @@ window.addEventListener("beforeunload", () => {
 </script>
 
 <style>
-/* Etichetta HOME discreta dentro il tasto logo */
+/* HOME sotto il logo senza deformare il tasto */
+.logo-wrapper {
+  flex-shrink: 0;
+}
+
 .logo-text-stack {
-  position: relative;
-  z-index: 2;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
@@ -2554,7 +2556,6 @@ window.addEventListener("beforeunload", () => {
   display: block;
   line-height: 0.92;
   white-space: nowrap;
-  font-size: inherit;
 }
 
 .logo-home-label {
@@ -2562,23 +2563,23 @@ window.addEventListener("beforeunload", () => {
   align-items: center;
   justify-content: center;
 
-  margin-top: 0.12rem;
-  padding: 0.065rem 0.34rem;
+  margin-top: 0.08rem;
+  padding: 0.045rem 0.34rem;
   border-radius: 9999px;
 
-  font-size: 0.5rem;
+  font-size: 0.48rem;
   line-height: 1;
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.13em;
 
   color: #2563eb;
   background: rgba(219,234,254,0.72);
-  border: 1px solid rgba(147,197,253,0.52);
+  border: 1px solid rgba(147,197,253,0.5);
 
   text-shadow: none;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.78),
-    0 1px 2px rgba(37,99,235,0.07);
+    0 1px 2px rgba(37,99,235,0.06);
 }
 
 .logo-wrapper:hover .logo-home-label {
@@ -2586,55 +2587,28 @@ window.addEventListener("beforeunload", () => {
   color: #1d4ed8;
 }
 
-/* Tablet / schermi medi: resta leggibile */
-@media (min-width: 481px) and (max-width: 900px) {
-  .logo-home-label {
-    font-size: 0.48rem;
-    padding: 0.06rem 0.32rem;
-    margin-top: 0.1rem;
-  }
-}
-
-/* Mobile stretto: compatta davvero il tasto */
+/* Mobile: non taglia MyLocalCare, riduce solo leggermente */
 @media (max-width: 480px) {
   .logo-wrapper {
-    min-width: 0 !important;
-    max-width: 7.6rem !important;
-    padding: 0.28rem 0.52rem 0.28rem 0.38rem !important;
-    gap: 0.16rem !important;
-    border-radius: 1.35rem !important;
+    gap: 0.22rem !important;
   }
 
-  .logo-wrapper img,
-  .logo-wrapper svg {
-    width: 1.85rem !important;
-    height: 1.85rem !important;
-    flex: 0 0 1.85rem !important;
-  }
-
-  .logo-text-stack {
-    max-width: 4.7rem;
-    overflow: hidden;
+  .logo-wrapper img {
+    width: 2rem !important;
+    height: 2rem !important;
   }
 
   .logo-main-text {
-    max-width: 4.7rem;
-    overflow: hidden;
-    text-overflow: clip;
-    white-space: nowrap;
-
-    font-size: 0.98rem !important;
-    line-height: 0.88;
-    letter-spacing: -0.06em;
+    font-size: 1.08rem !important;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
   }
 
   .logo-home-label {
-    margin-top: 0.065rem;
-    padding: 0.04rem 0.24rem;
-
-    font-size: 0.36rem;
-    line-height: 1;
-    letter-spacing: 0.105em;
+    margin-top: 0.055rem;
+    padding: 0.035rem 0.28rem;
+    font-size: 0.38rem;
+    letter-spacing: 0.11em;
   }
 }
 </style>
