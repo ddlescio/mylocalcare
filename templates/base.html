@@ -2635,6 +2635,209 @@ window.addEventListener("beforeunload", () => {
   }
 }
 </style>
+<style>
+/* =========================================================
+   iOS PWA — blocco orizzontale + ripristino layout
+   Serve per evitare il bug della status bar dopo rotazione.
+========================================================= */
+
+#lc-orientation-guard {
+  display: none;
+}
+
+html.lc-ios-pwa-standalone.lc-landscape-lock,
+html.lc-ios-pwa-standalone.lc-landscape-lock body {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+html.lc-ios-pwa-standalone.lc-landscape-lock #lc-orientation-guard {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 1.5rem !important;
+  background:
+    radial-gradient(circle at top left, rgba(219,234,254,0.96), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(252,231,243,0.92), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96)) !important;
+
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+}
+
+.lc-orientation-card {
+  width: min(92vw, 360px);
+  border-radius: 1.75rem;
+  padding: 1.5rem 1.25rem;
+
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(226,232,240,0.95);
+
+  box-shadow:
+    0 22px 55px rgba(15,23,42,0.14),
+    0 6px 18px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+
+  text-align: center;
+}
+
+.lc-orientation-icon {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 0.9rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 1.4rem;
+  background:
+    linear-gradient(180deg, rgba(239,246,255,0.98), rgba(255,255,255,0.95));
+  border: 1px solid rgba(191,219,254,0.95);
+
+  font-size: 2rem;
+  box-shadow:
+    0 10px 22px rgba(37,99,235,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.lc-orientation-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.25rem;
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.lc-orientation-text {
+  margin: 0.55rem auto 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  max-width: 17rem;
+}
+
+html.lc-pwa-reloading body {
+  opacity: 0.35 !important;
+  transition: opacity 0.12s ease !important;
+}
+</style>
+
+<script>
+/* =========================================================
+   iOS PWA — workaround reale per bug status bar dopo rotazione
+
+   Logica:
+   - Solo iPhone/iPad in modalità PWA installata.
+   - Se il telefono va in orizzontale: blocca l'interfaccia con overlay.
+   - Quando torna verticale: ricarica una volta la pagina per ripulire
+     il layout WebKit/status bar.
+========================================================= */
+(function () {
+  function isIOSDevice() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }
+
+  function isStandalonePWA() {
+    return window.matchMedia("(display-mode: standalone)").matches
+      || window.navigator.standalone === true;
+  }
+
+  if (!isIOSDevice() || !isStandalonePWA()) {
+    return;
+  }
+
+  const root = document.documentElement;
+  root.classList.add("lc-ios-pwa-standalone");
+
+  let reloadInProgress = false;
+  let initialized = false;
+
+  function isLandscape() {
+    return window.innerWidth > window.innerHeight;
+  }
+
+  function ensureOrientationGuard() {
+    if (document.getElementById("lc-orientation-guard")) {
+      return;
+    }
+
+    const guard = document.createElement("div");
+    guard.id = "lc-orientation-guard";
+    guard.setAttribute("aria-live", "polite");
+    guard.innerHTML = `
+      <div class="lc-orientation-card">
+        <div class="lc-orientation-icon">↻</div>
+        <h2 class="lc-orientation-title">Ruota il telefono</h2>
+        <p class="lc-orientation-text">
+          MyLocalCare è ottimizzato per l’uso verticale su iPhone.
+          Torna in verticale per continuare.
+        </p>
+      </div>
+    `;
+
+    document.body.appendChild(guard);
+  }
+
+  function applyOrientationGuard() {
+    const landscape = isLandscape();
+
+    if (landscape) {
+      ensureOrientationGuard();
+      root.classList.add("lc-landscape-lock");
+      sessionStorage.setItem("lc_ios_pwa_was_landscape", "1");
+      initialized = true;
+      return;
+    }
+
+    root.classList.remove("lc-landscape-lock");
+
+    /*
+      Se arriviamo qui dopo essere stati in orizzontale,
+      ricarichiamo una sola volta.
+      Questo è il punto chiave: forza WebKit a ricostruire correttamente
+      viewport, fixed navbar e status bar.
+    */
+    const wasLandscape = sessionStorage.getItem("lc_ios_pwa_was_landscape") === "1";
+
+    if (initialized && wasLandscape && !reloadInProgress) {
+      reloadInProgress = true;
+      sessionStorage.removeItem("lc_ios_pwa_was_landscape");
+      root.classList.add("lc-pwa-reloading");
+
+      setTimeout(function () {
+        window.location.replace(window.location.href);
+      }, 180);
+    }
+
+    initialized = true;
+  }
+
+  function scheduleOrientationCheck() {
+    applyOrientationGuard();
+    setTimeout(applyOrientationGuard, 120);
+    setTimeout(applyOrientationGuard, 360);
+    setTimeout(applyOrientationGuard, 700);
+  }
+
+  window.addEventListener("load", scheduleOrientationCheck);
+  window.addEventListener("resize", scheduleOrientationCheck);
+  window.addEventListener("orientationchange", scheduleOrientationCheck);
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) {
+      scheduleOrientationCheck();
+    }
+  });
+})();
+</script>
 
 
 </body>
