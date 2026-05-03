@@ -251,10 +251,7 @@
       <div class="w-full px-0 sm:px-0">
       <nav class="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 p-1.5">
         {% if pubblico %}
-          {% set tabs = [('annunci','Annunci'), ('info','Info'), ('foto','Foto')] %}
-        {% else %}
-          {% set tabs = [('annunci','Annunci'), ('info','Info'), ('foto','Foto'), ('recensioni','Recensioni')] %}
-        {% endif %}
+        {% set tabs = [('annunci','Annunci'), ('info','Info'), ('foto','Foto'), ('recensioni','Recensioni')] %}
         {% for key,label in tabs %}
         <button
           class="tab-btn relative flex-1 sm:flex-none px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200
@@ -674,11 +671,14 @@
     </div>
 
     {% if not pubblico %}
-      <!-- 🟧 TAB: RECENSIONI -->
-      <div id="tab-recensioni" class="tab-pane hidden">
+    <!-- 🟧 TAB: RECENSIONI -->
+    <div id="tab-recensioni" class="tab-pane hidden">
+      {% if pubblico %}
+        {% include 'partials/tab_recensioni_pubblico.html' %}
+      {% else %}
         {% include 'partials/tab_recensioni_privato.html' %}
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
 
   </section>
 </div>
@@ -1296,7 +1296,7 @@
       font-size: 0.66rem;
     }
   }
-  
+
   .hero-bottom-card::before {
     content: "";
     position: absolute;
