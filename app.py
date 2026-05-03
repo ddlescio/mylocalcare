@@ -2513,9 +2513,8 @@ def toggle_utente(id):
 @admin_required
 def elimina_utente_route(id):
     elimina_utente(id)
-    flash("Utente eliminato correttamente.")
+    flash("Utente eliminato correttamente. Email e username sono stati liberati.")
     return redirect(url_for('admin'))
-
 
 # ==========================================================
 # GESTIONE OPERATORI (vecchio pannello)

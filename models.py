@@ -645,11 +645,58 @@ def attiva_utente(id):
 
 
 def elimina_utente(id):
+    """
+    Eliminazione sicura lato admin.
+
+    Non cancelliamo fisicamente la riga da utenti perché l'utente può essere
+    collegato ad annunci, recensioni, messaggi, notifiche, acquisti, servizi, ecc.
+
+    Quando l'admin elimina un utente:
+    - gli annunci dell'utente vengono rimossi;
+    - l'account viene disattivato;
+    - email e username vengono liberati;
+    - il profilo viene reso invisibile;
+    - i dati principali vengono anonimizzati.
+    """
+
     conn = get_db_connection()
-    conn.execute("DELETE FROM utenti WHERE id = ?", (id,))
+    cur = get_cursor(conn)
+
+    id = int(id)
+
+    email_eliminata = f"deleted_user_{id}@deleted.local"
+    username_eliminato = f"UTENTE_ELIMINATO_{id}"
+
+    # 1) Prima eliminiamo gli annunci dell'utente.
+    # Questo fa sparire i suoi annunci dal sito.
+    cur.execute(sql("""
+        DELETE FROM annunci
+        WHERE utente_id = ?
+    """), (id,))
+
+    # 2) Poi anonimimizziamo/disattiviamo l'utente senza cancellarlo fisicamente.
+    cur.execute(sql("""
+        UPDATE utenti
+        SET
+            nome = ?,
+            cognome = ?,
+            email = ?,
+            username = ?,
+            password = '',
+            attivo = 0,
+            token_verifica = NULL,
+            visibile_pubblicamente = 0
+        WHERE id = ?
+    """), (
+        "Utente",
+        "eliminato",
+        email_eliminata,
+        username_eliminato,
+        id
+    ))
+
     conn.commit()
-
-
+    
 # ------------------ NOTIFICHE ------------------ #
 def count_notifiche_non_lette(utente_id):
     conn = get_db_connection()
