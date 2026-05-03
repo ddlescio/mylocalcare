@@ -3,7 +3,7 @@
 <head>
 
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
   <script>
   var _iub = _iub || [];
@@ -2635,6 +2635,39 @@ window.addEventListener("beforeunload", () => {
   }
 }
 </style>
+
+<style>
+/* =========================================================
+   🍎 FIX iPhone PWA — rispetto area ora/batteria/status bar
+   Vale solo quando l'app è installata come PWA
+========================================================= */
+
+@supports (padding-top: env(safe-area-inset-top)) {
+
+  html.pwa-installed body {
+    padding-top: env(safe-area-inset-top) !important;
+    background: #ffffff;
+  }
+
+  html.pwa-installed #main-navbar {
+    top: env(safe-area-inset-top) !important;
+  }
+
+  html.pwa-installed body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: #ffffff;
+    z-index: 10001;
+    pointer-events: none;
+  }
+
+}
+</style>
+
 
 </body>
 </html>
