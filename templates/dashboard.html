@@ -2089,9 +2089,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // 🔹 Se arriviamo dalle pagine recensioni, riapri la tab Recensioni
-  const tabRichiesta = sessionStorage.getItem("lc_profilo_tab_da_aprire");
+  // 🔹 Se arriviamo da pagine recensioni o da URL con #recensioni, riapri la tab corretta
+  const tabRichiestaSession = sessionStorage.getItem("lc_profilo_tab_da_aprire");
   sessionStorage.removeItem("lc_profilo_tab_da_aprire");
+
+  const tabRichiestaHash = window.location.hash
+    ? window.location.hash.replace("#", "").trim()
+    : "";
+
+  const tabRichiesta =
+    tabRichiestaHash && document.querySelector(`.tab-btn[data-tab="${tabRichiestaHash}"]`)
+      ? tabRichiestaHash
+      : tabRichiestaSession;
 
   const tabIniziale =
     tabRichiesta && document.querySelector(`.tab-btn[data-tab="${tabRichiesta}"]`)
@@ -2100,12 +2109,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   attivaTab(tabIniziale);
 
-  // 🔹 Cambio tab solo durante la navigazione corrente, senza salvarla
+  // 🔹 Cambio tab e aggiorno l'URL, così tornando indietro resta la tab corretta
   tabs.forEach(btn => {
     btn.addEventListener("click", () => {
-      attivaTab(btn.dataset.tab);
+      const tab = btn.dataset.tab;
+      attivaTab(tab);
+
+      if (tab === "annunci") {
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+      } else {
+        history.replaceState(null, "", "#" + tab);
+      }
     });
-  });
+  });  
 });
 </script>
 <script>
