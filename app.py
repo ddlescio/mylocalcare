@@ -8857,6 +8857,12 @@ def profilo_pubblico(id):
         pubblico=True,
         media_recensioni=media,
         totale_recensioni=totale,
+
+        # ✅ Recensioni da mostrare nella tab pubblica
+        recensioni_ricevute=recensioni,
+        recensioni=recensioni,
+        recensioni_pubbliche=recensioni,
+
         offro_presenti=offro_presenti,
         cerco_presenti=cerco_presenti,
         servizio_contatti_attivo=servizio_contatti_attivo,
