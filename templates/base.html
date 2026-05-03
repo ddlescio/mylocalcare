@@ -2114,8 +2114,12 @@ body[data-chat="true"] #mobile-search-container {
     height: 2rem !important;
   }
 
-  .logo-wrapper span {
-    font-size: 1.18rem !important;
+  .logo-wrapper .logo-main-text {
+    font-size: 1.08rem !important;
+  }
+
+  .logo-wrapper .logo-home-label {
+    font-size: 0.38rem !important;
   }
 
   #main-navbar .icon-hover,
@@ -2539,84 +2543,95 @@ window.addEventListener("beforeunload", () => {
 </script>
 
 <style>
-/* HOME sotto il logo senza deformare il tasto */
-.logo-wrapper {
-  flex-shrink: 0;
+/* ============================================================
+   LOGO NAVBAR + LABEL HOME
+   Mobile compatto / tablet-desktop grande
+   ============================================================ */
+
+/* Base: tablet e desktop */
+#main-navbar .logo-wrapper {
+  flex-shrink: 0 !important;
+  gap: 0.5rem !important;
 }
 
-/* Dimensione normale per tablet / desktop */
-.logo-wrapper img {
+#main-navbar .logo-wrapper img {
   width: 2.75rem !important;
   height: 2.75rem !important;
+  min-width: 2.75rem !important;
+  max-width: 2.75rem !important;
+  flex: 0 0 2.75rem !important;
 }
 
-.logo-text-stack {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
+#main-navbar .logo-text-stack {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
 }
 
-.logo-main-text {
-  display: block;
-  line-height: 0.92;
-  white-space: nowrap;
+#main-navbar .logo-main-text {
+  display: block !important;
+  white-space: nowrap !important;
+  line-height: 0.92 !important;
   font-size: 1.55rem !important;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.045em !important;
 }
 
-.logo-home-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+#main-navbar .logo-home-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 
-  margin-top: 0.08rem;
-  padding: 0.055rem 0.38rem;
-  border-radius: 9999px;
+  margin-top: 0.08rem !important;
+  padding: 0.055rem 0.38rem !important;
+  border-radius: 9999px !important;
 
-  font-size: 0.5rem;
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: 0.13em;
+  font-size: 0.5rem !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.13em !important;
 
-  color: #2563eb;
-  background: rgba(219,234,254,0.72);
-  border: 1px solid rgba(147,197,253,0.5);
+  color: #2563eb !important;
+  background: rgba(219,234,254,0.72) !important;
+  border: 1px solid rgba(147,197,253,0.5) !important;
 
-  text-shadow: none;
+  text-shadow: none !important;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.78),
-    0 1px 2px rgba(37,99,235,0.06);
+    0 1px 2px rgba(37,99,235,0.06) !important;
 }
 
-.logo-wrapper:hover .logo-home-label {
-  background: rgba(191,219,254,0.88);
-  color: #1d4ed8;
+#main-navbar .logo-wrapper:hover .logo-home-label {
+  background: rgba(191,219,254,0.88) !important;
+  color: #1d4ed8 !important;
 }
 
-/* Solo mobile stretto: compatto */
+/* Mobile stretto: compatto */
 @media (max-width: 480px) {
-  .logo-wrapper {
+  #main-navbar .logo-wrapper {
     gap: 0.22rem !important;
   }
 
-  .logo-wrapper img {
+  #main-navbar .logo-wrapper img {
     width: 2rem !important;
     height: 2rem !important;
+    min-width: 2rem !important;
+    max-width: 2rem !important;
+    flex: 0 0 2rem !important;
   }
 
-  .logo-main-text {
+  #main-navbar .logo-main-text {
     font-size: 1.08rem !important;
-    line-height: 0.9;
-    letter-spacing: -0.04em;
+    line-height: 0.9 !important;
+    letter-spacing: -0.04em !important;
   }
 
-  .logo-home-label {
-    margin-top: 0.055rem;
-    padding: 0.035rem 0.28rem;
-    font-size: 0.38rem;
-    letter-spacing: 0.11em;
+  #main-navbar .logo-home-label {
+    margin-top: 0.055rem !important;
+    padding: 0.035rem 0.28rem !important;
+    font-size: 0.38rem !important;
+    letter-spacing: 0.11em !important;
   }
 }
 </style>
