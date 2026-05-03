@@ -2552,8 +2552,9 @@ window.addEventListener("beforeunload", () => {
 
 .logo-main-text {
   display: block;
-  line-height: 0.9;
+  line-height: 0.92;
   white-space: nowrap;
+  font-size: inherit;
 }
 
 .logo-home-label {
@@ -2562,52 +2563,78 @@ window.addEventListener("beforeunload", () => {
   justify-content: center;
 
   margin-top: 0.12rem;
-  padding: 0.06rem 0.32rem;
+  padding: 0.065rem 0.34rem;
   border-radius: 9999px;
 
-  font-size: 0.46rem;
+  font-size: 0.5rem;
   line-height: 1;
   font-weight: 900;
   letter-spacing: 0.12em;
 
   color: #2563eb;
-  background: rgba(219,234,254,0.68);
-  border: 1px solid rgba(147,197,253,0.48);
+  background: rgba(219,234,254,0.72);
+  border: 1px solid rgba(147,197,253,0.52);
 
   text-shadow: none;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.75),
-    0 1px 2px rgba(37,99,235,0.06);
+    inset 0 1px 0 rgba(255,255,255,0.78),
+    0 1px 2px rgba(37,99,235,0.07);
 }
 
 .logo-wrapper:hover .logo-home-label {
-  background: rgba(191,219,254,0.85);
+  background: rgba(191,219,254,0.88);
   color: #1d4ed8;
 }
 
-/* Mobile: logo più compatto */
+/* Tablet / schermi medi: resta leggibile */
+@media (min-width: 481px) and (max-width: 900px) {
+  .logo-home-label {
+    font-size: 0.48rem;
+    padding: 0.06rem 0.32rem;
+    margin-top: 0.1rem;
+  }
+}
+
+/* Mobile stretto: compatta davvero il tasto */
 @media (max-width: 480px) {
   .logo-wrapper {
-    padding: 0.34rem 0.62rem 0.32rem 0.42rem !important;
-    gap: 0.18rem !important;
+    min-width: 0 !important;
+    max-width: 7.6rem !important;
+    padding: 0.28rem 0.52rem 0.28rem 0.38rem !important;
+    gap: 0.16rem !important;
+    border-radius: 1.35rem !important;
   }
 
-  .logo-wrapper img {
-    width: 2rem !important;
-    height: 2rem !important;
+  .logo-wrapper img,
+  .logo-wrapper svg {
+    width: 1.85rem !important;
+    height: 1.85rem !important;
+    flex: 0 0 1.85rem !important;
+  }
+
+  .logo-text-stack {
+    max-width: 4.7rem;
+    overflow: hidden;
   }
 
   .logo-main-text {
-    font-size: 1rem !important;
+    max-width: 4.7rem;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+
+    font-size: 0.98rem !important;
     line-height: 0.88;
-    letter-spacing: -0.055em;
+    letter-spacing: -0.06em;
   }
 
   .logo-home-label {
-    margin-top: 0.08rem;
-    padding: 0.045rem 0.26rem;
-    font-size: 0.38rem;
-    letter-spacing: 0.11em;
+    margin-top: 0.065rem;
+    padding: 0.04rem 0.24rem;
+
+    font-size: 0.36rem;
+    line-height: 1;
+    letter-spacing: 0.105em;
   }
 }
 </style>
