@@ -57,14 +57,28 @@
 
             <div class="public-review-head">
               <div class="public-review-author">
-                <div class="public-review-avatar">
-                  {{ (r['autore_username'] or 'U')[:1]|upper }}
-                </div>
+
+                <a href="{{ url_for('profilo_pubblico', id=r['id_autore']) }}"
+                   class="public-review-avatar-link"
+                   aria-label="Vai al profilo di @{{ r['autore_username'] or 'utente' }}">
+
+                  {% if r['foto_profilo'] %}
+                    <img src="{{ url_for('static', filename=r['foto_profilo']) }}"
+                         class="public-review-avatar-img"
+                         alt="@{{ r['autore_username'] or 'utente' }}">
+                  {% else %}
+                    <div class="public-review-avatar-fallback">
+                      {{ (r['autore_username'] or 'U')[:1]|upper }}
+                    </div>
+                  {% endif %}
+
+                </a>
 
                 <div class="min-w-0">
-                  <p class="public-review-author-name">
+                  <a href="{{ url_for('profilo_pubblico', id=r['id_autore']) }}"
+                     class="public-review-author-name">
                     @{{ r['autore_username'] or 'utente' }}
-                  </p>
+                  </a>
 
                   <div class="public-review-stars-small" aria-label="Valutazione {{ r.voto }} su 5">
                     {% for i in range(r.voto) %}★{% endfor %}
@@ -74,7 +88,7 @@
               </div>
 
               <div class="public-review-date">
-                {{ r.data|fmt_it_smart }}
+                {{ (r.ultima_modifica or r.data)|fmt_it_smart }}
               </div>
             </div>
 
@@ -92,7 +106,11 @@
             {% if risposta %}
               <div class="public-review-response">
                 <div class="public-review-response-label">
-                  💬 Risposta di @{{ utente['username'] }}
+                  💬 Risposta di
+                  <a href="{{ url_for('profilo_pubblico', id=utente['id']) }}"
+                     class="public-review-response-link">
+                    @{{ utente['username'] }}
+                  </a>
                 </div>
 
                 <p class="public-review-response-text">
@@ -115,17 +133,163 @@
       </div>
     {% endif %}
 
-    {% if pubblico and session.get('utente_id') != utente['id'] %}
+    {% if pubblico and session.get('utente_id') and session.get('utente_id') != utente['id'] %}
       <div class="public-reviews-footer">
-        <a href="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
-           class="public-reviews-cta">
+        <button type="button"
+                id="open-public-review-modal"
+                class="public-reviews-cta">
           Lascia una recensione
+        </button>
+      </div>
+    {% elif pubblico and not session.get('utente_id') %}
+      <div class="public-reviews-footer">
+        <a href="{{ url_for('login') }}"
+           class="public-reviews-cta">
+          Accedi per lasciare una recensione
         </a>
       </div>
     {% endif %}
 
   </div>
 </div>
+
+{% if pubblico and session.get('utente_id') and session.get('utente_id') != utente['id'] %}
+  <!-- MODALE LASCIA RECENSIONE -->
+  <div id="public-review-modal"
+       class="public-review-modal hidden"
+       aria-hidden="true">
+
+    <div class="public-review-modal-backdrop" data-close-public-review-modal></div>
+
+    <div class="public-review-modal-panel" role="dialog" aria-modal="true" aria-labelledby="public-review-modal-title">
+
+      <button type="button"
+              class="public-review-modal-close"
+              data-close-public-review-modal
+              aria-label="Chiudi">
+        ✕
+      </button>
+
+      <form method="POST"
+            action="{{ url_for('recensioni_utente', user_id=utente['id']) }}"
+            class="public-review-form">
+
+        <div class="public-review-form-head">
+          <div class="public-review-form-badge">Recensione verificata</div>
+
+          <h3 id="public-review-modal-title" class="public-review-form-title">
+            Lascia una recensione per @{{ utente['username'] }}
+          </h3>
+
+          <p class="public-review-form-subtitle">
+            Esprimi un giudizio chiaro, sincero e rispettoso.
+          </p>
+        </div>
+
+        <div class="public-review-stars-wrap">
+          <label class="public-review-field-label">Valutazione</label>
+
+          <div class="public-review-stars-row">
+            {% for i in range(1,6) %}
+              <button type="button"
+                      class="public-review-star-btn"
+                      data-public-review-star="{{ i }}"
+                      aria-label="Valuta {{ i }} su 5">★</button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <input type="hidden" name="voto" id="public-review-voto" value="0">
+
+        <div class="public-review-textarea-wrap">
+          <label class="public-review-field-label">Commento</label>
+          <textarea name="testo"
+                    rows="4"
+                    placeholder="Scrivi la tua recensione (facoltativo)"
+                    class="public-review-textarea"></textarea>
+        </div>
+
+        <button type="submit" class="public-review-submit">
+          <span>💾</span>
+          <span>Salva recensione</span>
+        </button>
+
+      </form>
+    </div>
+  </div>
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("public-review-modal");
+  const openBtn = document.getElementById("open-public-review-modal");
+  const votoInput = document.getElementById("public-review-voto");
+  const stars = document.querySelectorAll("[data-public-review-star]");
+
+  function openModal() {
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeModal() {
+    if (!modal) return;
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  function aggiornaStelle(voto) {
+    stars.forEach((star) => {
+      const value = parseInt(star.dataset.publicReviewStar, 10);
+      star.classList.toggle("is-active", value <= voto);
+    });
+  }
+
+  if (openBtn) {
+    openBtn.addEventListener("click", openModal);
+  }
+
+  document.querySelectorAll("[data-close-public-review-modal]").forEach((el) => {
+    el.addEventListener("click", closeModal);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  stars.forEach((star) => {
+    star.addEventListener("click", () => {
+      const voto = parseInt(star.dataset.publicReviewStar, 10);
+      if (votoInput) votoInput.value = voto;
+      aggiornaStelle(voto);
+    });
+
+    star.addEventListener("mouseenter", () => {
+      aggiornaStelle(parseInt(star.dataset.publicReviewStar, 10));
+    });
+  });
+
+  const starsRow = document.querySelector(".public-review-stars-row");
+  if (starsRow) {
+    starsRow.addEventListener("mouseleave", () => {
+      aggiornaStelle(parseInt(votoInput?.value || "0", 10));
+    });
+  }
+
+  const form = document.querySelector(".public-review-form");
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      const voto = parseInt(votoInput?.value || "0", 10);
+      if (!voto || voto < 1 || voto > 5) {
+        e.preventDefault();
+        alert("Seleziona una valutazione da 1 a 5 stelle.");
+      }
+    });
+  }
+});
+</script>
 
 <style>
 .public-reviews-card {
@@ -299,29 +463,56 @@
   gap: 0.75rem;
 }
 
-.public-review-avatar {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
+.public-review-avatar-link {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: block;
+  border-radius: 9999px;
+  text-decoration: none;
+}
+
+.public-review-avatar-img,
+.public-review-avatar-fallback {
+  width: 46px;
+  height: 46px;
+  border-radius: 9999px;
+  border: 1px solid rgba(226,232,240,0.95);
+  box-shadow:
+    0 6px 14px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.public-review-avatar-img {
+  object-fit: cover;
+  background: #fff;
+}
+
+.public-review-avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
   background:
     linear-gradient(135deg, #dbeafe, #fdf2f8);
   color: #1d4ed8;
   font-size: 0.95rem;
   font-weight: 900;
-  border: 1px solid rgba(191,219,254,0.9);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
 }
 
 .public-review-author-name {
+  display: inline-block;
   margin: 0;
-  color: #0f172a;
+  color: #2563eb;
   font-size: 0.94rem;
   line-height: 1.25;
   font-weight: 850;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.public-review-author-name:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 .public-review-stars-small {
@@ -371,6 +562,15 @@
   color: #1d4ed8;
   font-size: 0.78rem;
   font-weight: 850;
+}
+
+.public-review-response-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.public-review-response-link:hover {
+  text-decoration: underline;
 }
 
 .public-review-response-text {
@@ -438,6 +638,184 @@
   box-shadow:
     0 10px 22px rgba(79,70,229,0.22),
     inset 0 1px 0 rgba(255,255,255,0.22);
+  border: 0;
+  cursor: pointer;
+}
+
+/* MODALE */
+.public-review-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.public-review-modal.hidden {
+  display: none;
+}
+
+.public-review-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15,23,42,0.58);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.public-review-modal-panel {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 560px);
+  max-height: 88vh;
+  overflow-y: auto;
+  border-radius: 1.8rem;
+  padding: 1.1rem;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.98), rgba(244,247,255,0.96));
+  border: 1px solid rgba(226,232,240,0.96);
+  box-shadow:
+    0 26px 70px rgba(15,23,42,0.24),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+.public-review-modal-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  border: 1px solid rgba(226,232,240,0.95);
+  background: rgba(255,255,255,0.86);
+  color: #64748b;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.public-review-form {
+  padding: 0.6rem 0.2rem 0.2rem;
+}
+
+.public-review-form-head {
+  text-align: center;
+  padding: 0.8rem 2.2rem 1rem;
+}
+
+.public-review-form-badge {
+  display: inline-flex;
+  margin-bottom: 0.7rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(226,232,240,0.95);
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.public-review-form-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.28rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 900;
+  color: #1d4ed8;
+}
+
+.public-review-form-subtitle {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.public-review-stars-wrap,
+.public-review-textarea-wrap {
+  margin-bottom: 1rem;
+}
+
+.public-review-field-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.84rem;
+  font-weight: 750;
+  color: #475569;
+}
+
+.public-review-stars-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.15rem;
+  flex-wrap: wrap;
+}
+
+.public-review-star-btn {
+  border: 0;
+  background: transparent;
+  color: #d1d5db;
+  font-size: 2.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .16s ease, color .16s ease;
+}
+
+.public-review-star-btn.is-active,
+.public-review-star-btn:hover {
+  color: #facc15;
+}
+
+.public-review-star-btn:hover {
+  transform: scale(1.08);
+}
+
+.public-review-textarea {
+  width: 100%;
+  min-height: 118px;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid #dbe2ea;
+  background: rgba(255,255,255,0.96);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #334155;
+  resize: vertical;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.public-review-textarea:focus {
+  outline: none;
+  border-color: #93c5fd;
+  background: rgba(255,255,255,1);
+  box-shadow:
+    0 0 0 3px rgba(96,165,250,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.96);
+}
+
+.public-review-submit {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 50px;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(147,197,253,0.95);
+  border-radius: 1rem;
+  background:
+    linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #ffffff;
+  font-size: 0.96rem;
+  font-weight: 760;
+  letter-spacing: -0.01em;
+  box-shadow:
+    0 12px 24px rgba(59,130,246,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+  cursor: pointer;
 }
 
 @media (max-width: 640px) {
@@ -468,6 +846,27 @@
   .public-review-item {
     border-radius: 1.15rem;
     padding: 0.95rem;
+  }
+
+  .public-review-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .public-review-modal-panel {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 1.6rem 1.6rem 0 0;
+    padding: 1rem;
+  }
+
+  .public-review-form-head {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .public-review-star-btn {
+    font-size: 1.95rem;
   }
 }
 </style>
