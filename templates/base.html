@@ -2544,6 +2544,12 @@ window.addEventListener("beforeunload", () => {
   flex-shrink: 0;
 }
 
+/* Dimensione normale per tablet / desktop */
+.logo-wrapper img {
+  width: 2.75rem !important;
+  height: 2.75rem !important;
+}
+
 .logo-text-stack {
   display: inline-flex;
   flex-direction: column;
@@ -2556,6 +2562,8 @@ window.addEventListener("beforeunload", () => {
   display: block;
   line-height: 0.92;
   white-space: nowrap;
+  font-size: 1.55rem !important;
+  letter-spacing: -0.045em;
 }
 
 .logo-home-label {
@@ -2564,10 +2572,10 @@ window.addEventListener("beforeunload", () => {
   justify-content: center;
 
   margin-top: 0.08rem;
-  padding: 0.045rem 0.34rem;
+  padding: 0.055rem 0.38rem;
   border-radius: 9999px;
 
-  font-size: 0.48rem;
+  font-size: 0.5rem;
   line-height: 1;
   font-weight: 900;
   letter-spacing: 0.13em;
@@ -2587,7 +2595,7 @@ window.addEventListener("beforeunload", () => {
   color: #1d4ed8;
 }
 
-/* Mobile: non taglia MyLocalCare, riduce solo leggermente */
+/* Solo mobile stretto: compatto */
 @media (max-width: 480px) {
   .logo-wrapper {
     gap: 0.22rem !important;
