@@ -688,16 +688,16 @@
 <!-- 🚀 MODALE AUMENTA VISIBILITÀ -->
 <div id="modale-visibilita"
      class="hidden fixed inset-0 z-[999] bg-black/60 flex items-end sm:items-center justify-center">
-  <!-- CONTENUTO -->
-  <div class="
-    w-full sm:max-w-md
-    bg-white
-    rounded-t-3xl sm:rounded-3xl
-    shadow-2xl
-    p-6
-    max-h-[90vh]
-    overflow-y-auto
-  ">
+ <!-- CONTENUTO -->
+ <div id="modale-visibilita-card" class="
+   w-full sm:max-w-md
+   bg-white
+   rounded-t-3xl sm:rounded-3xl
+   shadow-2xl
+   p-6
+   max-h-[90vh]
+   overflow-y-auto
+ ">
 
   <!-- HEADER PREMIUM COMPATTO -->
   <div class="relative -mx-6 -mt-6 mb-3 overflow-hidden rounded-t-3xl sm:rounded-t-3xl bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900 px-5 pt-4 pb-3 text-white">
@@ -2237,176 +2237,371 @@ nav::before {
 }
 
 /* ============================================================
-   MODALE VISIBILITÀ — GERARCHIA, RESPIRO, MOBILE CLEAN
+   MODALE VISIBILITÀ — PREMIUM CENTERED UX
    ============================================================ */
 
-/* Contenitore principale del modale */
-#modale-visibilita > div {
+/* Overlay: il modale non parte più dal fondo */
+#modale-visibilita {
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1.25rem !important;
+  background: rgba(15, 23, 42, 0.62) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Card principale: più larga, staccata, premium */
+#modale-visibilita-card {
+  width: min(94vw, 520px) !important;
+  max-width: 520px !important;
+  max-height: min(86vh, 820px) !important;
   padding: 0 !important;
-  max-height: 86vh !important;
+  border-radius: 2rem !important;
   overflow-y: auto !important;
   background: #f8fafc !important;
+  border: 1px solid rgba(255,255,255,0.86) !important;
+  box-shadow:
+    0 30px 80px rgba(15, 23, 42, 0.34),
+    0 8px 24px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255,255,255,0.85) !important;
 }
 
-/* Header più separato dal contenuto */
-#modale-visibilita > div > div:first-child {
+/* Header: meno invadente, più elegante */
+#modale-visibilita-card > div:first-child {
   margin: 0 !important;
-  border-radius: 1.5rem 1.5rem 0 0 !important;
-  padding: 1.15rem 1.35rem 1.25rem !important;
+  padding: 1.05rem 1.2rem 1rem !important;
+  border-radius: 2rem 2rem 0 0 !important;
+  background:
+    linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.96)) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.10) !important;
 }
 
-/* Tutti i blocchi diretti sotto header */
-#modale-visibilita > div > div:not(:first-child) {
-  margin-left: 1rem !important;
-  margin-right: 1rem !important;
+/* Badge piccolo header */
+#modale-visibilita-card > div:first-child .inline-flex {
+  font-size: 0.58rem !important;
+  letter-spacing: 0.13em !important;
+  padding: 0.18rem 0.55rem !important;
+  opacity: 0.92 !important;
 }
 
-/* Stato attuale più leggibile */
+/* Titolo header meno pesante */
+#modale-visibilita-card > div:first-child h2 {
+  margin-top: 0.42rem !important;
+  font-size: 1.18rem !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.035em !important;
+}
+
+/* Testo header */
+#modale-visibilita-card > div:first-child p {
+  margin-top: 0.35rem !important;
+  font-size: 0.78rem !important;
+  line-height: 1.35 !important;
+  color: rgba(219,234,254,0.86) !important;
+}
+
+/* X chiusura più evidente */
+#modale-visibilita-card > div:first-child button[onclick="chiudiVisibilita()"] {
+  width: 2.65rem !important;
+  height: 2.65rem !important;
+  border-radius: 9999px !important;
+  background: rgba(255,255,255,0.16) !important;
+  border: 1px solid rgba(255,255,255,0.20) !important;
+  color: #ffffff !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.16) !important;
+}
+
+#modale-visibilita-card > div:first-child button[onclick="chiudiVisibilita()"]:hover {
+  background: rgba(255,255,255,0.25) !important;
+  transform: scale(1.04);
+}
+
+/* Corpo: più respiro */
+#modale-visibilita-card > .mb-3,
+#modale-visibilita-card > .mb-4 {
+  margin-left: 1.15rem !important;
+  margin-right: 1.15rem !important;
+  margin-bottom: 1.05rem !important;
+}
+
+/* Stato iniziale */
+#modale-visibilita-card > .mb-3:first-of-type {
+  margin-top: 1.15rem !important;
+}
+
 #box-visibilita-stato {
-  margin-top: 1rem !important;
-  padding: 1rem 1.1rem !important;
-  border-radius: 1.15rem !important;
-  line-height: 1.45 !important;
+  padding: 1.05rem 1.15rem !important;
+  border-radius: 1.35rem !important;
+  line-height: 1.48 !important;
+  font-size: 0.9rem !important;
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.70) !important;
 }
 
-/* Spazio netto tra le sezioni principali */
-#modale-visibilita .mb-3,
-#modale-visibilita .mb-4 {
-  margin-bottom: 1rem !important;
+/* Label flottanti dentro stato: meno aggressive */
+#box-visibilita-stato > div.absolute {
+  top: -0.55rem !important;
+  left: 0.85rem !important;
+  font-size: 0.65rem !important;
+  padding: 0.18rem 0.52rem !important;
+  border-radius: 9999px !important;
 }
 
-/* Sezioni principali chiuse: meno casino, più card “contenitore” */
-#modale-visibilita > div > .mb-3 > details,
-#modale-visibilita > div > .mb-4 > details {
-  border-radius: 1.25rem !important;
-  border: 1px solid rgba(203, 213, 225, 0.95) !important;
+/* Card urgente: deve sembrare un blocco speciale, non una sezione standard */
+#card-annuncio_urgente {
+  padding: 1.05rem !important;
+  border-radius: 1.45rem !important;
+  border: 1px solid rgba(251,113,133,0.34) !important;
+  background:
+    linear-gradient(135deg, rgba(255,241,242,0.96), rgba(255,255,255,0.98) 56%, rgba(255,247,237,0.92)) !important;
+  box-shadow:
+    0 10px 24px rgba(244,63,94,0.08),
+    0 2px 8px rgba(15,23,42,0.045) !important;
+}
+
+/* Sezioni principali: Pacchetti / Servizi */
+#modale-visibilita-card > .mb-3 > details,
+#modale-visibilita-card > .mb-4 > details {
+  border-radius: 1.45rem !important;
+  border: 1px solid rgba(203,213,225,0.92) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94)) !important;
+  box-shadow:
+    0 10px 22px rgba(15,23,42,0.055),
+    0 2px 7px rgba(15,23,42,0.04) !important;
+  transition:
+    opacity .22s ease,
+    filter .22s ease,
+    transform .22s ease,
+    box-shadow .22s ease,
+    border-color .22s ease;
+}
+
+/* Header delle sezioni principali */
+#modale-visibilita-card > .mb-3 > details > summary,
+#modale-visibilita-card > .mb-4 > details > summary {
+  padding: 1.05rem 1.1rem !important;
+}
+
+/* Titoli sezioni */
+#modale-visibilita-card > .mb-3 > details > summary h3,
+#modale-visibilita-card > .mb-4 > details > summary h3 {
+  font-size: 1.02rem !important;
+  letter-spacing: -0.035em !important;
+}
+
+/* Descrizione sezioni */
+#modale-visibilita-card > .mb-3 > details > summary p,
+#modale-visibilita-card > .mb-4 > details > summary p {
+  margin-top: 0.28rem !important;
+  font-size: 0.80rem !important;
+  line-height: 1.35 !important;
+}
+
+/* Badge sotto i summary: più ordinati */
+#modale-visibilita-card > .mb-3 > details > summary .mt-2,
+#modale-visibilita-card > .mb-4 > details > summary .mt-2 {
+  margin-top: 0.7rem !important;
+  gap: 0.45rem !important;
+}
+
+#modale-visibilita-card > .mb-3 > details > summary .mt-2 span,
+#modale-visibilita-card > .mb-4 > details > summary .mt-2 span {
+  padding: 0.18rem 0.58rem !important;
+  font-size: 0.66rem !important;
+  line-height: 1.15 !important;
+}
+
+/* Sezione aperta: diventa il focus */
+#modale-visibilita-card > .mb-3 > details[open],
+#modale-visibilita-card > .mb-4 > details[open] {
+  border-color: rgba(59,130,246,0.42) !important;
   background: #ffffff !important;
   box-shadow:
-    0 8px 18px rgba(15, 23, 42, 0.055),
-    0 1px 2px rgba(15, 23, 42, 0.04) !important;
+    0 18px 38px rgba(37,99,235,0.10),
+    0 8px 18px rgba(15,23,42,0.07) !important;
+  transform: translateY(-1px);
 }
 
-/* Summary delle sezioni principali più arioso */
-#modale-visibilita > div > .mb-3 > details > summary,
-#modale-visibilita > div > .mb-4 > details > summary {
-  padding: 1rem 1.05rem !important;
+/* Area interna delle sezioni aperte */
+#modale-visibilita-card > .mb-3 > details > div,
+#modale-visibilita-card > .mb-4 > details > div {
+  padding: 1.05rem !important;
+  border-top: 1px solid rgba(226,232,240,0.88) !important;
+  background:
+    linear-gradient(180deg, rgba(248,250,252,0.90), rgba(241,245,249,0.80)) !important;
 }
 
-/* Quando una sezione è aperta, staccala visivamente */
-#modale-visibilita > div > .mb-3 > details[open],
-#modale-visibilita > div > .mb-4 > details[open] {
-  border-color: rgba(96, 165, 250, 0.55) !important;
+/* Sfocatura degli altri blocchi quando una sezione è aperta */
+#modale-visibilita-card.lc-has-open > .mb-3,
+#modale-visibilita-card.lc-has-open > .mb-4 {
+  transition: opacity .22s ease, filter .22s ease, transform .22s ease;
+}
+
+#modale-visibilita-card.lc-has-open > .mb-3:not(.lc-open-section),
+#modale-visibilita-card.lc-has-open > .mb-4:not(.lc-open-section) {
+  opacity: 0.42;
+  filter: blur(1.2px) grayscale(0.15);
+  transform: scale(0.992);
+}
+
+/* La sezione aperta resta nitida */
+#modale-visibilita-card.lc-has-open > .mb-3.lc-open-section,
+#modale-visibilita-card.lc-has-open > .mb-4.lc-open-section {
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+
+/* Card interne: più chiaramente subordinate */
+#modale-visibilita-card [id^="card-"] {
+  border-radius: 1.18rem !important;
   box-shadow:
-    0 12px 26px rgba(37, 99, 235, 0.08),
-    0 2px 6px rgba(15, 23, 42, 0.05) !important;
+    0 5px 12px rgba(15,23,42,0.045) !important;
 }
 
-/* Area contenuto interna dei details principali */
-#modale-visibilita > div > .mb-3 > details > div,
-#modale-visibilita > div > .mb-4 > details > div {
-  padding: 1rem !important;
-  background: #f8fafc !important;
-  border-top: 1px solid rgba(226, 232, 240, 0.95) !important;
-}
-
-/* Card interne: più compatte e con gerarchia inferiore */
-#modale-visibilita [id^="card-"] {
-  margin-top: 0 !important;
-  border-radius: 1.05rem !important;
-  box-shadow:
-    0 4px 10px rgba(15, 23, 42, 0.035) !important;
-}
-
-/* Card pacchetti dentro sezione aperta: sembrano figlie, non sezioni principali */
+/* Card pacchetti */
 #card-visibilita_premium,
 #card-pacchetto_visibilita {
-  padding: 0.95rem !important;
-  margin-bottom: 0.85rem !important;
-}
-
-/* Card urgente separata meglio dallo stato */
-#card-annuncio_urgente {
-  margin-top: 0.25rem !important;
   padding: 1rem !important;
+  margin-bottom: 0.95rem !important;
 }
 
-/* Details interni: meno bordo, più leggibilità */
-#modale-visibilita [id^="card-"] details {
-  margin-top: 0.85rem !important;
-  border-radius: 0.9rem !important;
-  background: rgba(255,255,255,0.88) !important;
+/* Titoli card interne */
+#modale-visibilita-card [id^="card-"] h3,
+#modale-visibilita-card [id^="card-"] h4 {
+  font-size: 1rem !important;
+  line-height: 1.18 !important;
 }
 
-/* Summary interni meno invadenti */
-#modale-visibilita [id^="card-"] details > summary {
-  padding: 0.75rem 0.85rem !important;
+/* Testi card interne */
+#modale-visibilita-card [id^="card-"] p {
+  font-size: 0.80rem !important;
+  line-height: 1.42 !important;
+}
+
+/* Details interni alle card */
+#modale-visibilita-card [id^="card-"] details {
+  margin-top: 0.9rem !important;
+  border-radius: 1rem !important;
+  background: rgba(255,255,255,0.80) !important;
+  border: 1px solid rgba(226,232,240,0.86) !important;
+}
+
+/* Summary interni */
+#modale-visibilita-card [id^="card-"] details > summary {
+  padding: 0.82rem 0.92rem !important;
   font-size: 0.78rem !important;
 }
 
-/* Contenuto aperto delle card interne */
-#modale-visibilita [id^="card-"] details > div {
-  padding: 0.9rem !important;
+/* Contenuto interno aperto */
+#modale-visibilita-card [id^="card-"] details > div {
+  padding: 0.95rem !important;
+  background: rgba(255,255,255,0.68) !important;
   line-height: 1.5 !important;
-  background: rgba(255,255,255,0.74) !important;
 }
 
-/* Liste più leggibili quando apri i pacchetti */
-#modale-visibilita ul.space-y-1 {
+/* Liste premium più leggibili */
+#modale-visibilita-card ul.space-y-1 {
   display: grid !important;
-  gap: 0.35rem !important;
-  margin-bottom: 0.75rem !important;
+  gap: 0.42rem !important;
+  margin-bottom: 0.8rem !important;
 }
 
-/* CTA interne più distanziate */
-#modale-visibilita [id^="btn-"] {
-  margin-top: 0.9rem !important;
+#modale-visibilita-card ul.space-y-1 li {
+  padding: 0.42rem 0.55rem !important;
+  border-radius: 0.75rem !important;
+  background: rgba(255,255,255,0.72) !important;
+  border: 1px solid rgba(226,232,240,0.70) !important;
 }
 
-/* Nota finale più separata */
-#modale-visibilita .text-xs.text-gray-500.border-t.pt-4 {
-  margin: 1.15rem 1rem 1.25rem !important;
+/* Pulsanti interni più importanti e leggibili */
+#modale-visibilita-card [id^="btn-"] {
+  margin-top: 0.95rem !important;
+  min-height: 2.55rem !important;
+  font-size: 0.88rem !important;
+}
+
+/* Nota finale */
+#modale-visibilita-card > .text-xs.text-gray-500.border-t.pt-4 {
+  margin: 1.2rem 1.15rem 1.25rem !important;
   padding-top: 1rem !important;
   line-height: 1.45 !important;
+  color: #64748b !important;
 }
 
-/* Mobile: alleggeriamo i badge sotto le sezioni */
+/* Scrollbar più discreta */
+#modale-visibilita-card::-webkit-scrollbar {
+  width: 7px;
+}
+
+#modale-visibilita-card::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,0.48);
+  border-radius: 9999px;
+}
+
+#modale-visibilita-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Mobile: resta centrato, non attaccato al fondo */
 @media (max-width: 640px) {
-  #modale-visibilita > div {
-    max-height: 88vh !important;
-    border-radius: 1.5rem 1.5rem 0 0 !important;
+  #modale-visibilita {
+    align-items: center !important;
+    padding: 0.9rem !important;
   }
 
-  #modale-visibilita > div > div:not(:first-child) {
+  #modale-visibilita-card {
+    width: min(94vw, 500px) !important;
+    max-height: 84vh !important;
+    border-radius: 1.7rem !important;
+  }
+
+  #modale-visibilita-card > div:first-child {
+    border-radius: 1.7rem 1.7rem 0 0 !important;
+    padding: 1rem 1.05rem 0.95rem !important;
+  }
+
+  #modale-visibilita-card > div:first-child h2 {
+    font-size: 1.08rem !important;
+  }
+
+  #modale-visibilita-card > div:first-child button[onclick="chiudiVisibilita()"] {
+    width: 2.55rem !important;
+    height: 2.55rem !important;
+  }
+
+  #modale-visibilita-card > .mb-3,
+  #modale-visibilita-card > .mb-4 {
     margin-left: 0.85rem !important;
     margin-right: 0.85rem !important;
+    margin-bottom: 0.95rem !important;
   }
 
-  #modale-visibilita > div > .mb-3 > details > summary,
-  #modale-visibilita > div > .mb-4 > details > summary {
+  #box-visibilita-stato {
+    padding: 1rem !important;
+    font-size: 0.86rem !important;
+  }
+
+  #modale-visibilita-card > .mb-3 > details > summary,
+  #modale-visibilita-card > .mb-4 > details > summary {
     padding: 0.95rem !important;
   }
 
-  #modale-visibilita > div > .mb-3 > details > summary .mt-2,
-  #modale-visibilita > div > .mb-4 > details > summary .mt-2 {
-    margin-top: 0.65rem !important;
+  #modale-visibilita-card > .mb-3 > details > div,
+  #modale-visibilita-card > .mb-4 > details > div {
+    padding: 0.9rem !important;
   }
 
-  #modale-visibilita > div > .mb-3 > details > summary .mt-2 span,
-  #modale-visibilita > div > .mb-4 > details > summary .mt-2 span {
-    font-size: 0.62rem !important;
-    padding: 0.12rem 0.45rem !important;
-  }
-
-  #modale-visibilita h3 {
-    font-size: 0.98rem !important;
-  }
-
-  #modale-visibilita h4 {
-    font-size: 0.98rem !important;
-  }
-
-  #modale-visibilita p {
-    line-height: 1.42 !important;
+  #modale-visibilita-card.lc-has-open > .mb-3:not(.lc-open-section),
+  #modale-visibilita-card.lc-has-open > .mb-4:not(.lc-open-section) {
+    opacity: 0.32;
+    filter: blur(1.4px) grayscale(0.22);
   }
 }
 
@@ -3577,6 +3772,39 @@ document.addEventListener("DOMContentLoaded", () => {
       handleStripeReturnStatusDashboard();
     }, 150);
   });
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const card = document.getElementById("modale-visibilita-card");
+  if (!card) return;
+
+  function aggiornaFocusModaleVisibilita() {
+    const sezioni = Array.from(card.querySelectorAll(":scope > .mb-3, :scope > .mb-4"));
+
+    sezioni.forEach(sezione => {
+      sezione.classList.remove("lc-open-section");
+    });
+
+    const dettagliAperti = Array.from(card.querySelectorAll("details[open]"));
+
+    const sezioneAperta = dettagliAperti
+      .map(d => d.closest(".mb-3, .mb-4"))
+      .find(Boolean);
+
+    if (sezioneAperta) {
+      card.classList.add("lc-has-open");
+      sezioneAperta.classList.add("lc-open-section");
+    } else {
+      card.classList.remove("lc-has-open");
+    }
+  }
+
+  card.querySelectorAll("details").forEach(details => {
+    details.addEventListener("toggle", () => {
+      setTimeout(aggiornaFocusModaleVisibilita, 30);
+    });
+  });
+});
 </script>
 
 {% endblock %}
