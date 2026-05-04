@@ -2253,54 +2253,50 @@ nav::before {
   padding: 0 !important;
   border-radius: 2rem !important;
   overflow-y: auto !important;
+
   background:
-    radial-gradient(circle at top right, rgba(59,130,246,0.08), transparent 34%),
-    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
+    radial-gradient(circle at top right, rgba(96,165,250,0.22), transparent 30%),
+    radial-gradient(circle at 8% 18%, rgba(244,114,182,0.13), transparent 28%),
+    linear-gradient(
+      180deg,
+      #0f172a 0%,
+      #172033 28%,
+      #eef2f7 28.2%,
+      #f8fafc 100%
+    ) !important;
+
   border: 1px solid rgba(255,255,255,0.86) !important;
   box-shadow:
     0 30px 80px rgba(15, 23, 42, 0.34),
     0 8px 24px rgba(15, 23, 42, 0.16),
-    inset 0 1px 0 rgba(255,255,255,0.85) !important;
+    inset 0 1px 0 rgba(255,255,255,0.12) !important;
 }
 
 /* ============================================================
-   HERO + STATO VISIBILITÀ — CARD STACCATA
+   HERO + STATO VISIBILITÀ — TESTATA INTEGRATA NEL MODALE
    ============================================================ */
 
 .lc-visibilita-hero-status {
   position: relative;
   overflow: visible;
-  margin: 1.05rem 1.15rem 1.25rem !important;
-  padding: 0 !important;
-  border-radius: 1.65rem !important;
+  margin: 0 !important;
+  padding: 1.05rem 1.15rem 1.15rem !important;
+  border-radius: 0 !important;
   background: transparent !important;
   color: #ffffff;
 }
 
-/* Card scura superiore: non più incollata al modale */
+/* niente quarta card */
 .lc-visibilita-hero-status::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 1.65rem;
-  background:
-    radial-gradient(circle at top right, rgba(96,165,250,0.22), transparent 34%),
-    radial-gradient(circle at bottom left, rgba(244,114,182,0.13), transparent 40%),
-    linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.98));
-  box-shadow:
-    0 18px 38px rgba(15,23,42,0.20),
-    0 8px 18px rgba(15,23,42,0.13),
-    inset 0 1px 0 rgba(255,255,255,0.13);
-  pointer-events: none;
+  display: none !important;
 }
 
-/* Bagliori più discreti */
 .lc-visibilita-hero-glow {
   position: absolute;
   border-radius: 9999px;
   pointer-events: none;
   filter: blur(34px);
-  opacity: 0.75;
+  opacity: 0.55;
 }
 
 .lc-visibilita-hero-glow-a {
@@ -2312,14 +2308,13 @@ nav::before {
 }
 
 .lc-visibilita-hero-glow-b {
-  bottom: -3.3rem;
+  bottom: -3rem;
   left: -2.7rem;
   width: 8rem;
   height: 8rem;
-  background: rgba(244,114,182,0.14);
+  background: rgba(244,114,182,0.13);
 }
 
-/* Riga titolo */
 .lc-visibilita-hero-top {
   position: relative;
   z-index: 2;
@@ -2327,7 +2322,6 @@ nav::before {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.85rem;
-  padding: 1rem 1rem 0.65rem;
 }
 
 .lc-visibilita-kicker {
@@ -2337,7 +2331,7 @@ nav::before {
   border-radius: 9999px;
   border: 1px solid rgba(255,255,255,0.16);
   background: rgba(255,255,255,0.10);
-  padding: 0.18rem 0.58rem;
+  padding: 0.2rem 0.62rem;
   font-size: 0.58rem;
   font-weight: 950;
   line-height: 1.1;
@@ -2357,13 +2351,12 @@ nav::before {
 
 .lc-visibilita-subtitle {
   margin-top: 0.42rem;
-  max-width: 19rem;
-  font-size: 0.76rem;
-  line-height: 1.35;
+  max-width: 20rem;
+  font-size: 0.77rem;
+  line-height: 1.38;
   color: rgba(219,234,254,0.84);
 }
 
-/* X più pulita */
 .lc-visibilita-close-btn {
   position: relative;
   z-index: 3;
@@ -2374,7 +2367,7 @@ nav::before {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.13);
   border: 1px solid rgba(255,255,255,0.18);
   color: #ffffff;
   font-size: 1rem;
@@ -2394,32 +2387,29 @@ nav::before {
   transform: scale(1.04);
 }
 
-/* Stato: resta dentro la hero, ma visivamente è una card separata */
 .lc-visibilita-status-wrap {
   position: relative;
   z-index: 2;
-  padding: 0 1rem 1rem;
-  margin-top: 0.15rem;
+  margin-top: 0.9rem;
 }
 
-/* Il box stato rimane dinamico: JS cambia className e contenuto */
+/* Stato: elemento funzionale, non quarta card */
 #box-visibilita-stato {
   overflow: visible;
-  padding: 0.95rem 1rem !important;
-  border-radius: 1.2rem !important;
+  padding: 0.85rem 0.95rem !important;
+  border-radius: 1.1rem !important;
   line-height: 1.42 !important;
-  font-size: 0.86rem !important;
+  font-size: 0.84rem !important;
   box-shadow:
-    0 12px 24px rgba(0,0,0,0.13),
-    0 2px 6px rgba(15,23,42,0.08),
+    0 10px 22px rgba(0,0,0,0.14),
     inset 0 1px 0 rgba(255,255,255,0.82) !important;
 }
 
 #box-visibilita-stato > div.absolute {
-  top: -0.58rem !important;
-  left: 0.85rem !important;
-  font-size: 0.64rem !important;
-  padding: 0.18rem 0.55rem !important;
+  top: -0.55rem !important;
+  left: 0.78rem !important;
+  font-size: 0.62rem !important;
+  padding: 0.16rem 0.52rem !important;
   border-radius: 9999px !important;
 }
 
@@ -2434,9 +2424,8 @@ nav::before {
   margin-bottom: 1.05rem !important;
 }
 
-/* La prima card non deve più sembrare attaccata all'header */
 #modale-visibilita-card > .lc-main-card:first-of-type {
-  margin-top: 0 !important;
+  margin-top: 0.25rem !important;
 }
 
 /* ============================================================
@@ -2821,23 +2810,24 @@ nav::before {
   }
 
   .lc-visibilita-hero-status {
-    margin: 0.85rem 0.85rem 1rem !important;
-    border-radius: 1.45rem !important;
-    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    padding: 0.95rem 0.9rem 1rem !important;
   }
 
   .lc-visibilita-hero-status::before {
-    border-radius: 1.45rem !important;
+    display: none !important;
   }
 
   .lc-visibilita-hero-top {
-    padding: 0.92rem 0.92rem 0.6rem !important;
+    padding: 0 !important;
   }
 
   .lc-visibilita-status-wrap {
-    padding: 0 0.92rem 0.92rem !important;
+    padding: 0 !important;
+    margin-top: 0.8rem !important;
   }
-  
+    
   .lc-visibilita-title {
     font-size: 1.08rem !important;
   }
