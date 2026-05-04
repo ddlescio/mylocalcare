@@ -248,7 +248,6 @@ button, input[type="submit"] {
   <script src="{{ url_for('static', filename='js/admin_counters.js') }}"></script>
   {% endif %}
 
-  <div id="app-portrait-lock">
 
   <!-- ✅ Navbar fissa in alto -->
   <nav id="main-navbar" class="fixed top-0 left-0 right-0 bg-white shadow z-50 transition-all duration-300 ease-in-out">
@@ -2637,92 +2636,79 @@ window.addEventListener("beforeunload", () => {
   }
 }
 </style>
-</div><!-- /#app-portrait-lock -->
 
 <style>
 /* =========================================================
- MOBILE LANDSCAPE LOCK — MyLocalCare
- Obiettivo:
- - nessun padding aggiunto
- - nessun top modificato
- - nessuna classe persistente
- - nessun reload
- - nessuna schermata "ruota il telefono"
- - in landscape viene mantenuto un layout portrait fittizio
+   iOS PWA SAFE TOP FIX — MyLocalCare
+
+   Scopo:
+   - non blocca la rotazione
+   - non ruota artificialmente l'app
+   - non usa overlay
+   - non usa reload
+   - sposta semplicemente navbar e contenuto più in basso
+     quando l'app è aperta come PWA standalone su iOS
 ========================================================= */
 
-/* Stato normale: non modifica nulla */
-#app-portrait-lock {
-width: 100%;
-min-height: 100%;
+:root {
+  --lc-pwa-top-offset: 34px;
 }
 
-/*
- Solo mobile/tablet piccoli in orizzontale.
- Invece di lasciare che il layout diventi landscape,
- ruotiamo l’intera app dentro una viewport portrait.
-*/
-@media (max-width: 900px) and (orientation: landscape) {
-html,
-body {
-  width: 100dvw !important;
-  height: 100dvh !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  background: #ffffff !important;
+/* App installata come PWA */
+html.pwa-installed #main-navbar {
+  top: var(--lc-pwa-top-offset) !important;
 }
 
-body {
-  position: fixed !important;
-  inset: 0 !important;
+/* Spazio bianco superiore stabile dietro status bar */
+html.pwa-installed body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--lc-pwa-top-offset);
+  background: #ffffff;
+  z-index: 9999;
+  pointer-events: none;
 }
 
-#app-portrait-lock {
-  position: fixed !important;
-
-  /*
-    In landscape:
-    - 100dvh diventa la larghezza "portrait"
-    - 100dvw diventa l’altezza disponibile ruotata
-  */
-  width: 100dvh !important;
-  height: 100dvw !important;
-
-  top: 0 !important;
-  left: 0 !important;
-
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-
-  background: #ffffff !important;
-
-  transform-origin: top left !important;
-  transform: rotate(90deg) translateY(-100%) !important;
-
-  -webkit-overflow-scrolling: touch !important;
+/* Il contenuto parte più sotto per compensare la navbar spostata */
+html.pwa-installed .container {
+  padding-top: var(--lc-pwa-top-offset) !important;
 }
 
-/*
-   Neutralizza eventuali fixed molto aggressivi dentro l’app ruotata.
-   La navbar resta nel suo contesto portrait.
-*/
-#main-navbar {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
+/* I messaggi flash seguono la navbar più bassa */
+html.pwa-installed #flash-root {
+  top: calc(5rem + var(--lc-pwa-top-offset)) !important;
 }
 
-/*
-   Evita che eventuali elementi esterni al wrapper creino fasce bianche.
-*/
-body::before,
-body::after {
-  content: none !important;
-  display: none !important;
+/* La barra ricerca inline sotto navbar si abbassa correttamente */
+html.pwa-installed #inline-search {
+  top: calc(4rem + var(--lc-pwa-top-offset)) !important;
 }
+
+/* Menu hamburger mobile sotto la navbar abbassata */
+html.pwa-installed #nav-menu {
+  top: calc(4.15rem + var(--lc-pwa-top-offset)) !important;
+}
+
+/* Correzione specifica per /cerca: mantiene il contenuto sotto navbar */
+html.pwa-installed body.page-cerca .container {
+  padding-top: calc(70px + 1rem + var(--lc-pwa-top-offset)) !important;
+}
+
+/* Mobile: un filo meno aggressivo se serve, ma stabile */
+@media (max-width: 640px) {
+  :root {
+    --lc-pwa-top-offset: 34px;
+  }
+
+  html.pwa-installed body.page-cerca .container {
+    padding-top: calc(70px + 0.5rem + var(--lc-pwa-top-offset)) !important;
+  }
 }
 </style>
+
+
 </body>
 </html>
