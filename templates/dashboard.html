@@ -699,225 +699,410 @@
     overflow-y-auto
   ">
 
-    <!-- HEADER -->
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-bold text-blue-700">
-        Aumenta la visibilità
-      </h2>
-      <button onclick="chiudiVisibilita()" class="text-gray-400 text-xl">
+  <!-- HEADER PREMIUM -->
+  <div class="relative -mx-6 -mt-6 mb-5 overflow-hidden rounded-t-3xl sm:rounded-t-3xl bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900 px-6 pt-6 pb-5 text-white">
+
+    <div class="absolute -top-16 -right-16 h-36 w-36 rounded-full bg-blue-400/25 blur-3xl"></div>
+    <div class="absolute -bottom-20 -left-16 h-40 w-40 rounded-full bg-pink-400/20 blur-3xl"></div>
+
+    <div class="relative flex items-start justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-100">
+          🚀 Visibilità annuncio
+        </div>
+
+        <h2 class="mt-3 text-2xl font-black tracking-[-0.04em] leading-tight">
+          Aumenta la visibilità
+        </h2>
+
+        <p class="mt-2 text-sm leading-relaxed text-blue-100/90">
+          Scegli un pacchetto completo oppure apri i singoli servizi per capire cosa fanno.
+        </p>
+      </div>
+
+      <button onclick="chiudiVisibilita()"
+              class="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition">
         ✕
       </button>
     </div>
+  </div>
 
-    <!-- STATO ATTUALE -->
-    <div class="mb-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">
-        Ora il tuo annuncio è:
-      </h3>
+  <!-- STATO ATTUALE -->
+  <div class="mb-5">
+    <details class="group rounded-2xl border border-slate-200 bg-slate-50/80 overflow-hidden">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <span class="text-sm font-bold text-slate-800">
+          Ora il tuo annuncio è:
+        </span>
 
-      <div id="box-visibilita-stato"
-           class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
-        Caricamento stato visibilità…
+        <span class="text-xs font-semibold text-blue-700 group-open:hidden">
+          Mostra
+        </span>
+        <span class="hidden text-xs font-semibold text-blue-700 group-open:inline">
+          Nascondi
+        </span>
+      </summary>
+
+      <div class="border-t border-slate-200 px-4 py-4">
+        <div id="box-visibilita-stato"
+             class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
+          Caricamento stato visibilità…
+        </div>
       </div>
-    </div>
+    </details>
+  </div>
 
-    <!-- SERVIZI SINGOLI -->
-    <div class="mb-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">
-        Servizi singoli
-      </h3>
-
-      <div class="space-y-3">
-
-        <!-- BOOST LISTA -->
-        <div id="card-boost_lista" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm">🚀 Boost lista</span>
-            <span id="badge-boost_lista" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-600">
-            Aumenta temporaneamente la visibilità del tuo annuncio nei risultati.
-          </p>
-
-          <p id="info-boost_lista" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-boost_lista"
-            onclick="apriServizio(this)"
-            data-codice="boost_lista"
-            data-titolo="🚀 Boost lista"
-            data-descrizione="Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca."
-            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-        <!-- EVIDENZA -->
-        <div id="card-badge_evidenza" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm">✨ Evidenza</span>
-            <span id="badge-badge_evidenza" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-600">
-            Rende il tuo annuncio più riconoscibile con cornice e badge.
-          </p>
-
-          <p id="info-badge_evidenza" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-badge_evidenza"
-            onclick="apriServizio(this)"
-            data-codice="badge_evidenza"
-            data-titolo="✨ Evidenza"
-            data-descrizione="Rende il tuo annuncio più visibile con cornice e badge."
-            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-        <!-- VETRINA -->
-        <div id="card-vetrina_annuncio" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm">🪟 Vetrina</span>
-            <span id="badge-vetrina_annuncio" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-600">
-            Inserisce l’annuncio in una sezione ad alta visibilità.
-          </p>
-
-          <p id="info-vetrina_annuncio" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-vetrina_annuncio"
-            onclick="apriServizio(this)"
-            data-codice="vetrina_annuncio"
-            data-titolo="🪟 Vetrina"
-            data-descrizione="Inserisce il tuo annuncio in una sezione dedicata ad alta visibilità."
-            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-        <!-- URGENTE -->
-        <div id="card-annuncio_urgente" class="border border-rose-200 bg-rose-50/70 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm text-rose-700">⚡ Urgente</span>
-            <span id="badge-annuncio_urgente" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-700">
-            Spinta immediata con notifiche agli utenti compatibili.
-          </p>
-
-          <p id="info-annuncio_urgente" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-annuncio_urgente"
-            onclick="apriServizio(this)"
-            data-codice="annuncio_urgente"
-            data-titolo="⚡ Urgente"
-            data-descrizione="Spinta massima con notifiche agli utenti compatibili."
-            class="mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-        <!-- CONTATTI -->
-        <div id="card-contatti" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm">📞 Sblocco contatti</span>
-            <span id="badge-contatti" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-600">
-            Consente di visualizzare email e telefono dell’annuncio.
-          </p>
-
-          <p id="info-contatti" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-contatti"
-            onclick="apriServizio(this)"
-            data-codice="contatti"
-            data-titolo="📞 Sblocco contatti"
-            data-descrizione="Consente di visualizzare email e telefono dell’annuncio."
-            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- PACCHETTI -->
-    <div class="mb-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">
+  <!-- PACCHETTI IN PRIMO PIANO -->
+  <div class="mb-6">
+    <div class="mb-3">
+      <h3 class="text-base font-black tracking-[-0.03em] text-slate-950">
         Pacchetti consigliati
       </h3>
+      <p class="mt-1 text-xs text-slate-500">
+        Le opzioni più complete, pensate per ottenere più visibilità senza scegliere ogni servizio singolarmente.
+      </p>
+    </div>
 
-      <div class="space-y-4">
+    <div class="space-y-4">
 
-        <!-- PACCHETTO VISIBILITÀ -->
-        <div id="card-pacchetto_visibilita"
-             class="border border-blue-200 bg-blue-50/60 rounded-2xl p-4">
+      <!-- URGENTE IN TESTA -->
+      <div id="card-annuncio_urgente"
+           class="relative overflow-hidden rounded-[1.6rem] border border-rose-200 bg-gradient-to-br from-rose-50 via-white to-orange-50 p-4 shadow-[0_18px_38px_rgba(244,63,94,0.14)]">
 
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm text-blue-800">📦 Pacchetto Visibilità</span>
-            <span id="badge-pacchetto_visibilita"
-                  class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+        <div class="absolute -top-14 -right-14 h-28 w-28 rounded-full bg-rose-300/35 blur-2xl"></div>
+
+        <div class="relative flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="inline-flex items-center gap-1.5 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-sm">
+              ⚡ Urgenza
+            </div>
+
+            <h4 class="mt-3 text-lg font-black tracking-[-0.035em] text-rose-950">
+              Annuncio urgente
+            </h4>
+
+            <p class="mt-1 text-sm leading-relaxed text-slate-700">
+              La spinta più immediata per dare risalto all’annuncio quando vuoi maggiore attenzione in tempi brevi.
+            </p>
           </div>
 
-          <p class="text-xs text-slate-700">
-            Combina più servizi per aumentare la visibilità del tuo annuncio.
-          </p>
-
-          <ul class="mt-2 text-xs text-slate-600 list-disc list-inside space-y-1">
-            <li>Boost lista</li>
-            <li>Evidenza</li>
-            <li>Contatti temporanei</li>
-          </ul>
-
-          <p id="info-pacchetto_visibilita" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-pacchetto_visibilita"
-            onclick="apriServizio(this)"
-            data-codice="pacchetto_visibilita"
-            data-titolo="📦 Pacchetto Visibilità"
-            data-descrizione="Pacchetto che combina più servizi di visibilità."
-            class="mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
-            Scopri il pacchetto
-          </button>
+          <span id="badge-annuncio_urgente"
+                class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
         </div>
 
-        <!-- VISIBILITÀ PREMIUM -->
-        <div id="card-visibilita_premium"
-             class="border border-amber-300 bg-amber-50/70 rounded-2xl p-4">
+        <details class="group relative mt-3 rounded-2xl bg-white/70 border border-rose-100">
+          <summary class="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-bold text-rose-700">
+            <span>Scopri come funziona</span>
+            <span class="group-open:hidden">＋</span>
+            <span class="hidden group-open:inline">−</span>
+          </summary>
 
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm text-amber-800">🌟 Visibilità Premium</span>
-            <span id="badge-visibilita_premium"
-                  class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+          <div class="border-t border-rose-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
+            <p>
+              Evidenzia l’annuncio come urgente e lo rende più adatto ai casi in cui vuoi attirare attenzione rapidamente.
+            </p>
+
+            <p id="info-annuncio_urgente" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+            <button id="btn-annuncio_urgente"
+              onclick="apriServizio(this)"
+              data-codice="annuncio_urgente"
+              data-titolo="⚡ Urgente"
+              data-descrizione="Spinta massima con notifiche agli utenti compatibili."
+              class="mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-medium">
+              Scopri
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <!-- VISIBILITÀ PREMIUM -->
+      <div id="card-visibilita_premium"
+           class="relative overflow-hidden rounded-[1.6rem] border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-yellow-50 p-4 shadow-[0_18px_38px_rgba(245,158,11,0.14)]">
+
+        <div class="absolute -top-16 -right-16 h-32 w-32 rounded-full bg-amber-300/30 blur-2xl"></div>
+
+        <div class="relative flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-sm">
+              🌟 Premium
+            </div>
+
+            <h4 class="mt-3 text-lg font-black tracking-[-0.035em] text-amber-950">
+              Visibilità Premium
+            </h4>
+
+            <p class="mt-1 text-sm leading-relaxed text-slate-700">
+              Tutti i servizi inclusi con massima priorità.
+            </p>
           </div>
 
-          <p class="text-xs text-slate-700">
-            Tutti i servizi inclusi con massima priorità.
-          </p>
-
-          <ul class="mt-2 text-xs text-slate-700 list-disc list-inside space-y-1">
-            <li>Tutti i servizi di visibilità</li>
-            <li>Vetrina</li>
-            <li>Contatti inclusi</li>
-          </ul>
-
-          <p id="info-visibilita_premium" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-visibilita_premium"
-            onclick="apriServizio(this)"
-            data-codice="visibilita_premium"
-            data-titolo="🌟 Visibilità Premium"
-            data-descrizione="Pacchetto con massima visibilità e priorità."
-            class="mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
-            Scopri
-          </button>
+          <span id="badge-visibilita_premium"
+                class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
         </div>
+
+        <div class="relative mt-3 grid grid-cols-3 gap-2">
+          <div class="rounded-2xl bg-white/75 border border-amber-100 px-2 py-2 text-center">
+            <div class="text-base">🚀</div>
+            <div class="mt-1 text-[10px] font-bold text-slate-600">Boost</div>
+          </div>
+
+          <div class="rounded-2xl bg-white/75 border border-amber-100 px-2 py-2 text-center">
+            <div class="text-base">🪟</div>
+            <div class="mt-1 text-[10px] font-bold text-slate-600">Vetrina</div>
+          </div>
+
+          <div class="rounded-2xl bg-white/75 border border-amber-100 px-2 py-2 text-center">
+            <div class="text-base">📞</div>
+            <div class="mt-1 text-[10px] font-bold text-slate-600">Contatti</div>
+          </div>
+        </div>
+
+        <details class="group relative mt-3 rounded-2xl bg-white/70 border border-amber-100">
+          <summary class="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-bold text-amber-700">
+            <span>Scopri cosa include</span>
+            <span class="group-open:hidden">＋</span>
+            <span class="hidden group-open:inline">−</span>
+          </summary>
+
+          <div class="border-t border-amber-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
+            <ul class="space-y-1">
+              <li>• Tutti i servizi di visibilità</li>
+              <li>• Vetrina</li>
+              <li>• Contatti inclusi</li>
+            </ul>
+
+            <p id="info-visibilita_premium" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+            <button id="btn-visibilita_premium"
+              onclick="apriServizio(this)"
+              data-codice="visibilita_premium"
+              data-titolo="🌟 Visibilità Premium"
+              data-descrizione="Pacchetto con massima visibilità e priorità."
+              class="mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
+              Scopri
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <!-- PACCHETTO VISIBILITÀ -->
+      <div id="card-pacchetto_visibilita"
+           class="relative overflow-hidden rounded-[1.6rem] border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 shadow-[0_16px_34px_rgba(59,130,246,0.12)]">
+
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-sm">
+              📦 Consigliato
+            </div>
+
+            <h4 class="mt-3 text-lg font-black tracking-[-0.035em] text-blue-950">
+              Pacchetto Visibilità
+            </h4>
+
+            <p class="mt-1 text-sm leading-relaxed text-slate-700">
+              Combina più servizi per aumentare la visibilità del tuo annuncio.
+            </p>
+          </div>
+
+          <span id="badge-pacchetto_visibilita"
+                class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+        </div>
+
+        <details class="group mt-3 rounded-2xl bg-white/70 border border-blue-100">
+          <summary class="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-bold text-blue-700">
+            <span>Scopri cosa include</span>
+            <span class="group-open:hidden">＋</span>
+            <span class="hidden group-open:inline">−</span>
+          </summary>
+
+          <div class="border-t border-blue-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
+            <ul class="space-y-1">
+              <li>• Boost lista</li>
+              <li>• Evidenza</li>
+              <li>• Contatti temporanei</li>
+            </ul>
+
+            <p id="info-pacchetto_visibilita" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+            <button id="btn-pacchetto_visibilita"
+              onclick="apriServizio(this)"
+              data-codice="pacchetto_visibilita"
+              data-titolo="📦 Pacchetto Visibilità"
+              data-descrizione="Pacchetto che combina più servizi di visibilità."
+              class="mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
+              Scopri il pacchetto
+            </button>
+          </div>
+        </details>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SERVIZI SINGOLI COMPATTI -->
+  <div class="mb-6">
+    <div class="mb-3">
+      <h3 class="text-base font-black tracking-[-0.03em] text-slate-950">
+        Servizi singoli
+      </h3>
+      <p class="mt-1 text-xs text-slate-500">
+        Apri solo quello che ti interessa.
+      </p>
+    </div>
+
+    <div class="space-y-2">
+
+      <!-- BOOST LISTA -->
+      <div id="card-boost_lista" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3">
+          <div class="min-w-0">
+            <div class="font-bold text-sm text-slate-900">🚀 Boost lista</div>
+            <div class="mt-0.5 text-xs text-slate-500">Più visibilità nei risultati</div>
+          </div>
+
+          <span id="badge-boost_lista" class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+        </div>
+
+        <details class="group border-t border-slate-100">
+          <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-bold text-blue-700">
+            <span>Scopri come funziona</span>
+            <span class="group-open:hidden">＋</span>
+            <span class="hidden group-open:inline">−</span>
+          </summary>
+
+          <div class="px-4 pb-4 text-xs leading-relaxed text-slate-600">
+            <p>
+              Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca.
+            </p>
+
+            <p id="info-boost_lista" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+            <button id="btn-boost_lista"
+              onclick="apriServizio(this)"
+              data-codice="boost_lista"
+              data-titolo="🚀 Boost lista"
+              data-descrizione="Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca."
+              class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+              Scopri
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <!-- EVIDENZA -->
+      <div id="card-badge_evidenza" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3">
+          <div class="min-w-0">
+            <div class="font-bold text-sm text-slate-900">✨ Evidenza</div>
+            <div class="mt-0.5 text-xs text-slate-500">Badge e cornice più riconoscibili</div>
+          </div>
+
+          <span id="badge-badge_evidenza" class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+        </div>
+
+        <details class="group border-t border-slate-100">
+          <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-bold text-blue-700">
+            <span>Scopri come funziona</span>
+            <span class="group-open:hidden">＋</span>
+            <span class="hidden group-open:inline">−</span>
+          </summary>
+
+          <div class="px-4 pb-4 text-xs leading-relaxed text-slate-600">
+            <p>
+              Rende il tuo annuncio più riconoscibile con cornice e badge.
+            </p>
+
+            <p id="info-badge_evidenza" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+            <button id="btn-badge_evidenza"
+              onclick="apriServizio(this)"
+              data-codice="badge_evidenza"
+              data-titolo="✨ Evidenza"
+              data-descrizione="Rende il tuo annuncio più visibile con cornice e badge."
+              class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+              Scopri
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <!-- VETRINA -->
+      <div id="card-vetrina_annuncio" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3">
+          <div class="min-w-0">
+            <div class="font-bold text-sm text-slate-900">🪟 Vetrina</div>
+            <div class="mt-0.5 text-xs text-slate-500">Sezione ad alta visibilità</div>
+          </div>
+
+          <span id="badge-vetrina_annuncio" class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+        </div>
+
+        <details class="group border-t border-slate-100">
+          <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-bold text-blue-700">
+            <span>Scopri come funziona</span>
+            <span class="group-open:hidden">＋</span>
+            <span class="hidden group-open:inline">−</span>
+          </summary>
+
+          <div class="px-4 pb-4 text-xs leading-relaxed text-slate-600">
+            <p>
+              Inserisce l’annuncio in una sezione dedicata ad alta visibilità.
+            </p>
+
+            <p id="info-vetrina_annuncio" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+            <button id="btn-vetrina_annuncio"
+              onclick="apriServizio(this)"
+              data-codice="vetrina_annuncio"
+              data-titolo="🪟 Vetrina"
+              data-descrizione="Inserisce il tuo annuncio in una sezione dedicata ad alta visibilità."
+              class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+              Scopri
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <!-- CONTATTI -->
+      <div id="card-contatti" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3">
+          <div class="min-w-0">
+            <div class="font-bold text-sm text-slate-900">📞 Sblocco contatti</div>
+            <div class="mt-0.5 text-xs text-slate-500">Email e telefono visibili</div>
+          </div>
+
+          <span id="badge-contatti" class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+        </div>
+
+        <details class="group border-t border-slate-100">
+          <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-bold text-blue-700">
+            <span>Scopri come funziona</span>
+            <span class="group-open:hidden">＋</span>
+            <span class="hidden group-open:inline">−</span>
+          </summary>
+
+          <div class="px-4 pb-4 text-xs leading-relaxed text-slate-600">
+            <p>
+              Consente di visualizzare email e telefono dell’annuncio.
+            </p>
+
+            <p id="info-contatti" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+            <button id="btn-contatti"
+              onclick="apriServizio(this)"
+              data-codice="contatti"
+              data-titolo="📞 Sblocco contatti"
+              data-descrizione="Consente di visualizzare email e telefono dell’annuncio."
+              class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+              Scopri
+            </button>
+          </div>
+        </details>
+      </div>
+
+    </div>
+  </div>
 
         <!-- ✅ MODALE CONFERMA -->
         <div id="modale-conferma"
@@ -2121,7 +2306,7 @@ document.addEventListener("DOMContentLoaded", () => {
         history.replaceState(null, "", "#" + tab);
       }
     });
-  });  
+  });
 });
 </script>
 <script>
@@ -2418,9 +2603,12 @@ let NUM_SERVIZI_ATTESI = 0;
              "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
 
            btn.disabled = false;
-           btn.textContent = "Scopri";
+           btn.textContent = btn.dataset.codice === "pacchetto_visibilita"
+             ? "Scopri il pacchetto"
+             : "Scopri";
            btn.className =
              "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
+
            } else {
              badge.textContent = "Attivo";
              badge.className =
