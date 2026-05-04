@@ -2637,38 +2637,43 @@ window.addEventListener("beforeunload", () => {
 </style>
 <style>
 /* =========================================================
-   iOS PWA — blocco landscape + ripristino tramite reload reale
-   NON aggiunge padding/top.
-   NON tenta di correggere la safe-area a mano.
+   iOS / mobile PWA — blocco visivo landscape SENZA toccare layout
+   Non aggiunge padding.
+   Non sposta navbar.
+   Non ricarica pagina.
+   Non usa body::before.
 ========================================================= */
 
 #lc-orientation-guard {
   display: none;
 }
 
-html.lc-ios-pwa-standalone.lc-landscape-lock,
-html.lc-ios-pwa-standalone.lc-landscape-lock body {
-  overflow: hidden !important;
-  height: 100% !important;
-}
+/* Overlay solo su mobile/tablet piccoli in orizzontale */
+@media (max-width: 900px) and (orientation: landscape) {
+  html,
+  body {
+    overflow: hidden !important;
+  }
 
-html.lc-ios-pwa-standalone.lc-landscape-lock #lc-orientation-guard {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 2147483647 !important;
+  #lc-orientation-guard {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147483647 !important;
 
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 
-  padding: 1.5rem !important;
-  background:
-    radial-gradient(circle at top left, rgba(219,234,254,0.96), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(252,231,243,0.92), transparent 34%),
-    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96)) !important;
+    padding: 1.5rem !important;
 
-  backdrop-filter: blur(18px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+    background:
+      radial-gradient(circle at top left, rgba(219,234,254,0.96), transparent 32%),
+      radial-gradient(circle at bottom right, rgba(252,231,243,0.92), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96)) !important;
+
+    backdrop-filter: blur(18px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+  }
 }
 
 .lc-orientation-card {
@@ -2676,7 +2681,7 @@ html.lc-ios-pwa-standalone.lc-landscape-lock #lc-orientation-guard {
   border-radius: 1.75rem;
   padding: 1.5rem 1.25rem;
 
-  background: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.94);
   border: 1px solid rgba(226,232,240,0.95);
 
   box-shadow:
@@ -2702,6 +2707,7 @@ html.lc-ios-pwa-standalone.lc-landscape-lock #lc-orientation-guard {
   border: 1px solid rgba(191,219,254,0.95);
 
   font-size: 2rem;
+
   box-shadow:
     0 10px 22px rgba(37,99,235,0.12),
     inset 0 1px 0 rgba(255,255,255,0.95);
@@ -2723,164 +2729,61 @@ html.lc-ios-pwa-standalone.lc-landscape-lock #lc-orientation-guard {
   line-height: 1.45;
   max-width: 17rem;
 }
-
-html.lc-pwa-hard-refreshing body {
-  opacity: 0 !important;
-  transition: opacity 0.08s ease !important;
-}
 </style>
 
+<div id="lc-orientation-guard" aria-live="polite">
+  <div class="lc-orientation-card">
+    <div class="lc-orientation-icon">↻</div>
+    <h2 class="lc-orientation-title">Ruota il telefono</h2>
+    <p class="lc-orientation-text">
+      MyLocalCare è ottimizzato per l’uso verticale.
+      Torna in verticale per continuare.
+    </p>
+  </div>
+</div>
+
 <script>
-/* =========================================================
-   iOS PWA — workaround definitivo per bug status bar dopo rotazione
-
-   Comportamento:
-   - verticale iniziale: non tocca nulla;
-   - landscape: mostra overlay;
-   - ritorno portrait: forza nuova navigazione con parametro cache-buster;
-   - dopo reload: rimuove il parametro dall'URL.
-========================================================= */
+/*
+  Pulizia delle vecchie patch:
+  rimuove classi, padding e top inline eventualmente lasciati
+  dai tentativi precedenti.
+*/
 (function () {
-  function isIOSDevice() {
-    return /iphone|ipad|ipod/i.test(navigator.userAgent)
-      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  }
+  function cleanOldOrientationFixes() {
+    const root = document.documentElement;
+    const body = document.body;
+    const navbar = document.getElementById("main-navbar");
 
-  function isStandalonePWA() {
-    return window.matchMedia("(display-mode: standalone)").matches
-      || window.navigator.standalone === true;
-  }
-
-  if (!isIOSDevice() || !isStandalonePWA()) {
-    return;
-  }
-
-  const root = document.documentElement;
-  root.classList.add("lc-ios-pwa-standalone");
-
-  /*
-    Pulizia dei vecchi tentativi.
-    Queste chiavi erano usate dalle patch precedenti e possono causare
-    padding errati anche all'avvio.
-  */
-  try {
-    sessionStorage.removeItem("lc_ios_pwa_rotated_landscape");
-    sessionStorage.removeItem("lc_ios_pwa_was_landscape");
-  } catch (e) {}
-
-  let startedLandscape = false;
-  let sawLandscape = false;
-  let hardRefreshStarted = false;
-
-  function isLandscape() {
-    return window.innerWidth > window.innerHeight;
-  }
-
-  function ensureOrientationGuard() {
-    if (document.getElementById("lc-orientation-guard")) {
-      return;
-    }
-
-    const guard = document.createElement("div");
-    guard.id = "lc-orientation-guard";
-    guard.setAttribute("aria-live", "polite");
-    guard.innerHTML = `
-      <div class="lc-orientation-card">
-        <div class="lc-orientation-icon">↻</div>
-        <h2 class="lc-orientation-title">Ruota il telefono</h2>
-        <p class="lc-orientation-text">
-          MyLocalCare è ottimizzato per l’uso verticale su iPhone.
-          Torna in verticale per continuare.
-        </p>
-      </div>
-    `;
-
-    document.body.appendChild(guard);
-  }
-
-  function cleanPwaRefreshParam() {
-    const url = new URL(window.location.href);
-
-    if (!url.searchParams.has("_pwa_orient_fix")) {
-      return;
-    }
-
-    url.searchParams.delete("_pwa_orient_fix");
-
-    window.history.replaceState(
-      {},
-      document.title,
-      url.pathname + url.search + url.hash
+    root.classList.remove(
+      "lc-ios-pwa-standalone",
+      "lc-landscape-lock",
+      "lc-ios-statusbar-repair",
+      "lc-pwa-hard-refreshing",
+      "lc-pwa-reloading",
+      "pwa-landscape",
+      "pwa-portrait"
     );
-  }
 
-  function forceHardPortraitReload() {
-    if (hardRefreshStarted) return;
-    hardRefreshStarted = true;
-
-    root.classList.add("lc-pwa-hard-refreshing");
-
-    const url = new URL(window.location.href);
-
-    /*
-      Parametro sempre diverso:
-      evita che iOS riusi una vecchia istanza visiva della PWA.
-    */
-    url.searchParams.set("_pwa_orient_fix", String(Date.now()));
-
-    setTimeout(function () {
-      window.location.href = url.toString();
-    }, 80);
-  }
-
-  function handleOrientationState() {
-    const landscape = isLandscape();
-
-    if (landscape) {
-      sawLandscape = true;
-      ensureOrientationGuard();
-      root.classList.add("lc-landscape-lock");
-      return;
+    if (body) {
+      body.style.paddingTop = "";
+      body.style.marginTop = "";
+      body.style.top = "";
     }
 
-    root.classList.remove("lc-landscape-lock");
-
-    /*
-      Se l'app è stata aperta già in orizzontale, non ricarico subito:
-      mostro solo il messaggio e aspetto un ritorno verticale stabile.
-    */
-    if (sawLandscape && !startedLandscape) {
-      forceHardPortraitReload();
+    if (navbar) {
+      navbar.style.top = "";
+      navbar.style.transform = "";
+      navbar.style.webkitTransform = "";
     }
+
+    try {
+      sessionStorage.removeItem("lc_ios_pwa_rotated_landscape");
+      sessionStorage.removeItem("lc_ios_pwa_was_landscape");
+    } catch (e) {}
   }
 
-  function scheduleCheck() {
-    handleOrientationState();
-    setTimeout(handleOrientationState, 120);
-    setTimeout(handleOrientationState, 350);
-    setTimeout(handleOrientationState, 700);
-  }
-
-  window.addEventListener("load", function () {
-    startedLandscape = isLandscape();
-
-    cleanPwaRefreshParam();
-
-    if (startedLandscape) {
-      sawLandscape = true;
-    }
-
-    scheduleCheck();
-  });
-
-  window.addEventListener("resize", scheduleCheck);
-  window.addEventListener("orientationchange", scheduleCheck);
-
-  document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) {
-      scheduleCheck();
-    }
-  });
+  window.addEventListener("DOMContentLoaded", cleanOldOrientationFixes);
+  window.addEventListener("pageshow", cleanOldOrientationFixes);
 })();
 </script>
 
