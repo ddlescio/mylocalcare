@@ -2535,6 +2535,128 @@ nav::before {
   color: #64748b !important;
 }
 
+/* Evita che le sezioni sfocate blocchino o catturino male i click */
+#modale-visibilita-card.lc-has-open > .mb-3:not(.lc-open-section),
+#modale-visibilita-card.lc-has-open > .mb-4:not(.lc-open-section) {
+  pointer-events: auto;
+}
+
+/* La sezione aperta ha priorità visiva e di interazione */
+#modale-visibilita-card.lc-has-open > .lc-open-section {
+  position: relative;
+  z-index: 5;
+}
+
+/* Quando una sezione è aperta, riduco un po' lo spazio inutile sopra/sotto */
+#modale-visibilita-card.lc-has-open {
+  scroll-behavior: smooth;
+}
+
+/* ============================================================
+   CHIUSURA SEMPRE VISIBILE QUANDO UNA SEZIONE È APERTA
+   ============================================================ */
+
+/* Summary principali aperti: Pacchetti consigliati / Servizi singoli */
+#modale-visibilita-card.lc-has-open > .lc-open-section > details[open] > summary {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 20 !important;
+  margin: -1px -1px 0 !important;
+  border-radius: 1.45rem 1.45rem 1rem 1rem !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96)) !important;
+  border-bottom: 1px solid rgba(203,213,225,0.85) !important;
+  box-shadow:
+    0 10px 20px rgba(15,23,42,0.08),
+    0 1px 0 rgba(255,255,255,0.85) inset !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Rende più evidente il comando Chiudi nei summary principali */
+#modale-visibilita-card.lc-has-open > .lc-open-section > details[open] > summary .group-open\:inline,
+#modale-visibilita-card.lc-has-open > .lc-open-section > details[open] > summary .group-open\:hidden + span {
+  font-weight: 900 !important;
+}
+
+/* Bottone testuale Chiudi più simile a una pill */
+#modale-visibilita-card.lc-has-open > .lc-open-section > details[open] > summary > div:last-child {
+  padding: 0.35rem 0.55rem !important;
+  border-radius: 9999px !important;
+  background: rgba(37,99,235,0.09) !important;
+  border: 1px solid rgba(37,99,235,0.16) !important;
+  color: #1d4ed8 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8) !important;
+}
+
+/* Details interni aperti: singolo servizio / singolo pacchetto */
+#modale-visibilita-card [id^="card-"] details[open] > summary {
+  position: sticky !important;
+  top: 3.35rem !important;
+  z-index: 18 !important;
+  margin: -1px -1px 0 !important;
+  border-radius: 1rem 1rem 0.85rem 0.85rem !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94)) !important;
+  border-bottom: 1px solid rgba(203,213,225,0.78) !important;
+  box-shadow:
+    0 8px 16px rgba(15,23,42,0.075),
+    inset 0 1px 0 rgba(255,255,255,0.9) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Trasforma il + / − interno in un comando più visibile */
+#modale-visibilita-card [id^="card-"] details[open] > summary::after {
+  content: "Chiudi ×";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.8rem;
+  padding: 0.25rem 0.62rem;
+  margin-left: 0.65rem;
+  border-radius: 9999px;
+  background: rgba(15,23,42,0.92);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow:
+    0 7px 14px rgba(15,23,42,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.16);
+}
+
+/* Nasconde il vecchio meno nei details interni aperti, così non hai doppio simbolo */
+#modale-visibilita-card [id^="card-"] details[open] > summary > span:last-child {
+  display: none !important;
+}
+
+/* Evidenzia meglio la card interna aperta */
+#modale-visibilita-card [id^="card-"] details[open] {
+  border-color: rgba(37,99,235,0.24) !important;
+  box-shadow:
+    0 10px 22px rgba(37,99,235,0.08),
+    0 2px 8px rgba(15,23,42,0.05) !important;
+}
+
+/* Mobile: la barra sticky interna resta più alta e comoda da cliccare */
+@media (max-width: 640px) {
+  #modale-visibilita-card.lc-has-open > .lc-open-section > details[open] > summary {
+    top: 0 !important;
+  }
+
+  #modale-visibilita-card [id^="card-"] details[open] > summary {
+    top: 3rem !important;
+  }
+
+  #modale-visibilita-card [id^="card-"] details[open] > summary::after {
+    min-height: 1.7rem;
+    padding: 0.22rem 0.55rem;
+    font-size: 0.64rem;
+  }
+}
+
 /* Scrollbar più discreta */
 #modale-visibilita-card::-webkit-scrollbar {
   width: 7px;
@@ -2846,8 +2968,34 @@ let ANNUNCIO_ID_CORRENTE = null;
 </script>
 <script>
   function chiudiVisibilita() {
-    document.getElementById("modale-visibilita").classList.add("hidden");
-    document.body.classList.remove("overflow-hidden", "modal-open"); // 🔓 RIABILITA SCROLL
+    const modale = document.getElementById("modale-visibilita");
+    const card = document.getElementById("modale-visibilita-card");
+
+    // Chiudo anche eventuali modali figli/sovrapposti
+    document.getElementById("modale-servizio")?.classList.add("hidden");
+    document.getElementById("modale-conferma")?.classList.add("hidden");
+
+    // Reset Stripe box/conferma, se era stato aperto
+    document.getElementById("stripe-box")?.classList.add("hidden");
+
+    // Reset focus/sfocatura
+    if (card) {
+      card.classList.remove("lc-has-open");
+      card.querySelectorAll(".lc-open-section").forEach(el => {
+        el.classList.remove("lc-open-section");
+      });
+
+      // Chiudo tutte le tendine rimaste aperte
+      card.querySelectorAll("details[open]").forEach(d => {
+        d.removeAttribute("open");
+      });
+
+      // Riporto lo scroll interno in alto
+      card.scrollTo({ top: 0, behavior: "auto" });
+    }
+
+    modale?.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden", "modal-open");
   }
 </script>
 <script>
@@ -3776,10 +3924,46 @@ document.addEventListener("DOMContentLoaded", () => {
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const card = document.getElementById("modale-visibilita-card");
-  if (!card) return;
+  const modale = document.getElementById("modale-visibilita");
 
-  function aggiornaFocusModaleVisibilita() {
-    const sezioni = Array.from(card.querySelectorAll(":scope > .mb-3, :scope > .mb-4"));
+  if (!card || !modale) return;
+
+  let gestioneToggleInCorso = false;
+
+  function getSezioniPrincipali() {
+    return Array.from(card.querySelectorAll(":scope > .mb-3, :scope > .mb-4"));
+  }
+
+  function resetFocusModaleVisibilita() {
+    card.classList.remove("lc-has-open");
+
+    getSezioniPrincipali().forEach(sezione => {
+      sezione.classList.remove("lc-open-section");
+    });
+  }
+
+  function centraSezioneNelModale(sezione) {
+    if (!sezione) return;
+
+    const cardRect = card.getBoundingClientRect();
+    const sectionRect = sezione.getBoundingClientRect();
+
+    const currentScroll = card.scrollTop;
+
+    const sectionCenter =
+      sectionRect.top - cardRect.top + currentScroll + sectionRect.height / 2;
+
+    const targetScroll =
+      sectionCenter - card.clientHeight / 2;
+
+    card.scrollTo({
+      top: Math.max(0, targetScroll),
+      behavior: "smooth"
+    });
+  }
+
+  function aggiornaFocusModaleVisibilita(detailsAperto = null) {
+    const sezioni = getSezioniPrincipali();
 
     sezioni.forEach(sezione => {
       sezione.classList.remove("lc-open-section");
@@ -3787,22 +3971,82 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const dettagliAperti = Array.from(card.querySelectorAll("details[open]"));
 
-    const sezioneAperta = dettagliAperti
-      .map(d => d.closest(".mb-3, .mb-4"))
-      .find(Boolean);
+    const sezioneAperta = detailsAperto
+      ? detailsAperto.closest(".mb-3, .mb-4")
+      : dettagliAperti
+          .map(d => d.closest(".mb-3, .mb-4"))
+          .find(Boolean);
 
-    if (sezioneAperta) {
-      card.classList.add("lc-has-open");
-      sezioneAperta.classList.add("lc-open-section");
-    } else {
-      card.classList.remove("lc-has-open");
+    if (!sezioneAperta) {
+      resetFocusModaleVisibilita();
+      return;
     }
+
+    card.classList.add("lc-has-open");
+    sezioneAperta.classList.add("lc-open-section");
+
+    setTimeout(() => {
+      centraSezioneNelModale(sezioneAperta);
+    }, 120);
   }
 
   card.querySelectorAll("details").forEach(details => {
     details.addEventListener("toggle", () => {
-      setTimeout(aggiornaFocusModaleVisibilita, 30);
+      if (gestioneToggleInCorso) return;
+
+      gestioneToggleInCorso = true;
+
+      setTimeout(() => {
+        if (details.open) {
+          const sezioneCorrente = details.closest(".mb-3, .mb-4");
+
+          /*
+            Chiude gli altri details appartenenti ad altre sezioni principali.
+            Così non rimangono aperte più aree lontane tra loro.
+          */
+          card.querySelectorAll("details[open]").forEach(altro => {
+            if (altro === details) return;
+
+            const altraSezione = altro.closest(".mb-3, .mb-4");
+
+            if (altraSezione !== sezioneCorrente) {
+              altro.removeAttribute("open");
+            }
+          });
+
+          aggiornaFocusModaleVisibilita(details);
+        } else {
+          const ancoraAperti = card.querySelectorAll("details[open]");
+
+          if (!ancoraAperti.length) {
+            resetFocusModaleVisibilita();
+          } else {
+            aggiornaFocusModaleVisibilita(ancoraAperti[0]);
+          }
+        }
+
+        gestioneToggleInCorso = false;
+      }, 40);
     });
+  });
+
+  /*
+    Click sullo sfondo nero: chiude il modale.
+    Non interferisce con i click dentro la card.
+  */
+  modale.addEventListener("click", (e) => {
+    if (e.target === modale) {
+      chiudiVisibilita();
+    }
+  });
+
+  /*
+    ESC: chiude il modale visibilità solo se è aperto.
+  */
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modale.classList.contains("hidden")) {
+      chiudiVisibilita();
+    }
   });
 });
 </script>
