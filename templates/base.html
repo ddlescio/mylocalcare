@@ -2637,15 +2637,10 @@ window.addEventListener("beforeunload", () => {
 </style>
 <style>
 /* =========================================================
-   iOS PWA — blocco orizzontale + riparazione status bar
-   Versione SENZA reload.
-   All'avvio non aggiunge spazio.
-   Applica offset solo dopo landscape -> portrait.
+   iOS PWA — blocco landscape + ripristino tramite reload reale
+   NON aggiunge padding/top.
+   NON tenta di correggere la safe-area a mano.
 ========================================================= */
-
-:root {
-  --lc-ios-repair-top: 44px;
-}
 
 #lc-orientation-guard {
   display: none;
@@ -2729,35 +2724,21 @@ html.lc-ios-pwa-standalone.lc-landscape-lock #lc-orientation-guard {
   max-width: 17rem;
 }
 
-/*
-   Riparazione applicata SOLO dopo essere tornati da orizzontale a verticale.
-   Non agisce all'avvio normale della PWA.
-*/
-html.lc-ios-pwa-standalone.lc-ios-statusbar-repair body {
-  padding-top: var(--lc-ios-repair-top) !important;
-}
-
-html.lc-ios-pwa-standalone.lc-ios-statusbar-repair #main-navbar {
-  top: var(--lc-ios-repair-top) !important;
-}
-
-/* fascia bianca dietro ora/batteria */
-html.lc-ios-pwa-standalone.lc-ios-statusbar-repair body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--lc-ios-repair-top);
-  background: #ffffff;
-  z-index: 10001;
-  pointer-events: none;
+html.lc-pwa-hard-refreshing body {
+  opacity: 0 !important;
+  transition: opacity 0.08s ease !important;
 }
 </style>
 
 <script>
 /* =========================================================
-   iOS PWA — blocco landscape + repair portrait senza reload
+   iOS PWA — workaround definitivo per bug status bar dopo rotazione
+
+   Comportamento:
+   - verticale iniziale: non tocca nulla;
+   - landscape: mostra overlay;
+   - ritorno portrait: forza nuova navigazione con parametro cache-buster;
+   - dopo reload: rimuove il parametro dall'URL.
 ========================================================= */
 (function () {
   function isIOSDevice() {
@@ -2777,8 +2758,19 @@ html.lc-ios-pwa-standalone.lc-ios-statusbar-repair body::before {
   const root = document.documentElement;
   root.classList.add("lc-ios-pwa-standalone");
 
-  let hasBeenLandscape = false;
-  let firstRunDone = false;
+  /*
+    Pulizia dei vecchi tentativi.
+    Queste chiavi erano usate dalle patch precedenti e possono causare
+    padding errati anche all'avvio.
+  */
+  try {
+    sessionStorage.removeItem("lc_ios_pwa_rotated_landscape");
+    sessionStorage.removeItem("lc_ios_pwa_was_landscape");
+  } catch (e) {}
+
+  let startedLandscape = false;
+  let sawLandscape = false;
+  let hardRefreshStarted = false;
 
   function isLandscape() {
     return window.innerWidth > window.innerHeight;
@@ -2806,70 +2798,87 @@ html.lc-ios-pwa-standalone.lc-ios-statusbar-repair body::before {
     document.body.appendChild(guard);
   }
 
-  function applyOrientationGuard() {
+  function cleanPwaRefreshParam() {
+    const url = new URL(window.location.href);
+
+    if (!url.searchParams.has("_pwa_orient_fix")) {
+      return;
+    }
+
+    url.searchParams.delete("_pwa_orient_fix");
+
+    window.history.replaceState(
+      {},
+      document.title,
+      url.pathname + url.search + url.hash
+    );
+  }
+
+  function forceHardPortraitReload() {
+    if (hardRefreshStarted) return;
+    hardRefreshStarted = true;
+
+    root.classList.add("lc-pwa-hard-refreshing");
+
+    const url = new URL(window.location.href);
+
+    /*
+      Parametro sempre diverso:
+      evita che iOS riusi una vecchia istanza visiva della PWA.
+    */
+    url.searchParams.set("_pwa_orient_fix", String(Date.now()));
+
+    setTimeout(function () {
+      window.location.href = url.toString();
+    }, 80);
+  }
+
+  function handleOrientationState() {
     const landscape = isLandscape();
 
     if (landscape) {
-      hasBeenLandscape = true;
-      sessionStorage.setItem("lc_ios_pwa_rotated_landscape", "1");
-
+      sawLandscape = true;
       ensureOrientationGuard();
       root.classList.add("lc-landscape-lock");
-
-      /*
-        Mentre sei in orizzontale NON applichiamo repair portrait.
-        Verrà applicato solo quando torni verticale.
-      */
-      root.classList.remove("lc-ios-statusbar-repair");
-
-      firstRunDone = true;
       return;
     }
 
     root.classList.remove("lc-landscape-lock");
 
-    const rotatedBefore =
-      hasBeenLandscape ||
-      sessionStorage.getItem("lc_ios_pwa_rotated_landscape") === "1";
-
     /*
-      Punto chiave:
-      - all'avvio verticale normale: niente offset;
-      - dopo landscape -> portrait: offset di riparazione.
+      Se l'app è stata aperta già in orizzontale, non ricarico subito:
+      mostro solo il messaggio e aspetto un ritorno verticale stabile.
     */
-    if (firstRunDone && rotatedBefore) {
-      root.classList.add("lc-ios-statusbar-repair");
+    if (sawLandscape && !startedLandscape) {
+      forceHardPortraitReload();
+    }
+  }
 
-      const navbar = document.getElementById("main-navbar");
-      if (navbar) {
-        navbar.style.transform = "translate3d(0,0,0)";
-        navbar.style.webkitTransform = "translate3d(0,0,0)";
+  function scheduleCheck() {
+    handleOrientationState();
+    setTimeout(handleOrientationState, 120);
+    setTimeout(handleOrientationState, 350);
+    setTimeout(handleOrientationState, 700);
+  }
 
-        setTimeout(function () {
-          navbar.style.transform = "";
-          navbar.style.webkitTransform = "";
-        }, 120);
-      }
+  window.addEventListener("load", function () {
+    startedLandscape = isLandscape();
+
+    cleanPwaRefreshParam();
+
+    if (startedLandscape) {
+      sawLandscape = true;
     }
 
-    firstRunDone = true;
-  }
+    scheduleCheck();
+  });
 
-  function scheduleOrientationCheck() {
-    applyOrientationGuard();
-    setTimeout(applyOrientationGuard, 120);
-    setTimeout(applyOrientationGuard, 360);
-    setTimeout(applyOrientationGuard, 700);
-    setTimeout(applyOrientationGuard, 1200);
-  }
-
-  window.addEventListener("load", scheduleOrientationCheck);
-  window.addEventListener("resize", scheduleOrientationCheck);
-  window.addEventListener("orientationchange", scheduleOrientationCheck);
+  window.addEventListener("resize", scheduleCheck);
+  window.addEventListener("orientationchange", scheduleCheck);
 
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) {
-      scheduleOrientationCheck();
+      scheduleCheck();
     }
   });
 })();
