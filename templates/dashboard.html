@@ -1233,7 +1233,7 @@
   </div>
 </div>
 
-<style>  
+<style>
   /* ============================================================
      HERO PROFILO PREMIUM — NUOVA VERSIONE
      ============================================================ */
@@ -2235,6 +2235,181 @@ nav::before {
         0 18px 36px rgba(15,23,42,0.08);
     }
 }
+
+/* ============================================================
+   MODALE VISIBILITÀ — GERARCHIA, RESPIRO, MOBILE CLEAN
+   ============================================================ */
+
+/* Contenitore principale del modale */
+#modale-visibilita > div {
+  padding: 0 !important;
+  max-height: 86vh !important;
+  overflow-y: auto !important;
+  background: #f8fafc !important;
+}
+
+/* Header più separato dal contenuto */
+#modale-visibilita > div > div:first-child {
+  margin: 0 !important;
+  border-radius: 1.5rem 1.5rem 0 0 !important;
+  padding: 1.15rem 1.35rem 1.25rem !important;
+}
+
+/* Tutti i blocchi diretti sotto header */
+#modale-visibilita > div > div:not(:first-child) {
+  margin-left: 1rem !important;
+  margin-right: 1rem !important;
+}
+
+/* Stato attuale più leggibile */
+#box-visibilita-stato {
+  margin-top: 1rem !important;
+  padding: 1rem 1.1rem !important;
+  border-radius: 1.15rem !important;
+  line-height: 1.45 !important;
+}
+
+/* Spazio netto tra le sezioni principali */
+#modale-visibilita .mb-3,
+#modale-visibilita .mb-4 {
+  margin-bottom: 1rem !important;
+}
+
+/* Sezioni principali chiuse: meno casino, più card “contenitore” */
+#modale-visibilita > div > .mb-3 > details,
+#modale-visibilita > div > .mb-4 > details {
+  border-radius: 1.25rem !important;
+  border: 1px solid rgba(203, 213, 225, 0.95) !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.055),
+    0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Summary delle sezioni principali più arioso */
+#modale-visibilita > div > .mb-3 > details > summary,
+#modale-visibilita > div > .mb-4 > details > summary {
+  padding: 1rem 1.05rem !important;
+}
+
+/* Quando una sezione è aperta, staccala visivamente */
+#modale-visibilita > div > .mb-3 > details[open],
+#modale-visibilita > div > .mb-4 > details[open] {
+  border-color: rgba(96, 165, 250, 0.55) !important;
+  box-shadow:
+    0 12px 26px rgba(37, 99, 235, 0.08),
+    0 2px 6px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Area contenuto interna dei details principali */
+#modale-visibilita > div > .mb-3 > details > div,
+#modale-visibilita > div > .mb-4 > details > div {
+  padding: 1rem !important;
+  background: #f8fafc !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.95) !important;
+}
+
+/* Card interne: più compatte e con gerarchia inferiore */
+#modale-visibilita [id^="card-"] {
+  margin-top: 0 !important;
+  border-radius: 1.05rem !important;
+  box-shadow:
+    0 4px 10px rgba(15, 23, 42, 0.035) !important;
+}
+
+/* Card pacchetti dentro sezione aperta: sembrano figlie, non sezioni principali */
+#card-visibilita_premium,
+#card-pacchetto_visibilita {
+  padding: 0.95rem !important;
+  margin-bottom: 0.85rem !important;
+}
+
+/* Card urgente separata meglio dallo stato */
+#card-annuncio_urgente {
+  margin-top: 0.25rem !important;
+  padding: 1rem !important;
+}
+
+/* Details interni: meno bordo, più leggibilità */
+#modale-visibilita [id^="card-"] details {
+  margin-top: 0.85rem !important;
+  border-radius: 0.9rem !important;
+  background: rgba(255,255,255,0.88) !important;
+}
+
+/* Summary interni meno invadenti */
+#modale-visibilita [id^="card-"] details > summary {
+  padding: 0.75rem 0.85rem !important;
+  font-size: 0.78rem !important;
+}
+
+/* Contenuto aperto delle card interne */
+#modale-visibilita [id^="card-"] details > div {
+  padding: 0.9rem !important;
+  line-height: 1.5 !important;
+  background: rgba(255,255,255,0.74) !important;
+}
+
+/* Liste più leggibili quando apri i pacchetti */
+#modale-visibilita ul.space-y-1 {
+  display: grid !important;
+  gap: 0.35rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* CTA interne più distanziate */
+#modale-visibilita [id^="btn-"] {
+  margin-top: 0.9rem !important;
+}
+
+/* Nota finale più separata */
+#modale-visibilita .text-xs.text-gray-500.border-t.pt-4 {
+  margin: 1.15rem 1rem 1.25rem !important;
+  padding-top: 1rem !important;
+  line-height: 1.45 !important;
+}
+
+/* Mobile: alleggeriamo i badge sotto le sezioni */
+@media (max-width: 640px) {
+  #modale-visibilita > div {
+    max-height: 88vh !important;
+    border-radius: 1.5rem 1.5rem 0 0 !important;
+  }
+
+  #modale-visibilita > div > div:not(:first-child) {
+    margin-left: 0.85rem !important;
+    margin-right: 0.85rem !important;
+  }
+
+  #modale-visibilita > div > .mb-3 > details > summary,
+  #modale-visibilita > div > .mb-4 > details > summary {
+    padding: 0.95rem !important;
+  }
+
+  #modale-visibilita > div > .mb-3 > details > summary .mt-2,
+  #modale-visibilita > div > .mb-4 > details > summary .mt-2 {
+    margin-top: 0.65rem !important;
+  }
+
+  #modale-visibilita > div > .mb-3 > details > summary .mt-2 span,
+  #modale-visibilita > div > .mb-4 > details > summary .mt-2 span {
+    font-size: 0.62rem !important;
+    padding: 0.12rem 0.45rem !important;
+  }
+
+  #modale-visibilita h3 {
+    font-size: 0.98rem !important;
+  }
+
+  #modale-visibilita h4 {
+    font-size: 0.98rem !important;
+  }
+
+  #modale-visibilita p {
+    line-height: 1.42 !important;
+  }
+}
+
 </style>
 <style>
   /* ============================
