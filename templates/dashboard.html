@@ -716,7 +716,7 @@
         </h2>
 
         <p class="mt-2 text-sm leading-relaxed text-blue-100/90">
-          Scegli un pacchetto completo oppure apri i singoli servizi per capire cosa fanno.
+          Scegli un pacchetto per massima efficacia e convenienza, oppure attiva un singolo servizio per potenziare solo ciò che ti serve.
         </p>
       </div>
 
@@ -729,27 +729,16 @@
 
   <!-- STATO ATTUALE -->
   <div class="mb-5">
-    <details class="group rounded-2xl border border-slate-200 bg-slate-50/80 overflow-hidden">
-      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-        <span class="text-sm font-bold text-slate-800">
-          Ora il tuo annuncio è:
-        </span>
+    <div class="mb-2 flex items-center justify-between gap-3">
+      <h3 class="text-sm font-black tracking-[-0.02em] text-slate-900">
+        Stato attuale
+      </h3>
+    </div>
 
-        <span class="text-xs font-semibold text-blue-700 group-open:hidden">
-          Mostra
-        </span>
-        <span class="hidden text-xs font-semibold text-blue-700 group-open:inline">
-          Nascondi
-        </span>
-      </summary>
-
-      <div class="border-t border-slate-200 px-4 py-4">
-        <div id="box-visibilita-stato"
-             class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
-          Caricamento stato visibilità…
-        </div>
-      </div>
-    </details>
+    <div id="box-visibilita-stato"
+         class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
+      Caricamento stato visibilità…
+    </div>
   </div>
 
   <!-- PACCHETTI IN PRIMO PIANO -->
@@ -774,7 +763,7 @@
         <div class="relative flex items-start justify-between gap-3">
           <div class="min-w-0">
             <div class="inline-flex items-center gap-1.5 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-sm">
-              ⚡ Urgenza
+              ⚡ Massima spinta
             </div>
 
             <h4 class="mt-3 text-lg font-black tracking-[-0.035em] text-rose-950">
@@ -782,7 +771,7 @@
             </h4>
 
             <p class="mt-1 text-sm leading-relaxed text-slate-700">
-              La spinta più immediata per dare risalto all’annuncio quando vuoi maggiore attenzione in tempi brevi.
+              Il pacchetto più forte: include visibilità completa e invio di una notifica agli utenti compatibili nella tua zona.
             </p>
           </div>
 
@@ -792,23 +781,28 @@
 
         <details class="group relative mt-3 rounded-2xl bg-white/70 border border-rose-100">
           <summary class="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-bold text-rose-700">
-            <span>Scopri come funziona</span>
+            <span>Scopri cosa include</span>
             <span class="group-open:hidden">＋</span>
             <span class="hidden group-open:inline">−</span>
           </summary>
 
           <div class="border-t border-rose-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
-            <p>
-              Evidenzia l’annuncio come urgente e lo rende più adatto ai casi in cui vuoi attirare attenzione rapidamente.
-            </p>
+            <ul class="space-y-1">
+              <li>• Boost nei risultati di ricerca</li>
+              <li>• Evidenza grafica con badge e cornice</li>
+              <li>• Inserimento in vetrina</li>
+              <li>• Contatti visibili</li>
+              <li>• Notifica agli utenti compatibili con la richiesta nella zona</li>
+            </ul>
 
             <p id="info-annuncio_urgente" class="mt-2 text-xs text-slate-500 hidden"></p>
 
             <button id="btn-annuncio_urgente"
+              type="button"
               onclick="apriServizio(this)"
               data-codice="annuncio_urgente"
-              data-titolo="⚡ Urgente"
-              data-descrizione="Spinta massima con notifiche agli utenti compatibili."
+              data-titolo="⚡ Annuncio urgente"
+              data-descrizione="Include boost, evidenza, vetrina, contatti e invio di una notifica agli utenti compatibili con la tua richiesta nella zona."
               class="mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-medium">
               Scopri
             </button>
@@ -833,29 +827,12 @@
             </h4>
 
             <p class="mt-1 text-sm leading-relaxed text-slate-700">
-              Tutti i servizi inclusi con massima priorità.
+              Pacchetto completo: comprende tutti i servizi di visibilità, inclusa la vetrina e lo sblocco contatti.
             </p>
           </div>
 
           <span id="badge-visibilita_premium"
                 class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-        </div>
-
-        <div class="relative mt-3 grid grid-cols-3 gap-2">
-          <div class="rounded-2xl bg-white/75 border border-amber-100 px-2 py-2 text-center">
-            <div class="text-base">🚀</div>
-            <div class="mt-1 text-[10px] font-bold text-slate-600">Boost</div>
-          </div>
-
-          <div class="rounded-2xl bg-white/75 border border-amber-100 px-2 py-2 text-center">
-            <div class="text-base">🪟</div>
-            <div class="mt-1 text-[10px] font-bold text-slate-600">Vetrina</div>
-          </div>
-
-          <div class="rounded-2xl bg-white/75 border border-amber-100 px-2 py-2 text-center">
-            <div class="text-base">📞</div>
-            <div class="mt-1 text-[10px] font-bold text-slate-600">Contatti</div>
-          </div>
         </div>
 
         <details class="group relative mt-3 rounded-2xl bg-white/70 border border-amber-100">
@@ -867,20 +844,22 @@
 
           <div class="border-t border-amber-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
             <ul class="space-y-1">
-              <li>• Tutti i servizi di visibilità</li>
-              <li>• Vetrina</li>
-              <li>• Contatti inclusi</li>
+              <li>• Boost lista</li>
+              <li>• Evidenza grafica</li>
+              <li>• Vetrina annuncio</li>
+              <li>• Sblocco contatti</li>
             </ul>
 
             <p id="info-visibilita_premium" class="mt-2 text-xs text-slate-500 hidden"></p>
 
             <button id="btn-visibilita_premium"
+              type="button"
               onclick="apriServizio(this)"
               data-codice="visibilita_premium"
               data-titolo="🌟 Visibilità Premium"
-              data-descrizione="Pacchetto con massima visibilità e priorità."
+              data-descrizione="Pacchetto completo con boost lista, evidenza, vetrina e sblocco contatti."
               class="mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
-              Scopri
+              Scopri il pacchetto
             </button>
           </div>
         </details>
@@ -897,11 +876,11 @@
             </div>
 
             <h4 class="mt-3 text-lg font-black tracking-[-0.035em] text-blue-950">
-              Pacchetto Visibilità
+              Pacchetto Visibilità Base
             </h4>
 
             <p class="mt-1 text-sm leading-relaxed text-slate-700">
-              Combina più servizi per aumentare la visibilità del tuo annuncio.
+              Include boost, evidenza e contatti. È la versione più semplice del pacchetto Premium, senza vetrina.
             </p>
           </div>
 
@@ -919,17 +898,18 @@
           <div class="border-t border-blue-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
             <ul class="space-y-1">
               <li>• Boost lista</li>
-              <li>• Evidenza</li>
-              <li>• Contatti temporanei</li>
+              <li>• Grafica in evidenza</li>
+              <li>• Sblocco contatti</li>
             </ul>
 
             <p id="info-pacchetto_visibilita" class="mt-2 text-xs text-slate-500 hidden"></p>
 
             <button id="btn-pacchetto_visibilita"
+              type="button"
               onclick="apriServizio(this)"
               data-codice="pacchetto_visibilita"
-              data-titolo="📦 Pacchetto Visibilità"
-              data-descrizione="Pacchetto che combina più servizi di visibilità."
+              data-titolo="📦 Pacchetto Visibilità Base"
+              data-descrizione="Pacchetto base che combina più servizi di visibilità."
               class="mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
               Scopri il pacchetto
             </button>
@@ -979,6 +959,7 @@
             <p id="info-boost_lista" class="mt-2 text-xs text-slate-500 hidden"></p>
 
             <button id="btn-boost_lista"
+              type="button"
               onclick="apriServizio(this)"
               data-codice="boost_lista"
               data-titolo="🚀 Boost lista"
@@ -1016,6 +997,7 @@
             <p id="info-badge_evidenza" class="mt-2 text-xs text-slate-500 hidden"></p>
 
             <button id="btn-badge_evidenza"
+              type="button"
               onclick="apriServizio(this)"
               data-codice="badge_evidenza"
               data-titolo="✨ Evidenza"
@@ -1053,6 +1035,7 @@
             <p id="info-vetrina_annuncio" class="mt-2 text-xs text-slate-500 hidden"></p>
 
             <button id="btn-vetrina_annuncio"
+              type="button"
               onclick="apriServizio(this)"
               data-codice="vetrina_annuncio"
               data-titolo="🪟 Vetrina"
@@ -1090,6 +1073,7 @@
             <p id="info-contatti" class="mt-2 text-xs text-slate-500 hidden"></p>
 
             <button id="btn-contatti"
+              type="button"
               onclick="apriServizio(this)"
               data-codice="contatti"
               data-titolo="📞 Sblocco contatti"
@@ -1106,7 +1090,7 @@
 
         <!-- ✅ MODALE CONFERMA -->
         <div id="modale-conferma"
-             class="hidden fixed inset-0 z-[70] bg-black/60 overflow-y-auto overscroll-contain p-0 sm:p-6 flex items-end sm:items-center justify-center">
+             class="hidden fixed inset-0 z-[1002] bg-black/60 overflow-y-auto overscroll-contain p-0 sm:p-6 flex items-end sm:items-center justify-center">
 
           <div class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto">
 
@@ -1157,8 +1141,8 @@
     </div>
 
     <!-- 📦 MODALE SERVIZIO (POP CORN) -->
-    <div id="modale-servizio"
-         class="hidden fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center">
+    <div id="modale-conferma"
+         class="hidden fixed inset-0 z-[1002] bg-black/60 overflow-y-auto overscroll-contain p-0 sm:p-6 flex items-end sm:items-center justify-center">
 
       <div class="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6">
 
@@ -2453,12 +2437,22 @@ let ANNUNCIO_ID_CORRENTE = null;
 let selezioneCorrente = null;
 
 async function apriServizio(btn) {
+  if (!btn) return;
+
   const modale = document.getElementById("modale-servizio");
-  if (!modale.classList.contains("hidden")) return;
+  if (!modale) {
+    console.error("Modale servizio non trovato: #modale-servizio");
+    return;
+  }
 
   const codice = btn.dataset.codice;
   const titolo = btn.dataset.titolo || "Servizio";
   const descrizione = btn.dataset.descrizione || "";
+
+  if (!codice) {
+    console.error("Codice servizio mancante sul bottone:", btn);
+    return;
+  }
 
   try {
     const tipo = codice.startsWith("pacchetto_") || codice.includes("premium")
@@ -2466,10 +2460,12 @@ async function apriServizio(btn) {
       : "servizi";
 
     const res = await fetch(`/api/${tipo}/${encodeURIComponent(codice)}/piani`, {
-      headers: { "Accept": "application/json" }
+      headers: { "Accept": "application/json" },
+      cache: "no-store"
     });
 
     if (!res.ok) {
+      console.error("Errore API piani:", res.status, codice, tipo);
       alert("Errore nel caricamento dei piani del servizio.");
       return;
     }
@@ -2493,7 +2489,7 @@ async function apriServizio(btn) {
       const permanente = !!p.permanente || p.durata === null || p.durata === undefined;
 
       el.className = `
-        border rounded-2xl p-4 cursor-pointer transition
+        border rounded-2xl p-4 cursor-pointer transition bg-white
         ${p.evidenziato ? "border-blue-600 scale-[1.03]" : "border-slate-200"}
       `;
 
@@ -2521,6 +2517,7 @@ async function apriServizio(btn) {
         document.querySelectorAll("#ms-piani > div").forEach(x =>
           x.classList.remove("ring-2", "ring-blue-500")
         );
+
         el.classList.add("ring-2", "ring-blue-500");
 
         selezioneCorrente = {
@@ -2530,7 +2527,7 @@ async function apriServizio(btn) {
           permanente,
           titolo: titolo,
           codice: codice,
-          tipo: tipo // "servizi" | "pacchetti"
+          tipo: tipo
         };
 
         btnConferma.disabled = false;
@@ -2541,8 +2538,9 @@ async function apriServizio(btn) {
     });
 
     modale.classList.remove("hidden");
+
   } catch (e) {
-    console.error(e);
+    console.error("Errore apriServizio:", e);
     alert("Errore di rete o JS durante il caricamento del servizio.");
   }
 }
@@ -2603,9 +2601,12 @@ let NUM_SERVIZI_ATTESI = 0;
              "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
 
            btn.disabled = false;
-           btn.textContent = btn.dataset.codice === "pacchetto_visibilita"
-             ? "Scopri il pacchetto"
-             : "Scopri";
+           btn.textContent =
+             btn.dataset.codice === "pacchetto_visibilita" ||
+             btn.dataset.codice === "visibilita_premium"
+               ? "Scopri il pacchetto"
+               : "Scopri";
+                            
            btn.className =
              "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
 
