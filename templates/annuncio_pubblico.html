@@ -384,12 +384,12 @@
       ⬅️ Torna
     </a>
     {% if g.utente and g.utente['id'] == annuncio['utente_id'] %}
-      <button
-        onclick="apriVisibilita()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 text-sm flex items-center gap-1"
-      >
-        🚀 Aumenta visibilità
-      </button>
+    <button
+      onclick="apriVisibilita({{ annuncio['id'] }})"
+      class="px-4 py-2 bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 text-sm flex items-center gap-1"
+    >
+      🚀 Aumenta visibilità
+    </button>
     {% endif %}
 
     {% if g.utente and g.utente['id'] == annuncio['utente_id'] %}
@@ -422,10 +422,10 @@
 
 <!-- 🚀 MODALE AUMENTA VISIBILITÀ -->
 <div id="modale-visibilita"
-     class="hidden fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+     class="hidden fixed inset-0 z-[999] bg-black/60 flex items-end sm:items-center justify-center">
 
   <!-- CONTENUTO -->
-  <div class="
+  <div id="modale-visibilita-card" class="
     w-full sm:max-w-md
     bg-white
     rounded-t-3xl sm:rounded-3xl
@@ -435,312 +435,493 @@
     overflow-y-auto
   ">
 
-    <!-- HEADER -->
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-bold text-blue-700">
-        Aumenta la visibilità
-      </h2>
-      <button onclick="chiudiVisibilita()" class="text-gray-400 text-xl">
+    <!-- HERO + STATO VISIBILITÀ -->
+    <div id="visibilita-hero-status" class="lc-visibilita-hero-status">
+
+      <div class="lc-visibilita-hero-glow lc-visibilita-hero-glow-a"></div>
+      <div class="lc-visibilita-hero-glow lc-visibilita-hero-glow-b"></div>
+
+      <button type="button"
+              onclick="chiudiVisibilita()"
+              class="lc-visibilita-close-btn"
+              aria-label="Chiudi modale visibilità">
         ✕
       </button>
-    </div>
 
-    <!-- STATO ATTUALE -->
-    <div class="mb-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">
-        Ora il tuo annuncio è:
-      </h3>
-
-      <div id="box-visibilita-stato"
-           class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
-        Caricamento stato visibilità…
+      <div class="lc-visibilita-status-wrap">
+        <div id="box-visibilita-stato"
+             class="relative bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600">
+          Caricamento stato visibilità…
+        </div>
       </div>
+
     </div>
 
-    <!-- SERVIZI SINGOLI -->
-    <div class="mb-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">
-        Servizi singoli
-      </h3>
+    <!-- SEPARATORE AZIONI VISIBILITÀ -->
+    <div class="lc-visibilita-actions-divider">
+      <span class="lc-visibilita-actions-line"></span>
 
-      <div class="space-y-3">
+      <div class="lc-visibilita-actions-label">
+        <span class="lc-visibilita-actions-kicker">Azioni disponibili</span>
+        <span class="lc-visibilita-actions-title">Scegli come potenziare l’annuncio</span>
+      </div>
 
-        <!-- BOOST LISTA -->
-        <div id="card-boost_lista" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm">🚀 Boost lista</span>
-            <span id="badge-boost_lista" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+      <span class="lc-visibilita-actions-line"></span>
+    </div>
+
+    <!-- ANNUNCIO URGENTE COMPATTO -->
+    <div class="mb-3 lc-main-card lc-card-urgente">
+      <details class="group rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 via-white to-orange-50 shadow-sm overflow-hidden">
+
+        <summary class="cursor-pointer list-none px-3.5 py-3">
+          <div class="relative flex items-start justify-between gap-3">
+
+            <div class="absolute -top-14 -right-14 h-28 w-28 rounded-full bg-rose-300/35 blur-2xl pointer-events-none"></div>
+
+            <div class="relative min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
+                  ⚡ Urgente
+                </span>
+
+                <h3 class="text-[15px] font-black tracking-[-0.035em] leading-tight text-rose-950">
+                  Hai fretta?
+                </h3>
+              </div>
+
+              <p class="mt-1 text-[12.5px] leading-snug text-slate-700">
+                <b>Visibilità top</b> + <b>notifica diretta mirata</b>.
+              </p>
+            </div>
+
+            <div class="relative shrink-0 flex flex-col items-end gap-1">
+              <span id="badge-annuncio_urgente"
+                    class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
+                …
+              </span>
+
+              <div class="flex items-center gap-1.5 text-rose-700">
+                <span class="text-xs font-bold group-open:hidden">Apri</span>
+                <span class="hidden text-xs font-bold group-open:inline">Chiudi</span>
+                <span class="text-sm font-black group-open:hidden">＋</span>
+                <span class="hidden text-sm font-black group-open:inline">−</span>
+              </div>
+            </div>
+
           </div>
+        </summary>
 
-          <p class="text-xs text-slate-600">
-            Aumenta temporaneamente la visibilità del tuo annuncio nei risultati.
+        <div class="border-t border-rose-100 px-3.5 py-3 text-xs leading-relaxed text-slate-700 bg-white/68">
+
+          <p class="font-semibold text-slate-900">
+            Conviene quando vuoi trovare qualcuno il prima possibile e non vuoi aspettare che l’annuncio venga visto “con calma”.
           </p>
 
-          <p id="info-boost_lista" class="mt-2 text-xs text-slate-500 hidden"></p>
+          <div class="mt-3 rounded-2xl border border-rose-100 bg-rose-50/70 p-3">
+            <p class="text-[11px] font-black uppercase tracking-[0.12em] text-rose-500 mb-2">
+              Cosa sblocca
+            </p>
 
-          <button id="btn-boost_lista"
-            onclick="apriServizio(this)"
-            data-codice="boost_lista"
-            data-titolo="🚀 Boost lista"
-            data-descrizione="Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca."
-            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-        <!-- EVIDENZA -->
-        <div id="card-badge_evidenza" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm">✨ Evidenza</span>
-            <span id="badge-badge_evidenza" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+            <ul class="space-y-1.5 text-[12.5px] text-slate-700">
+              <li>• Boost nei risultati</li>
+              <li>• Grafica in evidenza</li>
+              <li>• Vetrina annuncio</li>
+              <li>• Contatti visibili</li>
+              <li>
+                • <b>Notifica diretta mirata</b> agli utenti compatibili nella zona
+              </li>
+            </ul>
           </div>
-
-          <p class="text-xs text-slate-600">
-            Rende il tuo annuncio più riconoscibile con cornice e badge.
-          </p>
-
-          <p id="info-badge_evidenza" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-badge_evidenza"
-            onclick="apriServizio(this)"
-            data-codice="badge_evidenza"
-            data-titolo="✨ Evidenza"
-            data-descrizione="Rende il tuo annuncio più visibile con cornice e badge."
-            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-        <!-- VETRINA -->
-        <div id="card-vetrina_annuncio" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm">🪟 Vetrina</span>
-            <span id="badge-vetrina_annuncio" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-600">
-            Inserisce l’annuncio in una sezione ad alta visibilità.
-          </p>
-
-          <p id="info-vetrina_annuncio" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-vetrina_annuncio"
-            onclick="apriServizio(this)"
-            data-codice="vetrina_annuncio"
-            data-titolo="🪟 Vetrina"
-            data-descrizione="Inserisce il tuo annuncio in una sezione dedicata ad alta visibilità."
-            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-        <!-- URGENTE -->
-        <div id="card-annuncio_urgente" class="border border-rose-200 bg-rose-50/70 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm text-rose-700">⚡ Urgente</span>
-            <span id="badge-annuncio_urgente" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-700">
-            Spinta immediata con notifiche agli utenti compatibili.
-          </p>
 
           <p id="info-annuncio_urgente" class="mt-2 text-xs text-slate-500 hidden"></p>
 
           <button id="btn-annuncio_urgente"
+            type="button"
             onclick="apriServizio(this)"
             data-codice="annuncio_urgente"
-            data-titolo="⚡ Urgente"
-            data-descrizione="Spinta massima con notifiche agli utenti compatibili."
-            class="mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-medium">
-            Scopri
+            data-titolo="⚡ Annuncio urgente"
+            data-descrizione="Massima spinta per chi ha una reale urgenza: boost, evidenza, vetrina, contatti visibili e notifica diretta mirata agli utenti compatibili nella zona."
+            class="mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-semibold">
+            Attiva Annuncio urgente
           </button>
         </div>
 
-        <!-- CONTATTI -->
-        <div id="card-contatti" class="border border-slate-200 bg-slate-50/60 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm">📞 Sblocco contatti</span>
-            <span id="badge-contatti" class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-600">
-            Consente di visualizzare email e telefono dell’annuncio.
-          </p>
-
-          <p id="info-contatti" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-contatti"
-            onclick="apriServizio(this)"
-            data-codice="contatti"
-            data-titolo="📞 Sblocco contatti"
-            data-descrizione="Consente di visualizzare email e telefono dell’annuncio."
-            class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-            Scopri
-          </button>
-        </div>
-
-      </div>
+      </details>
     </div>
 
-    <!-- PACCHETTI -->
-    <div class="mb-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">
-        Pacchetti consigliati
-      </h3>
+    <!-- PACCHETTI CONSIGLIATI COMPATTI -->
+    <div class="mb-3 lc-main-card lc-card-pacchetti">
+      <details class="group rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <summary class="cursor-pointer list-none px-3.5 py-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="text-[15px] font-black tracking-[-0.035em] text-slate-950">
+                Pacchetti consigliati
+              </h3>
 
-      <div class="space-y-4">
-
-        <!-- PACCHETTO VISIBILITÀ -->
-        <div id="card-pacchetto_visibilita"
-             class="border border-blue-200 bg-blue-50/60 rounded-2xl p-4">
-
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm text-blue-800">📦 Pacchetto Visibilità</span>
-            <span id="badge-pacchetto_visibilita"
-                  class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-700">
-            Combina più servizi per aumentare la visibilità del tuo annuncio.
-          </p>
-
-          <ul class="mt-2 text-xs text-slate-600 list-disc list-inside space-y-1">
-            <li>Boost lista</li>
-            <li>Evidenza</li>
-            <li>Contatti temporanei</li>
-          </ul>
-
-          <p id="info-pacchetto_visibilita" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-pacchetto_visibilita"
-            onclick="apriServizio(this)"
-            data-codice="pacchetto_visibilita"
-            data-titolo="📦 Pacchetto Visibilità"
-            data-descrizione="Pacchetto che combina più servizi di visibilità."
-            class="mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
-            Scopri il pacchetto
-          </button>
-        </div>
-
-        <!-- VISIBILITÀ PREMIUM -->
-        <div id="card-visibilita_premium"
-             class="border border-amber-300 bg-amber-50/70 rounded-2xl p-4">
-
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold text-sm text-amber-800">🌟 Visibilità Premium</span>
-            <span id="badge-visibilita_premium"
-                  class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
-          </div>
-
-          <p class="text-xs text-slate-700">
-            Tutti i servizi inclusi con massima priorità.
-          </p>
-
-          <ul class="mt-2 text-xs text-slate-700 list-disc list-inside space-y-1">
-            <li>Tutti i servizi di visibilità</li>
-            <li>Vetrina</li>
-            <li>Contatti inclusi</li>
-          </ul>
-
-          <p id="info-visibilita_premium" class="mt-2 text-xs text-slate-500 hidden"></p>
-
-          <button id="btn-visibilita_premium"
-            onclick="apriServizio(this)"
-            data-codice="visibilita_premium"
-            data-titolo="🌟 Visibilità Premium"
-            data-descrizione="Pacchetto con massima visibilità e priorità."
-            class="mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
-            Scopri
-          </button>
-        </div>
-
-        <!-- ✅ MODALE CONFERMA -->
-        <div id="modale-conferma"
-             class="hidden fixed inset-0 z-[70] bg-black/60 overflow-y-auto overscroll-contain p-0 sm:p-6 flex items-end sm:items-center justify-center">
-
-          <div class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto">
-
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-bold text-slate-900">
-                Conferma attivazione
-              </h2>
-              <button onclick="chiudiConferma()" class="text-gray-400 text-xl">✕</button>
-            </div>
-
-            <div class="space-y-3 text-sm text-slate-700">
-              <p>
-                Stai per attivare:
+              <p class="mt-0.5 text-xs leading-snug text-slate-500">
+                Soluzioni complete e più convenienti.
               </p>
 
-              <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div class="font-semibold" id="conf-titolo">—</div>
-                <div class="text-xs text-slate-500" id="conf-durata">—</div>
-                <div class="text-lg font-bold mt-1" id="conf-prezzo">—</div>
+              <div class="mt-2 flex flex-wrap gap-1.5">
+                <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                  🌟 Premium
+                </span>
+                <span class="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                  📦 Base
+                </span>
+              </div>
+            </div>
+
+            <div class="shrink-0 flex items-center gap-2">
+              <span class="text-xs font-bold text-blue-700 group-open:hidden">Apri</span>
+              <span class="hidden text-xs font-bold text-blue-700 group-open:inline">Chiudi</span>
+              <span class="text-sm text-blue-700 group-open:hidden">＋</span>
+              <span class="hidden text-sm text-blue-700 group-open:inline">−</span>
+            </div>
+          </div>
+        </summary>
+
+        <div class="border-t border-slate-100 px-3.5 py-3 space-y-3 bg-slate-50/45">
+
+          <!-- VISIBILITÀ PREMIUM -->
+          <div id="card-visibilita_premium"
+               class="relative overflow-hidden rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-yellow-50 p-3 shadow-[0_10px_24px_rgba(245,158,11,0.10)]">
+
+            <div class="absolute -top-14 -right-14 h-28 w-28 rounded-full bg-amber-300/30 blur-2xl"></div>
+
+            <div class="relative flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white shadow-sm">
+                  🌟 Premium
+                </div>
+
+                <h4 class="mt-2 text-[15px] font-black tracking-[-0.035em] text-amber-950">
+                  Visibilità Premium
+                </h4>
+
+                <p class="mt-1 text-xs leading-snug text-slate-700">
+                  Tutti i servizi di visibilità, inclusa vetrina e contatti.
+                </p>
               </div>
 
-              <p class="text-xs text-slate-500">
-                Il servizio verrà attivato immediatamente sul tuo annuncio.
-              </p>
+              <span id="badge-visibilita_premium"
+                    class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
             </div>
 
-            <div id="stripe-box" class="mt-4 hidden">
-              <div id="payment-element"></div>
+            <details class="group relative mt-2 rounded-xl bg-white/75 border border-amber-100">
+              <summary class="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-bold text-amber-700">
+                <span>Scopri cosa include</span>
+                <span class="group-open:hidden">＋</span>
+                <span class="hidden group-open:inline">−</span>
+              </summary>
 
-              <button
-                id="pay-button"
-                class="mt-4 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                Paga ora
-              </button>
+              <div class="border-t border-amber-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
+                <ul class="space-y-1">
+                  <li>• Boost lista - Annuncio nelle prime posizioni</li>
+                  <li>• Grafica in evidenza - Annuncio si distingue dagli altri</li>
+                  <li>• Vetrina - Annuncio inserito anche in sezione dedicata ad alta visibilità</li>
+                  <li>• Contatti visibili</li>
+                </ul>
 
-              <p id="payment-error" class="mt-2 text-sm text-red-600 hidden"></p>
-            </div>
+                <p id="info-visibilita_premium" class="mt-2 text-xs text-slate-500 hidden"></p>
 
-            <button
-              onclick="confermaAttivazione(this)"
-              class="mt-5 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-              Conferma
-            </button>
+                <button id="btn-visibilita_premium"
+                  type="button"
+                  onclick="apriServizio(this)"
+                  data-codice="visibilita_premium"
+                  data-titolo="🌟 Visibilità Premium"
+                  data-descrizione="Pacchetto completo con boost lista, evidenza, vetrina e Contatti visibili."
+                  class="mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
+                  Scopri il pacchetto
+                </button>
+              </div>
+            </details>
           </div>
-        </div>
 
-      </div>
+          <!-- PACCHETTO VISIBILITÀ -->
+          <div id="card-pacchetto_visibilita"
+               class="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-3 shadow-[0_10px_24px_rgba(59,130,246,0.09)]">
+
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white shadow-sm">
+                  📦 Base
+                </div>
+
+                <h4 class="mt-2 text-[15px] font-black tracking-[-0.035em] text-blue-950">
+                  Pacchetto Visibilità Base
+                </h4>
+
+                <p class="mt-1 text-xs leading-snug text-slate-700">
+                  Boost, evidenza e contatti. Senza vetrina.
+                </p>
+              </div>
+
+              <span id="badge-pacchetto_visibilita"
+                    class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+            </div>
+
+            <details class="group mt-2 rounded-xl bg-white/75 border border-blue-100">
+              <summary class="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-bold text-blue-700">
+                <span>Scopri cosa include</span>
+                <span class="group-open:hidden">＋</span>
+                <span class="hidden group-open:inline">−</span>
+              </summary>
+
+              <div class="border-t border-blue-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
+                <ul class="space-y-1">
+                  <li>• Boost lista - Annuncio nelle prime posizioni</li>
+                  <li>• Grafica in evidenza - Annuncio si distingue dagli altri</li>
+                  <li>• Contatti visibili</li>
+                </ul>
+
+                <p id="info-pacchetto_visibilita" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+                <button id="btn-pacchetto_visibilita"
+                  type="button"
+                  onclick="apriServizio(this)"
+                  data-codice="pacchetto_visibilita"
+                  data-titolo="📦 Pacchetto Visibilità Base"
+                  data-descrizione="Pacchetto base che combina boost lista, grafica in evidenza e Contatti visibili."
+                  class="mt-3 w-full py-2 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
+                  Scopri il pacchetto
+                </button>
+              </div>
+            </details>
+          </div>
+
+        </div>
+      </details>
     </div>
 
-    <!-- 📦 MODALE SERVIZIO (POP CORN) -->
-    <div id="modale-servizio"
-         class="hidden fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center">
+    <!-- SERVIZI SINGOLI COMPATTI -->
+    <div class="mb-4 lc-main-card lc-card-servizi">
+      <details class="group rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <summary class="cursor-pointer list-none px-3.5 py-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="text-[15px] font-black tracking-[-0.035em] text-slate-950">
+                Servizi singoli
+              </h3>
 
-      <div class="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6">
+              <p class="mt-0.5 text-xs leading-snug text-slate-500">
+                Potenzia solo l’aspetto che ti interessa.
+              </p>
 
-        <!-- HEADER -->
+              <div class="mt-2 flex flex-wrap gap-1.5">
+                <span class="inline-flex rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">🚀 Boost</span>
+                <span class="inline-flex rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">✨ Evidenza</span>
+                <span class="inline-flex rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">🪟 Vetrina</span>
+                <span class="inline-flex rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">📞 Contatti</span>
+              </div>
+            </div>
+
+            <div class="shrink-0 flex items-center gap-2">
+              <span class="text-xs font-bold text-blue-700 group-open:hidden">Apri</span>
+              <span class="hidden text-xs font-bold text-blue-700 group-open:inline">Chiudi</span>
+              <span class="text-sm text-blue-700 group-open:hidden">＋</span>
+              <span class="hidden text-sm text-blue-700 group-open:inline">−</span>
+            </div>
+          </div>
+        </summary>
+
+        <div class="border-t border-slate-100 px-3.5 py-3 space-y-2 bg-slate-50/45">
+
+          <!-- BOOST LISTA -->
+          <div id="card-boost_lista" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between gap-3 px-3.5 py-2.5">
+              <div class="min-w-0">
+                <div class="font-bold text-sm text-slate-900">🚀 Boost lista</div>
+                <div class="mt-0.5 text-xs text-slate-500">Più visibilità nelle prime posizioni</div>
+              </div>
+
+              <span id="badge-boost_lista" class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+            </div>
+
+            <details class="group border-t border-slate-100">
+              <summary class="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-bold text-blue-700">
+                <span>Scopri come funziona</span>
+                <span class="group-open:hidden">＋</span>
+                <span class="hidden group-open:inline">−</span>
+              </summary>
+
+              <div class="px-3.5 pb-3 text-xs leading-relaxed text-slate-600">
+                <p>Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca.</p>
+
+                <p id="info-boost_lista" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+                <button id="btn-boost_lista"
+                  type="button"
+                  onclick="apriServizio(this)"
+                  data-codice="boost_lista"
+                  data-titolo="🚀 Boost lista"
+                  data-descrizione="Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca."
+                  class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+                  Scopri
+                </button>
+              </div>
+            </details>
+          </div>
+
+          <!-- EVIDENZA -->
+          <div id="card-badge_evidenza" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between gap-3 px-3.5 py-2.5">
+              <div class="min-w-0">
+                <div class="font-bold text-sm text-slate-900">✨ Evidenza</div>
+                <div class="mt-0.5 text-xs text-slate-500">Badge e cornice evidenziati per farti notare subito</div>
+              </div>
+
+              <span id="badge-badge_evidenza" class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+            </div>
+
+            <details class="group border-t border-slate-100">
+              <summary class="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-bold text-blue-700">
+                <span>Scopri come funziona</span>
+                <span class="group-open:hidden">＋</span>
+                <span class="hidden group-open:inline">−</span>
+              </summary>
+
+              <div class="px-3.5 pb-3 text-xs leading-relaxed text-slate-600">
+                <p>Rende il tuo annuncio più riconoscibile con cornice e badge.</p>
+
+                <p id="info-badge_evidenza" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+                <button id="btn-badge_evidenza"
+                  type="button"
+                  onclick="apriServizio(this)"
+                  data-codice="badge_evidenza"
+                  data-titolo="✨ Evidenza"
+                  data-descrizione="Rende il tuo annuncio più visibile con cornice e badge."
+                  class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+                  Scopri
+                </button>
+              </div>
+            </details>
+          </div>
+
+          <!-- VETRINA -->
+          <div id="card-vetrina_annuncio" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between gap-3 px-3.5 py-2.5">
+              <div class="min-w-0">
+                <div class="font-bold text-sm text-slate-900">🪟 Vetrina</div>
+                <div class="mt-0.5 text-xs text-slate-500">Raddoppia la visibilità</div>
+              </div>
+
+              <span id="badge-vetrina_annuncio" class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+            </div>
+
+            <details class="group border-t border-slate-100">
+              <summary class="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-bold text-blue-700">
+                <span>Scopri come funziona</span>
+                <span class="group-open:hidden">＋</span>
+                <span class="hidden group-open:inline">−</span>
+              </summary>
+
+              <div class="px-3.5 pb-3 text-xs leading-relaxed text-slate-600">
+                <p>Inserisce l’annuncio anche in una sezione dedicata ad alta visibilità.</p>
+
+                <p id="info-vetrina_annuncio" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+                <button id="btn-vetrina_annuncio"
+                  type="button"
+                  onclick="apriServizio(this)"
+                  data-codice="vetrina_annuncio"
+                  data-titolo="🪟 Vetrina"
+                  data-descrizione="Inserisce il tuo annuncio in una sezione dedicata ad alta visibilità."
+                  class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+                  Scopri
+                </button>
+              </div>
+            </details>
+          </div>
+
+          <!-- CONTATTI -->
+          <div id="card-contatti" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between gap-3 px-3.5 py-2.5">
+              <div class="min-w-0">
+                <div class="font-bold text-sm text-slate-900">📞 Contatti visibili</div>
+                <div class="mt-0.5 text-xs text-slate-500">Email e telefono visibili se disponibili</div>
+              </div>
+
+              <span id="badge-contatti" class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">…</span>
+            </div>
+
+            <details class="group border-t border-slate-100">
+              <summary class="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-xs font-bold text-blue-700">
+                <span>Scopri come funziona</span>
+                <span class="group-open:hidden">＋</span>
+                <span class="hidden group-open:inline">−</span>
+              </summary>
+
+              <div class="px-3.5 pb-3 text-xs leading-relaxed text-slate-600">
+                <p>Consente di visualizzare email e telefono dell’annuncio.</p>
+
+                <p id="info-contatti" class="mt-2 text-xs text-slate-500 hidden"></p>
+
+                <button id="btn-contatti"
+                  type="button"
+                  onclick="apriServizio(this)"
+                  data-codice="contatti"
+                  data-titolo="📞 Contatti visibili"
+                  data-descrizione="Consente di visualizzare email e telefono dell’annuncio."
+                  class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
+                  Scopri
+                </button>
+              </div>
+            </details>
+          </div>
+
+        </div>
+      </details>
+    </div>
+
+    <!-- ✅ MODALE CONFERMA -->
+    <div id="modale-conferma"
+         class="hidden fixed inset-0 z-[1002] bg-black/60 overflow-y-auto overscroll-contain p-0 sm:p-6 flex items-end sm:items-center justify-center">
+
+      <div class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto">
+
         <div class="flex items-center justify-between mb-4">
-          <h2 id="ms-titolo" class="text-lg font-bold text-blue-700">
-            —
+          <h2 class="text-lg font-bold text-slate-900">
+            Conferma attivazione
           </h2>
-          <button onclick="chiudiServizio()" class="text-gray-400 text-xl">✕</button>
+          <button onclick="chiudiConferma()" class="text-gray-400 text-xl">✕</button>
         </div>
 
-        <!-- DESCRIZIONE -->
-        <p id="ms-descrizione" class="text-sm text-slate-700 mb-5">
-          —
-        </p>
+        <div class="space-y-3 text-sm text-slate-700">
+          <p>
+            Stai per attivare:
+          </p>
 
-        <!-- PIANI -->
-        <div id="ms-piani" class="grid gap-4">
-          <!-- JS inserisce i piani qui -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+            <div class="font-semibold" id="conf-titolo">—</div>
+            <div class="text-xs text-slate-500" id="conf-durata">—</div>
+            <div class="text-lg font-bold mt-1" id="conf-prezzo">—</div>
+          </div>
+
+          <p class="text-xs text-slate-500">
+            Il servizio verrà attivato immediatamente sul tuo annuncio.
+          </p>
         </div>
 
-        <!-- CTA -->
-        <button id="ms-conferma"
-                disabled
-                class="mt-5 w-full py-3 rounded-full bg-blue-600 text-white text-sm font-semibold opacity-50 cursor-not-allowed">
-          Continua
+        <div id="stripe-box" class="mt-4 hidden">
+          <div id="payment-element"></div>
+
+          <button
+            id="pay-button"
+            class="mt-4 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+            Paga ora
+          </button>
+
+          <p id="payment-error" class="mt-2 text-sm text-red-600 hidden"></p>
+        </div>
+
+        <button
+          onclick="confermaAttivazione(this)"
+          class="mt-5 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+          Conferma
         </button>
-
-        <p class="mt-3 text-xs text-gray-500 text-center">
-          Nessun servizio garantisce una posizione fissa nei risultati.
-        </p>
       </div>
     </div>
 
@@ -751,8 +932,50 @@
       <br>
       Nessun servizio garantisce una posizione fissa nei risultati.
     </div>
+
+  </div>
+  <!-- /CONTENUTO MODALE VISIBILITÀ -->
+</div>
+<!-- /MODALE AUMENTA VISIBILITÀ -->
+
+<!-- 📦 MODALE SERVIZIO -->
+<div id="modale-servizio"
+     class="hidden fixed inset-0 z-[1001] bg-black/60 overflow-y-auto overscroll-contain p-0 sm:p-6 flex items-end sm:items-center justify-center">
+
+  <div class="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6">
+
+    <!-- HEADER -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="ms-titolo" class="text-lg font-bold text-blue-700">
+        —
+      </h2>
+      <button onclick="chiudiServizio()" class="text-gray-400 text-xl">✕</button>
+    </div>
+
+    <!-- DESCRIZIONE -->
+    <p id="ms-descrizione" class="text-sm text-slate-700 mb-5">
+      —
+    </p>
+
+    <!-- PIANI -->
+    <div id="ms-piani" class="grid gap-4">
+      <!-- JS inserisce i piani qui -->
+    </div>
+
+    <!-- CTA -->
+    <button id="ms-conferma"
+            disabled
+            class="mt-5 w-full py-3 rounded-full bg-blue-600 text-white text-sm font-semibold opacity-50 cursor-not-allowed">
+      Continua
+    </button>
+
+    <p class="mt-3 text-xs text-gray-500 text-center">
+      Nessun servizio garantisce una posizione fissa nei risultati.
+    </p>
+
   </div>
 </div>
+
 <style>
   /* ============================================================
      PAGINA ANNUNCIO — LAYOUT BASE
@@ -1825,7 +2048,426 @@
       padding-bottom: 0.88rem;
     }
   }
-  
+
+
+/* ============================================================
+   MODALE VISIBILITÀ — STRUTTURA PREMIUM
+   ============================================================ */
+
+#modale-visibilita {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+#modale-visibilita-card {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(59, 130, 246, 0.12), transparent 34%),
+    radial-gradient(circle at 92% 2%, rgba(219, 39, 119, 0.10), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+  box-shadow:
+    0 28px 80px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.lc-visibilita-hero-status {
+  position: relative;
+  overflow: hidden;
+  margin: -0.35rem -0.35rem 0;
+  padding: 1.05rem 1rem 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.84);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.95), rgba(239,246,255,0.88), rgba(253,244,255,0.72));
+  box-shadow:
+    0 14px 34px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.lc-visibilita-hero-glow {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(30px);
+  z-index: 0;
+}
+
+.lc-visibilita-hero-glow-a {
+  width: 145px;
+  height: 145px;
+  left: -54px;
+  top: -58px;
+  background: rgba(59, 130, 246, 0.20);
+}
+
+.lc-visibilita-hero-glow-b {
+  width: 150px;
+  height: 150px;
+  right: -62px;
+  bottom: -62px;
+  background: rgba(219, 39, 119, 0.13);
+}
+
+.lc-visibilita-close-btn {
+  position: absolute;
+  top: 0.74rem;
+  right: 0.74rem;
+  z-index: 5;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.84);
+  border: 1px solid rgba(226,232,240,0.88);
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 800;
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.lc-visibilita-close-btn:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow:
+    0 12px 24px rgba(15,23,42,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.lc-visibilita-status-wrap {
+  position: relative;
+  z-index: 2;
+  padding-top: 1.95rem;
+}
+
+#box-visibilita-stato {
+  border-radius: 18px !important;
+  line-height: 1.45;
+  box-shadow:
+    0 10px 22px rgba(15,23,42,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.86);
+}
+
+
+/* ============================================================
+   MODALE VISIBILITÀ — SEPARATORE AZIONI
+   ============================================================ */
+
+.lc-visibilita-actions-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.05rem 0 0.9rem;
+}
+
+.lc-visibilita-actions-line {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(148, 163, 184, 0.55),
+    transparent
+  );
+}
+
+.lc-visibilita-actions-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  line-height: 1.05;
+}
+
+.lc-visibilita-actions-kicker {
+  color: #94a3b8;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.lc-visibilita-actions-title {
+  margin-top: 0.18rem;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+
+/* ============================================================
+   MODALE VISIBILITÀ — CARD PRINCIPALI
+   ============================================================ */
+
+.lc-main-card {
+  position: relative;
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease,
+    filter 0.22s ease;
+}
+
+.lc-main-card > details {
+  transition:
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    transform 0.22s ease;
+}
+
+.lc-main-card > details > summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lc-main-card > details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.lc-main-card > details > summary::marker {
+  content: "";
+}
+
+#modale-visibilita-card.lc-has-open .lc-main-card:not(.lc-open-section) {
+  opacity: 0.58;
+  filter: saturate(0.86);
+  transform: scale(0.985);
+}
+
+#modale-visibilita-card.lc-has-open .lc-main-card:not(.lc-open-section):hover {
+  opacity: 0.82;
+  filter: saturate(1);
+}
+
+.lc-open-section {
+  z-index: 3;
+  transform: translateY(-1px);
+}
+
+.lc-open-section > details {
+  box-shadow:
+    0 18px 42px rgba(15,23,42,0.13),
+    0 8px 20px rgba(59,130,246,0.08) !important;
+}
+
+.lc-card-urgente.lc-open-section > details {
+  border-color: rgba(251, 113, 133, 0.75) !important;
+  box-shadow:
+    0 18px 42px rgba(159, 18, 57, 0.14),
+    0 8px 22px rgba(244, 63, 94, 0.12) !important;
+}
+
+.lc-card-pacchetti.lc-open-section > details {
+  border-color: rgba(96, 165, 250, 0.65) !important;
+}
+
+.lc-card-servizi.lc-open-section > details {
+  border-color: rgba(148, 163, 184, 0.68) !important;
+}
+
+
+/* ============================================================
+   MODALE VISIBILITÀ — DETTAGLI INTERNI
+   ============================================================ */
+
+#modale-visibilita details details {
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+#modale-visibilita details details[open] {
+  box-shadow:
+    0 8px 20px rgba(15,23,42,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.84);
+}
+
+#modale-visibilita summary {
+  user-select: none;
+}
+
+#modale-visibilita button:disabled {
+  pointer-events: none;
+}
+
+#modale-visibilita button:not(:disabled) {
+  cursor: pointer;
+}
+
+#modale-visibilita button {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    opacity 0.18s ease;
+}
+
+#modale-visibilita button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+#modale-visibilita button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+
+/* ============================================================
+   MODALE SERVIZIO / CONFERMA — RIFINITURA
+   ============================================================ */
+
+#modale-servizio,
+#modale-conferma {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+#modale-servizio > div,
+#modale-conferma > div {
+  border: 1px solid rgba(226,232,240,0.92);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(59,130,246,0.10), transparent 34%),
+    radial-gradient(circle at 92% 0%, rgba(219,39,119,0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+  box-shadow:
+    0 28px 80px rgba(15, 23, 42, 0.30),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+#ms-piani > div {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+  box-shadow:
+    0 10px 22px rgba(15,23,42,0.055),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+#ms-piani > div:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 28px rgba(15,23,42,0.09),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+#stripe-box {
+  border-radius: 20px;
+  border: 1px solid rgba(226,232,240,0.86);
+  background: rgba(255,255,255,0.72);
+  padding: 0.85rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.88),
+    0 8px 18px rgba(15,23,42,0.05);
+}
+
+
+/* ============================================================
+   TOAST PAGAMENTO
+   ============================================================ */
+
+#payment-toast {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+#payment-toast-card {
+  animation: lcPaymentToastIn 0.24s ease-out both;
+}
+
+@keyframes lcPaymentToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+/* ============================================================
+   MOBILE — MODALI
+   ============================================================ */
+
+@media (max-width: 640px) {
+  #modale-visibilita {
+    align-items: flex-end;
+  }
+
+  #modale-visibilita-card {
+    width: 100%;
+    max-width: none;
+    max-height: 91vh;
+    border-radius: 28px 28px 0 0;
+    padding: 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .lc-visibilita-hero-status {
+    margin: 0;
+    border-radius: 22px;
+    padding: 0.88rem;
+  }
+
+  .lc-visibilita-status-wrap {
+    padding-top: 1.85rem;
+  }
+
+  #box-visibilita-stato {
+    font-size: 0.82rem !important;
+    padding: 0.85rem !important;
+  }
+
+  .lc-visibilita-actions-divider {
+    gap: 0.5rem;
+    margin: 0.92rem 0 0.78rem;
+  }
+
+  .lc-visibilita-actions-title {
+    font-size: 0.76rem;
+  }
+
+  .lc-main-card {
+    margin-bottom: 0.58rem !important;
+  }
+
+  #modale-visibilita-card.lc-has-open .lc-main-card:not(.lc-open-section) {
+    opacity: 0.64;
+    transform: scale(0.99);
+  }
+
+  #modale-servizio > div,
+  #modale-conferma > div {
+    width: 100%;
+    max-width: none;
+    border-radius: 28px 28px 0 0;
+    padding: 1.1rem;
+    padding-bottom: max(1.1rem, env(safe-area-inset-bottom));
+  }
+
+  #payment-toast {
+    align-items: flex-end;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  #payment-toast-card {
+    max-width: none;
+    border-radius: 22px;
+  }
+}
+
+
   </style>
   <script>
   function apriZoom(src) {
@@ -1840,15 +2482,65 @@
   }
 </script>
 <script>
-  function apriVisibilita() {
-    document.getElementById("modale-visibilita").classList.remove("hidden");
-    bodyModalOn();
+let ANNUNCIO_ID_CORRENTE = null;
+
+function apriVisibilita(id) {
+  ANNUNCIO_ID_CORRENTE = id || {{ annuncio['id'] }};
+
+  const modale = document.getElementById("modale-visibilita");
+  if (!modale) return;
+
+  modale.classList.remove("hidden");
+  document.body.classList.add("overflow-hidden", "modal-open");
+
+  // Reset contatori e stati prima di ricaricare
+  serviziCaricati = 0;
+  Object.keys(statoServizi).forEach(k => delete statoServizi[k]);
+
+  const servizi = [
+    "boost_lista",
+    "badge_evidenza",
+    "vetrina_annuncio",
+    "annuncio_urgente",
+    "contatti",
+    "pacchetto_visibilita",
+    "visibilita_premium"
+  ];
+
+  NUM_SERVIZI_ATTESI = servizi.length;
+
+  servizi.forEach(codice => {
+    caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice);
+  });
+}
+
+function chiudiVisibilita() {
+  const modale = document.getElementById("modale-visibilita");
+  const card = document.getElementById("modale-visibilita-card");
+
+  document.getElementById("modale-servizio")?.classList.add("hidden");
+  document.getElementById("modale-conferma")?.classList.add("hidden");
+  document.getElementById("stripe-box")?.classList.add("hidden");
+
+  if (card) {
+    card.classList.remove("lc-has-open");
+
+    card.querySelectorAll(".lc-open-section").forEach(el => {
+      el.classList.remove("lc-open-section");
+    });
+
+    card.querySelectorAll("details[open]").forEach(d => {
+      d.removeAttribute("open");
+    });
+
+    window.dispatchEvent(new Event("lc:resetModaleVisibilita"));
+
+    card.scrollTo({ top: 0, behavior: "auto" });
   }
 
-  function chiudiVisibilita() {
-    document.getElementById("modale-visibilita").classList.add("hidden");
-    bodyModalOff();
-  }
+  modale?.classList.add("hidden");
+  document.body.classList.remove("overflow-hidden", "modal-open");
+}
 </script>
 <script>
 let selezioneCorrente = null;
@@ -1960,172 +2652,170 @@ const PERCENTUALE_RINNOVO = 0.25; // 25% finale della durata
 const MIN_GIORNI_RINNOVO = 1;     // mai prima di 1 giorno
 
 /* =========================================================
-   STATO GLOBALE
+   STATO GLOBALE MODALE VISIBILITÀ
    ========================================================= */
 const statoServizi = {};
 let serviziCaricati = 0;
 let NUM_SERVIZI_ATTESI = 0;
 
 /* =========================================================
-   INIT
+   CARICA STATO SERVIZIO / PACCHETTO
    ========================================================= */
-   document.addEventListener("DOMContentLoaded", () => {
-     const ANNUNCIO_ID = {{ annuncio['id'] }};
+async function caricaStatoServizio(annuncioId, codice) {
+  try {
+    const res = await fetch(
+      `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
+      { cache: "no-store" }
+    );
 
-     const servizi = [
-       "boost_lista",
-       "badge_evidenza",
-       "vetrina_annuncio",
-       "annuncio_urgente",
-       "contatti"
-     ];
+    let data = { attivo: false };
 
-     const pacchetti = [
-       "pacchetto_visibilita",
-       "visibilita_premium"
-     ];
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      console.warn("API stato servizio non ok:", codice, res.status);
+    }
 
-     NUM_SERVIZI_ATTESI = servizi.length + pacchetti.length;
+    statoServizi[codice] = data;
 
-     servizi.forEach(codice => caricaStatoServizio(ANNUNCIO_ID, codice));
-     pacchetti.forEach(codice => caricaStatoPacchetto(codice));
-   });
+    const badge = document.getElementById(`badge-${codice}`);
+    const info  = document.getElementById(`info-${codice}`);
+    const btn   = document.getElementById(`btn-${codice}`);
 
-   async function caricaStatoPacchetto(codice) {
-     try {
-       statoServizi[codice] = { attivo: false };
-     } catch (e) {
-       console.error("Errore stato pacchetto", codice, e);
-       statoServizi[codice] = { attivo: false };
-     }
+    if (badge && btn) {
+      info?.classList.add("hidden");
 
-     serviziCaricati++;
-     if (serviziCaricati === NUM_SERVIZI_ATTESI) {
-       aggiornaStatoPacchetti();
-       aggiornaStatoVisibilita();
-     }
-   }
+      /* =====================================================
+         SERVIZIO NON ATTIVO
+         ===================================================== */
+      if (!data.attivo) {
+        badge.textContent = "Non attivo";
+        badge.className =
+          "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
 
-/* =========================================================
-   CARICA STATO SERVIZIO
-   ========================================================= */
-   async function caricaStatoServizio(annuncioId, codice) {
-     try {
-       const res = await fetch(
-         `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
-         { cache: "no-store" }
-       );
+        btn.disabled = false;
 
-       let data = { attivo: false };
+        if (codice === "pacchetto_visibilita" || codice === "visibilita_premium") {
+          btn.textContent = "Scopri il pacchetto";
+        } else if (codice === "annuncio_urgente") {
+          btn.textContent = "Attiva Annuncio urgente";
+        } else {
+          btn.textContent = "Scopri";
+        }
 
-       if (res.ok) {
-         data = await res.json();
-       } else {
-         console.warn("API non ok:", codice);
-       }
+        if (codice === "annuncio_urgente") {
+          btn.className =
+            "mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-semibold";
+        } else if (codice === "visibilita_premium") {
+          btn.className =
+            "mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold";
+        } else if (codice === "pacchetto_visibilita") {
+          btn.className =
+            "mt-3 w-full py-2 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold";
+        } else {
+          btn.className =
+            "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
+        }
+      }
 
-       // salva stato globale SEMPRE
-       statoServizi[codice] = data;
+      /* =====================================================
+         SERVIZIO ATTIVO
+         ===================================================== */
+      else {
+        badge.textContent = "Attivo";
+        badge.className =
+          "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
 
-       const badge = document.getElementById(`badge-${codice}`);
-       const info  = document.getElementById(`info-${codice}`);
-       const btn   = document.getElementById(`btn-${codice}`);
+        // PERMANENTE
+        if (data.permanente === true) {
+          btn.disabled = true;
+          btn.textContent = "♾️ Senza scadenza";
+          btn.className =
+            "mt-3 w-full py-2 rounded-full bg-green-100 text-indigo-700 text-sm font-medium cursor-default";
 
-       if (badge && btn) {
+          if (info) {
+            info.classList.remove("hidden");
+            info.textContent = "Servizio attivo senza scadenza";
+          }
+        }
 
-         info?.classList.add("hidden");
+        // DATE MANCANTI
+        else if (!data.data_fine || !data.data_inizio) {
+          btn.disabled = true;
+          btn.textContent = "Attivo";
+          btn.className =
+            "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
+        }
 
-         /* =====================================================
-            SERVIZIO NON ATTIVO
-            ===================================================== */
-         if (!data.attivo) {
-           badge.textContent = "Non attivo";
-           badge.className =
-             "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+        // SERVIZIO CON SCADENZA
+        else {
+          const fine = new Date(data.data_fine);
+          fine.setHours(23, 59, 59, 999);
 
-           btn.disabled = false;
-           btn.textContent = "Scopri";
-           btn.className =
-             "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
-           } else {
-             badge.textContent = "Attivo";
-             badge.className =
-               "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+          const oggi = new Date();
+          oggi.setHours(0, 0, 0, 0);
 
-               // PERMANENTE (admin / infinito)
-               if (data.permanente === true) {
-                 btn.disabled = true;
-                 btn.textContent = "♾️ Senza scadenza";
-                 btn.className =
-                   "mt-3 w-full py-2 rounded-full bg-green-100 text-indigo-700 text-sm font-medium cursor-default";
+          const giorniResidui = Math.ceil((fine - oggi) / 86400000);
 
-                 if (info) {
-                   info.classList.remove("hidden");
-                   info.textContent = "Servizio attivo senza scadenza";
-                 }
-               }
+          if (giorniResidui <= 0) {
+            badge.textContent = "Scaduto";
+            badge.className =
+              "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
 
-               // DATE MANCANTI (fallback sicurezza)
-               else if (!data.data_fine || !data.data_inizio) {
-                 btn.disabled = true;
-                 btn.textContent = "Attivo";
-                 btn.className =
-                   "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
-               }
+            btn.disabled = false;
+            btn.textContent =
+              codice === "pacchetto_visibilita" || codice === "visibilita_premium"
+                ? "Scopri il pacchetto"
+                : "Scopri";
 
-             else {
+            if (codice === "annuncio_urgente") {
+              btn.className =
+                "mt-3 w-full py-2 rounded-full bg-rose-500 hover:bg-rose-600 transition text-white text-sm font-semibold";
+            } else if (codice === "visibilita_premium") {
+              btn.className =
+                "mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold";
+            } else if (codice === "pacchetto_visibilita") {
+              btn.className =
+                "mt-3 w-full py-2 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold";
+            } else {
+              btn.className =
+                "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
+            }
+          }
 
-               const fine = new Date(data.data_fine);
-               fine.setHours(23,59,59,999);
+          else if (giorniResidui <= 3) {
+            btn.disabled = false;
+            btn.textContent =
+              codice === "pacchetto_visibilita" || codice === "visibilita_premium"
+                ? "Rinnova pacchetto"
+                : "Rinnova";
 
-               const oggi = new Date();
-               oggi.setHours(0,0,0,0);
+            btn.className =
+              "mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium";
+          }
 
-               const giorniResidui = Math.ceil((fine - oggi) / 86400000);
+          else {
+            btn.disabled = true;
+            btn.textContent = `Attivo fino al ${fine.toLocaleDateString("it-IT")}`;
+            btn.className =
+              "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
+          }
+        }
+      }
+    }
 
-               // SCADUTO
-               if (giorniResidui <= 0) {
-                 badge.textContent = "Scaduto";
-                 badge.className =
-                   "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+  } catch (e) {
+    console.error("Errore stato servizio", codice, e);
+    statoServizi[codice] = { attivo: false };
+  }
 
-                 btn.disabled = false;
-                 btn.textContent = "Scopri";
-                 btn.className =
-                   "mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium";
-               }
+  serviziCaricati++;
 
-               // VICINO SCADENZA (≤ 3 giorni)
-               else if (giorniResidui <= 3) {
-                 btn.disabled = false;
-                 btn.textContent = "Rinnova";
-                 btn.className =
-                   "mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium";
-               }
-
-               // LONTANO
-               else {
-                 btn.disabled = true;
-                 btn.textContent = `Attivo fino al ${fine.toLocaleDateString('it-IT')}`;
-                 btn.className =
-                   "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
-               }
-             }
-           }
-       }
-
-     } catch (e) {
-       console.error("Errore stato servizio", codice, e);
-       statoServizi[codice] = { attivo: false };
-     }
-
-     // QUESTO DEVE SEMPRE PARTIRE
-     serviziCaricati++;
-     if (serviziCaricati === NUM_SERVIZI_ATTESI) {
-       aggiornaStatoPacchetti();
-       aggiornaStatoVisibilita();
-     }
-   }
+  if (serviziCaricati === NUM_SERVIZI_ATTESI) {
+    aggiornaStatoPacchetti();
+    aggiornaStatoVisibilita();
+  }
+}
 </script>
 <script>
 function aggiornaStatoPacchetti() {
@@ -2558,6 +3248,61 @@ document.addEventListener("DOMContentLoaded", () => {
   function bodyModalOff() {
     document.body.classList.remove("modal-open");
   }
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const card = document.getElementById("modale-visibilita-card");
+  if (!card) return;
+
+  const mainDetails = card.querySelectorAll(".lc-main-card > details");
+
+  mainDetails.forEach(details => {
+    details.addEventListener("toggle", () => {
+      const wrapper = details.closest(".lc-main-card");
+
+      if (details.open) {
+        card.classList.add("lc-has-open");
+
+        mainDetails.forEach(other => {
+          if (other !== details) {
+            other.removeAttribute("open");
+            other.closest(".lc-main-card")?.classList.remove("lc-open-section");
+          }
+        });
+
+        wrapper?.classList.add("lc-open-section");
+
+        setTimeout(() => {
+          wrapper?.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        }, 90);
+
+      } else {
+        wrapper?.classList.remove("lc-open-section");
+
+        const ancoraAperte = Array.from(mainDetails).some(d => d.open);
+
+        if (!ancoraAperte) {
+          card.classList.remove("lc-has-open");
+        }
+      }
+    });
+  });
+
+  window.addEventListener("lc:resetModaleVisibilita", () => {
+    card.classList.remove("lc-has-open");
+
+    card.querySelectorAll(".lc-open-section").forEach(el => {
+      el.classList.remove("lc-open-section");
+    });
+
+    card.querySelectorAll("details[open]").forEach(d => {
+      d.removeAttribute("open");
+    });
+  });
+});
 </script>
 
 <script>
