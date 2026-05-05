@@ -883,7 +883,7 @@
             <div class="border-t border-amber-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
               <ul class="space-y-1">
                 <li>• Boost lista</li>
-                <li>• Evidenza grafica</li>
+                <li>• Grafica in evidenza</li>
                 <li>• Vetrina annuncio</li>
                 <li>• Sblocco contatti</li>
               </ul>
@@ -4146,7 +4146,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resetFocusModaleVisibilita();
   }
-  
+
   function centraSezioneNelModale(sezione) {
     if (!sezione) return;
 
@@ -4210,6 +4210,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, true);
 
+  /*
+    Rende cliccabili per intero le due card dei pacchetti.
+    Cliccando sulla card chiusa, apre il relativo details interno.
+    I click sui pulsanti restano normali.
+  */
+  ["card-visibilita_premium", "card-pacchetto_visibilita"].forEach(id => {
+    const box = document.getElementById(id);
+    if (!box) return;
+
+    const detailsInterno = box.querySelector(":scope > details");
+    if (!detailsInterno) return;
+
+    box.classList.add("cursor-pointer");
+
+    box.addEventListener("click", (e) => {
+      if (e.target.closest("button, a, input, label, select, textarea")) return;
+
+      const summary = detailsInterno.querySelector(":scope > summary");
+
+      // Se clicchi direttamente sul summary, lasciamo lavorare il comportamento nativo
+      if (summary && summary.contains(e.target)) return;
+
+      // Se la card è chiusa, cliccando ovunque sulla card la apriamo
+      if (!detailsInterno.open) {
+        detailsInterno.setAttribute("open", "");
+      }
+    });
+  });
+
   card.querySelectorAll("details").forEach(details => {
     details.addEventListener("toggle", () => {
       if (gestioneToggleInCorso) return;
@@ -4221,19 +4250,25 @@ document.addEventListener("DOMContentLoaded", () => {
           const sezioneCorrente = details.closest(".mb-3, .mb-4");
 
           /*
-            Chiude gli altri details appartenenti ad altre sezioni principali.
-            Così non rimangono aperte più aree lontane tra loro.
+          /*
+            Chiude gli altri details aperti, mantenendo però aperti
+            eventuali details genitori necessari.
+
+            Esempio:
+            - se apro "Visibilità Premium", il details principale
+              "Pacchetti consigliati" deve restare aperto;
+            - se poi apro "Pacchetto Visibilità Base",
+              "Visibilità Premium" si chiude automaticamente.
           */
           card.querySelectorAll("details[open]").forEach(altro => {
             if (altro === details) return;
 
-            const altraSezione = altro.closest(".mb-3, .mb-4");
+            // Mantiene aperti i details genitori del details appena aperto
+            if (altro.contains(details)) return;
 
-            if (altraSezione !== sezioneCorrente) {
-              altro.removeAttribute("open");
-            }
+            altro.removeAttribute("open");
           });
-
+          
           aggiornaFocusModaleVisibilita(details);
         } else {
           const ancoraAperti = card.querySelectorAll("details[open]");
