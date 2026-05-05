@@ -2708,7 +2708,7 @@ nav::before {
   opacity: 0.36 !important;
   filter: blur(1.3px) grayscale(0.14) !important;
   transform: scale(0.985) !important;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 #modale-visibilita-card.lc-has-open > .lc-main-card.lc-open-section {
@@ -4139,6 +4139,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function chiudiCardAperteVisibilita() {
+    card.querySelectorAll("details[open]").forEach(details => {
+      details.removeAttribute("open");
+    });
+
+    resetFocusModaleVisibilita();
+  }
+  
   function centraSezioneNelModale(sezione) {
     if (!sezione) return;
 
@@ -4186,6 +4194,21 @@ document.addEventListener("DOMContentLoaded", () => {
       centraSezioneNelModale(sezioneAperta);
     }, 120);
   }
+
+  card.addEventListener("click", (e) => {
+    if (!card.classList.contains("lc-has-open")) return;
+
+    const sezioneAperta = card.querySelector(".lc-open-section");
+    if (!sezioneAperta) return;
+
+    const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
+
+    if (!clickDentroSezioneAperta) {
+      e.preventDefault();
+      e.stopPropagation();
+      chiudiCardAperteVisibilita();
+    }
+  }, true);
 
   card.querySelectorAll("details").forEach(details => {
     details.addEventListener("toggle", () => {
