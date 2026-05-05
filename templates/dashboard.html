@@ -882,10 +882,10 @@
 
             <div class="border-t border-amber-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
               <ul class="space-y-1">
-                <li>• Boost lista</li>
-                <li>• Grafica in evidenza</li>
-                <li>• Vetrina annuncio</li>
-                <li>• Sblocco contatti</li>
+                <li>• Boost lista - Annuncio nelle prime posizioni</li>
+                <li>• Grafica in evidenza - Annuncio si distingue dagli altri</li>
+                <li>• Vetrina annuncio - Annuncio inserito in vetrina prima degli altri</li>
+                <li>• Contatti visibili</li>
               </ul>
 
               <p id="info-visibilita_premium" class="mt-2 text-xs text-slate-500 hidden"></p>
@@ -895,7 +895,7 @@
                 onclick="apriServizio(this)"
                 data-codice="visibilita_premium"
                 data-titolo="🌟 Visibilità Premium"
-                data-descrizione="Pacchetto completo con boost lista, evidenza, vetrina e sblocco contatti."
+                data-descrizione="Pacchetto completo con boost lista, evidenza, vetrina e Contatti visibili."
                 class="mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
                 Scopri il pacchetto
               </button>
@@ -935,9 +935,9 @@
 
             <div class="border-t border-blue-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
               <ul class="space-y-1">
-                <li>• Boost lista</li>
-                <li>• Grafica in evidenza</li>
-                <li>• Sblocco contatti</li>
+                <li>• Boost lista - Annuncio nelle prime posizioni</li>
+                <li>• Grafica in evidenza - Annuncio si distingue dagli altri</li>
+                <li>• Contatti visibili</li>
               </ul>
 
               <p id="info-pacchetto_visibilita" class="mt-2 text-xs text-slate-500 hidden"></p>
@@ -947,7 +947,7 @@
                 onclick="apriServizio(this)"
                 data-codice="pacchetto_visibilita"
                 data-titolo="📦 Pacchetto Visibilità Base"
-                data-descrizione="Pacchetto base che combina boost lista, grafica in evidenza e sblocco contatti."
+                data-descrizione="Pacchetto base che combina boost lista, grafica in evidenza e Contatti visibili."
                 class="mt-3 w-full py-2 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
                 Scopri il pacchetto
               </button>
@@ -1104,7 +1104,7 @@
         <div id="card-contatti" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div class="flex items-center justify-between gap-3 px-3.5 py-2.5">
             <div class="min-w-0">
-              <div class="font-bold text-sm text-slate-900">📞 Sblocco contatti</div>
+              <div class="font-bold text-sm text-slate-900">📞 Contatti visibili</div>
               <div class="mt-0.5 text-xs text-slate-500">Email e telefono visibili</div>
             </div>
 
@@ -1127,7 +1127,7 @@
                 type="button"
                 onclick="apriServizio(this)"
                 data-codice="contatti"
-                data-titolo="📞 Sblocco contatti"
+                data-titolo="📞 Contatti visibili"
                 data-descrizione="Consente di visualizzare email e telefono dell’annuncio."
                 class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
                 Scopri
@@ -4268,7 +4268,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             altro.removeAttribute("open");
           });
-          
+
           aggiornaFocusModaleVisibilita(details);
         } else {
           const ancoraAperti = card.querySelectorAll("details[open]");
