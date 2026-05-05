@@ -721,6 +721,18 @@
 
  </div>
 
+ <!-- SEPARATORE AZIONI VISIBILITÀ -->
+ <div class="lc-visibilita-actions-divider">
+   <span class="lc-visibilita-actions-line"></span>
+
+   <div class="lc-visibilita-actions-label">
+     <span class="lc-visibilita-actions-kicker">Azioni disponibili</span>
+     <span class="lc-visibilita-actions-title">Scegli come potenziare l’annuncio</span>
+   </div>
+
+   <span class="lc-visibilita-actions-line"></span>
+ </div>
+
   <!-- ANNUNCIO URGENTE COMPATTO -->
   <div class="mb-3 lc-main-card lc-card-urgente">
     <div id="card-annuncio_urgente"
@@ -2346,6 +2358,61 @@ nav::before {
   border-radius: 9999px !important;
 }
 
+/* Separatore tra stato e azioni */
+.lc-visibilita-actions-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.8rem;
+
+  margin: 0.25rem 1.25rem 0.85rem !important;
+}
+
+.lc-visibilita-actions-line {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(148,163,184,0.55),
+    transparent
+  );
+}
+
+.lc-visibilita-actions-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+
+  padding: 0.32rem 0.7rem;
+  border-radius: 9999px;
+
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(226,232,240,0.9);
+
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.055),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.lc-visibilita-actions-kicker {
+  font-size: 0.56rem;
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #94a3b8;
+}
+
+.lc-visibilita-actions-title {
+  font-size: 0.72rem;
+  line-height: 1.1;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  color: #334155;
+  white-space: nowrap;
+}
+
 /* ============================================================
    SPAZIATURA CORPO MODALE
    ============================================================ */
@@ -2358,7 +2425,7 @@ nav::before {
 }
 
 #modale-visibilita-card > .lc-main-card:first-of-type {
-  margin-top: 0.55rem !important;
+  margin-top: 0 !important;
 }
 
 /* ============================================================
@@ -2764,6 +2831,23 @@ nav::before {
     padding: 0.95rem 3.7rem 0.95rem 0.95rem !important;
     font-size: 0.84rem !important;
     border-radius: 1.35rem !important;
+  }
+
+  .lc-visibilita-actions-divider {
+    gap: 0.55rem;
+    margin: 0.15rem 0.95rem 0.75rem !important;
+  }
+
+  .lc-visibilita-actions-label {
+    padding: 0.3rem 0.62rem;
+  }
+
+  .lc-visibilita-actions-kicker {
+    font-size: 0.52rem;
+  }
+
+  .lc-visibilita-actions-title {
+    font-size: 0.68rem;
   }
   
   #modale-visibilita-card > .lc-main-card {
