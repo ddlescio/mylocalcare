@@ -512,32 +512,44 @@
 
           <!-- DESTRA: feed annunci -->
           <div class="min-w-0">
-            <div class="profilo-card annunci-panel p-4 sm:p-5">
-              <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <h3 class="text-[1.05rem] sm:text-[1.1rem] font-semibold text-slate-900 tracking-[-0.02em]">
-                      Annunci pubblicati
-                    </h3>
+            <div class="annunci-premium-panel">
 
-                    {% if annunci and annunci|length %}
-                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold
-                                   bg-slate-100 text-slate-600 border border-slate-200">
-                        {{ annunci|length }}
-                      </span>
-                    {% endif %}
+              <!-- HEADER PREMIUM ANNUNCI -->
+              <div class="annunci-premium-header">
+                <div class="annunci-premium-header-glow annunci-premium-header-glow-a"></div>
+                <div class="annunci-premium-header-glow annunci-premium-header-glow-b"></div>
+
+                <div class="annunci-premium-title-wrap">
+                  <div class="annunci-premium-icon">
+                    📣
                   </div>
 
-                  <p class="text-[12px] sm:text-[12.5px] text-slate-400 mt-1 leading-relaxed">
-                    I tuoi annunci attivi e in revisione
-                  </p>
+                  <div class="min-w-0">
+                    <div class="annunci-premium-kicker">
+                      Profilo
+                    </div>
+
+                    <div class="annunci-premium-title-row">
+                      <h3 class="annunci-premium-title">
+                        Annunci pubblicati
+                      </h3>
+
+                      {% if annunci and annunci|length %}
+                        <span class="annunci-premium-count">
+                          {{ annunci|length }}
+                        </span>
+                      {% endif %}
+                    </div>
+
+                    <p class="annunci-premium-subtitle">
+                      Annunci attivi, in revisione o da aggiornare
+                    </p>
+                  </div>
                 </div>
 
                 {% if not pubblico %}
                 <a href="{{ url_for('nuovo_annuncio') }}"
-                   class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold
-                          text-blue-700 bg-blue-50 border border-blue-200 shadow-sm
-                          hover:bg-blue-100 hover:border-blue-300 transition-all duration-200">
+                   class="annunci-premium-create">
                   <span class="text-base leading-none">＋</span>
                   <span>Crea annuncio</span>
                 </a>
@@ -545,112 +557,131 @@
               </div>
 
               {% if annunci and annunci|length %}
-              <div class="grid grid-cols-1 {% if annunci and annunci|length > 1 %}2xl:grid-cols-2{% endif %} gap-4 sm:gap-5 mt-3">
+              <div class="annunci-premium-list">
                 {% for a in annunci %}
-                <div class="annuncio-card-premium relative flex flex-col rounded-[1.6rem] border border-[rgba(226,232,240,0.95)]
-                            bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))]
-                            shadow-[0_10px_22px_rgba(15,23,42,0.05),_0_24px_50px_rgba(15,23,42,0.09)]
-                            hover:shadow-[0_14px_30px_rgba(15,23,42,0.07),_0_30px_60px_rgba(15,23,42,0.12)]
-                            hover:-translate-y-[4px] transition-all duration-300 overflow-hidden backdrop-blur-[12px]
-                            before:content-[''] before:absolute before:inset-0
-                            before:bg-[linear-gradient(135deg,rgba(255,255,255,0.30),rgba(255,255,255,0)_42%)]
-                            before:pointer-events-none
-                            after:content-[''] after:absolute after:left-4 after:right-4 after:top-0 after:h-px
-                            after:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.92),transparent)]
-                            after:pointer-events-none">
-                  <!-- Contenuto principale -->
+
+                {% set stato_label = 'Pubblicato' %}
+                {% set stato_class = 'is-published' %}
+                {% if a['stato'] == 'in_attesa' %}
+                  {% set stato_label = 'In revisione' %}
+                  {% set stato_class = 'is-pending' %}
+                {% elif a['stato'] == 'rifiutato' %}
+                  {% set stato_label = 'Rifiutato' %}
+                  {% set stato_class = 'is-rejected' %}
+                {% endif %}
+
+                <article class="profile-annuncio-premium-card {{ stato_class }}">
+
                   <a href="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
-                     class="flex-1 block p-4 sm:p-5 relative">
+                     class="profile-annuncio-premium-link">
 
-                    {% if not pubblico %}
-                      <span class="absolute top-3 right-4 text-[10px] px-2 py-[3px] rounded-full border font-medium leading-tight whitespace-nowrap
-                                   {% if a['stato']=='approvato' %}
-                                     bg-green-50 text-green-700 border-green-200
-                                   {% elif a['stato']=='in_attesa' %}
-                                     bg-yellow-50 text-yellow-700 border-yellow-200
-                                   {% elif a['stato']=='rifiutato' %}
-                                     bg-red-50 text-red-700 border-red-200
-                                   {% endif %}">
-                        {% if a['stato']=='approvato' %}Pubblicato{% elif a['stato']=='in_attesa' %}In revisione{% else %}Rifiutato{% endif %}
-                      </span>
-                    {% endif %}
+                    <div class="profile-annuncio-premium-top">
 
-                    <div class="relative z-[1]">
-                      <h4 class="text-blue-800 font-semibold text-[16px] sm:text-[17px] leading-tight mb-2 pr-16 line-clamp-2 tracking-[-0.01em]">
-                        {{ a['titolo'] }}
-                      </h4>
+                      <div class="profile-annuncio-premium-main">
+                        <div class="profile-annuncio-premium-meta">
+                          <span class="profile-annuncio-pin">📍</span>
+                          <span class="profile-annuncio-zone">{{ a['zona'] or 'Zona non indicata' }}</span>
 
-                      <div class="flex flex-wrap items-center gap-2 mb-2.5">
-                        <div class="inline-flex items-center gap-1.5 text-[12px] text-slate-500 min-w-0 max-w-full">
-                          <span class="text-[13px]">📍</span>
-                          <span class="truncate">{{ a['zona'] or 'n/d' }}</span>
+                          <span class="profile-annuncio-dot">·</span>
+
+                          <span class="profile-annuncio-category">
+                            {{ a['categoria'] }}
+                          </span>
                         </div>
 
-                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium
-                                     bg-blue-50 text-blue-700 border border-blue-100">
-                          {{ a['categoria'] }}
-                        </span>
+                        <h4 class="profile-annuncio-title">
+                          {{ a['titolo'] }}
+                        </h4>
                       </div>
 
-                      {% if a['descrizione'] %}
-                        <p class="text-[13px] sm:text-[13.5px] text-slate-700 leading-relaxed line-clamp-3">
-                          {{ a['descrizione'] }}
-                        </p>
+                      {% if not pubblico %}
+                        <span class="profile-annuncio-status {{ stato_class }}">
+                          {{ stato_label }}
+                        </span>
                       {% endif %}
+
                     </div>
+
+                    {% if a['descrizione'] %}
+                      <p class="profile-annuncio-description">
+                        {{ a['descrizione'] }}
+                      </p>
+                    {% endif %}
+
+                    <div class="profile-annuncio-bottom-preview">
+                      <span class="profile-annuncio-readmore">
+                        Apri annuncio
+                      </span>
+                      <span class="profile-annuncio-arrow">
+                        →
+                      </span>
+                    </div>
+
                   </a>
 
                   {% if not pubblico %}
-                  <div class="flex items-center justify-between gap-2 text-[11px] border-t border-gray-100 px-3.5 py-2.5 bg-white/80 backdrop-blur-sm mt-auto">
+                  <div class="profile-annuncio-actions">
 
-                    <!-- SINISTRA -->
                     {% if a['stato'] == 'approvato' %}
                     <button
+                      type="button"
                       onclick="apriVisibilita({{ a['id'] }})"
-                      class="flex items-center gap-1 px-3 py-1.5 rounded-full
-                             bg-blue-600 text-white hover:bg-blue-700 shadow">
-                      🚀 <span>Aumenta visibilità</span>
+                      class="profile-annuncio-boost-btn">
+                      <span>🚀</span>
+                      <span>Aumenta visibilità</span>
                     </button>
                     {% else %}
-                      <div></div> {# placeholder per mantenere allineamento #}
+                      <a href="{{ url_for('modifica_annuncio', id=a['id']) }}"
+                         class="profile-annuncio-secondary-btn">
+                        <span>✏️</span>
+                        <span>Modifica</span>
+                      </a>
                     {% endif %}
 
-                    <!-- DESTRA -->
-                    <div class="flex gap-2">
-                      {% if a['stato'] != 'approvato' %}
-                        <a href="{{ url_for('modifica_annuncio', id=a['id']) }}"
-                           class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-gray-600
-                                  hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/60 transition-all duration-200">
-                          ✏️ <span>Modifica</span>
-                        </a>
-                      {% endif %}
-
-                      <a href="{{ url_for('elimina_annuncio', id=a['id']) }}"
-                         onclick="return confirm('Eliminare questo annuncio?');"
-                         class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-gray-600
-                                hover:text-red-600 hover:border-red-200 hover:bg-red-50/70 transition-all duration-200">
-                        🗑️ <span>Elimina</span>
-                      </a>
-                    </div>
+                    <a href="{{ url_for('elimina_annuncio', id=a['id']) }}"
+                       onclick="return confirm('Eliminare questo annuncio?');"
+                       class="profile-annuncio-delete-btn">
+                      <span>🗑️</span>
+                      <span>Elimina</span>
+                    </a>
 
                   </div>
                   {% endif %}
-                </div>
+
+                </article>
                 {% endfor %}
               </div>
+
               {% else %}
-              <p class="text-sm text-gray-500 mt-3">
-                {% if pubblico %}
-                  Questo utente non ha ancora pubblicato annunci.
-                {% else %}
-                  Non hai ancora pubblicato annunci.
-                  <span class="text-blue-600 font-medium">Crea il tuo primo annuncio!</span>
+              <div class="annunci-premium-empty">
+                <div class="annunci-premium-empty-icon">📭</div>
+
+                <h4>
+                  {% if pubblico %}
+                    Nessun annuncio pubblicato
+                  {% else %}
+                    Non hai ancora pubblicato annunci
+                  {% endif %}
+                </h4>
+
+                <p>
+                  {% if pubblico %}
+                    Questo profilo non ha ancora annunci visibili.
+                  {% else %}
+                    Crea il tuo primo annuncio per iniziare a ricevere contatti.
+                  {% endif %}
+                </p>
+
+                {% if not pubblico %}
+                <a href="{{ url_for('nuovo_annuncio') }}" class="annunci-premium-empty-btn">
+                  ＋ Crea il primo annuncio
+                </a>
                 {% endif %}
-              </p>
+              </div>
               {% endif %}
+
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -3064,6 +3095,617 @@ nav::before {
   }
 
 }
+
+/* ============================================================
+   LISTA ANNUNCI PROFILO — PREMIUM
+   ============================================================ */
+
+.annunci-premium-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(37,99,235,0.13), transparent 34%),
+    radial-gradient(circle at 6% 0%, rgba(236,72,153,0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,0.985), rgba(248,250,252,0.96));
+  box-shadow:
+    0 18px 42px rgba(15,23,42,0.075),
+    0 34px 74px rgba(15,23,42,0.075),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.annunci-premium-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0) 42%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.annunci-premium-panel::after {
+  content: "";
+  position: absolute;
+  left: 1.4rem;
+  right: 1.4rem;
+  top: 0;
+  height: 1px;
+  background:
+    linear-gradient(90deg, transparent, rgba(255,255,255,0.98), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.annunci-premium-header {
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 1rem;
+  border-bottom: 1px solid rgba(226,232,240,0.82);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.92), rgba(239,246,255,0.58), rgba(255,255,255,0.92));
+}
+
+.annunci-premium-header-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(26px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.annunci-premium-header-glow-a {
+  width: 150px;
+  height: 150px;
+  left: -58px;
+  top: -62px;
+  background: rgba(59,130,246,0.22);
+}
+
+.annunci-premium-header-glow-b {
+  width: 150px;
+  height: 150px;
+  right: -60px;
+  top: -70px;
+  background: rgba(236,72,153,0.12);
+}
+
+.annunci-premium-title-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.annunci-premium-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.92));
+  border: 1px solid rgba(191,219,254,0.88);
+  box-shadow:
+    0 10px 20px rgba(37,99,235,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+  font-size: 1.05rem;
+}
+
+.annunci-premium-kicker {
+  color: #94a3b8;
+  font-size: 0.62rem;
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.annunci-premium-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-top: 0.18rem;
+}
+
+.annunci-premium-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.32rem;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+}
+
+.annunci-premium-count {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.62rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #2563eb;
+  background: rgba(239,246,255,0.92);
+  border: 1px solid rgba(191,219,254,0.88);
+  font-size: 0.75rem;
+  font-weight: 900;
+  box-shadow:
+    0 6px 14px rgba(37,99,235,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.annunci-premium-subtitle {
+  margin-top: 0.32rem;
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  font-weight: 520;
+}
+
+.annunci-premium-create {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.36rem;
+  padding: 0.42rem 0.82rem;
+  border-radius: 9999px;
+  color: #1d4ed8;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.88));
+  border: 1px solid rgba(147,197,253,0.82);
+  box-shadow:
+    0 8px 18px rgba(37,99,235,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  font-size: 0.78rem;
+  font-weight: 830;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.annunci-premium-create:hover {
+  transform: translateY(-1px);
+  border-color: rgba(59,130,246,0.95);
+  box-shadow:
+    0 12px 24px rgba(37,99,235,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.annunci-premium-list {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1.1rem;
+}
+
+.profile-annuncio-premium-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.55rem;
+  border: 1px solid rgba(203,213,225,0.86);
+  background:
+    radial-gradient(circle at 96% 0%, rgba(59,130,246,0.10), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.96));
+  box-shadow:
+    0 12px 26px rgba(15,23,42,0.055),
+    0 24px 50px rgba(15,23,42,0.075),
+    inset 0 1px 0 rgba(255,255,255,0.90);
+  isolation: isolate;
+  transition:
+    transform .22s ease,
+    box-shadow .22s ease,
+    border-color .22s ease,
+    background .22s ease;
+}
+
+.profile-annuncio-premium-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.58), rgba(255,255,255,0) 42%);
+  pointer-events: none;
+}
+
+.profile-annuncio-premium-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1rem;
+  bottom: 1rem;
+  width: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #2563eb, #4f46e5, #db2777);
+  opacity: 0.78;
+}
+
+.profile-annuncio-premium-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(147,197,253,0.92);
+  box-shadow:
+    0 16px 34px rgba(15,23,42,0.075),
+    0 32px 66px rgba(15,23,42,0.105),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+.profile-annuncio-premium-card.is-published::after {
+  background: linear-gradient(180deg, #22c55e, #2563eb);
+}
+
+.profile-annuncio-premium-card.is-pending::after {
+  background: linear-gradient(180deg, #f59e0b, #f97316);
+}
+
+.profile-annuncio-premium-card.is-rejected::after {
+  background: linear-gradient(180deg, #fb7185, #ef4444);
+}
+
+.profile-annuncio-premium-link {
+  display: block;
+  padding: 1.08rem 1.1rem 0.9rem 1.25rem;
+}
+
+.profile-annuncio-premium-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.profile-annuncio-premium-main {
+  min-width: 0;
+}
+
+.profile-annuncio-premium-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.2;
+  font-weight: 650;
+}
+
+.profile-annuncio-pin {
+  color: #ef4444;
+  font-size: 0.82rem;
+}
+
+.profile-annuncio-zone {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-annuncio-dot {
+  color: #cbd5e1;
+  font-weight: 900;
+}
+
+.profile-annuncio-category {
+  max-width: 170px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0.18rem 0.58rem;
+  border-radius: 9999px;
+  color: #1d4ed8;
+  background: rgba(239,246,255,0.92);
+  border: 1px solid rgba(191,219,254,0.78);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-annuncio-title {
+  margin: 0.5rem 0 0;
+  color: #1d4ed8;
+  font-size: 1.08rem;
+  line-height: 1.12;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.profile-annuncio-status {
+  flex: 0 0 auto;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22rem 0.66rem;
+  border-radius: 9999px;
+  font-size: 0.67rem;
+  line-height: 1;
+  font-weight: 850;
+  white-space: nowrap;
+  box-shadow:
+    0 6px 14px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+}
+
+.profile-annuncio-status.is-published {
+  color: #15803d;
+  background: rgba(240,253,244,0.94);
+  border: 1px solid rgba(134,239,172,0.82);
+}
+
+.profile-annuncio-status.is-pending {
+  color: #92400e;
+  background: rgba(255,251,235,0.96);
+  border: 1px solid rgba(253,230,138,0.9);
+}
+
+.profile-annuncio-status.is-rejected {
+  color: #b91c1c;
+  background: rgba(254,242,242,0.96);
+  border: 1px solid rgba(254,202,202,0.9);
+}
+
+.profile-annuncio-description {
+  margin: 0.78rem 0 0;
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.48;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  letter-spacing: -0.01em;
+}
+
+.profile-annuncio-bottom-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+  padding-top: 0.72rem;
+  border-top: 1px solid rgba(226,232,240,0.72);
+}
+
+.profile-annuncio-readmore {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.profile-annuncio-arrow {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #2563eb;
+  background: rgba(239,246,255,0.88);
+  border: 1px solid rgba(191,219,254,0.82);
+  font-weight: 900;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.profile-annuncio-premium-card:hover .profile-annuncio-arrow {
+  transform: translateX(2px);
+  background: rgba(219,234,254,0.96);
+}
+
+.profile-annuncio-actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.78rem 0.95rem 0.9rem 1.15rem;
+  border-top: 1px solid rgba(226,232,240,0.78);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.78), rgba(248,250,252,0.92));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.profile-annuncio-boost-btn,
+.profile-annuncio-secondary-btn,
+.profile-annuncio-delete-btn {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.34rem;
+  padding: 0.42rem 0.78rem;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  line-height: 1;
+  font-weight: 820;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.profile-annuncio-boost-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #4f46e5, #db2777);
+  border: 1px solid rgba(255,255,255,0.28);
+  box-shadow:
+    0 10px 20px rgba(79,70,229,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+}
+
+.profile-annuncio-boost-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 26px rgba(79,70,229,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.28);
+}
+
+.profile-annuncio-secondary-btn {
+  color: #1d4ed8;
+  background: rgba(239,246,255,0.84);
+  border: 1px solid rgba(191,219,254,0.82);
+}
+
+.profile-annuncio-secondary-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(219,234,254,0.95);
+}
+
+.profile-annuncio-delete-btn {
+  color: #64748b;
+  background: rgba(255,255,255,0.82);
+  border: 1px solid rgba(203,213,225,0.82);
+}
+
+.profile-annuncio-delete-btn:hover {
+  transform: translateY(-1px);
+  color: #dc2626;
+  background: rgba(254,242,242,0.96);
+  border-color: rgba(254,202,202,0.95);
+}
+
+.annunci-premium-empty {
+  position: relative;
+  z-index: 2;
+  margin: 1.1rem;
+  padding: 2rem 1.2rem;
+  border-radius: 1.5rem;
+  border: 1px dashed rgba(148,163,184,0.55);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(248,250,252,0.78));
+  text-align: center;
+}
+
+.annunci-premium-empty-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.25rem;
+  background: rgba(239,246,255,0.92);
+  border: 1px solid rgba(191,219,254,0.82);
+  font-size: 1.35rem;
+}
+
+.annunci-premium-empty h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.annunci-premium-empty p {
+  margin: 0.35rem auto 0;
+  max-width: 24rem;
+  color: #64748b;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.annunci-premium-empty-btn {
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.68rem 1rem;
+  border-radius: 9999px;
+  color: white;
+  background: linear-gradient(135deg, #2563eb, #4f46e5, #db2777);
+  font-size: 0.84rem;
+  font-weight: 850;
+  box-shadow:
+    0 12px 24px rgba(79,70,229,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+}
+
+@media (max-width: 640px) {
+  .annunci-premium-panel {
+    border-radius: 1.6rem;
+  }
+
+  .annunci-premium-header {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .annunci-premium-icon {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border-radius: 1rem;
+    font-size: 0.98rem;
+  }
+
+  .annunci-premium-title {
+    font-size: 1.16rem;
+  }
+
+  .annunci-premium-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .annunci-premium-create {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.72rem;
+  }
+
+  .annunci-premium-list {
+    gap: 0.9rem;
+    padding: 0.9rem;
+  }
+
+  .profile-annuncio-premium-card {
+    border-radius: 1.35rem;
+  }
+
+  .profile-annuncio-premium-link {
+    padding: 0.95rem 0.95rem 0.82rem 1.1rem;
+  }
+
+  .profile-annuncio-title {
+    font-size: 1rem;
+  }
+
+  .profile-annuncio-zone {
+    max-width: 118px;
+  }
+
+  .profile-annuncio-category {
+    max-width: 130px;
+  }
+
+  .profile-annuncio-actions {
+    padding: 0.72rem 0.82rem 0.82rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .profile-annuncio-boost-btn,
+  .profile-annuncio-secondary-btn,
+  .profile-annuncio-delete-btn {
+    min-height: 32px;
+    padding: 0.38rem 0.62rem;
+    font-size: 0.72rem;
+  }
+}
+
 </style>
 
 <style>
@@ -4311,7 +4953,7 @@ document.addEventListener("DOMContentLoaded", () => {
         figlio.removeAttribute("open");
       });
   }
-  
+
   function chiudiAltriDetails(detailsAperto) {
     if (!detailsAperto) return;
 
