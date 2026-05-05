@@ -2967,75 +2967,84 @@
 </script>
 <script>
 let ANNUNCIO_ID_CORRENTE = null;
+</script>
 
-function apriVisibilita(id) {
-  ANNUNCIO_ID_CORRENTE = id || {{ annuncio['id'] }};
+<script>
+  function apriVisibilita(id) {
+    ANNUNCIO_ID_CORRENTE = id || {{ annuncio['id'] }};
 
-  const modale = document.getElementById("modale-visibilita");
-  if (!modale) return;
+    document.getElementById("modale-visibilita").classList.remove("hidden");
+    document.body.classList.add("overflow-hidden", "modal-open");
 
-  modale.classList.remove("hidden");
-  document.body.classList.add("overflow-hidden", "modal-open");
+    // reset contatori
+    serviziCaricati = 0;
+    Object.keys(statoServizi).forEach(k => delete statoServizi[k]);
 
-  // Reset contatori e stati prima di ricaricare
-  serviziCaricati = 0;
-  Object.keys(statoServizi).forEach(k => delete statoServizi[k]);
+    const servizi = [
+      "boost_lista",
+      "badge_evidenza",
+      "vetrina_annuncio",
+      "annuncio_urgente",
+      "contatti",
+      "pacchetto_visibilita",
+      "visibilita_premium"
+    ];
 
-  const servizi = [
-    "boost_lista",
-    "badge_evidenza",
-    "vetrina_annuncio",
-    "annuncio_urgente",
-    "contatti",
-    "pacchetto_visibilita",
-    "visibilita_premium"
-  ];
-
-  NUM_SERVIZI_ATTESI = servizi.length;
-
-  servizi.forEach(codice => {
-    caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice);
-  });
-}
-
-function chiudiVisibilita() {
-  const modale = document.getElementById("modale-visibilita");
-  const card = document.getElementById("modale-visibilita-card");
-
-  document.getElementById("modale-servizio")?.classList.add("hidden");
-  document.getElementById("modale-conferma")?.classList.add("hidden");
-  document.getElementById("stripe-box")?.classList.add("hidden");
-
-  if (card) {
-    card.classList.remove("lc-has-open");
-
-    card.querySelectorAll(".lc-open-section").forEach(el => {
-      el.classList.remove("lc-open-section");
-    });
-
-    card.querySelectorAll("details[open]").forEach(d => {
-      d.removeAttribute("open");
-    });
-
-    window.dispatchEvent(new Event("lc:resetModaleVisibilita"));
-
-    card.scrollTo({ top: 0, behavior: "auto" });
+    NUM_SERVIZI_ATTESI = servizi.length;
+    servizi.forEach(codice =>
+      caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice)
+    );
   }
+</script>
 
-  modale?.classList.add("hidden");
-  document.body.classList.remove("overflow-hidden", "modal-open");
-}
+<script>
+  function chiudiVisibilita() {
+    const modale = document.getElementById("modale-visibilita");
+    const card = document.getElementById("modale-visibilita-card");
+
+    document.getElementById("modale-servizio")?.classList.add("hidden");
+    document.getElementById("modale-conferma")?.classList.add("hidden");
+    document.getElementById("stripe-box")?.classList.add("hidden");
+
+    if (card) {
+      card.classList.remove("lc-has-open");
+
+      card.querySelectorAll(".lc-open-section").forEach(el => {
+        el.classList.remove("lc-open-section");
+      });
+
+      card.querySelectorAll("details[open]").forEach(d => {
+        d.removeAttribute("open");
+      });
+
+      window.dispatchEvent(new Event("lc:resetModaleVisibilita"));
+      card.scrollTo({ top: 0, behavior: "auto" });
+    }
+
+    modale?.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden", "modal-open");
+  }
 </script>
 <script>
 let selezioneCorrente = null;
 
 async function apriServizio(btn) {
+  if (!btn) return;
+
   const modale = document.getElementById("modale-servizio");
-  if (!modale.classList.contains("hidden")) return;
+  if (!modale) {
+    console.error("Modale servizio non trovato: #modale-servizio");
+    return;
+  }
 
   const codice = btn.dataset.codice;
   const titolo = btn.dataset.titolo || "Servizio";
   const descrizione = btn.dataset.descrizione || "";
+
+  if (!codice) {
+    console.error("Codice servizio mancante sul bottone:", btn);
+    return;
+  }
 
   try {
     const tipo = codice.startsWith("pacchetto_") || codice.includes("premium")
@@ -3043,10 +3052,12 @@ async function apriServizio(btn) {
       : "servizi";
 
     const res = await fetch(`/api/${tipo}/${encodeURIComponent(codice)}/piani`, {
-      headers: { "Accept": "application/json" }
+      headers: { "Accept": "application/json" },
+      cache: "no-store"
     });
 
     if (!res.ok) {
+      console.error("Errore API piani:", res.status, codice, tipo);
       alert("Errore nel caricamento dei piani del servizio.");
       return;
     }
@@ -3070,7 +3081,7 @@ async function apriServizio(btn) {
       const permanente = !!p.permanente || p.durata === null || p.durata === undefined;
 
       el.className = `
-        border rounded-2xl p-4 cursor-pointer transition
+        border rounded-2xl p-4 cursor-pointer transition bg-white
         ${p.evidenziato ? "border-blue-600 scale-[1.03]" : "border-slate-200"}
       `;
 
@@ -3098,6 +3109,7 @@ async function apriServizio(btn) {
         document.querySelectorAll("#ms-piani > div").forEach(x =>
           x.classList.remove("ring-2", "ring-blue-500")
         );
+
         el.classList.add("ring-2", "ring-blue-500");
 
         selezioneCorrente = {
@@ -3107,7 +3119,7 @@ async function apriServizio(btn) {
           permanente,
           titolo: titolo,
           codice: codice,
-          tipo: tipo // "servizi" | "pacchetti"
+          tipo: tipo
         };
 
         btnConferma.disabled = false;
@@ -3118,8 +3130,9 @@ async function apriServizio(btn) {
     });
 
     modale.classList.remove("hidden");
+
   } catch (e) {
-    console.error(e);
+    console.error("Errore apriServizio:", e);
     alert("Errore di rete o JS durante il caricamento del servizio.");
   }
 }
@@ -3736,59 +3749,244 @@ document.addEventListener("DOMContentLoaded", () => {
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const card = document.getElementById("modale-visibilita-card");
-  if (!card) return;
+  const modale = document.getElementById("modale-visibilita");
 
-  const mainDetails = card.querySelectorAll(".lc-main-card > details");
+  if (!card || !modale) return;
 
-  mainDetails.forEach(details => {
-    details.addEventListener("toggle", () => {
-      const wrapper = details.closest(".lc-main-card");
+  let gestioneToggleInCorso = false;
 
-      if (details.open) {
-        card.classList.add("lc-has-open");
+  function getSezioniPrincipali() {
+    return Array.from(card.querySelectorAll(":scope > .lc-main-card"));
+  }
 
-        mainDetails.forEach(other => {
-          if (other !== details) {
-            other.removeAttribute("open");
-            other.closest(".lc-main-card")?.classList.remove("lc-open-section");
-          }
-        });
+  function getMainDetails(sezione) {
+    if (!sezione) return null;
+    return sezione.querySelector(":scope > details");
+  }
 
-        wrapper?.classList.add("lc-open-section");
+  function isMainDetails(details) {
+    const sezione = details.closest(".lc-main-card");
+    return !!sezione && getMainDetails(sezione) === details;
+  }
 
-        setTimeout(() => {
-          wrapper?.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-          });
-        }, 90);
+  function resetFocusModaleVisibilita() {
+    card.classList.remove("lc-has-open");
 
-      } else {
-        wrapper?.classList.remove("lc-open-section");
+    getSezioniPrincipali().forEach(sezione => {
+      sezione.classList.remove("lc-open-section");
+    });
+  }
 
-        const ancoraAperte = Array.from(mainDetails).some(d => d.open);
+  function chiudiTuttiIDetails() {
+    card.querySelectorAll("details[open]").forEach(details => {
+      details.removeAttribute("open");
+    });
 
-        if (!ancoraAperte) {
-          card.classList.remove("lc-has-open");
-        }
+    resetFocusModaleVisibilita();
+  }
+
+  function chiudiDiscendenti(details) {
+    if (!details) return;
+
+    details.querySelectorAll("details[open]").forEach(figlio => {
+      figlio.removeAttribute("open");
+    });
+  }
+
+  function chiudiAltriDetails(detailsAperto) {
+    if (!detailsAperto) return;
+
+    const sezioneCorrente = detailsAperto.closest(".lc-main-card");
+    const mainCorrente = getMainDetails(sezioneCorrente);
+
+    card.querySelectorAll("details[open]").forEach(altro => {
+      if (altro === detailsAperto) return;
+
+      if (!isMainDetails(detailsAperto) && altro === mainCorrente) {
+        return;
+      }
+
+      altro.removeAttribute("open");
+    });
+
+    if (isMainDetails(detailsAperto)) {
+      chiudiDiscendenti(detailsAperto);
+    }
+  }
+
+  function centraSezioneNelModale(sezione) {
+    if (!sezione) return;
+
+    const cardRect = card.getBoundingClientRect();
+    const sectionRect = sezione.getBoundingClientRect();
+
+    const currentScroll = card.scrollTop;
+
+    const sectionCenter =
+      sectionRect.top - cardRect.top + currentScroll + sectionRect.height / 2;
+
+    const targetScroll =
+      sectionCenter - card.clientHeight / 2;
+
+    card.scrollTo({
+      top: Math.max(0, targetScroll),
+      behavior: "smooth"
+    });
+  }
+
+  function aggiornaFocusModaleVisibilita(detailsAperto = null) {
+    getSezioniPrincipali().forEach(sezione => {
+      sezione.classList.remove("lc-open-section");
+    });
+
+    const dettagliAperti = Array.from(card.querySelectorAll("details[open]"));
+
+    if (!dettagliAperti.length) {
+      resetFocusModaleVisibilita();
+      return;
+    }
+
+    const riferimento = detailsAperto && detailsAperto.open
+      ? detailsAperto
+      : dettagliAperti[0];
+
+    const sezioneAperta = riferimento.closest(".lc-main-card");
+
+    if (!sezioneAperta) {
+      resetFocusModaleVisibilita();
+      return;
+    }
+
+    card.classList.add("lc-has-open");
+    sezioneAperta.classList.add("lc-open-section");
+
+    setTimeout(() => {
+      centraSezioneNelModale(sezioneAperta);
+    }, 80);
+  }
+
+  /*
+    Quando una sezione è aperta:
+    se clicchi fuori dalla sezione aperta, chiudo tutto
+    e torno alla vista con le 3 card principali.
+  */
+  card.addEventListener("click", (e) => {
+    if (!card.classList.contains("lc-has-open")) return;
+
+    const sezioneAperta = card.querySelector(".lc-open-section");
+
+    if (!sezioneAperta) {
+      chiudiTuttiIDetails();
+      return;
+    }
+
+    const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
+
+    if (!clickDentroSezioneAperta) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      chiudiTuttiIDetails();
+
+      card.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+  }, true);
+
+  /*
+    Rende cliccabili per intero le card interne:
+    - pacchetti
+    - servizi singoli
+
+    I click su pulsanti/link restano normali.
+  */
+  [
+    "card-visibilita_premium",
+    "card-pacchetto_visibilita",
+    "card-boost_lista",
+    "card-badge_evidenza",
+    "card-vetrina_annuncio",
+    "card-contatti"
+  ].forEach(id => {
+    const box = document.getElementById(id);
+    if (!box) return;
+
+    const detailsInterno = box.querySelector(":scope > details");
+    if (!detailsInterno) return;
+
+    box.classList.add("cursor-pointer");
+
+    box.addEventListener("click", (e) => {
+      if (e.target.closest("button, a, input, label, select, textarea")) return;
+
+      const summary = detailsInterno.querySelector(":scope > summary");
+
+      if (summary && summary.contains(e.target)) return;
+
+      if (!detailsInterno.open) {
+        detailsInterno.setAttribute("open", "");
       }
     });
   });
 
+  card.querySelectorAll("details").forEach(details => {
+    details.addEventListener("toggle", () => {
+      if (gestioneToggleInCorso) return;
+
+      gestioneToggleInCorso = true;
+
+      setTimeout(() => {
+        if (details.open) {
+          chiudiAltriDetails(details);
+          aggiornaFocusModaleVisibilita(details);
+        } else {
+          if (isMainDetails(details)) {
+            chiudiDiscendenti(details);
+          }
+
+          const ancoraAperti = Array.from(card.querySelectorAll("details[open]"));
+
+          if (!ancoraAperti.length) {
+            resetFocusModaleVisibilita();
+          } else {
+            aggiornaFocusModaleVisibilita(ancoraAperti[0]);
+          }
+        }
+
+        gestioneToggleInCorso = false;
+      }, 30);
+    });
+  });
+
+  /*
+    Click sullo sfondo nero: chiude tutto il modale visibilità.
+  */
+  modale.addEventListener("click", (e) => {
+    if (e.target === modale) {
+      chiudiVisibilita();
+    }
+  });
+
+  /*
+    ESC: chiude il modale visibilità solo se è aperto.
+  */
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modale.classList.contains("hidden")) {
+      chiudiVisibilita();
+    }
+  });
+
+  /*
+    Quando il modale viene chiuso da altre funzioni,
+    assicuriamo comunque il reset completo dei details.
+  */
   window.addEventListener("lc:resetModaleVisibilita", () => {
-    card.classList.remove("lc-has-open");
-
-    card.querySelectorAll(".lc-open-section").forEach(el => {
-      el.classList.remove("lc-open-section");
-    });
-
-    card.querySelectorAll("details[open]").forEach(d => {
-      d.removeAttribute("open");
-    });
+    chiudiTuttiIDetails();
   });
 });
 </script>
-
 <script>
   let paymentToastTimer = null;
 
