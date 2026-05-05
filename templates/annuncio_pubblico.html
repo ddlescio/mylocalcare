@@ -1842,8 +1842,41 @@
   }
 
   .annuncio-info-card-header-centered {
+    flex-direction: column;
     justify-content: center;
+    align-items: center;
+    gap: 0.55rem;
     text-align: center;
+    padding-top: 1.05rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .annuncio-info-card-header-centered .annuncio-info-card-titlebox {
+    width: 100%;
+    max-width: 24rem;
+  }
+
+  .annuncio-info-card-header-centered .annuncio-info-card-titlebox h2,
+  .annuncio-info-card-header-centered .annuncio-info-card-titlebox p,
+  .annuncio-info-card-header-centered .annuncio-info-card-titlebox span {
+    text-align: center;
+  }
+
+  .annuncio-chat-card .annuncio-info-card-body,
+  .annuncio-login-card .annuncio-info-card-body {
+    padding-top: 0.85rem;
+  }
+
+  .annuncio-chat-card .annuncio-contact-body,
+  .annuncio-login-card .annuncio-contact-body {
+    padding-left: 0.86rem;
+    padding-right: 0.86rem;
+  }
+
+  .annuncio-chat-card .annuncio-main-action-btn,
+  .annuncio-login-card .annuncio-secondary-action-btn {
+    width: 100%;
+    max-width: 26rem;
   }
 
   .annuncio-info-card-icon {
@@ -2336,6 +2369,39 @@
       padding: 0.62rem 0.7rem;
       font-size: 0.78rem;
     }
+
+    .annuncio-info-card-header-centered {
+      gap: 0.48rem;
+      padding: 0.92rem 0.9rem 0.76rem;
+    }
+
+    .annuncio-info-card-header-centered .annuncio-info-card-icon {
+      margin: 0 auto;
+    }
+
+    .annuncio-chat-card .annuncio-info-card-titlebox,
+    .annuncio-login-card .annuncio-info-card-titlebox {
+      max-width: 18rem;
+    }
+
+    .annuncio-chat-card .annuncio-info-card-titlebox h2,
+    .annuncio-login-card .annuncio-info-card-titlebox h2 {
+      font-size: 1.03rem;
+    }
+
+    .annuncio-chat-card .annuncio-info-card-titlebox p,
+    .annuncio-login-card .annuncio-info-card-titlebox p {
+      max-width: 16.5rem;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.28;
+    }
+
+    .annuncio-chat-card .annuncio-main-action-btn,
+    .annuncio-login-card .annuncio-secondary-action-btn {
+      width: 100%;
+      max-width: none;
+    }    
   }
 
   /* ============================================================
