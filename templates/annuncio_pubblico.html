@@ -3778,9 +3778,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function chiudiTuttiIDetails() {
-    card.querySelectorAll("details[open]").forEach(details => {
-      details.removeAttribute("open");
-    });
+    Array.from(card.querySelectorAll("details[open]"))
+      .reverse()
+      .forEach(details => {
+        details.removeAttribute("open");
+      });
 
     resetFocusModaleVisibilita();
   }
@@ -3788,11 +3790,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function chiudiDiscendenti(details) {
     if (!details) return;
 
-    details.querySelectorAll("details[open]").forEach(figlio => {
-      figlio.removeAttribute("open");
-    });
+    Array.from(details.querySelectorAll("details[open]"))
+      .reverse()
+      .forEach(figlio => {
+        figlio.removeAttribute("open");
+      });
   }
-
+  
   function chiudiAltriDetails(detailsAperto) {
     if (!detailsAperto) return;
 
