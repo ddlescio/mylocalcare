@@ -3126,7 +3126,7 @@ let ANNUNCIO_ID_CORRENTE = null;
       });
 
       window.dispatchEvent(new Event("lc:resetModaleVisibilita"));
-      
+
       // Riporto lo scroll interno in alto
       card.scrollTo({ top: 0, behavior: "auto" });
     }
@@ -4182,6 +4182,36 @@ document.addEventListener("DOMContentLoaded", () => {
       centraSezioneNelModale(sezioneAperta);
     }, 80);
   }
+
+  /*
+    Quando una sezione è aperta:
+    se clicchi fuori dalla sezione aperta, chiudo tutto
+    e torno alla vista con le 3 card principali.
+  */
+  card.addEventListener("click", (e) => {
+    if (!card.classList.contains("lc-has-open")) return;
+
+    const sezioneAperta = card.querySelector(".lc-open-section");
+
+    if (!sezioneAperta) {
+      chiudiTuttiIDetails();
+      return;
+    }
+
+    const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
+
+    if (!clickDentroSezioneAperta) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      chiudiTuttiIDetails();
+
+      card.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+  }, true);  
 
   /*
     Rende cliccabili per intero le card interne:
