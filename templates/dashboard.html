@@ -1966,61 +1966,6 @@ aside p.text-sm.text-gray-500.font-medium {
   pointer-events: none;
 }
 
-.intro-panel,
-.annunci-panel {
-  border-radius: 1.6rem;
-}
-
-.intro-panel h3,
-.annunci-panel h3 {
-  letter-spacing: -0.03em;
-}
-
-.intro-panel p,
-.annunci-panel p {
-  letter-spacing: -0.01em;
-}
-
-.annuncio-card-premium {
-  border-radius: 1.45rem !important;
-  border: 1px solid rgba(226,232,240,0.88) !important;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.995) 0%, rgba(249,251,255,0.965) 100%) !important;
-  box-shadow:
-    0 8px 18px rgba(15,23,42,0.04),
-    0 18px 38px rgba(15,23,42,0.07) !important;
-  transform: translateY(0);
-}
-
-.annuncio-card-premium:hover {
-  transform: translateY(-3px) !important;
-  box-shadow:
-    0 12px 26px rgba(15,23,42,0.06),
-    0 24px 48px rgba(15,23,42,0.10) !important;
-}
-
-.annuncio-card-premium > a {
-  padding: 1.05rem 1.1rem 0.95rem !important;
-}
-
-.annuncio-card-premium h4 {
-  color: #1d4ed8 !important;
-  letter-spacing: -0.025em;
-}
-
-.annuncio-card-premium p {
-  color: #334155 !important;
-}
-
-.annuncio-card-premium > div:last-child {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.88), rgba(248,250,252,0.96)) !important;
-  border-top: 1px solid rgba(226,232,240,0.8) !important;
-}
-
-.annuncio-card-premium .absolute.top-3.right-4 {
-  box-shadow: 0 4px 10px rgba(15,23,42,0.05);
-}
 
 /* ============================================================
    TABS
@@ -2174,21 +2119,6 @@ nav::before {
       0 18px 36px rgba(15,23,42,0.08);
   }
 
-  .intro-panel,
-  .annunci-panel {
-    border-radius: 1.45rem;
-    box-shadow:
-      0 8px 20px rgba(15,23,42,0.05),
-      0 18px 36px rgba(15,23,42,0.08);
-  }
-
-  .annuncio-card-premium {
-    border-radius: 1.3rem !important;
-  }
-
-  .annuncio-card-premium > a {
-    padding: 0.95rem 1rem 0.9rem !important;
-  }
 }
 
 /* ============================================================
@@ -3286,21 +3216,6 @@ nav::before {
     background .18s ease;
 }
 
-.profile-annuncio-premium-card::before {
-  content: "";
-  position: absolute;
-  left: 0.72rem;
-  top: 0.82rem;
-  bottom: 0.82rem;
-  width: 3px;
-  border-radius: 9999px;
-  background: linear-gradient(180deg, #3b82f6, #4f46e5);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.70),
-    0 8px 16px rgba(15,23,42,0.08);
-  pointer-events: none;
-}
-
 .profile-annuncio-premium-card::after {
   content: "";
   position: absolute;
@@ -3322,10 +3237,6 @@ nav::before {
     linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.94));
 }
 
-.profile-annuncio-premium-card.is-published::before {
-  background: linear-gradient(180deg, #22c55e, #2563eb);
-}
-
 .profile-annuncio-premium-card.is-pending {
   border-color: rgba(245,158,11,0.40);
   background:
@@ -3333,19 +3244,11 @@ nav::before {
     linear-gradient(180deg, rgba(255,251,235,0.96), rgba(255,255,255,0.94));
 }
 
-.profile-annuncio-premium-card.is-pending::before {
-  background: linear-gradient(180deg, #f59e0b, #f97316);
-}
-
 .profile-annuncio-premium-card.is-rejected {
   border-color: rgba(244,63,94,0.36);
   background:
     radial-gradient(circle at top right, rgba(244,63,94,0.14), transparent 42%),
     linear-gradient(180deg, rgba(255,241,242,0.96), rgba(255,255,255,0.94));
-}
-
-.profile-annuncio-premium-card.is-rejected::before {
-  background: linear-gradient(180deg, #fb7185, #ef4444);
 }
 
 .profile-annuncio-premium-card:hover {
@@ -3545,16 +3448,6 @@ nav::before {
     border-color .18s ease;
 }
 
-.profile-annuncio-boost-btn {
-  color: #ffffff;
-  background:
-    linear-gradient(135deg, #2563eb, #4f46e5 52%, #db2777);
-  border: 1px solid rgba(255,255,255,0.28);
-  box-shadow:
-    0 9px 18px rgba(79,70,229,0.18),
-    inset 0 1px 0 rgba(255,255,255,0.24);
-}
-
 .profile-annuncio-secondary-btn {
   color: #1d4ed8;
   background:
@@ -3724,12 +3617,6 @@ nav::before {
 
   .profile-annuncio-premium-card {
     border-radius: 1.34rem;
-  }
-
-  .profile-annuncio-premium-card::before {
-    left: 0.62rem;
-    top: 0.76rem;
-    bottom: 0.76rem;
   }
 
   .profile-annuncio-premium-link {
@@ -4069,17 +3956,17 @@ nav::before {
   line-height: 1.35;
 }
 
-/* Frase personale più elegante */
+/* Frase personale più elegante ma meno dominante */
 #intro-frase-row {
-  margin-top: 0.1rem;
+  margin-top: 0;
 }
 
 #intro-frase-row span:last-child {
   color: #334155;
-  font-size: 0.96rem;
-  line-height: 1.55;
-  font-weight: 520;
-  letter-spacing: -0.02em;
+  font-size: 0.88rem;
+  line-height: 1.48;
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
 
 /* Separatore attività coerente */
@@ -4174,8 +4061,8 @@ nav::before {
   }
 
   #intro-frase-row span:last-child {
-    font-size: 0.92rem;
-    line-height: 1.52;
+    font-size: 0.86rem;
+    line-height: 1.46;
   }
 }
 
