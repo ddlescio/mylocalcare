@@ -3804,6 +3804,113 @@ nav::before {
   }
 }
 
+/* ============================================================
+   RIFINITURA CARD ANNUNCI — NO BARRA + CTA PREMIUM SOFT
+   ============================================================ */
+
+/* Tolgo la barra verticale laterale */
+.profile-annuncio-premium-card::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Compenso lo spazio lasciato dalla barra */
+.profile-annuncio-premium-main {
+  padding-left: 0 !important;
+}
+
+.profile-annuncio-premium-link {
+  padding-left: 0.95rem !important;
+}
+
+/* Card pubblicata: bordo leggero ma più caratterizzato */
+.profile-annuncio-premium-card.is-published {
+  border-color: rgba(34,197,94,0.34) !important;
+  background:
+    radial-gradient(circle at top right, rgba(34,197,94,0.105), transparent 39%),
+    radial-gradient(circle at bottom left, rgba(37,99,235,0.075), transparent 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.992), rgba(248,250,252,0.955)) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.78),
+    0 10px 22px rgba(15,23,42,0.055),
+    0 2px 6px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.94) !important;
+}
+
+/* Card in revisione */
+.profile-annuncio-premium-card.is-pending {
+  border-color: rgba(245,158,11,0.38) !important;
+  background:
+    radial-gradient(circle at top right, rgba(245,158,11,0.14), transparent 40%),
+    linear-gradient(180deg, rgba(255,251,235,0.965), rgba(255,255,255,0.948)) !important;
+}
+
+/* Card rifiutata */
+.profile-annuncio-premium-card.is-rejected {
+  border-color: rgba(244,63,94,0.34) !important;
+  background:
+    radial-gradient(circle at top right, rgba(244,63,94,0.12), transparent 40%),
+    linear-gradient(180deg, rgba(255,241,242,0.955), rgba(255,255,255,0.948)) !important;
+}
+
+/* Bordo interno premium, molto leggero */
+.profile-annuncio-premium-card {
+  outline: 1px solid rgba(255,255,255,0.78);
+  outline-offset: -2px;
+}
+
+/* Hover più elegante, meno "pulsante" */
+.profile-annuncio-premium-card:hover {
+  border-color: rgba(147,197,253,0.72) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.82),
+    0 14px 30px rgba(15,23,42,0.075),
+    0 4px 10px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.96) !important;
+}
+
+/* CTA Aumenta visibilità: oro/amber premium, meno aggressivo */
+.profile-annuncio-boost-btn {
+  color: #78350f !important;
+  background:
+    radial-gradient(circle at 18% 15%, rgba(255,255,255,0.82), transparent 34%),
+    linear-gradient(135deg, #fef3c7 0%, #fbbf24 46%, #f59e0b 100%) !important;
+  border: 1px solid rgba(245,158,11,0.46) !important;
+  box-shadow:
+    0 8px 18px rgba(245,158,11,0.18),
+    0 2px 6px rgba(146,64,14,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.58) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.42);
+}
+
+/* Hover CTA */
+.profile-annuncio-boost-btn:hover {
+  color: #78350f !important;
+  background:
+    radial-gradient(circle at 18% 15%, rgba(255,255,255,0.88), transparent 34%),
+    linear-gradient(135deg, #fde68a 0%, #f59e0b 48%, #d97706 100%) !important;
+  border-color: rgba(217,119,6,0.52) !important;
+  box-shadow:
+    0 10px 22px rgba(245,158,11,0.22),
+    0 3px 8px rgba(146,64,14,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.62) !important;
+}
+
+/* Mobile: mantengo compattezza dopo la rimozione della barra */
+@media (max-width: 640px) {
+  .profile-annuncio-premium-link {
+    padding-left: 0.82rem !important;
+  }
+
+  .profile-annuncio-premium-main {
+    padding-left: 0 !important;
+  }
+
+  .profile-annuncio-actions {
+    padding-left: 0.7rem !important;
+  }
+}
+
 </style>
 
 <style>
