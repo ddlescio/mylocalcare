@@ -3125,6 +3125,8 @@ let ANNUNCIO_ID_CORRENTE = null;
         d.removeAttribute("open");
       });
 
+      window.dispatchEvent(new Event("lc:resetModaleVisibilita"));
+      
       // Riporto lo scroll interno in alto
       card.scrollTo({ top: 0, behavior: "auto" });
     }
@@ -4066,7 +4068,17 @@ document.addEventListener("DOMContentLoaded", () => {
   let gestioneToggleInCorso = false;
 
   function getSezioniPrincipali() {
-    return Array.from(card.querySelectorAll(":scope > .mb-3, :scope > .mb-4"));
+    return Array.from(card.querySelectorAll(":scope > .lc-main-card"));
+  }
+
+  function getMainDetails(sezione) {
+    if (!sezione) return null;
+    return sezione.querySelector(":scope > details");
+  }
+
+  function isMainDetails(details) {
+    const sezione = details.closest(".lc-main-card");
+    return !!sezione && getMainDetails(sezione) === details;
   }
 
   function resetFocusModaleVisibilita() {
@@ -4077,12 +4089,47 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function chiudiCardAperteVisibilita() {
+  function chiudiTuttiIDetails() {
     card.querySelectorAll("details[open]").forEach(details => {
       details.removeAttribute("open");
     });
 
     resetFocusModaleVisibilita();
+  }
+
+  function chiudiDiscendenti(details) {
+    if (!details) return;
+
+    details.querySelectorAll("details[open]").forEach(figlio => {
+      figlio.removeAttribute("open");
+    });
+  }
+
+  function chiudiAltriDetails(detailsAperto) {
+    if (!detailsAperto) return;
+
+    const sezioneCorrente = detailsAperto.closest(".lc-main-card");
+    const mainCorrente = getMainDetails(sezioneCorrente);
+
+    /*
+      Regola:
+      - se apro una sezione principale, chiudo tutto il resto e anche i figli della sezione stessa;
+      - se apro una card interna, tengo aperto solo il suo genitore principale + quella card interna;
+      - ogni altra sezione/card viene chiusa completamente.
+    */
+    card.querySelectorAll("details[open]").forEach(altro => {
+      if (altro === detailsAperto) return;
+
+      if (!isMainDetails(detailsAperto) && altro === mainCorrente) {
+        return;
+      }
+
+      altro.removeAttribute("open");
+    });
+
+    if (isMainDetails(detailsAperto)) {
+      chiudiDiscendenti(detailsAperto);
+    }
   }
 
   function centraSezioneNelModale(sezione) {
@@ -4106,19 +4153,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function aggiornaFocusModaleVisibilita(detailsAperto = null) {
-    const sezioni = getSezioniPrincipali();
-
-    sezioni.forEach(sezione => {
+    getSezioniPrincipali().forEach(sezione => {
       sezione.classList.remove("lc-open-section");
     });
 
     const dettagliAperti = Array.from(card.querySelectorAll("details[open]"));
 
-    const sezioneAperta = detailsAperto
-      ? detailsAperto.closest(".mb-3, .mb-4")
-      : dettagliAperti
-          .map(d => d.closest(".mb-3, .mb-4"))
-          .find(Boolean);
+    if (!dettagliAperti.length) {
+      resetFocusModaleVisibilita();
+      return;
+    }
+
+    const riferimento = detailsAperto && detailsAperto.open
+      ? detailsAperto
+      : dettagliAperti[0];
+
+    const sezioneAperta = riferimento.closest(".lc-main-card");
 
     if (!sezioneAperta) {
       resetFocusModaleVisibilita();
@@ -4130,30 +4180,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setTimeout(() => {
       centraSezioneNelModale(sezioneAperta);
-    }, 120);
+    }, 80);
   }
 
-  card.addEventListener("click", (e) => {
-    if (!card.classList.contains("lc-has-open")) return;
-
-    const sezioneAperta = card.querySelector(".lc-open-section");
-    if (!sezioneAperta) return;
-
-    const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
-
-    if (!clickDentroSezioneAperta) {
-      e.preventDefault();
-      e.stopPropagation();
-      chiudiCardAperteVisibilita();
-    }
-  }, true);
-
   /*
-    Rende cliccabili per intero tutte le card interne:
+    Rende cliccabili per intero le card interne:
     - pacchetti
     - servizi singoli
 
-    I click sui pulsanti restano normali.
+    I click su pulsanti/link restano normali.
   */
   [
     "card-visibilita_premium",
@@ -4177,15 +4212,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const summary = detailsInterno.querySelector(":scope > summary");
 
       /*
-        Se clicchi sul summary, lasciamo il comportamento nativo:
-        apre/chiude normalmente.
+        Se clicchi direttamente su "Scopri come funziona",
+        lasciamo fare al comportamento nativo del details.
       */
       if (summary && summary.contains(e.target)) return;
 
       /*
-        Se clicchi sul resto della card:
-        - se è chiusa, la apriamo
-        - se è già aperta, non facciamo nulla
+        Se clicchi sul resto della card, la apriamo.
+        Se era già aperta, non facciamo nulla.
       */
       if (!detailsInterno.open) {
         detailsInterno.setAttribute("open", "");
@@ -4201,30 +4235,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       setTimeout(() => {
         if (details.open) {
-          const sezioneCorrente = details.closest(".mb-3, .mb-4");
-
-          /*
-            Chiude gli altri details aperti, mantenendo però aperti
-            eventuali details genitori necessari.
-
-            Esempio:
-            - se apro "Visibilità Premium", il details principale
-              "Pacchetti consigliati" deve restare aperto;
-            - se poi apro "Pacchetto Visibilità Base",
-              "Visibilità Premium" si chiude automaticamente.
-          */
-          card.querySelectorAll("details[open]").forEach(altro => {
-            if (altro === details) return;
-
-            // Mantiene aperti i details genitori del details appena aperto
-            if (altro.contains(details)) return;
-
-            altro.removeAttribute("open");
-          });
-
+          chiudiAltriDetails(details);
           aggiornaFocusModaleVisibilita(details);
         } else {
-          const ancoraAperti = card.querySelectorAll("details[open]");
+          /*
+            Se chiudo una sezione principale, chiudo anche tutti i suoi dettagli interni.
+            Questo evita che, riaprendo la sezione, una card interna risulti ancora aperta ma vuota.
+          */
+          if (isMainDetails(details)) {
+            chiudiDiscendenti(details);
+          }
+
+          const ancoraAperti = Array.from(card.querySelectorAll("details[open]"));
 
           if (!ancoraAperti.length) {
             resetFocusModaleVisibilita();
@@ -4234,13 +4256,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         gestioneToggleInCorso = false;
-      }, 40);
+      }, 30);
     });
   });
 
   /*
-    Click sullo sfondo nero: chiude il modale.
-    Non interferisce con i click dentro la card.
+    Click sullo sfondo nero: chiude tutto il modale visibilità.
   */
   modale.addEventListener("click", (e) => {
     if (e.target === modale) {
@@ -4255,6 +4276,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape" && !modale.classList.contains("hidden")) {
       chiudiVisibilita();
     }
+  });
+
+  /*
+    Quando il modale viene chiuso da altre funzioni,
+    assicuriamo comunque il reset completo dei details.
+  */
+  window.addEventListener("lc:resetModaleVisibilita", () => {
+    chiudiTuttiIDetails();
   });
 });
 </script>
