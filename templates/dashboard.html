@@ -705,24 +705,12 @@
    <div class="lc-visibilita-hero-glow lc-visibilita-hero-glow-a"></div>
    <div class="lc-visibilita-hero-glow lc-visibilita-hero-glow-b"></div>
 
-   <div class="lc-visibilita-hero-top">
-     <div class="min-w-0">
-       <div class="lc-visibilita-kicker">
-         🚀 Visibilità annuncio
-       </div>
-
-       <p class="lc-visibilita-subtitle">
-         Controlla lo stato attuale e scegli come potenziare l’annuncio.
-       </p>
-     </div>
-
-     <button type="button"
-             onclick="chiudiVisibilita()"
-             class="lc-visibilita-close-btn"
-             aria-label="Chiudi modale visibilità">
-       ✕
-     </button>
-   </div>
+   <button type="button"
+           onclick="chiudiVisibilita()"
+           class="lc-visibilita-close-btn"
+           aria-label="Chiudi modale visibilità">
+     ✕
+   </button>
 
    <div class="lc-visibilita-status-wrap">
      <div id="box-visibilita-stato"
@@ -2255,161 +2243,106 @@ nav::before {
   overflow-y: auto !important;
 
   background:
-    radial-gradient(circle at top right, rgba(96,165,250,0.22), transparent 30%),
-    radial-gradient(circle at 8% 18%, rgba(244,114,182,0.13), transparent 28%),
-    linear-gradient(
-      180deg,
-      #0f172a 0%,
-      #172033 28%,
-      #eef2f7 28.2%,
-      #f8fafc 100%
-    ) !important;
+    radial-gradient(circle at top right, rgba(59,130,246,0.10), transparent 34%),
+    radial-gradient(circle at top left, rgba(16,185,129,0.08), transparent 30%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
 
-  border: 1px solid rgba(255,255,255,0.86) !important;
+  border: 1px solid rgba(255,255,255,0.88) !important;
   box-shadow:
     0 30px 80px rgba(15, 23, 42, 0.34),
     0 8px 24px rgba(15, 23, 42, 0.16),
-    inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    inset 0 1px 0 rgba(255,255,255,0.85) !important;
 }
 
 /* ============================================================
-   HERO + STATO VISIBILITÀ — TESTATA INTEGRATA NEL MODALE
+   STATO VISIBILITÀ — HEADER PRINCIPALE DEL MODALE
    ============================================================ */
 
 .lc-visibilita-hero-status {
   position: relative;
   overflow: visible;
   margin: 0 !important;
-  padding: 1.05rem 1.15rem 1.15rem !important;
+  padding: 1.15rem 1.15rem 0.65rem !important;
   border-radius: 0 !important;
   background: transparent !important;
-  color: #ffffff;
+  color: inherit;
 }
 
-/* niente quarta card */
-.lc-visibilita-hero-status::before {
+/* Non serve più una hero separata */
+.lc-visibilita-hero-status::before,
+.lc-visibilita-hero-glow,
+.lc-visibilita-hero-glow-a,
+.lc-visibilita-hero-glow-b,
+.lc-visibilita-hero-top,
+.lc-visibilita-kicker,
+.lc-visibilita-title,
+.lc-visibilita-subtitle {
   display: none !important;
 }
 
-.lc-visibilita-hero-glow {
-  position: absolute;
-  border-radius: 9999px;
-  pointer-events: none;
-  filter: blur(34px);
-  opacity: 0.55;
-}
-
-.lc-visibilita-hero-glow-a {
-  top: -3rem;
-  right: -2.5rem;
-  width: 7rem;
-  height: 7rem;
-  background: rgba(96,165,250,0.24);
-}
-
-.lc-visibilita-hero-glow-b {
-  bottom: -3rem;
-  left: -2.7rem;
-  width: 8rem;
-  height: 8rem;
-  background: rgba(244,114,182,0.13);
-}
-
-.lc-visibilita-hero-top {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.85rem;
-}
-
-.lc-visibilita-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.38rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.10);
-  padding: 0.2rem 0.62rem;
-  font-size: 0.58rem;
-  font-weight: 950;
-  line-height: 1.1;
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-  color: rgba(219,234,254,0.94);
-}
-
-.lc-visibilita-title {
-  margin-top: 0.42rem;
-  font-size: 1.18rem;
-  line-height: 1.08;
-  font-weight: 950;
-  letter-spacing: -0.04em;
-  color: #ffffff;
-}
-
-.lc-visibilita-subtitle {
-  margin-top: 0.42rem;
-  max-width: 20rem;
-  font-size: 0.77rem;
-  line-height: 1.38;
-  color: rgba(219,234,254,0.84);
-}
-
 .lc-visibilita-close-btn {
-  position: relative;
-  z-index: 3;
-  flex: 0 0 auto;
+  position: absolute;
+  top: 1.05rem;
+  right: 1.05rem;
+  z-index: 20;
+
   display: inline-flex;
   width: 2.55rem;
   height: 2.55rem;
   align-items: center;
   justify-content: center;
+
   border-radius: 9999px;
-  background: rgba(255,255,255,0.13);
-  border: 1px solid rgba(255,255,255,0.18);
-  color: #ffffff;
+  background: rgba(15,23,42,0.08);
+  border: 1px solid rgba(15,23,42,0.08);
+  color: #475569;
+
   font-size: 1rem;
   font-weight: 900;
+
   box-shadow:
-    0 8px 18px rgba(0,0,0,0.16),
-    inset 0 1px 0 rgba(255,255,255,0.14);
+    0 8px 18px rgba(15,23,42,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.75);
+
   transition:
     transform .18s ease,
     background .18s ease,
+    color .18s ease,
     border-color .18s ease;
 }
 
 .lc-visibilita-close-btn:hover {
-  background: rgba(255,255,255,0.24);
-  border-color: rgba(255,255,255,0.28);
+  background: rgba(15,23,42,0.13);
+  border-color: rgba(15,23,42,0.12);
+  color: #0f172a;
   transform: scale(1.04);
 }
 
 .lc-visibilita-status-wrap {
   position: relative;
   z-index: 2;
-  margin-top: 0.9rem;
+  margin-top: 0 !important;
 }
 
-/* Stato: elemento funzionale, non quarta card */
+/* La card stato diventa il vero titolo del modale */
 #box-visibilita-stato {
   overflow: visible;
-  padding: 0.85rem 0.95rem !important;
-  border-radius: 1.1rem !important;
+  padding: 1.05rem 4rem 1.05rem 1rem !important;
+  border-radius: 1.45rem !important;
   line-height: 1.42 !important;
-  font-size: 0.84rem !important;
+  font-size: 0.88rem !important;
+
   box-shadow:
-    0 10px 22px rgba(0,0,0,0.14),
-    inset 0 1px 0 rgba(255,255,255,0.82) !important;
+    0 16px 34px rgba(15,23,42,0.10),
+    0 6px 14px rgba(15,23,42,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.86) !important;
 }
 
 #box-visibilita-stato > div.absolute {
-  top: -0.55rem !important;
-  left: 0.78rem !important;
-  font-size: 0.62rem !important;
-  padding: 0.16rem 0.52rem !important;
+  top: -0.62rem !important;
+  left: 0.9rem !important;
+  font-size: 0.64rem !important;
+  padding: 0.18rem 0.58rem !important;
   border-radius: 9999px !important;
 }
 
@@ -2425,7 +2358,7 @@ nav::before {
 }
 
 #modale-visibilita-card > .lc-main-card:first-of-type {
-  margin-top: 0.25rem !important;
+  margin-top: 0.55rem !important;
 }
 
 /* ============================================================
@@ -2812,47 +2745,27 @@ nav::before {
   .lc-visibilita-hero-status {
     margin: 0 !important;
     border-radius: 0 !important;
-    padding: 0.95rem 0.9rem 1rem !important;
-  }
-
-  .lc-visibilita-hero-status::before {
-    display: none !important;
-  }
-
-  .lc-visibilita-hero-top {
-    padding: 0 !important;
+    padding: 1rem 0.9rem 0.6rem !important;
   }
 
   .lc-visibilita-status-wrap {
     padding: 0 !important;
-    margin-top: 0.8rem !important;
-  }
-    
-  .lc-visibilita-title {
-    font-size: 1.08rem !important;
-  }
-
-  .lc-visibilita-subtitle {
-    font-size: 0.76rem !important;
+    margin-top: 0 !important;
   }
 
   .lc-visibilita-close-btn {
-    width: 2.55rem !important;
-    height: 2.55rem !important;
-  }
-
-  #modale-visibilita-card > .lc-main-card,
-  #modale-visibilita-card > .mb-4 {
-    margin-left: 0.85rem !important;
-    margin-right: 0.85rem !important;
-    margin-bottom: 0.95rem !important;
+    top: 0.95rem !important;
+    right: 0.95rem !important;
+    width: 2.45rem !important;
+    height: 2.45rem !important;
   }
 
   #box-visibilita-stato {
-    padding: 0.9rem 0.95rem !important;
+    padding: 0.95rem 3.7rem 0.95rem 0.95rem !important;
     font-size: 0.84rem !important;
+    border-radius: 1.35rem !important;
   }
-
+  
   #modale-visibilita-card > .lc-main-card {
     padding: 0.34rem !important;
     border-radius: 1.55rem !important;
