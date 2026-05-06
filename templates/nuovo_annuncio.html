@@ -215,17 +215,36 @@
           <select id="categoria" name="categoria" required
                   class="block w-full border-2 border-slate-200 rounded-2xl p-3.5 text-slate-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm">
             <option value="">Seleziona una categoria</option>
-            <option value="operatori benessere" {% if current_categoria == 'operatori benessere' %}selected{% endif %}>Operatori benessere</option>
-            <option value="babysitter" {% if current_categoria == 'babysitter' %}selected{% endif %}>Babysitter</option>
-            <option value="caregiver" {% if current_categoria == 'caregiver' %}selected{% endif %}>Caregiver</option>
-            <option value="petsitter" {% if current_categoria == 'petsitter' %}selected{% endif %}>Pet-Sitter</option>
-            <option value="ripetizioni" {% if current_categoria == 'ripetizioni' %}selected{% endif %}>Ripetizioni</option>
-            <option value="aiuto-in-casa" {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>Aiuto in casa</option>
-            <option value="escursioni & sport" {% if current_categoria == 'escursioni & sport' %}selected{% endif %}>Gite / Compagni di allenamento</option>
-            <option value="biglietti spettacoli" {% if current_categoria == 'biglietti spettacoli' %}selected{% endif %}>Biglietti spettacoli</option>
-            <option value="libri scuola" {% if current_categoria == 'libri scuola' %}selected{% endif %}>Libri scuola</option>
-            <option value="caffe & parole" {% if current_categoria == 'caffe & parole' %}selected{% endif %}>Caffè & parole</option>
-
+            <option value="operatori-benessere" {% if current_categoria == 'operatori-benessere' %}selected{% endif %}>
+              Operatori benessere
+            </option>
+            <option value="babysitter" {% if current_categoria == 'babysitter' %}selected{% endif %}>
+              Babysitter
+            </option>
+            <option value="caregiver" {% if current_categoria == 'caregiver' %}selected{% endif %}>
+              Caregiver
+            </option>
+            <option value="pet-sitter" {% if current_categoria == 'pet-sitter' %}selected{% endif %}>
+              Pet-Sitter
+            </option>
+            <option value="ripetizioni" {% if current_categoria == 'ripetizioni' %}selected{% endif %}>
+              Ripetizioni
+            </option>
+            <option value="aiuto-in-casa" {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>
+              Aiuto in casa
+            </option>
+            <option value="escursioni-sport" {% if current_categoria == 'escursioni-sport' %}selected{% endif %}>
+              Gite / Compagni di allenamento
+            </option>
+            <option value="biglietti-spettacoli" {% if current_categoria == 'biglietti-spettacoli' %}selected{% endif %}>
+              Biglietti spettacoli
+            </option>
+            <option value="libri-scuola" {% if current_categoria == 'libri-scuola' %}selected{% endif %}>
+              Libri scuola
+            </option>
+            <option value="caffe-parole" {% if current_categoria == 'caffe-parole' %}selected{% endif %}>
+              Caffè & parole
+            </option>
           </select>
 
         </div>
