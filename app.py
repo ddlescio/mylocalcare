@@ -4972,10 +4972,11 @@ def dashboard():
                data_pubblicazione, stato
         FROM annunci
         WHERE utente_id = ?
+          AND COALESCE(stato, '') <> 'eliminato'
         ORDER BY data_pubblicazione DESC
     """), (session["utente_id"],))
     annunci = [dict(r) for r in c.fetchall()]
-
+    
 
     # 🔹 Ritorna la dashboard con gli annunci caricati
     return render_template(
