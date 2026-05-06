@@ -5321,22 +5321,27 @@ def utente_update_galleria():
 
     return redirect(url_for("dashboard") + "#tab-foto")
 
-@app.route("/annuncio/<int:id>/elimina")
+@app.route('/annuncio/<int:id>/elimina')
 @login_required
 def elimina_annuncio(id):
     conn = get_db_connection()
     cur = get_cursor(conn)
+
     cur.execute(sql("SELECT * FROM annunci WHERE id = ?"), (id,))
     annuncio = cur.fetchone()
 
     if not annuncio or annuncio["utente_id"] != g.utente["id"]:
-
         flash("Non puoi eliminare questo annuncio.", "error")
         return redirect(url_for("dashboard"))
 
-    conn.execute(sql("DELETE FROM annunci WHERE id = ?"), (id,))
-    conn.commit()
+    # Soft delete: non cancelliamo fisicamente l'annuncio perché può avere acquisti collegati.
+    # Lo marchiamo come eliminato per preservare storico pagamenti e vincoli FK.
+    cur.execute(
+        sql("UPDATE annunci SET stato = ? WHERE id = ? AND utente_id = ?"),
+        ("eliminato", id, g.utente["id"])
+    )
 
+    conn.commit()
 
     # 🔁 Se l'annuncio era 'in_attesa', i counters admin vanno aggiornati
     invalidate_admin_counters()
