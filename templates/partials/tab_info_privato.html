@@ -1979,7 +1979,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     offroSection?.classList.toggle("hidden", offro.length === 0);
     cercoSection?.classList.toggle("hidden", cerco.length === 0);
-    wrapperAttivita?.classList.toggle("hidden", offro.length === 0 && cerco.length === 0);    
+    wrapperAttivita?.classList.toggle("hidden", offro.length === 0 && cerco.length === 0);
   }
 
   let autosaveTimer = null;
@@ -2076,15 +2076,53 @@ document.addEventListener("DOMContentLoaded", () => {
       fraseHidden.value = fraseTextarea.value;
     };
 
+    const aggiornaFraseIntroLive = () => {
+      const frase = fraseTextarea.value.trim();
+
+      let fraseRow = document.getElementById("intro-frase-row");
+      let fraseValue = document.getElementById("intro-frase-value");
+      const introInfoBase = document.getElementById("intro-info-base");
+
+      if (!fraseRow && frase && introInfoBase) {
+        fraseRow = document.createElement("div");
+        fraseRow.id = "intro-frase-row";
+        fraseRow.className = "intro-quote-row";
+
+        fraseRow.innerHTML = `
+          <span class="intro-quote-icon">💬</span>
+          <span class="intro-quote-text">
+            “<span id="intro-frase-value"></span>”
+          </span>
+        `;
+
+        introInfoBase.appendChild(fraseRow);
+        fraseValue = document.getElementById("intro-frase-value");
+      }
+
+      if (fraseRow && fraseValue) {
+        fraseValue.textContent = frase;
+        fraseRow.classList.toggle("hidden", !frase);
+      }
+    };
+
     fraseTextarea.addEventListener("input", () => {
       syncFrase();
+      aggiornaFraseIntroLive();
       pianificaAutosave(900);
     });
 
     fraseTextarea.addEventListener("blur", () => {
       syncFrase();
+      aggiornaFraseIntroLive();
       pianificaAutosave(250);
     });
+
+    fraseTextarea.addEventListener("change", () => {
+      syncFrase();
+      aggiornaFraseIntroLive();
+      pianificaAutosave(250);
+    });
+  }
 
     fraseTextarea.addEventListener("change", () => {
       syncFrase();
