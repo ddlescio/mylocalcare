@@ -6861,7 +6861,7 @@ def cerca():
 
     alias_map = {
         "operatori-benessere": "operatori benessere",
-        "pet-sitter": "pet-sitter",
+        "pet-sitter": "petsitter",
         "escursioni-sport": "escursioni & sport",
         "biglietti-spettacoli": "biglietti spettacoli",
         "libri-scuola": "libri scuola",
