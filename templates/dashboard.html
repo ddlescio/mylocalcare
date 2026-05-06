@@ -4061,24 +4061,36 @@ nav::before {
   }
 
   #intro-frase-row {
-    gap: 0.5rem !important;
+    min-height: 0 !important;
+    padding: 0.05rem 0.25rem !important;
+    gap: 0.45rem !important;
     align-items: flex-start !important;
   }
 
+  #intro-frase-row > span:first-child {
+    width: 1.45rem !important;
+    height: 1.45rem !important;
+    flex: 0 0 1.45rem !important;
+    font-size: 0.72rem !important;
+  }
+
   #intro-frase-row > span:last-child {
-    font-size: 0.68rem !important;
-    line-height: 1.28 !important;
+    display: block !important;
+    max-width: 100% !important;
+    color: #475569 !important;
+    font-size: 0.62rem !important;
+    line-height: 1.22 !important;
     font-weight: 400 !important;
-    letter-spacing: -0.005em !important;
+    letter-spacing: 0 !important;
   }
 
   #intro-frase-value {
-    font-size: 0.68rem !important;
-    line-height: 1.28 !important;
-    font-weight: 400 !important;
-    letter-spacing: -0.005em !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    font-weight: inherit !important;
+    letter-spacing: inherit !important;
   }
-  
+    
 }
 
 </style>
