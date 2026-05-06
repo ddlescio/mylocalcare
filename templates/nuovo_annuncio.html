@@ -266,13 +266,17 @@
           <label class="flex items-center gap-2 text-base font-bold text-slate-800 mb-2">
 
             <span>Filtri specifici</span>
+            <span class="text-blue-600 font-extrabold">*</span>
 
           </label>
 
           <div id="filtri-checkboxes" class="flex flex-wrap gap-2"></div>
 
-        </div>
+          <p class="mt-2 text-sm text-slate-500">
+            Se non trovi quello che ti serve, seleziona <strong>Altro</strong>.
+          </p>
 
+        </div>
         <!-- Zona -->
 
         <div class="relative space-y-2">
@@ -729,12 +733,31 @@ document.addEventListener("DOMContentLoaded", function () {
       const titolo = document.getElementById("titolo");
       const descrizione = document.getElementById("descrizione");
 
+      const filtriContainer = document.getElementById("filtri-container");
+      const filtriCheckboxes = document.getElementById("filtri-checkboxes");
+
+      const filtriDisponibili = filtriCheckboxes
+        ? Array.from(filtriCheckboxes.querySelectorAll('input[type="checkbox"]'))
+        : [];
+
+      const categoriaHaFiltri =
+        filtriContainer &&
+        !filtriContainer.classList.contains("hidden") &&
+        filtriDisponibili.length > 0;
+
+      const almenoUnFiltroSelezionato =
+        filtriDisponibili.some(cb => cb.checked);
+
       if (!tipo) {
         errori.push("Seleziona se OFFRI o CERCHI il servizio.");
       }
 
       if (!categoria || !categoria.value.trim()) {
         errori.push("Seleziona una categoria.");
+      }
+
+      if (categoriaHaFiltri && !almenoUnFiltroSelezionato) {
+        errori.push("Seleziona almeno un filtro specifico. Se non trovi quello che ti serve, seleziona Altro.");
       }
 
       if (!zona || !zona.value.trim()) {
@@ -759,6 +782,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const primoCampo =
           (!tipo && document.querySelector('input[name="tipo_annuncio"]')) ||
           (!categoria?.value.trim() && categoria) ||
+          (categoriaHaFiltri && !almenoUnFiltroSelezionato && filtriContainer) ||
           (!zona?.value.trim() && zona) ||
           (!titolo?.value.trim() && titolo) ||
           (!descrizione?.value.trim() && descrizione);
