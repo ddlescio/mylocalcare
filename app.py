@@ -370,7 +370,7 @@ CATEGORY_MAP = {
     "operatori-benessere": ("operatori benessere", "Operatori Benessere"),
     "operatori benessere": ("operatori benessere", "Operatori Benessere"),
     "babysitter": ("babysitter", "Babysitter"),
-    "petsitter": ("petsitter", "Pet-Sitter"),
+    "pet-sitter": ("petsitter", "Pet-Sitter"),
     "caregiver": ("caregiver", "Caregiver"),
     "ripetizioni": ("ripetizioni", "Ripetizioni"),
     "aiuto-in-casa": ("aiuto-in-casa", "Aiuto in Casa"),
@@ -4976,7 +4976,7 @@ def dashboard():
         ORDER BY data_pubblicazione DESC
     """), (session["utente_id"],))
     annunci = [dict(r) for r in c.fetchall()]
-    
+
 
     # 🔹 Ritorna la dashboard con gli annunci caricati
     return render_template(
@@ -6861,7 +6861,7 @@ def cerca():
 
     alias_map = {
         "operatori-benessere": "operatori benessere",
-        "pet-sitter": "petsitter",
+        "pet-sitter": "pet-sitter",
         "escursioni-sport": "escursioni & sport",
         "biglietti-spettacoli": "biglietti spettacoli",
         "libri-scuola": "libri scuola",
@@ -6875,7 +6875,7 @@ def cerca():
     if raw_cat.lower() in alias_map:
         json_key_aliases.append(alias_map[raw_cat.lower()])
 
-    json_key = cat_slug
+    json_key = alias_map.get(cat_slug, cat_slug)
 
     zona = request.args.get("zona", "").strip()
     provincia_filtro = request.args.get("provincia", "").strip()
