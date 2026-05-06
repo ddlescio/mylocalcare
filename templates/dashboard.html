@@ -323,13 +323,16 @@
                   <span id="intro-lingue-value">{{ utente.get('lingue') or '' }}</span>
                 </div>
 
-                <div id="intro-frase-row"
-                     class="intro-quote-row {% if not utente.get('frase') %}hidden{% endif %}">
-                  <span class="intro-quote-icon">💬</span>
-                  <span class="intro-quote-text">
-                    “<span id="intro-frase-value">{{ utente.get('frase') or '' }}</span>”
-                  </span>
-                </div>
+                {% set frase_intro = utente.get('frase')|default('', true)|trim %}
+
+                {% if frase_intro %}
+                  <div id="intro-frase-row" class="intro-quote-row">
+                    <span class="intro-quote-icon">💬</span>
+                    <span class="intro-quote-text">
+                      “<span id="intro-frase-value">{{ frase_intro }}</span>”
+                    </span>
+                  </div>
+                {% endif %}
 
               </div>
 
@@ -4114,11 +4117,63 @@ nav::before {
     letter-spacing: 0 !important;
     font-style: italic !important;
   }
-      
+
 }
 
 </style>
+<style>
+  /* ============================================================
+     FIX MOBILE — FRASE INTRO PROFILO
+     deve stare in fondo al primo blocco <style>
+     ============================================================ */
 
+  @media (max-width: 640px) {
+
+    .intro-panel #intro-frase-row.intro-quote-row {
+      display: flex !important;
+      align-items: flex-start !important;
+      gap: 0.42rem !important;
+      min-height: 0 !important;
+      padding: 0.04rem 0.2rem !important;
+      margin: 0 !important;
+      border-radius: 0.8rem !important;
+    }
+
+    .intro-panel #intro-frase-row .intro-quote-icon {
+      width: 1.35rem !important;
+      height: 1.35rem !important;
+      flex: 0 0 1.35rem !important;
+      font-size: 0.68rem !important;
+      line-height: 1 !important;
+    }
+
+    .intro-panel #intro-frase-row .intro-quote-text {
+      display: block !important;
+      min-width: 0 !important;
+      max-width: calc(100% - 1.8rem) !important;
+      color: #475569 !important;
+      font-size: 0.68rem !important;
+      line-height: 1.25 !important;
+      font-weight: 400 !important;
+      letter-spacing: 0 !important;
+      font-style: italic !important;
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+    }
+
+    .intro-panel #intro-frase-row .intro-quote-text *,
+    .intro-panel #intro-frase-value {
+      color: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+      font-weight: inherit !important;
+      letter-spacing: inherit !important;
+      font-style: inherit !important;
+    }
+
+  }
+  
+</style>
 <style>
   /* ============================
      PLACEHOLDER FOTO PROFILO
