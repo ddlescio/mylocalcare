@@ -361,15 +361,17 @@
   {% endif %}
 
   <!-- 🔙 AZIONI FINALI -->
-  <a href="{{ back_url or url_for('dashboard') }}"
-     id="annuncio-back-btn"
-     data-annuncio-id="{{ annuncio['id'] }}"
-     data-server-back-url="{{ back_url or '' }}"
-     data-dashboard-url="{{ url_for('dashboard') }}"
-     class="annuncio-bottom-btn annuncio-bottom-btn-muted">
-    <span>←</span>
-    <span>Torna</span>
-  </a>
+  <div class="annuncio-bottom-actions">
+
+    <a href="{{ back_url or url_for('dashboard') }}"
+       id="annuncio-back-btn"
+       data-annuncio-id="{{ annuncio['id'] }}"
+       data-server-back-url="{{ back_url or '' }}"
+       data-dashboard-url="{{ url_for('dashboard') }}"
+       class="annuncio-bottom-btn annuncio-bottom-btn-muted">
+      <span>←</span>
+      <span>Torna</span>
+    </a>
 
     {% if g.utente and g.utente['id'] == annuncio['utente_id'] %}
 
@@ -405,8 +407,7 @@
     {% endif %}
 
   </div>
-</div>
-
+  
 <!-- ZOOM -->
 <div id="zoom-overlay"
      class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50"
