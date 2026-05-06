@@ -6875,7 +6875,7 @@ def cerca():
     if raw_cat.lower() in alias_map:
         json_key_aliases.append(alias_map[raw_cat.lower()])
 
-    json_key = alias_map.get(cat_slug, cat_slug)
+    json_key = cat_slug
 
     zona = request.args.get("zona", "").strip()
     provincia_filtro = request.args.get("provincia", "").strip()
