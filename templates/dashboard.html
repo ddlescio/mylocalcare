@@ -4086,7 +4086,7 @@ nav::before {
     font-size: 0.61rem !important;
     line-height: 1 !important;
   }
-  
+
   /* Corpo Intro più compatto su mobile */
   #intro-info-base {
     gap: 0.42rem !important;
@@ -4205,41 +4205,86 @@ nav::before {
   }
 </style>
 <style>
-/* ============================================================
-   FIX FINALE MOBILE — FRASE INTRO TROPPO GRANDE
-   ============================================================ */
+  /* ============================================================
+     FIX FINALE MOBILE — INTRO PROFILO
+     ============================================================ */
 
-@media (max-width: 640px) {
+  @media (max-width: 640px) {
 
-  #tab-annunci #intro-frase-row.intro-quote-row {
-    gap: 0.26rem !important;
-    padding: 0 !important;
-    margin-top: 0.1rem !important;
-    min-height: 0 !important;
-    line-height: 1 !important;
+    /* Header Intro più equilibrato su mobile */
+    #tab-annunci .intro-panel > .flex.items-start.justify-between {
+      gap: 0.45rem !important;
+      align-items: center !important;
+    }
+
+    #tab-annunci .intro-panel > .flex.items-start.justify-between > div:first-child {
+      min-width: 0 !important;
+      flex: 1 1 auto !important;
+    }
+
+    /* Bottone Modifica info: su mobile diventa piccolo e mostra solo "Modifica" */
+    #tab-annunci .intro-panel a[data-jump="info"] {
+      flex: 0 0 auto !important;
+      width: auto !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      height: 23px !important;
+      min-height: 23px !important;
+      padding: 0 0.46rem !important;
+      gap: 0 !important;
+      border-radius: 9999px !important;
+      font-size: 0 !important;
+      line-height: 1 !important;
+      white-space: nowrap !important;
+      box-shadow:
+        0 3px 7px rgba(37,99,235,0.055),
+        0 1px 3px rgba(15,23,42,0.035),
+        inset 0 1px 0 rgba(255,255,255,0.92) !important;
+    }
+
+    #tab-annunci .intro-panel a[data-jump="info"] span {
+      display: none !important;
+    }
+
+    #tab-annunci .intro-panel a[data-jump="info"]::after {
+      content: "Modifica";
+      display: inline-block;
+      font-size: 0.58rem !important;
+      line-height: 1 !important;
+      font-weight: 850 !important;
+      letter-spacing: -0.01em !important;
+    }
+
+    /* Frase personale compatta */
+    #tab-annunci #intro-frase-row.intro-quote-row {
+      gap: 0.26rem !important;
+      padding: 0 !important;
+      margin-top: 0.1rem !important;
+      min-height: 0 !important;
+      line-height: 1 !important;
+    }
+
+    #tab-annunci #intro-frase-row .intro-quote-text,
+    #tab-annunci #intro-frase-row .intro-quote-text *,
+    #tab-annunci #intro-frase-value {
+      font-size: 12px !important;
+      line-height: 1.22 !important;
+      font-weight: 400 !important;
+      letter-spacing: 0 !important;
+      font-style: italic !important;
+      transform: none !important;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+    }
+
+    #tab-annunci #intro-frase-row .intro-quote-icon {
+      width: 1.28rem !important;
+      height: 1.28rem !important;
+      flex: 0 0 1.28rem !important;
+      font-size: 0.62rem !important;
+      line-height: 1 !important;
+    }
   }
-
-  #tab-annunci #intro-frase-row .intro-quote-text,
-  #tab-annunci #intro-frase-row .intro-quote-text *,
-  #tab-annunci #intro-frase-value {
-    font-size: 12px !important;
-    line-height: 1.22 !important;
-    font-weight: 400 !important;
-    letter-spacing: 0 !important;
-    font-style: italic !important;
-    transform: none !important;
-    -webkit-text-size-adjust: 100% !important;
-    text-size-adjust: 100% !important;
-  }
-
-  #tab-annunci #intro-frase-row .intro-quote-icon {
-    width: 1.28rem !important;
-    height: 1.28rem !important;
-    flex: 0 0 1.28rem !important;
-    font-size: 0.62rem !important;
-    line-height: 1 !important;
-  }
-}
 </style>
 
 <script>
