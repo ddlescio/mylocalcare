@@ -407,7 +407,7 @@
     {% endif %}
 
   </div>
-  
+
 <!-- ZOOM -->
 <div id="zoom-overlay"
      class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50"
@@ -3182,6 +3182,42 @@
   }
 
   /* ============================================================
+     BADGE STATO SERVIZI — UNIFORME
+     ============================================================ */
+
+  #modale-visibilita-card [id^="badge-"].lc-status-badge {
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
+    min-width: 54px !important;
+    min-height: 36px !important;
+    padding: 0.28rem 0.48rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    line-height: 1.05 !important;
+    white-space: normal !important;
+    border-radius: 9999px !important;
+    font-size: 0.68rem !important;
+    font-weight: 750 !important;
+  }
+
+  #modale-visibilita-card [id^="badge-"].lc-status-badge.is-not-active {
+    background: #e5e7eb !important;
+    color: #4b5563 !important;
+  }
+
+  #modale-visibilita-card [id^="badge-"].lc-status-badge.is-active {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+  }
+
+  #modale-visibilita-card [id^="badge-"].lc-status-badge.is-expired {
+    background: #e5e7eb !important;
+    color: #4b5563 !important;
+  }
+
+  /* ============================================================
      MODALE VISIBILITÀ MOBILE
      ============================================================ */
 
@@ -3512,6 +3548,26 @@ let NUM_SERVIZI_ATTESI = 0;
 /* =========================================================
    CARICA STATO SERVIZIO / PACCHETTO
    ========================================================= */
+   function setBadgeNonAttivo(badge) {
+     if (!badge) return;
+
+     badge.innerHTML = "Non<br>attivo";
+     badge.className = "lc-status-badge is-not-active";
+   }
+
+   function setBadgeAttivo(badge) {
+     if (!badge) return;
+
+     badge.textContent = "Attivo";
+     badge.className = "lc-status-badge is-active";
+   }
+
+   function setBadgeScaduto(badge) {
+     if (!badge) return;
+
+     badge.textContent = "Scaduto";
+     badge.className = "lc-status-badge is-expired";
+   }
 async function caricaStatoServizio(annuncioId, codice) {
   try {
     const res = await fetch(
@@ -3540,9 +3596,7 @@ async function caricaStatoServizio(annuncioId, codice) {
          SERVIZIO NON ATTIVO
          ===================================================== */
       if (!data.attivo) {
-        badge.textContent = "Non attivo";
-        badge.className =
-          "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+        setBadgeNonAttivo(badge);
 
         btn.disabled = false;
 
@@ -3573,9 +3627,7 @@ async function caricaStatoServizio(annuncioId, codice) {
          SERVIZIO ATTIVO
          ===================================================== */
       else {
-        badge.textContent = "Attivo";
-        badge.className =
-          "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+        setBadgeAttivo(badge);
 
         // PERMANENTE
         if (data.permanente === true) {
@@ -3609,9 +3661,7 @@ async function caricaStatoServizio(annuncioId, codice) {
           const giorniResidui = Math.ceil((fine - oggi) / 86400000);
 
           if (giorniResidui <= 0) {
-            badge.textContent = "Scaduto";
-            badge.className =
-              "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+            setBadgeScaduto(badge);
 
             btn.disabled = false;
             btn.textContent =
@@ -3705,9 +3755,7 @@ function aggiornaStatoPacchetti() {
        PACCHETTO NON ATTIVO
        ========================= */
     if (!tuttiAttivi) {
-      badge.textContent = "Non attivo";
-      badge.className =
-        "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+      setBadgeNonAttivo(badge);
 
       btn.disabled = false;
       btn.textContent = "Scopri il pacchetto";
@@ -3719,9 +3767,7 @@ function aggiornaStatoPacchetti() {
     /* =========================
        PACCHETTO ATTIVO
        ========================= */
-    badge.textContent = "Attivo";
-    badge.className =
-      "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+    setBadgeAttivo(badge);
 
       const attivi = stati.filter(s => s.attivo === true);
       const servizioInScadenza = attivi
@@ -4024,74 +4070,322 @@ function aggiornaStatoVisibilita() {
       }
     }
   </script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
 
-  const payBtn = document.getElementById("pay-button");
-  const errBox = document.getElementById("payment-error");
+    const payBtn = document.getElementById("pay-button");
+    const errBox = document.getElementById("payment-error");
 
-  if (!payBtn) return; // sicurezza: bottone non ancora nel DOM
+    if (!payBtn) return;
 
-  payBtn.onclick = async () => {
-    // sicurezza: niente pagamento se Stripe Elements non è pronto
-    if (!elements) return;
+    payBtn.onclick = async () => {
+      if (!elements) return;
 
-    // reset errore
-    if (errBox) {
-      errBox.textContent = "";
-      errBox.classList.add("hidden");
-    }
+      if (errBox) {
+        errBox.textContent = "";
+        errBox.classList.add("hidden");
+      }
 
-    // evita doppio click
-    payBtn.disabled = true;
-    payBtn.classList.add("opacity-50", "cursor-not-allowed");
+      payBtn.disabled = true;
+      payBtn.classList.add("opacity-50", "cursor-not-allowed");
 
-    try {
-      const stripeInstance = await getStripeInstance();
+      try {
+        const stripeInstance = await getStripeInstance();
 
-      const { error } = await stripeInstance.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: window.location.href
+        const returnUrl = new URL(window.location.href);
+        returnUrl.searchParams.delete("payment_intent");
+        returnUrl.searchParams.delete("payment_intent_client_secret");
+        returnUrl.searchParams.delete("redirect_status");
+
+        const { error } = await stripeInstance.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url: returnUrl.toString()
+          }
+        });
+        
+        if (error) {
+          if (errBox) {
+            errBox.textContent = error.message || "Pagamento non riuscito.";
+            errBox.classList.remove("hidden");
+          } else {
+            alert(error.message || "Pagamento non riuscito.");
+          }
+
+          payBtn.disabled = false;
+          payBtn.classList.remove("opacity-50", "cursor-not-allowed");
         }
-      });
-      /*
-        - Se error è presente → errore immediato (carta rifiutata, ecc.)
-        - Se NON c'è error → Stripe può fare redirect (3DS)
-          oppure il pagamento va avanti e il webhook farà il resto
-      */
-      if (error) {
+
+      } catch (e) {
+        console.error("Errore Stripe:", e);
+
         if (errBox) {
-          errBox.textContent = error.message || "Pagamento non riuscito.";
+          errBox.textContent = "Errore imprevisto durante il pagamento. Riprova.";
           errBox.classList.remove("hidden");
         } else {
-          alert(error.message || "Pagamento non riuscito.");
+          alert("Errore imprevisto durante il pagamento. Riprova.");
         }
 
-        // riabilita per nuovo tentativo
         payBtn.disabled = false;
         payBtn.classList.remove("opacity-50", "cursor-not-allowed");
       }
+    };
 
-    } catch (e) {
-      console.error("Errore Stripe:", e);
+  });
+  </script>
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const card = document.getElementById("modale-visibilita-card");
+    const modale = document.getElementById("modale-visibilita");
 
-      if (errBox) {
-        errBox.textContent = "Errore imprevisto durante il pagamento. Riprova.";
-        errBox.classList.remove("hidden");
-      } else {
-        alert("Errore imprevisto durante il pagamento. Riprova.");
+    if (!card || !modale) return;
+
+    let gestioneToggleInCorso = false;
+
+    function getSezioniPrincipali() {
+      return Array.from(card.querySelectorAll(":scope > .lc-main-card"));
+    }
+
+    function getMainDetails(sezione) {
+      if (!sezione) return null;
+      return sezione.querySelector(":scope > details");
+    }
+
+    function isMainDetails(details) {
+      const sezione = details.closest(".lc-main-card");
+      return !!sezione && getMainDetails(sezione) === details;
+    }
+
+    function resetFocusModaleVisibilita() {
+      card.classList.remove("lc-has-open");
+
+      getSezioniPrincipali().forEach(sezione => {
+        sezione.classList.remove("lc-open-section");
+      });
+    }
+
+    function chiudiDiscendenti(details) {
+      if (!details) return;
+
+      Array.from(details.querySelectorAll("details[open]"))
+        .reverse()
+        .forEach(figlio => {
+          figlio.removeAttribute("open");
+        });
+    }
+
+    function chiudiSezioneCompleta(sezione) {
+      if (!sezione) return;
+
+      Array.from(sezione.querySelectorAll("details[open]"))
+        .reverse()
+        .forEach(details => {
+          details.removeAttribute("open");
+        });
+
+      sezione.classList.remove("lc-open-section");
+    }
+
+    function chiudiTuttiIDetails() {
+      Array.from(card.querySelectorAll("details[open]"))
+        .reverse()
+        .forEach(details => {
+          details.removeAttribute("open");
+        });
+
+      resetFocusModaleVisibilita();
+    }
+
+    function chiudiAltriDetails(detailsAperto) {
+      if (!detailsAperto) return;
+
+      const sezioneCorrente = detailsAperto.closest(".lc-main-card");
+      const mainCorrente = getMainDetails(sezioneCorrente);
+      const aperturaPrincipale = isMainDetails(detailsAperto);
+
+      /*
+        Regola definitiva:
+        - quando apro una sezione principale, chiudo completamente tutte le altre sezioni;
+        - chiudo anche tutti i dettagli interni della sezione che sto aprendo;
+        - quando apro una card interna, tengo aperta solo la sua sezione principale
+          e chiudo tutte le altre card interne.
+      */
+      getSezioniPrincipali().forEach(sezione => {
+        if (sezione !== sezioneCorrente) {
+          chiudiSezioneCompleta(sezione);
+        }
+      });
+
+      if (aperturaPrincipale) {
+        chiudiDiscendenti(detailsAperto);
+        return;
       }
 
-      // riabilita per nuovo tentativo
-      payBtn.disabled = false;
-      payBtn.classList.remove("opacity-50", "cursor-not-allowed");
-    }
-  };
+      if (mainCorrente && !mainCorrente.open) {
+        mainCorrente.setAttribute("open", "");
+      }
 
-});
-</script>
-<script>
+      Array.from(sezioneCorrente.querySelectorAll("details[open]"))
+        .reverse()
+        .forEach(altro => {
+          if (altro === detailsAperto) return;
+          if (altro === mainCorrente) return;
+
+          altro.removeAttribute("open");
+        });
+    }
+
+    function centraSezioneNelModale(sezione) {
+      if (!sezione) return;
+
+      const cardRect = card.getBoundingClientRect();
+      const sectionRect = sezione.getBoundingClientRect();
+      const currentScroll = card.scrollTop;
+
+      const sectionCenter =
+        sectionRect.top - cardRect.top + currentScroll + sectionRect.height / 2;
+
+      const targetScroll =
+        sectionCenter - card.clientHeight / 2;
+
+      card.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: "smooth"
+      });
+    }
+
+    function aggiornaFocusModaleVisibilita(detailsAperto = null) {
+      getSezioniPrincipali().forEach(sezione => {
+        sezione.classList.remove("lc-open-section");
+      });
+
+      const dettagliAperti = Array.from(card.querySelectorAll("details[open]"));
+
+      if (!dettagliAperti.length) {
+        resetFocusModaleVisibilita();
+        return;
+      }
+
+      const riferimento = detailsAperto && detailsAperto.open
+        ? detailsAperto
+        : dettagliAperti[0];
+
+      const sezioneAperta = riferimento.closest(".lc-main-card");
+
+      if (!sezioneAperta) {
+        resetFocusModaleVisibilita();
+        return;
+      }
+
+      card.classList.add("lc-has-open");
+      sezioneAperta.classList.add("lc-open-section");
+
+      setTimeout(() => {
+        centraSezioneNelModale(sezioneAperta);
+      }, 80);
+    }
+
+    card.addEventListener("click", (e) => {
+      if (!card.classList.contains("lc-has-open")) return;
+
+      const sezioneAperta = card.querySelector(".lc-open-section");
+
+      if (!sezioneAperta) {
+        chiudiTuttiIDetails();
+        return;
+      }
+
+      const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
+
+      if (!clickDentroSezioneAperta) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        chiudiTuttiIDetails();
+
+        card.scrollTo({
+          top: 0,
+          behavior: "smooth"
+        });
+      }
+    }, true);
+
+    [
+      "card-visibilita_premium",
+      "card-pacchetto_visibilita",
+      "card-boost_lista",
+      "card-badge_evidenza",
+      "card-vetrina_annuncio",
+      "card-contatti"
+    ].forEach(id => {
+      const box = document.getElementById(id);
+      if (!box) return;
+
+      const detailsInterno = box.querySelector(":scope > details");
+      if (!detailsInterno) return;
+
+      box.classList.add("cursor-pointer");
+
+      box.addEventListener("click", (e) => {
+        if (e.target.closest("button, a, input, label, select, textarea")) return;
+
+        const summary = detailsInterno.querySelector(":scope > summary");
+
+        if (summary && summary.contains(e.target)) return;
+
+        if (!detailsInterno.open) {
+          detailsInterno.setAttribute("open", "");
+        }
+      });
+    });
+
+    card.querySelectorAll("details").forEach(details => {
+      details.addEventListener("toggle", () => {
+        if (gestioneToggleInCorso) return;
+
+        gestioneToggleInCorso = true;
+
+        setTimeout(() => {
+          if (details.open) {
+            chiudiAltriDetails(details);
+            aggiornaFocusModaleVisibilita(details);
+          } else {
+            if (isMainDetails(details)) {
+              chiudiDiscendenti(details);
+            }
+
+            const ancoraAperti = Array.from(card.querySelectorAll("details[open]"));
+
+            if (!ancoraAperti.length) {
+              resetFocusModaleVisibilita();
+            } else {
+              aggiornaFocusModaleVisibilita(ancoraAperti[0]);
+            }
+          }
+
+          gestioneToggleInCorso = false;
+        }, 30);
+      });
+    });
+
+    modale.addEventListener("click", (e) => {
+      if (e.target === modale) {
+        chiudiVisibilita();
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modale.classList.contains("hidden")) {
+        chiudiVisibilita();
+      }
+    });
+
+    window.addEventListener("lc:resetModaleVisibilita", () => {
+      chiudiTuttiIDetails();
+    });
+  });
+  </script>
+  <script>
   function bodyModalOn() {
     document.body.classList.add("modal-open");
   }
@@ -4099,251 +4393,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function bodyModalOff() {
     document.body.classList.remove("modal-open");
   }
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const card = document.getElementById("modale-visibilita-card");
-  const modale = document.getElementById("modale-visibilita");
-
-  if (!card || !modale) return;
-
-  let gestioneToggleInCorso = false;
-
-  function getSezioniPrincipali() {
-    return Array.from(card.querySelectorAll(":scope > .lc-main-card"));
-  }
-
-  function getMainDetails(sezione) {
-    if (!sezione) return null;
-    return sezione.querySelector(":scope > details");
-  }
-
-  function isMainDetails(details) {
-    const sezione = details.closest(".lc-main-card");
-    return !!sezione && getMainDetails(sezione) === details;
-  }
-
-  function resetFocusModaleVisibilita() {
-    card.classList.remove("lc-has-open");
-
-    getSezioniPrincipali().forEach(sezione => {
-      sezione.classList.remove("lc-open-section");
-    });
-  }
-
-  function chiudiTuttiIDetails() {
-    Array.from(card.querySelectorAll("details[open]"))
-      .reverse()
-      .forEach(details => {
-        details.removeAttribute("open");
-      });
-
-    resetFocusModaleVisibilita();
-  }
-
-  function chiudiDiscendenti(details) {
-    if (!details) return;
-
-    Array.from(details.querySelectorAll("details[open]"))
-      .reverse()
-      .forEach(figlio => {
-        figlio.removeAttribute("open");
-      });
-  }
-
-  function chiudiAltriDetails(detailsAperto) {
-    if (!detailsAperto) return;
-
-    const sezioneCorrente = detailsAperto.closest(".lc-main-card");
-    const mainCorrente = getMainDetails(sezioneCorrente);
-
-    card.querySelectorAll("details[open]").forEach(altro => {
-      if (altro === detailsAperto) return;
-
-      if (!isMainDetails(detailsAperto) && altro === mainCorrente) {
-        return;
-      }
-
-      altro.removeAttribute("open");
-    });
-
-    if (isMainDetails(detailsAperto)) {
-      chiudiDiscendenti(detailsAperto);
-    }
-  }
-
-  function centraSezioneNelModale(sezione) {
-    if (!sezione) return;
-
-    const cardRect = card.getBoundingClientRect();
-    const sectionRect = sezione.getBoundingClientRect();
-
-    const currentScroll = card.scrollTop;
-
-    const sectionCenter =
-      sectionRect.top - cardRect.top + currentScroll + sectionRect.height / 2;
-
-    const targetScroll =
-      sectionCenter - card.clientHeight / 2;
-
-    card.scrollTo({
-      top: Math.max(0, targetScroll),
-      behavior: "smooth"
-    });
-  }
-
-  function aggiornaFocusModaleVisibilita(detailsAperto = null) {
-    getSezioniPrincipali().forEach(sezione => {
-      sezione.classList.remove("lc-open-section");
-    });
-
-    const dettagliAperti = Array.from(card.querySelectorAll("details[open]"));
-
-    if (!dettagliAperti.length) {
-      resetFocusModaleVisibilita();
-      return;
-    }
-
-    const riferimento = detailsAperto && detailsAperto.open
-      ? detailsAperto
-      : dettagliAperti[0];
-
-    const sezioneAperta = riferimento.closest(".lc-main-card");
-
-    if (!sezioneAperta) {
-      resetFocusModaleVisibilita();
-      return;
-    }
-
-    card.classList.add("lc-has-open");
-    sezioneAperta.classList.add("lc-open-section");
-
-    setTimeout(() => {
-      centraSezioneNelModale(sezioneAperta);
-    }, 80);
-  }
-
-  /*
-    Quando una sezione è aperta:
-    se clicchi fuori dalla sezione aperta, chiudo tutto
-    e torno alla vista con le 3 card principali.
-  */
-  card.addEventListener("click", (e) => {
-    if (!card.classList.contains("lc-has-open")) return;
-
-    const sezioneAperta = card.querySelector(".lc-open-section");
-
-    if (!sezioneAperta) {
-      chiudiTuttiIDetails();
-      return;
-    }
-
-    const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
-
-    if (!clickDentroSezioneAperta) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      chiudiTuttiIDetails();
-
-      card.scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
-    }
-  }, true);
-
-  /*
-    Rende cliccabili per intero le card interne:
-    - pacchetti
-    - servizi singoli
-
-    I click su pulsanti/link restano normali.
-  */
-  [
-    "card-visibilita_premium",
-    "card-pacchetto_visibilita",
-    "card-boost_lista",
-    "card-badge_evidenza",
-    "card-vetrina_annuncio",
-    "card-contatti"
-  ].forEach(id => {
-    const box = document.getElementById(id);
-    if (!box) return;
-
-    const detailsInterno = box.querySelector(":scope > details");
-    if (!detailsInterno) return;
-
-    box.classList.add("cursor-pointer");
-
-    box.addEventListener("click", (e) => {
-      if (e.target.closest("button, a, input, label, select, textarea")) return;
-
-      const summary = detailsInterno.querySelector(":scope > summary");
-
-      if (summary && summary.contains(e.target)) return;
-
-      if (!detailsInterno.open) {
-        detailsInterno.setAttribute("open", "");
-      }
-    });
-  });
-
-  card.querySelectorAll("details").forEach(details => {
-    details.addEventListener("toggle", () => {
-      if (gestioneToggleInCorso) return;
-
-      gestioneToggleInCorso = true;
-
-      setTimeout(() => {
-        if (details.open) {
-          chiudiAltriDetails(details);
-          aggiornaFocusModaleVisibilita(details);
-        } else {
-          if (isMainDetails(details)) {
-            chiudiDiscendenti(details);
-          }
-
-          const ancoraAperti = Array.from(card.querySelectorAll("details[open]"));
-
-          if (!ancoraAperti.length) {
-            resetFocusModaleVisibilita();
-          } else {
-            aggiornaFocusModaleVisibilita(ancoraAperti[0]);
-          }
-        }
-
-        gestioneToggleInCorso = false;
-      }, 30);
-    });
-  });
-
-  /*
-    Click sullo sfondo nero: chiude tutto il modale visibilità.
-  */
-  modale.addEventListener("click", (e) => {
-    if (e.target === modale) {
-      chiudiVisibilita();
-    }
-  });
-
-  /*
-    ESC: chiude il modale visibilità solo se è aperto.
-  */
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !modale.classList.contains("hidden")) {
-      chiudiVisibilita();
-    }
-  });
-
-  /*
-    Quando il modale viene chiuso da altre funzioni,
-    assicuriamo comunque il reset completo dei details.
-  */
-  window.addEventListener("lc:resetModaleVisibilita", () => {
-    chiudiTuttiIDetails();
-  });
-});
 </script>
 <script>
   let paymentToastTimer = null;

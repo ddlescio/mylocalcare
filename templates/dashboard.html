@@ -2922,7 +2922,7 @@ nav::before {
      font-size: 0.68rem !important;
      font-weight: 750 !important;
    }
-   
+
 #modale-visibilita-card [id^="badge-"].lc-status-badge.is-not-active {
   background: #e5e7eb !important;
   color: #4b5563 !important;
@@ -5551,28 +5551,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sezioneCorrente = detailsAperto.closest(".lc-main-card");
     const mainCorrente = getMainDetails(sezioneCorrente);
+    const stoAprendoSezionePrincipale = isMainDetails(detailsAperto);
 
     /*
-      Regola:
-      - se apro una sezione principale, chiudo tutto il resto e anche i figli della sezione stessa;
-      - se apro una card interna, tengo aperto solo il suo genitore principale + quella card interna;
-      - ogni altra sezione/card viene chiusa completamente.
+      Regola definitiva:
+      - se apro una sezione principale, tutte le altre sezioni vengono resettate completamente;
+      - se apro una card interna, resta aperta solo la sua sezione principale;
+      - ogni sezione abbandonata perde anche tutti i details interni aperti.
     */
-    card.querySelectorAll("details[open]").forEach(altro => {
-      if (altro === detailsAperto) return;
 
-      if (!isMainDetails(detailsAperto) && altro === mainCorrente) {
+    getSezioniPrincipali().forEach(sezione => {
+      const main = getMainDetails(sezione);
+      if (!main) return;
+
+      const isSezioneCorrente = sezione === sezioneCorrente;
+
+      if (!isSezioneCorrente) {
+        sezione.querySelectorAll("details[open]").forEach(d => {
+          d.removeAttribute("open");
+        });
         return;
       }
 
-      altro.removeAttribute("open");
+      if (stoAprendoSezionePrincipale) {
+        sezione.querySelectorAll("details[open]").forEach(d => {
+          if (d !== detailsAperto) {
+            d.removeAttribute("open");
+          }
+        });
+        return;
+      }
+
+      sezione.querySelectorAll("details[open]").forEach(d => {
+        if (d === detailsAperto) return;
+        if (d === mainCorrente) return;
+
+        d.removeAttribute("open");
+      });
     });
-
-    if (isMainDetails(detailsAperto)) {
-      chiudiDiscendenti(detailsAperto);
-    }
   }
-
+  
   function centraSezioneNelModale(sezione) {
     if (!sezione) return;
 
