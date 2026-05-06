@@ -3418,6 +3418,26 @@ let ANNUNCIO_ID_CORRENTE = null;
 <script>
 let selezioneCorrente = null;
 
+function resetApertureModaleVisibilita() {
+  const card = document.getElementById("modale-visibilita-card");
+  if (!card) return;
+
+  card.classList.remove("lc-has-open");
+
+  card.querySelectorAll(".lc-open-section").forEach(el => {
+    el.classList.remove("lc-open-section");
+  });
+
+  card.querySelectorAll("details[open]").forEach(details => {
+    details.removeAttribute("open");
+  });
+
+  card.scrollTo({
+    top: 0,
+    behavior: "auto"
+  });
+}
+
 async function apriServizio(btn) {
   if (!btn) return;
 
@@ -3519,6 +3539,7 @@ async function apriServizio(btn) {
       box.appendChild(el);
     });
 
+    resetApertureModaleVisibilita();
     modale.classList.remove("hidden");
 
   } catch (e) {
@@ -4103,7 +4124,7 @@ function aggiornaStatoVisibilita() {
             return_url: returnUrl.toString()
           }
         });
-        
+
         if (error) {
           if (errBox) {
             errBox.textContent = error.message || "Pagamento non riuscito.";
