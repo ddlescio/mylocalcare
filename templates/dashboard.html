@@ -4161,124 +4161,8 @@ nav::before {
   }
 }
 
-/* ============================================================
-   OVERRIDE FINALE MOBILE — INTRO PROFILO PIÙ COMPATTA
-   ============================================================ */
-
-@media (max-width: 640px) {
-
-  /* Card Intro: meno “grossa” */
-  .intro-panel {
-    border-radius: 1.35rem !important;
-    padding: 0.72rem !important;
-  }
-
-  .intro-panel::before {
-    inset: 0.24rem !important;
-    border-radius: 1.12rem !important;
-  }
-
-  /* Header Intro più basso */
-  .intro-panel > .flex.items-start.justify-between {
-    margin: -0.72rem -0.72rem 0.55rem !important;
-    padding: 0.62rem 0.72rem 0.58rem !important;
-    gap: 0.45rem !important;
-  }
-
-  .intro-panel h3 {
-    font-size: 0.82rem !important;
-    line-height: 1.05 !important;
-    letter-spacing: -0.03em !important;
-  }
-
-  .intro-panel h3 + p,
-  .intro-panel > .flex.items-start.justify-between p {
-    font-size: 0.58rem !important;
-    line-height: 1.18 !important;
-    margin-top: 0.16rem !important;
-  }
-
-  /* Bottone Modifica info più piccolo */
-  .intro-panel a[data-jump="info"] {
-    min-height: 24px !important;
-    padding: 0.22rem 0.48rem !important;
-    font-size: 0.54rem !important;
-    line-height: 1 !important;
-    border-radius: 9999px !important;
-  }
-
-  /* Corpo info più compatto */
-  #intro-info-base {
-    gap: 0.28rem !important;
-  }
-
-  #intro-info-base > div {
-    min-height: 0 !important;
-    padding: 0.02rem 0.12rem !important;
-    gap: 0.28rem !important;
-    border-radius: 0.65rem !important;
-  }
-
-  #intro-info-base > div > span:first-child,
-  #intro-frase-row .intro-quote-icon {
-    width: 1.05rem !important;
-    height: 1.05rem !important;
-    flex: 0 0 1.05rem !important;
-    font-size: 0.52rem !important;
-  }
-
-  #intro-info-base span:not(:first-child),
-  #intro-citta-value,
-  #intro-lingue-value {
-    font-size: 9.5px !important;
-    line-height: 1.15 !important;
-  }
-
-  /* Frase personale */
-  #intro-frase-row.intro-quote-row {
-    min-height: 0 !important;
-    padding: 0.02rem 0.12rem !important;
-    gap: 0.28rem !important;
-    border-radius: 0.65rem !important;
-  }
-
-  #intro-frase-row .intro-quote-text,
-  #intro-frase-row .intro-quote-text *,
-  #intro-frase-value {
-    font-size: 9.5px !important;
-    line-height: 1.16 !important;
-    font-weight: 400 !important;
-    letter-spacing: 0 !important;
-  }
-
-  /* Sezione Cosa offro / Cosa cerco */
-  #intro-attivita-wrapper {
-    margin-top: 0.48rem !important;
-    padding-top: 0.48rem !important;
-    gap: 0.48rem !important;
-  }
-
-  #intro-attivita-wrapper p {
-    font-size: 0.46rem !important;
-    line-height: 1 !important;
-    letter-spacing: 0.09em !important;
-    margin-bottom: 0.28rem !important;
-  }
-
-  #intro-offro-list,
-  #intro-cerco-list {
-    gap: 0.28rem !important;
-  }
-
-  #intro-offro-list span,
-  #intro-cerco-list span {
-    font-size: 0.48rem !important;
-    line-height: 1 !important;
-    padding: 0.14rem 0.34rem !important;
-  }
-}
-
 </style>
+
 
 <style>
   /* ============================
@@ -4319,6 +4203,44 @@ nav::before {
     100% { transform: translateY(0) rotate(0deg); }
   }
 </style>
+<style>
+/* ============================================================
+   FIX FINALE MOBILE — FRASE INTRO TROPPO GRANDE
+   ============================================================ */
+
+@media (max-width: 640px) {
+
+  #tab-annunci #intro-frase-row.intro-quote-row {
+    gap: 0.26rem !important;
+    padding: 0 !important;
+    margin-top: 0.1rem !important;
+    min-height: 0 !important;
+    line-height: 1 !important;
+  }
+
+  #tab-annunci #intro-frase-row .intro-quote-text,
+  #tab-annunci #intro-frase-row .intro-quote-text *,
+  #tab-annunci #intro-frase-value {
+    font-size: 9px !important;
+    line-height: 1.12 !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    font-style: italic !important;
+    transform: none !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
+  #tab-annunci #intro-frase-row .intro-quote-icon {
+    width: 1rem !important;
+    height: 1rem !important;
+    flex: 0 0 1rem !important;
+    font-size: 0.5rem !important;
+    line-height: 1 !important;
+  }
+}
+</style>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".tab-btn");
