@@ -2932,7 +2932,7 @@
     opacity: 0.36 !important;
     filter: blur(1.3px) grayscale(0.14) !important;
     transform: scale(0.985) !important;
-    pointer-events: none;
+    pointer-events: auto !important;
   }
 
   #modale-visibilita-card.lc-has-open > .lc-main-card.lc-open-section {
@@ -4316,19 +4316,39 @@ function aggiornaStatoVisibilita() {
         return;
       }
 
+      const sezioneCliccata = e.target.closest(".lc-main-card");
       const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
 
-      if (!clickDentroSezioneAperta) {
-        e.preventDefault();
-        e.stopPropagation();
+      /*
+        Se clicco dentro la sezione già aperta,
+        lascio funzionare normalmente i dettagli interni.
+      */
+      if (clickDentroSezioneAperta) return;
 
+      /*
+        Se clicco su un'altra sezione principale:
+        - chiudo quella aperta
+        - lascio proseguire il click
+        Così il browser apre automaticamente la nuova sezione cliccata.
+      */
+      if (sezioneCliccata && sezioneCliccata !== sezioneAperta) {
         chiudiTuttiIDetails();
-
-        card.scrollTo({
-          top: 0,
-          behavior: "smooth"
-        });
+        return;
       }
+
+      /*
+        Se clicco nello sfondo interno del modale,
+        chiudo tutto e torno in alto.
+      */
+      e.preventDefault();
+      e.stopPropagation();
+
+      chiudiTuttiIDetails();
+
+      card.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
     }, true);
 
     [

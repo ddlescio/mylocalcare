@@ -2653,7 +2653,7 @@ nav::before {
   opacity: 0.36 !important;
   filter: blur(1.3px) grayscale(0.14) !important;
   transform: scale(0.985) !important;
-  pointer-events: none;
+  pointer-events: auto !important;
 }
 
 #modale-visibilita-card.lc-has-open > .lc-main-card.lc-open-section {
@@ -5590,7 +5590,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   }
-  
+
   function centraSezioneNelModale(sezione) {
     if (!sezione) return;
 
@@ -5644,8 +5644,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /*
     Quando una sezione è aperta:
-    se clicchi fuori dalla sezione aperta, chiudo tutto
-    e torno alla vista con le 3 card principali.
+    - se clicchi dentro la sezione aperta, continua tutto normalmente;
+    - se clicchi su un'altra sezione principale, chiudo quella aperta
+      e lascio proseguire il click, così si apre subito la nuova;
+    - se clicchi sullo sfondo interno del modale, chiudo tutto.
   */
   card.addEventListener("click", (e) => {
     if (!card.classList.contains("lc-has-open")) return;
@@ -5657,21 +5659,27 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const sezioneCliccata = e.target.closest(".lc-main-card");
     const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
 
-    if (!clickDentroSezioneAperta) {
-      e.preventDefault();
-      e.stopPropagation();
+    if (clickDentroSezioneAperta) return;
 
+    if (sezioneCliccata && sezioneCliccata !== sezioneAperta) {
       chiudiTuttiIDetails();
-
-      card.scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
+      return;
     }
-  }, true);
 
+    e.preventDefault();
+    e.stopPropagation();
+
+    chiudiTuttiIDetails();
+
+    card.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  }, true);
+  
   /*
     Rende cliccabili per intero le card interne:
     - pacchetti
