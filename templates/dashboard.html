@@ -324,9 +324,9 @@
                 </div>
 
                 <div id="intro-frase-row"
-                     class="flex items-start gap-3 italic text-gray-600 {% if not utente.get('frase') %}hidden{% endif %}">
-                  <span class="text-gray-400 text-lg">💬</span>
-                  <span>
+                     class="intro-quote-row {% if not utente.get('frase') %}hidden{% endif %}">
+                  <span class="intro-quote-icon">💬</span>
+                  <span class="intro-quote-text">
                     “<span id="intro-frase-value">{{ utente.get('frase') or '' }}</span>”
                   </span>
                 </div>
@@ -3956,17 +3956,44 @@ nav::before {
   line-height: 1.35;
 }
 
-/* Frase personale più elegante ma meno dominante */
-#intro-frase-row {
+/* Frase personale */
+#intro-frase-row.intro-quote-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.72rem;
+  min-height: 2.15rem;
   margin-top: 0;
+  padding: 0.28rem 0.35rem;
+  border-radius: 1rem;
 }
 
-#intro-frase-row span:last-child {
-  color: #334155;
-  font-size: 0.88rem;
-  line-height: 1.48;
-  font-weight: 500;
-  letter-spacing: -0.015em;
+#intro-frase-row .intro-quote-icon {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  flex: 0 0 1.75rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.80));
+  border: 1px solid rgba(203,213,225,0.70);
+  box-shadow:
+    0 5px 10px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+  font-size: 0.86rem !important;
+  line-height: 1 !important;
+}
+
+#intro-frase-row .intro-quote-text,
+#intro-frase-row .intro-quote-text *,
+#intro-frase-value {
+  color: #334155 !important;
+  font-size: 0.88rem !important;
+  line-height: 1.48 !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.015em !important;
+  font-style: italic !important;
 }
 
 /* Separatore attività coerente */
@@ -4060,37 +4087,34 @@ nav::before {
     padding: 0.22rem 0.25rem;
   }
 
-  #intro-frase-row {
+  #intro-frase-row.intro-quote-row {
     min-height: 0 !important;
     padding: 0.05rem 0.25rem !important;
     gap: 0.45rem !important;
     align-items: flex-start !important;
   }
 
-  #intro-frase-row > span:first-child {
+  #intro-frase-row .intro-quote-icon {
     width: 1.45rem !important;
     height: 1.45rem !important;
     flex: 0 0 1.45rem !important;
     font-size: 0.72rem !important;
+    line-height: 1 !important;
   }
 
-  #intro-frase-row > span:last-child {
-    display: block !important;
+  #intro-frase-row .intro-quote-text,
+  #intro-frase-row .intro-quote-text *,
+  #intro-frase-value {
+    display: inline !important;
     max-width: 100% !important;
     color: #475569 !important;
     font-size: 0.62rem !important;
     line-height: 1.22 !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
+    font-style: italic !important;
   }
-
-  #intro-frase-value {
-    font-size: inherit !important;
-    line-height: inherit !important;
-    font-weight: inherit !important;
-    letter-spacing: inherit !important;
-  }
-    
+      
 }
 
 </style>
