@@ -4086,94 +4086,83 @@ nav::before {
     font-size: 0.68rem !important;
   }
 
+  /* Corpo Intro più compatto su mobile */
+  #intro-info-base {
+    gap: 0.42rem !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
   #intro-info-base > div {
-    padding: 0.22rem 0.25rem;
+    min-height: 0 !important;
+    padding: 0.08rem 0.18rem !important;
+    gap: 0.42rem !important;
+  }
+
+  #intro-info-base > div > span:first-child {
+    width: 1.28rem !important;
+    height: 1.28rem !important;
+    flex: 0 0 1.28rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  #intro-info-base span:not(:first-child),
+  #intro-citta-value,
+  #intro-lingue-value {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
   }
 
   #intro-frase-row.intro-quote-row {
     min-height: 0 !important;
-    padding: 0.05rem 0.25rem !important;
-    gap: 0.45rem !important;
+    padding: 0.04rem 0.18rem !important;
+    gap: 0.42rem !important;
     align-items: flex-start !important;
   }
 
   #intro-frase-row .intro-quote-icon {
-    width: 1.45rem !important;
-    height: 1.45rem !important;
-    flex: 0 0 1.45rem !important;
-    font-size: 0.72rem !important;
+    width: 1.28rem !important;
+    height: 1.28rem !important;
+    flex: 0 0 1.28rem !important;
+    font-size: 0.62rem !important;
     line-height: 1 !important;
   }
 
   #intro-frase-row .intro-quote-text,
   #intro-frase-row .intro-quote-text *,
   #intro-frase-value {
-    display: inline !important;
-    max-width: 100% !important;
     color: #475569 !important;
-    font-size: 0.62rem !important;
+    font-size: 11px !important;
     line-height: 1.22 !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
     font-style: italic !important;
   }
 
+  #intro-attivita-wrapper {
+    margin-top: 0.7rem !important;
+    padding-top: 0.7rem !important;
+  }
+
+  #intro-attivita-wrapper p {
+    font-size: 0.56rem !important;
+    letter-spacing: 0.11em !important;
+  }
+
+  #intro-offro-list,
+  #intro-cerco-list {
+    gap: 0.38rem !important;
+  }
+
+  #intro-offro-list span,
+  #intro-cerco-list span {
+    font-size: 0.58rem !important;
+    padding: 0.18rem 0.45rem !important;
+  }
 }
 
 </style>
-<style>
-  /* ============================================================
-     FIX MOBILE — FRASE INTRO PROFILO
-     deve stare in fondo al primo blocco <style>
-     ============================================================ */
 
-  @media (max-width: 640px) {
-
-    .intro-panel #intro-frase-row.intro-quote-row {
-      display: flex !important;
-      align-items: flex-start !important;
-      gap: 0.42rem !important;
-      min-height: 0 !important;
-      padding: 0.04rem 0.2rem !important;
-      margin: 0 !important;
-      border-radius: 0.8rem !important;
-    }
-
-    .intro-panel #intro-frase-row .intro-quote-icon {
-      width: 1.35rem !important;
-      height: 1.35rem !important;
-      flex: 0 0 1.35rem !important;
-      font-size: 0.68rem !important;
-      line-height: 1 !important;
-    }
-
-    .intro-panel #intro-frase-row .intro-quote-text {
-      display: block !important;
-      min-width: 0 !important;
-      max-width: calc(100% - 1.8rem) !important;
-      color: #475569 !important;
-      font-size: 0.68rem !important;
-      line-height: 1.25 !important;
-      font-weight: 400 !important;
-      letter-spacing: 0 !important;
-      font-style: italic !important;
-      overflow-wrap: anywhere !important;
-      word-break: normal !important;
-    }
-
-    .intro-panel #intro-frase-row .intro-quote-text *,
-    .intro-panel #intro-frase-value {
-      color: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-      font-weight: inherit !important;
-      letter-spacing: inherit !important;
-      font-style: inherit !important;
-    }
-
-  }
-  
-</style>
 <style>
   /* ============================
      PLACEHOLDER FOTO PROFILO
