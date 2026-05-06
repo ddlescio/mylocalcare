@@ -1,23 +1,42 @@
 {% extends "base.html" %}
-
+{% set body_class = "offset-navbar" %}
 {% block title %}
   {{ "Modifica annuncio" if modalita == "modifica" else "Nuovo annuncio" }}
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto mt-8 sm:mt-10 px-4 sm:px-0">
+<div class="page-wrapper max-w-4xl mx-auto px-4 sm:px-0 pt-24 sm:pt-28 pb-10">
 
-  <!-- 🔙 FRECCIA TORNA INDIETRO -->
-  <a href="javascript:history.back()"
-     class="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 mb-4">
-    <span class="text-xl">←</span>
-    Torna
-  </a>
-
-  <div class="bg-white shadow-md rounded-3xl p-5 sm:p-8 border border-gray-100">
+  <div class="relative bg-white shadow-md rounded-3xl p-5 sm:p-8 border border-gray-100">
 
     <!-- HEADER PAGINA -->
-    <div class="mb-8 text-center">
+    <div class="mb-8 text-center relative">
+
+      <a href="javascript:history.back()"
+         class="absolute left-0 top-0 group inline-flex items-center gap-2 rounded-full
+                bg-gradient-to-br from-white via-blue-50 to-indigo-50
+                border border-white/80
+                px-3.5 py-2
+                text-blue-700
+                shadow-[0_10px_24px_rgba(37,99,235,0.12),inset_0_1px_0_rgba(255,255,255,0.95)]
+                hover:shadow-[0_14px_30px_rgba(37,99,235,0.18),inset_0_1px_0_rgba(255,255,255,0.98)]
+                hover:-translate-y-0.5
+                hover:text-blue-800
+                transition-all duration-200"
+         aria-label="Torna indietro">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full
+                     bg-white/85 border border-blue-100
+                     shadow-sm
+                     text-lg leading-none
+                     group-hover:bg-blue-100 transition">
+          ←
+        </span>
+
+        <span class="hidden sm:inline text-sm font-bold tracking-[-0.02em]">
+          Torna
+        </span>
+      </a>
+
       <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100 mb-4">
         <span>📌</span>
         <span>{{ "Gestione annuncio" if modalita == "modifica" else "Nuovo annuncio" }}</span>
@@ -129,54 +148,27 @@
           <select id="categoria" name="categoria" required
                   class="block w-full border-2 border-slate-200 rounded-2xl p-3.5 text-slate-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm">
             <option value="">Seleziona una categoria</option>
+            <option value="operatori benessere" {% if current_categoria == 'operatori benessere' %}selected{% endif %}>Operatori benessere</option>
+            <option value="babysitter" {% if current_categoria == 'babysitter' %}selected{% endif %}>Babysitter</option>
+            <option value="caregiver" {% if current_categoria == 'caregiver' %}selected{% endif %}>Caregiver</option>
+            <option value="petsitter" {% if current_categoria == 'petsitter' %}selected{% endif %}>Pet-Sitter</option>
+            <option value="ripetizioni" {% if current_categoria == 'ripetizioni' %}selected{% endif %}>Ripetizioni</option>
+            <option value="aiuto-in-casa" {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>Aiuto in casa</option>
+            <option value="escursioni & sport" {% if current_categoria == 'escursioni & sport' %}selected{% endif %}>Gite / Compagni di allenamento</option>
+            <option value="biglietti spettacoli" {% if current_categoria == 'biglietti spettacoli' %}selected{% endif %}>Biglietti spettacoli</option>
+            <option value="libri scuola" {% if current_categoria == 'libri scuola' %}selected{% endif %}>Libri scuola</option>
+            <option value="caffe & parole" {% if current_categoria == 'caffe & parole' %}selected{% endif %}>Caffè & parole</option>
 
-            <option value="operatori benessere" {% if current_categoria == 'operatori benessere' %}selected{% endif %}>
-              Operatori benessere
-            </option>
-
-            <option value="babysitter" {% if current_categoria == 'babysitter' %}selected{% endif %}>
-              Babysitter
-            </option>
-
-            <option value="caregiver" {% if current_categoria == 'caregiver' %}selected{% endif %}>
-              Caregiver
-            </option>
-
-            <option value="petsitter" {% if current_categoria == 'petsitter' %}selected{% endif %}>
-              Pet-Sitter
-            </option>
-
-            <option value="ripetizioni" {% if current_categoria == 'ripetizioni' %}selected{% endif %}>
-              Ripetizioni
-            </option>
-
-            <option value="aiuto-in-casa" {% if current_categoria == 'aiuto-in-casa' %}selected{% endif %}>
-              Aiuto in casa
-            </option>
-
-            <option value="escursioni & sport" {% if current_categoria == 'escursioni & sport' %}selected{% endif %}>
-              Gite / Compagni di allenamento
-            </option>
-
-            <option value="biglietti spettacoli" {% if current_categoria == 'biglietti spettacoli' %}selected{% endif %}>
-              Biglietti spettacoli
-            </option>
-
-            <option value="libri scuola" {% if current_categoria == 'libri scuola' %}selected{% endif %}>
-              Libri scuola
-            </option>
-
-            <option value="caffe & parole" {% if current_categoria == 'caffe & parole' %}selected{% endif %}>
-              Caffè & parole
-            </option>
           </select>
+
         </div>
 
         <!-- Filtri dinamici -->
         <div id="filtri-container" class="hidden mt-2">
           <label class="flex items-center gap-2 text-base font-bold text-slate-800 mb-2">
             <span>Filtri specifici</span>
-          </label>
+            <span class="text-blue-600 font-extrabold">*</span>
+          </label>          
           <div id="filtri-checkboxes" class="flex flex-wrap gap-2"></div>
         </div>
 
@@ -582,12 +574,30 @@ document.addEventListener("DOMContentLoaded", function () {
       const titolo = document.getElementById("titolo");
       const descrizione = document.getElementById("descrizione");
 
+      const filtriContainer = document.getElementById("filtri-container");
+      const filtriCheckboxes = document.getElementById("filtri-checkboxes");
+      const filtriDisponibili = filtriCheckboxes
+        ? Array.from(filtriCheckboxes.querySelectorAll('input[type="checkbox"]'))
+        : [];
+
+      const categoriaHaFiltri =
+        filtriContainer &&
+        !filtriContainer.classList.contains("hidden") &&
+        filtriDisponibili.length > 0;
+
+      const almenoUnFiltroSelezionato =
+        filtriDisponibili.some(cb => cb.checked);
+
       if (!tipo) {
         errori.push("Seleziona se OFFRI o CERCHI il servizio.");
       }
 
       if (!categoria || !categoria.value.trim()) {
         errori.push("Seleziona una categoria.");
+      }
+
+      if (categoriaHaFiltri && !almenoUnFiltroSelezionato) {
+        errori.push("Seleziona almeno un filtro specifico per la categoria scelta.");
       }
 
       if (!zona || !zona.value.trim()) {
@@ -612,6 +622,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const primoCampo =
           (!tipo && document.querySelector('input[name="tipo_annuncio"]')) ||
           (!categoria?.value.trim() && categoria) ||
+          (categoriaHaFiltri && !almenoUnFiltroSelezionato && filtriContainer) ||
           (!zona?.value.trim() && zona) ||
           (!titolo?.value.trim() && titolo) ||
           (!descrizione?.value.trim() && descrizione);

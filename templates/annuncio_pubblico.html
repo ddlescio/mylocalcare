@@ -361,13 +361,15 @@
   {% endif %}
 
   <!-- 🔙 AZIONI FINALI -->
-  <div class="annuncio-bottom-actions">
-
-    <a href="{{ back_url or url_for('dashboard') }}"
-       class="annuncio-bottom-btn annuncio-bottom-btn-muted">
-      <span>←</span>
-      <span>Torna</span>
-    </a>
+  <a href="{{ back_url or url_for('dashboard') }}"
+     id="annuncio-back-btn"
+     data-annuncio-id="{{ annuncio['id'] }}"
+     data-server-back-url="{{ back_url or '' }}"
+     data-dashboard-url="{{ url_for('dashboard') }}"
+     class="annuncio-bottom-btn annuncio-bottom-btn-muted">
+    <span>←</span>
+    <span>Torna</span>
+  </a>
 
     {% if g.utente and g.utente['id'] == annuncio['utente_id'] %}
 
@@ -4561,4 +4563,64 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 150);
   });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const backBtn = document.getElementById("annuncio-back-btn");
+  if (!backBtn) return;
+
+  const annuncioId = backBtn.dataset.annuncioId;
+  const serverBackUrl = backBtn.dataset.serverBackUrl || "";
+  const dashboardUrl = backBtn.dataset.dashboardUrl || "/dashboard";
+
+  const storageKey = `lc_annuncio_back_url_${annuncioId}`;
+
+  function normalizzaUrl(url) {
+    try {
+      return new URL(url, window.location.origin);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function isUrlValidaPerTornare(url) {
+    const parsed = normalizzaUrl(url);
+    if (!parsed) return false;
+
+    const currentPath = window.location.pathname;
+    const backPath = parsed.pathname;
+
+    // Evita loop sulla stessa pagina annuncio
+    if (backPath === currentPath) return false;
+
+    // Evita di tornare alla pagina modifica/elimina
+    if (backPath.includes("modifica")) return false;
+    if (backPath.includes("elimina")) return false;
+
+    // Evita URL esterni
+    if (parsed.origin !== window.location.origin) return false;
+
+    return true;
+  }
+
+  // Se il backend ci passa una provenienza buona, la salvo
+  if (serverBackUrl && isUrlValidaPerTornare(serverBackUrl)) {
+    sessionStorage.setItem(storageKey, serverBackUrl);
+    backBtn.href = serverBackUrl;
+    return;
+  }
+
+  // Se il backend passa una provenienza non buona, recupero quella salvata prima
+  const savedBackUrl = sessionStorage.getItem(storageKey);
+
+  if (savedBackUrl && isUrlValidaPerTornare(savedBackUrl)) {
+    backBtn.href = savedBackUrl;
+    return;
+  }
+
+  // Fallback solo se non ho alternative valide
+  backBtn.href = dashboardUrl;
+});
+</script>
+
+
 {% endblock %}
