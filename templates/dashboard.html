@@ -2903,6 +2903,42 @@ nav::before {
 }
 
 /* ============================================================
+   BADGE STATO SERVIZI — UNIFORME
+   ============================================================ */
+
+   #modale-visibilita-card [id^="badge-"].lc-status-badge {
+     flex: 0 0 auto !important;
+     box-sizing: border-box !important;
+     min-width: 54px !important;
+     min-height: 36px !important;
+     padding: 0.28rem 0.48rem !important;
+     display: inline-flex !important;
+     align-items: center !important;
+     justify-content: center !important;
+     text-align: center !important;
+     line-height: 1.05 !important;
+     white-space: normal !important;
+     border-radius: 9999px !important;
+     font-size: 0.68rem !important;
+     font-weight: 750 !important;
+   }
+   
+#modale-visibilita-card [id^="badge-"].lc-status-badge.is-not-active {
+  background: #e5e7eb !important;
+  color: #4b5563 !important;
+}
+
+#modale-visibilita-card [id^="badge-"].lc-status-badge.is-active {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+}
+
+#modale-visibilita-card [id^="badge-"].lc-status-badge.is-expired {
+  background: #e5e7eb !important;
+  color: #4b5563 !important;
+}
+
+/* ============================================================
    MODALE VISIBILITÀ MOBILE
    ============================================================ */
 
@@ -4259,7 +4295,7 @@ nav::before {
       letter-spacing: -0.01em !important;
       color: #1d4ed8 !important;
     }
-    
+
     /* Frase personale compatta */
     #tab-annunci #intro-frase-row.intro-quote-row {
       gap: 0.26rem !important;
@@ -4658,7 +4694,29 @@ let NUM_SERVIZI_ATTESI = 0;
 /* =========================================================
    CARICA STATO SERVIZIO
    ========================================================= */
-   async function caricaStatoServizio(annuncioId, codice) {
+
+function setBadgeNonAttivo(badge) {
+  if (!badge) return;
+
+  badge.innerHTML = "Non<br>attivo";
+  badge.className = "lc-status-badge is-not-active";
+}
+
+function setBadgeAttivo(badge) {
+  if (!badge) return;
+
+  badge.textContent = "Attivo";
+  badge.className = "lc-status-badge is-active";
+}
+
+function setBadgeScaduto(badge) {
+  if (!badge) return;
+
+  badge.textContent = "Scaduto";
+  badge.className = "lc-status-badge is-expired";
+}
+
+async function caricaStatoServizio(annuncioId, codice) {
      try {
        const res = await fetch(
          `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
@@ -4687,10 +4745,8 @@ let NUM_SERVIZI_ATTESI = 0;
          /* =====================================================
             SERVIZIO NON ATTIVO
             ===================================================== */
-         if (!data.attivo) {
-           badge.textContent = "Non attivo";
-           badge.className =
-             "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+            if (!data.attivo) {
+              setBadgeNonAttivo(badge);
 
            btn.disabled = false;
            btn.textContent =
@@ -4714,9 +4770,7 @@ let NUM_SERVIZI_ATTESI = 0;
                }
 
            } else {
-             badge.textContent = "Attivo";
-             badge.className =
-               "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+              setBadgeAttivo(badge);
 
                // PERMANENTE (admin / infinito)
                if (data.permanente === true) {
@@ -4751,10 +4805,7 @@ let NUM_SERVIZI_ATTESI = 0;
 
                // SCADUTO
                if (giorniResidui <= 0) {
-                 badge.textContent = "Scaduto";
-                 badge.className =
-                   "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
-
+                  setBadgeScaduto(badge);
                  btn.disabled = false;
                  btn.textContent = "Scopri";
                  btn.className =
@@ -4829,10 +4880,8 @@ function aggiornaStatoPacchetti() {
     /* =========================
        PACCHETTO NON ATTIVO
        ========================= */
-    if (!tuttiAttivi) {
-      badge.textContent = "Non attivo";
-      badge.className =
-        "text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600";
+       if (!tuttiAttivi) {
+         setBadgeNonAttivo(badge);
 
       btn.disabled = false;
       btn.textContent = "Scopri il pacchetto";
@@ -4849,9 +4898,7 @@ function aggiornaStatoPacchetti() {
     /* =========================
        PACCHETTO ATTIVO
        ========================= */
-    badge.textContent = "Attivo";
-    badge.className =
-      "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+      setBadgeAttivo(badge);
 
       const attivi = stati.filter(s => s.attivo === true);
       const servizioInScadenza = attivi
