@@ -2522,13 +2522,20 @@ window.addEventListener("load", async () => {
     const pagePath = window.location.pathname || "";
     const allowedPage =
       pagePath === "/" ||
+      pagePath === "/home" ||
       pagePath.startsWith("/cerca");
+
+    console.log("🔔 Push page check:", {
+      pagePath,
+      allowedPage,
+      permission: Notification.permission
+    });
 
     if (!allowedPage) {
       console.log("🔔 Push sync skip: pagina non target", pagePath);
       return;
     }
-
+    
     const syncKey = `lc_push_synced_user_${currentUserId}`;
     const lastSynced = localStorage.getItem(syncKey);
 
@@ -2552,7 +2559,7 @@ window.addEventListener("load", async () => {
 
       return;
     }
-    
+
     /*
       Caso B:
       Se l'utente ha già attivato o negato le notifiche,
