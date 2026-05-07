@@ -4339,14 +4339,69 @@ function aggiornaStatoVisibilita() {
       const sezioneAperta = card.querySelector(".lc-open-section");
 
       if (!sezioneAperta) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
         chiudiTuttiIDetails();
         return;
       }
 
-      const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
+      const mainDetailsAperto = getMainDetails(sezioneAperta);
 
-      if (clickDentroSezioneAperta) return;
+      /*
+        Cerco eventuali details interni aperti dentro la sezione attiva.
+        Esempi:
+        - "Scopri cosa include"
+        - "Scopri come funziona"
+      */
+      const detailsInterniAperti = Array.from(
+        sezioneAperta.querySelectorAll("details[open]")
+      ).filter(d => d !== mainDetailsAperto);
 
+      /*
+        Caso 1:
+        c'è un details interno aperto.
+
+        Allora il click è consentito SOLO se avviene dentro quel details interno.
+        Se clicchi fuori dal details interno, anche se sei ancora dentro la card principale,
+        chiudo tutto.
+      */
+      if (detailsInterniAperti.length > 0) {
+        const clickDentroDetailsInternoAperto = detailsInterniAperti.some(d =>
+          d.contains(e.target)
+        );
+
+        if (clickDentroDetailsInternoAperto) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        chiudiTuttiIDetails();
+
+        card.scrollTo({
+          top: 0,
+          behavior: "smooth"
+        });
+
+        return;
+      }
+
+      /*
+        Caso 2:
+        non ci sono details interni aperti.
+
+        Se clicchi dentro la sezione principale aperta, lascio il comportamento normale.
+        Per esempio puoi chiuderla cliccando sul suo summary.
+      */
+      if (sezioneAperta.contains(e.target)) return;
+
+      /*
+        Caso 3:
+        clicchi fuori dalla sezione principale aperta.
+        Chiudo tutto e blocco il click, così non apre subito un'altra card.
+      */
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
@@ -4358,7 +4413,7 @@ function aggiornaStatoVisibilita() {
         behavior: "smooth"
       });
     }, true);
-
+    
     /*
       Rende cliccabili per intero le card interne:
       - Visibilità Premium
@@ -4484,7 +4539,7 @@ function aggiornaStatoVisibilita() {
     });
   });
   </script>
-    
+
   <script>
   function bodyModalOn() {
     document.body.classList.add("modal-open");
