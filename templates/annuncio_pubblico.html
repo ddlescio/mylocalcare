@@ -628,7 +628,7 @@
                   data-titolo="🌟 Visibilità Premium"
                   data-descrizione="Pacchetto completo con boost lista, evidenza, vetrina e Contatti visibili."
                   class="mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
-                  Scopri il pacchetto
+                  Attiva Premium
                 </button>
               </div>
             </details>
@@ -680,7 +680,7 @@
                   data-titolo="📦 Pacchetto Visibilità Base"
                   data-descrizione="Pacchetto base che combina boost lista, grafica in evidenza e Contatti visibili."
                   class="mt-3 w-full py-2 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
-                  Scopri il pacchetto
+                  Attiva Base
                 </button>
               </div>
             </details>
@@ -753,7 +753,7 @@
                   data-titolo="🚀 Boost lista"
                   data-descrizione="Aumenta temporaneamente la visibilità del tuo annuncio nei risultati di ricerca."
                   class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-                  Scopri
+                  Attiva
                 </button>
               </div>
             </details>
@@ -789,7 +789,7 @@
                   data-titolo="✨ Evidenza"
                   data-descrizione="Rende il tuo annuncio più visibile con cornice e badge."
                   class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-                  Scopri
+                  Attiva
                 </button>
               </div>
             </details>
@@ -825,7 +825,7 @@
                   data-titolo="🪟 Vetrina"
                   data-descrizione="Inserisce il tuo annuncio in una sezione dedicata ad alta visibilità."
                   class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-                  Scopri
+                  Attiva
                 </button>
               </div>
             </details>
@@ -861,7 +861,7 @@
                   data-titolo="📞 Contatti visibili"
                   data-descrizione="Consente di visualizzare email e telefono dell’annuncio."
                   class="mt-3 w-full py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition text-blue-700 text-sm font-medium">
-                  Scopri
+                  Attiva
                 </button>
               </div>
             </details>
@@ -3343,6 +3343,97 @@
 
 
   </style>
+  <style>
+    /* ============================================================
+       SERVIZI SINGOLI — CTA PIÙ FORTE
+       ============================================================ */
+
+    #modale-visibilita-card .lc-card-servizi [id^="btn-"] {
+      min-height: 2.75rem !important;
+      border-radius: 9999px !important;
+      color: #ffffff !important;
+      background:
+        linear-gradient(135deg, #2563eb, #4f46e5 58%, #7c3aed) !important;
+      border: 1px solid rgba(255,255,255,0.22) !important;
+      box-shadow:
+        0 10px 22px rgba(79,70,229,0.20),
+        0 4px 10px rgba(37,99,235,0.12),
+        inset 0 1px 0 rgba(255,255,255,0.24) !important;
+      font-weight: 850 !important;
+      letter-spacing: -0.01em !important;
+    }
+
+    #modale-visibilita-card .lc-card-servizi [id^="btn-"]:hover {
+      background:
+        linear-gradient(135deg, #1d4ed8, #4338ca 58%, #6d28d9) !important;
+      box-shadow:
+        0 13px 26px rgba(79,70,229,0.25),
+        0 5px 12px rgba(37,99,235,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.28) !important;
+      transform: translateY(-1px);
+    }
+
+    #modale-visibilita-card .lc-card-servizi [id^="btn-"]:disabled {
+      color: #15803d !important;
+      background: #dcfce7 !important;
+      box-shadow: none !important;
+      transform: none !important;
+      cursor: default !important;
+    }
+
+    /* ============================================================
+       SERVIZI SINGOLI — SOTTOCARD PIÙ SOLIDE
+       ============================================================ */
+
+    #modale-visibilita-card .lc-card-servizi #card-boost_lista,
+    #modale-visibilita-card .lc-card-servizi #card-badge_evidenza,
+    #modale-visibilita-card .lc-card-servizi #card-vetrina_annuncio,
+    #modale-visibilita-card .lc-card-servizi #card-contatti {
+      background:
+        radial-gradient(circle at top right, rgba(59,130,246,0.10), transparent 42%),
+        linear-gradient(180deg, rgba(255,255,255,0.995), rgba(248,250,252,0.965)) !important;
+      border-width: 1.7px !important;
+      box-shadow:
+        0 12px 26px rgba(15,23,42,0.085),
+        0 4px 10px rgba(15,23,42,0.055),
+        inset 0 1px 0 rgba(255,255,255,0.95) !important;
+    }
+
+    #modale-visibilita-card .lc-card-servizi #card-boost_lista {
+      border-color: rgba(37,99,235,0.52) !important;
+    }
+
+    #modale-visibilita-card .lc-card-servizi #card-badge_evidenza {
+      border-color: rgba(168,85,247,0.52) !important;
+    }
+
+    #modale-visibilita-card .lc-card-servizi #card-vetrina_annuncio {
+      border-color: rgba(20,184,166,0.52) !important;
+    }
+
+    #modale-visibilita-card .lc-card-servizi #card-contatti {
+      border-color: rgba(34,197,94,0.52) !important;
+    }
+
+    #modale-visibilita-card .lc-card-servizi [id^="card-"] > .flex.items-center {
+      padding-top: 0.95rem !important;
+      padding-bottom: 0.9rem !important;
+    }
+
+    #modale-visibilita-card .lc-card-servizi [id^="card-"] .font-bold.text-sm {
+      font-size: 0.95rem !important;
+      line-height: 1.12 !important;
+      color: #0f172a !important;
+    }
+
+    #modale-visibilita-card .lc-card-servizi [id^="card-"] .text-xs.text-slate-500 {
+      margin-top: 0.22rem !important;
+      font-size: 0.76rem !important;
+      line-height: 1.28 !important;
+      color: #64748b !important;
+    }
+
+  </style>
   <script>
   function apriZoom(src) {
     document.getElementById("zoom-img").src = src;
@@ -3621,13 +3712,17 @@ async function caricaStatoServizio(annuncioId, codice) {
 
         btn.disabled = false;
 
-        if (codice === "pacchetto_visibilita" || codice === "visibilita_premium") {
-          btn.textContent = "Scopri il pacchetto";
-        } else if (codice === "annuncio_urgente") {
-          btn.textContent = "Attiva Annuncio urgente";
-        } else {
-          btn.textContent = "Scopri";
-        }
+        const testiCtaServizi = {
+          annuncio_urgente: "Attiva Annuncio urgente",
+          visibilita_premium: "Attiva Premium",
+          pacchetto_visibilita: "Attiva Base",
+          boost_lista: "Attiva",
+          badge_evidenza: "Attiva",
+          vetrina_annuncio: "Attiva",
+          contatti: "Attiva"
+        };
+
+        btn.textContent = testiCtaServizi[codice] || "Attiva";
 
         if (codice === "annuncio_urgente") {
           btn.className =
@@ -3685,10 +3780,17 @@ async function caricaStatoServizio(annuncioId, codice) {
             setBadgeScaduto(badge);
 
             btn.disabled = false;
-            btn.textContent =
-              codice === "pacchetto_visibilita" || codice === "visibilita_premium"
-                ? "Scopri il pacchetto"
-                : "Scopri";
+            const testiCtaServiziScaduti = {
+              annuncio_urgente: "Attiva Annuncio urgente",
+              visibilita_premium: "Attiva Premium",
+              pacchetto_visibilita: "Attiva Base",
+              boost_lista: "Attiva",
+              badge_evidenza: "Attiva",
+              vetrina_annuncio: "Attiva",
+              contatti: "Attiva"
+            };
+
+            btn.textContent = testiCtaServiziScaduti[codice] || "Attiva";
 
             if (codice === "annuncio_urgente") {
               btn.className =
@@ -3775,16 +3877,26 @@ function aggiornaStatoPacchetti() {
     /* =========================
        PACCHETTO NON ATTIVO
        ========================= */
-    if (!tuttiAttivi) {
-      setBadgeNonAttivo(badge);
+       if (!tuttiAttivi) {
+         setBadgeNonAttivo(badge);
 
-      btn.disabled = false;
-      btn.textContent = "Scopri il pacchetto";
-      btn.className =
-        "mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold";
-      return;
-    }
+         btn.disabled = false;
+         btn.textContent =
+           codicePacchetto === "visibilita_premium"
+             ? "Attiva Premium"
+             : "Attiva Base";
 
+         if (codicePacchetto === "visibilita_premium") {
+           btn.className =
+             "mt-4 w-full py-2.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold";
+         } else {
+           btn.className =
+             "mt-4 w-full py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold";
+         }
+
+         return;
+       }
+       
     /* =========================
        PACCHETTO ATTIVO
        ========================= */
@@ -4486,7 +4598,7 @@ function aggiornaStatoVisibilita() {
 
       chiudiTutteLeSezioni();
     }, true);
-    
+
     /*
       CLICK SUL FONDO NERO
 

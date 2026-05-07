@@ -928,7 +928,7 @@
                 data-titolo="🌟 Visibilità Premium"
                 data-descrizione="Pacchetto completo con boost lista, evidenza, vetrina e Contatti visibili."
                 class="mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold">
-                Scopri il pacchetto
+                Attiva Premium
               </button>
             </div>
           </details>
@@ -980,7 +980,7 @@
                 data-titolo="📦 Pacchetto Visibilità Base"
                 data-descrizione="Pacchetto base che combina boost lista, grafica in evidenza e Contatti visibili."
                 class="mt-3 w-full py-2 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold">
-                Scopri il pacchetto
+                Attiva Base
               </button>
             </div>
           </details>
@@ -4837,12 +4837,19 @@ async function caricaStatoServizio(annuncioId, codice) {
             if (!data.attivo) {
               setBadgeNonAttivo(badge);
 
-           btn.disabled = false;
-           btn.textContent =
-             btn.dataset.codice === "pacchetto_visibilita" ||
-             btn.dataset.codice === "visibilita_premium"
-               ? "Scopri il pacchetto"
-               : "Attiva";
+              btn.disabled = false;
+
+              const testiCtaServizi = {
+                annuncio_urgente: "Attiva Annuncio urgente",
+                visibilita_premium: "Attiva Premium",
+                pacchetto_visibilita: "Attiva Base",
+                boost_lista: "Attiva",
+                badge_evidenza: "Attiva",
+                vetrina_annuncio: "Attiva",
+                contatti: "Attiva"
+              };
+
+              btn.textContent = testiCtaServizi[btn.dataset.codice] || "Attiva";
 
                if (codice === "annuncio_urgente") {
                  btn.className =
@@ -4972,18 +4979,22 @@ function aggiornaStatoPacchetti() {
        if (!tuttiAttivi) {
          setBadgeNonAttivo(badge);
 
-      btn.disabled = false;
-      btn.textContent = "Scopri il pacchetto";
-      if (codicePacchetto === "visibilita_premium") {
-        btn.className =
-          "mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold";
-      } else {
-        btn.className =
-          "mt-3 w-full py-2 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold";
-      }
-      return;
-    }
+         btn.disabled = false;
+         btn.textContent =
+           codicePacchetto === "visibilita_premium"
+             ? "Attiva Premium"
+             : "Attiva Base";
 
+         if (codicePacchetto === "visibilita_premium") {
+           btn.className =
+             "mt-3 w-full py-2 rounded-full bg-amber-600 hover:bg-amber-700 transition text-white text-sm font-semibold";
+         } else {
+           btn.className =
+             "mt-3 w-full py-2 rounded-full bg-blue-600 hover:bg-blue-700 transition text-white text-sm font-semibold";
+         }
+         return;
+       }
+       
     /* =========================
        PACCHETTO ATTIVO
        ========================= */
