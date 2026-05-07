@@ -4321,87 +4321,20 @@ function aggiornaStatoVisibilita() {
     }
 
     /*
-      Regola click definitiva:
+      Regola click definitiva corretta:
 
-      - se una sezione principale è aperta e clicchi fuori da quella sezione,
-        si chiude tutto e basta;
-
-      - il click NON deve aprire subito la nuova sezione cliccata;
-
-      - per aprire un'altra sezione serve un secondo click;
-
-      - in chiusura vengono chiusi anche tutti i details interni,
-        così non restano pacchetti/servizi aperti ma vuoti.
+      - intercetto a livello di modale, non solo dentro la card bianca;
+      - uso pointerdown perché arriva prima del click nativo dei <details>;
+      - se c'è un details interno aperto, qualsiasi pressione fuori da quel details
+        chiude tutto;
+      - se è aperta una card principale, cliccare fuori da quella card chiude tutto;
+      - il click successivo viene bloccato, così non apre subito un'altra card.
     */
-    card.addEventListener("click", (e) => {
-      if (!card.classList.contains("lc-has-open")) return;
+    let bloccaClickSuccessivo = false;
 
-      const sezioneAperta = card.querySelector(".lc-open-section");
+    function chiudiVistaApertaDaClickEsterno(e) {
+      bloccaClickSuccessivo = true;
 
-      if (!sezioneAperta) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
-        chiudiTuttiIDetails();
-        return;
-      }
-
-      const mainDetailsAperto = getMainDetails(sezioneAperta);
-
-      /*
-        Cerco eventuali details interni aperti dentro la sezione attiva.
-        Esempi:
-        - "Scopri cosa include"
-        - "Scopri come funziona"
-      */
-      const detailsInterniAperti = Array.from(
-        sezioneAperta.querySelectorAll("details[open]")
-      ).filter(d => d !== mainDetailsAperto);
-
-      /*
-        Caso 1:
-        c'è un details interno aperto.
-
-        Allora il click è consentito SOLO se avviene dentro quel details interno.
-        Se clicchi fuori dal details interno, anche se sei ancora dentro la card principale,
-        chiudo tutto.
-      */
-      if (detailsInterniAperti.length > 0) {
-        const clickDentroDetailsInternoAperto = detailsInterniAperti.some(d =>
-          d.contains(e.target)
-        );
-
-        if (clickDentroDetailsInternoAperto) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
-        chiudiTuttiIDetails();
-
-        card.scrollTo({
-          top: 0,
-          behavior: "smooth"
-        });
-
-        return;
-      }
-
-      /*
-        Caso 2:
-        non ci sono details interni aperti.
-
-        Se clicchi dentro la sezione principale aperta, lascio il comportamento normale.
-        Per esempio puoi chiuderla cliccando sul suo summary.
-      */
-      if (sezioneAperta.contains(e.target)) return;
-
-      /*
-        Caso 3:
-        clicchi fuori dalla sezione principale aperta.
-        Chiudo tutto e blocco il click, così non apre subito un'altra card.
-      */
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
@@ -4412,8 +4345,78 @@ function aggiornaStatoVisibilita() {
         top: 0,
         behavior: "smooth"
       });
+    }
+
+    modale.addEventListener("pointerdown", (e) => {
+      if (modale.classList.contains("hidden")) return;
+      if (!card.classList.contains("lc-has-open")) return;
+
+      const sezioneAperta = card.querySelector(".lc-open-section");
+
+      if (!sezioneAperta) {
+        chiudiVistaApertaDaClickEsterno(e);
+        return;
+      }
+
+      const clickDentroCardBianca = card.contains(e.target);
+      const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
+      const mainDetailsAperto = getMainDetails(sezioneAperta);
+
+      const detailsInterniAperti = Array.from(
+        sezioneAperta.querySelectorAll("details[open]")
+      ).filter(d => d !== mainDetailsAperto);
+
+      /*
+        Se c'è un details interno aperto, il click è valido SOLO dentro quel details.
+        Esempio:
+        - aperto "Pacchetti consigliati"
+        - aperto "Scopri cosa include"
+        - clic fuori da "Scopri cosa include" => chiudo tutto
+      */
+      if (detailsInterniAperti.length > 0) {
+        const clickDentroDetailsInternoAperto = detailsInterniAperti.some(d =>
+          d.contains(e.target)
+        );
+
+        if (clickDentroDetailsInternoAperto) return;
+
+        chiudiVistaApertaDaClickEsterno(e);
+        return;
+      }
+
+      /*
+        Se non ci sono details interni aperti, ma clicco fuori dalla sezione principale
+        aperta, chiudo tutto.
+      */
+      if (!clickDentroSezioneAperta) {
+        chiudiVistaApertaDaClickEsterno(e);
+        return;
+      }
+
+      /*
+        Se clicco sul fondo del modale o comunque fuori dalla card bianca,
+        chiudo la vista aperta senza lasciare details incoerenti.
+      */
+      if (!clickDentroCardBianca) {
+        chiudiVistaApertaDaClickEsterno(e);
+        return;
+      }
     }, true);
-    
+
+    /*
+      Dopo il pointerdown di chiusura blocco anche il click generato subito dopo,
+      così non parte l'apertura accidentale di un'altra card.
+    */
+    modale.addEventListener("click", (e) => {
+      if (!bloccaClickSuccessivo) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      bloccaClickSuccessivo = false;
+    }, true);
+        
     /*
       Rende cliccabili per intero le card interne:
       - Visibilità Premium
