@@ -5891,9 +5891,148 @@ def internal_push_send():
         print(f"❌ [internal_push_send] errore fatale: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
+
+# =========================================================
+# 🔔 PUSH SUBSCRIBE PUBBLICO
+# Associa sempre la subscription all'utente attualmente loggato
+# =========================================================
+
+@app.route("/push/subscribe", methods=["POST"])
+@login_required
+def push_subscribe():
+    conn = None
+    cur = None
+
+    try:
+        user_id = g.utente["id"]
+        data = request.get_json(silent=True) or {}
+
+        endpoint = data.get("endpoint")
+        keys = data.get("keys") or {}
+        p256dh = keys.get("p256dh")
+        auth = keys.get("auth")
+
+        if not endpoint or not p256dh or not auth:
+            print("❌ [push_subscribe] payload non valido:", data)
+            return jsonify({
+                "ok": False,
+                "error": "payload subscription non valido"
+            }), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    id SERIAL PRIMARY KEY,
+                    utente_id INTEGER NOT NULL,
+                    endpoint TEXT UNIQUE NOT NULL,
+                    p256dh TEXT NOT NULL,
+                    auth TEXT NOT NULL,
+                    user_agent TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                INSERT INTO push_subscriptions (
+                    utente_id,
+                    endpoint,
+                    p256dh,
+                    auth,
+                    user_agent,
+                    created_at,
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT (endpoint)
+                DO UPDATE SET
+                    utente_id = EXCLUDED.utente_id,
+                    p256dh = EXCLUDED.p256dh,
+                    auth = EXCLUDED.auth,
+                    user_agent = EXCLUDED.user_agent,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (
+                user_id,
+                endpoint,
+                p256dh,
+                auth,
+                request.headers.get("User-Agent", "")
+            ))
+
+        else:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    utente_id INTEGER NOT NULL,
+                    endpoint TEXT UNIQUE NOT NULL,
+                    p256dh TEXT NOT NULL,
+                    auth TEXT NOT NULL,
+                    user_agent TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                INSERT INTO push_subscriptions (
+                    utente_id,
+                    endpoint,
+                    p256dh,
+                    auth,
+                    user_agent,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT(endpoint)
+                DO UPDATE SET
+                    utente_id = excluded.utente_id,
+                    p256dh = excluded.p256dh,
+                    auth = excluded.auth,
+                    user_agent = excluded.user_agent,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (
+                user_id,
+                endpoint,
+                p256dh,
+                auth,
+                request.headers.get("User-Agent", "")
+            ))
+
+            conn.commit()
+
+        print(
+            f"✅ [push_subscribe] subscription sincronizzata "
+            f"user_id={user_id} endpoint={endpoint[:80]}..."
+        )
+
+        return jsonify({
+            "ok": True,
+            "user_id": user_id
+        })
+
+    except Exception as e:
+        print(f"❌ [push_subscribe] errore: {e}")
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
+    finally:
+        try:
+            if cur is not None:
+                cur.close()
+        except Exception:
+            pass
+
+
 @app.route("/service-worker.js")
 def service_worker():
     return app.send_static_file("service-worker.js")
+
 # ==========================================================
 # NOTIFICHE - ROTTE (AGGIUNTA)
 # ==========================================================
