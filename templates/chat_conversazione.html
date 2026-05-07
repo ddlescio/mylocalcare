@@ -1994,15 +1994,63 @@ async function initVideoSystem() {
     // ==============================
     // CHIUSURA
     // ==============================
-    closeBtn.addEventListener("click", async () => {
-        if (callObject) await callObject.leave();
-        endCall();
-    });
+    let closingCall = false;
+
+    async function closeCallFromLayerX() {
+
+        if (closingCall) return;
+        closingCall = true;
+
+        console.log("❌ Chiusura video da X layer: provo prima Daily.leave()");
+
+        /*
+          Caso 1:
+          La call Daily è già partita.
+          Usiamo leave(), così Daily chiude nel modo più pulito possibile.
+          L'evento "left-meeting" chiamerà endCall().
+        */
+        if (callObject) {
+            try {
+                await callObject.leave();
+
+                /*
+                  Piccolo fallback:
+                  se per qualche motivo Daily non emette left-meeting,
+                  dopo 600ms chiudiamo noi.
+                */
+                setTimeout(() => {
+                    if (currentRoomName) {
+                        console.warn("⚠️ Daily left-meeting non arrivato: chiusura fallback");
+                        endCall();
+                    }
+                }, 600);
+
+                return;
+
+            } catch (err) {
+                console.warn("⚠️ Errore durante callObject.leave(), chiudo manualmente:", err);
+                await endCall();
+                return;
+            }
+        }
+
+        /*
+          Caso 2:
+          L'utente è nel layer video ma non è ancora entrato nella call Daily
+          oppure Daily non è stato creato.
+        */
+        await endCall();
+    }
+
+    closeBtn.addEventListener("click", closeCallFromLayerX);
 
     async function endCall() {
 
         // 🛡️ Evita doppia esecuzione
-        if (!currentRoomName) return;
+        if (!currentRoomName) {
+            closingCall = false;
+            return;
+        }
 
         // 🔥 Salva prima la stanza e azzera subito (anti doppio trigger)
         const roomToClose = currentRoomName;
@@ -2042,6 +2090,7 @@ async function initVideoSystem() {
 
         // 🔄 Reset bottone video
         resetBtn();
+        closingCall = false;
     }
 
 } // ← chiusura initVideoSystem
