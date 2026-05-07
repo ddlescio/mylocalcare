@@ -2583,13 +2583,21 @@ nav::before {
   display: inline !important;
 }
 
-#modale-visibilita-card [id^="card-"] details > div {
+#modale-visibilita-card [id^="card-"] details:not([open]) > div {
+  display: none !important;
+}
+
+#modale-visibilita-card [id^="card-"] details[open] > div {
   display: block !important;
   min-height: 0 !important;
   padding: 0.85rem 0.95rem 0.95rem !important;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.86), rgba(248,250,252,0.78)) !important;
   line-height: 1.5 !important;
+}
+
+#modale-visibilita-card details:not([open]) > :not(summary) {
+  display: none !important;
 }
 
 #modale-visibilita-card [id^="card-"] details > div > p:not([id^="info-"]) {
