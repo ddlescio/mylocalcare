@@ -4994,7 +4994,7 @@ function aggiornaStatoPacchetti() {
          }
          return;
        }
-       
+
     /* =========================
        PACCHETTO ATTIVO
        ========================= */
@@ -5872,20 +5872,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const sezioneAperta = card.querySelector(".lc-open-section");
     if (!sezioneAperta) return;
 
-    const mainDetails = getMainDetails(sezioneAperta);
-
-    const detailsInterniAperti = getDetailsInterni(sezioneAperta).filter(d => d.open);
-
     const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
 
     /*
       CASO 1:
-      Sono dentro la sezione principale aperta.
+      Clic dentro la sezione principale già aperta.
 
-      Se c'è un details interno aperto e clicco fuori da quel details,
-      chiudo solo i details interni, lasciando aperta la card principale.
+      Regola:
+      - se clicco una sottocard diversa, NON blocco il click;
+        lascio lavorare il listener della sottocard, che chiude il vecchio details
+        e apre direttamente quello nuovo.
+      - se clicco dentro il details già aperto, non faccio nulla.
+      - se clicco dentro la stessa card ma fuori dalle sottocard/details,
+        chiudo solo i details interni.
     */
     if (clickDentroSezioneAperta) {
+      const detailsInterniAperti = getDetailsInterni(sezioneAperta).filter(d => d.open);
+
       if (!detailsInterniAperti.length) return;
 
       const clickDentroDetailsInternoAperto = detailsInterniAperti.some(details => {
@@ -5894,13 +5897,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (clickDentroDetailsInternoAperto) return;
 
+      const cardInternaCliccata = e.target.closest(
+        "#card-visibilita_premium, #card-pacchetto_visibilita, #card-boost_lista, #card-badge_evidenza, #card-vetrina_annuncio, #card-contatti"
+      );
+
+      const cardInternaDentroSezioneAperta =
+        cardInternaCliccata && sezioneAperta.contains(cardInternaCliccata);
+
+      /*
+        Se sto cliccando un'altra sottocard dentro la stessa sezione,
+        NON intercetto il click.
+        Così il listener specifico della sottocard può aprire subito il nuovo details.
+      */
+      if (cardInternaDentroSezioneAperta) {
+        return;
+      }
+
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
 
       chiusuraProgrammatica = true;
 
-      chiudiDetailsInterni(sezioneAperta);
+      getDetailsInterni(sezioneAperta).forEach(details => {
+        details.removeAttribute("open");
+      });
+
+      const mainDetails = getMainDetails(sezioneAperta);
 
       if (mainDetails && mainDetails.open) {
         impostaFocusSuSezione(sezioneAperta);
@@ -5917,17 +5940,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /*
       CASO 2:
-      Clicco fuori dalla sezione principale aperta.
+      Clic fuori dalla sezione principale aperta.
 
-      Qui chiudo tutto e torno alle 3 card principali.
+      Regola:
+      - chiude SEMPRE la card principale aperta;
+      - chiude SEMPRE tutti i details interni;
+      - NON apre subito un'altra card principale;
+      - per aprire un'altra card principale servirà un secondo click.
     */
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
 
-    chiudiTutteLeSezioni();
-  }, true);
+    chiusuraProgrammatica = true;
 
+    card.querySelectorAll("details[open]").forEach(details => {
+      details.removeAttribute("open");
+    });
+
+    getSezioniPrincipali().forEach(sezione => {
+      sezione.classList.remove("lc-open-section");
+    });
+
+    resetFocusModaleVisibilita();
+
+    card.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+
+    requestAnimationFrame(() => {
+      chiusuraProgrammatica = false;
+    });
+  }, true);
+  
   /*
     CLICK SUL FONDO NERO
 
