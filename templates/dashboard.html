@@ -4341,6 +4341,18 @@ nav::before {
   /* ============================================================
      FIX FINALE MOBILE — INTRO PROFILO
      ============================================================ */
+ /* ============================================================
+    FIX SWITCH VISIBILITÀ PROFILO
+    ============================================================ */
+
+ #visibile:checked + div > div {
+   transform: translateX(1.25rem) !important;
+ }
+
+ #visibile + div > div {
+   transform: translateX(0) !important;
+ }
+
 
   @media (max-width: 640px) {
 
@@ -4446,7 +4458,7 @@ nav::before {
       flex: 0 0 1.42rem !important;
       font-size: 0.72rem !important;
       line-height: 1 !important;
-    }    
+    }
   }
 </style>
 
