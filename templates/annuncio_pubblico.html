@@ -4275,6 +4275,25 @@ function aggiornaStatoVisibilita() {
 
     let chiusuraProgrammatica = false;
 
+    function forzaChiusuraDetails(details) {
+      if (!details) return;
+
+      details.querySelectorAll("details").forEach(figlio => {
+        figlio.open = false;
+        figlio.removeAttribute("open");
+      });
+
+      details.open = false;
+      details.removeAttribute("open");
+    }
+
+    function forzaChiusuraTuttiDetailsModale() {
+      card.querySelectorAll("details").forEach(details => {
+        details.open = false;
+        details.removeAttribute("open");
+      });
+    }
+
     function getSezioniPrincipali() {
       return Array.from(card.querySelectorAll(":scope > .lc-main-card"));
     }
@@ -4319,13 +4338,7 @@ function aggiornaStatoVisibilita() {
     }
 
     function chiudiDetailsSenzaToggle(details) {
-      if (!details) return;
-
-      details.querySelectorAll("details[open]").forEach(figlio => {
-        figlio.removeAttribute("open");
-      });
-
-      details.removeAttribute("open");
+      forzaChiusuraDetails(details);
     }
 
     function chiudiDetailsInterni(sezione, except = null) {
@@ -4333,7 +4346,7 @@ function aggiornaStatoVisibilita() {
 
       getDetailsInterni(sezione).forEach(details => {
         if (details === except) return;
-        details.removeAttribute("open");
+        forzaChiusuraDetails(details);
       });
     }
 
@@ -4625,9 +4638,12 @@ function aggiornaStatoVisibilita() {
 
       chiusuraProgrammatica = true;
 
-      card.querySelectorAll("details[open]").forEach(details => {
-        details.removeAttribute("open");
-      });
+      /*
+        Chiusura forzata immediata.
+        Serve sia open=false sia removeAttribute("open"),
+        perché alcuni <details> possono mantenere lo stato interno.
+      */
+      forzaChiusuraTuttiDetailsModale();
 
       getSezioniPrincipali().forEach(sezione => {
         sezione.classList.remove("lc-open-section");
@@ -4640,11 +4656,21 @@ function aggiornaStatoVisibilita() {
         behavior: "smooth"
       });
 
+      /*
+        Seconda chiusura dopo il ciclo del click.
+        Questa è la parte importante: se il click/toggle nativo prova
+        a riaprire o mantenere un details, lo richiudiamo subito dopo.
+      */
       requestAnimationFrame(() => {
-        chiusuraProgrammatica = false;
-      });
+        forzaChiusuraTuttiDetailsModale();
+
+        requestAnimationFrame(() => {
+          forzaChiusuraTuttiDetailsModale();
+          chiusuraProgrammatica = false;
+        });
+      });      
     }, true);
-    
+
     /*
       CLICK SUL FONDO NERO
 
