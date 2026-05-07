@@ -4415,13 +4415,15 @@ function aggiornaStatoVisibilita() {
     });
 
     /*
-      CLICK DENTRO IL MODALE MA FUORI DALLA CARD PRINCIPALE APERTA
+      CLICK FUORI DAL CONTENUTO APERTO
 
-      Esempio:
-      - apro "Pacchetti consigliati";
-      - clicco su "Servizi singoli";
-      - non deve aprire subito Servizi singoli;
-      - deve solo chiudere Pacchetti e tornare alle 3 card principali.
+      Regole:
+      - se clicco dentro la stessa sezione principale ma fuori dal details interno aperto,
+        chiudo solo i details interni;
+      - se clicco fuori dalla sezione principale aperta,
+        chiudo tutta la sezione principale e torno alle 3 card;
+      - se clicco dentro il details interno aperto,
+        non faccio nulla.
     */
     card.addEventListener("click", (e) => {
       if (!card.classList.contains("lc-has-open")) return;
@@ -4429,15 +4431,62 @@ function aggiornaStatoVisibilita() {
       const sezioneAperta = card.querySelector(".lc-open-section");
       if (!sezioneAperta) return;
 
-      if (sezioneAperta.contains(e.target)) return;
+      const mainDetails = getMainDetails(sezioneAperta);
 
+      const detailsInterniAperti = getDetailsInterni(sezioneAperta).filter(d => d.open);
+
+      const clickDentroSezioneAperta = sezioneAperta.contains(e.target);
+
+      /*
+        CASO 1:
+        Sono dentro la sezione principale aperta.
+
+        Se c'è un details interno aperto e clicco fuori da quel details,
+        chiudo solo i details interni, lasciando aperta la card principale.
+      */
+      if (clickDentroSezioneAperta) {
+        if (!detailsInterniAperti.length) return;
+
+        const clickDentroDetailsInternoAperto = detailsInterniAperti.some(details => {
+          return details.contains(e.target);
+        });
+
+        if (clickDentroDetailsInternoAperto) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        chiusuraProgrammatica = true;
+
+        chiudiDetailsInterni(sezioneAperta);
+
+        if (mainDetails && mainDetails.open) {
+          impostaFocusSuSezione(sezioneAperta);
+        } else {
+          resetFocusModaleVisibilita();
+        }
+
+        requestAnimationFrame(() => {
+          chiusuraProgrammatica = false;
+        });
+
+        return;
+      }
+
+      /*
+        CASO 2:
+        Clicco fuori dalla sezione principale aperta.
+
+        Qui chiudo tutto e torno alle 3 card principali.
+      */
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
 
       chiudiTutteLeSezioni();
     }, true);
-
+    
     /*
       CLICK SUL FONDO NERO
 
@@ -4470,7 +4519,7 @@ function aggiornaStatoVisibilita() {
     });
   });
   </script>
-  
+
   <script>
   function bodyModalOn() {
     document.body.classList.add("modal-open");
