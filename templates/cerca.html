@@ -452,12 +452,12 @@
       data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
     >
 
-      {% if a.get('has_urgente', 0) == 1 %}
-        <div class="badge-urgente-top z-20">
-          <span class="badge-urgente-dot"></span>
-          Urgente
-        </div>
-      {% elif a.get('has_evidenza', 0) == 1 %}
+    {% if a.get('has_urgente', 0) == 1 %}
+      <div class="badge-urgente-top z-20">
+        <span class="badge-urgente-megafono" aria-hidden="true">📣</span>
+        Urgente
+      </div>
+    {% elif a.get('has_evidenza', 0) == 1 %}
         <div class="absolute top-4 right-4 z-20">
           <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-900 shadow-md">
             ⭐ In evidenza
@@ -1453,14 +1453,16 @@
     animation: urgentPulse 2.6s ease-in-out infinite;
   }
 
-  .badge-urgente-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 0 8px rgba(255,255,255,0.9);
+  .badge-urgente-megafono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    transform: translateY(-0.5px);
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18));
   }
-
+  
   @keyframes urgentPulse {
     0%   { transform: scale(1); }
     50%  { transform: scale(1.04); }
