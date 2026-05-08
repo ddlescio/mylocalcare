@@ -1,103 +1,607 @@
 {% extends "base.html" %}
 {% set page = "impostazioni" %}
+{% set body_class = "offset-navbar page-impostazioni" %}
 
 {% block content %}
 
-<div class="max-w-2xl mx-auto px-4 pt-24 pb-10">
+<div class="settings-shell max-w-3xl mx-auto px-4 pt-24 pb-14">
 
-  <!-- 🔙 FRECCIA TORNA -->
-  <a onclick="history.back()"
-     class="inline-flex items-center text-blue-600 hover:text-blue-700 mb-4 text-sm font-medium cursor-pointer">
-    ← Torna indietro
-  </a>
-
-  <h1 class="text-2xl font-bold text-gray-800 mb-6">⚙️ Impostazioni</h1>
-
-  <!-- 🔵 BLOCCO 1 – Profilo Account -->
-  <div class="bg-white rounded-2xl shadow-sm border mb-6">
-    <div class="p-5 border-b">
-      <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
-        👤 Profilo account
-      </h2>
-    </div>
-
-    <div class="divide-y">
-      <a href="{{ url_for('modifica_username') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-        <span class="text-gray-700">Modifica username</span>
-        <span class="text-gray-400">›</span>
-      </a>
-
-      <a href="{{ url_for('modifica_password') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-        <span class="text-gray-700">Modifica password</span>
-        <span class="text-gray-400">›</span>
-      </a>
-
-      <!-- 🔴 ORA: link a STEP 1 -->
-      <a href="{{ url_for('elimina_account_step1') }}" class="flex items-center justify-between px-5 py-4 hover:bg-red-50">
-        <span class="text-red-600">Elimina account</span>
-        <span class="text-red-400">›</span>
-      </a>
-    </div>
+  <!-- 🔙 TOP BAR -->
+  <div class="settings-topbar mb-5">
+    <button type="button"
+            id="settingsBackBtn"
+            class="settings-back-btn">
+      <span class="settings-back-icon">‹</span>
+      <span>Torna indietro</span>
+    </button>
   </div>
 
-  <!-- 🔒 BLOCCO 2 – Sicurezza -->
-  <div class="bg-white rounded-2xl shadow-sm border mb-6">
-    <div class="p-5 border-b">
-      <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
-        🔒 Sicurezza
-      </h2>
+  <!-- HERO -->
+  <section class="settings-hero mb-7">
+    <div class="settings-hero-glow settings-hero-glow-left"></div>
+    <div class="settings-hero-glow settings-hero-glow-right"></div>
+
+    <div class="relative z-10 flex items-start gap-4">
+      <div class="settings-hero-icon">
+        ⚙️
+      </div>
+
+      <div class="min-w-0">
+        <h1 class="settings-title">
+          Impostazioni
+        </h1>
+        <p class="settings-subtitle">
+          Gestisci profilo, sicurezza, notifiche e contenuti del tuo account.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 👤 PROFILO ACCOUNT -->
+  <section class="settings-card mb-6">
+    <div class="settings-card-header">
+      <div class="settings-section-icon">
+        👤
+      </div>
+      <div>
+        <h2 class="settings-section-title">Profilo account</h2>
+        <p class="settings-section-desc">Modifica dati di accesso e gestione account.</p>
+      </div>
     </div>
 
-    <div class="divide-y">
-      <a href="{{ url_for('email_notifiche') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-        <span class="text-gray-700">Notifiche via email</span>
-        <span class="text-gray-400">›</span>
+    <div class="settings-list">
+      <a href="{{ url_for('modifica_username') }}" class="settings-row">
+        <div class="settings-row-left">
+          <span class="settings-row-icon">🏷️</span>
+          <div>
+            <div class="settings-row-title">Modifica username</div>
+            <div class="settings-row-desc">Aggiorna il nome visibile sul profilo.</div>
+          </div>
+        </div>
+        <span class="settings-chevron">›</span>
+      </a>
+
+      <a href="{{ url_for('modifica_password') }}" class="settings-row">
+        <div class="settings-row-left">
+          <span class="settings-row-icon">🔑</span>
+          <div>
+            <div class="settings-row-title">Modifica password</div>
+            <div class="settings-row-desc">Imposta una nuova password di accesso.</div>
+          </div>
+        </div>
+        <span class="settings-chevron">›</span>
+      </a>
+
+      <a href="{{ url_for('elimina_account_step1') }}" class="settings-row settings-row-danger">
+        <div class="settings-row-left">
+          <span class="settings-row-icon settings-row-icon-danger">🗑️</span>
+          <div>
+            <div class="settings-row-title text-red-600">Elimina account</div>
+            <div class="settings-row-desc">Avvia la procedura di eliminazione definitiva.</div>
+          </div>
+        </div>
+        <span class="settings-chevron text-red-300">›</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- 🔒 SICUREZZA E NOTIFICHE -->
+  <section class="settings-card mb-6">
+    <div class="settings-card-header">
+      <div class="settings-section-icon">
+        🔒
+      </div>
+      <div>
+        <h2 class="settings-section-title">Sicurezza e notifiche</h2>
+        <p class="settings-section-desc">Controlla come ricevere avvisi e comunicazioni.</p>
+      </div>
+    </div>
+
+    <div class="settings-list">
+      <a href="{{ url_for('email_notifiche') }}" class="settings-row">
+        <div class="settings-row-left">
+          <span class="settings-row-icon">📧</span>
+          <div>
+            <div class="settings-row-title">Notifiche via email</div>
+            <div class="settings-row-desc">Gestisci gli avvisi ricevuti tramite email.</div>
+          </div>
+        </div>
+        <span class="settings-chevron">›</span>
       </a>
 
       <!-- 🔔 NOTIFICHE PUSH -->
-      <div class="px-5 py-4">
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <div class="text-gray-700 font-medium">
-              Notifiche push
-            </div>
-            <div id="pushSettingsStatus" class="text-xs text-gray-500 mt-1">
+      <div class="settings-row settings-row-static">
+        <div class="settings-row-left min-w-0">
+          <span class="settings-row-icon">🔔</span>
+          <div class="min-w-0">
+            <div class="settings-row-title">Notifiche push</div>
+            <div id="pushSettingsStatus" class="settings-row-desc">
               Controllo stato notifiche...
             </div>
           </div>
-
-          <button type="button"
-                  id="pushSettingsBtn"
-                  class="shrink-0 rounded-full bg-gray-200 text-gray-600 px-4 py-2 text-xs font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed">
-            Verifica
-          </button>
         </div>
+
+        <button type="button"
+                id="pushSettingsBtn"
+                class="settings-push-btn settings-push-btn-neutral">
+          Verifica
+        </button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- 🖼 BLOCCO 3 – Foto profilo -->
-  <div class="bg-white rounded-2xl shadow-sm border">
-    <div class="p-5 border-b">
-      <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
-        🖼 Foto profilo
-      </h2>
+  <!-- 🖼 FOTO PROFILO -->
+  <section class="settings-card">
+    <div class="settings-card-header">
+      <div class="settings-section-icon">
+        🖼️
+      </div>
+      <div>
+        <h2 class="settings-section-title">Immagini profilo</h2>
+        <p class="settings-section-desc">Personalizza foto profilo e copertina.</p>
+      </div>
     </div>
 
-    <div class="divide-y">
-      <a href="{{ url_for('cambia_foto') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-        <span class="text-gray-700">Cambia foto profilo</span>
-        <span class="text-gray-400">›</span>
+    <div class="settings-list">
+      <a href="{{ url_for('cambia_foto') }}" class="settings-row">
+        <div class="settings-row-left">
+          <span class="settings-row-icon">🙂</span>
+          <div>
+            <div class="settings-row-title">Cambia foto profilo</div>
+            <div class="settings-row-desc">Aggiorna l’immagine principale del tuo account.</div>
+          </div>
+        </div>
+        <span class="settings-chevron">›</span>
       </a>
 
-      <a href="{{ url_for('cambia_copertina') }}" class="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-        <span class="text-gray-700">Cambia copertina</span>
-        <span class="text-gray-400">›</span>
+      <a href="{{ url_for('cambia_copertina') }}" class="settings-row">
+        <div class="settings-row-left">
+          <span class="settings-row-icon">🌄</span>
+          <div>
+            <div class="settings-row-title">Cambia copertina</div>
+            <div class="settings-row-desc">Modifica l’immagine grande del profilo.</div>
+          </div>
+        </div>
+        <span class="settings-chevron">›</span>
       </a>
     </div>
-  </div>
+  </section>
 
 </div>
+
+<style>
+/* =========================================================
+   SETTINGS PREMIUM — MyLocalCare
+   Stile coerente con navbar sculpted/glass
+========================================================= */
+
+.settings-shell {
+  position: relative;
+}
+
+/* 🔙 Back */
+.settings-topbar {
+  display: flex;
+  align-items: center;
+}
+
+.settings-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+
+  padding: 0.48rem 0.82rem;
+  border-radius: 9999px;
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.84));
+  border: 1px solid rgba(203,213,225,0.75);
+
+  color: #2563eb;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease,
+    border-color .16s ease,
+    background .16s ease;
+}
+
+.settings-back-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(147,197,253,0.95);
+  box-shadow:
+    0 12px 22px rgba(37,99,235,0.11),
+    inset 0 1px 0 rgba(255,255,255,1);
+}
+
+.settings-back-icon {
+  font-size: 1.35rem;
+  line-height: 0.8;
+  margin-top: -1px;
+}
+
+/* HERO */
+.settings-hero {
+  position: relative;
+  overflow: hidden;
+
+  border-radius: 2rem;
+  padding: 1.25rem;
+
+  background:
+    radial-gradient(circle at 15% 0%, rgba(219,234,254,0.95) 0%, transparent 35%),
+    radial-gradient(circle at 90% 10%, rgba(252,231,243,0.70) 0%, transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.88));
+
+  border: 1px solid rgba(226,232,240,0.88);
+
+  box-shadow:
+    0 24px 48px rgba(15,23,42,0.10),
+    0 8px 18px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -18px 32px rgba(148,163,184,0.08);
+}
+
+.settings-hero-glow {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(28px);
+  opacity: 0.85;
+}
+
+.settings-hero-glow-left {
+  width: 9rem;
+  height: 9rem;
+  left: -3rem;
+  top: -3rem;
+  background: rgba(96,165,250,0.28);
+}
+
+.settings-hero-glow-right {
+  width: 8rem;
+  height: 8rem;
+  right: -2rem;
+  bottom: -3rem;
+  background: rgba(244,114,182,0.18);
+}
+
+.settings-hero-icon {
+  width: 3.2rem;
+  height: 3.2rem;
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 1.35rem;
+
+  background:
+    radial-gradient(circle at 45% 15%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.78) 40%, rgba(226,232,240,0.78) 100%);
+
+  border: 1px solid rgba(203,213,225,0.88);
+
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset -4px -7px 12px rgba(100,116,139,0.12),
+    0 12px 18px rgba(15,23,42,0.12);
+
+  font-size: 1.45rem;
+}
+
+.settings-title {
+  color: #0f172a;
+  font-size: 1.72rem;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+}
+
+.settings-subtitle {
+  margin-top: 0.35rem;
+  color: #64748b;
+  font-size: 0.94rem;
+  line-height: 1.45;
+  font-weight: 550;
+}
+
+/* CARD */
+.settings-card {
+  overflow: hidden;
+  border-radius: 1.8rem;
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
+
+  border: 1px solid rgba(226,232,240,0.88);
+
+  box-shadow:
+    0 18px 34px rgba(15,23,42,0.075),
+    0 4px 10px rgba(15,23,42,0.035),
+    inset 0 1px 0 rgba(255,255,255,1);
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+
+  padding: 1.05rem 1.12rem;
+  border-bottom: 1px solid rgba(226,232,240,0.86);
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.76), rgba(248,250,252,0.50));
+}
+
+.settings-section-icon {
+  width: 2.45rem;
+  height: 2.45rem;
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 1rem;
+
+  background:
+    linear-gradient(180deg, rgba(239,246,255,0.96), rgba(255,255,255,0.76));
+
+  border: 1px solid rgba(191,219,254,0.75);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    0 8px 14px rgba(37,99,235,0.08);
+
+  font-size: 1.13rem;
+}
+
+.settings-section-title {
+  color: #1e293b;
+  font-size: 1rem;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.settings-section-desc {
+  margin-top: 0.16rem;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  font-weight: 650;
+}
+
+/* LIST */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+
+  padding: 1rem 1.12rem;
+
+  color: inherit;
+  text-decoration: none;
+
+  border-bottom: 1px solid rgba(226,232,240,0.68);
+
+  background: rgba(255,255,255,0.30);
+
+  transition:
+    background .16s ease,
+    transform .16s ease;
+}
+
+.settings-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-row:hover {
+  background:
+    linear-gradient(90deg, rgba(239,246,255,0.72), rgba(255,255,255,0.35));
+}
+
+.settings-row-static:hover {
+  background: rgba(255,255,255,0.30);
+}
+
+.settings-row-danger:hover {
+  background:
+    linear-gradient(90deg, rgba(254,242,242,0.85), rgba(255,255,255,0.40));
+}
+
+.settings-row-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.settings-row-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 0.92rem;
+
+  background:
+    radial-gradient(circle at 45% 15%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.78) 42%, rgba(226,232,240,0.70) 100%);
+
+  border: 1px solid rgba(226,232,240,0.88);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    0 7px 12px rgba(15,23,42,0.07);
+
+  font-size: 1rem;
+}
+
+.settings-row-icon-danger {
+  background:
+    radial-gradient(circle at 45% 15%, rgba(255,255,255,1) 0%, rgba(254,226,226,0.82) 44%, rgba(252,165,165,0.28) 100%);
+  border-color: rgba(252,165,165,0.55);
+}
+
+.settings-row-title {
+  color: #334155;
+  font-size: 0.94rem;
+  line-height: 1.15;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+}
+
+.settings-row-desc {
+  margin-top: 0.18rem;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.settings-chevron {
+  color: #cbd5e1;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* PUSH BUTTON */
+.settings-push-btn {
+  flex: 0 0 auto;
+  border-radius: 9999px;
+
+  padding: 0.54rem 0.88rem;
+
+  font-size: 0.74rem;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.015em;
+
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease,
+    background .16s ease,
+    color .16s ease,
+    border-color .16s ease;
+}
+
+.settings-push-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.settings-push-btn-neutral {
+  background: #e2e8f0;
+  color: #475569;
+  border: 1px solid rgba(203,213,225,0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.70),
+    0 7px 12px rgba(15,23,42,0.06);
+}
+
+.settings-push-btn-active {
+  background:
+    linear-gradient(180deg, #eff6ff, #dbeafe);
+  color: #1d4ed8;
+  border: 1px solid rgba(147,197,253,0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.85),
+    0 8px 14px rgba(37,99,235,0.12);
+}
+
+.settings-push-btn-danger {
+  background:
+    linear-gradient(180deg, #fff1f2, #ffe4e6);
+  color: #e11d48;
+  border: 1px solid rgba(253,164,175,0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.86),
+    0 8px 14px rgba(225,29,72,0.10);
+}
+
+.settings-push-btn-blocked {
+  background: #e2e8f0;
+  color: #94a3b8;
+  border: 1px solid rgba(203,213,225,0.86);
+  cursor: not-allowed;
+}
+
+.settings-push-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* MOBILE */
+@media (max-width: 640px) {
+  .settings-shell {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+    padding-top: 5.6rem;
+  }
+
+  .settings-hero {
+    border-radius: 1.65rem;
+    padding: 1.05rem;
+  }
+
+  .settings-title {
+    font-size: 1.48rem;
+  }
+
+  .settings-subtitle {
+    font-size: 0.86rem;
+  }
+
+  .settings-card {
+    border-radius: 1.45rem;
+  }
+
+  .settings-card-header {
+    padding: 0.95rem;
+  }
+
+  .settings-row {
+    padding: 0.95rem;
+    gap: 0.7rem;
+  }
+
+  .settings-row-icon {
+    width: 2.05rem;
+    height: 2.05rem;
+    border-radius: 0.82rem;
+  }
+
+  .settings-row-title {
+    font-size: 0.9rem;
+  }
+
+  .settings-row-desc {
+    font-size: 0.72rem;
+  }
+
+  .settings-push-btn {
+    padding: 0.5rem 0.72rem;
+    font-size: 0.70rem;
+  }
+}
+</style>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -114,7 +618,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sessionStorage.setItem("impostazioni_origin", ref);
   }
 
-  document.querySelector("a[onclick='history.back()']")?.addEventListener("click", (e) => {
+  document.getElementById("settingsBackBtn")?.addEventListener("click", (e) => {
     e.preventDefault();
 
     const origin = sessionStorage.getItem("impostazioni_origin");
@@ -127,6 +631,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
+
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
   const btn = document.getElementById("pushSettingsBtn");
@@ -135,21 +640,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!btn || !status) return;
 
   function setBtn(mode) {
+    btn.disabled = false;
+
     if (mode === "active") {
       btn.textContent = "Disattiva";
-      btn.className = "shrink-0 rounded-full bg-red-50 text-red-600 border border-red-200 px-4 py-2 text-xs font-semibold transition hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed";
+      btn.className = "settings-push-btn settings-push-btn-danger";
       return;
     }
 
     if (mode === "blocked") {
       btn.textContent = "Bloccate";
-      btn.className = "shrink-0 rounded-full bg-gray-200 text-gray-500 px-4 py-2 text-xs font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed";
+      btn.className = "settings-push-btn settings-push-btn-blocked";
+      btn.disabled = true;
+      return;
+    }
+
+    if (mode === "loading") {
+      btn.textContent = "Attendo...";
+      btn.className = "settings-push-btn settings-push-btn-neutral";
       btn.disabled = true;
       return;
     }
 
     btn.textContent = "Attiva";
-    btn.className = "shrink-0 rounded-full bg-blue-600 text-white px-4 py-2 text-xs font-semibold transition hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed";
+    btn.className = "settings-push-btn settings-push-btn-active";
   }
 
   async function getCurrentSubscription() {
@@ -161,7 +675,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function refreshPushState() {
-    btn.disabled = true;
+    setBtn("loading");
 
     if (!("Notification" in window)) {
       status.textContent = "Le notifiche push non sono supportate su questo dispositivo.";
@@ -192,24 +706,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (Notification.permission === "granted" && subscription) {
       status.textContent = "Notifiche push attive su questo dispositivo.";
       setBtn("active");
-      btn.disabled = false;
       return;
     }
 
     if (Notification.permission === "granted" && !subscription) {
       status.textContent = "Permesso concesso, ma notifiche non ancora sincronizzate.";
       setBtn("inactive");
-      btn.disabled = false;
       return;
     }
 
-    status.textContent = "Attiva le notifiche push per ricevere avvisi anche quando l’app è chiusa.";
+    status.textContent = "Attiva gli avvisi quando l’app è chiusa o in background.";
     setBtn("inactive");
-    btn.disabled = false;
   }
 
   btn.addEventListener("click", async () => {
-    btn.disabled = true;
+    setBtn("loading");
 
     try {
       const subscription = await getCurrentSubscription();
@@ -237,7 +748,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         status.textContent = "Notifiche push disattivate su questo dispositivo.";
         setBtn("inactive");
-        btn.disabled = false;
         return;
       }
 
@@ -247,7 +757,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (typeof registerPush !== "function") {
         status.textContent = "Funzione di attivazione push non disponibile.";
         setBtn("inactive");
-        btn.disabled = false;
         return;
       }
 
@@ -263,7 +772,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         status.textContent = "Notifiche push attive su questo dispositivo.";
         setBtn("active");
-        btn.disabled = false;
         return;
       }
 
@@ -275,17 +783,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       status.textContent = "Non è stato possibile attivare le notifiche push. Riprova.";
       setBtn("inactive");
-      btn.disabled = false;
 
     } catch (err) {
       console.error("Errore gestione notifiche push:", err);
       status.textContent = "Errore durante la gestione delle notifiche push.";
       setBtn("inactive");
-      btn.disabled = false;
     }
   });
 
   await refreshPushState();
 });
 </script>
+
 {% endblock %}
