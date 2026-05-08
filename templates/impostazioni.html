@@ -53,6 +53,26 @@
         <span class="text-gray-700">Notifiche via email</span>
         <span class="text-gray-400">›</span>
       </a>
+
+      <!-- 🔔 NOTIFICHE PUSH -->
+      <div class="px-5 py-4">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <div class="text-gray-700 font-medium">
+              Notifiche push
+            </div>
+            <div id="pushSettingsStatus" class="text-xs text-gray-500 mt-1">
+              Controllo stato notifiche...
+            </div>
+          </div>
+
+          <button type="button"
+                  id="pushSettingsBtn"
+                  class="shrink-0 rounded-full bg-gray-200 text-gray-600 px-4 py-2 text-xs font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed">
+            Verifica
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -107,6 +127,165 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const btn = document.getElementById("pushSettingsBtn");
+  const status = document.getElementById("pushSettingsStatus");
 
+  if (!btn || !status) return;
 
+  function setBtn(mode) {
+    if (mode === "active") {
+      btn.textContent = "Disattiva";
+      btn.className = "shrink-0 rounded-full bg-red-50 text-red-600 border border-red-200 px-4 py-2 text-xs font-semibold transition hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed";
+      return;
+    }
+
+    if (mode === "blocked") {
+      btn.textContent = "Bloccate";
+      btn.className = "shrink-0 rounded-full bg-gray-200 text-gray-500 px-4 py-2 text-xs font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed";
+      btn.disabled = true;
+      return;
+    }
+
+    btn.textContent = "Attiva";
+    btn.className = "shrink-0 rounded-full bg-blue-600 text-white px-4 py-2 text-xs font-semibold transition hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed";
+  }
+
+  async function getCurrentSubscription() {
+    if (!("serviceWorker" in navigator)) return null;
+    if (!("PushManager" in window)) return null;
+
+    const registration = await navigator.serviceWorker.ready;
+    return await registration.pushManager.getSubscription();
+  }
+
+  async function refreshPushState() {
+    btn.disabled = true;
+
+    if (!("Notification" in window)) {
+      status.textContent = "Le notifiche push non sono supportate su questo dispositivo.";
+      setBtn("blocked");
+      return;
+    }
+
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      status.textContent = "Le notifiche push non sono supportate in questo browser.";
+      setBtn("blocked");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      status.textContent = "Le notifiche push richiedono una connessione sicura HTTPS.";
+      setBtn("blocked");
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      status.textContent = "Notifiche bloccate. Riattivale dalle impostazioni del dispositivo/browser.";
+      setBtn("blocked");
+      return;
+    }
+
+    const subscription = await getCurrentSubscription();
+
+    if (Notification.permission === "granted" && subscription) {
+      status.textContent = "Notifiche push attive su questo dispositivo.";
+      setBtn("active");
+      btn.disabled = false;
+      return;
+    }
+
+    if (Notification.permission === "granted" && !subscription) {
+      status.textContent = "Permesso concesso, ma notifiche non ancora sincronizzate.";
+      setBtn("inactive");
+      btn.disabled = false;
+      return;
+    }
+
+    status.textContent = "Attiva le notifiche push per ricevere avvisi anche quando l’app è chiusa.";
+    setBtn("inactive");
+    btn.disabled = false;
+  }
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+
+    try {
+      const subscription = await getCurrentSubscription();
+
+      /*
+        Se esiste una subscription locale, il pulsante è in modalità Disattiva.
+        La eliminiamo dal browser e poi avvisiamo il backend.
+      */
+      if (subscription) {
+        const endpoint = subscription.endpoint;
+
+        await subscription.unsubscribe();
+
+        await fetch("/push/unsubscribe", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint })
+        });
+
+        const currentUserId = {{ session.get('utente_id')|tojson }};
+        if (currentUserId) {
+          localStorage.removeItem(`lc_push_synced_user_${currentUserId}`);
+        }
+
+        status.textContent = "Notifiche push disattivate su questo dispositivo.";
+        setBtn("inactive");
+        btn.disabled = false;
+        return;
+      }
+
+      /*
+        Se non esiste subscription, usiamo la funzione globale già presente in base.html.
+      */
+      if (typeof registerPush !== "function") {
+        status.textContent = "Funzione di attivazione push non disponibile.";
+        setBtn("inactive");
+        btn.disabled = false;
+        return;
+      }
+
+      status.textContent = "Attivazione notifiche push in corso...";
+
+      const ok = await registerPush();
+
+      if (ok === true) {
+        const currentUserId = {{ session.get('utente_id')|tojson }};
+        if (currentUserId) {
+          localStorage.setItem(`lc_push_synced_user_${currentUserId}`, new Date().toISOString());
+        }
+
+        status.textContent = "Notifiche push attive su questo dispositivo.";
+        setBtn("active");
+        btn.disabled = false;
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        status.textContent = "Notifiche bloccate. Riattivale dalle impostazioni del dispositivo/browser.";
+        setBtn("blocked");
+        return;
+      }
+
+      status.textContent = "Non è stato possibile attivare le notifiche push. Riprova.";
+      setBtn("inactive");
+      btn.disabled = false;
+
+    } catch (err) {
+      console.error("Errore gestione notifiche push:", err);
+      status.textContent = "Errore durante la gestione delle notifiche push.";
+      setBtn("inactive");
+      btn.disabled = false;
+    }
+  });
+
+  await refreshPushState();
+});
+</script>
 {% endblock %}

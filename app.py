@@ -6052,6 +6052,54 @@ def push_subscribe():
         except Exception:
             pass
 
+@app.route("/push/unsubscribe", methods=["POST"])
+@login_required
+def push_unsubscribe():
+    conn = None
+    cur = None
+
+    try:
+        user_id = g.utente["id"]
+        data = request.get_json(silent=True) or {}
+        endpoint = data.get("endpoint")
+
+        if not endpoint:
+          return jsonify({"ok": False, "error": "endpoint mancante"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                DELETE FROM push_subscriptions
+                WHERE user_id = %s
+                  AND endpoint = %s
+            """, (user_id, endpoint))
+        else:
+            cur.execute("""
+                DELETE FROM push_subscriptions
+                WHERE user_id = ?
+                  AND endpoint = ?
+            """, (user_id, endpoint))
+            conn.commit()
+
+        print(
+            f"🔕 [push_unsubscribe] subscription rimossa user_id={user_id} endpoint={endpoint[:90]}...",
+            flush=True
+        )
+
+        return jsonify({"ok": True})
+
+    except Exception as e:
+        print("❌ [push_unsubscribe] errore:", repr(e), flush=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
 
 @app.route("/service-worker.js")
 def service_worker():
