@@ -5896,6 +5896,30 @@ def internal_push_send():
 # 🔔 PUSH SUBSCRIBE PUBBLICO
 # Associa sempre la subscription all'utente attualmente loggato
 # =========================================================
+@app.route("/push/debug", methods=["POST"])
+@login_required
+def push_debug():
+    try:
+        data = request.get_json(silent=True) or {}
+
+        print("🧪 [push_debug]", {
+            "user_id": session.get("utente_id"),
+            "g_utente_id": g.utente["id"] if getattr(g, "utente", None) else None,
+            "step": data.get("step"),
+            "ok": data.get("ok"),
+            "details": data.get("details"),
+            "user_agent": request.headers.get("User-Agent", "")
+        }, flush=True)
+
+        return jsonify({"ok": True})
+
+    except Exception as e:
+        print("❌ [push_debug] errore:", repr(e), flush=True)
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
 
 @app.route("/push/subscribe", methods=["POST"])
 @login_required

@@ -2445,6 +2445,19 @@ function urlBase64ToUint8Array(base64String) {
 }
 </script>
 <script>
+async function pushDebug(step, ok = true, details = {}) {
+  try {
+    await fetch("/push/debug", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step, ok, details })
+    });
+  } catch (e) {
+    console.warn("pushDebug fallito:", e);
+  }
+}
+
 async function registerPush() {
   try {
     console.log("🔔 [registerPush] START", {
@@ -2452,6 +2465,16 @@ async function registerPush() {
       permission: ("Notification" in window) ? Notification.permission : null,
       hasServiceWorker: "serviceWorker" in navigator,
       hasPushManager: "PushManager" in window,
+      secure: window.isSecureContext,
+      standalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+    });
+
+    await pushDebug("start", true, {
+      href: window.location.href,
+      permission: ("Notification" in window) ? Notification.permission : null,
+      hasServiceWorker: "serviceWorker" in navigator,
+      hasPushManager: "PushManager" in window,
+      hasNotification: "Notification" in window,
       secure: window.isSecureContext,
       standalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
     });
@@ -2486,9 +2509,20 @@ async function registerPush() {
       waiting: !!registration.waiting
     });
 
+    await pushDebug("service_worker_ready", true, {
+      scope: registration.scope,
+      active: !!registration.active,
+      installing: !!registration.installing,
+      waiting: !!registration.waiting
+    });
+
     let subscription = await registration.pushManager.getSubscription();
 
     console.log("🔔 [registerPush] subscription esistente:", !!subscription);
+
+    await pushDebug("existing_subscription", true, {
+      exists: !!subscription
+    });
 
     if (!subscription) {
       if (Notification.permission === "denied") {
@@ -2513,6 +2547,11 @@ async function registerPush() {
       console.log("🔔 [registerPush] VAPID_PUBLIC_KEY presente:", !!vapidPublicKey);
       console.log("🔔 [registerPush] VAPID_PUBLIC_KEY length:", vapidPublicKey ? vapidPublicKey.length : 0);
 
+      await pushDebug("vapid_key_check", !!vapidPublicKey, {
+        present: !!vapidPublicKey,
+        length: vapidPublicKey ? vapidPublicKey.length : 0
+      });
+
       if (!vapidPublicKey) {
         console.error("❌ [registerPush] VAPID_PUBLIC_KEY mancante nel template");
         return false;
@@ -2523,8 +2562,19 @@ async function registerPush() {
       try {
         applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
         console.log("✅ [registerPush] VAPID convertita length:", applicationServerKey.length);
+
+        await pushDebug("vapid_key_converted", true, {
+          length: applicationServerKey.length
+        });
+
       } catch (e) {
         console.error("❌ [registerPush] errore conversione VAPID_PUBLIC_KEY:", e);
+
+        await pushDebug("vapid_key_conversion_failed", false, {
+          name: e && e.name,
+          message: e && e.message
+        });
+
         return false;
       }
 
@@ -2540,12 +2590,28 @@ async function registerPush() {
           hasKeys: !!(subscription.toJSON && subscription.toJSON().keys),
           json: subscription.toJSON ? subscription.toJSON() : null
         });
+
+        const createdSubscriptionJson = subscription.toJSON ? subscription.toJSON() : subscription;
+
+        await pushDebug("subscribe_success", true, {
+          endpointStart: createdSubscriptionJson.endpoint ? createdSubscriptionJson.endpoint.slice(0, 80) : null,
+          hasKeys: !!createdSubscriptionJson.keys,
+          hasP256dh: !!(createdSubscriptionJson.keys && createdSubscriptionJson.keys.p256dh),
+          hasAuth: !!(createdSubscriptionJson.keys && createdSubscriptionJson.keys.auth)
+        });
+
       } catch (e) {
         console.error("❌ [registerPush] pushManager.subscribe FALLITA:", {
           name: e && e.name,
           message: e && e.message,
           stack: e && e.stack
         });
+
+        await pushDebug("subscribe_failed", false, {
+          name: e && e.name,
+          message: e && e.message
+        });
+
         return false;
       }
     }
@@ -2554,6 +2620,13 @@ async function registerPush() {
 
     console.log("🔔 [registerPush] invio subscription al backend:", {
       endpoint: subscriptionJson.endpoint ? subscriptionJson.endpoint.slice(0, 120) : null,
+      hasP256dh: !!(subscriptionJson.keys && subscriptionJson.keys.p256dh),
+      hasAuth: !!(subscriptionJson.keys && subscriptionJson.keys.auth)
+    });
+
+    await pushDebug("before_backend_subscribe", true, {
+      endpointStart: subscriptionJson.endpoint ? subscriptionJson.endpoint.slice(0, 80) : null,
+      hasKeys: !!subscriptionJson.keys,
       hasP256dh: !!(subscriptionJson.keys && subscriptionJson.keys.p256dh),
       hasAuth: !!(subscriptionJson.keys && subscriptionJson.keys.auth)
     });
@@ -2573,6 +2646,12 @@ async function registerPush() {
         message: e && e.message,
         stack: e && e.stack
       });
+
+      await pushDebug("backend_fetch_failed", false, {
+        name: e && e.name,
+        message: e && e.message
+      });
+
       return false;
     }
 
@@ -2584,12 +2663,19 @@ async function registerPush() {
       body: txt
     });
 
+    await pushDebug("backend_response", resp.ok, {
+      status: resp.status,
+      ok: resp.ok,
+      body: txt.slice(0, 500)
+    });
+
     if (!resp.ok) {
       console.error("❌ [registerPush] backend /push/subscribe non OK:", resp.status, txt);
       return false;
     }
 
     console.log("✅ [registerPush] Push registrata/sincronizzata correttamente");
+    await pushDebug("done", true);
     return true;
 
   } catch (err) {
@@ -2598,8 +2684,14 @@ async function registerPush() {
       message: err && err.message,
       stack: err && err.stack
     });
+
+    await pushDebug("fatal_error", false, {
+      name: err && err.name,
+      message: err && err.message
+    });
+
     return false;
-  }
+  }  
 }
 
 window.addEventListener("load", async () => {
