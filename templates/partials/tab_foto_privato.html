@@ -48,16 +48,16 @@
       <!-- 🖼️ MODALE GALLERIA PUBBLICA -->
       <div id="modalGalleria" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[999] hidden">
         <button id="chiudiGalleria"
-                class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white text-2xl font-bold rounded-full w-10 h-10 flex items-center justify-center">
+                class="gallery-close-btn bg-white/20 hover:bg-white/30 text-white text-2xl font-bold rounded-full w-10 h-10 flex items-center justify-center">
           ✕
         </button>
 
         <button id="prevFoto"
-                class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center select-none">
+                class="gallery-nav-btn gallery-prev-btn bg-white/20 hover:bg-white/30 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center select-none">
           ‹
         </button>
         <button id="nextFoto"
-                class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center select-none">
+                class="gallery-nav-btn gallery-next-btn bg-white/20 hover:bg-white/30 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center select-none">
           ›
         </button>
 
@@ -159,8 +159,40 @@
     transform: scale(1);
   }
 
-  /* Pulsanti sopra l'immagine */
-  #modalGalleria button { z-index: 10000; }
+  /* Pulsanti modale galleria: sotto navbar, sempre cliccabili */
+  #modalGalleria button {
+    position: absolute;
+    z-index: 1000002 !important;
+  }
+
+  /* X chiusura: abbassata sotto la navbar */
+  #chiudiGalleria.gallery-close-btn {
+    top: calc(5rem + env(safe-area-inset-top, 0px));
+    right: 1rem;
+  }
+
+  /* Frecce laterali */
+  .gallery-nav-btn {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .gallery-prev-btn {
+    left: 1rem;
+  }
+
+  .gallery-next-btn {
+    right: 1rem;
+  }
+
+  /* Su mobile molto stretto: X ancora leggermente più bassa */
+  @media (max-width: 640px) {
+    #chiudiGalleria.gallery-close-btn {
+      top: calc(5.4rem + env(safe-area-inset-top, 0px));
+      right: 0.85rem;
+    }
+  }
+    
 </style>
 
 
@@ -320,7 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         formGalleria.submit();
       }
-    }, 80);    
+    }, 80);
   });
 
   chiudiBtn?.addEventListener("click", () => {
