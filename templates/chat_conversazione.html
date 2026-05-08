@@ -201,10 +201,19 @@ body {
     position: relative; /* 🔥 NON fixed */
     background: #fff;
     border-top: 1px solid #e5e7eb;
-    padding: 0.5rem 0.8rem;
-    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-  }
 
+    /* più spazio sopra/sotto per rendere input e tasto comodi */
+    padding: 0.65rem 0.85rem;
+
+    /*
+      Su iPhone/PWA evita che input e tasto siano a filo del bordo inferiore.
+      env(safe-area-inset-bottom) copre la zona gesture/home indicator.
+    */
+    padding-bottom: calc(1.15rem + env(safe-area-inset-bottom));
+
+    box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.06);
+  }
+  
   /* BLOCCA ZOOM IOS */
   .chat-input {
     font-size: 16px !important;
