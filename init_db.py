@@ -518,7 +518,10 @@ def crea_tabella_push_subscriptions():
     conn = get_conn()
     c = conn.cursor()
 
-    # ✅ Tabella push subscriptions (compatibile Postgres / SQLite)
+    # ✅ Tabella push subscriptions
+    # - endpoint è univoco per device/browser/PWA
+    # - se lo stesso telefono cambia utente, la stessa subscription può essere riassociata al nuovo utente
+    # - se lo stesso utente usa più telefoni, avrà più endpoint diversi
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS push_subscriptions (
         id {pk_col()},
@@ -526,12 +529,19 @@ def crea_tabella_push_subscriptions():
         endpoint TEXT NOT NULL,
         p256dh TEXT NOT NULL,
         auth TEXT NOT NULL,
+
+        user_agent TEXT,
+        platform TEXT,
+
         created_at {dt_col(True)},
-        UNIQUE(endpoint)
+        updated_at {dt_col(True)},
+
+        UNIQUE(endpoint),
+
+        FOREIGN KEY (utente_id) REFERENCES utenti(id)
     );
     """))
 
-    # (opzionale ma utile) indice per recuperare velocemente tutte le sub di un utente
     c.execute(sql("""
         CREATE INDEX IF NOT EXISTS idx_push_subscriptions_utente
         ON push_subscriptions(utente_id);
@@ -541,6 +551,59 @@ def crea_tabella_push_subscriptions():
     conn.close()
     print("✅ Tabella 'push_subscriptions' pronta.")
 
+def aggiorna_tabella_push_subscriptions():
+    conn = get_conn()
+    c = conn.cursor()
+
+    if IS_POSTGRES:
+        c.execute(sql("""
+            ALTER TABLE push_subscriptions
+            ADD COLUMN IF NOT EXISTS user_agent TEXT;
+        """))
+
+        c.execute(sql("""
+            ALTER TABLE push_subscriptions
+            ADD COLUMN IF NOT EXISTS platform TEXT;
+        """))
+
+        c.execute(sql("""
+            ALTER TABLE push_subscriptions
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+        """))
+
+        c.execute(sql("""
+            ALTER TABLE push_subscriptions
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+        """))
+
+    else:
+        c.execute("PRAGMA table_info(push_subscriptions)")
+        colonne_push = [row[1] for row in c.fetchall()]
+
+        if "user_agent" not in colonne_push:
+            c.execute("ALTER TABLE push_subscriptions ADD COLUMN user_agent TEXT;")
+            print("✅ Colonna 'user_agent' aggiunta a push_subscriptions.")
+
+        if "platform" not in colonne_push:
+            c.execute("ALTER TABLE push_subscriptions ADD COLUMN platform TEXT;")
+            print("✅ Colonna 'platform' aggiunta a push_subscriptions.")
+
+        if "updated_at" not in colonne_push:
+            c.execute(f"ALTER TABLE push_subscriptions ADD COLUMN updated_at {dt_col(True)};")
+            print("✅ Colonna 'updated_at' aggiunta a push_subscriptions.")
+
+        if "created_at" not in colonne_push:
+            c.execute(f"ALTER TABLE push_subscriptions ADD COLUMN created_at {dt_col(True)};")
+            print("✅ Colonna 'created_at' aggiunta a push_subscriptions.")
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_push_subscriptions_utente
+        ON push_subscriptions(utente_id);
+    """))
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'push_subscriptions' aggiornata.")
 # ---------------------------------------------------------
 # 🗂️ TABELLA NOTIFICHE INVIATE DALL'ADMIN
 # ---------------------------------------------------------
@@ -1044,6 +1107,24 @@ def aggiorna_colonne_mancanti():
         print("✅ Colonna 'tipo' aggiunta a notifiche.")
 
     # ---------------------------------------------------------
+    # 🔔 AGGIORNAMENTO PUSH SUBSCRIPTIONS
+    # ---------------------------------------------------------
+    c.execute("PRAGMA table_info(push_subscriptions)")
+    colonne_push = [row[1] for row in c.fetchall()]
+
+    if "user_agent" not in colonne_push:
+        c.execute("ALTER TABLE push_subscriptions ADD COLUMN user_agent TEXT;")
+        print("✅ Colonna 'user_agent' aggiunta a push_subscriptions.")
+
+    if "platform" not in colonne_push:
+        c.execute("ALTER TABLE push_subscriptions ADD COLUMN platform TEXT;")
+        print("✅ Colonna 'platform' aggiunta a push_subscriptions.")
+
+    if "updated_at" not in colonne_push:
+        c.execute(f"ALTER TABLE push_subscriptions ADD COLUMN updated_at {dt_col(True)};")
+        print("✅ Colonna 'updated_at' aggiunta a push_subscriptions.")
+
+    # ---------------------------------------------------------
     # 📢 Aggiornamento colonne ANNUNCI
     # ---------------------------------------------------------
     c.execute("PRAGMA table_info(annunci)")
@@ -1150,8 +1231,9 @@ def inizializza_database():
     crea_tabella_risposte()
     crea_tabella_notifiche()
     crea_tabella_push_subscriptions()
+    aggiorna_tabella_push_subscriptions()
     crea_tabella_notifiche_admin()
-    crea_tabella_reset_password()
+    crea_tabella_reset_password()    
     crea_tabella_chat_chiusure()
     crea_tabella_segnalazioni_chat()
     crea_tabella_video_call_log()

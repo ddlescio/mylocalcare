@@ -2447,68 +2447,194 @@ function urlBase64ToUint8Array(base64String) {
 <script>
 async function registerPush() {
   try {
-    if (!("serviceWorker" in navigator)) return;
-    if (!("PushManager" in window)) return;
-    if (!window.isSecureContext) return;
+    console.log("🔔 [registerPush] START", {
+      href: window.location.href,
+      permission: ("Notification" in window) ? Notification.permission : null,
+      hasServiceWorker: "serviceWorker" in navigator,
+      hasPushManager: "PushManager" in window,
+      secure: window.isSecureContext,
+      standalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+    });
 
+    if (!("serviceWorker" in navigator)) {
+      console.error("❌ [registerPush] serviceWorker non supportato");
+      return false;
+    }
+
+    if (!("PushManager" in window)) {
+      console.error("❌ [registerPush] PushManager non supportato");
+      return false;
+    }
+
+    if (!("Notification" in window)) {
+      console.error("❌ [registerPush] Notification API non supportata");
+      return false;
+    }
+
+    if (!window.isSecureContext) {
+      console.error("❌ [registerPush] contesto non sicuro");
+      return false;
+    }
+
+    console.log("🔔 [registerPush] attendo serviceWorker.ready...");
     const registration = await navigator.serviceWorker.ready;
+
+    console.log("✅ [registerPush] serviceWorker pronto", {
+      scope: registration.scope,
+      active: !!registration.active,
+      installing: !!registration.installing,
+      waiting: !!registration.waiting
+    });
 
     let subscription = await registration.pushManager.getSubscription();
 
+    console.log("🔔 [registerPush] subscription esistente:", !!subscription);
+
     if (!subscription) {
       if (Notification.permission === "denied") {
-        console.log("Permesso notifiche negato");
-        return;
+        console.error("❌ [registerPush] permesso notifiche negato");
+        return false;
       }
 
       if (Notification.permission !== "granted") {
+        console.log("🔔 [registerPush] chiedo permesso notifiche...");
         const permission = await Notification.requestPermission();
+
+        console.log("🔔 [registerPush] esito permesso:", permission);
+
         if (permission !== "granted") {
-          console.log("Permesso notifiche non concesso");
-          return;
+          console.error("❌ [registerPush] permesso notifiche non concesso");
+          return false;
         }
       }
 
       const vapidPublicKey = {{ config.get("VAPID_PUBLIC_KEY", "")|tojson }};
 
+      console.log("🔔 [registerPush] VAPID_PUBLIC_KEY presente:", !!vapidPublicKey);
+      console.log("🔔 [registerPush] VAPID_PUBLIC_KEY length:", vapidPublicKey ? vapidPublicKey.length : 0);
+
       if (!vapidPublicKey) {
-        console.error("❌ VAPID_PUBLIC_KEY mancante nel template");
-        return;
+        console.error("❌ [registerPush] VAPID_PUBLIC_KEY mancante nel template");
+        return false;
       }
 
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-      });
+      let applicationServerKey;
+
+      try {
+        applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+        console.log("✅ [registerPush] VAPID convertita length:", applicationServerKey.length);
+      } catch (e) {
+        console.error("❌ [registerPush] errore conversione VAPID_PUBLIC_KEY:", e);
+        return false;
+      }
+
+      try {
+        console.log("🔔 [registerPush] creo nuova subscription...");
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey
+        });
+
+        console.log("✅ [registerPush] subscription creata:", {
+          endpoint: subscription.endpoint ? subscription.endpoint.slice(0, 120) : null,
+          hasKeys: !!(subscription.toJSON && subscription.toJSON().keys),
+          json: subscription.toJSON ? subscription.toJSON() : null
+        });
+      } catch (e) {
+        console.error("❌ [registerPush] pushManager.subscribe FALLITA:", {
+          name: e && e.name,
+          message: e && e.message,
+          stack: e && e.stack
+        });
+        return false;
+      }
     }
 
-    const resp = await fetch("/push/subscribe", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(subscription)
+    const subscriptionJson = subscription.toJSON ? subscription.toJSON() : subscription;
+
+    console.log("🔔 [registerPush] invio subscription al backend:", {
+      endpoint: subscriptionJson.endpoint ? subscriptionJson.endpoint.slice(0, 120) : null,
+      hasP256dh: !!(subscriptionJson.keys && subscriptionJson.keys.p256dh),
+      hasAuth: !!(subscriptionJson.keys && subscriptionJson.keys.auth)
+    });
+
+    let resp;
+
+    try {
+      resp = await fetch("/push/subscribe", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscriptionJson)
+      });
+    } catch (e) {
+      console.error("❌ [registerPush] fetch /push/subscribe FALLITA:", {
+        name: e && e.name,
+        message: e && e.message,
+        stack: e && e.stack
+      });
+      return false;
+    }
+
+    const txt = await resp.text();
+
+    console.log("🔔 [registerPush] risposta /push/subscribe:", {
+      status: resp.status,
+      ok: resp.ok,
+      body: txt
     });
 
     if (!resp.ok) {
-      const txt = await resp.text();
-      console.error("❌ Errore /push/subscribe:", resp.status, txt);
-      return;
+      console.error("❌ [registerPush] backend /push/subscribe non OK:", resp.status, txt);
+      return false;
     }
 
-    console.log("✅ Push registrata/sincronizzata correttamente");
+    console.log("✅ [registerPush] Push registrata/sincronizzata correttamente");
     return true;
+
   } catch (err) {
-    console.error("❌ Errore registerPush:", err);
+    console.error("❌ [registerPush] ERRORE FATALE:", {
+      name: err && err.name,
+      message: err && err.message,
+      stack: err && err.stack
+    });
     return false;
   }
 }
 
 window.addEventListener("load", async () => {
   try {
-    if (!("serviceWorker" in navigator)) return;
-    if (!("PushManager" in window)) return;
-    if (!("Notification" in window)) return;
-    if (!window.isSecureContext) return;
+    console.log("🔔 Push bootstrap START", {
+      href: window.location.href,
+      pathname: window.location.pathname,
+      userAgent: navigator.userAgent,
+      standalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+      hasServiceWorker: "serviceWorker" in navigator,
+      hasPushManager: "PushManager" in window,
+      hasNotification: "Notification" in window,
+      isSecureContext: window.isSecureContext,
+      notificationPermission: ("Notification" in window) ? Notification.permission : null
+    });
+
+    if (!("serviceWorker" in navigator)) {
+      console.warn("🔔 Push stop: serviceWorker non supportato");
+      return;
+    }
+
+    if (!("PushManager" in window)) {
+      console.warn("🔔 Push stop: PushManager non supportato");
+      return;
+    }
+
+    if (!("Notification" in window)) {
+      console.warn("🔔 Push stop: Notification API non supportata");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      console.warn("🔔 Push stop: contesto non sicuro");
+      return;
+    }
 
     const currentUserId = {{ session.get('utente_id')|tojson }};
 
@@ -2535,7 +2661,7 @@ window.addEventListener("load", async () => {
       console.log("🔔 Push sync skip: pagina non target", pagePath);
       return;
     }
-    
+
     const syncKey = `lc_push_synced_user_${currentUserId}`;
     const lastSynced = localStorage.getItem(syncKey);
 
