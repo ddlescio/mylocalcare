@@ -2691,7 +2691,7 @@ async function registerPush() {
     });
 
     return false;
-  }  
+  }
 }
 
 window.addEventListener("load", async () => {
@@ -2771,13 +2771,25 @@ window.addEventListener("load", async () => {
       if (ok === true) {
         localStorage.setItem(syncKey, new Date().toISOString());
         console.log("✅ Push sincronizzata automaticamente per user", currentUserId);
-      } else {
-        console.warn("⚠️ Push permission granted ma sync non completata per user", currentUserId);
+        return;
       }
+
+      console.warn("⚠️ Push permission granted ma sync non completata per user", currentUserId);
+
+      // Permesso già concesso, ma subscription/backend non completati:
+      // mostro comunque il box con pulsante Riprova.
+      showPushActivationPrompt(currentUserId, syncKey);
+
+      setTimeout(() => {
+        const btn = document.getElementById("pushActivationBtn");
+        if (btn) {
+          btn.textContent = "Riprova";
+        }
+      }, 50);
 
       return;
     }
-
+    
     /*
       Caso B:
       Se l'utente ha già attivato o negato le notifiche,
