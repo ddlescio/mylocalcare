@@ -223,8 +223,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function bloccaUIUpload() {
     uploadInCorso = true;
-    inputFoto.disabled = true;
+
+    /*
+      IMPORTANTE:
+      Non disabilitare inputFoto prima del submit.
+      Se un input type="file" è disabled, il browser può non inviare il file.
+    */
     inputFoto.classList.add("opacity-50", "cursor-not-allowed");
+    inputFoto.style.pointerEvents = "none";
 
     if (btnSalvaRimozioni) {
       btnSalvaRimozioni.disabled = true;
@@ -267,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 50);
     });
   }
-  
+
   inputFoto.addEventListener("click", (e) => {
     if (uploadInCorso) {
       e.preventDefault();
@@ -307,7 +313,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     bloccaUIUpload();
-    formGalleria.submit();
+
+    setTimeout(() => {
+      if (typeof formGalleria.requestSubmit === "function") {
+        formGalleria.requestSubmit();
+      } else {
+        formGalleria.submit();
+      }
+    }, 80);    
   });
 
   chiudiBtn?.addEventListener("click", () => {
