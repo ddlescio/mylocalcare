@@ -5272,7 +5272,10 @@ def utente_update_galleria():
 
     # --- Aggiungi nuove immagini SOLO entro il limite ---
     uploaded_files = request.files.getlist("foto_galleria")
-    upload_dir = os.path.join("/uploads", "profili", "galleria")
+
+    # Salviamo la galleria nello stesso spazio servito da /static/uploads/...
+    # perché nel template le immagini vengono lette con url_for('static', filename=...)
+    upload_dir = os.path.join(app.static_folder, "uploads", "profili", "galleria")
     os.makedirs(upload_dir, exist_ok=True)
 
     file_validi = []
