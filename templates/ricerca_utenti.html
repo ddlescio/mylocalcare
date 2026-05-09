@@ -13,9 +13,9 @@
 
       <p class="lc-users-subtitle">
         Ritrova un profilo attivo anche se non ha annunci pubblicati al momento.
-        Puoi cercare per username o per iniziale e, se serve, restringere per zona o categoria.
+        Puoi cercare per username o iniziale, oppure lasciare i campi vuoti per vedere tutti i profili attivi.
       </p>
-
+      
       <button type="button" id="toggleFiltriUtenti" class="lc-filter-toggle">
         <span>🔎</span>
         <span>Filtri ricerca</span>
@@ -968,11 +968,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
 
   const hasActiveFilters =
-    params.has("username") ||
-    params.has("zona") ||
-    params.has("provincia") ||
-    params.has("categoria") ||
-    params.has("zona_autocomplete_visuale");
+    (params.get("username") || "").trim() !== "" ||
+    (params.get("zona") || "").trim() !== "" ||
+    (params.get("provincia") || "").trim() !== "" ||
+    (params.get("categoria") || "").trim() !== "" ||
+    (params.get("zona_autocomplete_visuale") || "").trim() !== "";
 
   if (hasActiveFilters) {
     box.classList.add("is-open");
