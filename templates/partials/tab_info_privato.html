@@ -1210,7 +1210,7 @@
       font-size: 0.78rem;
     }
   }
-  
+
   /* ------------------------------------------------------------------
      📌 AREA DESTRA – CARD STILE “Annunci”
   ------------------------------------------------------------------ */
@@ -2197,8 +2197,35 @@ document.addEventListener("DOMContentLoaded", () => {
     if (target) target.classList.remove("hidden");
   }
 
+  function scrollMenuInfoInAlto() {
+    const sidebar = infoBox.querySelector(".info-sidebar");
+    if (!sidebar) return;
+
+    /*
+      Offset pensato per non finire sotto navbar/header sticky.
+      Su mobile lascio più spazio perché la barra superiore occupa di più.
+    */
+    const offset = window.innerWidth <= 640 ? 92 : 105;
+
+    const targetTop =
+      sidebar.getBoundingClientRect().top + window.scrollY - offset;
+
+    window.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior: "smooth"
+    });
+  }
+
   sectionBtns.forEach(btn => {
-    btn.addEventListener("click", () => mostraSezione(btn.dataset.section));
+    btn.addEventListener("click", () => {
+      mostraSezione(btn.dataset.section);
+
+      /*
+        Aspetto un attimo perché prima viene cambiata la sezione visibile.
+        Così lo scroll si calcola sulla posizione reale aggiornata.
+      */
+      setTimeout(scrollMenuInfoInAlto, 80);
+    });
   });
 
   mostraSezione("overview");

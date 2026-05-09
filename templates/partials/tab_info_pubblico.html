@@ -30,20 +30,51 @@
         </span>
       </div>
 
-      <nav class="info-sidebar-nav space-y-1">
+      <nav class="info-sidebar-nav info-sidebar-nav-premium">
+
         {% set sezioni = {
-          'work_education': 'Esperienze e formazione',
-          'contacts': 'Contatti',
-          'description': 'Chi sono'
+          'work_education': {
+            'label': 'Esperienze e formazione',
+            'desc': 'Percorso, competenze e attestati',
+            'icon': '💼'
+          },
+          'contacts': {
+            'label': 'Contatti',
+            'desc': 'Canali disponibili e presenza online',
+            'icon': '📞'
+          },
+          'description': {
+            'label': 'Chi sono',
+            'desc': 'Presentazione personale',
+            'icon': '🧾'
+          }
         } %}
-        {% for key, label in sezioni.items() %}
+
+        {% for key, item in sezioni.items() %}
           <button type="button"
-                  class="section-btn w-full text-left text-sm font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition
-                         {% if loop.first %}bg-blue-100 text-blue-700{% else %}text-gray-700{% endif %}"
+                  class="section-btn info-menu-card {% if loop.first %}bg-blue-100 text-blue-700{% else %}text-gray-700{% endif %}"
                   data-section="{{ key }}">
-            {{ label }}
+
+            <span class="info-menu-icon">
+              {{ item.icon }}
+            </span>
+
+            <span class="info-menu-text">
+              <span class="info-menu-label">
+                {{ item.label }}
+              </span>
+
+              <span class="info-menu-desc">
+                {{ item.desc }}
+              </span>
+            </span>
+
+            <span class="info-menu-arrow">
+              →
+            </span>
           </button>
         {% endfor %}
+
       </nav>
     </aside>
 
@@ -384,9 +415,228 @@
       display: none;
     }
   }
-  
-  .section-btn{ font-size:.92rem; padding:.55rem .9rem; border-radius:12px; border:1px solid transparent; }
-  .section-btn.bg-blue-100{ background:#e8f1ff !important; border-color:#c7ddff !important; color:#1e40af !important; font-weight:600; }
+
+  /* ============================================================
+     MENU INFO PUBBLICO — CARD CLICCABILI PREMIUM
+  ============================================================ */
+
+  .info-sidebar-nav-premium {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.72rem;
+  }
+
+  .info-menu-card {
+    position: relative;
+    width: 100%;
+    min-height: 4.25rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.72rem;
+    padding: 0.78rem 0.82rem;
+    border-radius: 1.05rem;
+    text-align: left;
+    cursor: pointer;
+    border: 1px solid rgba(226,232,240,0.92);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.82));
+    box-shadow:
+      0 7px 16px rgba(15,23,42,0.045),
+      0 2px 5px rgba(15,23,42,0.035),
+      inset 0 1px 0 rgba(255,255,255,0.92);
+    transition:
+      transform .18s ease,
+      box-shadow .18s ease,
+      border-color .18s ease,
+      background .18s ease,
+      color .18s ease;
+    overflow: hidden;
+  }
+
+  .info-menu-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0) 52%);
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .info-menu-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(196,181,253,0.88);
+    background:
+      radial-gradient(circle at 100% 0%, rgba(124,58,237,0.12), transparent 42%),
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,245,255,0.88));
+    box-shadow:
+      0 12px 24px rgba(124,58,237,0.10),
+      0 4px 10px rgba(15,23,42,0.055),
+      inset 0 1px 0 rgba(255,255,255,0.96);
+  }
+
+  .info-menu-card:active {
+    transform: scale(0.985);
+  }
+
+  .info-menu-icon {
+    position: relative;
+    z-index: 1;
+    width: 2.18rem;
+    height: 2.18rem;
+    flex: 0 0 2.18rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.85rem;
+    background:
+      linear-gradient(180deg, rgba(250,245,255,0.96), rgba(243,232,255,0.82));
+    border: 1px solid rgba(196,181,253,0.82);
+    box-shadow:
+      0 5px 11px rgba(124,58,237,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.92);
+    font-size: 0.95rem;
+  }
+
+  .info-menu-text {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+  }
+
+  .info-menu-label {
+    display: block;
+    color: #334155;
+    font-size: 0.9rem;
+    line-height: 1.12;
+    font-weight: 820;
+    letter-spacing: -0.025em;
+  }
+
+  .info-menu-desc {
+    display: block;
+    color: #64748b;
+    font-size: 0.69rem;
+    line-height: 1.25;
+    font-weight: 520;
+  }
+
+  .info-menu-arrow {
+    position: relative;
+    z-index: 1;
+    width: 1.55rem;
+    height: 1.55rem;
+    flex: 0 0 1.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: #94a3b8;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(226,232,240,0.82);
+    font-size: 0.82rem;
+    font-weight: 950;
+    transition:
+      transform .18s ease,
+      color .18s ease,
+      background .18s ease,
+      border-color .18s ease;
+  }
+
+  .info-menu-card:hover .info-menu-arrow {
+    transform: translateX(2px);
+    color: #7c3aed;
+    background: #faf5ff;
+    border-color: rgba(196,181,253,0.88);
+  }
+
+  /* Stato attivo pubblico */
+  .info-menu-card.bg-blue-100 {
+    color: #7c3aed !important;
+    border-color: rgba(196,181,253,0.95) !important;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(124,58,237,0.18), transparent 42%),
+      linear-gradient(180deg, #faf5ff 0%, #ede9fe 100%) !important;
+    box-shadow:
+      0 14px 28px rgba(124,58,237,0.15),
+      0 5px 12px rgba(124,58,237,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.95) !important;
+  }
+
+  .info-menu-card.bg-blue-100::after {
+    content: "";
+    position: absolute;
+    left: 0.42rem;
+    top: 0.72rem;
+    bottom: 0.72rem;
+    width: 3px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #7c3aed, #ec4899);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.72),
+      0 5px 12px rgba(124,58,237,0.20);
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-icon {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(221,214,254,0.88));
+    border-color: rgba(168,85,247,0.78);
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-label {
+    color: #581c87;
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-desc {
+    color: #475569;
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-arrow {
+    color: #ffffff;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    border-color: rgba(124,58,237,0.75);
+    transform: translateX(2px);
+  }
+
+  @media (max-width: 640px) {
+    .info-sidebar-nav-premium {
+      gap: 0.62rem;
+    }
+
+    .info-menu-card {
+      min-height: 4rem;
+      padding: 0.72rem 0.74rem;
+      gap: 0.62rem;
+      border-radius: 0.95rem;
+    }
+
+    .info-menu-icon {
+      width: 2rem;
+      height: 2rem;
+      flex-basis: 2rem;
+      border-radius: 0.78rem;
+      font-size: 0.86rem;
+    }
+
+    .info-menu-label {
+      font-size: 0.88rem;
+    }
+
+    .info-menu-desc {
+      font-size: 0.67rem;
+    }
+
+    .info-menu-arrow {
+      width: 1.45rem;
+      height: 1.45rem;
+      flex-basis: 1.45rem;
+      font-size: 0.78rem;
+    }
+  }
 
   .info-card{
     border-radius: 1.25rem;
@@ -480,7 +730,7 @@
       width: 100%;
     }
 
-    .section-btn {
+    .section-btn:not(.info-menu-card) {
       padding: 0.72rem 0.8rem !important;
       font-size: 0.98rem !important;
     }
@@ -549,20 +799,52 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const sectionBtns = document.querySelectorAll(".section-btn");
-  const contentSections = document.querySelectorAll("main [data-section]");
+  const infoBox = document.querySelector(".info-wrapper");
+  if (!infoBox) return;
+
+  const sectionBtns = infoBox.querySelectorAll(".section-btn");
+  const contentSections = infoBox.querySelectorAll("#info-content > section[data-section]");
 
   function mostraSezione(key) {
-    sectionBtns.forEach(b => b.classList.remove("bg-blue-100","text-blue-700"));
+    sectionBtns.forEach(b => b.classList.remove("bg-blue-100", "text-blue-700"));
+
     const btn = Array.from(sectionBtns).find(b => b.dataset.section === key);
-    if (btn) btn.classList.add("bg-blue-100","text-blue-700");
+    if (btn) btn.classList.add("bg-blue-100", "text-blue-700");
 
     contentSections.forEach(s => s.classList.add("hidden"));
-    const target = document.querySelector(`main [data-section="${key}"]`);
+
+    const target = infoBox.querySelector(`#info-content > section[data-section="${key}"]`);
     if (target) target.classList.remove("hidden");
   }
 
-  sectionBtns.forEach(btn => btn.addEventListener("click", () => mostraSezione(btn.dataset.section)));
+  function scrollMenuInfoInAlto() {
+    const sidebar = infoBox.querySelector(".info-sidebar");
+    if (!sidebar) return;
+
+    /*
+      Stesso comportamento del profilo privato:
+      dopo il click porta il menu premium a inizio schermata,
+      lasciando spazio alla navbar sticky.
+    */
+    const offset = window.innerWidth <= 640 ? 92 : 105;
+
+    const targetTop =
+      sidebar.getBoundingClientRect().top + window.scrollY - offset;
+
+    window.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior: "smooth"
+    });
+  }
+
+  sectionBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      mostraSezione(btn.dataset.section);
+
+      setTimeout(scrollMenuInfoInAlto, 80);
+    });
+  });
+
   mostraSezione("work_education");
 });
 </script>
