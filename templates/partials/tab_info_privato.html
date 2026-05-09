@@ -88,210 +88,249 @@
       <!-- Sezione: Info di base -->
       <section data-section="overview">
 
-        <form method="post" action="{{ url_for('utente_update_info') }}" class="space-y-6" id="form-info-base">
+        <form method="post"
+              action="{{ url_for('utente_update_info') }}"
+              class="space-y-6"
+              id="form-info-base">
 
-          <!-- Città -->
-          <div class="form-box">
-            <label class="label-strong">Città</label>
-            <div class="relative">
-              <!-- input visibile (solo autocomplete) -->
-              <input
-                id="citta-autocomplete"
-                type="text"
-                class="input-modern"
-                placeholder="Es. Milano"
-                autocomplete="off"
-                value="{{ utente.get('citta') or '' }}"
-              >
-
-              <!-- valore reale salvato -->
-              <input
-                type="hidden"
-                name="citta"
-                id="citta_hidden"
-                value="{{ utente.get('citta') or '' }}"
-                data-autosave="1"
-              >
-
-              <!-- lista suggerimenti -->
-              <ul id="citta-suggerimenti"
-                  class="absolute z-30 left-0 right-0 mt-2 hidden max-h-60 overflow-y-auto
-                         bg-white border border-slate-200 rounded-2xl shadow-lg">
-              </ul>
-            </div>
-          </div>
-
-          <!-- 🔹 Lingue parlate -->
-          <div class="form-box">
-            <label class="label-strong">Lingue parlate</label>
-
-            {% set lingue_salvate = (utente.get('lingue') or '').split(',') %}
-            {% set lingue_salvate = lingue_salvate | map('trim') | reject('equalto', '') | list %}
-
-            <div class="lingue-selector-wrap">
-              <input
-                type="hidden"
-                name="lingue"
-                id="lingue_hidden"
-                value="{{ utente.get('lingue') or '' }}"
-                data-autosave="1"
-                {% if pubblico %}disabled{% endif %}
-              >
-
-              <button
-                type="button"
-                id="lingue-toggle"
-                class="lingue-toggle input-modern text-left flex items-center justify-between gap-3 {% if pubblico %}opacity-100 cursor-default{% endif %}"
-                data-autosave-ui="lingue"
-                {% if pubblico %}disabled{% endif %}
-              >
-                <span id="lingue-toggle-text" class="truncate">
-                  {% if lingue_salvate %}
-                    {{ lingue_salvate | join(', ') }}
-                  {% else %}
-                    Seleziona una o più lingue
-                  {% endif %}
-                </span>
-                {% if not pubblico %}
-                <span class="lingue-toggle-arrow">▾</span>
-                {% endif %}
-              </button>
-
-              {% if not pubblico %}
-              <div id="lingue-dropdown" class="lingue-dropdown hidden">
-                <div class="lingue-dropdown-grid">
-                  {% set elenco_lingue = [
-                    'Italiano',
-                    'Inglese',
-                    'Francese',
-                    'Spagnolo',
-                    'Tedesco',
-                    'Albanese',
-                    'Arabo',
-                    'Bengalese',
-                    'Cinese',
-                    'Coreano',
-                    'Filippino',
-                    'Giapponese',
-                    'Greco',
-                    'Hindi',
-                    'Olandese',
-                    'Polacco',
-                    'Portoghese',
-                    'Rumeno',
-                    'Russo',
-                    'Turco',
-                    'Ucraino'
-                  ] %}
-                  {% for lingua in elenco_lingue %}
-                    <button
-                      type="button"
-                      class="lingua-pill{% if lingua in lingue_salvate %} active{% endif %}"
-                      data-lingua="{{ lingua }}">
-                      {{ lingua }}
-                    </button>
-                  {% endfor %}
-                </div>
-              </div>
-              {% endif %}
-            </div>
-
-            {% if not pubblico %}
-            <p class="text-xs text-gray-500 mt-1">Puoi selezionare più lingue.</p>
-            {% endif %}
-          </div>
-
-          <!-- 🔹 Frase personale -->
-          <div class="form-box">
-            <label class="label-strong">La tua frase</label>
-
-            {% if not pubblico %}
-              <p class="text-xs text-gray-500 mt-1 mb-2 leading-relaxed">
-                Sarà una delle prime cose che gli altri vedranno sul tuo profilo.
-                Puoi scrivere una frase che ti racconta, una citazione, una frase di una canzone
-                o qualcosa che ti rappresenta.
-              </p>
-            {% endif %}
-
-            <input
-              type="hidden"
-              name="frase"
-              id="frase_hidden"
-              value="{{ utente.get('frase') or '' }}"
-              data-autosave="1"
-              {% if pubblico %}disabled{% endif %}
-            >
-
-            <textarea
-              id="frase_textarea"
-              class="input-modern"
-              maxlength="120"
-              rows="3"
-              style="resize:none; min-height: 70px;"
-              placeholder="{% if not pubblico %}Es. “Mi piace aiutare con il sorriso” oppure “It's only rock and roll but I like it”{% endif %}"
-              {% if pubblico %}disabled{% endif %}>{{ utente.get('frase') or '' }}</textarea>
-          </div>
-
-          {% if not pubblico %}
-          <!-- 🔹 Attività LocalCare -->
-          <div class="form-box">
-            <label class="label-strong">Cosa offri o cerchi?</label>
-
-            <p class="text-xs text-gray-500 mt-1 mb-3 leading-relaxed">
-              ✨ Dicci cosa offri e cosa cerchi: così MyLocalCare può avvisarti quando trova persone
-              o annunci che possono interessarti nella tua zona.
+          <div class="ov-head">
+            <h4 class="ov-title">🪪 Informazioni di base</h4>
+            <p class="ov-subtitle">
+              Completa i dettagli principali del tuo profilo: città, lingue, attività e frase personale.
             </p>
+          </div>
 
-            {% set categorie = [
-              'Operatori benessere',
-              'Aiuto in casa',
-              'Ripetizioni',
-              'Babysitter',
-              'Pet-sitter',
-              'Caregiver',
-              'escursioni-sport',
-              'Biglietti spettacoli',
-              'Libri scuola',
-              'Caffe & parole'
-            ] %}
+          <div class="ov-stack">
 
-            <div class="attivita-grid grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {% for cat in categorie %}
-                <div class="attivita-card border border-gray-200 rounded-xl bg-gray-50 p-4 shadow-sm">
-                  <p class="attivita-card-title text-sm font-semibold text-gray-800 mb-3">{{ cat }}</p>
+            <!-- CITTÀ E LINGUE -->
+            <div class="ov-card">
+              <div class="ov-card-head">
+                <h5 class="ov-card-title">Dati principali</h5>
+                <p class="ov-card-sub">Indica dove ti trovi e quali lingue parli.</p>
+              </div>
 
-                  <div class="attivita-actions flex flex-wrap gap-2">
-                    <input type="hidden" name="offro_{{ loop.index }}" value="{{ 1 if utente.get('offro_' ~ loop.index) else 0 }}" data-autosave="1">
-                    <input type="hidden" name="cerco_{{ loop.index }}" value="{{ 1 if utente.get('cerco_' ~ loop.index) else 0 }}" data-autosave="1">
+              <div class="ov-grid ov-grid-2">
 
-                    <button type="button"
-                            class="pill attivita-pill"
-                            data-target="offro_{{ loop.index }}"
-                            data-autosave-ui="pill"
-                            {% if utente.get('offro_' ~ loop.index) %}data-active="1"{% endif %}>
-                      Offro
-                    </button>
+                <!-- Città -->
+                <div class="ov-field">
+                  <label class="ov-label">Città</label>
 
-                    <button type="button"
-                            class="pill attivita-pill"
-                            data-target="cerco_{{ loop.index }}"
-                            data-autosave-ui="pill"
-                            {% if utente.get('cerco_' ~ loop.index) %}data-active="1"{% endif %}>
-                      Cerco
-                    </button>
+                  <div class="relative">
+                    <input
+                      id="citta-autocomplete"
+                      type="text"
+                      class="input-modern ov-input"
+                      placeholder="Es. Milano"
+                      autocomplete="off"
+                      value="{{ utente.get('citta') or '' }}"
+                    >
+
+                    <input
+                      type="hidden"
+                      name="citta"
+                      id="citta_hidden"
+                      value="{{ utente.get('citta') or '' }}"
+                      data-autosave="1"
+                    >
+
+                    <ul id="citta-suggerimenti"
+                        class="absolute z-30 left-0 right-0 mt-2 hidden max-h-60 overflow-y-auto
+                               bg-white border border-slate-200 rounded-2xl shadow-lg">
+                    </ul>
                   </div>
                 </div>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
 
-          {% if not pubblico %}
-          <div id="autosave-info-base-status"
-               class="hidden text-xs text-gray-500 text-right">
-            Modifiche salvate
+                <!-- Lingue parlate -->
+                <div class="ov-field">
+                  <label class="ov-label">Lingue parlate</label>
+
+                  {% set lingue_salvate = (utente.get('lingue') or '').split(',') %}
+                  {% set lingue_salvate = lingue_salvate | map('trim') | reject('equalto', '') | list %}
+
+                  <div class="lingue-selector-wrap">
+                    <input
+                      type="hidden"
+                      name="lingue"
+                      id="lingue_hidden"
+                      value="{{ utente.get('lingue') or '' }}"
+                      data-autosave="1"
+                      {% if pubblico %}disabled{% endif %}
+                    >
+
+                    <button
+                      type="button"
+                      id="lingue-toggle"
+                      class="lingue-toggle input-modern ov-input text-left flex items-center justify-between gap-3 {% if pubblico %}opacity-100 cursor-default{% endif %}"
+                      data-autosave-ui="lingue"
+                      {% if pubblico %}disabled{% endif %}
+                    >
+                      <span id="lingue-toggle-text" class="truncate">
+                        {% if lingue_salvate %}
+                          {{ lingue_salvate | join(', ') }}
+                        {% else %}
+                          Seleziona una o più lingue
+                        {% endif %}
+                      </span>
+
+                      {% if not pubblico %}
+                      <span class="lingue-toggle-arrow">▾</span>
+                      {% endif %}
+                    </button>
+
+                    {% if not pubblico %}
+                    <div id="lingue-dropdown" class="lingue-dropdown hidden">
+                      <div class="lingue-dropdown-grid">
+                        {% set elenco_lingue = [
+                          'Italiano',
+                          'Inglese',
+                          'Francese',
+                          'Spagnolo',
+                          'Tedesco',
+                          'Albanese',
+                          'Arabo',
+                          'Bengalese',
+                          'Cinese',
+                          'Coreano',
+                          'Filippino',
+                          'Giapponese',
+                          'Greco',
+                          'Hindi',
+                          'Olandese',
+                          'Polacco',
+                          'Portoghese',
+                          'Rumeno',
+                          'Russo',
+                          'Turco',
+                          'Ucraino'
+                        ] %}
+
+                        {% for lingua in elenco_lingue %}
+                          <button
+                            type="button"
+                            class="lingua-pill{% if lingua in lingue_salvate %} active{% endif %}"
+                            data-lingua="{{ lingua }}">
+                            {{ lingua }}
+                          </button>
+                        {% endfor %}
+                      </div>
+                    </div>
+                    {% endif %}
+                  </div>
+
+                  {% if not pubblico %}
+                  <p class="ov-help">Puoi selezionare più lingue.</p>
+                  {% endif %}
+                </div>
+
+              </div>
+            </div>
+
+            {% if not pubblico %}
+            <!-- ATTIVITÀ LOCALCARE -->
+            <div class="ov-card">
+              <div class="ov-card-head">
+                <h5 class="ov-card-title">Cosa offri o cerchi?</h5>
+                <p class="ov-card-sub">
+                  Aiuta MyLocalCare a suggerirti persone e annunci coerenti con i tuoi interessi.
+                </p>
+              </div>
+
+              {% set categorie = [
+                'Operatori benessere',
+                'Aiuto in casa',
+                'Ripetizioni',
+                'Babysitter',
+                'Pet-sitter',
+                'Caregiver',
+                'escursioni-sport',
+                'Biglietti spettacoli',
+                'Libri scuola',
+                'Caffe & parole'
+              ] %}
+
+              <div class="attivita-grid ov-attivita-grid">
+                {% for cat in categorie %}
+                  <div class="attivita-card ov-attivita-card">
+                    <p class="attivita-card-title ov-attivita-title">{{ cat }}</p>
+
+                    <div class="attivita-actions ov-attivita-actions">
+                      <input type="hidden"
+                             name="offro_{{ loop.index }}"
+                             value="{{ 1 if utente.get('offro_' ~ loop.index) else 0 }}"
+                             data-autosave="1">
+
+                      <input type="hidden"
+                             name="cerco_{{ loop.index }}"
+                             value="{{ 1 if utente.get('cerco_' ~ loop.index) else 0 }}"
+                             data-autosave="1">
+
+                      <button type="button"
+                              class="pill attivita-pill ov-pill"
+                              data-target="offro_{{ loop.index }}"
+                              data-autosave-ui="pill"
+                              {% if utente.get('offro_' ~ loop.index) %}data-active="1"{% endif %}>
+                        Offro
+                      </button>
+
+                      <button type="button"
+                              class="pill attivita-pill ov-pill"
+                              data-target="cerco_{{ loop.index }}"
+                              data-autosave-ui="pill"
+                              {% if utente.get('cerco_' ~ loop.index) %}data-active="1"{% endif %}>
+                        Cerco
+                      </button>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- FRASE PERSONALE - SPOSTATA SOTTO OFFRO/CERCO -->
+            <div class="ov-card ov-quote-card">
+              <div class="ov-card-head">
+                <h5 class="ov-card-title">La tua frase</h5>
+                <p class="ov-card-sub">
+                  Sarà una delle prime cose che gli altri vedranno sul tuo profilo.
+                </p>
+              </div>
+
+              <input
+                type="hidden"
+                name="frase"
+                id="frase_hidden"
+                value="{{ utente.get('frase') or '' }}"
+                data-autosave="1"
+                {% if pubblico %}disabled{% endif %}
+              >
+
+              <div class="ov-field">
+                <label class="ov-label">Frase personale</label>
+
+                <textarea
+                  id="frase_textarea"
+                  class="input-modern ov-input ov-textarea"
+                  maxlength="120"
+                  rows="3"
+                  placeholder="{% if not pubblico %}Es. “Mi piace aiutare con il sorriso” oppure “It's only rock and roll but I like it”{% endif %}"
+                  {% if pubblico %}disabled{% endif %}>{{ utente.get('frase') or '' }}</textarea>
+
+                {% if not pubblico %}
+                <p class="ov-help">
+                  Puoi scrivere una frase che ti racconta, una citazione o qualcosa che ti rappresenta.
+                </p>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if not pubblico %}
+            <div id="autosave-info-base-status"
+                 class="hidden text-xs text-gray-500 text-right">
+              Modifiche salvate
+            </div>
+            {% endif %}
+
           </div>
-          {% endif %}
         </form>
       </section>
 
@@ -1290,6 +1329,272 @@
   {% endif %}
 
   /* ============================================================
+     PREMIUM — OVERVIEW / INFORMAZIONI DI BASE PRIVATO
+  ============================================================ */
+
+  .ov-head{
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+    margin-bottom:1.1rem;
+  }
+
+  .ov-title{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    font-size:1.2rem;
+    font-weight:800;
+    letter-spacing:-0.03em;
+    color:#1d4ed8;
+    margin:0;
+  }
+
+  .ov-subtitle{
+    margin:0;
+    font-size:.92rem;
+    color:#6b7280;
+    line-height:1.45;
+  }
+
+  .ov-stack{
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+  }
+
+  .ov-card{
+    position:relative;
+    border-radius:1.35rem;
+    background:linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%);
+    border:1px solid rgba(226,232,240,0.95);
+    box-shadow:
+      0 8px 20px rgba(15,23,42,0.04),
+      0 18px 40px rgba(15,23,42,0.07);
+    padding:1rem 1rem 1.05rem;
+    overflow:visible;
+  }
+
+  .ov-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    background:linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0) 44%);
+    pointer-events:none;
+  }
+
+  .ov-card-head{
+    position:relative;
+    z-index:1;
+    margin-bottom:.9rem;
+  }
+
+  .ov-card-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:750;
+    color:#1f2937;
+    letter-spacing:-0.02em;
+  }
+
+  .ov-card-sub{
+    margin:.2rem 0 0;
+    font-size:.82rem;
+    color:#6b7280;
+    line-height:1.4;
+  }
+
+  .ov-grid{
+    position:relative;
+    z-index:2;
+    display:grid;
+    gap:.9rem 1rem;
+  }
+
+  .ov-grid-2{
+    grid-template-columns:1fr;
+  }
+
+  .ov-field{
+    position:relative;
+    z-index:2;
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+  }
+
+  .ov-label{
+    font-size:.84rem;
+    font-weight:650;
+    color:#475569;
+  }
+
+  .ov-input{
+    font-size:.98rem;
+    border-radius:1rem !important;
+    padding:.82rem 1rem !important;
+    border:1px solid #d6dbe5 !important;
+    background:#ffffff !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+  }
+
+  .ov-input:focus{
+    border-color:#93c5fd !important;
+    box-shadow:
+      0 0 0 3px rgba(96,165,250,0.18),
+      0 6px 16px rgba(59,130,246,0.08) !important;
+  }
+
+  .ov-help{
+    margin:.15rem 0 0;
+    font-size:.76rem;
+    color:#64748b;
+    line-height:1.35;
+  }
+
+  .ov-attivita-grid{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:repeat(1, minmax(0, 1fr));
+    gap:.8rem;
+  }
+
+  .ov-attivita-card{
+    position:relative;
+    border-radius:1.05rem !important;
+    border:1px solid rgba(226,232,240,0.95) !important;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)) !important;
+    box-shadow:
+      0 6px 14px rgba(15,23,42,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.9) !important;
+    padding:.9rem .9rem !important;
+  }
+
+  .ov-attivita-title{
+    margin:0 0 .7rem !important;
+    color:#334155 !important;
+    font-size:.88rem !important;
+    line-height:1.2 !important;
+    font-weight:780 !important;
+    letter-spacing:-0.02em;
+  }
+
+  .ov-attivita-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem !important;
+  }
+
+  .ov-pill{
+    padding:.38rem .82rem !important;
+    border-radius:9999px !important;
+    border:1px solid #d1d5db !important;
+    background:#ffffff !important;
+    color:#475569;
+    font-size:.78rem !important;
+    font-weight:700;
+    line-height:1;
+    transition:
+      transform .16s ease,
+      box-shadow .16s ease,
+      background .16s ease,
+      color .16s ease,
+      border-color .16s ease;
+  }
+
+  .ov-pill:hover{
+    transform:translateY(-1px);
+    border-color:#93c5fd !important;
+    background:#eff6ff !important;
+    color:#1d4ed8;
+    box-shadow:0 5px 12px rgba(37,99,235,0.08);
+  }
+
+  .ov-pill[data-active="1"]{
+    background:linear-gradient(135deg, #2563eb, #4f46e5) !important;
+    color:#ffffff !important;
+    border-color:#2563eb !important;
+    box-shadow:
+      0 7px 15px rgba(37,99,235,0.18),
+      inset 0 1px 0 rgba(255,255,255,0.22);
+  }
+
+  .ov-quote-card{
+    background:
+      radial-gradient(circle at 100% 0%, rgba(59,130,246,0.10), transparent 38%),
+      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.95));
+  }
+
+  .ov-textarea{
+    min-height:96px !important;
+    resize:none !important;
+    line-height:1.5;
+  }
+
+  @media (min-width:768px){
+    .ov-grid-2{
+      grid-template-columns:1fr 1fr;
+    }
+
+    .ov-attivita-grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width:1024px){
+    .ov-attivita-grid{
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width:640px){
+    .ov-title{
+      font-size:1.06rem;
+    }
+
+    .ov-subtitle{
+      font-size:.86rem;
+    }
+
+    .ov-card{
+      border-radius:1.2rem;
+      padding:.9rem .9rem .95rem;
+    }
+
+    .ov-input{
+      font-size:.95rem;
+      padding:.78rem .9rem !important;
+    }
+
+    .ov-attivita-grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+      gap:.7rem !important;
+    }
+
+    .ov-attivita-card{
+      padding:.8rem .7rem !important;
+      border-radius:.95rem !important;
+    }
+
+    .ov-attivita-title{
+      font-size:.82rem !important;
+      margin-bottom:.62rem !important;
+    }
+
+    .ov-pill{
+      padding:.34rem .7rem !important;
+      font-size:.75rem !important;
+    }
+
+    .ov-textarea{
+      min-height:92px !important;
+    }
+  }
+
+  /* ============================================================
      PREMIUM — WORK EDUCATION PRIVATO
   ============================================================ */
   .we-head{
@@ -2198,17 +2503,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function scrollMenuInfoInAlto() {
-    const sidebar = infoBox.querySelector(".info-sidebar");
-    if (!sidebar) return;
+    const menu = infoBox.querySelector(".info-sidebar-nav-premium");
+    if (!menu) return;
 
     /*
-      Offset pensato per non finire sotto navbar/header sticky.
-      Su mobile lascio più spazio perché la barra superiore occupa di più.
+      Ora lo scroll non punta più al box profilo,
+      ma direttamente alla prima voce del menu premium.
     */
     const offset = window.innerWidth <= 640 ? 92 : 105;
 
     const targetTop =
-      sidebar.getBoundingClientRect().top + window.scrollY - offset;
+      menu.getBoundingClientRect().top + window.scrollY - offset;
 
     window.scrollTo({
       top: Math.max(0, targetTop),

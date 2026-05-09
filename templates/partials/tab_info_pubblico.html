@@ -818,25 +818,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function scrollMenuInfoInAlto() {
-    const sidebar = infoBox.querySelector(".info-sidebar");
-    if (!sidebar) return;
+    const menu = infoBox.querySelector(".info-sidebar-nav-premium");
+    if (!menu) return;
 
     /*
-      Stesso comportamento del profilo privato:
-      dopo il click porta il menu premium a inizio schermata,
-      lasciando spazio alla navbar sticky.
+      Porta a inizio schermata direttamente la prima voce del menu,
+      non il box "Profilo utente".
     */
     const offset = window.innerWidth <= 640 ? 92 : 105;
 
     const targetTop =
-      sidebar.getBoundingClientRect().top + window.scrollY - offset;
+      menu.getBoundingClientRect().top + window.scrollY - offset;
 
     window.scrollTo({
       top: Math.max(0, targetTop),
       behavior: "smooth"
     });
   }
-
+  
   sectionBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       mostraSezione(btn.dataset.section);
