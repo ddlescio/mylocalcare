@@ -233,6 +233,15 @@ body {
     box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.06);
   }
 
+  /*
+    iPhone: quando la tastiera è aperta, la barra accessoria iOS
+    è già sopra la tastiera. Riduciamo il padding sotto al composer
+    per avvicinarlo leggermente alla tastiera senza toccare Android.
+  */
+  html.lc-ios.lc-keyboard-open body[data-chat="true"] #composer {
+    padding-bottom: 0.45rem !important;
+  }  
+
   /* BLOCCA ZOOM IOS */
   .chat-input {
     font-size: 16px !important;
