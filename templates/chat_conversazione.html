@@ -238,10 +238,11 @@ body {
     è già sopra la tastiera. Riduciamo il padding sotto al composer
     per avvicinarlo leggermente alla tastiera senza toccare Android.
   */
-  html.lc-ios.lc-keyboard-open body[data-chat="true"] #composer {
-    padding-bottom: 0.45rem !important;
-  }  
-
+  html.lc-ios.lc-composer-focused body[data-chat="true"] #composer {
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  
   /* BLOCCA ZOOM IOS */
   .chat-input {
     font-size: 16px !important;
@@ -423,6 +424,8 @@ body {
     if (!isIOS) return;
     if (!e.target.closest("#composer")) return;
 
+    document.documentElement.classList.add("lc-composer-focused");
+
     setTimeout(() => {
       setChatViewportHeight();
 
@@ -437,6 +440,8 @@ body {
   document.addEventListener("focusout", (e) => {
     if (!isIOS) return;
     if (!e.target.closest("#composer")) return;
+
+    document.documentElement.classList.remove("lc-composer-focused");
 
     setTimeout(() => {
       setChatViewportHeight();
