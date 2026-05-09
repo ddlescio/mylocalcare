@@ -126,7 +126,7 @@ body {
 }
 
 /* --- 📱 MOBILE --- */
-@media (max-width: 480px) {
+@media (max-width: 640px) {
 
   :root {
     --vvh: 1vh; /* fallback, verrà aggiornato da JS su iOS */
@@ -151,8 +151,13 @@ body {
     left: 0;
     right: 0;
 
-    /* ✅ altezza reale visibile (sopra barra indirizzi iOS) */
-    height: calc(100dvh - var(--navbar-height));
+    /*
+      Android/Chrome può calcolare 100dvh in modo diverso quando
+      ci sono barra indirizzi o barra inferiore.
+      Usiamo --lc-vh aggiornato via visualViewport.
+    */
+    height: calc((var(--lc-vh, 1vh) * 100) - var(--navbar-height));
+    max-height: calc((var(--lc-vh, 1vh) * 100) - var(--navbar-height));
 
     display: flex;
     flex-direction: column;
@@ -182,10 +187,14 @@ body {
 
   /* area messaggi */
   #msgWrap {
-    flex: 1 1 auto;
+    /*
+      Importante: 1 1 0 impedisce all’area messaggi di “mangiarsi”
+      lo spazio del composer su Android.
+    */
+    flex: 1 1 0;
     min-height: 0;
     overflow-y: auto;
-    -webkit-overflow-scrolling: auto;
+    -webkit-overflow-scrolling: touch;
     background: #f9fafb;
     padding: 0.5rem 0.7rem;
   }
@@ -213,7 +222,7 @@ body {
 
     box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.06);
   }
-  
+
   /* BLOCCA ZOOM IOS */
   .chat-input {
     font-size: 16px !important;
@@ -281,8 +290,8 @@ body {
 }
 </style>
 <style>
-  @media (min-width: 481px) {
-
+@media (min-width: 641px) {
+  
     /* Il container non deve forzare viewport height */
     #chatContainer {
       position: relative !important;
@@ -340,8 +349,26 @@ body {
 
   }
 </style>
+<script>
+(function () {
+  function setChatViewportHeight() {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty("--lc-vh", `${h * 0.01}px`);
+  }
 
+  setChatViewportHeight();
 
+  window.addEventListener("resize", setChatViewportHeight);
+  window.addEventListener("orientationchange", () => {
+    setTimeout(setChatViewportHeight, 250);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", setChatViewportHeight);
+    window.visualViewport.addEventListener("scroll", setChatViewportHeight);
+  }
+})();
+</script>
 
 <div id="chatContainer">
 <div class="max-w-3xl mx-auto rounded-2xl shadow bg-white/70 backdrop-blur-md overflow-hidden mt-6 border border-gray-100">
