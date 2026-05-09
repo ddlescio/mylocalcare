@@ -604,6 +604,14 @@
                       </div>
 
                       <div class="profile-annuncio-side">
+
+                        {% set data_annuncio = a.get('data_pubblicazione') or a.get('created_at') or a.get('data_creazione') or a.get('data') %}
+                        {% if data_annuncio %}
+                          <span class="profile-annuncio-date-side">
+                            🕒 {{ data_annuncio | fmt_it_smart }}
+                          </span>
+                        {% endif %}
+
                         {% if not pubblico %}
                           <span class="profile-annuncio-status {{ stato_class }}">
                             {{ stato_label }}
@@ -3401,6 +3409,26 @@ nav::before {
   gap: 0.48rem;
 }
 
+.profile-annuncio-date-side {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.56rem;
+  border-radius: 9999px;
+  color: #64748b;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.82));
+  border: 1px solid rgba(203,213,225,0.78);
+  box-shadow:
+    0 5px 12px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+  font-size: 0.62rem;
+  line-height: 1;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
 .profile-annuncio-status {
   min-height: 24px;
   display: inline-flex;
@@ -3710,6 +3738,12 @@ nav::before {
   .profile-annuncio-side {
     gap: 0.42rem;
   }
+
+  .profile-annuncio-date-side {
+    min-height: 20px;
+    padding: 0.16rem 0.48rem;
+    font-size: 0.56rem;
+  }  
 
   .profile-annuncio-status {
     min-height: 22px;
