@@ -1,269 +1,966 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="max-w-xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+<div class="lc-users-page">
 
-  <h1 class="text-lg sm:text-xl font-bold mb-3 text-gray-800 text-center">
-    Cerca persone su <span class="text-blue-600">LocalCare</span>
-  </h1>
+  <div class="lc-users-shell">
 
-  <!-- 🔍 FORM DI RICERCA — stile coerente con /cerca -->
-  <form method="get"
-        class="mb-6 bg-white/90 backdrop-blur-md rounded-2xl
-               shadow-[0_8px_22px_rgba(15,23,42,0.08)]
-               border border-gray-100/70 p-4 sm:p-5 space-y-3.5">
+    <!-- HERO -->
+    <section class="lc-users-hero">
+      <div class="lc-users-hero-glow lc-users-hero-glow-a"></div>
+      <div class="lc-users-hero-glow lc-users-hero-glow-b"></div>
 
-    <!-- USERNAME -->
-    <div>
-      <label class="block text-xs font-medium text-gray-500 mb-1">
-        Username
-      </label>
-      <input
-        type="text"
-        name="username"
-        value="{{ request.args.get('username','') }}"
-        placeholder="es. vale46"
-        class="border border-gray-200 rounded-2xl px-3.5 py-2.5 w-full
-               bg-gray-50 focus:bg-white
-               focus:ring-2 focus:ring-blue-200 focus:border-blue-300
-               outline-none transition-all duration-150"
-      >
-    </div>
+      <div class="lc-users-hero-icon">
+        🔎
+      </div>
 
-    <!-- 📍 ZONA -->
-    <div class="relative">
-      <label class="block text-xs font-medium text-gray-500 mb-1">
-        Comune o zona
-      </label>
+      <div class="min-w-0">
+        <p class="lc-users-kicker">LocalCare</p>
+        <h1 class="lc-users-title">
+          Cerca persone
+        </h1>
+        <p class="lc-users-subtitle">
+          Trova utenti, operatori e profili nella tua zona.
+        </p>
+      </div>
+    </section>
 
-      <input
-        type="text"
-        id="zona-autocomplete"
-        name="zona_autocomplete_visuale"
-        class="border border-gray-200 rounded-2xl px-3.5 py-2.5 w-full
-               bg-gray-50 focus:bg-white
-               focus:ring-2 focus:ring-blue-200 focus:border-blue-300
-               outline-none transition-all duration-150"
-        placeholder="Scrivi un comune..."
-        autocomplete="off"
-        value="{{ request.args.get('zona_autocomplete_visuale','') }}"
-      >
-      <input type="hidden" name="zona" id="zona" value="{{ request.args.get('zona','') }}">
-      <input type="hidden" name="provincia" id="provincia" value="{{ request.args.get('provincia','') }}">
+    <!-- FORM RICERCA -->
+    <form method="get" class="lc-users-search-card">
 
-      <ul id="zona-suggerimenti"
-          class="absolute z-30 left-0 right-0 mt-2 hidden max-h-60 overflow-y-auto
-                 bg-white border border-slate-200 rounded-2xl shadow-lg">
-      </ul>
-    </div>
+      <div class="lc-users-search-grid">
 
-    <!-- 🏷️ CATEGORIA -->
-    <div>
-      <label class="block text-xs font-medium text-gray-500 mb-1">
-        Categoria
-      </label>
+        <!-- USERNAME -->
+        <div class="lc-field">
+          <label class="lc-label">
+            Username
+          </label>
 
-      <select
-        name="categoria"
-        class="appearance-none border border-gray-200 rounded-2xl
-               px-3.5 py-2.5 w-full bg-gray-50
-               focus:bg-white focus:ring-2 focus:ring-blue-200
-               focus:border-blue-300 outline-none transition-all"
-      >
-        <option value="">Tutte le categorie</option>
-        <option value="operatori-benessere" {% if request.args.get('categoria') == 'operatori-benessere' %}selected{% endif %}>
-          Operatori Benessere
-        </option>
-        <option value="babysitter" {% if request.args.get('categoria') == 'babysitter' %}selected{% endif %}>
-          Babysitter
-        </option>
-        <option value="petsitter" {% if request.args.get('categoria') == 'petsitter' %}selected{% endif %}>
-          Pet-sitter
-        </option>
-        <option value="caregiver" {% if request.args.get('categoria') == 'caregiver' %}selected{% endif %}>
-          Caregiver
-        </option>
-        <option value="ripetizioni" {% if request.args.get('categoria') == 'ripetizioni' %}selected{% endif %}>
-          Ripetizioni
-        </option>
-        <option value="aiuto-in-casa" {% if request.args.get('categoria') == 'aiuto-in-casa' %}selected{% endif %}>
-          Aiuto in casa
-        </option>
-        <option value="escursioni-sport" {% if request.args.get('categoria') == 'escursioni-sport' %}selected{% endif %}>
-          Escursioni & Sport
-        </option>
-        <option value="biglietti-spettacoli" {% if request.args.get('categoria') == 'biglietti-spettacoli' %}selected{% endif %}>
-          Biglietti Spettacoli
-        </option>
-        <option value="libri-scuola" {% if request.args.get('categoria') == 'libri-scuola' %}selected{% endif %}>
-          Libri scuola
-        </option>
-        <option value="caffe-parole" {% if request.args.get('categoria') == 'caffe-parole' %}selected{% endif %}>
-          Caffè & parole
-        </option>
-      </select>
-    </div>
-
-    <!-- 🔘 BOTTONI (full width come mock) -->
-    <div class="grid grid-cols-2 gap-3 pt-2">
-
-      <button
-        type="submit"
-        class="bg-blue-600 text-white px-4 py-2.5 rounded-full
-               hover:bg-blue-700
-               shadow-[0_6px_16px_rgba(37,99,235,0.25)]
-               hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)]
-               transition-all duration-200 font-semibold"
-      >
-        Cerca
-      </button>
-
-      <a
-        href="{{ url_for('ricerca_utenti') }}"
-        class="border border-gray-200 text-gray-700 px-4 py-2.5 rounded-full
-               bg-white hover:bg-gray-50
-               transition-all duration-150 text-center font-medium"
-      >
-        Reset
-      </a>
-    </div>
-  </form>
-
-  <!-- 🧩 RISULTATI -->
-  {% if utenti %}
-    <div class="grid grid-cols-1 gap-6">
-      {% for u in utenti %}
-        <div class="relative group">
-          <a
-            href="{% if logged_in %}{{ url_for('profilo_pubblico', id=u['id']) }}{% else %}{{ url_for('login', next=request.path) }}{% endif %}"
-            {% if not logged_in %}onclick="alert('Devi accedere per vedere il profilo.'); return false;"{% endif %}
-            class="relative block rounded-2xl border border-gray-100
-                   bg-white shadow-sm
-                   hover:shadow-md transition-all duration-300 p-6 text-center no-underline">
-
-            <img
-              src="{{ url_for('static', filename=u['foto_profilo'] or 'img/user_default.png') }}"
-              class="w-28 h-28 rounded-full mx-auto mb-3 object-cover border shadow"
+          <div class="lc-input-wrap">
+            <span class="lc-input-icon">@</span>
+            <input
+              type="text"
+              name="username"
+              value="{{ request.args.get('username','') }}"
+              placeholder="es. vale46"
+              class="lc-input lc-input-with-icon"
             >
-
-            <h2 class="text-lg font-semibold text-gray-800">
-              @{{ u['username'] }}
-            </h2>
-
-            {% if u['citta'] %}
-              <p class="text-sm text-gray-500">{{ u['citta'] }}</p>
-            {% endif %}
-
-            {% if u['numero_recensioni'] > 0 %}
-              <div class="mt-2 text-yellow-500 text-sm">
-                ⭐ {{ u['media_recensioni'] }}
-                <span class="text-gray-500">({{ u['numero_recensioni'] }})</span>
-              </div>
-            {% else %}
-              <p class="text-xs text-gray-400 italic mt-2">Nessuna recensione</p>
-            {% endif %}
-
-            <div class="mt-4 inline-block bg-blue-600 text-white text-sm font-semibold
-                        px-5 py-2.5 rounded-xl shadow-sm">
-              {% if logged_in %}Vedi profilo →{% else %}🔒 Accedi{% endif %}
-            </div>
-
-            {% if not logged_in %}
-              <div class="absolute inset-0 bg-white/80 flex items-center justify-center
-                          rounded-2xl opacity-0 group-hover:opacity-100 transition">
-                🔒
-              </div>
-            {% endif %}
-          </a>
+          </div>
         </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p class="text-center text-gray-500 mt-8">Nessun utente trovato.</p>
-  {% endif %}
+
+        <!-- ZONA -->
+        <div class="lc-field relative">
+          <label class="lc-label">
+            Comune o zona
+          </label>
+
+          <div class="lc-input-wrap">
+            <span class="lc-input-icon">📍</span>
+            <input
+              type="text"
+              id="zona-autocomplete"
+              name="zona_autocomplete_visuale"
+              class="lc-input lc-input-with-icon"
+              placeholder="Scrivi un comune..."
+              autocomplete="off"
+              value="{{ request.args.get('zona_autocomplete_visuale','') }}"
+            >
+          </div>
+
+          <input type="hidden" name="zona" id="zona" value="{{ request.args.get('zona','') }}">
+          <input type="hidden" name="provincia" id="provincia" value="{{ request.args.get('provincia','') }}">
+
+          <ul id="zona-suggerimenti" class="lc-autocomplete hidden"></ul>
+        </div>
+
+        <!-- CATEGORIA -->
+        <div class="lc-field">
+          <label class="lc-label">
+            Categoria
+          </label>
+
+          <div class="lc-input-wrap">
+            <span class="lc-input-icon">🏷️</span>
+
+            <select name="categoria" class="lc-input lc-select lc-input-with-icon">
+              <option value="">Tutte le categorie</option>
+
+              <option value="operatori-benessere" {% if request.args.get('categoria') == 'operatori-benessere' %}selected{% endif %}>
+                Operatori Benessere
+              </option>
+
+              <option value="babysitter" {% if request.args.get('categoria') == 'babysitter' %}selected{% endif %}>
+                Babysitter
+              </option>
+
+              <option value="petsitter" {% if request.args.get('categoria') == 'petsitter' %}selected{% endif %}>
+                Pet-sitter
+              </option>
+
+              <option value="caregiver" {% if request.args.get('categoria') == 'caregiver' %}selected{% endif %}>
+                Caregiver
+              </option>
+
+              <option value="ripetizioni" {% if request.args.get('categoria') == 'ripetizioni' %}selected{% endif %}>
+                Ripetizioni
+              </option>
+
+              <option value="aiuto-in-casa" {% if request.args.get('categoria') == 'aiuto-in-casa' %}selected{% endif %}>
+                Aiuto in casa
+              </option>
+
+              <option value="escursioni-sport" {% if request.args.get('categoria') == 'escursioni-sport' %}selected{% endif %}>
+                Escursioni & Sport
+              </option>
+
+              <option value="biglietti-spettacoli" {% if request.args.get('categoria') == 'biglietti-spettacoli' %}selected{% endif %}>
+                Biglietti Spettacoli
+              </option>
+
+              <option value="libri-scuola" {% if request.args.get('categoria') == 'libri-scuola' %}selected{% endif %}>
+                Libri scuola
+              </option>
+
+              <option value="caffe-parole" {% if request.args.get('categoria') == 'caffe-parole' %}selected{% endif %}>
+                Caffè & parole
+              </option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTTONI -->
+      <div class="lc-users-actions">
+        <button type="submit" class="lc-search-btn">
+          <span>🔍</span>
+          <span>Cerca</span>
+        </button>
+
+        <a href="{{ url_for('ricerca_utenti') }}" class="lc-reset-btn">
+          Reset
+        </a>
+      </div>
+
+    </form>
+
+    <!-- RISULTATI -->
+    <section class="lc-results-section">
+
+      <div class="lc-results-header">
+        <div>
+          <p class="lc-results-kicker">Risultati</p>
+
+          <h2 class="lc-results-title">
+            Persone trovate
+          </h2>
+        </div>
+
+        {% if utenti %}
+          <span class="lc-results-count">
+            {{ utenti|length }}
+          </span>
+        {% endif %}
+      </div>
+
+      {% if utenti %}
+        <div class="lc-users-grid">
+
+          {% for u in utenti %}
+            <article class="lc-user-card">
+
+              <a
+                href="{% if logged_in %}{{ url_for('profilo_pubblico', id=u['id']) }}{% else %}{{ url_for('login', next=request.path) }}{% endif %}"
+                {% if not logged_in %}onclick="alert('Devi accedere per vedere il profilo.'); return false;"{% endif %}
+                class="lc-user-card-link">
+
+                {% if not logged_in %}
+                  <div class="lc-user-lock-badge">
+                    🔒
+                  </div>
+                {% endif %}
+
+                <div class="lc-user-avatar-wrap">
+                  <img
+                    src="{{ url_for('static', filename=u['foto_profilo'] or 'img/user_default.png') }}"
+                    class="lc-user-avatar"
+                    alt="Foto profilo di @{{ u['username'] }}"
+                  >
+                </div>
+
+                <div class="lc-user-main">
+                  <h3 class="lc-user-name">
+                    <span>@</span>{{ u['username'] }}
+                  </h3>
+
+                  {% if u['citta'] %}
+                    <p class="lc-user-city">
+                      📍 {{ u['citta'] }}
+                    </p>
+                  {% else %}
+                    <p class="lc-user-city lc-user-city-muted">
+                      Zona non indicata
+                    </p>
+                  {% endif %}
+
+                  {% if u['numero_recensioni'] > 0 %}
+                    <div class="lc-user-rating">
+                      <span class="lc-user-rating-star">★</span>
+                      <span class="lc-user-rating-value">{{ u['media_recensioni'] }}</span>
+                      <span class="lc-user-rating-count">({{ u['numero_recensioni'] }})</span>
+                    </div>
+                  {% else %}
+                    <p class="lc-user-no-rating">
+                      Nessuna recensione
+                    </p>
+                  {% endif %}
+                </div>
+
+                <div class="lc-user-cta">
+                  {% if logged_in %}
+                    <span>Vedi profilo</span>
+                    <span>→</span>
+                  {% else %}
+                    <span>Accedi</span>
+                  {% endif %}
+                </div>
+
+              </a>
+
+            </article>
+          {% endfor %}
+
+        </div>
+      {% else %}
+        <div class="lc-users-empty">
+          <div class="lc-users-empty-icon">🕵️</div>
+
+          <h3>Nessun utente trovato</h3>
+
+          <p>
+            Prova a modificare username, zona o categoria.
+          </p>
+        </div>
+      {% endif %}
+
+    </section>
+
+  </div>
 </div>
 
-{% endblock %}
+<style>
+/* ============================================================
+   RICERCA UTENTI — PREMIUM LOCALCARE
+   ============================================================ */
 
-{% block scripts %}
-<script>
-/* ============================
-   AUTOCOMPLETE COMUNI (COPIA IDENTICA /cerca)
-============================ */
-document.addEventListener("DOMContentLoaded", function () {
-  const zonaInput = document.getElementById("zona-autocomplete");
-  const zonaHidden = document.getElementById("zona");
-  const provinciaHidden = document.getElementById("provincia");
-  const box = document.getElementById("zona-suggerimenti");
+.lc-users-page {
+  min-height: calc(100vh - 80px);
+  background:
+    radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(99,102,241,0.10), transparent 38%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  padding: 1.2rem 1rem 2rem;
+}
 
-  if (!zonaInput || !box) return;
-  if (zonaInput.dataset.init === "1") return;
-  zonaInput.dataset.init = "1";
+.lc-users-shell {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
 
-  let timeout, hasSelected = false;
+/* HERO */
 
-  const norm = s =>
-    (s || "").toLowerCase().normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/['’]/g, "").trim();
+.lc-users-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+  padding: 1.1rem 1.15rem;
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(255,255,255,0.98), transparent 30%),
+    linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.80));
+  border: 1px solid rgba(255,255,255,0.86);
+  box-shadow:
+    0 18px 38px rgba(15,23,42,0.095),
+    0 6px 16px rgba(15,23,42,0.055),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+  isolation: isolate;
+}
 
-  const score = (n, q) =>
-    n === q ? 0 : n.startsWith(q) ? 1 : n.includes(q) ? 2 : 99;
+.lc-users-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0.42rem;
+  z-index: -1;
+  border-radius: 1.45rem;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.86), rgba(238,242,255,0.30));
+  pointer-events: none;
+}
 
-  function hide() { box.classList.add("hidden"); }
-  function show() { box.classList.remove("hidden"); }
+.lc-users-hero::after {
+  content: "";
+  position: absolute;
+  left: 1.35rem;
+  right: 1.35rem;
+  top: 0.42rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.98), transparent);
+  pointer-events: none;
+}
 
-  zonaInput.addEventListener("input", () => {
-    clearTimeout(timeout);
-    hasSelected = false;
-    box.innerHTML = "";
+.lc-users-hero-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(24px);
+  opacity: 0.55;
+  pointer-events: none;
+}
 
-    const raw = zonaInput.value.trim();
-    const q = norm(raw);
-    if (q.length < 2) return hide();
+.lc-users-hero-glow-a {
+  width: 130px;
+  height: 130px;
+  right: -44px;
+  top: -58px;
+  background: rgba(59,130,246,0.24);
+}
 
-    timeout = setTimeout(() => {
-      fetch(`/api/suggerimenti-comuni?q=${encodeURIComponent(raw)}`)
-        .then(r => r.json())
-        .then(data => {
-          if (!Array.isArray(data)) return hide();
+.lc-users-hero-glow-b {
+  width: 110px;
+  height: 110px;
+  left: -48px;
+  bottom: -50px;
+  background: rgba(99,102,241,0.18);
+}
 
-          const risultati = data
-            .map(c => ({ ...c, _s: score(norm(c.comune), q) }))
-            .sort((a,b) => a._s - b._s)
-            .slice(0,10);
+.lc-users-hero-icon {
+  position: relative;
+  z-index: 2;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.82));
+  border: 1px solid rgba(191,219,254,0.82);
+  box-shadow:
+    0 8px 16px rgba(37,99,235,0.075),
+    0 2px 5px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.96);
+  font-size: 1.25rem;
+}
 
-          risultati.forEach(c => {
-            const el = document.createElement("div");
-            el.textContent = `${c.comune} (${c.provincia})`;
-            el.className = "px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm";
+.lc-users-kicker {
+  position: relative;
+  z-index: 2;
+  color: #94a3b8;
+  font-size: 0.62rem;
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
 
-            el.addEventListener("pointerdown", e => {
-              e.preventDefault();
-              zonaInput.value = `${c.comune} (${c.provincia})`;
-              zonaHidden.value = c.comune;
-              provinciaHidden.value = c.provincia;
-              hasSelected = true;
-              hide();
-            });
+.lc-users-title {
+  position: relative;
+  z-index: 2;
+  margin: 0.18rem 0 0;
+  color: #0f172a;
+  font-size: 1.55rem;
+  line-height: 1.02;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.75);
+}
 
-            box.appendChild(el);
-          });
-          show();
-        });
-    }, 200);
-  });
+.lc-users-subtitle {
+  position: relative;
+  z-index: 2;
+  margin-top: 0.32rem;
+  color: #64748b;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  font-weight: 520;
+}
 
-  zonaInput.addEventListener("blur", () => {
-    setTimeout(() => {
-      if (!hasSelected) {
-        zonaInput.value = "";
-        zonaHidden.value = "";
-        provinciaHidden.value = "";
-      }
-      hide();
-    }, 120);
-  });
-});
-</script>
+/* FORM */
+
+.lc-users-search-card {
+  position: relative;
+  overflow: visible;
+  margin-bottom: 1.15rem;
+  padding: 1rem;
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(circle at top right, rgba(59,130,246,0.10), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,0.985), rgba(248,250,252,0.88));
+  border: 1px solid rgba(255,255,255,0.86);
+  box-shadow:
+    0 18px 38px rgba(15,23,42,0.095),
+    0 6px 16px rgba(15,23,42,0.055),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.lc-users-search-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+.lc-field {
+  position: relative;
+}
+
+.lc-label {
+  display: block;
+  margin-bottom: 0.34rem;
+  color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lc-input-wrap {
+  position: relative;
+}
+
+.lc-input-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.lc-input {
+  width: 100%;
+  min-height: 45px;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(203,213,225,0.86);
+  background:
+    linear-gradient(180deg, rgba(248,250,252,0.95), rgba(255,255,255,0.90));
+  color: #0f172a;
+  padding: 0.72rem 0.92rem;
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.90),
+    0 4px 10px rgba(15,23,42,0.035);
+  transition:
+    border-color .18s ease,
+    box-shadow .18s ease,
+    background .18s ease,
+    transform .18s ease;
+}
+
+.lc-input-with-icon {
+  padding-left: 2.35rem;
+}
+
+.lc-input:focus {
+  background: #fff;
+  border-color: rgba(96,165,250,0.88);
+  box-shadow:
+    0 0 0 4px rgba(59,130,246,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.lc-select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.lc-users-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.lc-search-btn,
+.lc-reset-btn {
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  border-radius: 9999px;
+  font-size: 0.88rem;
+  line-height: 1;
+  font-weight: 850;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    background .18s ease,
+    border-color .18s ease;
+}
+
+.lc-search-btn {
+  color: #fff;
+  background:
+    linear-gradient(135deg, #2563eb, #4f46e5 58%, #7c3aed);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow:
+    0 10px 22px rgba(79,70,229,0.20),
+    0 4px 10px rgba(37,99,235,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.24);
+}
+
+.lc-search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 13px 26px rgba(79,70,229,0.25),
+    0 5px 12px rgba(37,99,235,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.28);
+}
+
+.lc-reset-btn {
+  color: #475569;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.82));
+  border: 1px solid rgba(203,213,225,0.82);
+  box-shadow:
+    0 6px 12px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.lc-reset-btn:hover {
+  transform: translateY(-1px);
+  color: #1d4ed8;
+  border-color: rgba(147,197,253,0.88);
+}
+
+/* AUTOCOMPLETE */
+
+.lc-autocomplete {
+  position: absolute;
+  z-index: 50;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.45rem);
+  max-height: 240px;
+  overflow-y: auto;
+  background: rgba(255,255,255,0.98);
+  border: 1px solid rgba(203,213,225,0.86);
+  border-radius: 1.2rem;
+  box-shadow:
+    0 18px 38px rgba(15,23,42,0.14),
+    0 6px 16px rgba(15,23,42,0.08);
+  padding: 0.35rem;
+}
+
+.lc-autocomplete div {
+  border-radius: 0.9rem;
+  padding: 0.62rem 0.78rem !important;
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.lc-autocomplete div:hover {
+  background: #eff6ff !important;
+  color: #1d4ed8;
+}
+
+/* RISULTATI */
+
+.lc-results-section {
+  position: relative;
+}
+
+.lc-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.85rem;
+  padding: 0 0.15rem;
+}
+
+.lc-results-kicker {
+  color: #94a3b8;
+  font-size: 0.58rem;
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.lc-results-title {
+  margin-top: 0.2rem;
+  color: #0f172a;
+  font-size: 1.02rem;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.lc-results-count {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #2563eb;
+  background:
+    linear-gradient(180deg, rgba(239,246,255,0.95), rgba(219,234,254,0.86));
+  border: 1px solid rgba(147,197,253,0.72);
+  font-size: 0.76rem;
+  font-weight: 950;
+  box-shadow:
+    0 4px 9px rgba(37,99,235,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.lc-users-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.95rem;
+}
+
+.lc-user-card {
+  position: relative;
+}
+
+.lc-user-card-link {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  border-radius: 1.55rem;
+  border: 1.5px solid rgba(59,130,246,0.22);
+  background:
+    radial-gradient(circle at top right, rgba(96,165,250,0.14), transparent 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.992), rgba(248,250,252,0.955));
+  box-shadow:
+    0 10px 22px rgba(15,23,42,0.065),
+    0 2px 6px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+  outline: 1px solid rgba(255,255,255,0.78);
+  outline-offset: -2px;
+  text-decoration: none;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+.lc-user-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,0.55) 0%,
+      rgba(255,255,255,0.18) 30%,
+      rgba(255,255,255,0) 62%
+    );
+  pointer-events: none;
+}
+
+.lc-user-card-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(147,197,253,0.72);
+  box-shadow:
+    0 14px 30px rgba(15,23,42,0.075),
+    0 4px 10px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.96);
+}
+
+.lc-user-avatar-wrap {
+  position: relative;
+  z-index: 2;
+}
+
+.lc-user-avatar {
+  width: 74px;
+  height: 74px;
+  display: block;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.10),
+    0 0 0 1px rgba(203,213,225,0.85);
+}
+
+.lc-user-main {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.lc-user-name {
+  margin: 0;
+  color: #1d4ed8;
+  font-size: 1.08rem;
+  line-height: 1.08;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lc-user-name span {
+  color: #94a3b8;
+}
+
+.lc-user-city {
+  margin-top: 0.28rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lc-user-city-muted {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.lc-user-rating {
+  width: fit-content;
+  margin-top: 0.48rem;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  padding: 0.18rem 0.56rem;
+  border-radius: 9999px;
+  color: #92400e;
+  background:
+    linear-gradient(180deg, rgba(255,251,235,0.98), rgba(254,243,199,0.86));
+  border: 1px solid rgba(253,230,138,0.9);
+  box-shadow:
+    0 5px 12px rgba(245,158,11,0.075),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.lc-user-rating-star {
+  color: #f59e0b;
+}
+
+.lc-user-rating-count {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.lc-user-no-rating {
+  margin-top: 0.48rem;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-style: italic;
+}
+
+.lc-user-cta {
+  position: relative;
+  z-index: 2;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.34rem;
+  padding: 0.42rem 0.78rem;
+  border-radius: 9999px;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, #2563eb, #4f46e5 58%, #7c3aed);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow:
+    0 8px 18px rgba(79,70,229,0.18),
+    0 3px 8px rgba(37,99,235,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.24);
+  font-size: 0.74rem;
+  line-height: 1;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.lc-user-lock-badge {
+  position: absolute;
+  top: 0.72rem;
+  right: 0.72rem;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(203,213,225,0.86);
+  box-shadow: 0 6px 14px rgba(15,23,42,0.10);
+  font-size: 0.8rem;
+}
+
+/* EMPTY */
+
+.lc-users-empty {
+  padding: 2rem 1rem;
+  border-radius: 1.55rem;
+  border: 1px dashed rgba(148,163,184,0.52);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(248,250,252,0.78));
+  text-align: center;
+  box-shadow:
+    0 10px 22px rgba(15,23,42,0.045),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.lc-users-empty-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.2rem;
+  background:
+    linear-gradient(180deg, rgba(239,246,255,0.96), rgba(219,234,254,0.76));
+  border: 1px solid rgba(191,219,254,0.82);
+  box-shadow:
+    0 8px 16px rgba(37,99,235,0.075),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+  font-size: 1.3rem;
+}
+
+.lc-users-empty h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.lc-users-empty p {
+  margin: 0.35rem auto 0;
+  max-width: 24rem;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.42;
+}
+
+/* MOBILE */
+
+@media (max-width: 640px) {
+  .lc-users-page {
+    padding: 0.85rem 0.75rem 1.6rem;
+  }
+
+  .lc-users-hero {
+    padding: 0.95rem;
+    border-radius: 1.55rem;
+    gap: 0.75rem;
+  }
+
+  .lc-users-hero::before {
+    inset: 0.34rem;
+    border-radius: 1.25rem;
+  }
+
+  .lc-users-hero-icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    border-radius: 1.05rem;
+    font-size: 1.08rem;
+  }
+
+  .lc-users-title {
+    font-size: 1.35rem;
+  }
+
+  .lc-users-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .lc-users-search-card {
+    padding: 0.9rem;
+    border-radius: 1.55rem;
+  }
+
+  .lc-input {
+    min-height: 43px;
+    border-radius: 1rem;
+    font-size: 16px;
+  }
+
+  .lc-users-actions {
+    gap: 0.6rem;
+  }
+
+  .lc-search-btn,
+  .lc-reset-btn {
+    min-height: 41px;
+    font-size: 0.82rem;
+  }
+
+  .lc-user-card-link {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "avatar main"
+      "cta cta";
+    gap: 0.72rem;
+    padding: 0.82rem;
+    border-radius: 1.35rem;
+  }
+
+  .lc-user-avatar-wrap {
+    grid-area: avatar;
+  }
+
+  .lc-user-main {
+    grid-area: main;
+  }
+
+  .lc-user-cta {
+    grid-area: cta;
+    width: 100%;
+    min-height: 36px;
+    margin-top: 0.12rem;
+  }
+
+  .lc-user-avatar {
+    width: 66px;
+    height: 66px;
+  }
+
+  .lc-user-name {
+    font-size: 1rem;
+  }
+
+  .lc-user-city {
+    font-size: 0.74rem;
+  }
+
+  .lc-results-title {
+    font-size: 0.98rem;
+  }
+}
+</style>
+
 {% endblock %}
