@@ -1393,8 +1393,8 @@
   .ov-card-title{
     margin:0;
     font-size:1rem;
-    font-weight:750;
-    color:#1f2937;
+    font-weight:760;
+    color:#1e3a8a;
     letter-spacing:-0.02em;
   }
 
@@ -1464,39 +1464,46 @@
   .ov-attivita-card{
     position:relative;
     border-radius:1.05rem !important;
-    border:1px solid rgba(226,232,240,0.95) !important;
+    border:1px solid rgba(226,232,240,0.9) !important;
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)) !important;
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.90)) !important;
     box-shadow:
-      0 6px 14px rgba(15,23,42,0.04),
+      0 5px 12px rgba(15,23,42,0.035),
       inset 0 1px 0 rgba(255,255,255,0.9) !important;
-    padding:.9rem .9rem !important;
+    padding:.78rem .78rem !important;
   }
 
   .ov-attivita-title{
-    margin:0 0 .7rem !important;
+    margin:0 0 .55rem !important;
     color:#334155 !important;
-    font-size:.88rem !important;
-    line-height:1.2 !important;
-    font-weight:780 !important;
-    letter-spacing:-0.02em;
+    font-size:.86rem !important;
+    line-height:1.15 !important;
+    font-weight:720 !important;
+    letter-spacing:-0.015em;
   }
 
   .ov-attivita-actions{
     display:flex;
-    flex-wrap:wrap;
-    gap:.5rem !important;
+    flex-wrap:nowrap;
+    align-items:center;
+    gap:.45rem !important;
   }
 
   .ov-pill{
-    padding:.38rem .82rem !important;
+    flex:1 1 0;
+    min-width:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.34rem .55rem !important;
     border-radius:9999px !important;
     border:1px solid #d1d5db !important;
     background:#ffffff !important;
     color:#475569;
-    font-size:.78rem !important;
-    font-weight:700;
+    font-size:.76rem !important;
+    font-weight:680;
     line-height:1;
+    white-space:nowrap;
     transition:
       transform .16s ease,
       box-shadow .16s ease,
@@ -1571,24 +1578,33 @@
 
     .ov-attivita-grid{
       grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
-      gap:.7rem !important;
+      gap:.62rem !important;
     }
 
     .ov-attivita-card{
-      padding:.8rem .7rem !important;
+      padding:.68rem .62rem !important;
       border-radius:.95rem !important;
     }
 
     .ov-attivita-title{
-      font-size:.82rem !important;
-      margin-bottom:.62rem !important;
+      font-size:.8rem !important;
+      line-height:1.12 !important;
+      margin-bottom:.48rem !important;
+      color:#334155 !important;
+      font-weight:700 !important;
+    }
+
+    .ov-attivita-actions{
+      flex-wrap:nowrap !important;
+      gap:.35rem !important;
     }
 
     .ov-pill{
-      padding:.34rem .7rem !important;
-      font-size:.75rem !important;
+      flex:1 1 0;
+      padding:.32rem .35rem !important;
+      font-size:.72rem !important;
     }
-
+    
     .ov-textarea{
       min-height:92px !important;
     }
