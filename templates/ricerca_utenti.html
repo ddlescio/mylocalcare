@@ -535,15 +535,16 @@
   padding: 0.35rem;
 }
 
-.lc-autocomplete div {
+.lc-autocomplete-item {
   border-radius: 0.9rem;
   padding: 0.62rem 0.78rem !important;
   color: #334155;
   font-size: 0.84rem;
   font-weight: 650;
+  cursor: pointer;
 }
 
-.lc-autocomplete div:hover {
+.lc-autocomplete-item:hover {
   background: #eff6ff !important;
   color: #1d4ed8;
 }
@@ -984,6 +985,129 @@ document.addEventListener("DOMContentLoaded", () => {
 
     btn.querySelector("span:last-child").textContent =
       isOpen ? "Nascondi filtri" : "Filtra";
+  });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const zonaInput = document.getElementById("zona-autocomplete");
+  const zonaHidden = document.getElementById("zona");
+  const provinciaHidden = document.getElementById("provincia");
+  const box = document.getElementById("zona-suggerimenti");
+
+  if (!zonaInput || !zonaHidden || !provinciaHidden || !box) return;
+
+  if (zonaInput.dataset.init === "1") return;
+  zonaInput.dataset.init = "1";
+
+  let timeout = null;
+  let hasSelected = false;
+
+  const norm = s =>
+    (s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/['’]/g, "")
+      .trim();
+
+  const score = (nomeComuneNormalizzato, queryNormalizzata) => {
+    if (nomeComuneNormalizzato === queryNormalizzata) return 0;
+    if (nomeComuneNormalizzato.startsWith(queryNormalizzata)) return 1;
+    if (nomeComuneNormalizzato.includes(queryNormalizzata)) return 2;
+    return 99;
+  };
+
+  function hideSuggestions() {
+    box.classList.add("hidden");
+  }
+
+  function showSuggestions() {
+    box.classList.remove("hidden");
+  }
+
+  function clearHiddenValues() {
+    zonaHidden.value = "";
+    provinciaHidden.value = "";
+  }
+
+  zonaInput.addEventListener("input", () => {
+    clearTimeout(timeout);
+
+    hasSelected = false;
+    box.innerHTML = "";
+    clearHiddenValues();
+
+    const raw = zonaInput.value.trim();
+    const q = norm(raw);
+
+    if (q.length < 2) {
+      hideSuggestions();
+      return;
+    }
+
+    timeout = setTimeout(() => {
+      fetch(`/api/suggerimenti-comuni?q=${encodeURIComponent(raw)}`, {
+        credentials: "same-origin",
+        cache: "no-store"
+      })
+        .then(r => r.json())
+        .then(data => {
+          box.innerHTML = "";
+
+          if (!Array.isArray(data) || data.length === 0) {
+            hideSuggestions();
+            return;
+          }
+
+          const risultati = data
+            .map(c => ({
+              ...c,
+              _score: score(norm(c.comune), q)
+            }))
+            .sort((a, b) => {
+              if (a._score !== b._score) return a._score - b._score;
+              return String(a.comune || "").localeCompare(String(b.comune || ""), "it");
+            })
+            .slice(0, 10);
+
+          risultati.forEach(c => {
+            const el = document.createElement("div");
+
+            el.textContent = `${c.comune} (${c.provincia})`;
+            el.className = "lc-autocomplete-item";
+
+            el.addEventListener("pointerdown", e => {
+              e.preventDefault();
+
+              zonaInput.value = `${c.comune} (${c.provincia})`;
+              zonaHidden.value = c.comune;
+              provinciaHidden.value = c.provincia;
+
+              hasSelected = true;
+              hideSuggestions();
+            });
+
+            box.appendChild(el);
+          });
+
+          showSuggestions();
+        })
+        .catch(err => {
+          console.warn("Errore autocomplete comuni:", err);
+          hideSuggestions();
+        });
+    }, 200);
+  });
+
+  zonaInput.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!hasSelected && zonaInput.value.trim() === "") {
+        clearHiddenValues();
+      }
+
+      hideSuggestions();
+    }, 140);
   });
 });
 </script>
