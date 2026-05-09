@@ -12,12 +12,13 @@
       </h1>
 
       <p class="lc-users-subtitle">
-        Filtra per username, zona o categoria per trovare più facilmente i profili giusti.
+        Ritrova un profilo attivo anche se non ha annunci pubblicati al momento.
+        Puoi cercare per username o per iniziale e, se serve, restringere per zona o categoria.
       </p>
 
       <button type="button" id="toggleFiltriUtenti" class="lc-filter-toggle">
         <span>🔎</span>
-        <span>Filtra</span>
+        <span>Filtri ricerca</span>
       </button>
     </section>
 
@@ -29,7 +30,7 @@
         <!-- USERNAME -->
         <div class="lc-field">
           <label class="lc-label">
-            Username
+            Cerca per username
           </label>
 
           <div class="lc-input-wrap">
@@ -984,7 +985,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.classList.toggle("is-open", isOpen);
 
     btn.querySelector("span:last-child").textContent =
-      isOpen ? "Nascondi filtri" : "Filtra";
+      isOpen ? "Nascondi filtri" : "Filtri ricerca";
   });
 });
 </script>
