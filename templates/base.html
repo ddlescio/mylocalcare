@@ -1972,6 +1972,17 @@ body[data-chat="true"] #mobile-search-container {
   background: transparent !important;
   border-top: 0 !important;
   box-shadow: none !important;
+
+  max-height: calc(100dvh - 5.1rem - env(safe-area-inset-bottom, 0px)) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)) !important;
+
+  scrollbar-width: none;
+}
+
+#nav-menu::-webkit-scrollbar {
+  display: none;
 }
 
 #nav-menu .nav-menu-glass-panel {
