@@ -764,6 +764,18 @@ def fmt_it(value):
         print("❌ Errore filtro fmt_it:", e)
         return value
 
+@app.template_filter('fmt_it_date')
+def fmt_it_date(value):
+    try:
+        dt = to_datetime_filter(value)
+        if not dt:
+            return value
+
+        dt_it = dt.astimezone(ZoneInfo("Europe/Rome"))
+        return dt_it.strftime("%d-%m-%Y")
+    except Exception as e:
+        print("❌ Errore filtro fmt_it_date:", e)
+        return value
 
 @app.template_filter('fmt_it_smart')
 def fmt_it_smart(value):

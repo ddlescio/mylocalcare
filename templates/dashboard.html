@@ -608,10 +608,10 @@
                         {% set data_annuncio = a.get('data_pubblicazione') or a.get('created_at') or a.get('data_creazione') or a.get('data') %}
                         {% if data_annuncio %}
                           <span class="profile-annuncio-date-side">
-                            📅 {{ data_annuncio | fmt_it }}
+                            {{ data_annuncio | fmt_it_date }}
                           </span>
                         {% endif %}
-
+                        
                         {% if not pubblico %}
                           <span class="profile-annuncio-status {{ stato_class }}">
                             {{ stato_label }}
