@@ -376,15 +376,15 @@
   .info-sidebar-profile-head-public {
     background:
       radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 32%),
-      radial-gradient(circle at 0% 100%, rgba(236,72,153,0.10), transparent 42%),
-      linear-gradient(180deg, rgba(255,255,255,0.97), rgba(248,250,252,0.82));
+      radial-gradient(circle at 0% 100%, rgba(59,130,246,0.08), transparent 42%),
+      linear-gradient(180deg, rgba(255,255,255,0.97), rgba(239,246,255,0.78));
   }
 
   .info-sidebar-profile-head-public .info-sidebar-profile-badge {
-    color: #7c3aed;
+    color: #1d4ed8;
     background:
-      linear-gradient(180deg, rgba(250,245,255,0.98), rgba(243,232,255,0.82));
-    border-color: rgba(196,181,253,0.72);
+      linear-gradient(180deg, rgba(239,246,255,0.98), rgba(219,234,254,0.82));
+    border-color: rgba(147,197,253,0.72);
   }
 
   @media (max-width: 640px) {
@@ -466,12 +466,12 @@
 
   .info-menu-card:hover {
     transform: translateY(-1px);
-    border-color: rgba(196,181,253,0.88);
+    border-color: rgba(147,197,253,0.86);
     background:
-      radial-gradient(circle at 100% 0%, rgba(124,58,237,0.12), transparent 42%),
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,245,255,0.88));
+      radial-gradient(circle at 100% 0%, rgba(59,130,246,0.11), transparent 42%),
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.88));
     box-shadow:
-      0 12px 24px rgba(124,58,237,0.10),
+      0 12px 24px rgba(37,99,235,0.09),
       0 4px 10px rgba(15,23,42,0.055),
       inset 0 1px 0 rgba(255,255,255,0.96);
   }
@@ -491,10 +491,10 @@
     justify-content: center;
     border-radius: 0.85rem;
     background:
-      linear-gradient(180deg, rgba(250,245,255,0.96), rgba(243,232,255,0.82));
-    border: 1px solid rgba(196,181,253,0.82);
+      linear-gradient(180deg, rgba(239,246,255,0.96), rgba(219,234,254,0.82));
+    border: 1px solid rgba(191,219,254,0.82);
     box-shadow:
-      0 5px 11px rgba(124,58,237,0.08),
+      0 5px 11px rgba(37,99,235,0.07),
       inset 0 1px 0 rgba(255,255,255,0.92);
     font-size: 0.95rem;
   }
@@ -549,21 +549,21 @@
 
   .info-menu-card:hover .info-menu-arrow {
     transform: translateX(2px);
-    color: #7c3aed;
-    background: #faf5ff;
-    border-color: rgba(196,181,253,0.88);
+    color: #2563eb;
+    background: #eff6ff;
+    border-color: rgba(147,197,253,0.86);
   }
 
   /* Stato attivo pubblico */
   .info-menu-card.bg-blue-100 {
-    color: #7c3aed !important;
-    border-color: rgba(196,181,253,0.95) !important;
+    color: #1d4ed8 !important;
+    border-color: rgba(96,165,250,0.92) !important;
     background:
-      radial-gradient(circle at 100% 0%, rgba(124,58,237,0.18), transparent 42%),
-      linear-gradient(180deg, #faf5ff 0%, #ede9fe 100%) !important;
+      radial-gradient(circle at 100% 0%, rgba(37,99,235,0.15), transparent 42%),
+      linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%) !important;
     box-shadow:
-      0 14px 28px rgba(124,58,237,0.15),
-      0 5px 12px rgba(124,58,237,0.08),
+      0 14px 28px rgba(37,99,235,0.13),
+      0 5px 12px rgba(37,99,235,0.07),
       inset 0 1px 0 rgba(255,255,255,0.95) !important;
   }
 
@@ -575,20 +575,20 @@
     bottom: 0.72rem;
     width: 3px;
     border-radius: 9999px;
-    background: linear-gradient(180deg, #7c3aed, #ec4899);
+    background: linear-gradient(180deg, #2563eb, #38bdf8);
     box-shadow:
       0 0 0 1px rgba(255,255,255,0.72),
-      0 5px 12px rgba(124,58,237,0.20);
+      0 5px 12px rgba(37,99,235,0.18);
   }
 
   .info-menu-card.bg-blue-100 .info-menu-icon {
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(221,214,254,0.88));
-    border-color: rgba(168,85,247,0.78);
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(191,219,254,0.86));
+    border-color: rgba(96,165,250,0.82);
   }
 
   .info-menu-card.bg-blue-100 .info-menu-label {
-    color: #581c87;
+    color: #1e3a8a;
   }
 
   .info-menu-card.bg-blue-100 .info-menu-desc {
@@ -597,11 +597,11 @@
 
   .info-menu-card.bg-blue-100 .info-menu-arrow {
     color: #ffffff;
-    background: linear-gradient(135deg, #7c3aed, #ec4899);
-    border-color: rgba(124,58,237,0.75);
+    background: linear-gradient(135deg, #2563eb, #38bdf8);
+    border-color: rgba(37,99,235,0.72);
     transform: translateX(2px);
   }
-
+  
   @media (max-width: 640px) {
     .info-sidebar-nav-premium {
       gap: 0.62rem;
@@ -835,7 +835,7 @@ document.addEventListener("DOMContentLoaded", () => {
       behavior: "smooth"
     });
   }
-  
+
   sectionBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       mostraSezione(btn.dataset.section);
