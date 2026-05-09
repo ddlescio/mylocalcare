@@ -152,9 +152,8 @@ body {
     right: 0;
 
     /*
-      Android/Chrome può calcolare 100dvh in modo diverso quando
-      ci sono barra indirizzi o barra inferiore.
-      Usiamo --lc-vh aggiornato via visualViewport.
+      Android resta gestito come prima con --lc-vh.
+      Su iPhone verrà applicato sotto un override dedicato.
     */
     height: calc((var(--lc-vh, 1vh) * 100) - var(--navbar-height));
     max-height: calc((var(--lc-vh, 1vh) * 100) - var(--navbar-height));
@@ -163,6 +162,17 @@ body {
     flex-direction: column;
     background: #fff;
     overflow: hidden;
+  }
+
+  /*
+    FIX iPhone/iOS:
+    quando la tastiera apre, Safari può spostare la visual viewport.
+    Usiamo offsetTop + height reali SOLO su iOS.
+  */
+  html.lc-ios body[data-chat="true"] #chatContainer {
+    top: calc(var(--lc-vv-offset-top, 0px) + var(--navbar-height));
+    height: calc(var(--lc-vv-height, 100vh) - var(--navbar-height));
+    max-height: calc(var(--lc-vv-height, 100vh) - var(--navbar-height));
   }
 
   /* disattiva card desktop */
@@ -291,7 +301,7 @@ body {
 </style>
 <style>
 @media (min-width: 641px) {
-  
+
     /* Il container non deve forzare viewport height */
     #chatContainer {
       position: relative !important;
@@ -351,22 +361,79 @@ body {
 </style>
 <script>
 (function () {
+  const ua = navigator.userAgent || "";
+
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    document.documentElement.classList.add("lc-ios");
+  }
+
   function setChatViewportHeight() {
-    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const vv = window.visualViewport;
+
+    /*
+      ANDROID / DESKTOP MOBILE:
+      manteniamo il comportamento che ora ti funziona.
+    */
+    const h = vv ? vv.height : window.innerHeight;
     document.documentElement.style.setProperty("--lc-vh", `${h * 0.01}px`);
+
+    /*
+      iOS:
+      oltre all'altezza serve anche offsetTop.
+      Senza offsetTop, quando Safari sposta la visual viewport
+      il composer può finire sparato in alto.
+    */
+    if (isIOS && vv) {
+      document.documentElement.style.setProperty("--lc-vv-height", `${vv.height}px`);
+      document.documentElement.style.setProperty("--lc-vv-offset-top", `${vv.offsetTop || 0}px`);
+
+      const keyboardOpen = vv.height < window.innerHeight * 0.78;
+      document.documentElement.classList.toggle("lc-keyboard-open", keyboardOpen);
+    }
   }
 
   setChatViewportHeight();
 
   window.addEventListener("resize", setChatViewportHeight);
+
   window.addEventListener("orientationchange", () => {
     setTimeout(setChatViewportHeight, 250);
+    setTimeout(setChatViewportHeight, 600);
   });
 
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", setChatViewportHeight);
     window.visualViewport.addEventListener("scroll", setChatViewportHeight);
   }
+
+  document.addEventListener("focusin", (e) => {
+    if (!isIOS) return;
+    if (!e.target.closest("#composer")) return;
+
+    setTimeout(() => {
+      setChatViewportHeight();
+
+      /*
+        Evita che iOS tenti uno scroll automatico aggressivo
+        e lasci il composer in una posizione sbagliata.
+      */
+      window.scrollTo(0, 0);
+    }, 80);
+  });
+
+  document.addEventListener("focusout", (e) => {
+    if (!isIOS) return;
+    if (!e.target.closest("#composer")) return;
+
+    setTimeout(() => {
+      setChatViewportHeight();
+      window.scrollTo(0, 0);
+    }, 120);
+  });
 })();
 </script>
 
