@@ -31,9 +31,6 @@
           <h1 class="chat-list-title">
             Le tue chat
           </h1>
-          <p class="chat-list-subtitle">
-            Conversazioni, messaggi recenti e notifiche non lette in un unico spazio.
-          </p>
         </div>
       </div>
 
@@ -78,7 +75,14 @@
                 {% if dt.tzinfo is none %}
                   {% set dt = dt.replace(tzinfo=pytz.UTC) %}
                 {% endif %}
-                {{ dt.astimezone(pytz.timezone("Europe/Rome")).strftime('%d/%m/%Y %H:%M') }}
+                {% set dt_it = dt.astimezone(pytz.timezone("Europe/Rome")) %}
+
+                <span class="chat-thread-date">
+                  {{ dt_it.strftime('%d/%m/%Y') }}
+                </span>
+                <span class="chat-thread-hour">
+                  {{ dt_it.strftime('%H:%M') }}
+                </span>
               {% endif %}
             </div>
           </div>
@@ -456,11 +460,26 @@
 
 .chat-thread-time {
   flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
   color: #94a3b8;
   font-size: 0.72rem;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 750;
   white-space: nowrap;
+}
+
+.chat-thread-date,
+.chat-thread-hour {
+  display: inline-block;
+}
+
+.chat-thread-hour {
+  color: #64748b;
+  font-weight: 850;
 }
 
 .chat-thread-preview-row {
@@ -640,10 +659,28 @@
   }
 
   .chat-thread-time {
-    font-size: 0.66rem;
-    max-width: 5.8rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.16rem;
+
+    min-width: 4.8rem;
+    max-width: none;
+
+    font-size: 0.64rem;
+    line-height: 1.05;
+
+    overflow: visible;
+    text-overflow: initial;
+    white-space: nowrap;
+  }
+
+  .chat-thread-date {
+    color: #94a3b8;
+  }
+
+  .chat-thread-hour {
+    color: #64748b;
+    font-size: 0.68rem;
   }
 
   .chat-thread-preview {
