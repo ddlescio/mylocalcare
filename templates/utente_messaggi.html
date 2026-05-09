@@ -17,12 +17,12 @@
   </div>
 
   <!-- HERO -->
-  <section class="chat-list-hero mb-7">
+  <section class="chat-list-hero chat-list-hero-compact mb-6">
     <div class="chat-list-hero-glow chat-list-hero-glow-left"></div>
     <div class="chat-list-hero-glow chat-list-hero-glow-right"></div>
 
-    <div class="relative z-10 flex items-start justify-between gap-4">
-      <div class="flex items-start gap-4 min-w-0">
+    <div class="relative z-10 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
         <div class="chat-list-hero-icon">
           💬
         </div>
@@ -31,6 +31,10 @@
           <h1 class="chat-list-title">
             Le tue chat
           </h1>
+
+          <p class="chat-list-subtitle">
+            Messaggi recenti e conversazioni.
+          </p>
         </div>
       </div>
 
@@ -206,6 +210,34 @@
     0 8px 18px rgba(15,23,42,0.05),
     inset 0 1px 0 rgba(255,255,255,1),
     inset 0 -18px 32px rgba(148,163,184,0.08);
+}
+
+.chat-list-hero-compact {
+  padding: 1rem 1.08rem;
+  border-radius: 1.7rem;
+
+  box-shadow:
+    0 16px 32px rgba(15,23,42,0.085),
+    0 5px 12px rgba(15,23,42,0.04),
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -14px 24px rgba(148,163,184,0.065);
+}
+
+.chat-list-hero-compact .chat-list-hero-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1.15rem;
+  font-size: 1.25rem;
+}
+
+.chat-list-hero-compact .chat-list-title {
+  font-size: 1.48rem;
+}
+
+.chat-list-hero-compact .chat-list-subtitle {
+  margin-top: 0.16rem;
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .chat-list-hero-glow {
@@ -620,16 +652,25 @@
   }
 
   .chat-list-hero {
-    border-radius: 1.65rem;
-    padding: 1.05rem;
+    border-radius: 1.5rem;
+    padding: 0.92rem;
+  }
+
+  .chat-list-hero-compact .chat-list-hero-icon {
+    width: 2.55rem;
+    height: 2.55rem;
+    border-radius: 1.05rem;
+    font-size: 1.12rem;
   }
 
   .chat-list-title {
-    font-size: 1.48rem;
+    font-size: 1.34rem;
   }
 
   .chat-list-subtitle {
-    font-size: 0.86rem;
+    margin-top: 0.12rem;
+    font-size: 0.72rem;
+    line-height: 1.2;
   }
 
   .chat-list-unread-pill {
