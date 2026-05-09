@@ -608,7 +608,7 @@
                         {% set data_annuncio = a.get('data_pubblicazione') or a.get('created_at') or a.get('data_creazione') or a.get('data') %}
                         {% if data_annuncio %}
                           <span class="profile-annuncio-date-side">
-                            🕒 {{ data_annuncio | fmt_it_smart }}
+                            📅 {{ data_annuncio | fmt_it }}
                           </span>
                         {% endif %}
 
@@ -3743,7 +3743,7 @@ nav::before {
     min-height: 20px;
     padding: 0.16rem 0.48rem;
     font-size: 0.56rem;
-  }  
+  }
 
   .profile-annuncio-status {
     min-height: 22px;
