@@ -2488,6 +2488,68 @@
     }
   }
 </style>
+<style>
+/* ============================================================
+   FIX INFO — AUTOCOMPLETE SOPRA LE CARD + NO OSCILLAZIONE MOBILE
+============================================================ */
+
+/* Permette ai dropdown/autocomplete di uscire sopra le card */
+.info-wrapper,
+.wrapper-info,
+.info-sidebar,
+.info-content-public,
+.info-content-private,
+main#info-content,
+main#info-content section,
+.ov-card,
+.ov-field,
+.relative {
+  overflow: visible !important;
+}
+
+/* Layer alto per autocomplete città/zona */
+#citta-suggerimenti {
+  z-index: 99999 !important;
+  position: absolute !important;
+}
+
+/* Il campo che contiene autocomplete deve stare sopra alle card vicine */
+#citta-autocomplete {
+  position: relative;
+  z-index: 99998;
+}
+
+/* Quando il suggerimento è aperto, la card dati principali deve restare sopra */
+.ov-card:has(#citta-autocomplete) {
+  z-index: 50;
+}
+
+/* Blocco oscillazione orizzontale su mobile/tablet verticale */
+@media (max-width: 1023px) {
+  html,
+  body {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .info-wrapper,
+  .wrapper-info,
+  .wrapper-info-public,
+  .wrapper-info-private,
+  .info-sidebar,
+  .info-content-public,
+  .info-content-private,
+  main#info-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    transform: none !important;
+  }
+}
+</style>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const infoBox = document.querySelector(".info-wrapper");
