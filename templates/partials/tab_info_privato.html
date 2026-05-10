@@ -2258,6 +2258,208 @@
   }
 </style>
 <style>
+  /* ============================================================
+     MENU INFO — VERSIONE PREMIUM LEGGERA / COMPATTA
+     Override solo estetico, non modifica HTML né JS
+  ============================================================ */
+
+  .info-sidebar {
+    padding: 0.85rem !important;
+    border-radius: 1.45rem !important;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.88)) !important;
+    border: 1px solid rgba(226,232,240,0.82) !important;
+    box-shadow:
+      0 10px 24px rgba(15,23,42,0.055),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+  }
+
+  .info-sidebar-profile-head {
+    margin-bottom: 0.55rem !important;
+    padding: 0.15rem 0.2rem 0.55rem !important;
+    border-bottom: 1px solid rgba(226,232,240,0.72) !important;
+  }
+
+  .info-sidebar-profile-title {
+    font-size: 0.98rem !important;
+    letter-spacing: -0.04em !important;
+  }
+
+  .info-sidebar-profile-title-icon {
+    width: 1.55rem !important;
+    height: 1.55rem !important;
+    border-radius: 0.7rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .info-sidebar-profile-subtitle {
+    max-width: 17rem !important;
+    margin-top: 0.28rem !important;
+    font-size: 0.69rem !important;
+    line-height: 1.25 !important;
+    color: #64748b !important;
+  }
+
+  .info-sidebar-nav-premium {
+    gap: 0.48rem !important;
+  }
+
+  .info-menu-card {
+    min-height: 3.25rem !important;
+    grid-template-columns: auto 1fr auto !important;
+    gap: 0.58rem !important;
+    padding: 0.58rem 0.62rem !important;
+    border-radius: 1rem !important;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.78)) !important;
+    border: 1px solid rgba(226,232,240,0.82) !important;
+    box-shadow:
+      0 4px 10px rgba(15,23,42,0.035),
+      inset 0 1px 0 rgba(255,255,255,0.88) !important;
+  }
+
+  .info-menu-card::before {
+    opacity: 0.35 !important;
+  }
+
+  .info-menu-card:hover {
+    transform: translateY(-1px) !important;
+    border-color: rgba(147,197,253,0.72) !important;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.78)) !important;
+    box-shadow:
+      0 8px 16px rgba(37,99,235,0.075),
+      inset 0 1px 0 rgba(255,255,255,0.94) !important;
+  }
+
+  .info-menu-icon {
+    width: 1.85rem !important;
+    height: 1.85rem !important;
+    flex-basis: 1.85rem !important;
+    border-radius: 0.78rem !important;
+    font-size: 0.78rem !important;
+    background:
+      linear-gradient(180deg, rgba(248,250,252,0.96), rgba(239,246,255,0.76)) !important;
+    border-color: rgba(203,213,225,0.76) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.9),
+      0 3px 7px rgba(15,23,42,0.04) !important;
+  }
+
+  .info-menu-label {
+    font-size: 0.82rem !important;
+    line-height: 1.08 !important;
+    font-weight: 820 !important;
+    color: #334155 !important;
+  }
+
+  .info-menu-desc {
+    margin-top: 0.08rem !important;
+    font-size: 0.62rem !important;
+    line-height: 1.18 !important;
+    color: #94a3b8 !important;
+    font-weight: 560 !important;
+  }
+
+  .info-menu-arrow {
+    width: 1.35rem !important;
+    height: 1.35rem !important;
+    flex-basis: 1.35rem !important;
+    font-size: 0.72rem !important;
+    color: #94a3b8 !important;
+    background: rgba(255,255,255,0.58) !important;
+    border-color: rgba(226,232,240,0.72) !important;
+    box-shadow: none !important;
+  }
+
+  /* Stato attivo più premium e meno pesante */
+  .info-menu-card.bg-blue-100 {
+    color: #1d4ed8 !important;
+    border-color: rgba(96,165,250,0.62) !important;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(37,99,235,0.12), transparent 44%),
+      linear-gradient(180deg, rgba(239,246,255,0.98), rgba(219,234,254,0.74)) !important;
+    box-shadow:
+      0 8px 18px rgba(37,99,235,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+  }
+
+  .info-menu-card.bg-blue-100::after {
+    left: 0.34rem !important;
+    top: 0.62rem !important;
+    bottom: 0.62rem !important;
+    width: 2.5px !important;
+    background: linear-gradient(180deg, #2563eb, #60a5fa) !important;
+    box-shadow: none !important;
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-icon {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(219,234,254,0.88)) !important;
+    border-color: rgba(147,197,253,0.74) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.92),
+      0 4px 9px rgba(37,99,235,0.08) !important;
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-label {
+    color: #1e40af !important;
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-desc {
+    color: #64748b !important;
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-arrow {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+    border-color: rgba(37,99,235,0.40) !important;
+  }
+
+  /* Mobile: ancora più compatto */
+  @media (max-width: 640px) {
+    .info-sidebar {
+      padding: 0.62rem !important;
+      border-radius: 1.15rem !important;
+    }
+
+    .info-sidebar-nav-premium {
+      gap: 0.42rem !important;
+    }
+
+    .info-menu-card {
+      min-height: 3rem !important;
+      padding: 0.52rem 0.58rem !important;
+      gap: 0.5rem !important;
+      border-radius: 0.9rem !important;
+    }
+
+    .info-menu-icon {
+      width: 1.65rem !important;
+      height: 1.65rem !important;
+      flex-basis: 1.65rem !important;
+      border-radius: 0.68rem !important;
+      font-size: 0.72rem !important;
+    }
+
+    .info-menu-label {
+      font-size: 0.78rem !important;
+    }
+
+    .info-menu-desc {
+      font-size: 0.58rem !important;
+      line-height: 1.15 !important;
+    }
+
+    .info-menu-arrow {
+      width: 1.22rem !important;
+      height: 1.22rem !important;
+      flex-basis: 1.22rem !important;
+      font-size: 0.66rem !important;
+    }
+  }
+</style>
+<style>
   @media (max-width: 640px) {
     .info-wrapper {
       background: transparent !important;
