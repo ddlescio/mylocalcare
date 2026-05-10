@@ -2490,49 +2490,95 @@
 </style>
 <style>
 /* ============================================================
-   FIX INFO — AUTOCOMPLETE SOPRA LE CARD + NO OSCILLAZIONE MOBILE
+   FIX INFO — AUTOCOMPLETE SOPRA LINGUE + NO OSCILLAZIONE MOBILE
 ============================================================ */
 
-/* Permette ai dropdown/autocomplete di uscire sopra le card */
+/* Base: evita tagli verticali dei dropdown */
 .info-wrapper,
 .wrapper-info,
-.info-sidebar,
 .info-content-public,
 .info-content-private,
 main#info-content,
 main#info-content section,
 .ov-card,
+.ov-grid,
 .ov-field,
 .relative {
   overflow: visible !important;
 }
 
-/* Layer alto per autocomplete città/zona */
-#citta-suggerimenti {
-  z-index: 99999 !important;
-  position: absolute !important;
-}
-
-/* Il campo che contiene autocomplete deve stare sopra alle card vicine */
-#citta-autocomplete {
-  position: relative;
-  z-index: 99998;
-}
-
-/* Quando il suggerimento è aperto, la card dati principali deve restare sopra */
+/* La card "Dati principali" deve creare un livello superiore */
 .ov-card:has(#citta-autocomplete) {
-  z-index: 50;
+  position: relative !important;
+  z-index: 5000 !important;
+  isolation: isolate !important;
 }
 
-/* Blocco oscillazione orizzontale su mobile/tablet verticale */
+/* Nel grid: il campo Città deve stare sopra Lingue */
+.ov-grid .ov-field:has(#citta-autocomplete) {
+  position: relative !important;
+  z-index: 6000 !important;
+}
+
+/* Il campo Lingue deve restare sotto alla tendina città */
+.ov-grid .ov-field:has(#lingue-toggle),
+.ov-grid .ov-field:has(#lingue_hidden) {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Contenitore diretto dell'autocomplete */
+#citta-autocomplete {
+  position: relative !important;
+  z-index: 6001 !important;
+}
+
+/* Tendina città sopra tutto il blocco dati principali */
+#citta-suggerimenti {
+  position: absolute !important;
+  z-index: 7000 !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: calc(100% + 0.45rem) !important;
+
+  background: #ffffff !important;
+  border: 1px solid rgba(203,213,225,0.95) !important;
+  border-radius: 1rem !important;
+  box-shadow:
+    0 18px 38px rgba(15,23,42,0.16),
+    0 8px 18px rgba(15,23,42,0.10) !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: 14rem !important;
+}
+
+/* Gli elementi della tendina devono essere opachi e leggibili */
+#citta-suggerimenti li,
+#citta-suggerimenti button,
+#citta-suggerimenti div {
+  background: #ffffff !important;
+  position: relative !important;
+  z-index: 7001 !important;
+}
+
+/* ============================================================
+   BLOCCO OSCILLAZIONE ORIZZONTALE MOBILE / TABLET VERTICALE
+============================================================ */
+
 @media (max-width: 1023px) {
   html,
   body {
     width: 100% !important;
     max-width: 100% !important;
-    overflow-x: hidden !important;
+    overflow-x: clip !important;
+    overscroll-behavior-x: none !important;
   }
 
+  .profilo-content-wrapper,
+  #tab-info,
+  #tab-info .tab-info-shell,
+  #tab-info .tab-info-panel,
   .info-wrapper,
   .wrapper-info,
   .wrapper-info-public,
@@ -2543,9 +2589,30 @@ main#info-content section,
   main#info-content {
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
     transform: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .profilo-content-wrapper {
+    overflow-x: clip !important;
+  }
+
+  #tab-info .tab-info-shell {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .info-wrapper {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  main#info-content section {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
 </style>
