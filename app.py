@@ -117,29 +117,20 @@ def init_pg_pool():
     pool = get_current_pg_pool()
 
     if pool is not None:
-        print(f"🟦 init_pg_pool: pool già presente pid={pid}", flush=True)
         return pool
 
     dsn = os.getenv("DATABASE_URL")
     if not dsn:
-        print(f"🟥 init_pg_pool: DATABASE_URL assente pid={pid}", flush=True)
         return None
 
     lock = _get_pg_lock_for_pid(pid)
 
-    print(f"🟦 init_pg_pool: before lock acquire pid={pid}", flush=True)
-
-    # NON far fallire la request se un altro thread dello stesso worker
-    # sta già creando il pool: aspetta finché il lock si libera.
     lock.acquire()
 
     try:
         pool = get_current_pg_pool()
         if pool is not None:
-            print(f"🟦 init_pg_pool: pool creato da altro thread pid={pid}", flush=True)
             return pool
-
-        print(f"🟦 init_pg_pool: creazione pool START pid={pid}", flush=True)
 
         pool = psycopg2_pool.ThreadedConnectionPool(
             minconn=1,
@@ -150,40 +141,30 @@ def init_pg_pool():
         )
 
         _set_current_pg_pool(pool)
-
-        print(f"🟩 init_pg_pool: creazione pool OK pid={pid}", flush=True)
         return pool
 
-    except Exception as e:
+    except Exception:
         _set_current_pg_pool(None)
-        print(f"🟥 init_pg_pool: errore creazione pool pid={pid}: {e}", flush=True)
         raise
 
     finally:
         try:
             lock.release()
-            print(f"🟦 init_pg_pool: lock released pid={pid}", flush=True)
-        except Exception as e:
-            print(f"🟥 init_pg_pool: errore release lock pid={pid}: {e}", flush=True)
+        except Exception:
+            pass
 
 def warm_pg_pool_for_current_process():
     dsn = os.getenv("DATABASE_URL")
     if not dsn:
-        print("🟨 PG warmup skipped: DATABASE_URL assente", flush=True)
         return
-
-    pid = _get_pg_pid()
-    print(f"🟦 PG warmup start pid={pid}", flush=True)
 
     pool = init_pg_pool()
     if pool is None:
-        raise RuntimeError(f"PG warmup failed: pool None pid={pid}")
+        raise RuntimeError("PG warmup failed: pool None")
 
     raw = None
     try:
-        print(f"🟦 PG warmup before getconn pid={pid}", flush=True)
         raw = pool.getconn()
-        print(f"🟦 PG warmup after getconn pid={pid}", flush=True)
 
         raw.autocommit = True
         raw.set_session(readonly=False, autocommit=True)
@@ -193,15 +174,12 @@ def warm_pg_pool_for_current_process():
         cur.fetchone()
         cur.close()
 
-        print(f"🟩 PG warmup OK pid={pid}", flush=True)
-
     finally:
         if raw is not None:
             try:
                 pool.putconn(raw)
-                print(f"🟦 PG warmup returned conn pid={pid}", flush=True)
-            except Exception as e:
-                print(f"🟥 PG warmup putconn error pid={pid}: {e}", flush=True)
+            except Exception:
+                pass
 
 def get_cursor(conn):
     import sqlite3
@@ -1044,7 +1022,6 @@ class PGConnectionWrapper:
 
 
 def get_db_connection():
-    global _pg_pool
     from flask import has_request_context
 
     database_url = os.getenv("DATABASE_URL")
@@ -1054,61 +1031,43 @@ def get_db_connection():
     # POSTGRES
     # =========================
     if database_url:
-        print("🟦 DB enter POSTGRES branch", flush=True)
-
-        print("🟦 DB before init_pg_pool()", flush=True)
         pool = init_pg_pool()
-        print("🟦 DB after init_pg_pool()", flush=True)
 
         if pool is None:
-            print("🟥 DB pool is None after init_pg_pool()", flush=True)
             raise RuntimeError("Pool PostgreSQL non inizializzato")
 
         if has_request_context():
             if hasattr(g, "db_conn") and g.db_conn is not None:
-                print("🟦 DB found g.db_conn, testing SELECT 1", flush=True)
                 try:
                     g.db_conn.cursor().execute("SELECT 1")
-                    print("🟦 DB reusing g.db_conn", flush=True)
                     return g.db_conn
-                except Exception as e:
-                    print(f"🟥 DB g.db_conn invalid: {e}", flush=True)
+                except Exception:
                     try:
                         g.db_conn.close()
-                    except Exception as e2:
-                        print(f"🟥 DB error closing invalid g.db_conn: {e2}", flush=True)
+                    except Exception:
+                        pass
                     g.db_conn = None
 
-        print("🟦 DB before _pg_pool.getconn()", flush=True)
         raw = pool.getconn()
-        print("🟦 DB after _pg_pool.getconn()", flush=True)
 
         if raw.closed:
-            print("🟦 DB raw connection was closed, replacing it", flush=True)
             pool.putconn(raw, close=True)
-            print("🟦 DB before pool.getconn() replacement", flush=True)
             raw = pool.getconn()
-            print("🟦 DB after pool.getconn() replacement", flush=True)
 
-        print("🟦 DB before raw.autocommit/set_session", flush=True)
         raw.autocommit = True
         raw.set_session(readonly=False, autocommit=True)
-        print("🟦 DB after raw.autocommit/set_session", flush=True)
 
         wrapped = PGConnectionWrapper(raw)
 
         if has_request_context():
             g.db_conn = wrapped
-            print("🟦 DB stored wrapped connection in g.db_conn", flush=True)
 
-        print("🟩 DB returning wrapped postgres connection", flush=True)
         return wrapped
 
     # =========================
     # SQLITE
     # =========================
     else:
-
         if hasattr(g, "db_conn"):
             return g.db_conn
 
@@ -1124,7 +1083,7 @@ def get_db_connection():
 
         g.db_conn = conn
         return conn
-
+        
 def close_db_connection(conn):
     if not conn:
         return
@@ -6703,7 +6662,7 @@ def login():
         return redirect(url_for('dashboard'))
 
     return render_template('login.html')
-    
+
 @app.route('/password_dimenticata', methods=['GET', 'POST'])
 def password_dimenticata():
     if request.method == 'POST':
