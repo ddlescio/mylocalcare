@@ -506,6 +506,19 @@ def verify_csrf():
     if not token or token != session.get("csrf_token"):
         abort(403)
 
+def privacy_debug(message, extra=None):
+    """
+    Log di debug sicuro:
+    - in produzione non stampa nulla;
+    - in locale/dev permette debug senza esporre dati personali nei log.
+    """
+    if os.getenv("APP_ENV", "production").lower() not in ("local", "development"):
+        return
+
+    if extra is not None:
+        print(f"🧪 {message}: {extra}", flush=True)
+    else:
+        print(f"🧪 {message}", flush=True)
 
 import os
 
@@ -5059,10 +5072,11 @@ def utente_update_info():
     offro = [_cb(f"offro_{i}") for i in range(1, 11)]
     cerco = [_cb(f"cerco_{i}") for i in range(1, 11)]
 
-    print("OFFRO:", [request.form.getlist(f"offro_{i}") for i in range(1,9)])
-    print("CERCO:", [request.form.getlist(f"cerco_{i}") for i in range(1,9)])
-    print("OFFRO RISOLTO:", offro)
-    print("CERCO RISOLTO:", cerco)
+    privacy_debug("update_info attività", {
+        "user_id": user_id,
+        "offro_count": sum(offro),
+        "cerco_count": sum(cerco)
+    })
 
     # 🔹 Query esplicita e completa
     # 🔹 Query SOLO per TAB "Info di base"
@@ -5123,8 +5137,10 @@ def utente_update_info():
 @app.route("/utente/update_esperienza", methods=["POST"])
 @login_required
 def utente_update_esperienza():
-    print("🟢 FUNZIONE ATTIVATA /utente/update_esperienza")
-    print("📘 DATI RICEVUTI:", dict(request.form))
+    privacy_debug("update_esperienza chiamata", {
+        "user_id": session.get("utente_id"),
+        "campi_presenti": list(request.form.keys())
+    })
     user_id = session.get("utente_id")
     if not user_id:
         flash("Sessione non valida.", "error")
@@ -5141,7 +5157,12 @@ def utente_update_esperienza():
     studio_3 = request.form.get("studio_3", "")
     certificazioni = request.form.get("certificazioni", "")
 
-    print("📘 DATI RICEVUTI (Esperienza):", esperienza_1, esperienza_2, esperienza_3, studio_1, studio_2, studio_3, certificazioni)
+    privacy_debug("update_esperienza dati letti", {
+        "user_id": user_id,
+        "ha_esperienze": any([esperienza_1, esperienza_2, esperienza_3]),
+        "ha_formazione": any([studio_1, studio_2, studio_3]),
+        "ha_certificazioni": bool(certificazioni)
+    })
 
     try:
         c.execute(sql("""
@@ -5171,8 +5192,10 @@ def utente_update_esperienza():
 @app.route("/utente/update_contatti", methods=["POST"])
 @login_required
 def utente_update_contatti():
-    print("🟢 FUNZIONE ATTIVATA /utente/update_contatti")
-    print("📘 DATI RICEVUTI:", dict(request.form))
+    privacy_debug("update_contatti chiamata", {
+        "user_id": session.get("utente_id"),
+        "campi_presenti": list(request.form.keys())
+    })
 
     user_id = session.get("utente_id")
     conn = get_db_connection()
@@ -5216,8 +5239,10 @@ def utente_update_contatti():
 @app.route("/utente/update_descrizione", methods=["POST"])
 @login_required
 def utente_update_descrizione():
-    print("🟢 FUNZIONE ATTIVATA /utente/update_descrizione")
-    print("📘 DATI RICEVUTI:", dict(request.form))
+    privacy_debug("update_descrizione chiamata", {
+        "user_id": session.get("utente_id"),
+        "ha_descrizione": bool(request.form.get("descrizione", "").strip())
+    })
 
     user_id = session.get("utente_id")
     if not user_id:
@@ -5250,9 +5275,11 @@ def utente_update_descrizione():
 @app.route('/utente/update_galleria', methods=['POST'])
 @login_required
 def utente_update_galleria():
-    print("🟢 FUNZIONE ATTIVATA /utente/update_galleria")
-    print("📘 DATI RICEVUTI:", dict(request.form))
-    print("📸 FILES:", request.files)
+    privacy_debug("update_galleria chiamata", {
+        "user_id": session.get("utente_id"),
+        "campi_presenti": list(request.form.keys()),
+        "numero_file": len(request.files)
+    })
 
     MAX_FOTO_GALLERIA = 4
 
@@ -10059,48 +10086,46 @@ else:
 
 
 @app.route("/chat-debug-page-open", methods=["POST"])
+@login_required
 def chat_debug_page_open():
-    from flask import request, session
+    if os.getenv("APP_ENV", "production").lower() not in ("local", "development"):
+        abort(404)
 
     try:
         data = request.get_json(silent=True) or {}
-        print(
-            "📍 [CHAT PAGE OPEN] "
-            f"user={session.get('utente_id')} "
-            f"marker={data.get('marker')} "
-            f"pathname={data.get('pathname')} "
-            f"href={data.get('href')} "
-            f"referrer={data.get('referrer')} "
-            f"ua={data.get('ua')} "
-            f"ts={data.get('ts')}"
-        )
+
+        privacy_debug("chat page open", {
+            "user_id": session.get("utente_id"),
+            "marker": data.get("marker"),
+            "pathname": data.get("pathname")
+        })
+
         return {"ok": True}, 200
+
     except Exception as e:
-        print("❌ Errore chat_debug_page_open:", e)
+        privacy_debug("errore chat_debug_page_open", repr(e))
         return {"ok": False}, 500
 
 @app.route("/chat-debug-socket-event", methods=["POST"])
+@login_required
 def chat_debug_socket_event():
-    from flask import request, session
+    if os.getenv("APP_ENV", "production").lower() not in ("local", "development"):
+        abort(404)
 
     try:
         data = request.get_json(silent=True) or {}
 
-        print(
-            "📥 [SOCKET CLIENT EVENT] "
-            f"user={session.get('utente_id')} "
-            f"event={data.get('event')} "
-            f"socket_id={data.get('socket_id')} "
-            f"pathname={data.get('pathname')} "
-            f"page_id={data.get('page_id')} "
-            f"payload={data.get('payload')} "
-            f"ts={data.get('ts')}"
-        )
+        privacy_debug("chat socket event", {
+            "user_id": session.get("utente_id"),
+            "event": data.get("event"),
+            "pathname": data.get("pathname"),
+            "page_id": data.get("page_id")
+        })
 
         return {"ok": True}, 200
 
     except Exception as e:
-        print("❌ Errore chat_debug_socket_event:", e)
+        privacy_debug("errore chat_debug_socket_event", repr(e))
         return {"ok": False}, 500
 
 @app.route("/webhook/stripe", methods=["POST"])
