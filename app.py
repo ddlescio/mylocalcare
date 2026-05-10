@@ -6518,53 +6518,35 @@ def conferma_email(token):
 # ==========================================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    import time
-    t_start = time.perf_counter()
-
-    print(f"🔐 LOGIN route entered | method={request.method} | path={request.path}", flush=True)
-
     if request.method == 'POST':
-        print("🔐 LOGIN POST started", flush=True)
-
         email = request.form['email'].strip().lower()
         password = request.form['password']
-
-        print(f"🔐 LOGIN form parsed | email={email}", flush=True)
 
         # ===============================
         # DB SELECT UTENTE
         # ===============================
-        print("🔐 LOGIN before get_db_connection() [SELECT utente]", flush=True)
         conn = get_db_connection()
-        print("🔐 LOGIN after get_db_connection() [SELECT utente]", flush=True)
-
         c = get_cursor(conn)
 
-        print("🔐 LOGIN before SELECT utente", flush=True)
         c.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
         utente = c.fetchone()
-        print(f"🔐 LOGIN after SELECT utente | found={bool(utente)}", flush=True)
-
-        t_select = time.perf_counter()
-        print("⏱ SELECT utente:", round(t_select - t_start, 4), "sec", flush=True)
 
         # 1️⃣ Utente inesistente
         if not utente:
-            print("🔐 LOGIN exit: utente non trovato", flush=True)
             flash("Email o password non validi.", "error")
             return redirect(url_for('login'))
 
         # ---------------------------------------------------------
         # 🔐 BLOCCO LOCK
         # ---------------------------------------------------------
-        from datetime import datetime, timezone
+        from datetime import datetime, timezone, timedelta
 
         def parse_iso(dt):
             if not dt:
                 return None
             try:
                 return datetime.fromisoformat(dt)
-            except:
+            except Exception:
                 return None
 
         lock_until = parse_iso(utente["lock_until"]) if "lock_until" in utente.keys() else None
@@ -6572,34 +6554,25 @@ def login():
 
         if lock_until and lock_until > now:
             minuti = int((lock_until - now).total_seconds() // 60) + 1
-            print(f"🔐 LOGIN exit: account locked | minuti={minuti}", flush=True)
             flash(f"Troppi tentativi falliti. Riprova tra {minuti} minuti.", "error")
             return redirect(url_for('login'))
 
         # Email non confermata
         if int(utente['attivo']) != 1:
-            print("🔐 LOGIN exit: email non confermata", flush=True)
             flash("Devi confermare l'email prima di accedere.", "warning")
             return redirect(url_for('login'))
 
         # ---------------------------------------------------------
         # PASSWORD CHECK
         # ---------------------------------------------------------
-        print("🔐 LOGIN before check_password_hash()", flush=True)
         if not check_password_hash(utente['password'], password):
-
-            print("🔐 LOGIN password KO", flush=True)
-
             failed = (utente["failed_logins"] or 0) + 1
             lock_until = None
 
             if failed >= 5:
-                from datetime import timedelta
                 lock_until = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
 
-            print("🔐 LOGIN before get_db_connection() [UPDATE failed_logins]", flush=True)
             conn = get_db_connection()
-            print("🔐 LOGIN after get_db_connection() [UPDATE failed_logins]", flush=True)
 
             conn.execute(
                 "UPDATE utenti SET failed_logins = ?, lock_until = ? WHERE id = ?",
@@ -6607,27 +6580,19 @@ def login():
             )
             conn.commit()
 
-            print("🔐 LOGIN exit: password errata + failed_logins aggiornati", flush=True)
             flash("Email o password non validi.", "error")
             return redirect(url_for('login'))
-
-        print("🔐 LOGIN password OK", flush=True)
-
-        t_pwd = time.perf_counter()
-        print("⏱ password check:", round(t_pwd - t_select, 4), "sec", flush=True)
 
         # ---------------------------------------------------------
         # STATUS CHECK
         # ---------------------------------------------------------
         disattivato_admin = utente['disattivato_admin'] if 'disattivato_admin' in utente.keys() else 0
         if disattivato_admin == 1:
-            print("🔐 LOGIN exit: account disattivato admin", flush=True)
             flash("Account disattivato.", "error")
             return redirect(url_for('login'))
 
         sospeso = utente['sospeso'] if 'sospeso' in utente.keys() else 0
         if sospeso == 1:
-            print("🔐 LOGIN exit: account sospeso", flush=True)
             session.clear()
             session['utente_id'] = utente['id']
             session['sospeso'] = True
@@ -6637,17 +6602,12 @@ def login():
         # MACRO AREA
         # ---------------------------------------------------------
         citta = utente["citta"]
-        print(f"🔐 LOGIN before get_provincia_from_comune() | citta={citta}", flush=True)
         provincia = get_provincia_from_comune(citta)
-        print(f"🔐 LOGIN after get_provincia_from_comune() | provincia={provincia}", flush=True)
 
         if provincia:
             session["macro_area"] = provincia
         else:
             session["macro_area"] = "Italia"
-
-        t_geo = time.perf_counter()
-        print("⏱ lookup provincia:", round(t_geo - t_pwd, 4), "sec", flush=True)
 
         # ---------------------------------------------------------
         # DECRYPT MASTER (DEK)
@@ -6655,25 +6615,16 @@ def login():
         import base64
 
         try:
-            print("🔐 LOGIN before decrypt_with_master()", flush=True)
             dek = decrypt_with_master(utente['dek_enc'], utente['dek_nonce'])
-            print("🔐 LOGIN after decrypt_with_master()", flush=True)
-
             session['dek_b64'] = base64.b64encode(dek).decode()
-        except Exception as e:
-            print(f"❌ LOGIN decrypt_with_master ERROR: {e}", flush=True)
+        except Exception:
             flash("Errore chiave personale.", "error")
             return redirect(url_for("login"))
-
-        t_dek = time.perf_counter()
-        print("⏱ decrypt DEK:", round(t_dek - t_geo, 4), "sec", flush=True)
 
         # ---------------------------------------------------------
         # DECRYPT X25519
         # ---------------------------------------------------------
         try:
-            print("🔐 LOGIN before decrypt X25519", flush=True)
-
             x_priv_nonce = base64.b64decode(utente["x25519_priv_nonce"])
             x_priv_ct, x_priv_tag = gcm_unpack(utente["x25519_priv_enc"])
 
@@ -6683,20 +6634,13 @@ def login():
             session["x25519_priv_b64"] = base64.b64encode(x_priv_bytes).decode()
             session["x25519_pub_b64"] = utente["x25519_pub"]
 
-            print("🔐 LOGIN after decrypt X25519", flush=True)
-
-        except Exception as e:
-            print(f"❌ LOGIN decrypt X25519 ERROR: {e}", flush=True)
-
-        t_x = time.perf_counter()
-        print("⏱ decrypt X25519:", round(t_x - t_dek, 4), "sec", flush=True)
+        except Exception:
+            pass
 
         # ---------------------------------------------------------
         # RESET FAIL LOGIN
         # ---------------------------------------------------------
-        print("🔐 LOGIN before get_db_connection() [RESET failed_logins]", flush=True)
         conn = get_db_connection()
-        print("🔐 LOGIN after get_db_connection() [RESET failed_logins]", flush=True)
 
         conn.execute(
             "UPDATE utenti SET failed_logins = 0, lock_until = NULL WHERE id = ?",
@@ -6704,26 +6648,16 @@ def login():
         )
         conn.commit()
 
-        print("🔐 LOGIN after RESET failed_logins commit", flush=True)
-
-        t_reset = time.perf_counter()
-        print("⏱ reset failed:", round(t_reset - t_x, 4), "sec", flush=True)
-
         # ---------------------------------------------------------
         # ADMIN SESSION
         # ---------------------------------------------------------
-        from datetime import datetime, timedelta, timezone
         import secrets
 
         if utente["ruolo"] == "admin":
-            print("🔐 LOGIN admin branch entered", flush=True)
-
             session_token = secrets.token_hex(32)
             expiry = (datetime.now(timezone.utc) + timedelta(hours=12)).isoformat()
 
-            print("🔐 LOGIN before get_db_connection() [ADMIN session token]", flush=True)
             conn = get_db_connection()
-            print("🔐 LOGIN after get_db_connection() [ADMIN session token]", flush=True)
 
             conn.execute(sql("""
                 UPDATE utenti
@@ -6734,13 +6668,9 @@ def login():
 
             session["admin_session_token"] = session_token
 
-            print("🔐 LOGIN after ADMIN session token commit", flush=True)
-
         browser_fingerprint = request.headers.get("User-Agent", "unknown")
 
-        print("🔐 LOGIN before get_db_connection() [browser_fingerprint]", flush=True)
         conn = get_db_connection()
-        print("🔐 LOGIN after get_db_connection() [browser_fingerprint]", flush=True)
 
         conn.execute(sql("""
             UPDATE utenti
@@ -6751,11 +6681,6 @@ def login():
 
         session["admin_browser_fingerprint"] = browser_fingerprint
 
-        print("🔐 LOGIN after browser_fingerprint commit", flush=True)
-
-        t_admin = time.perf_counter()
-        print("⏱ admin updates:", round(t_admin - t_reset, 4), "sec", flush=True)
-
         # ---------------------------------------------------------
         # SESSION BASE
         # ---------------------------------------------------------
@@ -6764,32 +6689,21 @@ def login():
         session['utente_id'] = utente['id']
         session['utente_username'] = utente['username']
 
-        print("🔐 LOGIN before ensure_x25519_keys()", flush=True)
         ensure_x25519_keys(utente['id'])
-        print("🔐 LOGIN after ensure_x25519_keys()", flush=True)
-
-        t_keys = time.perf_counter()
-        print("⏱ ensure_x25519_keys:", round(t_keys - t_admin, 4), "sec", flush=True)
 
         from flask import get_flashed_messages
         get_flashed_messages()
 
         flash("Accesso effettuato con successo.", "success")
 
-        t_total = time.perf_counter()
-        print("🔥 LOGIN TOTALE:", round(t_total - t_start, 4), "sec", flush=True)
-
         next_page = request.args.get('next')
         if next_page:
-            print(f"🔐 LOGIN redirect next={next_page}", flush=True)
             return redirect(next_page)
 
-        print("🔐 LOGIN before final redirect", flush=True)
         return redirect(url_for('dashboard'))
 
-    print("🔐 LOGIN GET render_template(login.html)", flush=True)
     return render_template('login.html')
-
+    
 @app.route('/password_dimenticata', methods=['GET', 'POST'])
 def password_dimenticata():
     if request.method == 'POST':
