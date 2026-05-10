@@ -3,7 +3,7 @@ import os
 RUNTIME_SERVICE = os.getenv("RUNTIME_SERVICE", "web").strip().lower()
 APP_RUNTIME_ROLE = "realtime" if RUNTIME_SERVICE == "chat" else "web"
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory, abort
 from whitenoise import WhiteNoise
 import os
 import sqlite3
@@ -6943,12 +6943,15 @@ def reset_password(token):
 @app.route("/debug_chiavi_x25519")
 @login_required
 def debug_chiavi_x25519():
+    if APP_RUNTIME_ROLE != "web" or os.getenv("APP_ENV", "production").lower() != "local":
+        abort(404)
+
     return jsonify({
         "utente": g.utente["username"],
-        "pubblica_X25519": session.get("x25519_pub_b64"),
-        "privata_X25519": session.get("x25519_priv_b64")[:40] + "..." if session.get("x25519_priv_b64") else None
+        "ha_dek_b64": bool(session.get("dek_b64")),
+        "ha_pubblica_X25519": bool(session.get("x25519_pub_b64")),
+        "ha_privata_X25519": bool(session.get("x25519_priv_b64"))
     })
-
 
 @app.route('/logout')
 def logout():
@@ -9209,7 +9212,7 @@ def ricerca_utenti():
             AND LOWER(u.username) LIKE ?
         """
         params.append(like)
-                
+
     # 📍 filtro zona
     if zona:
         query += " AND LOWER(u.citta) LIKE ?"
