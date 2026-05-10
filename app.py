@@ -9192,28 +9192,24 @@ def ricerca_utenti():
 
     params = [session.get("utente_id")] * 4
 
-    # 🔍 filtro nome / username
+    # 🔍 filtro username
     if raw_nome:
         raw_nome_norm = raw_nome.lower()
 
-        # Se l'utente inserisce una sola lettera, cerco SOLO per iniziale.
-        # Esempio: "a" trova "andrea", "anna", "alberto", ma non "marco".
+        # Se l'utente inserisce una sola lettera, cerco SOLO username che iniziano con quella lettera.
+        # Esempio: "b" trova "bubu", "barbara", "bruno", ma non "giangela".
         if len(raw_nome_norm) == 1:
             like = f"{raw_nome_norm}%"
         else:
-            # Se inserisce più caratteri, mantengo la ricerca libera.
-            # Esempio: "mar" trova username/nome/cognome che contengono "mar".
+            # Se inserisce più caratteri, cerco username che contengono quel testo.
+            # Esempio: "bu" trova "bubu_topper_1000".
             like = f"%{raw_nome_norm}%"
 
         query += """
-            AND (
-                LOWER(u.username) LIKE ?
-                OR LOWER(u.nome) LIKE ?
-                OR LOWER(u.cognome) LIKE ?
-            )
+            AND LOWER(u.username) LIKE ?
         """
-        params.extend([like, like, like])
-        
+        params.append(like)
+                
     # 📍 filtro zona
     if zona:
         query += " AND LOWER(u.citta) LIKE ?"
