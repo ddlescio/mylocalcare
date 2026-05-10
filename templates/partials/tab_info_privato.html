@@ -859,25 +859,28 @@
     min-width: 0;
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     .wrapper-info-public,
     .wrapper-info-private {
       flex-direction: row;
-      align-items: flex-start;
+      align-items: flex-start !important;
       gap: 1.25rem;
     }
 
     .info-sidebar {
       flex: 0 0 260px;
       width: 260px;
-      position: sticky;
-      top: 8.5rem;
+      align-self: flex-start !important;
+      position: static !important;
+      top: auto !important;
+      margin-top: 0 !important;
     }
 
     .info-content-public,
     .info-content-private {
       flex: 1 1 auto;
       width: auto;
+      min-width: 0;
     }
   }
 
@@ -1174,7 +1177,7 @@
     line-height:1.5;
   }
 
-  @media (min-width:768px){
+  @media (min-width:1024px){
     .ov-grid-2{
       grid-template-columns:1fr 1fr;
     }
@@ -2383,8 +2386,32 @@
   }
 }
 </style>
+<style>
+  @media (max-width: 1023px) {
+    .wrapper-info,
+    .wrapper-info-public,
+    .wrapper-info-private {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 0.65rem !important;
+    }
 
+    .info-sidebar {
+      width: 100% !important;
+      flex: none !important;
+      position: static !important;
+      top: auto !important;
+      margin-top: 0 !important;
+    }
 
+    .info-content-public,
+    .info-content-private,
+    main#info-content {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+  }
+</style>
 <style>
   /* ============================================================
      LINGUE MULTI-SELEZIONE
@@ -2505,10 +2532,13 @@ document.addEventListener("DOMContentLoaded", () => {
       mostraSezione(btn.dataset.section);
 
       /*
-        Aspetto un attimo perché prima viene cambiata la sezione visibile.
-        Così lo scroll si calcola sulla posizione reale aggiornata.
+        Scroll automatico solo in layout mobile/tablet verticale.
+        In desktop e tablet orizzontale il menu resta affiancato,
+        quindi non deve muovere la pagina.
       */
-      setTimeout(scrollMenuInfoInAlto, 80);
+      if (window.innerWidth < 1024) {
+        setTimeout(scrollMenuInfoInAlto, 80);
+      }
     });
   });
 
