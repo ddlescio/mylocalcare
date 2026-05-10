@@ -611,7 +611,7 @@
                             {{ data_annuncio | fmt_it_date }}
                           </span>
                         {% endif %}
-                        
+
                         {% if not pubblico %}
                           <span class="profile-annuncio-status {{ stato_class }}">
                             {{ stato_label }}
@@ -4494,6 +4494,30 @@ nav::before {
       line-height: 1 !important;
     }
   }
+</style>
+<style>
+/* ============================================================
+   PROFILO MOBILE — RIDUCE SPAZIO TRA TAB PRINCIPALI E CONTENUTO
+   Annunci / Info / Foto / Recensioni
+============================================================ */
+@media (max-width: 640px) {
+  .profilo-content-wrapper > .sticky {
+    margin-bottom: 0 !important;
+  }
+
+  .profilo-content-wrapper > section > .tab-pane > div,
+  #tab-info .tab-info-shell {
+    padding-top: 0.55rem !important;
+  }
+
+  #tab-info .tab-info-panel {
+    margin-top: 0 !important;
+  }
+
+  #tab-info .info-wrapper {
+    margin-top: 0 !important;
+  }
+}
 </style>
 
 <script>

@@ -819,16 +819,13 @@
   .wrapper-info {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
     width: 100%;
   }
 
-  .wrapper-info-public {
-    align-items: flex-start;
-  }
-
+  .wrapper-info-public,
   .wrapper-info-private {
-    display: block;
+    align-items: stretch;
   }
 
   .info-wrapper {
@@ -848,7 +845,7 @@
         0 6px 14px rgba(15, 23, 42, 0.06),
         0 18px 40px rgba(15, 23, 42, 0.12);
     backdrop-filter: blur(12px);
-    min-width: 210px;
+    min-width: 0;
   }
 
   .info-sidebar-nav {
@@ -859,22 +856,30 @@
   .info-content-public,
   .info-content-private {
     width: 100%;
+    min-width: 0;
   }
 
   @media (min-width: 768px) {
-    .wrapper-info-public {
+    .wrapper-info-public,
+    .wrapper-info-private {
       flex-direction: row;
+      align-items: flex-start;
+      gap: 1.25rem;
     }
 
     .info-sidebar {
-      flex: 0 0 230px;
+      flex: 0 0 260px;
+      width: 260px;
+      position: sticky;
+      top: 8.5rem;
     }
 
-    .info-content-public {
-      flex: 1;
+    .info-content-public,
+    .info-content-private {
+      flex: 1 1 auto;
+      width: auto;
     }
   }
-
 
   /* ------------------------------------------------------------------
      📌 AREA DESTRA – CARD STILE “Annunci”
@@ -2341,7 +2346,7 @@
     font-size: 0.66rem !important;
     line-height: 1.24 !important;
   }
-  
+
   .info-sidebar-nav-premium {
     gap: 0.42rem !important;
   }
@@ -2456,7 +2461,6 @@
     }
   }
 </style>
-
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const infoBox = document.querySelector(".info-wrapper");
