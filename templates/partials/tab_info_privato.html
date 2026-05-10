@@ -1177,22 +1177,22 @@
     line-height:1.5;
   }
 
+  @media (min-width:641px){
+    .ov-attivita-grid{
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
+  }
+
   @media (min-width:1024px){
     .ov-grid-2{
       grid-template-columns:1fr 1fr;
     }
 
     .ov-attivita-grid{
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (min-width:1024px){
-    .ov-attivita-grid{
       grid-template-columns:repeat(3, minmax(0, 1fr));
     }
   }
-
+  
   @media (max-width:640px){
     .ov-title{
       font-size:1.06rem;
