@@ -481,19 +481,22 @@ def inject_csrf_token():
 
 
 def verify_csrf():
-    token = None
+    """
+    Verifica CSRF compatibile con:
+    - form HTML classici: csrf_token nel form
+    - fetch/AJAX: X-CSRF-Token negli header
+    - fetch JSON: X-CSRF-Token negli header
+    """
 
-    # JSON (fetch/AJAX)
-    if request.is_json:
-        token = request.headers.get("X-CSRF-Token")
-
-    # Form classico
-    else:
-        token = request.form.get("csrf_token")
+    token = (
+        request.headers.get("X-CSRF-Token")
+        or request.headers.get("X-CSRFToken")
+        or request.form.get("csrf_token")
+    )
 
     if not token or token != session.get("csrf_token"):
         abort(403)
-
+        
 def privacy_debug(message, extra=None):
     """
     Log di debug sicuro:
