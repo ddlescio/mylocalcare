@@ -6730,8 +6730,9 @@ def password_dimenticata():
             msg = Message(
                 subject="Reimposta la tua password - MyLocalCare",
                 recipients=[email],
-                sender=('MyLocalCare', app.config.get('MAIL_USERNAME'))
+                sender=app.config.get("MAIL_DEFAULT_SENDER")
             )
+            
             html = render_template(
                 "email/reset_password.html",
                 nome=utente["nome"],
