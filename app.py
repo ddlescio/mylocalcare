@@ -450,17 +450,14 @@ app.jinja_env.filters['from_json'] = lambda s: json.loads(s or "[]")
 #    Su Render DEVI avere FLASK_SECRET_KEY valorizzata nelle env.
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 
-# ✅ 2) Persistenza 30 giorni (cookie permanente)
+# ✅ 2) Configurazione cookie di sessione
+# La configurazione completa della sessione Redis viene fatta più sotto,
+# dopo l'inizializzazione di redis_client e Flask-Session.
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_DOMAIN=".mylocalcare.it",
-
-    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
-
-    # (opzionale ma utile) evita che ad ogni request ti riscriva/estenda il cookie
-    SESSION_REFRESH_EACH_REQUEST=False,
 )
 
 app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
@@ -857,8 +854,6 @@ app.config['SESSION_COOKIE_DOMAIN'] = ".mylocalcare.it"
 
 Session(app)
 
-Session(app)
-
 @app.template_filter('safe_strip')
 def safe_strip(value):
     return (value or '').strip()
@@ -1083,7 +1078,7 @@ def get_db_connection():
 
         g.db_conn = conn
         return conn
-        
+
 def close_db_connection(conn):
     if not conn:
         return
