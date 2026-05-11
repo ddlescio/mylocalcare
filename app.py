@@ -6717,7 +6717,7 @@ def password_dimenticata():
         """), (utente['id'],))
 
         # salva nuovo token
-        cur.execute(sql("""
+        cur.execute(sql(f"""
             INSERT INTO password_reset_tokens (utente_id, token, scadenza, usato)
             VALUES (?, ?, {epoch_now_sql()} + 3600, 0)
         """), (utente['id'], token))
@@ -6787,7 +6787,7 @@ def reset_password(token):
 
         password = request.form.get('password', '')
         conferma = request.form.get('conferma_password', '')
-        
+
         if not password or not conferma:
             flash("Compila entrambi i campi password.", "error")
             return redirect(url_for('reset_password', token=token))
