@@ -5854,34 +5854,34 @@ def invia_push(user_id, title, body):
                 if response_text:
                     print(f"❌ [invia_push] response_text={response_text[:500]}")
 
-            should_delete_subscription = False
+                should_delete_subscription = False
 
-            # Endpoint scaduto/non più valido
-            if status_code in (404, 410):
-                should_delete_subscription = True
-
-            # Subscription creata con una vecchia chiave VAPID / chiave diversa
-            if status_code in (400, 403):
-                error_text = (response_text or "").lower()
-
-                if (
-                    "vapid" in error_text
-                    or "vapidpkhashmismatch" in error_text
-                    or "credentials used to create the subscriptions" in error_text
-                ):
+                # Endpoint scaduto/non più valido
+                if status_code in (404, 410):
                     should_delete_subscription = True
 
-            if should_delete_subscription:
-                print(
-                    f"🧹 [invia_push] subscription non più valida -> delete "
-                    f"status={status_code} endpoint={endpoint[:90]}..."
-                )
+                # Subscription creata con una vecchia chiave VAPID / chiave diversa
+                if status_code in (400, 403):
+                    error_text = (response_text or "").lower()
 
-                cur.execute("""
-                    DELETE FROM push_subscriptions
-                    WHERE endpoint = %s
-                """, (endpoint,))
-    
+                    if (
+                        "vapid" in error_text
+                        or "vapidpkhashmismatch" in error_text
+                        or "credentials used to create the subscriptions" in error_text
+                    ):
+                        should_delete_subscription = True
+
+                if should_delete_subscription:
+                    print(
+                        f"🧹 [invia_push] subscription non più valida -> delete "
+                        f"status={status_code} endpoint={endpoint[:90]}..."
+                    )
+
+                    cur.execute("""
+                        DELETE FROM push_subscriptions
+                        WHERE endpoint = %s
+                    """, (endpoint,))
+
             except requests.exceptions.Timeout:
                 print(f"⚠️ [invia_push] timeout user_id={user_id} endpoint={endpoint[:90]}...")
 
