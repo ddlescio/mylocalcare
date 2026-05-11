@@ -467,6 +467,19 @@ def ensure_csrf_token():
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_hex(32)
 
+
+@app.context_processor
+def inject_csrf_token():
+    """
+    Rende disponibile csrf_token() in tutti i template.
+    Uso nei form:
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    """
+    return {
+        "csrf_token": lambda: session.get("csrf_token", "")
+    }
+
+
 def verify_csrf():
     token = None
 
@@ -6308,6 +6321,8 @@ def get_comune_info(comune_input):
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        verify_csrf()
+
         nome = request.form['nome'].strip()
         cognome = request.form['cognome'].strip()
         citta = request.form['citta'].strip()
@@ -6473,6 +6488,8 @@ def conferma_email(token):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        verify_csrf()
+
         email = request.form['email'].strip().lower()
         password = request.form['password']
 
@@ -6661,6 +6678,8 @@ def login():
 @app.route('/password_dimenticata', methods=['GET', 'POST'])
 def password_dimenticata():
     if request.method == 'POST':
+        verify_csrf()
+
         email = request.form.get('email', '').strip().lower()
 
         if not email:
@@ -6764,9 +6783,11 @@ def reset_password(token):
         return redirect(url_for('password_dimenticata'))
 
     if request.method == 'POST':
+        verify_csrf()
+
         password = request.form.get('password', '')
         conferma = request.form.get('conferma_password', '')
-
+        
         if not password or not conferma:
             flash("Compila entrambi i campi password.", "error")
             return redirect(url_for('reset_password', token=token))
