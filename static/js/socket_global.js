@@ -66,13 +66,65 @@ if (!shouldInitSocketOnThisPage()) {
   return;
 }
 
-  // ===============================
-  // CREA SOCKET DELLA PAGINA CORRENTE
-  // ===============================
-  const SOCKET_BASE_URL =
-    window.__SOCKET_BASE_URL__ ||
-    document.documentElement.dataset.socketBaseUrl ||
-    "https://chat.mylocalcare.it";
+// ===============================
+// CREA SOCKET DELLA PAGINA CORRENTE
+// ===============================
+const SOCKET_BASE_URL =
+  window.__SOCKET_BASE_URL__ ||
+  document.documentElement.dataset.socketBaseUrl ||
+  "https://chat.mylocalcare.it";
+
+// ======================================================
+// HARD GUARD SOCKET.IO
+// ======================================================
+// Qualunque chiamata a io(...) fatta da altri script dopo socket_global
+// viene forzata a usare SOLO websocket.
+// Serve a evitare il ritorno del polling su pagine globali/admin/navbar.
+if (window.io && !window.__io_websocket_only_guard_installed__) {
+  window.__io_websocket_only_guard_installed__ = true;
+
+  const __originalIo = window.io;
+
+  window.io = function (...args) {
+    let url = args[0];
+    let opts = args[1];
+
+    // Caso io(options)
+    if (typeof url === "object" && url !== null) {
+      opts = url;
+      url = undefined;
+    }
+
+    opts = {
+      ...(opts || {}),
+      transports: ["websocket"],
+      upgrade: false,
+      path: (opts && opts.path) || "/socket.io"
+    };
+
+    console.log("🛡️ io() forzato websocket-only", {
+      url: url || "(default)",
+      transports: opts.transports,
+      upgrade: opts.upgrade,
+      pathname: window.location.pathname
+    });
+
+    if (url === undefined) {
+      return __originalIo(opts);
+    }
+
+    return __originalIo(url, opts);
+  };
+
+  // Copia proprietà statiche eventuali di io, per compatibilità.
+  try {
+    Object.keys(__originalIo).forEach((key) => {
+      if (!(key in window.io)) {
+        window.io[key] = __originalIo[key];
+      }
+    });
+  } catch (_) {}
+}
 
     // ===============================
     // CLEANUP LEGGERO PRECEDENTE
