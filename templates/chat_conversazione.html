@@ -12,24 +12,6 @@
         ua: navigator.userAgent
       });
 
-      fetch("/chat-debug-page-open", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          marker: "chat_dom_loaded",
-          href: window.location.href,
-          pathname: window.location.pathname,
-          referrer: document.referrer,
-          ua: navigator.userAgent,
-          ts: new Date().toISOString()
-        })
-      }).catch(err => {
-        console.warn("❌ Errore chat-debug-page-open", err);
-      });
-
       document.body.dataset.chat = "true";
 
       // ✅ Fondamentale per base.html:
@@ -242,7 +224,7 @@ body {
     padding-top: 0.45rem !important;
     padding-bottom: 0.25rem !important;
   }
-  
+
   /* BLOCCA ZOOM IOS */
   .chat-input {
     font-size: 16px !important;
