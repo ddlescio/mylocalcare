@@ -49,7 +49,7 @@ window.addEventListener("pageshow", function (event) {
       return true;
     }
   }
-    
+
 if (!shouldInitSocketOnThisPage()) {
   console.log("⏭️ socket_global: init socket saltata su questa pagina", {
     pathname: window.location.pathname
@@ -100,8 +100,14 @@ if (!shouldInitSocketOnThisPage()) {
 
     const socket = io(SOCKET_BASE_URL, {
       path: "/socket.io",
-      transports: ["polling", "websocket"],
-      upgrade: true,
+
+      // ✅ Usiamo SOLO websocket.
+      // Evita il ciclo polling GET/POST che su Render/gunicorn multi-worker
+      // può produrre 400 "Session ID unknown" quando GET e POST finiscono
+      // su worker diversi.
+      transports: ["websocket"],
+      upgrade: false,
+
       withCredentials: true,
 
       reconnection: true,
@@ -325,7 +331,10 @@ if (!shouldInitSocketOnThisPage()) {
           }
 
           try {
-            socket.io.opts.transports = ["polling", "websocket"];
+            // ✅ Mantieni websocket-only anche nei reconnect forzati.
+            // Non reintrodurre polling, altrimenti tornano i POST /socket.io 400.
+            socket.io.opts.transports = ["websocket"];
+            socket.io.opts.upgrade = false;
           } catch (_) {}
 
           try {
