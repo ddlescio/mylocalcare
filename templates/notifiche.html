@@ -748,8 +748,25 @@ body.offset-navbar {
 </style>
 
 <script>
+const CSRF_TOKEN = "{{ csrf_token() }}";
+
+function csrfFetch(url, options = {}) {
+  const headers = {
+    ...(options.headers || {}),
+    "X-CSRF-Token": CSRF_TOKEN
+  };
+
+  return fetch(url, {
+    ...options,
+    headers
+  });
+}
+
 document.getElementById("markAllRead")?.addEventListener("click", async () => {
-  const resp = await fetch("/notifiche/segna_tutte_lette", { method: "POST" });
+  const resp = await csrfFetch("/notifiche/segna_tutte_lette", {
+    method: "POST"
+  });
+
   const data = await resp.json();
 
   if (data.success) {
@@ -772,7 +789,10 @@ document.getElementById("markAllRead")?.addEventListener("click", async () => {
 document.getElementById("deleteAll")?.addEventListener("click", async () => {
   if (!confirm("Vuoi davvero eliminare tutte le notifiche?")) return;
 
-  const resp = await fetch("/notifiche/elimina_tutte", { method: "POST" });
+  const resp = await csrfFetch("/notifiche/elimina_tutte", {
+    method: "POST"
+  });
+
   const data = await resp.json();
 
   if (data.success) {
@@ -783,7 +803,7 @@ document.getElementById("deleteAll")?.addEventListener("click", async () => {
 
 async function markSingleNotificationRead(id, button) {
   try {
-    const resp = await fetch(`/notifiche/leggi/${id}`, {
+    const resp = await csrfFetch(`/notifiche/leggi/${id}`, {
       method: "POST"
     });
 
@@ -811,7 +831,10 @@ async function deleteSingleNotification(id) {
   if (!confirm("Vuoi davvero eliminare questa notifica?")) return;
 
   try {
-    const resp = await fetch(`/notifiche/elimina/${id}`, { method: "POST" });
+    const resp = await csrfFetch(`/notifiche/elimina/${id}`, {
+      method: "POST"
+    });
+
     const data = await resp.json();
 
     if (data.success) {

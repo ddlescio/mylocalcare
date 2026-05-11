@@ -892,7 +892,13 @@ app.config['MAIL_USE_SSL'] = True
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+# ✅ Mittente unico e coerente per tutte le email automatiche
+MAIL_FROM_ADDRESS = os.getenv('MAIL_FROM_ADDRESS', 'info@mylocalcare.it')
+MAIL_FROM_NAME = os.getenv('MAIL_FROM_NAME', 'MyLocalCare')
+
+app.config['MAIL_DEFAULT_SENDER'] = (MAIL_FROM_NAME, MAIL_FROM_ADDRESS)
+
 app.config['MAIL_TIMEOUT'] = 20
 app.config['MAIL_MAX_EMAILS'] = None
 app.config['MAIL_DEBUG'] = (os.getenv("FLASK_ENV") == "development")
@@ -935,9 +941,9 @@ def invia_email_sospensione(email, nome):
         )
 
         msg = Message(
-            "Il tuo account MyLocalCare è stato sospeso",
-            sender="MyLocalCare <info@mylocalcare.it>",
-            recipients=[email]
+            subject="Il tuo account MyLocalCare è stato sospeso",
+            recipients=[email],
+            sender=app.config.get("MAIL_DEFAULT_SENDER")
         )
 
         msg.html = html
@@ -1315,12 +1321,19 @@ def admin_counters_page():
 @app.route('/notifiche/leggi/<int:id>', methods=["GET", "POST"])
 @login_required
 def leggi_notifica(id):
+    if request.method == "POST":
+        verify_csrf()
+
     segna_notifica_letta(id, g.utente['id'])
+
     # 🔔 aggiorna il badge in tempo reale
     emit_update_notifications(g.utente['id'])
+
+    if request.method == "POST":
+        return jsonify({"success": True})
+
     flash("Notifica segnata come letta.")
     return redirect(url_for('notifiche'))
-
 
 # ==========================================================
 # ANNUNCI – VISTA SINGOLA + TOGGLE STATO
@@ -3924,7 +3937,8 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, **kwargs
     try:
         msg = Message(
             subject=oggetto,
-            recipients=[destinazione]
+            recipients=[destinazione],
+            sender=app.config.get("MAIL_DEFAULT_SENDER")
         )
 
         # ✅ Se è specificato un template HTML
@@ -4597,6 +4611,8 @@ def segna_notifica_letta(notifica_id, user_id):
 
 @app.route("/notifiche/segna_tutte_lette", methods=["POST"])
 def segna_tutte_lette_route():
+    verify_csrf()
+
     if "utente_id" not in session:
         return jsonify({"success": False}), 403
 
@@ -4610,6 +4626,8 @@ def segna_tutte_lette_route():
 
 @app.route("/notifiche/elimina_tutte", methods=["POST"])
 def elimina_tutte_notifiche_route():
+    verify_csrf()
+
     if "utente_id" not in session:
         return jsonify({"success": False}), 403
 
@@ -4624,6 +4642,8 @@ def elimina_tutte_notifiche_route():
 @app.route("/notifiche/elimina/<int:id>", methods=["POST"])
 @login_required
 def elimina_notifica_singola_route(id):
+    verify_csrf()
+
     conn = get_db_connection()
     conn.execute(
         sql("DELETE FROM notifiche WHERE id = ? AND id_utente = ?"),
@@ -6427,9 +6447,9 @@ def register():
         link = build_external_url("conferma_email", token=token)
 
         messaggio = Message(
-            'Conferma la tua registrazione su MyLocalCare',
-            sender='MyLocalCare <info@mylocalcare.it>',
-            recipients=[email]
+            subject='Conferma la tua registrazione su MyLocalCare',
+            recipients=[email],
+            sender=app.config.get("MAIL_DEFAULT_SENDER")
         )
 
         html = render_template(
@@ -6732,7 +6752,7 @@ def password_dimenticata():
                 recipients=[email],
                 sender=app.config.get("MAIL_DEFAULT_SENDER")
             )
-            
+
             html = render_template(
                 "email/reset_password.html",
                 nome=utente["nome"],
