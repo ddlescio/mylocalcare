@@ -6810,22 +6810,17 @@ def password_dimenticata():
                 sender=app.config.get("MAIL_DEFAULT_SENDER")
             )
 
-            html = render_template(
-                "email/reset_password.html",
-                nome=utente["nome"],
-                link=reset_url
-            )
-
-            msg.html = html
             msg.body = (
                 f"Ciao {utente['nome']},\n\n"
-                "abbiamo ricevuto una richiesta per modificare la password del tuo account MyLocalCare.\n\n"
-                f"Puoi completare la procedura da questo link:\n{reset_url}\n\n"
-                "Se non hai richiesto tu questa modifica, puoi ignorare questa email.\n\n"
+                "abbiamo ricevuto una richiesta per modificare l'accesso al tuo account MyLocalCare.\n\n"
+                "Per completare la procedura, apri questo link:\n"
+                f"{reset_url}\n\n"
+                "Il link è valido per 60 minuti.\n\n"
+                "Se non hai richiesto tu questa operazione, puoi ignorare questa email.\n\n"
                 "A presto,\n"
                 "Il team MyLocalCare"
             )
-
+            
             mail.send(msg)
 
         except Exception as e:
