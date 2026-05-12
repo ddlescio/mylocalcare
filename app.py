@@ -6814,13 +6814,9 @@ def password_dimenticata():
                 reply_to=MAIL_FROM_ADDRESS
             )
 
-            # Forza un Message-ID coerente col dominio pubblico,
-            # evitando il dominio tecnico del server Render.
-            msg.extra_headers = {
-                "Message-ID": make_msgid(domain="mylocalcare.it"),
-                "Auto-Submitted": "auto-generated",
-                "X-Auto-Response-Suppress": "All"
-            }
+            # Forza il Message-ID principale con il dominio pubblico,
+            # invece di lasciare quello tecnico generato dal server Render.
+            msg.msgId = make_msgid(domain="mylocalcare.it")
 
             html = render_template(
                 "email/reset_password.html",
@@ -6845,7 +6841,7 @@ def password_dimenticata():
             print("Errore invio mail recupero accesso:", e, flush=True)
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
-            
+                        
         flash(
             "Se l'indirizzo è registrato, riceverai un link per completare la procedura.",
             "success"
