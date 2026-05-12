@@ -6754,46 +6754,49 @@ def login():
 
 @app.route('/password_dimenticata', methods=['GET', 'POST'])
 def password_dimenticata():
-    if request.method == 'POST':
-        verify_csrf()
+    # GET: mostra solo la pagina, senza inviare nulla
+    if request.method == 'GET':
+        return render_template('password_dimenticata.html')
 
-        email = request.form.get('email', '').strip().lower()
+    # POST: invio richiesta recupero accesso
+    verify_csrf()
 
-        if not email:
-            flash("Inserisci un indirizzo email.", "error")
-            return redirect(url_for('password_dimenticata'))
+    email = request.form.get('email', '').strip().lower()
 
-        # 🔎 Cerca utente
-        conn = get_db_connection()
+    if not email:
+        flash("Inserisci un indirizzo email.", "error")
+        return redirect(url_for('password_dimenticata'))
 
-        cur = get_cursor(conn)
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
         cur.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
         utente = cur.fetchone()
 
-
-        # ✅ Non riveliamo nulla
+        # Non riveliamo se l'email esiste o no
         if not utente:
-            flash("Se l'email è registrata, riceverai un link per reimpostare la password.", "info")
-            return redirect(url_for('password_dimenticata'))
+            flash(
+                "Se l'indirizzo è registrato, riceverai un link per completare la procedura.",
+                "info"
+            )
+            return redirect(url_for('login'))
 
-        # ✅ Genera token sicuro firmato
+        # Genera token sicuro firmato
         s = get_reset_serializer()
         token = s.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
 
         reset_url = build_external_url("reset_password", token=token)
 
-        # ✅ Salva token nel DB e invalida i precedenti
-        conn = get_db_connection()
-        cur = get_cursor(conn)
-
-        # invalida eventuali token ancora aperti
+        # Invalida eventuali token precedenti
         cur.execute(sql("""
             UPDATE password_reset_tokens
             SET usato = 1
             WHERE utente_id = ?
+              AND usato = 0
         """), (utente['id'],))
 
-        # salva nuovo token
+        # Salva nuovo token
         cur.execute(sql(f"""
             INSERT INTO password_reset_tokens (utente_id, token, scadenza, usato)
             VALUES (?, ?, {epoch_now_sql()} + 3600, 0)
@@ -6801,39 +6804,62 @@ def password_dimenticata():
 
         conn.commit()
 
+        # Invia email
+        try:
+            msg = Message(
+                subject="Accesso al tuo account MyLocalCare",
+                recipients=[email],
+                sender=app.config.get("MAIL_DEFAULT_SENDER")
+            )
 
-    # ✅ Invia email recupero accesso
-    try:
-        msg = Message(
-            subject="Accesso al tuo account MyLocalCare",
-            recipients=[email],
-            sender=app.config.get("MAIL_DEFAULT_SENDER")
+            html = render_template(
+                "email/reset_password.html",
+                nome=utente["nome"],
+                link=reset_url
+            )
+
+            msg.html = html
+            msg.body = (
+                f"Ciao {utente['nome']},\n\n"
+                "abbiamo ricevuto una richiesta per modificare l'accesso al tuo account MyLocalCare.\n\n"
+                f"Per completare la procedura apri questo link:\n{reset_url}\n\n"
+                "Il link è valido per 1 ora e può essere usato una sola volta.\n\n"
+                "Se non hai richiesto questa modifica, puoi ignorare questo messaggio."
+            )
+
+            mail.send(msg)
+
+        except Exception as e:
+            print("Errore invio mail recupero accesso:", e, flush=True)
+            flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
+            return redirect(url_for('password_dimenticata'))
+
+        flash(
+            "Se l'indirizzo è registrato, riceverai un link per completare la procedura.",
+            "success"
         )
-
-        html = render_template(
-            "email/reset_password.html",
-            nome=utente["nome"],
-            link=reset_url
-        )
-
-        msg.html = html
-        msg.body = (
-            f"Ciao {utente['nome']},\n\n"
-            "abbiamo ricevuto una richiesta per modificare l'accesso al tuo account MyLocalCare.\n\n"
-            f"Puoi proseguire da questo link:\n{reset_url}\n\n"
-            "Se non sei stato tu, puoi ignorare questa email.\n\n"
-            "MyLocalCare"
-        )
-
-        mail.send(msg)
+        return redirect(url_for('login'))
 
     except Exception as e:
-        print("Errore invio mail recupero accesso:", e)
-        flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
-        return redirect(url_for('password_dimenticata'))
-    
-    return render_template('password_dimenticata.html')
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
+        print("Errore recupero accesso:", repr(e), flush=True)
+        flash("Si è verificato un errore. Riprova più tardi.", "error")
+        return redirect(url_for('password_dimenticata'))
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+            
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     s = get_reset_serializer()
