@@ -6802,35 +6802,36 @@ def password_dimenticata():
         conn.commit()
 
 
-        # ✅ Invia email
-        try:
-            msg = Message(
-                subject="Accesso al tuo account MyLocalCare",
-                recipients=[email],
-                sender=app.config.get("MAIL_DEFAULT_SENDER")
-            )
+    # ✅ Invia email recupero accesso
+    try:
+        msg = Message(
+            subject="Accesso al tuo account MyLocalCare",
+            recipients=[email],
+            sender=app.config.get("MAIL_DEFAULT_SENDER")
+        )
 
-            msg.body = (
-                f"Ciao {utente['nome']},\n\n"
-                "abbiamo ricevuto una richiesta per modificare l'accesso al tuo account MyLocalCare.\n\n"
-                "Per completare la procedura, apri questo link:\n"
-                f"{reset_url}\n\n"
-                "Il link è valido per 60 minuti.\n\n"
-                "Se non hai richiesto tu questa operazione, puoi ignorare questa email.\n\n"
-                "A presto,\n"
-                "Il team MyLocalCare"
-            )
-            
-            mail.send(msg)
+        html = render_template(
+            "email/reset_password.html",
+            nome=utente["nome"],
+            link=reset_url
+        )
 
-        except Exception as e:
-            print("Errore invio mail reset:", e)
-            flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
-            return redirect(url_for('password_dimenticata'))
+        msg.html = html
+        msg.body = (
+            f"Ciao {utente['nome']},\n\n"
+            "abbiamo ricevuto una richiesta per modificare l'accesso al tuo account MyLocalCare.\n\n"
+            f"Puoi proseguire da questo link:\n{reset_url}\n\n"
+            "Se non sei stato tu, puoi ignorare questa email.\n\n"
+            "MyLocalCare"
+        )
 
-        flash("Se l'email è registrata, riceverai a breve un link per reimpostare la password.", "success")
-        return redirect(url_for('login'))
+        mail.send(msg)
 
+    except Exception as e:
+        print("Errore invio mail recupero accesso:", e)
+        flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
+        return redirect(url_for('password_dimenticata'))
+    
     return render_template('password_dimenticata.html')
 
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
