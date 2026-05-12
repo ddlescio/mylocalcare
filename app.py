@@ -2019,54 +2019,6 @@ def admin_passkey_auth_verify():
             "error": str(e)
         }), 400
 
-@app.route("/admin/passkey/auth/options", methods=["POST"])
-@admin_required
-def admin_passkey_auth_options():
-    """
-    Genera le opzioni WebAuthn per sbloccare l'area admin con una passkey già registrata.
-    """
-    verify_csrf()
-    ensure_admin_passkeys_table()
-
-    user_id = int(g.utente["id"])
-    passkeys = get_admin_passkeys_for_user(user_id)
-
-    if not passkeys:
-        return jsonify({
-            "ok": False,
-            "error": "Nessuna passkey registrata per questo amministratore."
-        }), 400
-
-    allow_credentials = []
-
-    for p in passkeys:
-        try:
-            allow_credentials.append(
-                PublicKeyCredentialDescriptor(
-                    id=base64url_to_bytes(p["credential_id"])
-                )
-            )
-        except Exception as e:
-            print("⚠️ Passkey ignorata in allow_credentials:", repr(e), flush=True)
-
-    options = generate_authentication_options(
-        rp_id=WEBAUTHN_RP_ID,
-        allow_credentials=allow_credentials,
-        user_verification=UserVerificationRequirement.REQUIRED,
-    )
-
-    session["admin_passkey_auth_challenge"] = base64.b64encode(
-        options.challenge
-    ).decode()
-
-    session["admin_passkey_auth_next"] = request.form.get("next") or request.args.get("next") or url_for("admin_dashboard")
-    session.modified = True
-
-    return app.response_class(
-        options_to_json(options),
-        mimetype="application/json"
-    )
-
 @app.route("/admin/counters")
 @admin_required
 def admin_counters():
