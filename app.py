@@ -8452,10 +8452,9 @@ def sospendi_account():
 
     # Recupera email e nome per invio notifica
     utente = cur.execute(
-        "SELECT email, nome FROM utenti WHERE id=?",
+        sql("SELECT email, nome FROM utenti WHERE id=?"),
         (session["utente_id"],)
     ).fetchone()
-
 
 
     # Invia email
@@ -8501,18 +8500,20 @@ def riattivazione_account():
 def riattiva_account():
     verify_csrf()
 
+    user_id = session.get("utente_id")
+
     conn = get_db_connection()
     cur = get_cursor(conn)
 
-    cur.execute(sql("UPDATE utenti SET sospeso=0 WHERE id=?"), (session["utente_id"],))
+    cur.execute(sql("UPDATE utenti SET sospeso=0 WHERE id=?"), (user_id,))
     conn.commit()
 
-    # rimuove flag sospeso
-    session.pop("sospeso", None)
+    # Per coerenza con il messaggio e per sicurezza, svuotiamo davvero la sessione
+    session.clear()
 
     flash("Account riattivato! Per motivi di sicurezza effettua di nuovo il login.", "success")
     return redirect(url_for("login"))
-
+    
 # ----------------------------------------
 # 🔒 CONTROLLO SOSPENSIONE AUTOMATICO
 # ----------------------------------------
