@@ -737,10 +737,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         await fetch("/push/unsubscribe", {
           method: "POST",
           credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": "{{ csrf_token() }}"
+          },
           body: JSON.stringify({ endpoint })
         });
-
+        
         const currentUserId = {{ session.get('utente_id')|tojson }};
         if (currentUserId) {
           localStorage.removeItem(`lc_push_synced_user_${currentUserId}`);

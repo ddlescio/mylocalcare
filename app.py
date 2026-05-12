@@ -6139,6 +6139,8 @@ def push_subscribe():
 @app.route("/push/unsubscribe", methods=["POST"])
 @login_required
 def push_unsubscribe():
+    verify_csrf()
+
     conn = None
     cur = None
 
@@ -8349,6 +8351,8 @@ def impostazioni():
 @login_required
 def modifica_username():
     if request.method == "POST":
+        verify_csrf()
+
         nuovo = request.form.get("username", "").strip().upper()   # ✅ SALVA MAIUSCOLO
 
         if nuovo:
@@ -8384,6 +8388,8 @@ def modifica_username():
 @login_required
 def modifica_password():
     if request.method == "POST":
+        verify_csrf()
+
         pw_attuale = request.form.get("password_attuale", "")
         nuova_pw = request.form.get("nuova_password", "")
         conferma_pw = request.form.get("conferma_password", "")
@@ -8434,6 +8440,8 @@ def elimina_account_step1():
 @app.route("/impostazioni/sospendi-account", methods=["POST"])
 @login_required
 def sospendi_account():
+    verify_csrf()
+
     conn = get_db_connection()
 
     cur = get_cursor(conn)
@@ -8464,6 +8472,8 @@ def sospendi_account():
 @login_required
 def elimina_account_step2():
     if request.method == "POST":
+        verify_csrf()
+
         conn = get_db_connection()
         cur = get_cursor(conn)
 
@@ -8489,6 +8499,8 @@ def riattivazione_account():
 @app.route("/impostazioni/riattiva-account", methods=["POST"])
 @login_required
 def riattiva_account():
+    verify_csrf()
+
     conn = get_db_connection()
     cur = get_cursor(conn)
 
@@ -8547,6 +8559,8 @@ def controllo_sospensione():
 @login_required
 def email_notifiche():
     if request.method == "POST":
+        verify_csrf()
+
         attivo = 1 if request.form.get("email_notifiche") == "on" else 0
         conn = get_db_connection()
         cur = get_cursor(conn)
@@ -8565,6 +8579,8 @@ def email_notifiche():
 @login_required
 def cambia_foto():
     if request.method == "POST":
+        verify_csrf()
+
         file = request.files.get("foto")
 
         if not file or file.filename == "":
@@ -8599,6 +8615,8 @@ def cambia_foto():
 @login_required
 def cambia_copertina():
     if request.method == "POST":
+        verify_csrf()
+
         file = request.files.get("copertina")
 
         if not file or file.filename == "":
