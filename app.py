@@ -1627,8 +1627,7 @@ def admin_passkey_register_options():
         try:
             exclude_credentials.append(
                 PublicKeyCredentialDescriptor(
-                    id=base64url_to_bytes(p["credential_id"]),
-                    transports=json.loads(p["transports"] or "[]")
+                    id=base64url_to_bytes(row["credential_id"])
                 )
             )
         except Exception:
@@ -1723,7 +1722,7 @@ def admin_passkey_register_verify():
         return jsonify({
             "ok": True
         })
-        
+
     except Exception as e:
         print("❌ Errore registrazione passkey admin:", repr(e), flush=True)
         traceback.print_exc()
