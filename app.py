@@ -1583,17 +1583,6 @@ def admin_unlock():
 
     return render_template("admin_unlock.html", next_url=next_url)
 
-@app.route("/admin/passkey/setup-db")
-@admin_required
-def admin_passkey_setup_db():
-    """
-    Route temporanea per creare la tabella admin_passkeys.
-    Dopo il primo test positivo potremo rimuoverla.
-    """
-    ensure_admin_passkeys_table()
-    flash("Tabella passkey admin pronta.", "success")
-    return redirect(url_for("admin_dashboard"))
-
 @app.route("/admin/passkey")
 @admin_required
 def admin_passkey_page():
@@ -10721,6 +10710,17 @@ def chat_count_unread(user_id):
         return 0
 
     return row["count"]
+
+# ==========================================================
+# 🔐 DB BOOTSTRAP — tabelle di sicurezza
+# ==========================================================
+if APP_RUNTIME_ROLE == "web":
+    try:
+        ensure_admin_passkeys_table()
+        print("✅ Tabella admin_passkeys verificata", flush=True)
+    except Exception as e:
+        print("❌ Errore verifica tabella admin_passkeys:", repr(e), flush=True)
+        raise
 
 if app.config["IS_REALTIME_SERVER"]:
     register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
