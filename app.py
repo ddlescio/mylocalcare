@@ -1628,7 +1628,7 @@ def admin_required(view_func):
         if request.endpoint not in stepup_exempt_endpoints and not admin_stepup_is_valid():
             next_url = request.full_path if request.query_string else request.path
             return redirect(url_for("admin_unlock", next=next_url))
-            
+
         # 5) tutto ok → esegui la view
         return view_func(*args, **kwargs)
 
@@ -1801,6 +1801,217 @@ def admin_passkey_register_verify():
 
     except Exception as e:
         print("❌ Errore registrazione passkey admin:", repr(e), flush=True)
+        traceback.print_exc()
+
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 400
+
+def get_admin_passkey_by_credential_id(user_id, credential_id_b64url):
+    """
+    Recupera una passkey admin specifica tramite credential_id.
+    """
+    ensure_admin_passkeys_table()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT
+                id,
+                utente_id,
+                credential_id,
+                credential_public_key,
+                sign_count,
+                device_type,
+                backed_up,
+                transports,
+                nome_dispositivo,
+                created_at,
+                last_used_at
+            FROM admin_passkeys
+            WHERE utente_id = ?
+              AND credential_id = ?
+            LIMIT 1
+        """), (
+            int(user_id),
+            credential_id_b64url
+        ))
+
+        return cur.fetchone()
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def update_admin_passkey_usage(passkey_id, new_sign_count):
+    """
+    Aggiorna contatore di sicurezza e ultimo utilizzo della passkey.
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql(f"""
+            UPDATE admin_passkeys
+            SET sign_count = ?,
+                last_used_at = {now_sql()}
+            WHERE id = ?
+        """), (
+            int(new_sign_count or 0),
+            int(passkey_id)
+        ))
+
+        conn.commit()
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+@app.route("/admin/passkey/auth/options", methods=["POST"])
+@admin_required
+def admin_passkey_auth_options():
+    """
+    Genera le opzioni WebAuthn per sbloccare l'area admin con una passkey già registrata.
+    """
+    verify_csrf()
+    ensure_admin_passkeys_table()
+
+    user_id = int(g.utente["id"])
+    passkeys = get_admin_passkeys_for_user(user_id)
+
+    if not passkeys:
+        return jsonify({
+            "ok": False,
+            "error": "Nessuna passkey registrata per questo admin."
+        }), 400
+
+    allow_credentials = []
+
+    for p in passkeys:
+        try:
+            allow_credentials.append(
+                PublicKeyCredentialDescriptor(
+                    id=base64url_to_bytes(p["credential_id"])
+                )
+            )
+        except Exception as e:
+            print("⚠️ Passkey saltata in auth/options:", repr(e), flush=True)
+
+    if not allow_credentials:
+        return jsonify({
+            "ok": False,
+            "error": "Nessuna passkey valida trovata."
+        }), 400
+
+    options = generate_authentication_options(
+        rp_id=WEBAUTHN_RP_ID,
+        allow_credentials=allow_credentials,
+        user_verification=UserVerificationRequirement.REQUIRED,
+    )
+
+    session["admin_passkey_auth_challenge"] = base64.b64encode(
+        options.challenge
+    ).decode()
+
+    session.modified = True
+
+    return app.response_class(
+        options_to_json(options),
+        mimetype="application/json"
+    )
+
+
+@app.route("/admin/passkey/auth/verify", methods=["POST"])
+@admin_required
+def admin_passkey_auth_verify():
+    """
+    Verifica la passkey usata dal browser e, se valida, sblocca temporaneamente l'area admin.
+    """
+    verify_csrf()
+
+    challenge_b64 = session.get("admin_passkey_auth_challenge")
+    if not challenge_b64:
+        return jsonify({
+            "ok": False,
+            "error": "Sfida passkey scaduta. Riprova."
+        }), 400
+
+    expected_challenge = base64.b64decode(challenge_b64)
+    data = request.get_json(silent=True) or {}
+
+    credential_id_b64url = data.get("id")
+    if not credential_id_b64url:
+        return jsonify({
+            "ok": False,
+            "error": "Credential ID mancante."
+        }), 400
+
+    passkey = get_admin_passkey_by_credential_id(
+        user_id=int(g.utente["id"]),
+        credential_id_b64url=credential_id_b64url
+    )
+
+    if not passkey:
+        return jsonify({
+            "ok": False,
+            "error": "Passkey non riconosciuta per questo admin."
+        }), 400
+
+    try:
+        verification = verify_authentication_response(
+            credential=data,
+            expected_challenge=expected_challenge,
+            expected_rp_id=WEBAUTHN_RP_ID,
+            expected_origin=WEBAUTHN_EXPECTED_ORIGIN,
+            credential_public_key=base64.b64decode(passkey["credential_public_key"]),
+            credential_current_sign_count=int(passkey["sign_count"] or 0),
+            require_user_verification=True,
+        )
+
+        update_admin_passkey_usage(
+            passkey_id=passkey["id"],
+            new_sign_count=verification.new_sign_count
+        )
+
+        session.pop("admin_passkey_auth_challenge", None)
+
+        # ✅ Questo è il punto chiave: la passkey sostituisce la password nello step-up admin.
+        mark_admin_stepup_verified()
+
+        session.modified = True
+
+        return jsonify({
+            "ok": True
+        })
+
+    except Exception as e:
+        print("❌ Errore autenticazione passkey admin:", repr(e), flush=True)
         traceback.print_exc()
 
         return jsonify({
