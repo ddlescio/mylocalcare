@@ -84,6 +84,22 @@ from io import BytesIO
 from flask import send_file
 from openpyxl import Workbook
 
+from webauthn import (
+    generate_registration_options,
+    verify_registration_response,
+    generate_authentication_options,
+    verify_authentication_response,
+    options_to_json,
+    base64url_to_bytes,
+)
+from webauthn.helpers.structs import (
+    AuthenticatorSelectionCriteria,
+    AuthenticatorAttachment,
+    UserVerificationRequirement,
+    ResidentKeyRequirement,
+    PublicKeyCredentialDescriptor,
+)
+
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
 # ==========================================================
@@ -444,6 +460,21 @@ from datetime import timedelta
 app.config["APP_RUNTIME_ROLE"] = APP_RUNTIME_ROLE
 app.config["IS_REALTIME_SERVER"] = (APP_RUNTIME_ROLE == "realtime")
 app.config["SOCKET_BASE_URL"] = os.environ.get("SOCKET_BASE_URL", "").strip()
+
+# ==========================================================
+# 🔐 WEBAUTHN / PASSKEY CONFIG
+# ==========================================================
+
+# Dominio principale su cui vengono registrate/verificate le passkey.
+# ATTENZIONE:
+# - rp_id deve essere il dominio, senza https://
+# - expected_origin deve essere l'origine completa con https://
+WEBAUTHN_RP_ID = os.getenv("WEBAUTHN_RP_ID", "mylocalcare.it")
+WEBAUTHN_RP_NAME = os.getenv("WEBAUTHN_RP_NAME", "MyLocalCare")
+WEBAUTHN_EXPECTED_ORIGIN = os.getenv(
+    "WEBAUTHN_EXPECTED_ORIGIN",
+    "https://www.mylocalcare.it"
+)
 
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s or "[]")
 
@@ -1177,6 +1208,92 @@ def foto_obbligatoria(f):
         return f(*args, **kwargs)
     return wrapper
 
+# ==========================================================
+# 🔐 ADMIN PASSKEYS — STORAGE CHIAVI PUBBLICHE
+# ==========================================================
+
+def ensure_admin_passkeys_table():
+    """
+    Crea la tabella per le passkey admin se non esiste.
+
+    Nota importante:
+    qui NON salviamo password e NON salviamo dati biometrici.
+    Salviamo solo:
+    - credential_id
+    - chiave pubblica
+    - contatore di sicurezza sign_count
+    - metadati tecnici della passkey
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS admin_passkeys (
+                    id SERIAL PRIMARY KEY,
+                    utente_id INTEGER NOT NULL REFERENCES utenti(id) ON DELETE CASCADE,
+                    credential_id TEXT UNIQUE NOT NULL,
+                    credential_public_key TEXT NOT NULL,
+                    sign_count INTEGER DEFAULT 0,
+                    device_type TEXT,
+                    backed_up INTEGER DEFAULT 0,
+                    transports TEXT,
+                    nome_dispositivo TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_used_at TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_admin_passkeys_utente
+                ON admin_passkeys(utente_id)
+            """)
+
+        else:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS admin_passkeys (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    utente_id INTEGER NOT NULL,
+                    credential_id TEXT UNIQUE NOT NULL,
+                    credential_public_key TEXT NOT NULL,
+                    sign_count INTEGER DEFAULT 0,
+                    device_type TEXT,
+                    backed_up INTEGER DEFAULT 0,
+                    transports TEXT,
+                    nome_dispositivo TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    last_used_at TEXT,
+                    FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+                )
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_admin_passkeys_utente
+                ON admin_passkeys(utente_id)
+            """)
+
+        conn.commit()
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        print("❌ Errore ensure_admin_passkeys_table:", repr(e), flush=True)
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 # ==========================================================
 # 🔹 ADMIN COUNTERS (Annunci e Recensioni in attesa)
@@ -1189,6 +1306,55 @@ from functools import wraps
 
 from functools import wraps
 from datetime import datetime, timezone
+
+# ==========================================================
+# 🔐 ADMIN STEP-UP AUTH
+# ==========================================================
+
+ADMIN_STEPUP_MINUTES = 15
+
+
+def admin_stepup_is_valid():
+    """
+    Verifica se l'admin ha già fatto uno sblocco recente.
+    Questo NON sostituisce admin_session_token: è un secondo livello.
+    """
+    raw_until = session.get("admin_stepup_until")
+    fp_sessione = session.get("admin_stepup_fingerprint")
+    fp_corrente = request.headers.get("User-Agent", "unknown")
+
+    if not raw_until or not fp_sessione:
+        return False
+
+    if fp_sessione != fp_corrente:
+        return False
+
+    try:
+        until = datetime.fromisoformat(raw_until)
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+    except Exception:
+        return False
+
+    return until > datetime.now(timezone.utc)
+
+
+def mark_admin_stepup_verified():
+    """
+    Marca lo sblocco admin come valido per pochi minuti.
+    In seguito questa funzione verrà chiamata dopo WebAuthn/FaceID.
+    """
+    until = datetime.now(timezone.utc) + timedelta(minutes=ADMIN_STEPUP_MINUTES)
+
+    session["admin_stepup_until"] = until.isoformat()
+    session["admin_stepup_fingerprint"] = request.headers.get("User-Agent", "unknown")
+    session.modified = True
+
+
+def clear_admin_stepup():
+    session.pop("admin_stepup_until", None)
+    session.pop("admin_stepup_fingerprint", None)
+    session.modified = True
 
 def admin_required(view_func):
     @wraps(view_func)
@@ -1268,11 +1434,62 @@ def admin_required(view_func):
             session.clear()
             return redirect(url_for("login"))
 
-        # 4) tutto ok → esegui la view
+        # 4) 🔐 secondo livello admin: sblocco recente richiesto
+        # La route admin_unlock è esclusa per evitare loop.
+        if request.endpoint != "admin_unlock" and not admin_stepup_is_valid():
+            next_url = request.full_path if request.query_string else request.path
+            return redirect(url_for("admin_unlock", next=next_url))
+
+        # 5) tutto ok → esegui la view
         return view_func(*args, **kwargs)
 
     return wrapped_view
 
+@app.route("/admin/sblocca", methods=["GET", "POST"])
+@admin_required
+def admin_unlock():
+    """
+    Sblocco temporaneo area admin.
+    Step provvisorio: conferma password.
+    Step successivo: sostituiremo questo POST con WebAuthn / passkey biometrica.
+    """
+
+    next_url = request.args.get("next") or url_for("admin_dashboard")
+
+    if not next_url.startswith("/admin"):
+        next_url = url_for("admin_dashboard")
+
+    if request.method == "POST":
+        verify_csrf()
+
+        password = request.form.get("password", "")
+
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute(sql("SELECT password FROM utenti WHERE id = ?"), (g.utente["id"],))
+        row = cur.fetchone()
+
+        if not row or not check_password_hash(row["password"], password):
+            flash("Password non valida.", "error")
+            return redirect(url_for("admin_unlock", next=next_url))
+
+        mark_admin_stepup_verified()
+
+        flash("Area amministratore sbloccata.", "success")
+        return redirect(next_url)
+
+    return render_template("admin_unlock.html", next_url=next_url)
+
+@app.route("/admin/passkey/setup-db")
+@admin_required
+def admin_passkey_setup_db():
+    """
+    Route temporanea per creare la tabella admin_passkeys.
+    Dopo il primo test positivo potremo rimuoverla.
+    """
+    ensure_admin_passkeys_table()
+    flash("Tabella passkey admin pronta.", "success")
+    return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/counters")
 @admin_required
@@ -6841,7 +7058,7 @@ def password_dimenticata():
             print("Errore invio mail recupero accesso:", e, flush=True)
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
-                        
+
         flash(
             "Se l'indirizzo è registrato, riceverai un link per completare la procedura.",
             "success"
@@ -7013,6 +7230,7 @@ def logout():
     session.pop("dek_b64", None)
     session.pop("id_priv_b64", None)
     session.pop("id_pub_b64", None)
+    clear_admin_stepup()
     session.clear()
 
     flash('Sei uscito correttamente.', 'info')
@@ -8568,9 +8786,15 @@ def elimina_account_step2():
             """), (user_id,))
 
             # =====================================================
-            # 5) Rimuove attivazioni servizi legate agli annunci dell'utente
-            #    Non rimuove gli acquisti, solo le attivazioni operative
+            # 5) Rimuove attivazioni servizi operative dell'utente
+            #
+            # Manteniamo gli acquisti/pagamenti nello storico,
+            # ma rimuoviamo tutte le attivazioni ancora operative:
+            # - servizi legati agli annunci dell'utente
+            # - servizi legati direttamente al profilo utente
             # =====================================================
+
+            # 5A) Attivazioni collegate agli annunci dell'utente
             cur.execute(sql("""
                 DELETE FROM attivazioni_servizi
                 WHERE annuncio_id IN (
@@ -8578,6 +8802,12 @@ def elimina_account_step2():
                     FROM annunci
                     WHERE utente_id = ?
                 )
+            """), (user_id,))
+
+            # 5B) Attivazioni collegate direttamente al profilo utente
+            cur.execute(sql("""
+                DELETE FROM attivazioni_servizi
+                WHERE utente_id = ?
             """), (user_id,))
 
             # =====================================================

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+
+<div class="max-w-md mx-auto pt-28 px-4">
+  <div class="bg-white rounded-2xl shadow-sm border p-6">
+
+    <div class="mb-5">
+      <h1 class="text-2xl font-bold text-gray-800">
+        Sblocco amministratore
+      </h1>
+      <p class="text-sm text-gray-500 mt-2">
+        Per continuare nell’area admin conferma la tua identità.
+      </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_unlock', next=next_url) }}" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Password account
+        </label>
+        <input
+          type="password"
+          name="password"
+          required
+          autocomplete="current-password"
+          class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          placeholder="Inserisci la password"
+        >
+      </div>
+
+      <button
+        type="submit"
+        class="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3"
+      >
+        Sblocca area admin
+      </button>
+    </form>
+
+    <p class="text-xs text-gray-400 mt-4">
+      Lo sblocco resta valido solo temporaneamente su questo dispositivo.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}
