@@ -1618,11 +1618,17 @@ def admin_required(view_func):
             return redirect(url_for("login"))
 
         # 4) 🔐 secondo livello admin: sblocco recente richiesto
-        # La route admin_unlock è esclusa per evitare loop.
-        if request.endpoint != "admin_unlock" and not admin_stepup_is_valid():
+        # Alcune route tecniche devono poter funzionare anche quando lo step-up non è ancora valido.
+        stepup_exempt_endpoints = {
+            "admin_unlock",
+            "admin_passkey_auth_options",
+            "admin_passkey_auth_verify",
+        }
+
+        if request.endpoint not in stepup_exempt_endpoints and not admin_stepup_is_valid():
             next_url = request.full_path if request.query_string else request.path
             return redirect(url_for("admin_unlock", next=next_url))
-
+            
         # 5) tutto ok → esegui la view
         return view_func(*args, **kwargs)
 
@@ -1828,7 +1834,7 @@ def admin_passkey_auth_options():
                 PublicKeyCredentialDescriptor(
                     id=base64url_to_bytes(p["credential_id"])
                 )
-            )            
+            )
         except Exception as e:
             print("⚠️ Passkey ignorata in allow_credentials:", repr(e), flush=True)
 
