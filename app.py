@@ -6780,7 +6780,7 @@ def password_dimenticata():
         s = get_reset_serializer()
         token = s.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
 
-        reset_url = url_for('reset_password', token=token, _external=True)
+        reset_url = build_external_url("reset_password", token=token)
 
         # ✅ Salva token nel DB e invalida i precedenti
         conn = get_db_connection()
@@ -6805,7 +6805,7 @@ def password_dimenticata():
         # ✅ Invia email
         try:
             msg = Message(
-                subject="Reimposta la tua password - MyLocalCare",
+                subject="Accesso al tuo account MyLocalCare",
                 recipients=[email],
                 sender=app.config.get("MAIL_DEFAULT_SENDER")
             )
@@ -6817,7 +6817,14 @@ def password_dimenticata():
             )
 
             msg.html = html
-            msg.body = f"Reset password: {reset_url}"
+            msg.body = (
+                f"Ciao {utente['nome']},\n\n"
+                "abbiamo ricevuto una richiesta per modificare la password del tuo account MyLocalCare.\n\n"
+                f"Puoi completare la procedura da questo link:\n{reset_url}\n\n"
+                "Se non hai richiesto tu questa modifica, puoi ignorare questa email.\n\n"
+                "A presto,\n"
+                "Il team MyLocalCare"
+            )
 
             mail.send(msg)
 
