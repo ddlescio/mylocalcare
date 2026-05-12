@@ -98,7 +98,6 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
     ResidentKeyRequirement,
     PublicKeyCredentialDescriptor,
-    RegistrationCredential,
 )
 
 # ==========================================================
@@ -1687,10 +1686,8 @@ def admin_passkey_register_verify():
     )
 
     try:
-        credential = RegistrationCredential.parse_raw(json.dumps(data))
-
         verification = verify_registration_response(
-            credential=credential,
+            credential=data,
             expected_challenge=expected_challenge,
             expected_rp_id=WEBAUTHN_RP_ID,
             expected_origin=WEBAUTHN_EXPECTED_ORIGIN,
@@ -1726,7 +1723,7 @@ def admin_passkey_register_verify():
         return jsonify({
             "ok": True
         })
-
+        
     except Exception as e:
         print("❌ Errore registrazione passkey admin:", repr(e), flush=True)
         traceback.print_exc()
