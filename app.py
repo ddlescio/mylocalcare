@@ -462,6 +462,31 @@ app.config.update(
 
 app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
 
+# ==========================================================
+# 🔐 SECURITY HEADERS GLOBALI
+# ==========================================================
+@app.after_request
+def apply_security_headers(response):
+    """
+    Header di sicurezza applicati a tutte le risposte HTTP.
+    """
+
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), bluetooth=()"
+    )
+
+    response.headers.setdefault(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+    )
+
+    return response
+
 @app.before_request
 def ensure_csrf_token():
     if "csrf_token" not in session:
@@ -859,13 +884,11 @@ configure_socket_registry(redis_client, socketio)
 app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_REDIS'] = redis_client
 
-print("REDIS_URL:", os.environ.get("REDIS_URL"))
-
 try:
     redis_client.ping()
-    print("✅ Redis connesso correttamente")
+    print("✅ Redis connesso correttamente", flush=True)
 except Exception as e:
-    print("❌ Redis NON connesso:", e)
+    print("❌ Redis NON connesso", flush=True)
 
 app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
