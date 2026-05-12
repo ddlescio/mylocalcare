@@ -8473,18 +8473,190 @@ def elimina_account_step2():
     if request.method == "POST":
         verify_csrf()
 
+        user_id = session.get("utente_id")
+
+        if not user_id:
+            flash("Sessione non valida. Effettua nuovamente l'accesso.", "error")
+            return redirect(url_for("login"))
+
         conn = get_db_connection()
         cur = get_cursor(conn)
 
-        cur.execute(sql("DELETE FROM utenti WHERE id=?"), (session["utente_id"],))
-        conn.commit()
+        try:
+            # =====================================================
+            # 1) Rimuove notifiche dell'utente
+            # =====================================================
+            cur.execute(sql("""
+                DELETE FROM notifiche
+                WHERE id_utente = ?
+            """), (user_id,))
+
+            # =====================================================
+            # 2) Rimuove eventuali subscription push dell'utente
+            # =====================================================
+            cur.execute(sql("""
+                DELETE FROM push_subscriptions
+                WHERE utente_id = ?
+            """), (user_id,))
+
+            # =====================================================
+            # 3) Rimuove chat e messaggi dell'utente
+            #    Così nessuno può più continuare a scrivergli
+            # =====================================================
+            cur.execute(sql("""
+                DELETE FROM messaggi_chat
+                WHERE mittente_id = ?
+                   OR destinatario_id = ?
+            """), (user_id, user_id))
+
+            # Se esiste storico chiusure chat, rimuove anche quello
+            cur.execute(sql("""
+                DELETE FROM chat_chiusure
+                WHERE admin_id = ?
+                   OR user_id = ?
+            """), (user_id, user_id))
+
+            # =====================================================
+            # 4) Scollega pagamenti/acquisti dagli annunci
+            #    I pagamenti restano, ma non puntano più agli annunci eliminati
+            # =====================================================
+            cur.execute(sql("""
+                UPDATE acquisti
+                SET annuncio_id = NULL
+                WHERE annuncio_id IN (
+                    SELECT id
+                    FROM annunci
+                    WHERE utente_id = ?
+                )
+            """), (user_id,))
+
+            # =====================================================
+            # 5) Rimuove attivazioni servizi legate agli annunci dell'utente
+            #    Non rimuove gli acquisti, solo le attivazioni operative
+            # =====================================================
+            cur.execute(sql("""
+                DELETE FROM attivazioni_servizi
+                WHERE annuncio_id IN (
+                    SELECT id
+                    FROM annunci
+                    WHERE utente_id = ?
+                )
+            """), (user_id,))
+
+            # =====================================================
+            # 6) Rimuove annunci dell'utente
+            # =====================================================
+            cur.execute(sql("""
+                DELETE FROM annunci
+                WHERE utente_id = ?
+            """), (user_id,))
+
+            # =====================================================
+            # 7) Gestione recensioni
+            #
+            # - Le recensioni SCRITTE dall'utente verso altri restano.
+            # - Le recensioni RICEVUTE dall'utente cancellato spariscono,
+            #   perché il suo profilo non deve più esistere.
+            # =====================================================
+
+            # Prima rimuove eventuali risposte collegate alle recensioni ricevute dall'utente
+            cur.execute(sql("""
+                DELETE FROM risposte_recensioni
+                WHERE id_recensione IN (
+                    SELECT id
+                    FROM recensioni
+                    WHERE id_destinatario = ?
+                )
+            """), (user_id,))
+
+            # Poi rimuove recensioni ricevute dall'utente cancellato
+            cur.execute(sql("""
+                DELETE FROM recensioni
+                WHERE id_destinatario = ?
+            """), (user_id,))
+
+            # Eventuali risposte scritte dall'utente su recensioni di altri:
+            # meglio rimuoverle perché l'account autore non esiste più come profilo attivo.
+            cur.execute(sql("""
+                DELETE FROM risposte_recensioni
+                WHERE id_autore = ?
+            """), (user_id,))
+
+            # =====================================================
+            # 8) Anonimizza l'utente invece di cancellare la riga
+            #
+            # Motivo:
+            # - pagamenti/acquisti possono riferirsi ancora a utenti.id
+            # - recensioni scritte ad altri possono riferirsi ancora a id_autore
+            # - cancellare la riga romperebbe vincoli FK e storico
+            # =====================================================
+            anonimizzato = f"utente_eliminato_{user_id}"
+
+            cur.execute(sql("""
+                UPDATE utenti
+                SET
+                    nome = 'Utente',
+                    cognome = 'eliminato',
+                    email = ?,
+                    username = ?,
+                    password = '',
+                    citta = NULL,
+                    provincia = NULL,
+                    macro_area = NULL,
+                    telefono = NULL,
+                    email_pubblica = NULL,
+                    indirizzo_studio = NULL,
+                    sito_web = NULL,
+                    instagram = NULL,
+                    facebook = NULL,
+                    linkedin = NULL,
+                    orari = NULL,
+                    preferenze_contatto = NULL,
+                    frase = NULL,
+                    descrizione = NULL,
+                    lingue = NULL,
+                    foto_profilo = NULL,
+                    copertina = NULL,
+                    foto_galleria = NULL,
+                    visibile_pubblicamente = 0,
+                    visibile_in_chat = 0,
+                    attivo = 0,
+                    sospeso = 1,
+                    disattivato_admin = 1,
+                    token_verifica = NULL,
+                    reset_token = NULL,
+                    reset_token_scadenza = NULL,
+                    admin_session_token = NULL,
+                    admin_session_expiry = NULL,
+                    admin_browser_fingerprint = NULL,
+                    x25519_pub = NULL,
+                    x25519_priv_enc = NULL,
+                    x25519_priv_nonce = NULL,
+                    dek_enc = NULL,
+                    dek_nonce = NULL,
+                    dek_mk_enc = NULL,
+                    dek_mk_nonce = NULL
+                WHERE id = ?
+            """), (
+                f"deleted_user_{user_id}@mylocalcare.local",
+                anonimizzato,
+                user_id
+            ))
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            print("❌ Errore eliminazione account:", repr(e), flush=True)
+            traceback.print_exc()
+            flash("Errore durante l'eliminazione dell'account. Riprova o contatta l'assistenza.", "error")
+            return redirect(url_for("elimina_account_step2"))
 
         session.clear()
         flash("Account eliminato definitivamente.", "success")
         return redirect(url_for("home"))
 
     return render_template("impostazioni/elimina_account_step2.html")
-
 
 @app.route("/impostazioni/riattivazione-account")
 @login_required
@@ -8513,7 +8685,7 @@ def riattiva_account():
 
     flash("Account riattivato! Per motivi di sicurezza effettua di nuovo il login.", "success")
     return redirect(url_for("login"))
-    
+
 # ----------------------------------------
 # 🔒 CONTROLLO SOSPENSIONE AUTOMATICO
 # ----------------------------------------
