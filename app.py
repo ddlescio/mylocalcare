@@ -11,6 +11,7 @@ import json
 import uuid
 import time
 from flask_mail import Mail, Message
+from email.utils import make_msgid
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 from socketio import RedisManager
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -6809,8 +6810,17 @@ def password_dimenticata():
             msg = Message(
                 subject="Accesso al tuo account MyLocalCare",
                 recipients=[email],
-                sender=app.config.get("MAIL_DEFAULT_SENDER")
+                sender=app.config.get("MAIL_DEFAULT_SENDER"),
+                reply_to=MAIL_FROM_ADDRESS
             )
+
+            # Forza un Message-ID coerente col dominio pubblico,
+            # evitando il dominio tecnico del server Render.
+            msg.extra_headers = {
+                "Message-ID": make_msgid(domain="mylocalcare.it"),
+                "Auto-Submitted": "auto-generated",
+                "X-Auto-Response-Suppress": "All"
+            }
 
             html = render_template(
                 "email/reset_password.html",
@@ -6824,7 +6834,9 @@ def password_dimenticata():
                 "abbiamo ricevuto una richiesta per modificare l'accesso al tuo account MyLocalCare.\n\n"
                 f"Per completare la procedura apri questo link:\n{reset_url}\n\n"
                 "Il link è valido per 1 ora e può essere usato una sola volta.\n\n"
-                "Se non hai richiesto questa modifica, puoi ignorare questo messaggio."
+                "Se non hai richiesto questa modifica, puoi ignorare questo messaggio.\n\n"
+                "A presto,\n"
+                "Il team MyLocalCare"
             )
 
             mail.send(msg)
@@ -6833,7 +6845,7 @@ def password_dimenticata():
             print("Errore invio mail recupero accesso:", e, flush=True)
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
-
+            
         flash(
             "Se l'indirizzo è registrato, riceverai un link per completare la procedura.",
             "success"
@@ -6859,7 +6871,7 @@ def password_dimenticata():
             conn.close()
         except Exception:
             pass
-            
+
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     s = get_reset_serializer()
