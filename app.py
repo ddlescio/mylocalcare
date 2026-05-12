@@ -520,17 +520,25 @@ if not redis_url:
 
 SOCKET_ASYNC_MODE = "eventlet" if app.config["IS_REALTIME_SERVER"] else "threading"
 
+APP_ENV = os.getenv("APP_ENV", "production").strip().lower()
+
+SOCKET_CORS_ORIGINS = [
+    "https://mylocalcare.it",
+    "https://www.mylocalcare.it",
+    "https://mylocalcare-chat.onrender.com",
+]
+
+# Origini locali solo in sviluppo, mai in produzione.
+if APP_ENV in ("local", "development"):
+    SOCKET_CORS_ORIGINS.extend([
+        "http://127.0.0.1:5050",
+        "http://localhost:5050",
+    ])
+
 socketio = SocketIO(
     app,
     async_mode=SOCKET_ASYNC_MODE,
-    cors_allowed_origins=[
-        "https://mylocalcare.it",
-        "https://www.mylocalcare.it",
-        "https://chat.mylocalcare.it",
-        "https://mylocalcare-chat.onrender.com",
-        "http://127.0.0.1:5050",
-        "http://localhost:5050"
-    ],
+    cors_allowed_origins=SOCKET_CORS_ORIGINS,
     message_queue=redis_url,
     channel="mylocalcare-socketio",
     allow_upgrades=True,
