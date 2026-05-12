@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 pt-24 pb-10">
+
+  <a href="{{ url_for('admin_dashboard') }}"
+     class="inline-flex items-center text-blue-600 hover:text-blue-700 mb-5 text-sm font-medium">
+    ← Torna alla dashboard admin
+  </a>
+
+  <div class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">
+      🔐 Passkey amministratore
+    </h1>
+
+    <p class="text-gray-600 text-sm leading-relaxed">
+      Registra questo dispositivo per sbloccare l’area admin con Face ID, Touch ID
+      o il sistema biometrico disponibile.
+    </p>
+
+    <div class="mt-5">
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Nome dispositivo
+      </label>
+
+      <input
+        id="nome-dispositivo"
+        type="text"
+        value="Dispositivo principale"
+        class="w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+    </div>
+
+    <button
+      id="btn-registra-passkey"
+      type="button"
+      class="mt-5 inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-white font-semibold hover:bg-blue-700 transition">
+      Registra passkey
+    </button>
+
+    <p id="passkey-status" class="mt-4 text-sm text-gray-600"></p>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border p-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+      Passkey registrate
+    </h2>
+
+    {% if passkeys %}
+      <div class="space-y-3">
+        {% for p in passkeys %}
+          <div class="border rounded-xl p-4">
+            <div class="font-semibold text-gray-800">
+              {{ p.nome_dispositivo or "Dispositivo senza nome" }}
+            </div>
+
+            <div class="text-sm text-gray-500 mt-1">
+              Creata il {{ p.created_at|fmt_it if p.created_at else "-" }}
+            </div>
+
+            {% if p.last_used_at %}
+              <div class="text-sm text-gray-500">
+                Ultimo utilizzo: {{ p.last_used_at|fmt_it }}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-sm text-gray-500">
+        Nessuna passkey registrata.
+      </p>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+const csrfToken = "{{ csrf_token() }}";
+
+function base64urlToBuffer(base64url) {
+  const padding = "=".repeat((4 - base64url.length % 4) % 4);
+  const base64 = (base64url + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const raw = window.atob(base64);
+  const buffer = new ArrayBuffer(raw.length);
+  const view = new Uint8Array(buffer);
+
+  for (let i = 0; i < raw.length; i++) {
+    view[i] = raw.charCodeAt(i);
+  }
+
+  return buffer;
+}
+
+function bufferToBase64url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+
+  for (const b of bytes) {
+    binary += String.fromCharCode(b);
+  }
+
+  return window.btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function credentialToJSON(credential) {
+  return {
+    id: credential.id,
+    rawId: bufferToBase64url(credential.rawId),
+    type: credential.type,
+    authenticatorAttachment: credential.authenticatorAttachment || null,
+    response: {
+      clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+      attestationObject: bufferToBase64url(credential.response.attestationObject),
+      transports: credential.response.getTransports
+        ? credential.response.getTransports()
+        : []
+    }
+  };
+}
+
+async function registraPasskeyAdmin() {
+  const status = document.getElementById("passkey-status");
+  const nome = document.getElementById("nome-dispositivo").value.trim() || "Dispositivo";
+
+  try {
+    if (!window.PublicKeyCredential) {
+      throw new Error("Questo browser non supporta le passkey.");
+    }
+
+    status.textContent = "Preparazione passkey...";
+
+    const optionsResponse = await fetch("{{ url_for('admin_passkey_register_options') }}", {
+      method: "POST",
+      headers: {
+        "X-CSRF-Token": csrfToken
+      }
+    });
+
+    const options = await optionsResponse.json();
+
+    if (!optionsResponse.ok) {
+      throw new Error(options.error || "Errore generazione opzioni passkey.");
+    }
+
+    options.challenge = base64urlToBuffer(options.challenge);
+    options.user.id = base64urlToBuffer(options.user.id);
+
+    if (options.excludeCredentials) {
+      options.excludeCredentials = options.excludeCredentials.map((cred) => ({
+        ...cred,
+        id: base64urlToBuffer(cred.id)
+      }));
+    }
+
+    status.textContent = "Conferma con Face ID / Touch ID...";
+
+    const credential = await navigator.credentials.create({
+      publicKey: options
+    });
+
+    const payload = credentialToJSON(credential);
+    payload.nome_dispositivo = nome;
+
+    status.textContent = "Verifica passkey...";
+
+    const verifyResponse = await fetch("{{ url_for('admin_passkey_register_verify') }}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await verifyResponse.json();
+
+    if (!verifyResponse.ok || !result.ok) {
+      throw new Error(result.error || "Registrazione passkey non riuscita.");
+    }
+
+    status.textContent = "Passkey registrata correttamente.";
+    window.location.reload();
+
+  } catch (err) {
+    console.error(err);
+    status.textContent = "Errore: " + (err.message || err);
+  }
+}
+
+document
+  .getElementById("btn-registra-passkey")
+  .addEventListener("click", registraPasskeyAdmin);
+</script>
+{% endblock %}

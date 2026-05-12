@@ -98,6 +98,7 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
     ResidentKeyRequirement,
     PublicKeyCredentialDescriptor,
+    RegistrationCredential,
 )
 
 # ==========================================================
@@ -1295,6 +1296,109 @@ def ensure_admin_passkeys_table():
         except Exception:
             pass
 
+def get_admin_passkeys_for_user(user_id):
+    """
+    Recupera le passkey registrate per un admin.
+    """
+    ensure_admin_passkeys_table()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT
+                id,
+                credential_id,
+                credential_public_key,
+                sign_count,
+                device_type,
+                backed_up,
+                transports,
+                nome_dispositivo,
+                created_at,
+                last_used_at
+            FROM admin_passkeys
+            WHERE utente_id = ?
+            ORDER BY created_at DESC
+        """), (user_id,))
+
+        return cur.fetchall()
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def save_admin_passkey(
+    user_id,
+    credential_id_b64url,
+    credential_public_key_b64,
+    sign_count,
+    device_type=None,
+    backed_up=0,
+    transports=None,
+    nome_dispositivo=None
+):
+    """
+    Salva una nuova passkey admin.
+    """
+    ensure_admin_passkeys_table()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            INSERT INTO admin_passkeys (
+                utente_id,
+                credential_id,
+                credential_public_key,
+                sign_count,
+                device_type,
+                backed_up,
+                transports,
+                nome_dispositivo
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """), (
+            user_id,
+            credential_id_b64url,
+            credential_public_key_b64,
+            int(sign_count or 0),
+            device_type,
+            1 if backed_up else 0,
+            json.dumps(transports or []),
+            nome_dispositivo
+        ))
+
+        conn.commit()
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 # ==========================================================
 # 🔹 ADMIN COUNTERS (Annunci e Recensioni in attesa)
 # ==========================================================
@@ -1490,6 +1594,147 @@ def admin_passkey_setup_db():
     ensure_admin_passkeys_table()
     flash("Tabella passkey admin pronta.", "success")
     return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/passkey")
+@admin_required
+def admin_passkey_page():
+    """
+    Pagina admin per registrare e vedere le passkey abilitate.
+    """
+    passkeys = get_admin_passkeys_for_user(g.utente["id"])
+
+    return render_template(
+        "admin_passkey.html",
+        passkeys=passkeys
+    )
+
+
+@app.route("/admin/passkey/register/options", methods=["POST"])
+@admin_required
+def admin_passkey_register_options():
+    """
+    Genera le opzioni WebAuthn per registrare una nuova passkey admin.
+    """
+    verify_csrf()
+    ensure_admin_passkeys_table()
+
+    user_id = int(g.utente["id"])
+    username = g.utente["username"] or f"admin-{user_id}"
+
+    existing = get_admin_passkeys_for_user(user_id)
+
+    exclude_credentials = []
+    for p in existing:
+        try:
+            exclude_credentials.append(
+                PublicKeyCredentialDescriptor(
+                    id=base64url_to_bytes(p["credential_id"]),
+                    transports=json.loads(p["transports"] or "[]")
+                )
+            )
+        except Exception:
+            pass
+
+    options = generate_registration_options(
+        rp_id=WEBAUTHN_RP_ID,
+        rp_name=WEBAUTHN_RP_NAME,
+        user_id=str(user_id).encode("utf-8"),
+        user_name=username,
+        user_display_name=username,
+        exclude_credentials=exclude_credentials,
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            resident_key=ResidentKeyRequirement.PREFERRED,
+            user_verification=UserVerificationRequirement.REQUIRED,
+        ),
+    )
+
+    session["admin_passkey_registration_challenge"] = base64.b64encode(
+        options.challenge
+    ).decode()
+
+    session.modified = True
+
+    return app.response_class(
+        options_to_json(options),
+        mimetype="application/json"
+    )
+
+
+@app.route("/admin/passkey/register/verify", methods=["POST"])
+@admin_required
+def admin_passkey_register_verify():
+    """
+    Verifica la risposta del browser e salva la passkey admin.
+    """
+    verify_csrf()
+    ensure_admin_passkeys_table()
+
+    challenge_b64 = session.get("admin_passkey_registration_challenge")
+    if not challenge_b64:
+        return jsonify({
+            "ok": False,
+            "error": "Sfida passkey scaduta. Riprova."
+        }), 400
+
+    expected_challenge = base64.b64decode(challenge_b64)
+
+    data = request.get_json(silent=True) or {}
+
+    nome_dispositivo = (
+        data.pop("nome_dispositivo", None)
+        or request.headers.get("User-Agent", "Dispositivo")
+    )
+
+    try:
+        credential = RegistrationCredential.parse_raw(json.dumps(data))
+
+        verification = verify_registration_response(
+            credential=credential,
+            expected_challenge=expected_challenge,
+            expected_rp_id=WEBAUTHN_RP_ID,
+            expected_origin=WEBAUTHN_EXPECTED_ORIGIN,
+            require_user_verification=True,
+        )
+
+        credential_id_b64url = data.get("id")
+
+        credential_public_key_b64 = base64.b64encode(
+            verification.credential_public_key
+        ).decode()
+
+        transports = []
+        try:
+            transports = data.get("response", {}).get("transports") or []
+        except Exception:
+            transports = []
+
+        save_admin_passkey(
+            user_id=int(g.utente["id"]),
+            credential_id_b64url=credential_id_b64url,
+            credential_public_key_b64=credential_public_key_b64,
+            sign_count=verification.sign_count,
+            device_type=str(verification.credential_device_type),
+            backed_up=bool(verification.credential_backed_up),
+            transports=transports,
+            nome_dispositivo=nome_dispositivo
+        )
+
+        session.pop("admin_passkey_registration_challenge", None)
+        session.modified = True
+
+        return jsonify({
+            "ok": True
+        })
+
+    except Exception as e:
+        print("❌ Errore registrazione passkey admin:", repr(e), flush=True)
+        traceback.print_exc()
+
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 400
 
 @app.route("/admin/counters")
 @admin_required
