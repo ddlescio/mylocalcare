@@ -8624,8 +8624,6 @@ def elimina_account_step2():
                     sospeso = 1,
                     disattivato_admin = 1,
                     token_verifica = NULL,
-                    reset_token = NULL,
-                    reset_token_scadenza = NULL,
                     admin_session_token = NULL,
                     admin_session_expiry = NULL,
                     admin_browser_fingerprint = NULL,
