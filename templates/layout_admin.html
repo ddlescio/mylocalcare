@@ -113,6 +113,17 @@
         <span>Notifiche</span>
       </a>
 
+      <a href="{{ url_for('admin_passkey_page') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/passkey') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>🔐</span>
+        <span>Passkey admin</span>
+      </a>      
+
       <a href="{{ url_for('admin_servizi') }}"
          class="flex items-center gap-2 px-3 py-2 rounded-xl
                 {% if current.startswith('/admin/servizi') %}

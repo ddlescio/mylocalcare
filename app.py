@@ -1478,6 +1478,46 @@ def save_admin_passkey(
         except Exception:
             pass
 
+def delete_admin_passkey_for_user(passkey_id, user_id):
+    """
+    Elimina una passkey admin appartenente all'utente indicato.
+    Non permette di eliminare passkey di altri admin.
+    """
+    ensure_admin_passkeys_table()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            DELETE FROM admin_passkeys
+            WHERE id = ?
+              AND utente_id = ?
+        """), (
+            int(passkey_id),
+            int(user_id)
+        ))
+
+        conn.commit()
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 # ==========================================================
 # 🔹 ADMIN COUNTERS (Annunci e Recensioni in attesa)
 # ==========================================================
@@ -1663,7 +1703,7 @@ def admin_unlock():
         }), 403
 
     return render_template("admin_unlock.html", next_url=next_url)
-    
+
 @app.route("/admin/passkey")
 @admin_required
 def admin_passkey_page():
@@ -1677,6 +1717,28 @@ def admin_passkey_page():
         passkeys=passkeys
     )
 
+@app.route("/admin/passkey/<int:passkey_id>/elimina", methods=["POST"])
+@admin_required
+def admin_passkey_delete(passkey_id):
+    """
+    Elimina una passkey admin registrata.
+    """
+    verify_csrf()
+
+    try:
+        delete_admin_passkey_for_user(
+            passkey_id=passkey_id,
+            user_id=g.utente["id"]
+        )
+
+        flash("Passkey rimossa correttamente.", "success")
+
+    except Exception as e:
+        print("❌ Errore eliminazione passkey admin:", repr(e), flush=True)
+        traceback.print_exc()
+        flash("Errore durante la rimozione della passkey.", "error")
+
+    return redirect(url_for("admin_passkey_page"))
 
 @app.route("/admin/passkey/register/options", methods=["POST"])
 @admin_required
