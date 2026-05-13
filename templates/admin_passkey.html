@@ -67,12 +67,30 @@
           Per sicurezza verranno mostrati solo questa volta. Copiali e conservali offline.
         </p>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="recovery-codes-list">
           {% for code in recovery_codes_generati %}
-            <code class="block rounded-lg bg-white border px-3 py-2 text-sm font-mono text-gray-800">
+            <code
+              class="admin-recovery-code block rounded-lg bg-white border px-3 py-2 text-sm font-mono text-gray-800"
+              data-code="{{ code }}"
+            >
               {{ code }}
             </code>
           {% endfor %}
+        </div>
+
+        <div class="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <button
+            type="button"
+            id="copy-recovery-codes-btn"
+            class="inline-flex items-center justify-center rounded-xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white hover:bg-amber-700 transition"
+          >
+            Copia tutti i codici
+          </button>
+
+          <p
+            id="copy-recovery-codes-msg"
+            class="text-sm text-amber-800 hidden"
+          ></p>
         </div>
       </div>
     {% endif %}
@@ -292,5 +310,73 @@ async function registraPasskeyAdmin() {
 document
   .getElementById("btn-registra-passkey")
   .addEventListener("click", registraPasskeyAdmin);
+
+async function copiaRecoveryCodes() {
+  const codes = Array.from(document.querySelectorAll(".admin-recovery-code"))
+    .map((el) => el.dataset.code || el.textContent.trim())
+    .filter(Boolean);
+
+  const msg = document.getElementById("copy-recovery-codes-msg");
+
+  if (!codes.length) {
+    if (msg) {
+      msg.textContent = "Nessun codice da copiare.";
+      msg.classList.remove("hidden");
+    }
+    return;
+  }
+
+  const testo = codes.join("\n");
+
+  try {
+    await navigator.clipboard.writeText(testo);
+
+    if (msg) {
+      msg.textContent = "Codici copiati negli appunti. Salvali subito in un posto sicuro.";
+      msg.classList.remove("hidden", "text-red-600");
+      msg.classList.add("text-amber-800");
+    }
+
+  } catch (err) {
+    console.error("Errore copia recovery codes:", err);
+
+    // Fallback per browser che bloccano navigator.clipboard
+    const textarea = document.createElement("textarea");
+    textarea.value = testo;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "-9999px";
+
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+      document.execCommand("copy");
+
+      if (msg) {
+        msg.textContent = "Codici copiati negli appunti. Salvali subito in un posto sicuro.";
+        msg.classList.remove("hidden", "text-red-600");
+        msg.classList.add("text-amber-800");
+      }
+
+    } catch (fallbackErr) {
+      if (msg) {
+        msg.textContent = "Impossibile copiare automaticamente. Seleziona i codici e copiali manualmente.";
+        msg.classList.remove("hidden", "text-amber-800");
+        msg.classList.add("text-red-600");
+      }
+
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+}
+
+const copyRecoveryCodesBtn = document.getElementById("copy-recovery-codes-btn");
+
+if (copyRecoveryCodesBtn) {
+  copyRecoveryCodesBtn.addEventListener("click", copiaRecoveryCodes);
+}
 </script>
 {% endblock %}
