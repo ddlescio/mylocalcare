@@ -1639,8 +1639,11 @@ def admin_required(view_func):
 def admin_unlock():
     """
     Sblocco temporaneo area admin.
-    Step provvisorio: conferma password.
-    Step successivo: sostituiremo questo POST con WebAuthn / passkey biometrica.
+
+    Da ora lo sblocco admin NON accetta più password.
+    L'unico metodo valido è la passkey WebAuthn tramite:
+    - /admin/passkey/auth/options
+    - /admin/passkey/auth/verify
     """
 
     next_url = request.args.get("next") or url_for("admin_dashboard")
@@ -1648,27 +1651,19 @@ def admin_unlock():
     if not next_url.startswith("/admin"):
         next_url = url_for("admin_dashboard")
 
+    # 🔒 Blocco definitivo del vecchio sblocco con password.
+    # Anche se nel template esistesse ancora un form password,
+    # il backend non lo accetta più.
     if request.method == "POST":
         verify_csrf()
 
-        password = request.form.get("password", "")
-
-        conn = get_db_connection()
-        cur = get_cursor(conn)
-        cur.execute(sql("SELECT password FROM utenti WHERE id = ?"), (g.utente["id"],))
-        row = cur.fetchone()
-
-        if not row or not check_password_hash(row["password"], password):
-            flash("Password non valida.", "error")
-            return redirect(url_for("admin_unlock", next=next_url))
-
-        mark_admin_stepup_verified()
-
-        flash("Area amministratore sbloccata.", "success")
-        return redirect(next_url)
+        return jsonify({
+            "ok": False,
+            "error": "Lo sblocco admin con password è disabilitato. Usa la passkey."
+        }), 403
 
     return render_template("admin_unlock.html", next_url=next_url)
-
+    
 @app.route("/admin/passkey")
 @admin_required
 def admin_passkey_page():
