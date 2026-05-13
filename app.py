@@ -1891,6 +1891,7 @@ def admin_required(view_func):
             "admin_unlock",
             "admin_passkey_auth_options",
             "admin_passkey_auth_verify",
+            "admin_recovery_code_verify",
         }
 
         if request.endpoint not in stepup_exempt_endpoints and not admin_stepup_is_valid():
