@@ -1941,15 +1941,63 @@ def admin_unlock():
 @admin_required
 def admin_passkey_page():
     """
-    Pagina admin per registrare e vedere le passkey abilitate.
+    Pagina admin per registrare e vedere le passkey abilitate
+    e controllare lo stato dei codici di recupero.
     """
-    passkeys = get_admin_passkeys_for_user(g.utente["id"])
+    user_id = int(g.utente["id"])
+
+    passkeys = get_admin_passkeys_for_user(user_id)
+    recovery_codes_disponibili = count_unused_admin_recovery_codes(user_id)
 
     return render_template(
         "admin_passkey.html",
-        passkeys=passkeys
+        passkeys=passkeys,
+        recovery_codes_disponibili=recovery_codes_disponibili,
+        recovery_codes_generati=None
     )
 
+@app.route("/admin/passkey/recovery-codes/genera", methods=["POST"])
+@admin_required
+def admin_generate_recovery_codes():
+    """
+    Genera nuovi codici di recupero admin.
+
+    I codici vengono mostrati in chiaro solo una volta,
+    subito dopo la generazione. Nel database viene salvato
+    solo l'hash.
+    """
+    verify_csrf()
+
+    user_id = int(g.utente["id"])
+
+    try:
+        recovery_codes = generate_admin_recovery_codes(
+            user_id=user_id,
+            count=8
+        )
+
+        passkeys = get_admin_passkeys_for_user(user_id)
+        recovery_codes_disponibili = count_unused_admin_recovery_codes(user_id)
+
+        flash(
+            "Nuovi codici di recupero generati. Salvali ora: non saranno più mostrati.",
+            "warning"
+        )
+
+        return render_template(
+            "admin_passkey.html",
+            passkeys=passkeys,
+            recovery_codes_disponibili=recovery_codes_disponibili,
+            recovery_codes_generati=recovery_codes
+        )
+
+    except Exception as e:
+        print("❌ Errore generazione recovery codes admin:", repr(e), flush=True)
+        traceback.print_exc()
+
+        flash("Errore durante la generazione dei codici di recupero.", "error")
+        return redirect(url_for("admin_passkey_page"))
+        
 @app.route("/admin/passkey/<int:passkey_id>/elimina", methods=["POST"])
 @admin_required
 def admin_passkey_delete(passkey_id):
@@ -11371,7 +11419,7 @@ if APP_RUNTIME_ROLE == "web":
         print("✅ Tabelle sicurezza admin verificate", flush=True)
     except Exception as e:
         print("⚠️ Verifica tabelle sicurezza admin non completata al bootstrap:", repr(e), flush=True)
-        
+
 if app.config["IS_REALTIME_SERVER"]:
     register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 

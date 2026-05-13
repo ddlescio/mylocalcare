@@ -42,6 +42,58 @@
     <p id="passkey-status" class="mt-4 text-sm text-gray-600"></p>
   </div>
 
+  <div class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">
+      🧯 Codici di recupero
+    </h2>
+
+    <p class="text-sm text-gray-600 leading-relaxed">
+      I codici di recupero servono per sbloccare l’area admin se perdi l’accesso alle passkey registrate.
+      Ogni codice può essere usato una sola volta.
+    </p>
+
+    <div class="mt-4 rounded-xl border bg-gray-50 px-4 py-3 text-sm text-gray-700">
+      Codici ancora disponibili:
+      <strong>{{ recovery_codes_disponibili or 0 }}</strong>
+    </div>
+
+    {% if recovery_codes_generati %}
+      <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div class="font-semibold text-amber-900 mb-2">
+          Salva questi codici ora
+        </div>
+
+        <p class="text-sm text-amber-800 mb-4">
+          Per sicurezza verranno mostrati solo questa volta. Copiali e conservali offline.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {% for code in recovery_codes_generati %}
+            <code class="block rounded-lg bg-white border px-3 py-2 text-sm font-mono text-gray-800">
+              {{ code }}
+            </code>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <form
+      method="POST"
+      action="{{ url_for('admin_generate_recovery_codes') }}"
+      class="mt-5"
+      onsubmit="return confirm('Generare nuovi codici invaliderà tutti i codici di recupero precedenti. Continuare?');"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <button
+        type="submit"
+        class="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-800 hover:bg-amber-100 transition"
+      >
+        Genera nuovi codici di recupero
+      </button>
+    </form>
+  </div>
+
   <div class="bg-white rounded-2xl shadow-sm border p-6">
     <h2 class="text-lg font-semibold text-gray-800 mb-4">
       Passkey registrate
@@ -234,7 +286,7 @@ async function registraPasskeyAdmin() {
 
     status.textContent = "Errore: " + messaggioErrore;
     status.className = "mt-4 text-sm text-red-600";
-  }  
+  }
 }
 
 document
