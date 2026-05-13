@@ -1209,6 +1209,175 @@ def foto_obbligatoria(f):
     return wrapper
 
 # ==========================================================
+# 🔐 ADMIN SECURITY VERSION — INVALIDAZIONE SESSIONI SENSIBILI
+# ==========================================================
+
+def ensure_admin_security_version_column():
+    """
+    Aggiunge alla tabella utenti una versione di sicurezza admin.
+
+    Serve per invalidare globalmente tutte le sessioni admin sensibili
+    dopo eventi critici:
+    - generazione nuovi recovery code
+    - uso recovery code
+    - registrazione/rimozione passkey
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                ALTER TABLE utenti
+                ADD COLUMN IF NOT EXISTS admin_security_version INTEGER DEFAULT 0
+            """)
+        else:
+            cur.execute("PRAGMA table_info(utenti)")
+            columns = [row["name"] for row in cur.fetchall()]
+
+            if "admin_security_version" not in columns:
+                cur.execute("""
+                    ALTER TABLE utenti
+                    ADD COLUMN admin_security_version INTEGER DEFAULT 0
+                """)
+
+        cur.execute(sql("""
+            UPDATE utenti
+            SET admin_security_version = 0
+            WHERE admin_security_version IS NULL
+        """))
+
+        conn.commit()
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def get_admin_security_version(user_id):
+    """
+    Legge la versione sicurezza admin corrente dal DB.
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT COALESCE(admin_security_version, 0) AS admin_security_version
+            FROM utenti
+            WHERE id = ?
+            LIMIT 1
+        """), (int(user_id),))
+
+        row = cur.fetchone()
+
+        if not row:
+            return 0
+
+        return int(row["admin_security_version"] or 0)
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def bump_admin_security_version(user_id, reason="security_change"):
+    """
+    Incrementa la versione sicurezza admin.
+
+    Effetto:
+    - tutte le vecchie sessioni admin con versione precedente decadono;
+    - la sessione corrente viene aggiornata alla nuova versione, così l'admin
+      che ha eseguito l'azione non viene buttato fuori subito.
+
+    Nota:
+    questa funzione NON richiama get_admin_security_version() per evitare
+    aperture/chiusure annidate della stessa connessione di request.
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                UPDATE utenti
+                SET admin_security_version = COALESCE(admin_security_version, 0) + 1
+                WHERE id = %s
+                RETURNING admin_security_version
+            """, (int(user_id),))
+
+            row = cur.fetchone()
+            nuova_versione = int(row["admin_security_version"] if hasattr(row, "keys") else row[0])
+
+        else:
+            cur.execute("""
+                UPDATE utenti
+                SET admin_security_version = COALESCE(admin_security_version, 0) + 1
+                WHERE id = ?
+            """, (int(user_id),))
+
+            cur.execute("""
+                SELECT COALESCE(admin_security_version, 0) AS admin_security_version
+                FROM utenti
+                WHERE id = ?
+                LIMIT 1
+            """, (int(user_id),))
+
+            row = cur.fetchone()
+            nuova_versione = int(row["admin_security_version"] if hasattr(row, "keys") else row[0])
+
+        conn.commit()
+
+        session["admin_security_version"] = nuova_versione
+        session.modified = True
+
+        print(
+            "🔐 [ADMIN SECURITY VERSION] incrementata",
+            {
+                "user_id": int(user_id),
+                "reason": reason,
+                "new_version": nuova_versione
+            },
+            flush=True
+        )
+
+        return nuova_versione
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+# ==========================================================
 # 🔐 ADMIN PASSKEYS — STORAGE CHIAVI PUBBLICHE
 # ==========================================================
 
@@ -1843,6 +2012,32 @@ def admin_required(view_func):
             session.clear()
             return redirect(url_for("login"))
 
+        # 🔐 Verifica versione sicurezza admin
+        session_admin_security_version = session.get("admin_security_version")
+
+        db_admin_security_version = (
+            row["admin_security_version"]
+            if "admin_security_version" in row.keys() and row["admin_security_version"] is not None
+            else 0
+        )
+
+        try:
+            session_admin_security_version = int(session_admin_security_version)
+            db_admin_security_version = int(db_admin_security_version)
+        except Exception:
+            flash("Sessione amministratore non valida. Esegui di nuovo il login.", "error")
+            session.clear()
+            return redirect(url_for("login"))
+
+        if session_admin_security_version != db_admin_security_version:
+            flash(
+                "La sessione amministratore è stata invalidata per una modifica di sicurezza. "
+                "Esegui di nuovo il login.",
+                "warning"
+            )
+            session.clear()
+            return redirect(url_for("login"))
+
         # 🔐 Verifica impronta browser
         session_fp = session.get("admin_browser_fingerprint")
         current_fp = request.headers.get("User-Agent", "unknown")
@@ -1977,6 +2172,11 @@ def admin_generate_recovery_codes():
             count=8
         )
 
+        bump_admin_security_version(
+            user_id=user_id,
+            reason="generate_recovery_codes"
+        )
+
         passkeys = get_admin_passkeys_for_user(user_id)
         recovery_codes_disponibili = count_unused_admin_recovery_codes(user_id)
 
@@ -2037,7 +2237,17 @@ def admin_passkey_delete(passkey_id):
             user_id=user_id
         )
 
-        flash("Passkey rimossa correttamente.", "success")
+        bump_admin_security_version(
+            user_id=user_id,
+            reason="delete_admin_passkey"
+        )
+
+        clear_admin_stepup()
+
+        flash(
+            "Passkey rimossa correttamente. Per sicurezza dovrai confermare di nuovo l’accesso admin.",
+            "success"
+        )
 
     except Exception as e:
         print("❌ Errore eliminazione passkey admin:", repr(e), flush=True)
@@ -2153,7 +2363,13 @@ def admin_passkey_register_verify():
             nome_dispositivo=nome_dispositivo
         )
 
+        bump_admin_security_version(
+            user_id=int(g.utente["id"]),
+            reason="register_admin_passkey"
+        )
+
         session.pop("admin_passkey_registration_challenge", None)
+        clear_admin_stepup()
         session.modified = True
 
         return jsonify({
@@ -2784,7 +3000,14 @@ def admin_recovery_code_verify():
         # ✅ Codice valido: azzera rate limit
         clear_admin_recovery_rate_limit(user_id)
 
-        # ✅ Sblocca temporaneamente admin
+        # 🔐 Un recovery code è un evento critico:
+        # invalida tutte le altre sessioni admin sensibili.
+        bump_admin_security_version(
+            user_id=user_id,
+            reason="recovery_code_used"
+        )
+
+        # ✅ Sblocca temporaneamente admin solo per la sessione corrente
         mark_admin_stepup_verified()
         session.modified = True
 
@@ -2836,7 +3059,7 @@ def admin_recovery_code_verify():
             conn.close()
         except Exception:
             pass
-            
+
 @app.route("/admin/counters")
 @admin_required
 def admin_counters():
@@ -8269,6 +8492,12 @@ def login():
             session_token = secrets.token_hex(32)
             expiry = (datetime.now(timezone.utc) + timedelta(hours=12)).isoformat()
 
+            admin_security_version = int(
+                utente["admin_security_version"]
+                if "admin_security_version" in utente.keys() and utente["admin_security_version"] is not None
+                else 0
+            )
+
             conn = get_db_connection()
 
             conn.execute(sql("""
@@ -8279,6 +8508,7 @@ def login():
             conn.commit()
 
             session["admin_session_token"] = session_token
+            session["admin_security_version"] = admin_security_version
 
         browser_fingerprint = request.headers.get("User-Agent", "unknown")
 
@@ -10033,9 +10263,22 @@ def modifica_password():
 
         # 🔹 Aggiorna SOLO l'hash della password
         hash_pw = generate_password_hash(nuova_pw)
-        cur.execute(sql("UPDATE utenti SET password = ? WHERE id = ?"), (hash_pw, session["utente_id"]))
+        cur.execute(
+            sql("UPDATE utenti SET password = ? WHERE id = ?"),
+            (hash_pw, session["utente_id"])
+        )
         conn.commit()
 
+        # 🔐 Se è un admin, il cambio password è un evento critico:
+        # invalida tutte le altre sessioni admin sensibili.
+        if g.utente and "ruolo" in g.utente.keys() and g.utente["ruolo"] == "admin":
+            bump_admin_security_version(
+                user_id=session["utente_id"],
+                reason="admin_password_changed"
+            )
+
+            # Dopo un cambio password, richiediamo un nuovo step-up alla prossima azione admin sensibile.
+            clear_admin_stepup()
 
         flash("Password aggiornata con successo!", "success")
         return redirect(url_for("impostazioni"))
@@ -11851,6 +12094,7 @@ def chat_count_unread(user_id):
 # in quel caso la tabella va verificata tramite nuovo deploy o migrazione manuale.
 if APP_RUNTIME_ROLE == "web":
     try:
+        ensure_admin_security_version_column()
         ensure_admin_passkeys_table()
         ensure_admin_recovery_codes_table()
         print("✅ Tabelle sicurezza admin verificate", flush=True)
@@ -12044,6 +12288,8 @@ def cleanup_video_calls():
 
 # 🔥 Avvia cleanup UNA SOLA VOLTA all’avvio del worker
 socketio.start_background_task(cleanup_video_calls)
+
+
 # ==========================================================
 # 7️⃣ AVVIO SERVER
 # ==========================================================
