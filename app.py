@@ -8615,19 +8615,13 @@ def password_dimenticata():
                 "X-Entity-Ref-ID": secrets.token_hex(16)
             }
 
-            html = render_template(
-                "email/reset_password.html",
-                nome=utente["nome"],
-                link=reset_url
-            )
-
-            msg.html = html
             msg.body = (
                 f"Ciao {utente['nome']},\n\n"
-                "hai richiesto la reimpostazione della password del tuo account MyLocalCare.\n\n"
-                f"Puoi scegliere una nuova password da questo link:\n{reset_url}\n\n"
+                "hai richiesto di reimpostare la password del tuo account MyLocalCare.\n\n"
+                "Per scegliere una nuova password, apri questo link:\n"
+                f"{reset_url}\n\n"
                 "Il link è valido per 1 ora e può essere usato una sola volta.\n\n"
-                "Se non hai richiesto tu questa operazione, puoi ignorare questa email: "
+                "Se non hai richiesto tu questa operazione, puoi ignorare questo messaggio: "
                 "la tua password attuale resterà invariata.\n\n"
                 "MyLocalCare\n"
                 "https://www.mylocalcare.it"
