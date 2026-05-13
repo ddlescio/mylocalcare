@@ -2401,6 +2401,229 @@ def admin_passkey_auth_verify():
             "error": str(e)
         }), 400
 
+# ==========================================================
+# 🔐 ADMIN RECOVERY CODE — RATE LIMIT + ALERT SICUREZZA
+# ==========================================================
+
+ADMIN_RECOVERY_MAX_ATTEMPTS_USER = 5
+ADMIN_RECOVERY_MAX_ATTEMPTS_IP = 12
+ADMIN_RECOVERY_WINDOW_SECONDS = 15 * 60  # 15 minuti
+
+
+def get_client_ip():
+    """
+    Recupera IP reale dietro proxy Render/Cloudflare-like.
+    Non lo usiamo come unica protezione, ma come secondo fattore di rate limit.
+    """
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+
+    real_ip = request.headers.get("X-Real-IP", "")
+    if real_ip:
+        return real_ip.strip()
+
+    return request.remote_addr or "unknown"
+
+
+def admin_recovery_rate_keys(user_id):
+    """
+    Rate limit separato:
+    - per utente admin
+    - per IP
+    Così blocchiamo sia brute force sul singolo account sia tentativi dallo stesso client.
+    """
+    ip = get_client_ip()
+
+    return {
+        "user": f"admin_recovery_rl:user:{int(user_id)}",
+        "ip": f"admin_recovery_rl:ip:{ip}",
+        "ip_value": ip
+    }
+
+
+def check_admin_recovery_rate_limit(user_id):
+    """
+    Ritorna:
+    - True, None se può tentare
+    - False, messaggio se deve essere bloccato
+    """
+    keys = admin_recovery_rate_keys(user_id)
+
+    try:
+        user_attempts_raw = redis_client.get(keys["user"])
+        ip_attempts_raw = redis_client.get(keys["ip"])
+
+        user_attempts = int(user_attempts_raw or 0)
+        ip_attempts = int(ip_attempts_raw or 0)
+
+        if user_attempts >= ADMIN_RECOVERY_MAX_ATTEMPTS_USER:
+            ttl = redis_client.ttl(keys["user"])
+            minuti = max(1, int((ttl or ADMIN_RECOVERY_WINDOW_SECONDS) / 60))
+            return False, f"Troppi tentativi non riusciti. Riprova tra circa {minuti} minuti."
+
+        if ip_attempts >= ADMIN_RECOVERY_MAX_ATTEMPTS_IP:
+            ttl = redis_client.ttl(keys["ip"])
+            minuti = max(1, int((ttl or ADMIN_RECOVERY_WINDOW_SECONDS) / 60))
+            return False, f"Troppi tentativi da questo dispositivo/rete. Riprova tra circa {minuti} minuti."
+
+        return True, None
+
+    except Exception as e:
+        # Fail-open: se Redis ha un problema non blocchiamo l'admin legittimo,
+        # ma logghiamo l'anomalia.
+        print("⚠️ Errore check_admin_recovery_rate_limit:", repr(e), flush=True)
+        return True, None
+
+
+def register_failed_admin_recovery_attempt(user_id):
+    """
+    Incrementa i contatori dopo un codice errato.
+    """
+    keys = admin_recovery_rate_keys(user_id)
+
+    try:
+        for key in (keys["user"], keys["ip"]):
+            current = redis_client.incr(key)
+
+            # Alla prima scrittura imposto la finestra temporale.
+            if current == 1:
+                redis_client.expire(key, ADMIN_RECOVERY_WINDOW_SECONDS)
+
+    except Exception as e:
+        print("⚠️ Errore register_failed_admin_recovery_attempt:", repr(e), flush=True)
+
+
+def clear_admin_recovery_rate_limit(user_id):
+    """
+    Cancella i contatori dopo un recovery code valido.
+    """
+    keys = admin_recovery_rate_keys(user_id)
+
+    try:
+        redis_client.delete(keys["user"])
+        redis_client.delete(keys["ip"])
+    except Exception as e:
+        print("⚠️ Errore clear_admin_recovery_rate_limit:", repr(e), flush=True)
+
+
+def notify_admin_recovery_code_used(user_id, recovery_code_id):
+    """
+    Avvisa l'admin che un recovery code è stato usato.
+
+    Importante:
+    - non blocca lo sblocco admin se email/notifica falliscono;
+    - non include mai il codice usato;
+    - salva una notifica interna e invia una email di sicurezza.
+    """
+    ip = get_client_ip()
+    user_agent = request.headers.get("User-Agent", "unknown")
+    quando = datetime.now(ZoneInfo("Europe/Rome")).strftime("%d/%m/%Y %H:%M:%S")
+
+    conn = None
+    cur = None
+
+    try:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+
+        cur.execute(sql("""
+            SELECT email, nome, username
+            FROM utenti
+            WHERE id = ?
+            LIMIT 1
+        """), (int(user_id),))
+
+        admin = cur.fetchone()
+
+        if not admin:
+            return
+
+        email_admin = admin["email"]
+        nome_admin = admin["nome"] or admin["username"] or "admin"
+
+        titolo = "Codice di recupero admin utilizzato"
+        messaggio = (
+            "È stato utilizzato un codice di recupero per sbloccare l’area amministratore.\n\n"
+            f"Data e ora: {quando}\n"
+            f"IP: {ip}\n"
+            f"Dispositivo/browser: {user_agent[:180]}\n\n"
+            "Se sei stato tu, non devi fare nulla. "
+            "Se non riconosci questa attività, accedi subito e rigenera i codici di recupero."
+        )
+
+        # Notifica interna
+        try:
+            _crea_notifica(
+                int(user_id),
+                titolo,
+                messaggio,
+                tipo="sicurezza",
+                link=url_for("admin_passkey_page")
+            )
+
+            emit_update_notifications(int(user_id))
+
+        except Exception as e:
+            print("⚠️ Errore notifica interna recovery code:", repr(e), flush=True)
+
+        # Email sicurezza
+        try:
+            msg = Message(
+                subject="Avviso sicurezza MyLocalCare: recovery code admin usato",
+                recipients=[email_admin],
+                sender=app.config.get("MAIL_DEFAULT_SENDER"),
+                reply_to=MAIL_FROM_ADDRESS
+            )
+
+            msg.body = (
+                f"Ciao {nome_admin},\n\n"
+                "ti informiamo che è stato utilizzato un codice di recupero per sbloccare "
+                "temporaneamente l’area amministratore di MyLocalCare.\n\n"
+                f"Data e ora: {quando}\n"
+                f"IP: {ip}\n"
+                f"Dispositivo/browser: {user_agent[:180]}\n\n"
+                "Se sei stato tu, puoi ignorare questa email.\n\n"
+                "Se non riconosci questa attività, accedi subito all’area admin, "
+                "rigenera i codici di recupero e verifica le passkey registrate.\n\n"
+                "MyLocalCare"
+            )
+
+            threading.Thread(
+                target=send_async_email,
+                args=(app, msg),
+                daemon=True
+            ).start()
+
+        except Exception as e:
+            print("⚠️ Errore email recovery code used:", repr(e), flush=True)
+
+        print(
+            "🔐 [ADMIN RECOVERY ALERT] alert inviato",
+            {
+                "user_id": int(user_id),
+                "recovery_code_id": int(recovery_code_id),
+                "ip": ip,
+            },
+            flush=True
+        )
+
+    except Exception as e:
+        print("⚠️ Errore notify_admin_recovery_code_used:", repr(e), flush=True)
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
+
 def normalize_admin_recovery_code(raw_code):
     """
     Normalizza un recovery code admin accettando:
@@ -2431,46 +2654,51 @@ def admin_recovery_code_verify():
     """
     Verifica un recovery code admin monouso.
 
-    Se il codice è valido:
-    - marca il codice come usato;
-    - registra used_at;
-    - sblocca temporaneamente l'area admin chiamando mark_admin_stepup_verified().
+    Protezioni:
+    - CSRF;
+    - rate limit per admin/user_id;
+    - rate limit per IP;
+    - codice monouso;
+    - alert email + notifica interna dopo uso valido.
     """
     verify_csrf()
 
     user_id = int(g.utente["id"])
-    data = request.get_json(silent=True) or {}
 
-    raw_code = (data.get("code") or request.form.get("recovery_code") or request.form.get("code") or "").strip().upper()
+    # 🔒 Rate limit PRIMA di controllare il codice
+    allowed, limit_message = check_admin_recovery_rate_limit(user_id)
+
+    if not allowed:
+        print(
+            "⛔ [ADMIN RECOVERY] rate limit attivo",
+            {
+                "user_id": user_id,
+                "ip": get_client_ip(),
+                "user_agent": request.headers.get("User-Agent", "")[:120]
+            },
+            flush=True
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": limit_message or "Troppi tentativi. Riprova più tardi."
+        }), 429
+
+    data = request.get_json(silent=True) or {}
+    raw_code = (data.get("code") or "").strip()
 
     if not raw_code:
+        register_failed_admin_recovery_attempt(user_id)
+
         return jsonify({
             "ok": False,
             "error": "Inserisci un codice di recupero."
         }), 400
 
-    # Normalizzazione solo per costruire varianti accettabili.
-    # IMPORTANTE:
-    # i codici attuali sono stati hashati nel formato completo:
-    # LC-XXXXXX-XXXXXX-XXXXXX
-    compact_code = normalize_admin_recovery_code(raw_code)
-
-    candidate_codes = []
-
-    # 1) codice così come incollato, ripulito dagli spazi
-    candidate_codes.append(raw_code.replace(" ", ""))
-
-    # 2) formato compatto senza LC e senza trattini
-    candidate_codes.append(compact_code)
-
-    # 3) formato ufficiale ricostruito: LC-XXXXXX-XXXXXX-XXXXXX
-    if re.fullmatch(r"[A-Z0-9]{18}", compact_code):
-        candidate_codes.append(
-            f"LC-{compact_code[0:6]}-{compact_code[6:12]}-{compact_code[12:18]}"
-        )
-
-    # elimina duplicati mantenendo l’ordine
-    candidate_codes = list(dict.fromkeys(candidate_codes))
+    # Normalizzazione coerente:
+    # accetta codice con spazi accidentali.
+    # Manteniamo il comportamento attuale per non rompere i codici già generati/testati.
+    normalized_code = raw_code.replace(" ", "").replace("-", "").strip().upper()
 
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -2490,18 +2718,34 @@ def admin_recovery_code_verify():
 
         for row in codes:
             try:
-                for candidate_code in candidate_codes:
-                    if check_password_hash(row["code_hash"], candidate_code):
-                        matched_code_id = int(row["id"])
-                        break
+                # Primo tentativo: comportamento attuale
+                if check_password_hash(row["code_hash"], normalized_code):
+                    matched_code_id = int(row["id"])
+                    break
 
-                if matched_code_id is not None:
+                # Secondo tentativo: compatibilità con codici salvati con trattini/prefisso LC-
+                # Utile se alcuni codici sono stati hashati nel formato visualizzato.
+                raw_upper = raw_code.strip().upper().replace(" ", "")
+                if check_password_hash(row["code_hash"], raw_upper):
+                    matched_code_id = int(row["id"])
                     break
 
             except Exception:
                 continue
-                
+
         if matched_code_id is None:
+            register_failed_admin_recovery_attempt(user_id)
+
+            print(
+                "❌ [ADMIN RECOVERY] codice non valido",
+                {
+                    "user_id": user_id,
+                    "ip": get_client_ip(),
+                    "user_agent": request.headers.get("User-Agent", "")[:120]
+                },
+                flush=True
+            )
+
             return jsonify({
                 "ok": False,
                 "error": "Codice di recupero non valido o già utilizzato."
@@ -2519,10 +2763,29 @@ def admin_recovery_code_verify():
             user_id
         ))
 
+        # Se per concorrenza il codice fosse già stato usato tra SELECT e UPDATE,
+        # non dobbiamo sbloccare.
+        try:
+            affected = cur.rowcount
+        except Exception:
+            affected = 1
+
+        if affected != 1:
+            conn.rollback()
+            register_failed_admin_recovery_attempt(user_id)
+
+            return jsonify({
+                "ok": False,
+                "error": "Codice di recupero già utilizzato."
+            }), 400
+
         conn.commit()
 
-        mark_admin_stepup_verified()
+        # ✅ Codice valido: azzera rate limit
+        clear_admin_recovery_rate_limit(user_id)
 
+        # ✅ Sblocca temporaneamente admin
+        mark_admin_stepup_verified()
         session.modified = True
 
         print(
@@ -2530,10 +2793,20 @@ def admin_recovery_code_verify():
             {
                 "user_id": user_id,
                 "recovery_code_id": matched_code_id,
+                "ip": get_client_ip(),
                 "user_agent": request.headers.get("User-Agent", "")[:120]
             },
             flush=True
         )
+
+        # ✅ Alert sicurezza, senza bloccare lo sblocco se fallisce
+        try:
+            notify_admin_recovery_code_used(
+                user_id=user_id,
+                recovery_code_id=matched_code_id
+            )
+        except Exception as e:
+            print("⚠️ Alert recovery code non inviato:", repr(e), flush=True)
 
         return jsonify({
             "ok": True
@@ -2563,7 +2836,7 @@ def admin_recovery_code_verify():
             conn.close()
         except Exception:
             pass
-
+            
 @app.route("/admin/counters")
 @admin_required
 def admin_counters():
