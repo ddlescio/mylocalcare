@@ -20,7 +20,7 @@
       </p>
     </div>
 
-    <!-- 🔐 SBLOCCO SOLO CON PASSKEY -->
+    <!-- 🔐 SBLOCCO CON PASSKEY -->
     <div>
       <button
         type="button"
@@ -34,10 +34,45 @@
       <p id="admin-passkey-unlock-msg" class="text-sm mt-3 hidden"></p>
     </div>
 
+    <!-- Separatore -->
+    <div class="flex items-center gap-3 my-6">
+      <div class="h-px bg-gray-200 flex-1"></div>
+      <span class="text-xs text-gray-400 uppercase tracking-wide">oppure</span>
+      <div class="h-px bg-gray-200 flex-1"></div>
+    </div>
+
+    <!-- 🧯 SBLOCCO CON RECOVERY CODE -->
+    <div class="rounded-xl border border-gray-200 p-4 bg-gray-50">
+      <label for="admin-recovery-code" class="block text-sm font-semibold text-gray-700 mb-2">
+        Codice di recupero admin
+      </label>
+
+      <input
+        id="admin-recovery-code"
+        type="text"
+        inputmode="text"
+        autocomplete="one-time-code"
+        placeholder="Inserisci un recovery code"
+        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+      >
+
+      <button
+        type="button"
+        id="admin-recovery-unlock-btn"
+        class="mt-3 w-full rounded-xl bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold py-3 flex items-center justify-center gap-2 transition"
+      >
+        <span>🧯</span>
+        <span>Sblocca con codice di recupero</span>
+      </button>
+
+      <p id="admin-recovery-unlock-msg" class="text-sm mt-3 hidden"></p>
+    </div>
+
     <div class="mt-5 rounded-xl bg-gray-50 border border-gray-100 p-4">
       <p class="text-xs text-gray-500 leading-relaxed">
         Lo sblocco resta valido solo temporaneamente su questo dispositivo.
         La password dell’account non può essere usata per sbloccare l’area amministratore.
+        Ogni codice di recupero può essere usato una sola volta.
       </p>
     </div>
 
@@ -46,25 +81,42 @@
 
 <script>
 (function () {
-  const btn = document.getElementById("admin-passkey-unlock-btn");
-  const msg = document.getElementById("admin-passkey-unlock-msg");
+  const passkeyBtn = document.getElementById("admin-passkey-unlock-btn");
+  const passkeyMsg = document.getElementById("admin-passkey-unlock-msg");
+
+  const recoveryBtn = document.getElementById("admin-recovery-unlock-btn");
+  const recoveryInput = document.getElementById("admin-recovery-code");
+  const recoveryMsg = document.getElementById("admin-recovery-unlock-msg");
+
   const csrfToken = "{{ csrf_token() }}";
   const nextUrl = "{{ next_url }}";
 
-  if (!btn || !msg) return;
+  function showMsg(el, text, type) {
+    if (!el) return;
 
-  function showMsg(text, type) {
-    msg.classList.remove("hidden", "text-red-600", "text-green-600", "text-gray-500");
+    el.classList.remove("hidden", "text-red-600", "text-green-600", "text-gray-500");
 
     if (type === "success") {
-      msg.classList.add("text-green-600");
+      el.classList.add("text-green-600");
     } else if (type === "error") {
-      msg.classList.add("text-red-600");
+      el.classList.add("text-red-600");
     } else {
-      msg.classList.add("text-gray-500");
+      el.classList.add("text-gray-500");
     }
 
-    msg.textContent = text;
+    el.textContent = text;
+  }
+
+  function setButtonLoading(btn, loading) {
+    if (!btn) return;
+
+    btn.disabled = loading;
+
+    if (loading) {
+      btn.classList.add("opacity-60", "cursor-not-allowed");
+    } else {
+      btn.classList.remove("opacity-60", "cursor-not-allowed");
+    }
   }
 
   function base64urlToBuffer(base64url) {
@@ -126,67 +178,120 @@
     };
   }
 
-  btn.addEventListener("click", async function () {
-    if (!window.PublicKeyCredential || !navigator.credentials) {
-      showMsg("Questo browser non supporta le passkey.", "error");
+  if (passkeyBtn && passkeyMsg) {
+    passkeyBtn.addEventListener("click", async function () {
+      if (!window.PublicKeyCredential || !navigator.credentials) {
+        showMsg(passkeyMsg, "Questo browser non supporta le passkey.", "error");
+        return;
+      }
+
+      setButtonLoading(passkeyBtn, true);
+      showMsg(passkeyMsg, "Richiesta passkey in corso…", "info");
+
+      try {
+        const optionsResponse = await fetch("{{ url_for('admin_passkey_auth_options') }}", {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": csrfToken
+          },
+          credentials: "same-origin"
+        });
+
+        const optionsData = await optionsResponse.json();
+
+        if (!optionsResponse.ok || optionsData.ok === false) {
+          throw new Error(optionsData.error || "Impossibile avviare la passkey.");
+        }
+
+        const publicKey = preparePublicKeyOptions(optionsData);
+
+        const assertion = await navigator.credentials.get({
+          publicKey: publicKey
+        });
+
+        const serialized = serializeAssertion(assertion);
+
+        const verifyResponse = await fetch("{{ url_for('admin_passkey_auth_verify') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken
+          },
+          credentials: "same-origin",
+          body: JSON.stringify(serialized)
+        });
+
+        const verifyData = await verifyResponse.json();
+
+        if (!verifyResponse.ok || verifyData.ok !== true) {
+          throw new Error(verifyData.error || "Passkey non valida.");
+        }
+
+        showMsg(passkeyMsg, "Identità confermata. Accesso in corso…", "success");
+
+        window.location.href = nextUrl || "{{ url_for('admin_dashboard') }}";
+
+      } catch (err) {
+        console.error("Errore sblocco passkey admin:", err);
+        showMsg(passkeyMsg, err.message || "Sblocco con passkey non riuscito.", "error");
+        setButtonLoading(passkeyBtn, false);
+      }
+    });
+  }
+
+  async function unlockWithRecoveryCode() {
+    if (!recoveryInput || !recoveryBtn || !recoveryMsg) return;
+
+    const code = recoveryInput.value.trim();
+
+    if (!code) {
+      showMsg(recoveryMsg, "Inserisci un codice di recupero.", "error");
       return;
     }
 
-    btn.disabled = true;
-    btn.classList.add("opacity-60", "cursor-not-allowed");
-    showMsg("Richiesta passkey in corso…", "info");
+    setButtonLoading(recoveryBtn, true);
+    showMsg(recoveryMsg, "Verifica codice in corso…", "info");
 
     try {
-      const optionsResponse = await fetch("{{ url_for('admin_passkey_auth_options') }}", {
-        method: "POST",
-        headers: {
-          "X-CSRF-Token": csrfToken
-        },
-        credentials: "same-origin"
-      });
-
-      const optionsData = await optionsResponse.json();
-
-      if (!optionsResponse.ok || optionsData.ok === false) {
-        throw new Error(optionsData.error || "Impossibile avviare la passkey.");
-      }
-
-      const publicKey = preparePublicKeyOptions(optionsData);
-
-      const assertion = await navigator.credentials.get({
-        publicKey: publicKey
-      });
-
-      const serialized = serializeAssertion(assertion);
-
-      const verifyResponse = await fetch("{{ url_for('admin_passkey_auth_verify') }}", {
+      const response = await fetch("{{ url_for('admin_recovery_code_verify') }}", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-CSRF-Token": csrfToken
         },
         credentials: "same-origin",
-        body: JSON.stringify(serialized)
+        body: JSON.stringify({
+          code: code
+        })
       });
 
-      const verifyData = await verifyResponse.json();
+      const data = await response.json();
 
-      if (!verifyResponse.ok || verifyData.ok !== true) {
-        throw new Error(verifyData.error || "Passkey non valida.");
+      if (!response.ok || data.ok !== true) {
+        throw new Error(data.error || "Codice di recupero non valido.");
       }
 
-      showMsg("Identità confermata. Accesso in corso…", "success");
+      showMsg(recoveryMsg, "Codice confermato. Accesso in corso…", "success");
 
       window.location.href = nextUrl || "{{ url_for('admin_dashboard') }}";
 
     } catch (err) {
-      console.error("Errore sblocco passkey admin:", err);
-      showMsg(err.message || "Sblocco con passkey non riuscito.", "error");
-
-      btn.disabled = false;
-      btn.classList.remove("opacity-60", "cursor-not-allowed");
+      console.error("Errore recovery code admin:", err);
+      showMsg(recoveryMsg, err.message || "Sblocco con codice non riuscito.", "error");
+      setButtonLoading(recoveryBtn, false);
     }
-  });
+  }
+
+  if (recoveryBtn && recoveryInput && recoveryMsg) {
+    recoveryBtn.addEventListener("click", unlockWithRecoveryCode);
+
+    recoveryInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        unlockWithRecoveryCode();
+      }
+    });
+  }
 })();
 </script>
 

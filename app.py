@@ -1997,7 +1997,7 @@ def admin_generate_recovery_codes():
 
         flash("Errore durante la generazione dei codici di recupero.", "error")
         return redirect(url_for("admin_passkey_page"))
-        
+
 @app.route("/admin/passkey/<int:passkey_id>/elimina", methods=["POST"])
 @admin_required
 def admin_passkey_delete(passkey_id):
@@ -2399,6 +2399,121 @@ def admin_passkey_auth_verify():
             "ok": False,
             "error": str(e)
         }), 400
+
+@app.route("/admin/recovery-code/verify", methods=["POST"])
+@admin_required
+def admin_recovery_code_verify():
+    """
+    Verifica un recovery code admin monouso.
+
+    Se il codice è valido:
+    - marca il codice come usato;
+    - registra used_at;
+    - sblocca temporaneamente l'area admin chiamando mark_admin_stepup_verified().
+    """
+    verify_csrf()
+
+    user_id = int(g.utente["id"])
+    data = request.get_json(silent=True) or {}
+
+    raw_code = (data.get("code") or "").strip()
+
+    if not raw_code:
+        return jsonify({
+            "ok": False,
+            "error": "Inserisci un codice di recupero."
+        }), 400
+
+    # Normalizzazione soft:
+    # permette all'admin di incollare il codice con spazi accidentali.
+    normalized_code = raw_code.replace(" ", "").replace("-", "").strip()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT id, code_hash, used
+            FROM admin_recovery_codes
+            WHERE utente_id = ?
+              AND used = 0
+            ORDER BY id ASC
+        """), (user_id,))
+
+        codes = cur.fetchall()
+
+        matched_code_id = None
+
+        for row in codes:
+            try:
+                if check_password_hash(row["code_hash"], normalized_code):
+                    matched_code_id = int(row["id"])
+                    break
+            except Exception:
+                continue
+
+        if matched_code_id is None:
+            return jsonify({
+                "ok": False,
+                "error": "Codice di recupero non valido o già utilizzato."
+            }), 400
+
+        cur.execute(sql(f"""
+            UPDATE admin_recovery_codes
+            SET used = 1,
+                used_at = {now_sql()}
+            WHERE id = ?
+              AND utente_id = ?
+              AND used = 0
+        """), (
+            matched_code_id,
+            user_id
+        ))
+
+        conn.commit()
+
+        mark_admin_stepup_verified()
+
+        session.modified = True
+
+        print(
+            "✅ [ADMIN RECOVERY] codice recovery usato",
+            {
+                "user_id": user_id,
+                "recovery_code_id": matched_code_id,
+                "user_agent": request.headers.get("User-Agent", "")[:120]
+            },
+            flush=True
+        )
+
+        return jsonify({
+            "ok": True
+        })
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        print("❌ Errore verifica recovery code admin:", repr(e), flush=True)
+        traceback.print_exc()
+
+        return jsonify({
+            "ok": False,
+            "error": "Errore durante la verifica del codice di recupero."
+        }), 500
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 @app.route("/admin/counters")
 @admin_required
