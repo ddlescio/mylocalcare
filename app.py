@@ -8601,7 +8601,7 @@ def password_dimenticata():
         # Invia email
         try:
             msg = Message(
-                subject="Accesso al tuo account MyLocalCare",
+                subject="Reimposta la password del tuo account MyLocalCare",
                 recipients=[email],
                 sender=app.config.get("MAIL_DEFAULT_SENDER"),
                 reply_to=MAIL_FROM_ADDRESS
@@ -8620,12 +8620,13 @@ def password_dimenticata():
             msg.html = html
             msg.body = (
                 f"Ciao {utente['nome']},\n\n"
-                "abbiamo ricevuto una richiesta per modificare l'accesso al tuo account MyLocalCare.\n\n"
-                f"Per completare la procedura apri questo link:\n{reset_url}\n\n"
+                "hai richiesto la reimpostazione della password del tuo account MyLocalCare.\n\n"
+                f"Puoi scegliere una nuova password da questo link:\n{reset_url}\n\n"
                 "Il link è valido per 1 ora e può essere usato una sola volta.\n\n"
-                "Se non hai richiesto questa modifica, puoi ignorare questo messaggio.\n\n"
-                "A presto,\n"
-                "Il team MyLocalCare"
+                "Se non hai richiesto tu questa operazione, puoi ignorare questa email: "
+                "la tua password attuale resterà invariata.\n\n"
+                "MyLocalCare\n"
+                "https://www.mylocalcare.it"
             )
 
             mail.send(msg)
