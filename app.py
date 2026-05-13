@@ -2401,6 +2401,30 @@ def admin_passkey_auth_verify():
             "error": str(e)
         }), 400
 
+def normalize_admin_recovery_code(raw_code):
+    """
+    Normalizza un recovery code admin accettando:
+    - LC-MSYD6H-EQ0IDC-53L9F4
+    - MSYD6H-EQ0IDC-53L9F4
+    - LCMSYD6HEQ0IDC53L9F4
+    - spazi accidentali
+    """
+    code = (raw_code or "").strip().upper()
+
+    # rimuove spazi
+    code = code.replace(" ", "")
+
+    # rimuove prefisso LC- se presente
+    if code.startswith("LC-"):
+        code = code[3:]
+    elif code.startswith("LC"):
+        code = code[2:]
+
+    # rimuove trattini
+    code = code.replace("-", "")
+
+    return code
+
 @app.route("/admin/recovery-code/verify", methods=["POST"])
 @admin_required
 def admin_recovery_code_verify():
@@ -2417,7 +2441,7 @@ def admin_recovery_code_verify():
     user_id = int(g.utente["id"])
     data = request.get_json(silent=True) or {}
 
-    raw_code = (data.get("code") or "").strip()
+    raw_code = (data.get("code") or request.form.get("recovery_code") or request.form.get("code") or "").strip().upper()
 
     if not raw_code:
         return jsonify({
@@ -2425,9 +2449,28 @@ def admin_recovery_code_verify():
             "error": "Inserisci un codice di recupero."
         }), 400
 
-    # Normalizzazione soft:
-    # permette all'admin di incollare il codice con spazi accidentali.
-    normalized_code = raw_code.replace(" ", "").replace("-", "").strip()
+    # Normalizzazione solo per costruire varianti accettabili.
+    # IMPORTANTE:
+    # i codici attuali sono stati hashati nel formato completo:
+    # LC-XXXXXX-XXXXXX-XXXXXX
+    compact_code = normalize_admin_recovery_code(raw_code)
+
+    candidate_codes = []
+
+    # 1) codice così come incollato, ripulito dagli spazi
+    candidate_codes.append(raw_code.replace(" ", ""))
+
+    # 2) formato compatto senza LC e senza trattini
+    candidate_codes.append(compact_code)
+
+    # 3) formato ufficiale ricostruito: LC-XXXXXX-XXXXXX-XXXXXX
+    if re.fullmatch(r"[A-Z0-9]{18}", compact_code):
+        candidate_codes.append(
+            f"LC-{compact_code[0:6]}-{compact_code[6:12]}-{compact_code[12:18]}"
+        )
+
+    # elimina duplicati mantenendo l’ordine
+    candidate_codes = list(dict.fromkeys(candidate_codes))
 
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -2447,12 +2490,17 @@ def admin_recovery_code_verify():
 
         for row in codes:
             try:
-                if check_password_hash(row["code_hash"], normalized_code):
-                    matched_code_id = int(row["id"])
+                for candidate_code in candidate_codes:
+                    if check_password_hash(row["code_hash"], candidate_code):
+                        matched_code_id = int(row["id"])
+                        break
+
+                if matched_code_id is not None:
                     break
+
             except Exception:
                 continue
-
+                
         if matched_code_id is None:
             return jsonify({
                 "ok": False,
