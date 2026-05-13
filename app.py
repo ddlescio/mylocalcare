@@ -1674,33 +1674,26 @@ def admin_required(view_func):
 
     return wrapped_view
 
-@app.route("/admin/sblocca", methods=["GET", "POST"])
+@app.route("/admin/sblocca", methods=["GET"])
 @admin_required
 def admin_unlock():
     """
     Sblocco temporaneo area admin.
 
-    Da ora lo sblocco admin NON accetta più password.
-    L'unico metodo valido è la passkey WebAuthn tramite:
+    Lo sblocco admin è consentito solo tramite passkey WebAuthn.
+    Questa route mostra soltanto la pagina di sblocco.
+
+    La verifica effettiva avviene solo tramite:
     - /admin/passkey/auth/options
     - /admin/passkey/auth/verify
+
+    Non esiste più fallback password lato backend.
     """
 
     next_url = request.args.get("next") or url_for("admin_dashboard")
 
     if not next_url.startswith("/admin"):
         next_url = url_for("admin_dashboard")
-
-    # 🔒 Blocco definitivo del vecchio sblocco con password.
-    # Anche se nel template esistesse ancora un form password,
-    # il backend non lo accetta più.
-    if request.method == "POST":
-        verify_csrf()
-
-        return jsonify({
-            "ok": False,
-            "error": "Lo sblocco admin con password è disabilitato. Usa la passkey."
-        }), 403
 
     return render_template("admin_unlock.html", next_url=next_url)
 
@@ -1722,13 +1715,37 @@ def admin_passkey_page():
 def admin_passkey_delete(passkey_id):
     """
     Elimina una passkey admin registrata.
+
+    Protezione importante:
+    non permette di eliminare l'ultima passkey disponibile,
+    altrimenti l'admin potrebbe rimanere bloccato fuori dall'area riservata.
     """
     verify_csrf()
 
+    user_id = int(g.utente["id"])
+
     try:
+        passkeys = get_admin_passkeys_for_user(user_id)
+
+        # 🔒 Sicurezza: non permettere di eliminare l'ultima passkey
+        if len(passkeys) <= 1:
+            flash(
+                "Non puoi eliminare l’ultima passkey admin. "
+                "Registra prima una nuova passkey su un altro dispositivo.",
+                "warning"
+            )
+            return redirect(url_for("admin_passkey_page"))
+
+        # 🔒 Sicurezza extra: verifica che la passkey richiesta appartenga davvero all'admin
+        passkey_ids = {int(p["id"]) for p in passkeys}
+
+        if int(passkey_id) not in passkey_ids:
+            flash("Passkey non trovata o non autorizzata.", "error")
+            return redirect(url_for("admin_passkey_page"))
+
         delete_admin_passkey_for_user(
             passkey_id=passkey_id,
-            user_id=g.utente["id"]
+            user_id=user_id
         )
 
         flash("Passkey rimossa correttamente.", "success")
@@ -9227,6 +9244,17 @@ def modifica_username():
 @app.route("/impostazioni/modifica-password", methods=["GET", "POST"])
 @login_required
 def modifica_password():
+    # 🔐 Se l'utente è admin, il cambio password richiede uno step-up passkey recente.
+    # Questo evita che una sessione admin già aperta possa cambiare password senza nuova verifica forte.
+    if g.utente and "ruolo" in g.utente.keys() and g.utente["ruolo"] == "admin":
+        if not admin_stepup_is_valid():
+            next_url = url_for("modifica_password")
+            flash(
+                "Per modificare la password admin devi prima confermare la tua identità con passkey.",
+                "warning"
+            )
+            return redirect(url_for("admin_unlock", next=next_url))
+                
     if request.method == "POST":
         verify_csrf()
 
@@ -11078,7 +11106,7 @@ if APP_RUNTIME_ROLE == "web":
         print("✅ Tabella admin_passkeys verificata", flush=True)
     except Exception as e:
         print("⚠️ Verifica tabella admin_passkeys rimandata:", repr(e), flush=True)
-        
+
 if app.config["IS_REALTIME_SERVER"]:
     register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 
