@@ -11069,14 +11069,16 @@ def chat_count_unread(user_id):
 # ==========================================================
 # 🔐 DB BOOTSTRAP — tabelle di sicurezza
 # ==========================================================
+# Non bloccare l'avvio dell'app se Postgres ha un timeout momentaneo.
+# La tabella admin_passkeys viene comunque verificata/creata dalle route passkey
+# tramite ensure_admin_passkeys_table().
 if APP_RUNTIME_ROLE == "web":
     try:
         ensure_admin_passkeys_table()
         print("✅ Tabella admin_passkeys verificata", flush=True)
     except Exception as e:
-        print("❌ Errore verifica tabella admin_passkeys:", repr(e), flush=True)
-        raise
-
+        print("⚠️ Verifica tabella admin_passkeys rimandata:", repr(e), flush=True)
+        
 if app.config["IS_REALTIME_SERVER"]:
     register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 
