@@ -1522,6 +1522,231 @@ def delete_admin_passkey_for_user(passkey_id, user_id):
             pass
 
 # ==========================================================
+# 🔐 ADMIN RECOVERY CODES — CODICI DI EMERGENZA PASSKEY
+# ==========================================================
+
+def ensure_admin_recovery_codes_table():
+    """
+    Crea la tabella dei recovery codes admin.
+
+    I codici NON vengono salvati in chiaro.
+    Salviamo solo:
+    - hash del codice
+    - stato usato/non usato
+    - data creazione
+    - data utilizzo
+
+    Ogni codice potrà essere usato una sola volta.
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS admin_recovery_codes (
+                    id SERIAL PRIMARY KEY,
+                    utente_id INTEGER NOT NULL REFERENCES utenti(id) ON DELETE CASCADE,
+                    code_hash TEXT NOT NULL,
+                    used INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    used_at TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_admin_recovery_codes_utente
+                ON admin_recovery_codes(utente_id)
+            """)
+
+        else:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS admin_recovery_codes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    utente_id INTEGER NOT NULL,
+                    code_hash TEXT NOT NULL,
+                    used INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    used_at TEXT,
+                    FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+                )
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_admin_recovery_codes_utente
+                ON admin_recovery_codes(utente_id)
+            """)
+
+        conn.commit()
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def generate_admin_recovery_codes(user_id, count=8):
+    """
+    Genera nuovi recovery codes per l'admin.
+
+    Attenzione:
+    - cancella/invalida i codici precedenti;
+    - restituisce i codici in chiaro SOLO in questa chiamata;
+    - nel DB salva solo hash.
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    plain_codes = []
+
+    try:
+        cur.execute(sql("""
+            DELETE FROM admin_recovery_codes
+            WHERE utente_id = ?
+        """), (int(user_id),))
+
+        for _ in range(count):
+            raw = secrets.token_urlsafe(18)
+            code = f"LC-{raw[:6]}-{raw[6:12]}-{raw[12:18]}".upper()
+            code_hash = generate_password_hash(code)
+
+            cur.execute(sql("""
+                INSERT INTO admin_recovery_codes (
+                    utente_id,
+                    code_hash,
+                    used
+                )
+                VALUES (?, ?, 0)
+            """), (
+                int(user_id),
+                code_hash
+            ))
+
+            plain_codes.append(code)
+
+        conn.commit()
+        return plain_codes
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def count_unused_admin_recovery_codes(user_id):
+    """
+    Conta quanti recovery codes admin sono ancora disponibili.
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT COUNT(*) AS totale
+            FROM admin_recovery_codes
+            WHERE utente_id = ?
+              AND used = 0
+        """), (int(user_id),))
+
+        row = cur.fetchone()
+        return int(fetchone_value(row) or 0)
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def verify_and_consume_admin_recovery_code(user_id, plain_code):
+    """
+    Verifica un recovery code e lo marca come usato.
+
+    Ritorna True se valido, False se non valido.
+    """
+    plain_code = (plain_code or "").strip().upper()
+
+    if not plain_code:
+        return False
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT id, code_hash
+            FROM admin_recovery_codes
+            WHERE utente_id = ?
+              AND used = 0
+            ORDER BY id ASC
+        """), (int(user_id),))
+
+        rows = cur.fetchall()
+
+        for row in rows:
+            if check_password_hash(row["code_hash"], plain_code):
+                cur.execute(sql(f"""
+                    UPDATE admin_recovery_codes
+                    SET used = 1,
+                        used_at = {now_sql()}
+                    WHERE id = ?
+                """), (int(row["id"]),))
+
+                conn.commit()
+                return True
+
+        return False
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+# ==========================================================
 # 🔹 ADMIN COUNTERS (Annunci e Recensioni in attesa)
 # ==========================================================
 
@@ -11142,10 +11367,11 @@ def chat_count_unread(user_id):
 if APP_RUNTIME_ROLE == "web":
     try:
         ensure_admin_passkeys_table()
-        print("✅ Tabella admin_passkeys verificata", flush=True)
+        ensure_admin_recovery_codes_table()
+        print("✅ Tabelle sicurezza admin verificate", flush=True)
     except Exception as e:
-        print("⚠️ Verifica tabella admin_passkeys non completata al bootstrap:", repr(e), flush=True)
-
+        print("⚠️ Verifica tabelle sicurezza admin non completata al bootstrap:", repr(e), flush=True)
+        
 if app.config["IS_REALTIME_SERVER"]:
     register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 

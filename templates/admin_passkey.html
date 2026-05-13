@@ -210,8 +210,31 @@ async function registraPasskeyAdmin() {
 
   } catch (err) {
     console.error(err);
-    status.textContent = "Errore: " + (err.message || err);
-  }
+
+    const nomeErrore = err && err.name ? err.name : "";
+    const messaggioErrore = err && err.message ? err.message : String(err);
+
+    if (
+      nomeErrore === "InvalidStateError" ||
+      messaggioErrore.toLowerCase().includes("invalid state")
+    ) {
+      status.textContent =
+        "Su questo dispositivo è già disponibile una passkey valida per MyLocalCare. " +
+        "Non serve registrarne un’altra: puoi usare quella già presente.";
+      status.className = "mt-4 text-sm text-amber-700";
+      return;
+    }
+
+    if (nomeErrore === "NotAllowedError") {
+      status.textContent =
+        "Operazione annullata o non completata. Riprova e conferma con Face ID / Touch ID.";
+      status.className = "mt-4 text-sm text-amber-700";
+      return;
+    }
+
+    status.textContent = "Errore: " + messaggioErrore;
+    status.className = "mt-4 text-sm text-red-600";
+  }  
 }
 
 document
