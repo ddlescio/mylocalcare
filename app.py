@@ -8607,9 +8607,13 @@ def password_dimenticata():
                 reply_to=MAIL_FROM_ADDRESS
             )
 
-            # Forza il Message-ID principale con il dominio pubblico,
-            # invece di lasciare quello tecnico generato dal server Render.
             msg.msgId = make_msgid(domain="mylocalcare.it")
+
+            msg.extra_headers = {
+                "Auto-Submitted": "auto-generated",
+                "X-Auto-Response-Suppress": "All",
+                "X-Entity-Ref-ID": secrets.token_hex(16)
+            }
 
             html = render_template(
                 "email/reset_password.html",
