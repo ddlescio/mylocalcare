@@ -1298,9 +1298,10 @@ def ensure_admin_passkeys_table():
 def get_admin_passkeys_for_user(user_id):
     """
     Recupera le passkey registrate per un admin.
-    """
-    ensure_admin_passkeys_table()
 
+    La tabella admin_passkeys deve già esistere:
+    viene verificata/creata solo a bootstrap o tramite migrazione.
+    """
     conn = get_db_connection()
     cur = get_cursor(conn)
 
@@ -1339,9 +1340,11 @@ def get_admin_passkey_by_credential_id(credential_id_b64url):
     """
     Recupera una passkey admin tramite credential_id.
     Serve nella fase di autenticazione/sblocco.
-    """
-    ensure_admin_passkeys_table()
 
+    Nota: questa funzione viene ridefinita più sotto con una versione più sicura
+    che filtra anche per user_id. Manteniamo questa solo per compatibilità interna,
+    senza creare/verificare la tabella durante l'uso operativo.
+    """
     conn = get_db_connection()
     cur = get_cursor(conn)
 
@@ -1376,7 +1379,6 @@ def get_admin_passkey_by_credential_id(credential_id_b64url):
             conn.close()
         except Exception:
             pass
-
 
 def update_admin_passkey_sign_count(passkey_id, sign_count):
     """
@@ -1428,9 +1430,10 @@ def save_admin_passkey(
 ):
     """
     Salva una nuova passkey admin.
-    """
-    ensure_admin_passkeys_table()
 
+    La tabella admin_passkeys deve già esistere:
+    viene verificata/creata solo a bootstrap o tramite migrazione.
+    """
     conn = get_db_connection()
     cur = get_cursor(conn)
 
@@ -1482,9 +1485,9 @@ def delete_admin_passkey_for_user(passkey_id, user_id):
     """
     Elimina una passkey admin appartenente all'utente indicato.
     Non permette di eliminare passkey di altri admin.
-    """
-    ensure_admin_passkeys_table()
 
+    La protezione contro eliminazione dell'ultima passkey viene fatta nella route.
+    """
     conn = get_db_connection()
     cur = get_cursor(conn)
 
@@ -1692,7 +1695,19 @@ def admin_unlock():
 
     next_url = request.args.get("next") or url_for("admin_dashboard")
 
-    if not next_url.startswith("/admin"):
+    # 🔐 Consenti redirect solo verso percorsi interni esplicitamente autorizzati.
+    # Serve per evitare open redirect, ma permette anche operazioni sensibili fuori da /admin
+    # come /impostazioni/modifica-password.
+    allowed_stepup_prefixes = (
+        "/admin",
+        "/impostazioni/modifica-password",
+    )
+
+    if (
+        not next_url.startswith("/")
+        or next_url.startswith("//")
+        or not next_url.startswith(allowed_stepup_prefixes)
+    ):
         next_url = url_for("admin_dashboard")
 
     return render_template("admin_unlock.html", next_url=next_url)
@@ -1764,7 +1779,6 @@ def admin_passkey_register_options():
     Genera le opzioni WebAuthn per registrare una nuova passkey admin.
     """
     verify_csrf()
-    ensure_admin_passkeys_table()
 
     user_id = int(g.utente["id"])
     username = g.utente["username"] or f"admin-{user_id}"
@@ -1816,7 +1830,6 @@ def admin_passkey_register_verify():
     Verifica la risposta del browser e salva la passkey admin.
     """
     verify_csrf()
-    ensure_admin_passkeys_table()
 
     challenge_b64 = session.get("admin_passkey_registration_challenge")
     if not challenge_b64:
@@ -1885,9 +1898,10 @@ def admin_passkey_register_verify():
 def get_admin_passkey_by_credential_id(user_id, credential_id_b64url):
     """
     Recupera una passkey admin specifica tramite credential_id.
-    """
-    ensure_admin_passkeys_table()
 
+    Filtra anche per utente admin, così una passkey registrata da un admin
+    non può essere usata per sbloccare l'area admin di un altro utente.
+    """
     conn = get_db_connection()
     cur = get_cursor(conn)
 
@@ -1974,7 +1988,6 @@ def admin_passkey_auth_options():
     Genera le opzioni WebAuthn per sbloccare l'area admin con una passkey già registrata.
     """
     verify_csrf()
-    ensure_admin_passkeys_table()
 
     user_id = int(g.utente["id"])
     passkeys = get_admin_passkeys_for_user(user_id)
@@ -9254,7 +9267,7 @@ def modifica_password():
                 "warning"
             )
             return redirect(url_for("admin_unlock", next=next_url))
-                
+
     if request.method == "POST":
         verify_csrf()
 
@@ -11097,16 +11110,21 @@ def chat_count_unread(user_id):
 # ==========================================================
 # 🔐 DB BOOTSTRAP — tabelle di sicurezza
 # ==========================================================
-# Non bloccare l'avvio dell'app se Postgres ha un timeout momentaneo.
-# La tabella admin_passkeys viene comunque verificata/creata dalle route passkey
-# tramite ensure_admin_passkeys_table().
+# La tabella admin_passkeys viene verificata/creata solo qui,
+# durante il bootstrap del servizio web.
+#
+# Le funzioni operative delle passkey devono solo leggere/scrivere dati,
+# senza eseguire CREATE TABLE / CREATE INDEX durante l'uso normale.
+#
+# Se Postgres ha un timeout momentaneo, l'avvio non viene bloccato:
+# in quel caso la tabella va verificata tramite nuovo deploy o migrazione manuale.
 if APP_RUNTIME_ROLE == "web":
     try:
         ensure_admin_passkeys_table()
         print("✅ Tabella admin_passkeys verificata", flush=True)
     except Exception as e:
-        print("⚠️ Verifica tabella admin_passkeys rimandata:", repr(e), flush=True)
-
+        print("⚠️ Verifica tabella admin_passkeys non completata al bootstrap:", repr(e), flush=True)
+        
 if app.config["IS_REALTIME_SERVER"]:
     register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 
