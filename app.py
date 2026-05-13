@@ -2059,6 +2059,16 @@ def admin_passkey_auth_verify():
             "error": "Credential ID mancante."
         }), 400
 
+    print(
+        "🔐 [PASSKEY AUTH] credential richiesta:",
+        {
+            "user_id": int(g.utente["id"]),
+            "credential_id_prefix": credential_id_b64url[:18],
+            "user_agent": request.headers.get("User-Agent", "")[:120]
+        },
+        flush=True
+    )
+
     passkey = get_admin_passkey_by_credential_id(
         user_id=int(g.utente["id"]),
         credential_id_b64url=credential_id_b64url
@@ -2069,6 +2079,17 @@ def admin_passkey_auth_verify():
             "ok": False,
             "error": "Passkey non riconosciuta per questo admin."
         }), 400
+
+    print(
+        "✅ [PASSKEY AUTH] passkey trovata:",
+        {
+            "passkey_id": passkey["id"],
+            "nome_dispositivo": passkey["nome_dispositivo"],
+            "credential_id_prefix": passkey["credential_id"][:18],
+            "last_used_at": passkey["last_used_at"]
+        },
+        flush=True
+    )
 
     try:
         verification = verify_authentication_response(
@@ -11124,7 +11145,7 @@ if APP_RUNTIME_ROLE == "web":
         print("✅ Tabella admin_passkeys verificata", flush=True)
     except Exception as e:
         print("⚠️ Verifica tabella admin_passkeys non completata al bootstrap:", repr(e), flush=True)
-        
+
 if app.config["IS_REALTIME_SERVER"]:
     register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
 
