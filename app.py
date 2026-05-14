@@ -8380,7 +8380,7 @@ def push_unsubscribe():
         return jsonify({
             "ok": True
         })
-        
+
     except Exception as e:
         try:
             if conn:
@@ -10191,25 +10191,44 @@ def crea_payment_intent():
     })
 
 def gestisci_pagamento_confermato(payment_intent):
-    if isinstance(payment_intent, dict):
-        riferimento_esterno = payment_intent.get("id")
-        metadata = payment_intent.get("metadata", {}) or {}
-        acquisto_id = metadata.get("acquisto_id")
-    else:
-        riferimento_esterno = payment_intent["id"]
-        metadata = payment_intent["metadata"] if "metadata" in payment_intent else {}
-        acquisto_id = metadata["acquisto_id"] if "acquisto_id" in metadata else None
+    # Stripe può passare oggetti StripeObject, non sempre dict puri.
+    # Convertiamo subito in dict normale per evitare errori tipo AttributeError('keys').
+    try:
+        if hasattr(payment_intent, "to_dict_recursive"):
+            payment_intent_data = payment_intent.to_dict_recursive()
+        elif isinstance(payment_intent, dict):
+            payment_intent_data = dict(payment_intent)
+        else:
+            payment_intent_data = dict(payment_intent)
+    except Exception as e:
+        log_exception_safe(
+            "❌ [STRIPE] impossibile normalizzare payment_intent",
+            e,
+            production=True
+        )
+        return
+
+    riferimento_esterno = payment_intent_data.get("id")
+
+    metadata_raw = payment_intent_data.get("metadata") or {}
+
+    try:
+        metadata = dict(metadata_raw)
+    except Exception:
+        metadata = {}
+
+    acquisto_id = metadata.get("acquisto_id")
 
     security_log(
         "💳 [STRIPE] START gestisci_pagamento_confermato",
         {
             "payment_intent": riferimento_esterno,
             "acquisto_id": acquisto_id,
-            "metadata_keys": list(metadata.keys()) if metadata else []
+            "metadata_keys": list(metadata.keys()) if isinstance(metadata, dict) else []
         },
         production=True
     )
-
+    
     if not acquisto_id:
         security_log(
             "❌ [STRIPE] metadata.acquisto_id mancante",
