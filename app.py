@@ -315,7 +315,10 @@ def ensure_x25519_keys(user_id):
     import base64
 
     if not row or not row["x25519_pub"] or not row["x25519_priv_enc"] or not row["x25519_priv_nonce"]:
-        print(f"Rigenerazione chiavi X25519 per utente {user_id}...")
+        security_log(
+            "🔐 Rigenerazione chiavi X25519 utente",
+            {"user_id": user_id}
+        )
         from nacl.public import PrivateKey
 
         # Genera nuova coppia
@@ -738,6 +741,37 @@ def security_log(message, extra=None, *, production=False):
     else:
         print(f"{message}", flush=True)
 
+def log_exception_safe(message, exc=None, extra=None, *, production=False):
+    """
+    Log sicuro per eccezioni non-Stripe.
+
+    Regole:
+    - in produzione non stampa traceback;
+    - in produzione stampa solo se production=True;
+    - non stampa mai repr(e) grezzo fuori dal sistema di redazione;
+    - in local/development stampa anche traceback per debug.
+    """
+
+    payload = {}
+
+    if extra:
+        payload.update(extra)
+
+    if exc is not None:
+        payload.update({
+            "error_type": type(exc).__name__,
+            "error": repr(exc)
+        })
+
+    security_log(
+        message,
+        payload if payload else None,
+        production=production
+    )
+
+    if os.getenv("APP_ENV", "production").lower() in ("local", "development"):
+        traceback.print_exc()
+
 import os
 
 redis_url = os.getenv("REDIS_URL")
@@ -986,9 +1020,11 @@ def to_datetime_filter(value):
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
     except Exception as e:
-        print("❌ Errore filtro to_datetime:", e)
+        log_exception_safe(
+            "❌ Errore filtro to_datetime",
+            e
+        )
         return None
-
 
 @app.template_filter('fmt_it')
 def fmt_it(value):
@@ -1000,7 +1036,10 @@ def fmt_it(value):
         dt_it = dt.astimezone(ZoneInfo("Europe/Rome"))
         return dt_it.strftime("%d-%m-%Y %H:%M")
     except Exception as e:
-        print("❌ Errore filtro fmt_it:", e)
+        log_exception_safe(
+            "❌ Errore filtro fmt_it",
+            e
+        )
         return value
 
 @app.template_filter('fmt_it_date')
@@ -1013,7 +1052,10 @@ def fmt_it_date(value):
         dt_it = dt.astimezone(ZoneInfo("Europe/Rome"))
         return dt_it.strftime("%d-%m-%Y")
     except Exception as e:
-        print("❌ Errore filtro fmt_it_date:", e)
+        log_exception_safe(
+            "❌ Errore filtro fmt_it_date",
+            e
+        )
         return value
 
 @app.template_filter('fmt_it_smart')
@@ -1044,7 +1086,10 @@ def fmt_it_smart(value):
         return dt_it.strftime("%d-%m-%Y %H:%M")
 
     except Exception as e:
-        print("❌ Errore filtro fmt_it_smart:", e)
+        log_exception_safe(
+            "❌ Errore filtro fmt_it_smart",
+            e
+        )
         return value
 
 @app.context_processor
@@ -1058,7 +1103,11 @@ def inject_session():
         try:
             realtime_token = build_realtime_token(utente_id)
         except Exception as e:
-            print("❌ Errore build_realtime_token:", e)
+            log_exception_safe(
+                "❌ Errore build_realtime_token",
+                e,
+                {"user_id": utente_id}
+            )
 
     return dict(
         session=session,
@@ -1088,9 +1137,13 @@ app.config['SESSION_REDIS'] = redis_client
 
 try:
     redis_client.ping()
-    print("✅ Redis connesso correttamente", flush=True)
+    safe_log("✅ Redis connesso correttamente", production=True)
 except Exception as e:
-    print("❌ Redis NON connesso", flush=True)
+    log_exception_safe(
+        "❌ Redis NON connesso",
+        e,
+        production=True
+    )
 
 app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
@@ -1188,7 +1241,12 @@ def invia_email_sospensione(email, nome):
         mail.send(msg)
 
     except Exception as e:
-        print("Errore invio email sospensione:", e)
+        log_exception_safe(
+            "❌ Errore invio email sospensione",
+            e,
+            {"email": email}
+        )
+
 # ==========================================================
 # 2️⃣ FUNZIONE CONNESSIONE DB E MODELS
 # ==========================================================
@@ -1260,7 +1318,11 @@ class PGConnectionWrapper:
                 pool.putconn(self.conn)
                 return
         except Exception as e:
-            print(f"🟥 PGConnectionWrapper.close putconn error: {e}", flush=True)
+            log_exception_safe(
+                "🟥 PGConnectionWrapper.close putconn error",
+                e,
+                production=True
+            )
 
         try:
             self.conn.close()
@@ -1522,14 +1584,14 @@ def bump_admin_security_version(user_id, reason="security_change"):
         session["admin_security_version"] = nuova_versione
         session.modified = True
 
-        print(
+        security_log(
             "🔐 [ADMIN SECURITY VERSION] incrementata",
             {
                 "user_id": int(user_id),
                 "reason": reason,
                 "new_version": nuova_versione
             },
-            flush=True
+            production=True
         )
 
         return nuova_versione
@@ -1620,7 +1682,11 @@ def ensure_admin_passkeys_table():
         except Exception:
             pass
 
-        print("❌ Errore ensure_admin_passkeys_table:", repr(e), flush=True)
+        log_exception_safe(
+            "❌ Errore ensure_admin_passkeys_table",
+            e,
+            production=True
+        )
         raise
 
     finally:
@@ -2363,8 +2429,12 @@ def admin_generate_recovery_codes():
         )
 
     except Exception as e:
-        print("❌ Errore generazione recovery codes admin:", repr(e), flush=True)
-        traceback.print_exc()
+        log_exception_safe(
+            "❌ Errore generazione recovery codes admin",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
 
         flash("Errore durante la generazione dei codici di recupero.", "error")
         return redirect(url_for("admin_passkey_page"))
@@ -2420,8 +2490,15 @@ def admin_passkey_delete(passkey_id):
         )
 
     except Exception as e:
-        print("❌ Errore eliminazione passkey admin:", repr(e), flush=True)
-        traceback.print_exc()
+        log_exception_safe(
+            "❌ Errore eliminazione passkey admin",
+            e,
+            {
+                "user_id": user_id,
+                "passkey_id": passkey_id
+            },
+            production=True
+        )
         flash("Errore durante la rimozione della passkey.", "error")
 
     return redirect(url_for("admin_passkey_page"))
@@ -2547,12 +2624,16 @@ def admin_passkey_register_verify():
         })
 
     except Exception as e:
-        print("❌ Errore registrazione passkey admin:", repr(e), flush=True)
-        traceback.print_exc()
+        log_exception_safe(
+            "❌ Errore registrazione passkey admin",
+            e,
+            {"user_id": int(g.utente["id"]) if g.utente else None},
+            production=True
+        )
 
         return jsonify({
             "ok": False,
-            "error": str(e)
+            "error": "Registrazione passkey non riuscita."
         }), 400
 
 def get_admin_passkey_by_credential_id(user_id, credential_id_b64url):
@@ -2667,8 +2748,12 @@ def admin_passkey_auth_options():
                     id=base64url_to_bytes(p["credential_id"])
                 )
             )
-        except Exception as e:
-            print("⚠️ Passkey saltata in auth/options:", repr(e), flush=True)
+    except Exception as e:
+        log_exception_safe(
+            "⚠️ Passkey saltata in auth/options",
+            e,
+            {"user_id": user_id}
+        )
 
     if not allow_credentials:
         return jsonify({
@@ -2865,11 +2950,13 @@ def check_admin_recovery_rate_limit(user_id):
         return True, None
 
     except Exception as e:
-        # Fail-open: se Redis ha un problema non blocchiamo l'admin legittimo,
-        # ma logghiamo l'anomalia.
-        print("⚠️ Errore check_admin_recovery_rate_limit:", repr(e), flush=True)
+        log_exception_safe(
+            "⚠️ Errore check_admin_recovery_rate_limit",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
         return True, None
-
 
 def register_failed_admin_recovery_attempt(user_id):
     """
@@ -2886,7 +2973,12 @@ def register_failed_admin_recovery_attempt(user_id):
                 redis_client.expire(key, ADMIN_RECOVERY_WINDOW_SECONDS)
 
     except Exception as e:
-        print("⚠️ Errore register_failed_admin_recovery_attempt:", repr(e), flush=True)
+        log_exception_safe(
+            "⚠️ Errore register_failed_admin_recovery_attempt",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
 
 
 def clear_admin_recovery_rate_limit(user_id):
@@ -2899,8 +2991,12 @@ def clear_admin_recovery_rate_limit(user_id):
         redis_client.delete(keys["user"])
         redis_client.delete(keys["ip"])
     except Exception as e:
-        print("⚠️ Errore clear_admin_recovery_rate_limit:", repr(e), flush=True)
-
+        log_exception_safe(
+            "⚠️ Errore clear_admin_recovery_rate_limit",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
 
 def notify_admin_recovery_code_used(user_id, recovery_code_id):
     """
@@ -2960,7 +3056,12 @@ def notify_admin_recovery_code_used(user_id, recovery_code_id):
             emit_update_notifications(int(user_id))
 
         except Exception as e:
-            print("⚠️ Errore notifica interna recovery code:", repr(e), flush=True)
+            log_exception_safe(
+                "⚠️ Errore notifica interna recovery code",
+                e,
+                {"user_id": user_id},
+                production=True
+            )
 
         # Email sicurezza
         try:
@@ -2991,20 +3092,30 @@ def notify_admin_recovery_code_used(user_id, recovery_code_id):
             ).start()
 
         except Exception as e:
-            print("⚠️ Errore email recovery code used:", repr(e), flush=True)
+            log_exception_safe(
+                "⚠️ Errore email recovery code used",
+                e,
+                {"user_id": user_id, "email": email_admin},
+                production=True
+            )
 
-        print(
+        security_log(
             "🔐 [ADMIN RECOVERY ALERT] alert inviato",
             {
                 "user_id": int(user_id),
                 "recovery_code_id": int(recovery_code_id),
                 "ip": ip,
             },
-            flush=True
+            production=True
         )
 
     except Exception as e:
-        print("⚠️ Errore notify_admin_recovery_code_used:", repr(e), flush=True)
+        log_exception_safe(
+            "⚠️ Errore notify_admin_recovery_code_used",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
 
     finally:
         try:
@@ -3208,7 +3319,12 @@ def admin_recovery_code_verify():
                 recovery_code_id=matched_code_id
             )
         except Exception as e:
-            print("⚠️ Alert recovery code non inviato:", repr(e), flush=True)
+            log_exception_safe(
+                "⚠️ Alert recovery code non inviato",
+                e,
+                {"user_id": user_id},
+                production=True
+            )
 
         return jsonify({
             "ok": True
@@ -7773,24 +7889,33 @@ def invia_push(user_id, title, body):
     cur = None
 
     try:
-        print(f"🔔 [invia_push] START user_id={user_id} title={title!r}")
-
-        print(
-            f"🔔 [invia_push] runtime_realtime={app.config.get('IS_REALTIME_SERVER')} "
-            f"vapid_private_present={bool(VAPID_PRIVATE_KEY)} "
-            f"vapid_claim={VAPID_CLAIM_EMAIL!r}"
+        security_log(
+            "🔔 [invia_push] START",
+            {
+                "user_id": user_id,
+                "title_present": bool(title),
+                "runtime_realtime": app.config.get("IS_REALTIME_SERVER"),
+                "vapid_private_present": bool(VAPID_PRIVATE_KEY),
+                "vapid_claim": VAPID_CLAIM_EMAIL
+            }
         )
 
         if not VAPID_PRIVATE_KEY:
-            print("❌ [invia_push] VAPID_PRIVATE_KEY mancante nel servizio corrente")
+            security_log(
+                "❌ [invia_push] VAPID_PRIVATE_KEY mancante",
+                {"user_id": user_id},
+                production=True
+            )
             return
 
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
-            print("❌ [invia_push] DATABASE_URL mancante nel servizio corrente")
+            security_log(
+                "❌ [invia_push] DATABASE_URL mancante",
+                {"user_id": user_id},
+                production=True
+            )
             return
-
-        print("🔔 [invia_push] connessione diretta PostgreSQL START")
 
         conn = psycopg2.connect(
             database_url,
@@ -7799,8 +7924,6 @@ def invia_push(user_id, title, body):
         )
         conn.autocommit = True
         cur = conn.cursor()
-
-        print("✅ [invia_push] connessione diretta PostgreSQL OK")
 
         cur.execute("""
             SELECT endpoint, p256dh, auth
@@ -7811,17 +7934,24 @@ def invia_push(user_id, title, body):
         subs = cur.fetchall()
 
         if not subs:
-            print(f"⚠️ [invia_push] Nessuna subscription push per utente {user_id}")
+            security_log(
+                "⚠️ [invia_push] nessuna subscription trovata",
+                {"user_id": user_id}
+            )
             return
 
-        print(f"🔔 [invia_push] subscriptions trovate: {len(subs)}")
+        security_log(
+            "🔔 [invia_push] subscription trovate",
+            {
+                "user_id": user_id,
+                "subscriptions_count": len(subs)
+            }
+        )
 
         for sub in subs:
             endpoint = sub["endpoint"]
 
             try:
-                print(f"🔔 [invia_push] tentativo endpoint={endpoint[:90]}...")
-
                 webpush(
                     subscription_info={
                         "endpoint": endpoint,
@@ -7842,7 +7972,13 @@ def invia_push(user_id, title, body):
                     timeout=5
                 )
 
-                print(f"✅ [invia_push] Push inviata a user_id={user_id}")
+                security_log(
+                    "✅ [invia_push] push inviata",
+                    {
+                        "user_id": user_id,
+                        "endpoint": endpoint
+                    }
+                )
 
             except WebPushException as e:
                 status_code = None
@@ -7855,21 +7991,22 @@ def invia_push(user_id, title, body):
                 except Exception:
                     pass
 
-                print(
-                    f"❌ [invia_push] WebPushException "
-                    f"status={status_code} endpoint={endpoint[:90]}... err={e}"
+                security_log(
+                    "❌ [invia_push] WebPushException",
+                    {
+                        "user_id": user_id,
+                        "status_code": status_code,
+                        "endpoint": endpoint,
+                        "error_type": type(e).__name__
+                    },
+                    production=True
                 )
-
-                if response_text:
-                    print(f"❌ [invia_push] response_text={response_text[:500]}")
 
                 should_delete_subscription = False
 
-                # Endpoint scaduto/non più valido
                 if status_code in (404, 410):
                     should_delete_subscription = True
 
-                # Subscription creata con una vecchia chiave VAPID / chiave diversa
                 if status_code in (400, 403):
                     error_text = (response_text or "").lower()
 
@@ -7881,9 +8018,14 @@ def invia_push(user_id, title, body):
                         should_delete_subscription = True
 
                 if should_delete_subscription:
-                    print(
-                        f"🧹 [invia_push] subscription non più valida -> delete "
-                        f"status={status_code} endpoint={endpoint[:90]}..."
+                    security_log(
+                        "🧹 [invia_push] subscription non più valida, eliminazione",
+                        {
+                            "user_id": user_id,
+                            "status_code": status_code,
+                            "endpoint": endpoint
+                        },
+                        production=True
                     )
 
                     cur.execute("""
@@ -7892,28 +8034,57 @@ def invia_push(user_id, title, body):
                     """, (endpoint,))
 
             except requests.exceptions.Timeout:
-                print(f"⚠️ [invia_push] timeout user_id={user_id} endpoint={endpoint[:90]}...")
+                security_log(
+                    "⚠️ [invia_push] timeout",
+                    {
+                        "user_id": user_id,
+                        "endpoint": endpoint
+                    },
+                    production=True
+                )
 
             except Exception as e:
-                print(f"❌ [invia_push] errore generico endpoint={endpoint[:90]}... err={e}")
+                log_exception_safe(
+                    "❌ [invia_push] errore generico",
+                    e,
+                    {
+                        "user_id": user_id,
+                        "endpoint": endpoint
+                    },
+                    production=True
+                )
 
-        print(f"🔔 [invia_push] END user_id={user_id}")
+        security_log(
+            "🔔 [invia_push] END",
+            {"user_id": user_id}
+        )
 
     except Exception as e:
-        print(f"❌ [invia_push] ERRORE FATALE user_id={user_id}: {e}")
+        log_exception_safe(
+            "❌ [invia_push] errore fatale",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
 
     finally:
         try:
             if cur is not None:
                 cur.close()
         except Exception as e:
-            print(f"⚠️ [invia_push] errore chiusura cur: {e}")
+            log_exception_safe(
+                "⚠️ [invia_push] errore chiusura cur",
+                e
+            )
 
         try:
             if conn is not None:
                 conn.close()
         except Exception as e:
-            print(f"⚠️ [invia_push] errore chiusura conn: {e}")
+            log_exception_safe(
+                "⚠️ [invia_push] errore chiusura conn",
+                e
+            )
 
 @app.route("/internal/push/send", methods=["POST"])
 def internal_push_send():
@@ -7922,11 +8093,22 @@ def internal_push_send():
         expected_token = os.environ.get("INTERNAL_PUSH_TOKEN", "")
 
         if not expected_token:
-            print("❌ [internal_push_send] INTERNAL_PUSH_TOKEN mancante")
+            security_log(
+                "❌ [internal_push_send] INTERNAL_PUSH_TOKEN mancante",
+                production=True
+            )
             return jsonify({"ok": False, "error": "internal token not configured"}), 500
 
         if internal_token != expected_token:
-            print("❌ [internal_push_send] token interno non valido")
+                security_log(
+                    "❌ [internal_push_send] token interno non valido",
+                    {
+                        "ip": get_client_ip(),
+                        "user_agent": request.headers.get("User-Agent", "")
+                    },
+                    production=True
+                )
+
             return jsonify({"ok": False, "error": "unauthorized"}), 403
 
         data = request.get_json(silent=True) or {}
@@ -7936,23 +8118,42 @@ def internal_push_send():
         body = data.get("body")
 
         if not user_id or not title or body is None:
-            print(f"❌ [internal_push_send] payload non valido: {data}")
+            security_log(
+                "❌ [internal_push_send] payload non valido",
+                {
+                    "keys": list(data.keys()) if isinstance(data, dict) else [],
+                    "user_id_present": bool(data.get("user_id")) if isinstance(data, dict) else False,
+                    "title_present": bool(data.get("title")) if isinstance(data, dict) else False,
+                    "body_present": data.get("body") is not None if isinstance(data, dict) else False
+                },
+                production=True
+            )
             return jsonify({"ok": False, "error": "invalid payload"}), 400
 
-        print(
-            f"🔔 [internal_push_send] richiesta ricevuta "
-            f"user_id={user_id} title={title!r}"
+        security_log(
+            "🔔 [internal_push_send] richiesta ricevuta",
+            {
+                "user_id": user_id,
+                "title_present": bool(title)
+            }
         )
 
         invia_push(int(user_id), str(title), str(body))
 
-        print(f"✅ [internal_push_send] invia_push completata per user_id={user_id}")
+        security_log(
+            "✅ [internal_push_send] invia_push completata",
+            {"user_id": user_id}
+        )
+
         return jsonify({"ok": True})
 
     except Exception as e:
-        print(f"❌ [internal_push_send] errore fatale: {e}")
-        return jsonify({"ok": False, "error": str(e)}), 500
-
+        log_exception_safe(
+            "❌ [internal_push_send] errore fatale",
+            e,
+            production=True
+        )
+        return jsonify({"ok": False, "error": "Errore interno invio push."}), 500
 
 # =========================================================
 # 🔔 PUSH SUBSCRIBE PUBBLICO
@@ -7964,24 +8165,26 @@ def push_debug():
     try:
         data = request.get_json(silent=True) or {}
 
-        print("🧪 [push_debug]", {
-            "user_id": session.get("utente_id"),
-            "g_utente_id": g.utente["id"] if getattr(g, "utente", None) else None,
-            "step": data.get("step"),
-            "ok": data.get("ok"),
-            "details": data.get("details"),
-            "user_agent": request.headers.get("User-Agent", "")
-        }, flush=True)
+    privacy_debug("push_debug", {
+        "user_id": session.get("utente_id"),
+        "g_utente_id": g.utente["id"] if getattr(g, "utente", None) else None,
+        "step": data.get("step"),
+        "ok": data.get("ok"),
+        "details": data.get("details"),
+        "user_agent": request.headers.get("User-Agent", "")
+    })
 
         return jsonify({"ok": True})
 
     except Exception as e:
-        print("❌ [push_debug] errore:", repr(e), flush=True)
+        log_exception_safe(
+            "❌ [push_debug] errore",
+            e
+        )
         return jsonify({
             "ok": False,
-            "error": str(e)
+            "error": "Errore debug push."
         }), 500
-
 
 @app.route("/push/subscribe", methods=["POST"])
 @login_required
@@ -7999,7 +8202,15 @@ def push_subscribe():
         auth = keys.get("auth")
 
         if not endpoint or not p256dh or not auth:
-            print("❌ [push_subscribe] payload non valido:", data)
+        security_log(
+            "❌ [push_subscribe] payload non valido",
+            {
+                "user_id": user_id,
+                "has_endpoint": bool(endpoint),
+                "has_p256dh": bool(p256dh),
+                "has_auth": bool(auth)
+            }
+        )
             return jsonify({
                 "ok": False,
                 "error": "payload subscription non valido"
@@ -8090,9 +8301,12 @@ def push_subscribe():
 
             conn.commit()
 
-        print(
-            f"✅ [push_subscribe] subscription sincronizzata "
-            f"user_id={user_id} endpoint={endpoint[:80]}..."
+        security_log(
+            "✅ [push_subscribe] subscription sincronizzata",
+            {
+                "user_id": user_id,
+                "endpoint": endpoint
+            }
         )
 
         return jsonify({
@@ -8101,10 +8315,17 @@ def push_subscribe():
         })
 
     except Exception as e:
-        print(f"❌ [push_subscribe] errore: {e}")
+        log_exception_safe(
+            "❌ [push_subscribe] errore",
+            e,
+            {
+                "user_id": g.utente["id"] if getattr(g, "utente", None) else None
+            },
+            production=True
+        )
         return jsonify({
             "ok": False,
-            "error": str(e)
+            "error": "Errore durante la registrazione delle notifiche push."
         }), 500
 
     finally:
@@ -8147,10 +8368,13 @@ def push_unsubscribe():
 
         conn.commit()
 
-        print(
-            f"🔕 [push_unsubscribe] subscription rimossa utente_id={user_id} endpoint={endpoint[:90]}...",
-            flush=True
-        )
+    security_log(
+        "🔕 [push_unsubscribe] subscription rimossa",
+        {
+            "user_id": user_id,
+            "endpoint": endpoint
+        }
+    )
 
         return jsonify({
             "ok": True
@@ -8163,11 +8387,18 @@ def push_unsubscribe():
         except Exception:
             pass
 
-        print("❌ [push_unsubscribe] errore:", repr(e), flush=True)
+        log_exception_safe(
+            "❌ [push_unsubscribe] errore",
+            e,
+            {
+                "user_id": g.utente["id"] if getattr(g, "utente", None) else None
+            },
+            production=True
+        )
 
         return jsonify({
             "ok": False,
-            "error": str(e)
+            "error": "Errore durante la rimozione della subscription push."
         }), 500
 
     finally:
@@ -9979,7 +10210,14 @@ def gestisci_pagamento_confermato(payment_intent):
     )
 
     if not acquisto_id:
-        print("❌ Webhook Stripe: metadata.acquisto_id mancante", metadata, flush=True)
+        security_log(
+            "❌ [STRIPE] metadata.acquisto_id mancante",
+            {
+                "payment_intent": riferimento_esterno,
+                "metadata_keys": list(metadata.keys()) if metadata else []
+            },
+            production=True
+        )
         return
 
     conn = get_db_connection()
@@ -12542,7 +12780,7 @@ def webhook_stripe():
             traceback.print_exc()
 
         return "Webhook error", 500
-        
+
 @app.route("/uploads/<path:filename>")
 def uploaded_files(filename):
     return send_from_directory("/uploads", filename)
