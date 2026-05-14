@@ -568,6 +568,27 @@ def privacy_debug(message, extra=None):
     else:
         print(f"🧪 {message}", flush=True)
 
+def safe_log(message, extra=None, *, level="info", production=False):
+    """
+    Logger centralizzato.
+
+    Regola:
+    - di default in produzione NON stampa dettagli;
+    - in locale/development stampa anche extra;
+    - se production=True stampa solo il messaggio essenziale, mai extra sensibili.
+    """
+    env = os.getenv("APP_ENV", "production").lower()
+
+    if env not in ("local", "development"):
+        if production:
+            print(f"{message}", flush=True)
+        return
+
+    if extra is not None:
+        print(f"{message}: {extra}", flush=True)
+    else:
+        print(f"{message}", flush=True)
+
 import os
 
 redis_url = os.getenv("REDIS_URL")
@@ -980,7 +1001,7 @@ app.config['SECURITY_PASSWORD_SALT'] = os.getenv(
 
 # 🔹 Inizializza Flask-Mail
 mail = Mail(app)
-print("APP_BASE_URL =", repr(app.config.get("APP_BASE_URL")))
+safe_log("APP_BASE_URL configurata", production=True)
 # ---------------------------------------------------------
 # 📧 FUNZIONI EMAIL – UTENTE
 # ---------------------------------------------------------
@@ -2549,14 +2570,14 @@ def admin_passkey_auth_verify():
             "error": "Credential ID mancante."
         }), 400
 
-    print(
-        "🔐 [PASSKEY AUTH] credential richiesta:",
-        {
-            "user_id": int(g.utente["id"]),
-            "credential_id_prefix": credential_id_b64url[:18],
-            "user_agent": request.headers.get("User-Agent", "")[:120]
-        },
-        flush=True
+        safe_log(
+            "🔐 [PASSKEY AUTH] richiesta autenticazione passkey",
+            {
+                "user_id": int(g.utente["id"]),
+                "credential_id_prefix": credential_id_b64url[:18],
+                "user_agent": request.headers.get("User-Agent", "")[:120]
+            }
+        )
     )
 
     passkey = get_admin_passkey_by_credential_id(
@@ -2570,15 +2591,15 @@ def admin_passkey_auth_verify():
             "error": "Passkey non riconosciuta per questo admin."
         }), 400
 
-    print(
-        "✅ [PASSKEY AUTH] passkey trovata:",
-        {
-            "passkey_id": passkey["id"],
-            "nome_dispositivo": passkey["nome_dispositivo"],
-            "credential_id_prefix": passkey["credential_id"][:18],
-            "last_used_at": passkey["last_used_at"]
-        },
-        flush=True
+        safe_log(
+            "✅ [PASSKEY AUTH] passkey trovata",
+            {
+                "passkey_id": passkey["id"],
+                "nome_dispositivo": passkey["nome_dispositivo"],
+                "credential_id_prefix": passkey["credential_id"][:18],
+                "last_used_at": passkey["last_used_at"]
+            }
+        )
     )
 
     try:
