@@ -34,40 +34,55 @@
       <p id="admin-passkey-unlock-msg" class="text-sm mt-3 hidden"></p>
     </div>
 
-    <!-- Separatore -->
-    <div class="flex items-center gap-3 my-6">
-      <div class="h-px bg-gray-200 flex-1"></div>
-      <span class="text-xs text-gray-400 uppercase tracking-wide">oppure</span>
-      <div class="h-px bg-gray-200 flex-1"></div>
+    <!-- 🧯 SBLOCCO CON RECOVERY CODE - SECONDO PIANO -->
+    <div class="mt-6">
+      <details class="group rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+        <summary class="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🧯</span>
+            <div>
+              <p class="text-sm font-semibold text-gray-700">
+                Usa un codice di recupero
+              </p>
+              <p class="text-xs text-gray-500">
+                Opzione di emergenza se la passkey non è disponibile.
+              </p>
+            </div>
+          </div>
+
+          <span class="text-gray-400 transition-transform group-open:rotate-180">
+            ▼
+          </span>
+        </summary>
+
+        <div class="border-t border-gray-200 px-4 pb-4 pt-4">
+          <label for="admin-recovery-code" class="block text-sm font-semibold text-gray-700 mb-2">
+            Codice di recupero admin
+          </label>
+
+          <input
+            id="admin-recovery-code"
+            type="text"
+            inputmode="text"
+            autocomplete="one-time-code"
+            placeholder="Inserisci un recovery code"
+            class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+          >
+
+          <button
+            type="button"
+            id="admin-recovery-unlock-btn"
+            class="mt-3 w-full rounded-xl bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold py-3 flex items-center justify-center gap-2 transition"
+          >
+            <span>🧯</span>
+            <span>Sblocca con codice di recupero</span>
+          </button>
+
+          <p id="admin-recovery-unlock-msg" class="text-sm mt-3 hidden"></p>
+        </div>
+      </details>
     </div>
-
-    <!-- 🧯 SBLOCCO CON RECOVERY CODE -->
-    <div class="rounded-xl border border-gray-200 p-4 bg-gray-50">
-      <label for="admin-recovery-code" class="block text-sm font-semibold text-gray-700 mb-2">
-        Codice di recupero admin
-      </label>
-
-      <input
-        id="admin-recovery-code"
-        type="text"
-        inputmode="text"
-        autocomplete="one-time-code"
-        placeholder="Inserisci un recovery code"
-        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
-      >
-
-      <button
-        type="button"
-        id="admin-recovery-unlock-btn"
-        class="mt-3 w-full rounded-xl bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold py-3 flex items-center justify-center gap-2 transition"
-      >
-        <span>🧯</span>
-        <span>Sblocca con codice di recupero</span>
-      </button>
-
-      <p id="admin-recovery-unlock-msg" class="text-sm mt-3 hidden"></p>
-    </div>
-
+    
     <div class="mt-5 rounded-xl bg-gray-50 border border-gray-100 p-4">
       <p class="text-xs text-gray-500 leading-relaxed">
         Lo sblocco resta valido solo temporaneamente su questo dispositivo.
