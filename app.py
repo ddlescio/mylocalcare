@@ -8222,19 +8222,6 @@ def push_subscribe():
 
         if app.config.get("IS_POSTGRES"):
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS push_subscriptions (
-                    id SERIAL PRIMARY KEY,
-                    utente_id INTEGER NOT NULL,
-                    endpoint TEXT UNIQUE NOT NULL,
-                    p256dh TEXT NOT NULL,
-                    auth TEXT NOT NULL,
-                    user_agent TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            cur.execute("""
                 INSERT INTO push_subscriptions (
                     utente_id,
                     endpoint,
@@ -8262,19 +8249,6 @@ def push_subscribe():
 
         else:
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS push_subscriptions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    utente_id INTEGER NOT NULL,
-                    endpoint TEXT UNIQUE NOT NULL,
-                    p256dh TEXT NOT NULL,
-                    auth TEXT NOT NULL,
-                    user_agent TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            cur.execute("""
                 INSERT INTO push_subscriptions (
                     utente_id,
                     endpoint,
@@ -8300,7 +8274,7 @@ def push_subscribe():
                 request.headers.get("User-Agent", "")
             ))
 
-            conn.commit()
+        conn.commit()
 
         security_log(
             "✅ [push_subscribe] subscription sincronizzata",
@@ -10228,7 +10202,7 @@ def gestisci_pagamento_confermato(payment_intent):
         },
         production=True
     )
-    
+
     if not acquisto_id:
         security_log(
             "❌ [STRIPE] metadata.acquisto_id mancante",
@@ -12064,32 +12038,14 @@ def emit_incoming_call_later(caller_id, destinatario_id, room_name, room_url, de
 # ==========================================================
 # 🎥 VIDEO CALLS — IMPOSTAZIONE GLOBALE ON/OFF
 # ==========================================================
-def ensure_app_settings_table():
-    conn = get_db_connection()
-    cur = get_cursor(conn)
-
-    try:
-        cur.execute(sql("""
-            CREATE TABLE IF NOT EXISTS app_settings (
-                chiave TEXT PRIMARY KEY,
-                valore TEXT NOT NULL
-            )
-        """))
-        conn.commit()
-    finally:
-        try:
-            cur.close()
-        except Exception:
-            pass
-        try:
-            conn.close()
-        except Exception:
-            pass
-
-
 def is_video_calls_enabled():
-    ensure_app_settings_table()
+    """
+    Legge lo stato globale delle videochiamate.
 
+    La tabella app_settings deve già esistere:
+    - in produzione viene creata/aggiornata tramite init_db/migrazione;
+    - nel runtime non eseguiamo CREATE TABLE.
+    """
     conn = get_db_connection()
     cur = get_cursor(conn)
 
@@ -12100,16 +12056,29 @@ def is_video_calls_enabled():
         )
         row = cur.fetchone()
 
-        # default: attive
+        # default: attive se la chiave non è ancora stata impostata
         if not row:
             return True
 
         return str(row["valore"]).strip() == "1"
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore lettura app_settings.video_calls_enabled",
+            e,
+            production=True
+        )
+
+        # Fail-safe: se la tabella o la lettura hanno problemi,
+        # meglio bloccare temporaneamente le videochiamate invece di aprirle senza controllo.
+        return False
+
     finally:
         try:
             cur.close()
         except Exception:
             pass
+
         try:
             conn.close()
         except Exception:
@@ -12117,33 +12086,56 @@ def is_video_calls_enabled():
 
 
 def set_video_calls_enabled(enabled: bool):
-    ensure_app_settings_table()
+    """
+    Aggiorna lo stato globale delle videochiamate.
 
+    La tabella app_settings deve già esistere:
+    nel runtime non eseguiamo CREATE TABLE.
+    """
     conn = get_db_connection()
     cur = get_cursor(conn)
 
     try:
-        cur.execute(
-            sql("DELETE FROM app_settings WHERE chiave = ?"),
-            ("video_calls_enabled",)
-        )
-
-        cur.execute(
-            sql("INSERT INTO app_settings (chiave, valore) VALUES (?, ?)"),
-            ("video_calls_enabled", "1" if enabled else "0")
-        )
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                INSERT INTO app_settings (chiave, valore)
+                VALUES (%s, %s)
+                ON CONFLICT (chiave)
+                DO UPDATE SET valore = EXCLUDED.valore
+            """, (
+                "video_calls_enabled",
+                "1" if enabled else "0"
+            ))
+        else:
+            cur.execute("""
+                INSERT INTO app_settings (chiave, valore)
+                VALUES (?, ?)
+                ON CONFLICT(chiave)
+                DO UPDATE SET valore = excluded.valore
+            """, (
+                "video_calls_enabled",
+                "1" if enabled else "0"
+            ))
 
         conn.commit()
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
     finally:
         try:
             cur.close()
         except Exception:
             pass
+
         try:
             conn.close()
         except Exception:
             pass
-
 
 @app.route("/admin/video-calls/toggle", methods=["POST"])
 @admin_required
