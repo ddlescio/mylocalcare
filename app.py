@@ -3234,7 +3234,7 @@ def admin_recovery_code_verify():
 
         if os.getenv("APP_ENV", "production").lower() in ("local", "development"):
             traceback.print_exc()
-            
+
         return jsonify({
             "ok": False,
             "error": "Errore durante la verifica del codice di recupero."
@@ -9968,10 +9968,14 @@ def gestisci_pagamento_confermato(payment_intent):
         metadata = payment_intent["metadata"] if "metadata" in payment_intent else {}
         acquisto_id = metadata["acquisto_id"] if "acquisto_id" in metadata else None
 
-    print(
-        f"🧪 [STRIPE] START gestisci_pagamento_confermato "
-        f"id={riferimento_esterno} acquisto_id={acquisto_id} metadata={metadata}",
-        flush=True
+    security_log(
+        "💳 [STRIPE] START gestisci_pagamento_confermato",
+        {
+            "payment_intent": riferimento_esterno,
+            "acquisto_id": acquisto_id,
+            "metadata_keys": list(metadata.keys()) if metadata else []
+        },
+        production=True
     )
 
     if not acquisto_id:
@@ -9995,7 +9999,17 @@ def gestisci_pagamento_confermato(payment_intent):
         """), (int(acquisto_id),))
 
         acquisto = cur.fetchone()
-        print(f"🧪 [STRIPE] acquisto letto = {dict(acquisto) if acquisto else None}", flush=True)
+        security_log(
+            "💳 [STRIPE] acquisto letto",
+            {
+                "acquisto_id": acquisto["id"] if acquisto else None,
+                "utente_id": acquisto["utente_id"] if acquisto else None,
+                "tipo": acquisto["tipo"] if acquisto else None,
+                "stato": acquisto["stato"] if acquisto else None,
+                "annuncio_id": acquisto["annuncio_id"] if acquisto else None
+            } if acquisto else None,
+            production=True
+        )
 
         if not acquisto:
             print("❌ Webhook Stripe: acquisto non trovato:", acquisto_id, flush=True)
@@ -10025,9 +10039,13 @@ def gestisci_pagamento_confermato(payment_intent):
             WHERE id = ?
         """), (riferimento_esterno, int(acquisto_id)))
 
-        print(
-            f"🧪 [STRIPE] acquisto aggiornato a paid id={acquisto_id} rif={riferimento_esterno}",
-            flush=True
+        security_log(
+            "💳 [STRIPE] acquisto aggiornato a paid",
+            {
+                "acquisto_id": acquisto_id,
+                "payment_intent": riferimento_esterno
+            },
+            production=True
         )
 
         # ===============================
@@ -10043,7 +10061,15 @@ def gestisci_pagamento_confermato(payment_intent):
             """), (piano_servizio_id,))
             piano = cur.fetchone()
 
-            print(f"🧪 [STRIPE] piano servizio = {dict(piano) if piano else None}", flush=True)
+            security_log(
+                "💳 [STRIPE] piano servizio letto",
+                {
+                    "servizio_id": piano["servizio_id"] if piano else None,
+                    "durata_giorni": piano["durata_giorni"] if piano else None,
+                    "prezzo_cent": piano["prezzo_cent"] if piano else None
+                } if piano else None,
+                production=True
+            )
 
             if not piano:
                 raise Exception("Piano servizio non trovato")
@@ -10060,10 +10086,14 @@ def gestisci_pagamento_confermato(payment_intent):
                 riferimento_esterno
             ))
 
-            print(
-                f"🧪 [STRIPE] inserito acquisti_servizi "
-                f"utente={utente_id} servizio={int(piano['servizio_id'])} rif={riferimento_esterno}",
-                flush=True
+            security_log(
+                "💳 [STRIPE] storico acquisto servizio inserito",
+                {
+                    "utente_id": utente_id,
+                    "servizio_id": int(piano["servizio_id"]),
+                    "payment_intent": riferimento_esterno
+                },
+                production=True
             )
 
             ok, msg, att_id = attiva_servizio(
@@ -10077,7 +10107,15 @@ def gestisci_pagamento_confermato(payment_intent):
                 note=f"Stripe PI {riferimento_esterno}"
             )
 
-            print("ATTIVA SERVIZIO:", ok, msg, att_id, flush=True)
+            security_log(
+                "💳 [STRIPE] attivazione servizio completata",
+                {
+                    "ok": ok,
+                    "attivazione_id": att_id,
+                    "messaggio": msg
+                },
+                production=True
+            )
 
             if not ok:
                 raise Exception(msg)
@@ -10151,10 +10189,14 @@ def gestisci_pagamento_confermato(payment_intent):
                     riferimento_esterno
                 ))
 
-                print(
-                    f"🧪 [STRIPE] inserito acquisti_servizi PACCHETTO "
-                    f"utente={utente_id} servizio={servizio_id} rif={riferimento_esterno}",
-                    flush=True
+                security_log(
+                    "💳 [STRIPE] storico acquisto servizio pacchetto inserito",
+                    {
+                        "utente_id": utente_id,
+                        "servizio_id": servizio_id,
+                        "payment_intent": riferimento_esterno
+                    },
+                    production=True
                 )
 
                 ok, msg, att_id = attiva_servizio(
@@ -10168,7 +10210,15 @@ def gestisci_pagamento_confermato(payment_intent):
                     note=f"Stripe PI {riferimento_esterno} (pacchetto)"
                 )
 
-                print("ATTIVA SERVIZIO PACCHETTO:", ok, msg, att_id, flush=True)
+                security_log(
+                    "💳 [STRIPE] attivazione servizio pacchetto completata",
+                    {
+                        "ok": ok,
+                        "attivazione_id": att_id,
+                        "messaggio": msg
+                    },
+                    production=True
+                )
 
                 if not ok and msg == "Servizio già attivo.":
                     continue
@@ -10202,12 +10252,30 @@ def gestisci_pagamento_confermato(payment_intent):
             raise Exception("Tipo acquisto non valido")
 
         conn.commit()
-        print("✅ Stripe webhook OK – servizi attivati", flush=True)
+        security_log(
+            "✅ [STRIPE] webhook completato — servizi attivati",
+            {
+                "acquisto_id": acquisto_id,
+                "payment_intent": riferimento_esterno
+            },
+            production=True
+        )
 
     except Exception as e:
         conn.rollback()
-        print("❌ ERRORE STRIPE:", repr(e), flush=True)
-        traceback.print_exc()
+        security_log(
+            "❌ [STRIPE] errore gestione pagamento confermato",
+            {
+                "error_type": type(e).__name__,
+                "error": repr(e),
+                "acquisto_id": acquisto_id,
+                "payment_intent": riferimento_esterno
+            },
+            production=True
+        )
+
+        if os.getenv("APP_ENV", "production").lower() in ("local", "development"):
+            traceback.print_exc()
 
     finally:
         try:
@@ -12380,14 +12448,23 @@ def chat_debug_socket_event():
 @app.route("/webhook/stripe", methods=["POST"])
 def webhook_stripe():
     try:
-        print("🧪 [WEBHOOK] START /webhook/stripe", flush=True)
+        security_log(
+            "💳 [WEBHOOK] START /webhook/stripe",
+            production=True
+        )
 
         payload = request.data
         sig_header = request.headers.get("Stripe-Signature")
         endpoint_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
 
-        print(f"🧪 [WEBHOOK] sig_header presente = {bool(sig_header)}", flush=True)
-        print(f"🧪 [WEBHOOK] endpoint_secret presente = {bool(endpoint_secret)}", flush=True)
+        security_log(
+            "💳 [WEBHOOK] configurazione richiesta Stripe",
+            {
+                "sig_header_present": bool(sig_header),
+                "endpoint_secret_present": bool(endpoint_secret)
+            },
+            production=True
+        )
 
         if not endpoint_secret:
             print("❌ STRIPE_WEBHOOK_SECRET non trovato", flush=True)
@@ -12399,31 +12476,73 @@ def webhook_stripe():
                 sig_header=sig_header,
                 secret=endpoint_secret
             )
-            print(f"🧪 [WEBHOOK] event type = {event['type']}", flush=True)
+            security_log(
+                "💳 [WEBHOOK] evento Stripe ricevuto",
+                {
+                    "event_type": event["type"]
+                },
+                production=True
+            )
 
         except ValueError as e:
-            print(f"❌ [WEBHOOK] Invalid payload: {repr(e)}", flush=True)
-            traceback.print_exc()
+            security_log(
+                "❌ [WEBHOOK] payload Stripe non valido",
+                {
+                    "error_type": type(e).__name__,
+                    "error": repr(e)
+                },
+                production=True
+            )
+
+            if os.getenv("APP_ENV", "production").lower() in ("local", "development"):
+                traceback.print_exc()
+
             return "Invalid payload", 400
 
         except stripe.error.SignatureVerificationError as e:
-            print(f"❌ [WEBHOOK] Invalid signature: {repr(e)}", flush=True)
-            traceback.print_exc()
+            security_log(
+                "❌ [WEBHOOK] firma Stripe non valida",
+                {
+                    "error_type": type(e).__name__,
+                    "error": repr(e)
+                },
+                production=True
+            )
+
+            if os.getenv("APP_ENV", "production").lower() in ("local", "development"):
+                traceback.print_exc()
+
             return "Invalid signature", 400
 
         if event["type"] == "payment_intent.succeeded":
             payment_intent = event["data"]["object"]
-            print("🧪 [WEBHOOK] prima di gestisci_pagamento_confermato", flush=True)
+            security_log(
+                "💳 [WEBHOOK] gestione pagamento confermato avviata",
+                production=True
+            )
             gestisci_pagamento_confermato(payment_intent)
-            print("🧪 [WEBHOOK] dopo gestisci_pagamento_confermato", flush=True)
+            security_log(
+                "✅ [WEBHOOK] gestione pagamento confermato completata",
+                production=True
+            )
 
         return "ok", 200
 
     except Exception as e:
-        print(f"❌ [WEBHOOK] ECCEZIONE NON GESTITA: {repr(e)}", flush=True)
-        traceback.print_exc()
-        return "Webhook error", 500
+        security_log(
+            "❌ [WEBHOOK] eccezione non gestita",
+            {
+                "error_type": type(e).__name__,
+                "error": repr(e)
+            },
+            production=True
+        )
 
+        if os.getenv("APP_ENV", "production").lower() in ("local", "development"):
+            traceback.print_exc()
+
+        return "Webhook error", 500
+        
 @app.route("/uploads/<path:filename>")
 def uploaded_files(filename):
     return send_from_directory("/uploads", filename)
