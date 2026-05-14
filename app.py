@@ -12608,24 +12608,19 @@ def chat_count_unread(user_id):
     return row["count"]
 
 # ==========================================================
-# 🔐 DB BOOTSTRAP — tabelle di sicurezza
+# 🔐 DB BOOTSTRAP — disattivato in runtime produzione
 # ==========================================================
-# La tabella admin_passkeys viene verificata/creata solo qui,
-# durante il bootstrap del servizio web.
+# Le tabelle/colonne di sicurezza admin devono essere create tramite migrazione
+# o script dedicato, non automaticamente all'avvio dell'app.
 #
-# Le funzioni operative delle passkey devono solo leggere/scrivere dati,
-# senza eseguire CREATE TABLE / CREATE INDEX durante l'uso normale.
+# Tabelle/colonne richieste già verificate su Render:
+# - utenti.admin_security_version
+# - admin_passkeys
+# - admin_recovery_codes
 #
-# Se Postgres ha un timeout momentaneo, l'avvio non viene bloccato:
-# in quel caso la tabella va verificata tramite nuovo deploy o migrazione manuale.
-if APP_RUNTIME_ROLE == "web":
-    try:
-        ensure_admin_security_version_column()
-        ensure_admin_passkeys_table()
-        ensure_admin_recovery_codes_table()
-        print("✅ Tabelle sicurezza admin verificate", flush=True)
-    except Exception as e:
-        print("⚠️ Verifica tabelle sicurezza admin non completata al bootstrap:", repr(e), flush=True)
+# Nota:
+# le funzioni ensure_admin_* restano nel codice solo come riferimento/migrazione manuale,
+# ma non vengono più chiamate automaticamente dal runtime web.
 
 if app.config["IS_REALTIME_SERVER"]:
     register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
