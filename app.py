@@ -2748,12 +2748,12 @@ def admin_passkey_auth_options():
                     id=base64url_to_bytes(p["credential_id"])
                 )
             )
-    except Exception as e:
-        log_exception_safe(
-            "⚠️ Passkey saltata in auth/options",
-            e,
-            {"user_id": user_id}
-        )
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Passkey saltata in auth/options",
+                e,
+                {"user_id": user_id}
+            )
 
     if not allow_credentials:
         return jsonify({
@@ -8100,14 +8100,14 @@ def internal_push_send():
             return jsonify({"ok": False, "error": "internal token not configured"}), 500
 
         if internal_token != expected_token:
-                security_log(
-                    "❌ [internal_push_send] token interno non valido",
-                    {
-                        "ip": get_client_ip(),
-                        "user_agent": request.headers.get("User-Agent", "")
-                    },
-                    production=True
-                )
+            security_log(
+                "❌ [internal_push_send] token interno non valido",
+                {
+                    "ip": get_client_ip(),
+                    "user_agent": request.headers.get("User-Agent", "")
+                },
+                production=True
+            )
 
             return jsonify({"ok": False, "error": "unauthorized"}), 403
 
@@ -8165,14 +8165,14 @@ def push_debug():
     try:
         data = request.get_json(silent=True) or {}
 
-    privacy_debug("push_debug", {
-        "user_id": session.get("utente_id"),
-        "g_utente_id": g.utente["id"] if getattr(g, "utente", None) else None,
-        "step": data.get("step"),
-        "ok": data.get("ok"),
-        "details": data.get("details"),
-        "user_agent": request.headers.get("User-Agent", "")
-    })
+        privacy_debug("push_debug", {
+            "user_id": session.get("utente_id"),
+            "g_utente_id": g.utente["id"] if getattr(g, "utente", None) else None,
+            "step": data.get("step"),
+            "ok": data.get("ok"),
+            "details": data.get("details"),
+            "user_agent": request.headers.get("User-Agent", "")
+        })
 
         return jsonify({"ok": True})
 
@@ -8202,15 +8202,16 @@ def push_subscribe():
         auth = keys.get("auth")
 
         if not endpoint or not p256dh or not auth:
-        security_log(
-            "❌ [push_subscribe] payload non valido",
-            {
-                "user_id": user_id,
-                "has_endpoint": bool(endpoint),
-                "has_p256dh": bool(p256dh),
-                "has_auth": bool(auth)
-            }
-        )
+            security_log(
+                "❌ [push_subscribe] payload non valido",
+                {
+                    "user_id": user_id,
+                    "has_endpoint": bool(endpoint),
+                    "has_p256dh": bool(p256dh),
+                    "has_auth": bool(auth)
+                }
+            )
+
             return jsonify({
                 "ok": False,
                 "error": "payload subscription non valido"
@@ -8368,18 +8369,18 @@ def push_unsubscribe():
 
         conn.commit()
 
-    security_log(
-        "🔕 [push_unsubscribe] subscription rimossa",
-        {
-            "user_id": user_id,
-            "endpoint": endpoint
-        }
-    )
+        security_log(
+            "🔕 [push_unsubscribe] subscription rimossa",
+            {
+                "user_id": user_id,
+                "endpoint": endpoint
+            }
+        )
 
         return jsonify({
             "ok": True
         })
-
+        
     except Exception as e:
         try:
             if conn:
