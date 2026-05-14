@@ -589,6 +589,155 @@ def safe_log(message, extra=None, *, level="info", production=False):
     else:
         print(f"{message}", flush=True)
 
+# ==========================================================
+# 🔐 SAFE LOGGING — REDAZIONE DATI SENSIBILI
+# ==========================================================
+
+SENSITIVE_LOG_KEYS = {
+    "password",
+    "conferma_password",
+    "nuova_password",
+    "password_attuale",
+    "token",
+    "csrf_token",
+    "secret",
+    "client_secret",
+    "stripe_secret",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "VAPID_PRIVATE_KEY",
+    "FLASK_SECRET_KEY",
+    "MASTER_SECRET_KEY",
+    "DATABASE_URL",
+    "MAIL_PASSWORD",
+    "authorization",
+    "cookie",
+    "session",
+    "dek_b64",
+    "x25519_priv_b64",
+    "x25519_priv_enc",
+    "x25519_priv_nonce",
+    "credential_public_key",
+    "credential_id",
+    "code",
+    "code_hash",
+}
+
+PARTIAL_MASK_KEYS = {
+    "email",
+    "endpoint",
+    "user_agent",
+    "ip",
+    "riferimento_esterno",
+    "payment_intent",
+    "acquisto_id",
+}
+
+
+def _mask_email_for_log(value):
+    value = str(value or "")
+    if "@" not in value:
+        return "***"
+
+    name, domain = value.split("@", 1)
+
+    if len(name) <= 2:
+        masked_name = name[:1] + "***"
+    else:
+        masked_name = name[:2] + "***"
+
+    return f"{masked_name}@{domain}"
+
+
+def _mask_text_for_log(value, keep_start=6, keep_end=4):
+    value = str(value or "")
+
+    if len(value) <= keep_start + keep_end:
+        return "***"
+
+    return f"{value[:keep_start]}...{value[-keep_end:]}"
+
+
+def redact_for_log(value, key_name=None):
+    """
+    Rimuove o maschera dati sensibili prima di mandarli nei log.
+
+    Regole:
+    - chiavi altamente sensibili: sempre [REDACTED]
+    - email: parzialmente mascherata
+    - endpoint / User-Agent / IP / riferimenti esterni: troncati o mascherati
+    - dict/list: redazione ricorsiva
+    """
+
+    key = str(key_name or "").lower()
+
+    if key in {k.lower() for k in SENSITIVE_LOG_KEYS}:
+        return "[REDACTED]"
+
+    if isinstance(value, dict):
+        return {
+            k: redact_for_log(v, k)
+            for k, v in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            redact_for_log(v, key_name)
+            for v in value
+        ]
+
+    if isinstance(value, tuple):
+        return tuple(
+            redact_for_log(v, key_name)
+            for v in value
+        )
+
+    if value is None:
+        return None
+
+    if key == "email":
+        return _mask_email_for_log(value)
+
+    if key in {"endpoint", "user_agent", "riferimento_esterno", "payment_intent"}:
+        return _mask_text_for_log(value, keep_start=10, keep_end=6)
+
+    if key == "ip":
+        return _mask_text_for_log(value, keep_start=3, keep_end=2)
+
+    if key == "acquisto_id":
+        return _mask_text_for_log(value, keep_start=2, keep_end=2)
+
+    return value
+
+
+def security_log(message, extra=None, *, production=False):
+    """
+    Logger sicuro per eventi tecnici e di sicurezza.
+
+    In produzione:
+    - stampa solo se production=True;
+    - stampa sempre dati redatti.
+
+    In locale/development:
+    - stampa anche extra, ma comunque redatti.
+    """
+
+    env = os.getenv("APP_ENV", "production").lower()
+    safe_extra = redact_for_log(extra)
+
+    if env not in ("local", "development"):
+        if production:
+            if safe_extra is not None:
+                print(f"{message}: {safe_extra}", flush=True)
+            else:
+                print(f"{message}", flush=True)
+        return
+
+    if safe_extra is not None:
+        print(f"{message}: {safe_extra}", flush=True)
+    else:
+        print(f"{message}", flush=True)
+
 import os
 
 redis_url = os.getenv("REDIS_URL")
@@ -2570,12 +2719,12 @@ def admin_passkey_auth_verify():
             "error": "Credential ID mancante."
         }), 400
 
-    safe_log(
+    security_log(
         "🔐 [PASSKEY AUTH] richiesta autenticazione passkey",
         {
             "user_id": int(g.utente["id"]),
-            "credential_id_prefix": credential_id_b64url[:18],
-            "user_agent": request.headers.get("User-Agent", "")[:120]
+            "credential_id": credential_id_b64url,
+            "user_agent": request.headers.get("User-Agent", "")
         }
     )
 
@@ -2590,16 +2739,16 @@ def admin_passkey_auth_verify():
             "error": "Passkey non riconosciuta per questo admin."
         }), 400
 
-    safe_log(
+    security_log(
         "✅ [PASSKEY AUTH] passkey trovata",
         {
             "passkey_id": passkey["id"],
             "nome_dispositivo": passkey["nome_dispositivo"],
-            "credential_id_prefix": passkey["credential_id"][:18],
+            "credential_id": passkey["credential_id"],
             "last_used_at": passkey["last_used_at"]
         }
     )
-    
+
     try:
         verification = verify_authentication_response(
             credential=data,
@@ -2628,12 +2777,23 @@ def admin_passkey_auth_verify():
         })
 
     except Exception as e:
-        print("❌ Errore autenticazione passkey admin:", repr(e), flush=True)
-        traceback.print_exc()
+        security_log(
+            "❌ Errore autenticazione passkey admin",
+            {
+                "user_id": int(g.utente["id"]) if g.utente else None,
+                "credential_id": credential_id_b64url,
+                "error_type": type(e).__name__,
+                "error": repr(e),
+                "user_agent": request.headers.get("User-Agent", "")
+            }
+        )
+
+        if os.getenv("APP_ENV", "production").lower() in ("local", "development"):
+            traceback.print_exc()
 
         return jsonify({
             "ok": False,
-            "error": str(e)
+            "error": "Autenticazione passkey non riuscita."
         }), 400
 
 # ==========================================================
@@ -2904,14 +3064,14 @@ def admin_recovery_code_verify():
     allowed, limit_message = check_admin_recovery_rate_limit(user_id)
 
     if not allowed:
-        print(
+        security_log(
             "⛔ [ADMIN RECOVERY] rate limit attivo",
             {
                 "user_id": user_id,
                 "ip": get_client_ip(),
-                "user_agent": request.headers.get("User-Agent", "")[:120]
+                "user_agent": request.headers.get("User-Agent", "")
             },
-            flush=True
+            production=True
         )
 
         return jsonify({
@@ -2971,14 +3131,14 @@ def admin_recovery_code_verify():
         if matched_code_id is None:
             register_failed_admin_recovery_attempt(user_id)
 
-            print(
+            security_log(
                 "❌ [ADMIN RECOVERY] codice non valido",
                 {
                     "user_id": user_id,
                     "ip": get_client_ip(),
-                    "user_agent": request.headers.get("User-Agent", "")[:120]
+                    "user_agent": request.headers.get("User-Agent", "")
                 },
-                flush=True
+                production=True
             )
 
             return jsonify({
@@ -3030,15 +3190,15 @@ def admin_recovery_code_verify():
         mark_admin_stepup_verified()
         session.modified = True
 
-        print(
+        security_log(
             "✅ [ADMIN RECOVERY] codice recovery usato",
             {
                 "user_id": user_id,
                 "recovery_code_id": matched_code_id,
                 "ip": get_client_ip(),
-                "user_agent": request.headers.get("User-Agent", "")[:120]
+                "user_agent": request.headers.get("User-Agent", "")
             },
-            flush=True
+            production=True
         )
 
         # ✅ Alert sicurezza, senza bloccare lo sblocco se fallisce
@@ -3060,9 +3220,21 @@ def admin_recovery_code_verify():
         except Exception:
             pass
 
-        print("❌ Errore verifica recovery code admin:", repr(e), flush=True)
-        traceback.print_exc()
+        security_log(
+            "❌ Errore verifica recovery code admin",
+            {
+                "user_id": user_id,
+                "error_type": type(e).__name__,
+                "error": repr(e),
+                "ip": get_client_ip(),
+                "user_agent": request.headers.get("User-Agent", "")
+            },
+            production=True
+        )
 
+        if os.getenv("APP_ENV", "production").lower() in ("local", "development"):
+            traceback.print_exc()
+            
         return jsonify({
             "ok": False,
             "error": "Errore durante la verifica del codice di recupero."
@@ -7956,40 +8128,58 @@ def push_unsubscribe():
         endpoint = data.get("endpoint")
 
         if not endpoint:
-          return jsonify({"ok": False, "error": "endpoint mancante"}), 400
+            return jsonify({
+                "ok": False,
+                "error": "endpoint mancante"
+            }), 400
 
         conn = get_db_connection()
-        cur = conn.cursor()
+        cur = get_cursor(conn)
 
-        if app.config.get("IS_POSTGRES"):
-            cur.execute("""
-                DELETE FROM push_subscriptions
-                WHERE user_id = %s
-                  AND endpoint = %s
-            """, (user_id, endpoint))
-        else:
-            cur.execute("""
-                DELETE FROM push_subscriptions
-                WHERE user_id = ?
-                  AND endpoint = ?
-            """, (user_id, endpoint))
-            conn.commit()
+        cur.execute(sql("""
+            DELETE FROM push_subscriptions
+            WHERE utente_id = ?
+              AND endpoint = ?
+        """), (
+            user_id,
+            endpoint
+        ))
+
+        conn.commit()
 
         print(
-            f"🔕 [push_unsubscribe] subscription rimossa user_id={user_id} endpoint={endpoint[:90]}...",
+            f"🔕 [push_unsubscribe] subscription rimossa utente_id={user_id} endpoint={endpoint[:90]}...",
             flush=True
         )
 
-        return jsonify({"ok": True})
+        return jsonify({
+            "ok": True
+        })
 
     except Exception as e:
+        try:
+            if conn:
+                conn.rollback()
+        except Exception:
+            pass
+
         print("❌ [push_unsubscribe] errore:", repr(e), flush=True)
-        return jsonify({"ok": False, "error": str(e)}), 500
+
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
 
     finally:
         try:
             if cur:
                 cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
+                conn.close()
         except Exception:
             pass
 
