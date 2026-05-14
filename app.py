@@ -2570,14 +2570,13 @@ def admin_passkey_auth_verify():
             "error": "Credential ID mancante."
         }), 400
 
-        safe_log(
-            "🔐 [PASSKEY AUTH] richiesta autenticazione passkey",
-            {
-                "user_id": int(g.utente["id"]),
-                "credential_id_prefix": credential_id_b64url[:18],
-                "user_agent": request.headers.get("User-Agent", "")[:120]
-            }
-        )
+    safe_log(
+        "🔐 [PASSKEY AUTH] richiesta autenticazione passkey",
+        {
+            "user_id": int(g.utente["id"]),
+            "credential_id_prefix": credential_id_b64url[:18],
+            "user_agent": request.headers.get("User-Agent", "")[:120]
+        }
     )
 
     passkey = get_admin_passkey_by_credential_id(
@@ -2591,17 +2590,16 @@ def admin_passkey_auth_verify():
             "error": "Passkey non riconosciuta per questo admin."
         }), 400
 
-        safe_log(
-            "✅ [PASSKEY AUTH] passkey trovata",
-            {
-                "passkey_id": passkey["id"],
-                "nome_dispositivo": passkey["nome_dispositivo"],
-                "credential_id_prefix": passkey["credential_id"][:18],
-                "last_used_at": passkey["last_used_at"]
-            }
-        )
+    safe_log(
+        "✅ [PASSKEY AUTH] passkey trovata",
+        {
+            "passkey_id": passkey["id"],
+            "nome_dispositivo": passkey["nome_dispositivo"],
+            "credential_id_prefix": passkey["credential_id"][:18],
+            "last_used_at": passkey["last_used_at"]
+        }
     )
-
+    
     try:
         verification = verify_authentication_response(
             credential=data,
