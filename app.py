@@ -8784,29 +8784,29 @@ def register():
         conn.commit()
 
 
-        # 📧 Email conferma
+        # 📧 Email conferma tramite MailAPI Aruba
         link = build_external_url("conferma_email", token=token)
 
-        messaggio = Message(
-            subject='Conferma la tua registrazione su MyLocalCare',
-            recipients=[email],
-            sender=app.config.get("MAIL_DEFAULT_SENDER")
-        )
-
-        html = render_template(
-            "email/conferma_account.html",
+        email_inviata = _invia_email(
+            destinazione=email,
+            oggetto="Conferma la tua registrazione su MyLocalCare",
+            corpo=f"Ciao {nome},\n\nconferma il tuo account MyLocalCare aprendo questo link:\n{link}\n\nMyLocalCare",
+            html_template="email/conferma_account.html",
             nome=nome,
             link=link
         )
 
-        messaggio.html = html
-        messaggio.body = f"Conferma il tuo account: {link}"
+        if email_inviata:
+            flash("Registrazione completata! Controlla la tua email per confermare l'account.", "success")
+        else:
+            flash(
+                "Registrazione completata, ma non siamo riusciti a inviare l'email di conferma. "
+                "Contatta l'assistenza o riprova più tardi.",
+                "warning"
+            )
 
-        threading.Thread(target=send_async_email, args=(app, messaggio), daemon=True).start()
-
-        flash("Registrazione completata! Controlla la tua email per confermare l'account.")
         return redirect(url_for('login'))
-
+        
     return render_template('register.html')
 
 @app.route("/termini")
