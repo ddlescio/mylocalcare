@@ -8806,7 +8806,7 @@ def register():
             )
 
         return redirect(url_for('login'))
-        
+
     return render_template('register.html')
 
 @app.route("/termini")
@@ -9095,24 +9095,11 @@ def password_dimenticata():
 
         conn.commit()
 
-        # Invia email
-        try:
-            msg = Message(
-                subject="Reimposta la password del tuo account MyLocalCare",
-                recipients=[email],
-                sender=app.config.get("MAIL_DEFAULT_SENDER"),
-                reply_to=MAIL_FROM_ADDRESS
-            )
-
-            msg.msgId = make_msgid(domain="mylocalcare.it")
-
-            msg.extra_headers = {
-                "Auto-Submitted": "auto-generated",
-                "X-Auto-Response-Suppress": "All",
-                "X-Entity-Ref-ID": secrets.token_hex(16)
-            }
-
-            msg.body = (
+        # Invia email tramite MailAPI Aruba
+        email_inviata = _invia_email(
+            destinazione=email,
+            oggetto="Reimposta la password del tuo account MyLocalCare",
+            corpo=(
                 f"Ciao {utente['nome']},\n\n"
                 "hai richiesto di reimpostare la password del tuo account MyLocalCare.\n\n"
                 "Per scegliere una nuova password, apri questo link:\n"
@@ -9123,14 +9110,12 @@ def password_dimenticata():
                 "MyLocalCare\n"
                 "https://www.mylocalcare.it"
             )
+        )
 
-            mail.send(msg)
-
-        except Exception as e:
-            print("Errore invio mail recupero accesso:", e, flush=True)
+        if not email_inviata:
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
-
+            
         flash(
             "Se l'indirizzo è registrato, riceverai un link per completare la procedura.",
             "success"
