@@ -6102,10 +6102,24 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             "text": text_finale or ""
         }
 
+        # ✅ IMPORTANTE:
+        # www.mylocalcare.it in produzione punta a Render.
+        # L'endpoint PHP invece vive su Aruba.
+        # Quindi forziamo la chiamata all'IP Aruba mantenendo l'Host corretto.
+        aruba_direct_url = os.getenv(
+            "LOCALCARE_MAIL_API_DIRECT_URL",
+            "https://89.46.110.14/send-localcare-mail.php"
+        ).strip()
+
         response = requests.post(
-            mail_api_url,
+            aruba_direct_url,
+            headers={
+                "Host": "www.mylocalcare.it",
+                "Content-Type": "application/json"
+            },
             json=payload,
-            timeout=15
+            timeout=15,
+            verify=False
         )
 
         try:
@@ -6151,7 +6165,7 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             production=True
         )
         return False
-        
+
 def _normalizza_lista(value):
     if not value:
         return []
