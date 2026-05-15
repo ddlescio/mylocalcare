@@ -6050,40 +6050,108 @@ def processa_match_nuovi_annunci():
     return len(annunci_processati)
 
 
-def _invia_email(destinazione, oggetto, corpo=None, html_template=None, **kwargs):
+def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=None, **kwargs):
     """
-    Funzione centralizzata invio email.
+    Funzione centralizzata invio email MyLocalCare.
+
+    Usa l'endpoint PHP su Aruba:
+    https://www.mylocalcare.it/send-localcare-mail.php
 
     Parametri:
     - destinazione: email destinatario
     - oggetto: subject
     - corpo: testo semplice fallback
-    - html_template: path template Jinja (opzionale)
+    - html_template: path template Jinja opzionale
+    - html: HTML già pronto opzionale
     - kwargs: variabili per template
     """
 
+    mail_api_url = os.getenv(
+        "LOCALCARE_MAIL_API_URL",
+        "https://www.mylocalcare.it/send-localcare-mail.php"
+    ).strip()
+
+    mail_api_secret = os.getenv("LOCALCARE_MAIL_API_SECRET", "").strip()
+
+    if not mail_api_secret:
+        security_log(
+            "❌ LOCALCARE_MAIL_API_SECRET mancante",
+            {"destinazione": destinazione},
+            production=True
+        )
+        return False
+
     try:
-        msg = Message(
-            subject=oggetto,
-            recipients=[destinazione],
-            sender=app.config.get("MAIL_DEFAULT_SENDER")
+        # ✅ HTML da template, se presente
+        if html_template:
+            html_finale = render_template(html_template, **kwargs)
+        else:
+            html_finale = html
+
+        # ✅ Testo fallback
+        text_finale = corpo or ""
+
+        if not text_finale and html_finale:
+            text_finale = "Apri questa email in formato HTML."
+
+        payload = {
+            "secret": mail_api_secret,
+            "to": destinazione,
+            "subject": oggetto,
+            "html": html_finale or "",
+            "text": text_finale or ""
+        }
+
+        response = requests.post(
+            mail_api_url,
+            json=payload,
+            timeout=15
         )
 
-        # ✅ Se è specificato un template HTML
-        if html_template:
-            msg.html = render_template(html_template, **kwargs)
+        try:
+            result = response.json()
+        except Exception:
+            result = {
+                "ok": False,
+                "raw": response.text[:300]
+            }
 
-            # fallback testo
-            msg.body = corpo or "Apri questa email in formato HTML."
+        if response.status_code != 200 or not result.get("ok"):
+            security_log(
+                "❌ Errore invio email tramite MailAPI Aruba",
+                {
+                    "status_code": response.status_code,
+                    "destinazione": destinazione,
+                    "oggetto": oggetto,
+                    "result": result
+                },
+                production=True
+            )
+            return False
 
-        else:
-            msg.body = corpo or ""
+        security_log(
+            "✅ Email inviata tramite MailAPI Aruba",
+            {
+                "destinazione": destinazione,
+                "oggetto": oggetto
+            },
+            production=True
+        )
 
-        mail.send(msg)
+        return True
 
     except Exception as e:
-        print("Errore invio email:", e)
-
+        log_exception_safe(
+            "❌ Eccezione invio email tramite MailAPI Aruba",
+            e,
+            {
+                "destinazione": destinazione,
+                "oggetto": oggetto
+            },
+            production=True
+        )
+        return False
+        
 def _normalizza_lista(value):
     if not value:
         return []

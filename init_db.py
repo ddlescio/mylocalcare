@@ -14,7 +14,7 @@ def dt_col(default_now=False):
         return "TEXT"
 
 def pk_col():
-    return "BIGSERIAL PRIMARY KEY" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
+    return "SERIAL PRIMARY KEY" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
 # =========================================================
 # INIZIALIZZAZIONE DATABASE LOCALE - LocalCare (2025)
 # =========================================================
@@ -142,6 +142,7 @@ def crea_tabella_utenti():
         admin_session_token TEXT,
         admin_session_expiry {dt_col()},
         admin_browser_fingerprint TEXT,
+        admin_security_version INTEGER DEFAULT 0,
 
         -- 🛡️ Verifica maggiore età
         maggiorenne_verificato INTEGER DEFAULT 0,
@@ -550,6 +551,81 @@ def crea_tabella_push_subscriptions():
     conn.commit()
     conn.close()
     print("✅ Tabella 'push_subscriptions' pronta.")
+
+# ---------------------------------------------------------
+# 🔐 SICUREZZA ADMIN — PASSKEY / RECOVERY / SETTINGS
+# ---------------------------------------------------------
+def crea_tabella_admin_passkeys():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql(f"""
+    CREATE TABLE IF NOT EXISTS admin_passkeys (
+        id {pk_col()},
+        utente_id INTEGER NOT NULL,
+        credential_id TEXT UNIQUE NOT NULL,
+        credential_public_key TEXT NOT NULL,
+        sign_count INTEGER DEFAULT 0,
+        device_type TEXT,
+        backed_up INTEGER DEFAULT 0,
+        transports TEXT,
+        nome_dispositivo TEXT,
+        created_at {dt_col(True)},
+        last_used_at {dt_col()},
+        FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+    );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_admin_passkeys_utente
+        ON admin_passkeys(utente_id);
+    """))
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'admin_passkeys' pronta.")
+
+
+def crea_tabella_admin_recovery_codes():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql(f"""
+    CREATE TABLE IF NOT EXISTS admin_recovery_codes (
+        id {pk_col()},
+        utente_id INTEGER NOT NULL,
+        code_hash TEXT NOT NULL,
+        used INTEGER DEFAULT 0,
+        created_at {dt_col(True)},
+        used_at {dt_col()},
+        FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+    );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_admin_recovery_codes_utente
+        ON admin_recovery_codes(utente_id);
+    """))
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'admin_recovery_codes' pronta.")
+
+
+def crea_tabella_app_settings():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql("""
+    CREATE TABLE IF NOT EXISTS app_settings (
+        chiave TEXT PRIMARY KEY,
+        valore TEXT NOT NULL
+    );
+    """))
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'app_settings' pronta.")
 
 def aggiorna_tabella_push_subscriptions():
     conn = get_conn()
@@ -1073,6 +1149,7 @@ def aggiorna_colonne_mancanti():
         "admin_session_token": "TEXT",
         "admin_session_expiry": "TEXT",
         "admin_browser_fingerprint": "TEXT",
+        "admin_security_version": "INTEGER DEFAULT 0",
     }
 
     for col, tipo in colonne_da_aggiungere.items():
@@ -1232,8 +1309,14 @@ def inizializza_database():
     crea_tabella_notifiche()
     crea_tabella_push_subscriptions()
     aggiorna_tabella_push_subscriptions()
+
+    # 🔐 Sicurezza admin / configurazioni app
+    crea_tabella_admin_passkeys()
+    crea_tabella_admin_recovery_codes()
+    crea_tabella_app_settings()
+
     crea_tabella_notifiche_admin()
-    crea_tabella_reset_password()    
+    crea_tabella_reset_password()
     crea_tabella_chat_chiusure()
     crea_tabella_segnalazioni_chat()
     crea_tabella_video_call_log()
