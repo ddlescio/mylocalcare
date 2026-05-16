@@ -6054,29 +6054,26 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
     """
     Funzione centralizzata invio email MyLocalCare.
 
-    Usa l'endpoint PHP su Aruba:
-    https://www.mylocalcare.it/send-localcare-mail.php
+    Usa Postmark API per l'invio delle email transazionali:
+    - conferma registrazione
+    - reset password
+    - notifiche email inviate tramite questa funzione
 
-    Parametri:
-    - destinazione: email destinatario
-    - oggetto: subject
-    - corpo: testo semplice fallback
-    - html_template: path template Jinja opzionale
-    - html: HTML già pronto opzionale
-    - kwargs: variabili per template
+    Variabili Render richieste:
+    - POSTMARK_SERVER_TOKEN
+    - MAIL_FROM_ADDRESS
+    - MAIL_FROM_NAME
     """
 
-    mail_api_url = os.getenv(
-        "LOCALCARE_MAIL_API_URL",
-        "https://www.mylocalcare.it/send-localcare-mail.php"
-    ).strip()
+    postmark_token = os.getenv("POSTMARK_SERVER_TOKEN", "").strip()
 
-    mail_api_secret = os.getenv("LOCALCARE_MAIL_API_SECRET", "").strip()
-
-    if not mail_api_secret:
+    if not postmark_token:
         security_log(
-            "❌ LOCALCARE_MAIL_API_SECRET mancante",
-            {"destinazione": destinazione},
+            "❌ POSTMARK_SERVER_TOKEN mancante",
+            {
+                "destinazione": destinazione,
+                "oggetto": oggetto
+            },
             production=True
         )
         return False
@@ -6094,45 +6091,42 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
         if not text_finale and html_finale:
             text_finale = "Apri questa email in formato HTML."
 
+        from_address = os.getenv("MAIL_FROM_ADDRESS", MAIL_FROM_ADDRESS).strip()
+        from_name = os.getenv("MAIL_FROM_NAME", MAIL_FROM_NAME).strip() or "MyLocalCare"
+
+        mittente = f"{from_name} <{from_address}>"
+
         payload = {
-            "secret": mail_api_secret,
-            "to": destinazione,
-            "subject": oggetto,
-            "html": html_finale or "",
-            "text": text_finale or ""
+            "From": mittente,
+            "To": destinazione,
+            "Subject": oggetto,
+            "TextBody": text_finale or "",
+            "HtmlBody": html_finale or "",
+            "MessageStream": os.getenv("POSTMARK_MESSAGE_STREAM", "outbound").strip() or "outbound",
+            "ReplyTo": from_address
         }
 
-        # ✅ IMPORTANTE:
-        # www.mylocalcare.it in produzione punta a Render.
-        # L'endpoint PHP invece vive su Aruba.
-        # Quindi forziamo la chiamata all'IP Aruba mantenendo l'Host corretto.
-        aruba_direct_url = os.getenv(
-            "LOCALCARE_MAIL_API_DIRECT_URL",
-            "https://89.46.110.14/send-localcare-mail.php"
-        ).strip()
-
         response = requests.post(
-            aruba_direct_url,
+            "https://api.postmarkapp.com/email",
             headers={
-                "Host": "www.mylocalcare.it",
-                "Content-Type": "application/json"
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "X-Postmark-Server-Token": postmark_token
             },
             json=payload,
-            timeout=15,
-            verify=False
+            timeout=15
         )
 
         try:
             result = response.json()
         except Exception:
             result = {
-                "ok": False,
-                "raw": response.text[:300]
+                "raw": response.text[:500]
             }
 
-        if response.status_code != 200 or not result.get("ok"):
+        if response.status_code != 200:
             security_log(
-                "❌ Errore invio email tramite MailAPI Aruba",
+                "❌ Errore invio email tramite Postmark",
                 {
                     "status_code": response.status_code,
                     "destinazione": destinazione,
@@ -6144,10 +6138,11 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             return False
 
         security_log(
-            "✅ Email inviata tramite MailAPI Aruba",
+            "✅ Email inviata tramite Postmark",
             {
                 "destinazione": destinazione,
-                "oggetto": oggetto
+                "oggetto": oggetto,
+                "message_id": result.get("MessageID") if isinstance(result, dict) else None
             },
             production=True
         )
@@ -6156,7 +6151,7 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
 
     except Exception as e:
         log_exception_safe(
-            "❌ Eccezione invio email tramite MailAPI Aruba",
+            "❌ Eccezione invio email tramite Postmark",
             e,
             {
                 "destinazione": destinazione,
@@ -6165,7 +6160,7 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             production=True
         )
         return False
-
+                
 def _normalizza_lista(value):
     if not value:
         return []
@@ -9115,7 +9110,7 @@ def password_dimenticata():
         if not email_inviata:
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
-            
+
         flash(
             "Se l'indirizzo è registrato, riceverai un link per completare la procedura.",
             "success"
