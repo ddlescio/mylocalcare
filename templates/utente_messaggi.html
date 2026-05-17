@@ -53,7 +53,9 @@
 
       {% for c in threads %}
       <a href="{{ url_for('chat_conversazione_view', other_id=c['altro_id']) }}"
-         class="chat-thread-card {% if c['non_letti'] > 0 %}chat-thread-card-unread{% endif %}">
+         class="chat-thread-card {% if c['non_letti'] > 0 %}chat-thread-card-unread{% endif %}"
+         data-chat-other-id="{{ c['altro_id'] }}"
+         data-chat-unread="{{ c['non_letti'] or 0 }}">
 
         <!-- FOTO PROFILO -->
         <div class="chat-thread-avatar-wrap">
@@ -744,56 +746,52 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function bindChatThreadsSocket(socket) {
-    if (!socket) return;
+  const OPENED_CHAT_KEY = "mlc_opened_read_chat_id";
 
-    window.__chatThreadsHandlers = window.__chatThreadsHandlers || {};
+  function markOpenedUnreadChat() {
+    document.querySelectorAll(".chat-thread-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const unread = parseInt(card.dataset.chatUnread || "0", 10);
+        const otherId = card.dataset.chatOtherId;
 
-    if (window.__chatThreadsHandlers.socket &&
-        window.__chatThreadsHandlers.socket !== socket &&
-        window.__chatThreadsHandlers.update) {
-      window.__chatThreadsHandlers.socket.off(
-        "chat_threads_update",
-        window.__chatThreadsHandlers.update
-      );
-    }
-
-    if (window.__chatThreadsHandlers.update) {
-      socket.off("chat_threads_update", window.__chatThreadsHandlers.update);
-    }
-
-    window.__chatThreadsHandlers.socket = socket;
-
-    window.__chatThreadsHandlers.update = function () {
-      location.reload();
-    };
-
-    socket.on("chat_threads_update", window.__chatThreadsHandlers.update);
-  }
-
-  if (window.whenSocketReady) {
-    window.whenSocketReady((socket) => {
-      bindChatThreadsSocket(socket);
-    });
-  } else if (window.socket) {
-    if (window.socket.connected) {
-      bindChatThreadsSocket(window.socket);
-    } else {
-      window.socket.once("connect", () => {
-        bindChatThreadsSocket(window.socket);
+        if (otherId && unread > 0) {
+          sessionStorage.setItem(OPENED_CHAT_KEY, otherId);
+        }
       });
-    }
+    });
   }
 
-  window.addEventListener("pageshow", function (e) {
-    const navEntries = performance.getEntriesByType("navigation");
-    const navType = navEntries && navEntries[0] ? navEntries[0].type : null;
+  function clearOpenedChatUnreadState() {
+    const openedOtherId = sessionStorage.getItem(OPENED_CHAT_KEY);
 
-    if (e.persisted || navType === "back_forward") {
-      location.reload();
+    if (!openedOtherId) return;
+
+    const card = document.querySelector(
+      `.chat-thread-card[data-chat-other-id="${openedOtherId}"]`
+    );
+
+    if (!card) {
+      sessionStorage.removeItem(OPENED_CHAT_KEY);
+      return;
     }
+
+    card.classList.remove("chat-thread-card-unread");
+    card.dataset.chatUnread = "0";
+
+    const dot = card.querySelector(".chat-thread-dot");
+    if (dot) dot.remove();
+
+    const count = card.querySelector(".chat-thread-count");
+    if (count) count.remove();
+
+    sessionStorage.removeItem(OPENED_CHAT_KEY);
+  }
+
+  markOpenedUnreadChat();
+
+  window.addEventListener("pageshow", function () {
+    clearOpenedChatUnreadState();
   });
 });
 </script>
-
 {% endblock %}

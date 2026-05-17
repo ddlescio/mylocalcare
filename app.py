@@ -6055,20 +6055,40 @@ def processa_match_nuovi_annunci():
 
 def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=None, **kwargs):
     """
-    Funzione centralizzata invio email MyLocalCare.
+    Funzione centralizzata invio email MyLocalCare tramite Postmark.
 
-    Usa Postmark API per l'invio delle email transazionali:
+    Usata per:
     - conferma registrazione
     - reset password
-    - notifiche email inviate tramite questa funzione
+    - sospensione account
+    - notifiche email inviate dall'admin
 
-    Variabili Render richieste:
-    - POSTMARK_SERVER_TOKEN
-    - MAIL_FROM_ADDRESS
-    - MAIL_FROM_NAME
+    Nota:
+    - non usa Flask-Mail;
+    - Flask-Mail resta solo per la funzione send_async_email(), che invia alert admin già funzionanti.
     """
 
     postmark_token = os.getenv("POSTMARK_SERVER_TOKEN", "").strip()
+
+    if not destinazione or not str(destinazione).strip():
+        security_log(
+            "❌ Invio email annullato: destinatario mancante",
+            {
+                "oggetto": oggetto
+            },
+            production=True
+        )
+        return False
+
+    if not oggetto or not str(oggetto).strip():
+        security_log(
+            "❌ Invio email annullato: oggetto mancante",
+            {
+                "destinazione": destinazione
+            },
+            production=True
+        )
+        return False
 
     if not postmark_token:
         security_log(
@@ -6082,30 +6102,66 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
         return False
 
     try:
+        html_finale = None
+
         # ✅ HTML da template, se presente
         if html_template:
-            html_finale = render_template(html_template, **kwargs)
-        else:
+            try:
+                html_finale = render_template(html_template, **kwargs)
+            except Exception as e:
+                log_exception_safe(
+                    "❌ Errore rendering template email",
+                    e,
+                    {
+                        "html_template": html_template,
+                        "destinazione": destinazione,
+                        "oggetto": oggetto
+                    },
+                    production=True
+                )
+
+                # Se il template fallisce, non blocchiamo per forza l'invio:
+                # inviamo almeno il testo se presente.
+                html_finale = None
+
+        # ✅ HTML diretto, se passato esplicitamente
+        elif html:
             html_finale = html
 
         # ✅ Testo fallback
-        text_finale = corpo or ""
+        text_finale = (corpo or "").strip()
 
         if not text_finale and html_finale:
-            text_finale = "Apri questa email in formato HTML."
+            text_finale = (
+                "Hai ricevuto una comunicazione da MyLocalCare.\n\n"
+                "Apri questa email in formato HTML per visualizzarla correttamente."
+            )
+
+        if not text_finale and not html_finale:
+            security_log(
+                "❌ Invio email annullato: contenuto vuoto",
+                {
+                    "destinazione": destinazione,
+                    "oggetto": oggetto,
+                    "html_template": html_template
+                },
+                production=True
+            )
+            return False
 
         from_address = os.getenv("MAIL_FROM_ADDRESS", MAIL_FROM_ADDRESS).strip()
         from_name = os.getenv("MAIL_FROM_NAME", MAIL_FROM_NAME).strip() or "MyLocalCare"
+        message_stream = os.getenv("POSTMARK_MESSAGE_STREAM", "outbound").strip() or "outbound"
 
         mittente = f"{from_name} <{from_address}>"
 
         payload = {
             "From": mittente,
-            "To": destinazione,
-            "Subject": oggetto,
-            "TextBody": text_finale or "",
+            "To": str(destinazione).strip(),
+            "Subject": str(oggetto).strip(),
+            "TextBody": text_finale,
             "HtmlBody": html_finale or "",
-            "MessageStream": os.getenv("POSTMARK_MESSAGE_STREAM", "outbound").strip() or "outbound",
+            "MessageStream": message_stream,
             "ReplyTo": from_address
         }
 
@@ -6152,6 +6208,18 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
 
         return True
 
+    except requests.exceptions.Timeout as e:
+        log_exception_safe(
+            "❌ Timeout invio email tramite Postmark",
+            e,
+            {
+                "destinazione": destinazione,
+                "oggetto": oggetto
+            },
+            production=True
+        )
+        return False
+
     except Exception as e:
         log_exception_safe(
             "❌ Eccezione invio email tramite Postmark",
@@ -6163,7 +6231,7 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             production=True
         )
         return False
-
+        
 def _normalizza_lista(value):
     if not value:
         return []
