@@ -3429,15 +3429,29 @@ def admin_counters():
         pending_recensioni_totali = pending_recensioni + pending_risposte
 
         step = "utenti"
-        totale_utenti = get_count(cur, """
-            SELECT COUNT(*) AS valore
-            FROM utenti
-            WHERE attivo = 1
-              AND sospeso = 0
-              AND COALESCE(disattivato_admin, 0) = 0
-              AND COALESCE(email, '') NOT LIKE 'deleted_user_%@mylocalcare.local'
-              AND COALESCE(username, '') NOT LIKE 'utente_eliminato_%'
-        """, step=step)
+
+        try:
+            totale_utenti = get_count(cur, """
+                SELECT COUNT(*) AS valore
+                FROM utenti
+                WHERE attivo = 1
+                  AND sospeso = 0
+                  AND COALESCE(disattivato_admin, 0) = 0
+                  AND COALESCE(email, '') NOT LIKE ?
+                  AND COALESCE(username, '') NOT LIKE ?
+            """, (
+                "deleted_user_%@mylocalcare.local",
+                "utente_eliminato_%"
+            ), step=step)
+
+        except Exception as e:
+            log_exception_safe(
+                "❌ Errore admin_counters solo step=utenti",
+                e,
+                production=True
+            )
+
+            totale_utenti = 0
 
         step = "messaggi"
         messaggi_non_letti = get_count(cur, """
@@ -3496,7 +3510,7 @@ def admin_counters():
             production=True
         )
 
-        return jsonify({
+        payload = {
             "ok": False,
             "error": "admin_counters_failed",
             "step": step,
@@ -3507,8 +3521,10 @@ def admin_counters():
             "messaggi": 0,
             "totale": 0,
             "video_minuti": 0
-        }), 200
+        }
 
+        return jsonify(payload), 200
+        
     finally:
         try:
             if cur:
@@ -3521,7 +3537,7 @@ def admin_counters():
                 conn.close()
         except Exception:
             pass
-                                            
+
 @app.route("/admin/counters/page")
 @admin_required
 def admin_counters_page():
