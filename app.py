@@ -3377,159 +3377,151 @@ def admin_counters():
     ttl = app.config["_ADMIN_COUNTERS_TTL"]
     now = time.time()
 
-    # 🔹 Usa la cache se ancora fresca
     if cache["payload"] is not None and (now - cache["ts"] < ttl):
         return jsonify(cache["payload"])
 
-    def scalar(row, default=0):
+    def get_count(cur, query, params=None, step=""):
         """
-        Estrae il primo valore da una riga DB in modo compatibile con:
-        - sqlite3.Row
-        - dict / RealDictRow PostgreSQL
-        - tuple/list
-        - None
+        Esegue una query COUNT/valore singolo e legge sempre la colonna alias 'valore'.
+        Evita fetchone_value(), row[0], list(row.values())[0].
         """
-        if row is None:
-            return default
+        cur.execute(sql(query), params or ())
+        row = cur.fetchone()
+
+        if not row:
+            return 0
 
         try:
-            if hasattr(row, "keys"):
-                keys = list(row.keys())
-                if not keys:
-                    return default
-                value = row[keys[0]]
-                return value if value is not None else default
-        except Exception:
-            pass
+            return int(row["valore"] or 0)
+        except Exception as e:
+            raise RuntimeError(f"Errore lettura valore admin_counters step={step}: {repr(e)}")
 
-        try:
-            if isinstance(row, dict):
-                if not row:
-                    return default
-                value = next(iter(row.values()))
-                return value if value is not None else default
-        except Exception:
-            pass
+    step = "start"
 
-        try:
-            value = row[0]
-            return value if value is not None else default
-        except Exception:
-            return default
+    conn = None
+    cur = None
 
-    with db_lock:
+    try:
         conn = get_db_connection()
-        c = get_cursor(conn)
+        cur = get_cursor(conn)
 
-        try:
-            # 🟡 Annunci in attesa
-            c.execute(sql("""
-                SELECT COUNT(*) AS valore
-                FROM annunci
-                WHERE stato = 'in_attesa'
-            """))
-            pending_annunci = int(scalar(c.fetchone(), 0) or 0)
+        step = "annunci"
+        pending_annunci = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM annunci
+            WHERE stato = 'in_attesa'
+        """, step=step)
 
-            # 🟡 Recensioni in attesa
-            c.execute(sql("""
-                SELECT COUNT(*) AS valore
-                FROM recensioni
-                WHERE stato = 'in_attesa'
-            """))
-            pending_recensioni = int(scalar(c.fetchone(), 0) or 0)
+        step = "recensioni"
+        pending_recensioni = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM recensioni
+            WHERE stato = 'in_attesa'
+        """, step=step)
 
-            # 🟡 Risposte recensioni in attesa
-            c.execute(sql("""
-                SELECT COUNT(*) AS valore
-                FROM risposte_recensioni
-                WHERE stato = 'in_attesa'
-            """))
-            pending_risposte = int(scalar(c.fetchone(), 0) or 0)
+        step = "risposte_recensioni"
+        pending_risposte = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM risposte_recensioni
+            WHERE stato = 'in_attesa'
+        """, step=step)
 
-            pending_recensioni_totali = pending_recensioni + pending_risposte
+        pending_recensioni_totali = pending_recensioni + pending_risposte
 
-            # 🟡 Utenti attivi reali
-            c.execute(sql("""
-                SELECT COUNT(*) AS valore
-                FROM utenti
-                WHERE attivo = 1
-                  AND sospeso = 0
-                  AND COALESCE(disattivato_admin, 0) = 0
-                  AND COALESCE(email, '') NOT LIKE 'deleted_user_%@mylocalcare.local'
-                  AND COALESCE(username, '') NOT LIKE 'utente_eliminato_%'
-            """))
-            totale_utenti = int(scalar(c.fetchone(), 0) or 0)
+        step = "utenti"
+        totale_utenti = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM utenti
+            WHERE attivo = 1
+              AND sospeso = 0
+              AND COALESCE(disattivato_admin, 0) = 0
+              AND COALESCE(email, '') NOT LIKE 'deleted_user_%@mylocalcare.local'
+              AND COALESCE(username, '') NOT LIKE 'utente_eliminato_%'
+        """, step=step)
 
-            # 🟢 Messaggi non letti
-            c.execute(sql("""
-                SELECT COUNT(*) AS valore
-                FROM messaggi_chat
-                WHERE letto = 0
-            """))
-            messaggi_non_letti = int(scalar(c.fetchone(), 0) or 0)
+        step = "messaggi"
+        messaggi_non_letti = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM messaggi_chat
+            WHERE letto = 0
+        """, step=step)
 
-            # 🎥 Minuti video usati nel mese corrente
-            if app.config.get("IS_POSTGRES"):
-                c.execute("""
-                    SELECT COALESCE(minuti_totali, 0) AS valore
+        step = "video_minuti"
+
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                SELECT COALESCE((
+                    SELECT minuti_totali
                     FROM video_limiti_mensili
                     WHERE mese = TO_CHAR(NOW(), 'YYYY-MM')
                     LIMIT 1
-                """)
-            else:
-                c.execute(f"""
-                    SELECT COALESCE(minuti_totali, 0) AS valore
+                ), 0) AS valore
+            """)
+        else:
+            cur.execute(f"""
+                SELECT COALESCE((
+                    SELECT minuti_totali
                     FROM video_limiti_mensili
                     WHERE mese = {month_sql()}
                     LIMIT 1
-                """)
+                ), 0) AS valore
+            """)
 
-            video_minuti = int(scalar(c.fetchone(), 0) or 0)
+        row_video = cur.fetchone()
 
-            payload = {
-                "utenti": totale_utenti,
-                "annunci": pending_annunci,
-                "recensioni": pending_recensioni_totali,
-                "risposte": pending_risposte,
-                "messaggi": messaggi_non_letti,
-                "totale": pending_annunci + pending_recensioni_totali,
-                "video_minuti": video_minuti
-            }
-
-            cache["payload"] = payload
-            cache["ts"] = now
-
-            return jsonify(payload)
-
+        try:
+            video_minuti = int(row_video["valore"] or 0) if row_video else 0
         except Exception as e:
-            log_exception_safe(
-                "❌ Errore admin_counters",
-                e,
-                production=True
-            )
+            raise RuntimeError(f"Errore lettura valore admin_counters step=video_minuti: {repr(e)}")
 
-            # Importante: risponde 200 così il frontend non resta con “—”
-            return jsonify({
-                "utenti": 0,
-                "annunci": 0,
-                "recensioni": 0,
-                "risposte": 0,
-                "messaggi": 0,
-                "totale": 0,
-                "video_minuti": 0
-            })
+        payload = {
+            "utenti": totale_utenti,
+            "annunci": pending_annunci,
+            "recensioni": pending_recensioni_totali,
+            "risposte": pending_risposte,
+            "messaggi": messaggi_non_letti,
+            "totale": pending_annunci + pending_recensioni_totali,
+            "video_minuti": video_minuti
+        }
 
-        finally:
-            try:
-                c.close()
-            except Exception:
-                pass
+        cache["payload"] = payload
+        cache["ts"] = now
 
-            try:
+        return jsonify(payload)
+
+    except Exception as e:
+        log_exception_safe(
+            f"❌ Errore admin_counters step={step}",
+            e,
+            production=True
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": "admin_counters_failed",
+            "step": step,
+            "utenti": 0,
+            "annunci": 0,
+            "recensioni": 0,
+            "risposte": 0,
+            "messaggi": 0,
+            "totale": 0,
+            "video_minuti": 0
+        }), 200
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
                 conn.close()
-            except Exception:
-                pass
-                                
+        except Exception:
+            pass
+                                            
 @app.route("/admin/counters/page")
 @admin_required
 def admin_counters_page():
