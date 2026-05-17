@@ -96,7 +96,7 @@
       <p class="text-2xl font-bold text-slate-800 mt-2">→</p>
     </div>
   </a>
-  
+
   <!-- 🎥 Videochiamate -->
   <a href="{{ url_for('admin_video_calls') }}"
      class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
@@ -119,27 +119,75 @@
 <!-- 🔹 JS per caricare counters -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    fetch("/admin/counters")
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-            if (!data) return;
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = value ?? "0";
+  }
 
-            document.getElementById("dash-utenti").textContent =
-              data.utenti ?? "0";
+  function aggiornaDashboardCounters() {
+    fetch("/admin/counters", {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      },
+      cache: "no-store"
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
 
-            document.getElementById("dash-annunci").textContent =
-              data.annunci ?? "0";
+        setText("dash-utenti", data.utenti);
+        setText("dash-annunci", data.annunci);
+        setText("dash-recensioni", data.recensioni);
+        setText("dash-messaggi", data.messaggi);
+        setText("dash-video-minuti", data.video_minuti);
+      })
+      .catch(() => {});
+  }
 
-            document.getElementById("dash-recensioni").textContent =
-              data.recensioni ?? "0";
+  aggiornaDashboardCounters();
 
-            document.getElementById("dash-messaggi").textContent =
-              data.messaggi ?? "0";
+  function bindAdminCountersSocket(socket) {
+    if (!socket) return;
 
-            document.getElementById("dash-video-minuti").textContent =
-              data.video_minuti ?? "0";
-        });
+    window.__adminDashboardCountersHandlers =
+      window.__adminDashboardCountersHandlers || {};
+
+    if (window.__adminDashboardCountersHandlers.update) {
+      socket.off(
+        "update_admin_counters",
+        window.__adminDashboardCountersHandlers.update
+      );
+    }
+
+    window.__adminDashboardCountersHandlers.update = function () {
+      aggiornaDashboardCounters();
+    };
+
+    socket.on(
+      "update_admin_counters",
+      window.__adminDashboardCountersHandlers.update
+    );
+  }
+
+  if (window.whenSocketReady) {
+    window.whenSocketReady((socket) => {
+      bindAdminCountersSocket(socket);
+    });
+  } else if (window.socket) {
+    if (window.socket.connected) {
+      bindAdminCountersSocket(window.socket);
+    } else {
+      window.socket.once("connect", () => {
+        bindAdminCountersSocket(window.socket);
+      });
+    }
+  }
+
+  window.addEventListener("pageshow", () => {
+    aggiornaDashboardCounters();
+  });
 });
 </script>
-
 {% endblock %}

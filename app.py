@@ -3400,11 +3400,31 @@ def admin_counters():
             # ✅ Somma recensioni + risposte nel badge “recensioni”
             pending_recensioni_totali = pending_recensioni + pending_risposte
 
-            # 🟡 Conta utenti totali
-            c.execute(sql("SELECT COUNT(*) FROM utenti"))
+            # 🟡 Conta utenti attivi reali
+            # Esclude:
+            # - utenti sospesi
+            # - utenti disattivati admin
+            # - utenti eliminati/anonimizzati
+            c.execute(sql("""
+                SELECT COUNT(*)
+                FROM utenti
+                WHERE attivo = 1
+                  AND sospeso = 0
+                  AND COALESCE(disattivato_admin, 0) = 0
+                  AND COALESCE(email, '') NOT LIKE 'deleted_user_%@mylocalcare.local'
+                  AND COALESCE(username, '') NOT LIKE 'utente_eliminato_%'
+            """))
             totale_utenti = fetchone_value(c.fetchone())
 
-                        # 🎥 Minuti video usati (mese corrente)
+            # 🟢 Conta messaggi non letti totali
+            c.execute(sql("""
+                SELECT COUNT(*)
+                FROM messaggi_chat
+                WHERE letto = 0
+            """))
+            messaggi_non_letti = fetchone_value(c.fetchone())
+
+            # 🎥 Minuti video usati (mese corrente)
             if app.config.get("IS_POSTGRES"):
                 c.execute("""
                     SELECT COALESCE(minuti_totali, 0)
@@ -3426,12 +3446,12 @@ def admin_counters():
             except:
                 pass
 
-    totale = pending_annunci + pending_recensioni_totali
     payload = {
         "utenti": totale_utenti,
         "annunci": pending_annunci,
         "recensioni": pending_recensioni_totali,
         "risposte": pending_risposte,
+        "messaggi": messaggi_non_letti,
         "totale": totale,
         "video_minuti": video_minuti
     }
@@ -6231,7 +6251,7 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             production=True
         )
         return False
-        
+
 def _normalizza_lista(value):
     if not value:
         return []
@@ -8013,6 +8033,13 @@ def modifica_recensione():
     if stato == "in_attesa":
         invalidate_admin_counters()
 
+        notifica_admin_evento(
+            titolo="Recensione modificata in attesa",
+            messaggio="Una recensione modificata è in attesa di approvazione.",
+            link=url_for("admin_recensioni", stato="in_attesa"),
+            push=True
+        )
+    
     # 🔵 Messaggio coerente con stato scelto
     if stato == "approvato":
         flash("⭐ Recensione aggiornata con successo.", "success")
@@ -8233,6 +8260,84 @@ def invia_push(user_id, title, body):
                 "⚠️ [invia_push] errore chiusura conn",
                 e
             )
+
+def notifica_admin_evento(titolo, messaggio, link=None, push=True):
+    """
+    Crea una notifica interna per tutti gli admin attivi
+    e, se possibile, invia anche una push.
+
+    Non usa Postmark.
+    Non invia email.
+    """
+    conn = None
+    cur = None
+
+    try:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+
+        cur.execute(sql("""
+            SELECT id
+            FROM utenti
+            WHERE ruolo = 'admin'
+              AND attivo = 1
+              AND sospeso = 0
+              AND COALESCE(disattivato_admin, 0) = 0
+        """))
+
+        admins = cur.fetchall()
+
+        if not admins:
+            return
+
+        for admin in admins:
+            admin_id = int(admin["id"])
+
+            try:
+                _crea_notifica(
+                    admin_id,
+                    titolo,
+                    messaggio,
+                    tipo="admin",
+                    link=link
+                )
+
+                emit_update_notifications(admin_id)
+
+                if push:
+                    invia_push(
+                        admin_id,
+                        titolo,
+                        messaggio
+                    )
+
+            except Exception as e:
+                log_exception_safe(
+                    "⚠️ Errore notifica_admin_evento per singolo admin",
+                    e,
+                    {"admin_id": admin_id},
+                    production=True
+                )
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore notifica_admin_evento",
+            e,
+            production=True
+        )
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
 
 @app.route("/internal/push/send", methods=["POST"])
 def internal_push_send():
@@ -8694,6 +8799,13 @@ def recensioni_utente(user_id):
                 flash("✅ Recensione inviata! Sarà visibile dopo approvazione.", "success")
                 invalidate_admin_counters()
 
+                notifica_admin_evento(
+                    titolo="Nuova recensione in attesa",
+                    messaggio="Una nuova recensione è in attesa di approvazione.",
+                    link=url_for("admin_recensioni", stato="in_attesa"),
+                    push=True
+                )
+
         except Exception as e:
             flash(f"❌ Errore durante il salvataggio della recensione: {e}", "error")
 
@@ -8850,7 +8962,18 @@ def register():
         conn.commit()
 
 
-        # 📧 Email conferma tramite MailAPI Aruba
+        conn.commit()
+
+        invalidate_admin_counters()
+
+        notifica_admin_evento(
+            titolo="Nuovo utente registrato",
+            messaggio=f"Nuovo utente registrato: @{username} — {nome} {cognome}",
+            link=url_for("admin_utenti"),
+            push=True
+        )
+
+        # 📧 Email conferma tramite Postmark
         link = build_external_url("conferma_email", token=token)
 
         email_inviata = _invia_email(
@@ -11495,10 +11618,18 @@ def nuovo_annuncio():
         # 🔔 Aggiorna contatori admin
         invalidate_admin_counters()
 
+        notifica_admin_evento(
+            titolo="Nuovo annuncio in attesa",
+            messaggio=f"Nuovo annuncio da approvare: {titolo}",
+            link=url_for("admin_annunci", stato="in_attesa"),
+            push=True
+        )
+
         flash(
             "✅ Annuncio creato! Sarà pubblicato dopo approvazione dell’amministratore.",
             "success"
         )
+
         return redirect(url_for("dashboard"))
 
     # =========================================================
