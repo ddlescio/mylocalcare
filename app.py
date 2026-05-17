@@ -1223,30 +1223,33 @@ def get_reset_serializer():
 
 
 def invia_email_sospensione(email, nome):
+    """
+    Invia l'email di sospensione account tramite Postmark,
+    usando la funzione centrale _invia_email().
+    """
     try:
-        html = render_template(
-            "email/sospensione_account.html",
+        return _invia_email(
+            destinazione=email,
+            oggetto="Il tuo account MyLocalCare è stato sospeso",
+            corpo=(
+                f"Ciao {nome},\n\n"
+                "il tuo account MyLocalCare è stato sospeso.\n\n"
+                "Se ritieni che si tratti di un errore o vuoi richiedere la riattivazione, "
+                "accedi al tuo account o contatta l'assistenza.\n\n"
+                "MyLocalCare"
+            ),
+            html_template="email/sospensione_account.html",
             nome=nome
         )
-
-        msg = Message(
-            subject="Il tuo account MyLocalCare è stato sospeso",
-            recipients=[email],
-            sender=app.config.get("MAIL_DEFAULT_SENDER")
-        )
-
-        msg.html = html
-        msg.body = "Il tuo account MyLocalCare è stato sospeso."
-
-        mail.send(msg)
 
     except Exception as e:
         log_exception_safe(
             "❌ Errore invio email sospensione",
             e,
-            {"email": email}
+            {"email": email},
+            production=True
         )
-
+        return False
 # ==========================================================
 # 2️⃣ FUNZIONE CONNESSIONE DB E MODELS
 # ==========================================================
@@ -6160,7 +6163,7 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             production=True
         )
         return False
-                
+
 def _normalizza_lista(value):
     if not value:
         return []
