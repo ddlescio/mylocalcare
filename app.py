@@ -3381,42 +3381,76 @@ def admin_counters():
     if cache["payload"] is not None and (now - cache["ts"] < ttl):
         return jsonify(cache["payload"])
 
+    def scalar(row, default=0):
+        """
+        Estrae il primo valore da una riga DB in modo compatibile con:
+        - sqlite3.Row
+        - dict / RealDictRow PostgreSQL
+        - tuple/list
+        - None
+        """
+        if row is None:
+            return default
+
+        try:
+            if hasattr(row, "keys"):
+                keys = list(row.keys())
+                if not keys:
+                    return default
+                value = row[keys[0]]
+                return value if value is not None else default
+        except Exception:
+            pass
+
+        try:
+            if isinstance(row, dict):
+                if not row:
+                    return default
+                value = next(iter(row.values()))
+                return value if value is not None else default
+        except Exception:
+            pass
+
+        try:
+            value = row[0]
+            return value if value is not None else default
+        except Exception:
+            return default
+
     with db_lock:
         conn = get_db_connection()
         c = get_cursor(conn)
 
         try:
-            # 🟡 Conta annunci in attesa
+            # 🟡 Annunci in attesa
             c.execute(sql("""
-                SELECT COUNT(*) AS totale
+                SELECT COUNT(*) AS valore
                 FROM annunci
                 WHERE stato = 'in_attesa'
             """))
-            pending_annunci = int(fetchone_value(c.fetchone()) or 0)
+            pending_annunci = int(scalar(c.fetchone(), 0) or 0)
 
-            # 🟡 Conta recensioni in attesa
+            # 🟡 Recensioni in attesa
             c.execute(sql("""
-                SELECT COUNT(*) AS totale
+                SELECT COUNT(*) AS valore
                 FROM recensioni
                 WHERE stato = 'in_attesa'
             """))
-            pending_recensioni = int(fetchone_value(c.fetchone()) or 0)
+            pending_recensioni = int(scalar(c.fetchone(), 0) or 0)
 
-            # 🟡 Conta risposte recensioni in attesa
+            # 🟡 Risposte recensioni in attesa
             c.execute(sql("""
-                SELECT COUNT(*) AS totale
+                SELECT COUNT(*) AS valore
                 FROM risposte_recensioni
                 WHERE stato = 'in_attesa'
             """))
-            pending_risposte = int(fetchone_value(c.fetchone()) or 0)
+            pending_risposte = int(scalar(c.fetchone(), 0) or 0)
 
-            # ✅ Somma recensioni + risposte nel badge “recensioni”
             pending_recensioni_totali = pending_recensioni + pending_risposte
 
-            # 🟡 Conta utenti attivi reali
-            # Esclude utenti sospesi, disattivati admin ed eliminati/anonimizzati
+            # 🟡 Utenti attivi reali
             c.execute(sql("""
-                SELECT COUNT(*) AS totale
+                SELECT COUNT(*) AS valore
                 FROM utenti
                 WHERE attivo = 1
                   AND sospeso = 0
@@ -3424,34 +3458,33 @@ def admin_counters():
                   AND COALESCE(email, '') NOT LIKE 'deleted_user_%@mylocalcare.local'
                   AND COALESCE(username, '') NOT LIKE 'utente_eliminato_%'
             """))
-            totale_utenti = int(fetchone_value(c.fetchone()) or 0)
+            totale_utenti = int(scalar(c.fetchone(), 0) or 0)
 
-            # 🟢 Conta messaggi chat non letti
+            # 🟢 Messaggi non letti
             c.execute(sql("""
-                SELECT COUNT(*) AS totale
+                SELECT COUNT(*) AS valore
                 FROM messaggi_chat
                 WHERE letto = 0
             """))
-            messaggi_non_letti = int(fetchone_value(c.fetchone()) or 0)
+            messaggi_non_letti = int(scalar(c.fetchone(), 0) or 0)
 
             # 🎥 Minuti video usati nel mese corrente
             if app.config.get("IS_POSTGRES"):
                 c.execute("""
-                    SELECT COALESCE(minuti_totali, 0) AS minuti
+                    SELECT COALESCE(minuti_totali, 0) AS valore
                     FROM video_limiti_mensili
                     WHERE mese = TO_CHAR(NOW(), 'YYYY-MM')
                     LIMIT 1
                 """)
             else:
                 c.execute(f"""
-                    SELECT COALESCE(minuti_totali, 0) AS minuti
+                    SELECT COALESCE(minuti_totali, 0) AS valore
                     FROM video_limiti_mensili
                     WHERE mese = {month_sql()}
                     LIMIT 1
                 """)
 
-            row = c.fetchone()
-            video_minuti = int(row["minuti"] if row and row["minuti"] is not None else 0)
+            video_minuti = int(scalar(c.fetchone(), 0) or 0)
 
             payload = {
                 "utenti": totale_utenti,
@@ -3475,6 +3508,7 @@ def admin_counters():
                 production=True
             )
 
+            # Importante: risponde 200 così il frontend non resta con “—”
             return jsonify({
                 "utenti": 0,
                 "annunci": 0,
@@ -3483,7 +3517,7 @@ def admin_counters():
                 "messaggi": 0,
                 "totale": 0,
                 "video_minuti": 0
-            }), 500
+            })
 
         finally:
             try:
@@ -3495,7 +3529,7 @@ def admin_counters():
                 conn.close()
             except Exception:
                 pass
-                
+                                
 @app.route("/admin/counters/page")
 @admin_required
 def admin_counters_page():
