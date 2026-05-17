@@ -3384,29 +3384,39 @@ def admin_counters():
     with db_lock:
         conn = get_db_connection()
         c = get_cursor(conn)
+
         try:
             # 🟡 Conta annunci in attesa
-            c.execute(sql("SELECT COUNT(*) FROM annunci WHERE stato = 'in_attesa'"))
-            pending_annunci = fetchone_value(c.fetchone())
+            c.execute(sql("""
+                SELECT COUNT(*) AS totale
+                FROM annunci
+                WHERE stato = 'in_attesa'
+            """))
+            pending_annunci = int(fetchone_value(c.fetchone()) or 0)
 
             # 🟡 Conta recensioni in attesa
-            c.execute(sql("SELECT COUNT(*) FROM recensioni WHERE stato = 'in_attesa'"))
-            pending_recensioni = fetchone_value(c.fetchone())
+            c.execute(sql("""
+                SELECT COUNT(*) AS totale
+                FROM recensioni
+                WHERE stato = 'in_attesa'
+            """))
+            pending_recensioni = int(fetchone_value(c.fetchone()) or 0)
 
-            # 🟡 Conta risposte in attesa
-            c.execute(sql("SELECT COUNT(*) FROM risposte_recensioni WHERE stato = 'in_attesa'"))
-            pending_risposte = fetchone_value(c.fetchone())
+            # 🟡 Conta risposte recensioni in attesa
+            c.execute(sql("""
+                SELECT COUNT(*) AS totale
+                FROM risposte_recensioni
+                WHERE stato = 'in_attesa'
+            """))
+            pending_risposte = int(fetchone_value(c.fetchone()) or 0)
 
             # ✅ Somma recensioni + risposte nel badge “recensioni”
             pending_recensioni_totali = pending_recensioni + pending_risposte
 
             # 🟡 Conta utenti attivi reali
-            # Esclude:
-            # - utenti sospesi
-            # - utenti disattivati admin
-            # - utenti eliminati/anonimizzati
+            # Esclude utenti sospesi, disattivati admin ed eliminati/anonimizzati
             c.execute(sql("""
-                SELECT COUNT(*)
+                SELECT COUNT(*) AS totale
                 FROM utenti
                 WHERE attivo = 1
                   AND sospeso = 0
@@ -3414,52 +3424,78 @@ def admin_counters():
                   AND COALESCE(email, '') NOT LIKE 'deleted_user_%@mylocalcare.local'
                   AND COALESCE(username, '') NOT LIKE 'utente_eliminato_%'
             """))
-            totale_utenti = fetchone_value(c.fetchone())
+            totale_utenti = int(fetchone_value(c.fetchone()) or 0)
 
-            # 🟢 Conta messaggi non letti totali
+            # 🟢 Conta messaggi chat non letti
             c.execute(sql("""
-                SELECT COUNT(*)
+                SELECT COUNT(*) AS totale
                 FROM messaggi_chat
                 WHERE letto = 0
             """))
-            messaggi_non_letti = fetchone_value(c.fetchone())
+            messaggi_non_letti = int(fetchone_value(c.fetchone()) or 0)
 
-            # 🎥 Minuti video usati (mese corrente)
+            # 🎥 Minuti video usati nel mese corrente
             if app.config.get("IS_POSTGRES"):
                 c.execute("""
-                    SELECT COALESCE(minuti_totali, 0)
+                    SELECT COALESCE(minuti_totali, 0) AS minuti
                     FROM video_limiti_mensili
-                    WHERE mese = TO_CHAR(NOW(),'YYYY-MM')
+                    WHERE mese = TO_CHAR(NOW(), 'YYYY-MM')
+                    LIMIT 1
                 """)
             else:
-                c.execute("""
-                    SELECT COALESCE(minuti_totali, 0)
+                c.execute(f"""
+                    SELECT COALESCE(minuti_totali, 0) AS minuti
                     FROM video_limiti_mensili
                     WHERE mese = {month_sql()}
+                    LIMIT 1
                 """)
+
             row = c.fetchone()
-            video_minuti = list(row.values())[0] if row else 0
+            video_minuti = int(row["minuti"] if row and row["minuti"] is not None else 0)
+
+            payload = {
+                "utenti": totale_utenti,
+                "annunci": pending_annunci,
+                "recensioni": pending_recensioni_totali,
+                "risposte": pending_risposte,
+                "messaggi": messaggi_non_letti,
+                "totale": pending_annunci + pending_recensioni_totali,
+                "video_minuti": video_minuti
+            }
+
+            cache["payload"] = payload
+            cache["ts"] = now
+
+            return jsonify(payload)
+
+        except Exception as e:
+            log_exception_safe(
+                "❌ Errore admin_counters",
+                e,
+                production=True
+            )
+
+            return jsonify({
+                "utenti": 0,
+                "annunci": 0,
+                "recensioni": 0,
+                "risposte": 0,
+                "messaggi": 0,
+                "totale": 0,
+                "video_minuti": 0
+            }), 500
 
         finally:
             try:
-                conn.close()
-            except:
+                c.close()
+            except Exception:
                 pass
 
-    payload = {
-        "utenti": totale_utenti,
-        "annunci": pending_annunci,
-        "recensioni": pending_recensioni_totali,
-        "risposte": pending_risposte,
-        "messaggi": messaggi_non_letti,
-        "totale": totale,
-        "video_minuti": video_minuti
-    }
-
-    cache["payload"] = payload
-    cache["ts"] = now
-    return jsonify(payload)
-
+            try:
+                conn.close()
+            except Exception:
+                pass
+                
 @app.route("/admin/counters/page")
 @admin_required
 def admin_counters_page():
@@ -8039,7 +8075,7 @@ def modifica_recensione():
             link=url_for("admin_recensioni", stato="in_attesa"),
             push=True
         )
-    
+
     # 🔵 Messaggio coerente con stato scelto
     if stato == "approvato":
         flash("⭐ Recensione aggiornata con successo.", "success")
