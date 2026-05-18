@@ -83,6 +83,55 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
         0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
+.filter-main-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.filter-status-field {
+    min-width: 0;
+}
+
+.filter-toggle-btn {
+    display: inline-flex;
+    white-space: nowrap;
+}
+
+.filter-extra-panel {
+    margin-top: 12px;
+}
+
+/* Mobile + tablet: visibile solo Stato, gli altri filtri sono chiusi */
+@media (max-width: 1023px) {
+    .filter-extra-panel {
+        display: none;
+    }
+
+    .filter-extra-panel.is-open {
+        display: block;
+    }
+}
+
+/* Desktop: tutti i filtri sempre visibili */
+@media (min-width: 1024px) {
+    .filter-main-row {
+        grid-template-columns: 1fr;
+        max-width: 260px;
+        margin-bottom: 12px;
+    }
+
+    .filter-toggle-btn {
+        display: none;
+    }
+
+    .filter-extra-panel {
+        display: block;
+        margin-top: 0;
+    }
+}
+
 .filter-grid {
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -97,7 +146,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
 @media (min-width: 1024px) {
     .filter-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
@@ -303,6 +352,191 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 }
 .mini-link-gray:hover { background: #f3f4f6; }
 
+/* ===== MODALE RIGA RECENSIONE MOBILE/TABLET ===== */
+.review-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.review-modal-backdrop.is-open {
+    display: flex;
+}
+
+.review-modal-card {
+    width: 100%;
+    max-width: 720px;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 28px 28px 0 0;
+    box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.24);
+    padding: 18px;
+    animation: reviewModalUp 0.2s ease-out;
+}
+
+@keyframes reviewModalUp {
+    from {
+        transform: translateY(24px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.review-modal-handle {
+    width: 48px;
+    height: 5px;
+    border-radius: 9999px;
+    background: #cbd5e1;
+    margin: 0 auto 14px;
+}
+
+.review-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.review-modal-title {
+    font-size: 1.15rem;
+    line-height: 1.2;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.review-modal-subtitle {
+    margin-top: 4px;
+    font-size: 0.84rem;
+    color: #64748b;
+}
+
+.review-modal-close {
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.review-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (min-width: 640px) {
+    .review-modal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.review-modal-info {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 12px;
+}
+
+.review-modal-info.full {
+    grid-column: 1 / -1;
+}
+
+.review-modal-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+}
+
+.review-modal-value {
+    font-size: 0.92rem;
+    font-weight: 650;
+    color: #0f172a;
+    word-break: break-word;
+    white-space: pre-line;
+}
+
+.review-modal-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.review-modal-action {
+    min-height: 42px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.86rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    text-decoration: none;
+}
+
+.review-modal-action.primary {
+    background: #2563eb;
+    color: white;
+}
+
+.review-modal-action.secondary {
+    background: #f8fafc;
+    color: #334155;
+    border-color: #dbe3ee;
+}
+
+.review-modal-action.green {
+    background: #16a34a;
+    color: white;
+}
+
+.review-modal-action.red {
+    background: #dc2626;
+    color: white;
+}
+
+.review-modal-action.disabled {
+    grid-column: 1 / -1;
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+}
+
+@media (min-width: 1024px) {
+    .review-modal-backdrop {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1023px) {
+    .review-row {
+        cursor: pointer;
+    }
+
+    .review-row:active {
+        background: #eff6ff;
+    }
+}
+
 /* ===== MODALE ===== */
 .modal-backdrop {
     position: fixed;
@@ -370,36 +604,12 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
   </div>
 
   <!-- FILTRI -->
-  <form method="get" class="filter-box">
-    <div class="filter-grid">
+  <form method="get" class="filter-box" id="admin-reviews-filter-form">
 
-      <div class="filter-field">
-        <label>Autore recensione</label>
-        <input type="text"
-               name="autore"
-               value="{{ request.args.get('autore','') }}"
-               placeholder="Nome o cognome">
-      </div>
+    <!-- FILTRO SEMPRE VISIBILE: STATO -->
+    <div class="filter-main-row">
 
-      <div class="filter-field">
-        <label>Destinatario</label>
-        <input type="text"
-               name="destinatario"
-               value="{{ request.args.get('destinatario','') }}"
-               placeholder="Nome o cognome">
-      </div>
-
-      <div class="filter-field">
-        <label>Voto</label>
-        <select name="voto">
-          <option value="">Tutti</option>
-          {% for v in [1,2,3,4,5] %}
-            <option value="{{ v }}" {% if request.args.get('voto') == v|string %}selected{% endif %}>{{ v }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="filter-field">
+      <div class="filter-field filter-status-field">
         <label>Stato recensione</label>
         <select name="stato">
           <option value="">Tutti</option>
@@ -409,6 +619,47 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
             </option>
           {% endfor %}
         </select>
+      </div>
+
+      <button type="button"
+              id="toggle-extra-review-filters"
+              class="filter-btn-secondary filter-toggle-btn">
+        Altri filtri
+      </button>
+
+    </div>
+
+    <!-- FILTRI SECONDARI: CHIUSI SU MOBILE/TABLET -->
+    <div class="filter-extra-panel" id="extra-review-filters-panel">
+
+      <div class="filter-grid">
+
+        <div class="filter-field">
+          <label>Autore recensione</label>
+          <input type="text"
+                 name="autore"
+                 value="{{ request.args.get('autore','') }}"
+                 placeholder="Nome o cognome">
+        </div>
+
+        <div class="filter-field">
+          <label>Destinatario</label>
+          <input type="text"
+                 name="destinatario"
+                 value="{{ request.args.get('destinatario','') }}"
+                 placeholder="Nome o cognome">
+        </div>
+
+        <div class="filter-field">
+          <label>Voto</label>
+          <select name="voto">
+            <option value="">Tutti</option>
+            {% for v in [1,2,3,4,5] %}
+              <option value="{{ v }}" {% if request.args.get('voto') == v|string %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
       </div>
 
     </div>
@@ -431,6 +682,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
           <th>Autore</th>
           <th>Destinatario</th>
           <th>Voto</th>
+          <th>Pubblicata il</th>
           <th>Recensione</th>
           <th>Stato rec.</th>
           <th>Risposta</th>
@@ -446,7 +698,25 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
         {% set testo = r.get('testo') or '' %}
         {% set risposta = r.get('risposta_testo') or '' %}
 
-        <tr>
+        <tr class="review-row"
+            data-review-id="{{ r.get('recensione_id') or '' }}"
+            data-review-autore="{{ (r.get('autore_nome') or '') ~ ' ' ~ (r.get('autore_cognome') or '') }}"
+            data-review-destinatario="{{ (r.get('dest_nome') or '') ~ ' ' ~ (r.get('dest_cognome') or '') }}"
+            data-review-voto="{{ r.get('voto') or '-' }}"
+            data-review-data="{% if r.get('data_recensione') %}{{ r.get('data_recensione')|fmt_it }}{% else %}-{% endif %}"
+            data-review-testo="{{ testo|e }}"
+            data-review-stato="{{ r.get('stato') or '-' }}"
+            data-review-risposta="{{ risposta|e }}"
+            data-review-risposta-stato="{{ r.get('risposta_stato') or '-' }}"
+            data-review-autore-chat="{% if r.get('autore_id') %}{{ url_for('chat_conversazione_view', other_id=r.get('autore_id')) }}{% else %}#{% endif %}"
+            data-review-autore-mail="{% if r.get('autore_email') %}mailto:{{ r.get('autore_email') }}{% else %}#{% endif %}"
+            data-review-dest-chat="{% if r.get('dest_id') %}{{ url_for('chat_conversazione_view', other_id=r.get('dest_id')) }}{% else %}#{% endif %}"
+            data-review-dest-mail="{% if r.get('dest_email') %}mailto:{{ r.get('dest_email') }}{% else %}#{% endif %}"
+            data-review-approva-url="{% if r.get('stato') != 'approvato' %}{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}{% else %}#{% endif %}"
+            data-review-rifiuta-url="{% if r.get('stato') != 'rifiutato' %}{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}{% else %}#{% endif %}"
+            data-reply-id="{{ r.get('risposta_id') or '' }}"
+            data-reply-approva-url="{% if r.get('risposta_id') and r.get('risposta_stato') != 'approvato' %}{{ url_for('approva_risposta', id=r.get('risposta_id'), next=request.full_path) }}{% else %}#{% endif %}"
+            data-reply-rifiuta-url="{% if r.get('risposta_id') and r.get('risposta_stato') == 'approvato' %}{{ url_for('rifiuta_risposta', id=r.get('risposta_id'), next=request.full_path) }}{% else %}#{% endif %}">
 
           <!-- AUTORE -->
           <td class="text-gray-800 font-medium">
@@ -485,6 +755,15 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
           <!-- VOTO -->
           <td class="text-yellow-500 font-semibold">
             {{ r.get('voto') }}★
+          </td>
+
+          <!-- DATA PUBBLICAZIONE -->
+          <td class="text-gray-600 text-xs">
+            {% if r.get('data_recensione') %}
+              {{ r.get('data_recensione')|fmt_it }}
+            {% else %}
+              —
+            {% endif %}
           </td>
 
           <!-- RECENSIONE -->
@@ -597,6 +876,109 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
 </div>
 
+<!-- MODALE RECENSIONE MOBILE/TABLET -->
+<div id="review-row-modal-backdrop" class="review-modal-backdrop" aria-hidden="true">
+  <div class="review-modal-card" role="dialog" aria-modal="true" aria-labelledby="review-modal-title">
+
+    <div class="review-modal-handle"></div>
+
+    <div class="review-modal-header">
+      <div>
+        <div id="review-modal-title" class="review-modal-title">
+          Recensione
+        </div>
+        <div id="review-modal-subtitle" class="review-modal-subtitle">
+          -
+        </div>
+      </div>
+
+      <button type="button"
+              id="review-modal-close"
+              class="review-modal-close"
+              aria-label="Chiudi">
+        ×
+      </button>
+    </div>
+
+    <div class="review-modal-grid">
+
+      <div class="review-modal-info">
+        <div class="review-modal-label">Autore</div>
+        <div id="modal-review-autore" class="review-modal-value">-</div>
+      </div>
+
+      <div class="review-modal-info">
+        <div class="review-modal-label">Destinatario</div>
+        <div id="modal-review-destinatario" class="review-modal-value">-</div>
+      </div>
+
+      <div class="review-modal-info">
+        <div class="review-modal-label">Voto</div>
+        <div id="modal-review-voto" class="review-modal-value">-</div>
+      </div>
+
+      <div class="review-modal-info">
+        <div class="review-modal-label">Pubblicata il</div>
+        <div id="modal-review-data" class="review-modal-value">-</div>
+      </div>
+
+      <div class="review-modal-info">
+        <div class="review-modal-label">Stato recensione</div>
+        <div id="modal-review-stato" class="review-modal-value">-</div>
+      </div>
+
+      <div class="review-modal-info">
+        <div class="review-modal-label">Stato risposta</div>
+        <div id="modal-review-risposta-stato" class="review-modal-value">-</div>
+      </div>
+
+      <div class="review-modal-info full">
+        <div class="review-modal-label">Testo recensione</div>
+        <div id="modal-review-testo" class="review-modal-value">-</div>
+      </div>
+
+      <div class="review-modal-info full">
+        <div class="review-modal-label">Risposta</div>
+        <div id="modal-review-risposta" class="review-modal-value">-</div>
+      </div>
+
+    </div>
+
+    <div id="review-modal-actions" class="review-modal-actions">
+
+      <a id="modal-review-autore-chat" href="#" class="review-modal-action primary">
+        💬 Chat autore
+      </a>
+
+      <a id="modal-review-autore-mail" href="#" class="review-modal-action secondary">
+        ✉️ Email autore
+      </a>
+
+      <a id="modal-review-dest-chat" href="#" class="review-modal-action primary">
+        💬 Chat destinatario
+      </a>
+
+      <a id="modal-review-dest-mail" href="#" class="review-modal-action secondary">
+        ✉️ Email destinatario
+      </a>
+
+      <a id="modal-review-approve" href="#" class="review-modal-action green">
+        Approva recensione
+      </a>
+
+      <a id="modal-review-reject" href="#" class="review-modal-action red">
+        Rifiuta recensione
+      </a>
+
+      <a id="modal-reply-action" href="#" class="review-modal-action secondary">
+        Azione risposta
+      </a>
+
+    </div>
+
+  </div>
+</div>
+
 <!-- MODALE -->
 <div id="modalDettaglio" class="modal-backdrop">
   <div class="modal-card">
@@ -623,6 +1005,142 @@ function openDettaglio(tipo, testo, autore, data) {
 function closeDettaglio() {
   document.getElementById('modalDettaglio').style.display = 'none';
 }
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const toggleBtn = document.getElementById("toggle-extra-review-filters");
+  const panel = document.getElementById("extra-review-filters-panel");
+
+  if (!toggleBtn || !panel) return;
+
+  const hasExtraFilters =
+    "{{ request.args.get('autore','')|e }}" ||
+    "{{ request.args.get('destinatario','')|e }}" ||
+    "{{ request.args.get('voto','')|e }}";
+
+  if (hasExtraFilters) {
+    panel.classList.add("is-open");
+    toggleBtn.textContent = "Nascondi filtri";
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    const isOpen = panel.classList.toggle("is-open");
+    toggleBtn.textContent = isOpen ? "Nascondi filtri" : "Altri filtri";
+  });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const backdrop = document.getElementById("review-row-modal-backdrop");
+  const closeBtn = document.getElementById("review-modal-close");
+
+  if (!backdrop || !closeBtn) return;
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value && value !== "None" ? value : "-";
+  };
+
+  const setHref = (id, value) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    if (!value || value === "#") {
+      el.href = "#";
+      el.classList.add("disabled");
+      el.style.pointerEvents = "none";
+    } else {
+      el.href = value;
+      el.classList.remove("disabled");
+      el.style.pointerEvents = "";
+    }
+  };
+
+  const openReviewModal = (row) => {
+    if (window.innerWidth >= 1024) return;
+
+    const d = row.dataset;
+
+    setText("review-modal-title", "Recensione #" + (d.reviewId || "-"));
+    setText("review-modal-subtitle", `${d.reviewAutore || "-"} → ${d.reviewDestinatario || "-"}`);
+
+    setText("modal-review-autore", d.reviewAutore);
+    setText("modal-review-destinatario", d.reviewDestinatario);
+    setText("modal-review-voto", d.reviewVoto ? d.reviewVoto + "★" : "-");
+    setText("modal-review-data", d.reviewData);
+    setText("modal-review-stato", d.reviewStato);
+    setText("modal-review-risposta-stato", d.reviewRispostaStato);
+    setText("modal-review-testo", d.reviewTesto);
+    setText("modal-review-risposta", d.reviewRisposta || "Nessuna risposta");
+
+    setHref("modal-review-autore-chat", d.reviewAutoreChat);
+    setHref("modal-review-autore-mail", d.reviewAutoreMail);
+    setHref("modal-review-dest-chat", d.reviewDestChat);
+    setHref("modal-review-dest-mail", d.reviewDestMail);
+
+    setHref("modal-review-approve", d.reviewApprovaUrl);
+    setHref("modal-review-reject", d.reviewRifiutaUrl);
+
+    const replyAction = document.getElementById("modal-reply-action");
+
+    if (replyAction) {
+      replyAction.className = "review-modal-action secondary";
+
+      if (!d.replyId) {
+        replyAction.textContent = "Nessuna risposta";
+        replyAction.href = "#";
+        replyAction.classList.add("disabled");
+        replyAction.style.pointerEvents = "none";
+      } else if (d.replyApprovaUrl && d.replyApprovaUrl !== "#") {
+        replyAction.textContent = "Approva risposta";
+        replyAction.href = d.replyApprovaUrl;
+        replyAction.classList.remove("disabled");
+        replyAction.classList.add("green");
+        replyAction.style.pointerEvents = "";
+      } else if (d.replyRifiutaUrl && d.replyRifiutaUrl !== "#") {
+        replyAction.textContent = "Rifiuta risposta";
+        replyAction.href = d.replyRifiutaUrl;
+        replyAction.classList.remove("disabled");
+        replyAction.classList.add("red");
+        replyAction.style.pointerEvents = "";
+      } else {
+        replyAction.textContent = "Risposta già gestita";
+        replyAction.href = "#";
+        replyAction.classList.add("disabled");
+        replyAction.style.pointerEvents = "none";
+      }
+    }
+
+    backdrop.classList.add("is-open");
+    backdrop.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeReviewModal = () => {
+    backdrop.classList.remove("is-open");
+    backdrop.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+
+  document.querySelectorAll(".review-row").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("a, button, input, select")) return;
+      openReviewModal(row);
+    });
+  });
+
+  closeBtn.addEventListener("click", closeReviewModal);
+
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closeReviewModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeReviewModal();
+  });
+});
 </script>
 
 {% endblock %}
