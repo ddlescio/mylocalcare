@@ -303,6 +303,7 @@
     background: rgba(15, 23, 42, 0.42);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    padding: 0;
 }
 
 .annuncio-modal-backdrop.is-open {
@@ -312,13 +313,15 @@
 .annuncio-modal-card {
     width: 100%;
     max-width: 720px;
-    max-height: 88vh;
+    max-height: min(88vh, 760px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     background: rgba(255, 255, 255, 0.97);
     border: 1px solid rgba(226, 232, 240, 0.95);
     border-radius: 28px 28px 0 0;
     box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.24);
     padding: 18px;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
     animation: annuncioModalUp 0.2s ease-out;
 }
 
@@ -795,7 +798,11 @@
         <p class="text-gray-500 text-center mt-6">Nessun annuncio trovato.</p>
     {% endif %}
 
-    <!-- MODALE ANNUNCIO MOBILE/TABLET -->
+  </div>
+</div>
+
+<!-- MODALE ANNUNCIO MOBILE/TABLET -->
+<div id="annuncio-row-modal-backdrop" class="annuncio-modal-backdrop" aria-hidden="true">
     <div id="annuncio-row-modal-backdrop" class="annuncio-modal-backdrop" aria-hidden="true">
       <div class="annuncio-modal-card" role="dialog" aria-modal="true" aria-labelledby="annuncio-modal-title">
 
@@ -894,13 +901,10 @@
       </div>
     </div>
 
-  </div>
-</div>
 
 <script>
   window.CSRF_TOKEN = "{{ session['csrf_token'] }}";
 </script>
-
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const inputComune = document.getElementById("zona-autocomplete");
