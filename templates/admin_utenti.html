@@ -454,6 +454,10 @@
       cursor: not-allowed;
   }
 
+  .user-modal-action-wide {
+      grid-column: 1 / -1;
+  }
+  
   @media (min-width: 1024px) {
       .user-modal-backdrop {
           display: none !important;
@@ -786,17 +790,17 @@
         Stato
       </a>
 
-      <button id="modal-user-contatti"
-              type="button"
-              class="user-modal-action secondary">
-        📞 Contatti
-      </button>
-
       <a id="modal-user-delete"
          href="#"
          class="user-modal-action danger">
         Elimina
       </a>
+
+      <button id="modal-user-contatti"
+              type="button"
+              class="user-modal-action secondary user-modal-action-wide">
+        📞 Contatti
+      </button>
     </div>
 
   </div>
