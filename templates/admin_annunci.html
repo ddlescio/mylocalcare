@@ -32,14 +32,25 @@
 /* --- CARD CONTATORI --- */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
     margin-bottom: 16px;
 }
 
-@media (min-width: 640px) {
-    .stats-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (max-width: 639px) {
+    .stat-card {
+        padding: 12px 10px;
+        border-radius: 18px;
+    }
+
+    .stat-label {
+        font-size: 0.68rem;
+        line-height: 1.15;
+        min-height: 1.6em;
+    }
+
+    .stat-value {
+        font-size: 1.35rem;
     }
 }
 
@@ -84,6 +95,55 @@
         0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
+.filter-main-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.filter-status-field {
+    min-width: 0;
+}
+
+.filter-toggle-btn {
+    display: inline-flex;
+    white-space: nowrap;
+}
+
+.filter-extra-panel {
+    margin-top: 12px;
+}
+
+/* Mobile + tablet: visibile solo Stato, gli altri filtri sono chiusi */
+@media (max-width: 1023px) {
+    .filter-extra-panel {
+        display: none;
+    }
+
+    .filter-extra-panel.is-open {
+        display: block;
+    }
+}
+
+/* Desktop: tutti i filtri sempre visibili */
+@media (min-width: 1024px) {
+    .filter-main-row {
+        grid-template-columns: 1fr;
+        max-width: 260px;
+        margin-bottom: 12px;
+    }
+
+    .filter-toggle-btn {
+        display: none;
+    }
+
+    .filter-extra-panel {
+        display: block;
+        margin-top: 0;
+    }
+}
+
 .filter-grid {
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -98,7 +158,7 @@
 
 @media (min-width: 1024px) {
     .filter-grid {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 }
 
@@ -232,6 +292,188 @@
     overflow: auto;
 }
 
+/* --- MODALE ANNUNCIO MOBILE/TABLET --- */
+.annuncio-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.annuncio-modal-backdrop.is-open {
+    display: flex;
+}
+
+.annuncio-modal-card {
+    width: 100%;
+    max-width: 720px;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 28px 28px 0 0;
+    box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.24);
+    padding: 18px;
+    animation: annuncioModalUp 0.2s ease-out;
+}
+
+@keyframes annuncioModalUp {
+    from {
+        transform: translateY(24px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.annuncio-modal-handle {
+    width: 48px;
+    height: 5px;
+    border-radius: 9999px;
+    background: #cbd5e1;
+    margin: 0 auto 14px;
+}
+
+.annuncio-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.annuncio-modal-title {
+    font-size: 1.15rem;
+    line-height: 1.2;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.annuncio-modal-subtitle {
+    margin-top: 4px;
+    font-size: 0.84rem;
+    color: #64748b;
+}
+
+.annuncio-modal-close {
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.annuncio-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (min-width: 640px) {
+    .annuncio-modal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.annuncio-modal-info {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 12px;
+}
+
+.annuncio-modal-info.full {
+    grid-column: 1 / -1;
+}
+
+.annuncio-modal-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+}
+
+.annuncio-modal-value {
+    font-size: 0.92rem;
+    font-weight: 650;
+    color: #0f172a;
+    word-break: break-word;
+}
+
+.annuncio-modal-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.annuncio-modal-action {
+    min-height: 42px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.86rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    text-decoration: none;
+}
+
+.annuncio-modal-action.primary {
+    background: #2563eb;
+    color: white;
+}
+
+.annuncio-modal-action.secondary {
+    background: #f8fafc;
+    color: #334155;
+    border-color: #dbe3ee;
+}
+
+.annuncio-modal-action.green {
+    background: #16a34a;
+    color: white;
+}
+
+.annuncio-modal-action.red {
+    background: #dc2626;
+    color: white;
+}
+
+.annuncio-modal-action.yellow {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+@media (min-width: 1024px) {
+    .annuncio-modal-backdrop {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1023px) {
+    .annuncio-row {
+        cursor: pointer;
+    }
+
+    .annuncio-row:active {
+        background: #eff6ff;
+    }
+}
+
 /* --- MOBILE --- */
 @media (max-width: 640px) {
     .admin-shell { padding: 14px; }
@@ -263,71 +505,12 @@
     </div>
 
     <!-- FILTRI ANNUNCI -->
-    <form method="GET" class="filter-box">
+    <form method="GET" class="filter-box" id="admin-annunci-filter-form">
 
-      <div class="filter-grid">
+      <!-- FILTRO SEMPRE VISIBILE: STATO -->
+      <div class="filter-main-row">
 
-        <div class="filter-field">
-            <label>Utente</label>
-            <input type="text" name="utente" value="{{ request.args.get('utente','') }}"
-                   placeholder="Nome o cognome">
-        </div>
-
-        <div class="filter-field">
-          <label>Categoria</label>
-          <select name="categoria">
-            <option value="">Tutte</option>
-            {% for cat in categorie %}
-              <option value="{{ cat }}"
-                {% if request.args.get('categoria') == cat %}selected{% endif %}>
-                {{ cat }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="filter-field">
-          <label>Tipo</label>
-          <select name="tipo_annuncio">
-            <option value="">Tutti</option>
-            <option value="offro"
-              {% if request.args.get('tipo_annuncio') == 'offro' %}selected{% endif %}>
-              Offro
-            </option>
-            <option value="cerco"
-              {% if request.args.get('tipo_annuncio') == 'cerco' %}selected{% endif %}>
-              Cerco
-            </option>
-          </select>
-        </div>
-
-        <div class="filter-field relative">
-          <label>Comune</label>
-          <input id="zona-autocomplete"
-                 type="text"
-                 placeholder="Comune"
-                 class="w-full">
-          <input type="hidden" name="zona" id="zona" value="{{ request.args.get('zona','') }}">
-
-          <div id="zona-suggerimenti"
-               class="suggestion-box hidden">
-          </div>
-        </div>
-
-        <div class="filter-field relative">
-          <label>Provincia</label>
-          <input id="provincia-visibile"
-                 type="text"
-                 name="provincia"
-                 value="{{ request.args.get('provincia','') }}"
-                 placeholder="Es. MI, PV, RM">
-
-          <div id="provincia-suggerimenti"
-               class="suggestion-box hidden">
-          </div>
-        </div>
-
-        <div class="filter-field">
+        <div class="filter-field filter-status-field">
             <label>Stato</label>
             <select name="stato">
                 <option value="">Tutti</option>
@@ -336,6 +519,82 @@
                 <option value="rifiutato" {% if request.args.get('stato') == 'rifiutato' %}selected{% endif %}>Rifiutato</option>
                 <option value="disattivato" {% if request.args.get('stato') == 'disattivato' %}selected{% endif %}>Disattivato</option>
             </select>
+        </div>
+
+        <button type="button"
+                id="toggle-extra-annunci-filters"
+                class="filter-btn-secondary filter-toggle-btn">
+          Altri filtri
+        </button>
+
+      </div>
+
+      <!-- FILTRI SECONDARI: CHIUSI SU MOBILE/TABLET -->
+      <div class="filter-extra-panel" id="extra-annunci-filters-panel">
+
+        <div class="filter-grid">
+
+          <div class="filter-field">
+              <label>Utente</label>
+              <input type="text" name="utente" value="{{ request.args.get('utente','') }}"
+                     placeholder="Nome o cognome">
+          </div>
+
+          <div class="filter-field">
+            <label>Categoria</label>
+            <select name="categoria">
+              <option value="">Tutte</option>
+              {% for cat in categorie %}
+                <option value="{{ cat }}"
+                  {% if request.args.get('categoria') == cat %}selected{% endif %}>
+                  {{ cat }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label>Tipo</label>
+            <select name="tipo_annuncio">
+              <option value="">Tutti</option>
+              <option value="offro"
+                {% if request.args.get('tipo_annuncio') == 'offro' %}selected{% endif %}>
+                Offro
+              </option>
+              <option value="cerco"
+                {% if request.args.get('tipo_annuncio') == 'cerco' %}selected{% endif %}>
+                Cerco
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-field relative">
+            <label>Comune</label>
+            <input id="zona-autocomplete"
+                   type="text"
+                   placeholder="Comune"
+                   value="{{ request.args.get('zona','') }}"
+                   class="w-full">
+            <input type="hidden" name="zona" id="zona" value="{{ request.args.get('zona','') }}">
+
+            <div id="zona-suggerimenti"
+                 class="suggestion-box hidden">
+            </div>
+          </div>
+
+          <div class="filter-field relative">
+            <label>Provincia</label>
+            <input id="provincia-visibile"
+                   type="text"
+                   name="provincia"
+                   value="{{ request.args.get('provincia','') }}"
+                   placeholder="Es. MI, PV, RM">
+
+            <div id="provincia-suggerimenti"
+                 class="suggestion-box hidden">
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -361,6 +620,7 @@
                     <th class="p-2">Utente</th>
                     <th class="p-2">Categoria</th>
                     <th class="p-2 text-center">Tipo</th>
+                    <th class="p-2">Pubblicato il</th>
                     <th class="p-2">Zona</th>
                     <th class="p-2">Provincia</th>
                     <th class="p-2 text-center">Stato</th>
@@ -371,7 +631,22 @@
             </thead>
             <tbody>
                 {% for a in annunci %}
-                <tr class="border-b">
+                <tr class="border-b annuncio-row"
+                    data-annuncio-id="{{ a.id }}"
+                    data-annuncio-titolo="{{ a.titolo or '-' }}"
+                    data-annuncio-utente="{{ (a.nome or '') ~ ' ' ~ (a.cognome or '') }}"
+                    data-annuncio-categoria="{{ a.categoria or '-' }}"
+                    data-annuncio-tipo="{{ a.tipo_annuncio or '-' }}"
+                    data-annuncio-zona="{{ a.zona or '-' }}"
+                    data-annuncio-provincia="{{ a.provincia or '-' }}"
+                    data-annuncio-stato="{{ a.stato or '-' }}"
+                    data-annuncio-data="{% if a.data_pubblicazione %}{{ a.data_pubblicazione|fmt_it }}{% else %}-{% endif %}"
+                    data-annuncio-chat-url="{{ url_for('chat_conversazione_view', other_id=a.utente_id) }}"
+                    data-annuncio-mail-url="mailto:{{ a.email }}"
+                    data-annuncio-apri-url="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}"
+                    data-annuncio-toggle-url="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
+                    data-annuncio-approva-url="{% if a.stato == 'in_attesa' %}{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}{% else %}#{% endif %}"
+                    data-annuncio-rifiuta-url="{% if a.stato == 'in_attesa' %}{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}{% else %}#{% endif %}">
                     <td class="p-2">{{ a.titolo }}</td>
                     <td class="p-2">
 
@@ -400,6 +675,15 @@
                       <span class="badge bg-gray-100 text-gray-500">—</span>
                     {% endif %}
                   </td>
+
+                    <td class="p-2 text-xs text-gray-600">
+                      {% if a.data_pubblicazione %}
+                        {{ a.data_pubblicazione|fmt_it }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
                     <td class="p-2">{{ a.zona }}</td>
                     <td class="p-2 font-semibold text-gray-600">{{ a.provincia }}</td>
 
@@ -510,6 +794,105 @@
     {% else %}
         <p class="text-gray-500 text-center mt-6">Nessun annuncio trovato.</p>
     {% endif %}
+
+    <!-- MODALE ANNUNCIO MOBILE/TABLET -->
+    <div id="annuncio-row-modal-backdrop" class="annuncio-modal-backdrop" aria-hidden="true">
+      <div class="annuncio-modal-card" role="dialog" aria-modal="true" aria-labelledby="annuncio-modal-title">
+
+        <div class="annuncio-modal-handle"></div>
+
+        <div class="annuncio-modal-header">
+          <div>
+            <div id="annuncio-modal-title" class="annuncio-modal-title">
+              Annuncio
+            </div>
+            <div id="annuncio-modal-subtitle" class="annuncio-modal-subtitle">
+              -
+            </div>
+          </div>
+
+          <button type="button"
+                  id="annuncio-modal-close"
+                  class="annuncio-modal-close"
+                  aria-label="Chiudi">
+            ×
+          </button>
+        </div>
+
+        <div class="annuncio-modal-grid">
+
+          <div class="annuncio-modal-info full">
+            <div class="annuncio-modal-label">Titolo</div>
+            <div id="modal-annuncio-titolo" class="annuncio-modal-value">-</div>
+          </div>
+
+          <div class="annuncio-modal-info">
+            <div class="annuncio-modal-label">Utente</div>
+            <div id="modal-annuncio-utente" class="annuncio-modal-value">-</div>
+          </div>
+
+          <div class="annuncio-modal-info">
+            <div class="annuncio-modal-label">Categoria</div>
+            <div id="modal-annuncio-categoria" class="annuncio-modal-value">-</div>
+          </div>
+
+          <div class="annuncio-modal-info">
+            <div class="annuncio-modal-label">Tipo</div>
+            <div id="modal-annuncio-tipo" class="annuncio-modal-value">-</div>
+          </div>
+
+          <div class="annuncio-modal-info">
+            <div class="annuncio-modal-label">Stato</div>
+            <div id="modal-annuncio-stato" class="annuncio-modal-value">-</div>
+          </div>
+
+          <div class="annuncio-modal-info">
+            <div class="annuncio-modal-label">Pubblicato il</div>
+            <div id="modal-annuncio-data" class="annuncio-modal-value">-</div>
+          </div>
+
+          <div class="annuncio-modal-info">
+            <div class="annuncio-modal-label">Comune</div>
+            <div id="modal-annuncio-zona" class="annuncio-modal-value">-</div>
+          </div>
+
+          <div class="annuncio-modal-info">
+            <div class="annuncio-modal-label">Provincia</div>
+            <div id="modal-annuncio-provincia" class="annuncio-modal-value">-</div>
+          </div>
+
+        </div>
+
+        <div class="annuncio-modal-actions">
+
+          <a id="modal-annuncio-apri" href="#" class="annuncio-modal-action primary">
+            Apri annuncio
+          </a>
+
+          <a id="modal-annuncio-chat" href="#" class="annuncio-modal-action secondary">
+            💬 Chat
+          </a>
+
+          <a id="modal-annuncio-mail" href="#" class="annuncio-modal-action secondary">
+            ✉️ Email
+          </a>
+
+          <a id="modal-annuncio-approva" href="#" class="annuncio-modal-action green">
+            Approva
+          </a>
+
+          <a id="modal-annuncio-rifiuta" href="#" class="annuncio-modal-action red">
+            Rifiuta
+          </a>
+
+          <a id="modal-annuncio-toggle" href="#" class="annuncio-modal-action yellow">
+            Attiva/Disattiva
+          </a>
+
+        </div>
+
+      </div>
+    </div>
 
   </div>
 </div>
@@ -754,4 +1137,120 @@ document.addEventListener("click", async (e) => {
   }
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const toggleBtn = document.getElementById("toggle-extra-annunci-filters");
+  const panel = document.getElementById("extra-annunci-filters-panel");
+
+  if (!toggleBtn || !panel) return;
+
+  const hasExtraFilters =
+    "{{ request.args.get('utente','')|e }}" ||
+    "{{ request.args.get('categoria','')|e }}" ||
+    "{{ request.args.get('tipo_annuncio','')|e }}" ||
+    "{{ request.args.get('zona','')|e }}" ||
+    "{{ request.args.get('provincia','')|e }}";
+
+  if (hasExtraFilters) {
+    panel.classList.add("is-open");
+    toggleBtn.textContent = "Nascondi filtri";
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    const isOpen = panel.classList.toggle("is-open");
+    toggleBtn.textContent = isOpen ? "Nascondi filtri" : "Altri filtri";
+  });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const backdrop = document.getElementById("annuncio-row-modal-backdrop");
+  const closeBtn = document.getElementById("annuncio-modal-close");
+
+  if (!backdrop || !closeBtn) return;
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value && value !== "None" ? value : "-";
+  };
+
+  const setHref = (id, value) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    if (!value || value === "#") {
+      el.href = "#";
+      el.style.display = "none";
+    } else {
+      el.href = value;
+      el.style.display = "inline-flex";
+    }
+  };
+
+  const openAnnuncioModal = (row) => {
+    if (window.innerWidth >= 1024) return;
+
+    const d = row.dataset;
+
+    setText("annuncio-modal-title", "Annuncio #" + (d.annuncioId || "-"));
+    setText("annuncio-modal-subtitle", d.annuncioUtente || "-");
+
+    setText("modal-annuncio-titolo", d.annuncioTitolo);
+    setText("modal-annuncio-utente", d.annuncioUtente);
+    setText("modal-annuncio-categoria", d.annuncioCategoria);
+    setText("modal-annuncio-tipo", d.annuncioTipo);
+    setText("modal-annuncio-stato", d.annuncioStato);
+    setText("modal-annuncio-data", d.annuncioData);
+    setText("modal-annuncio-zona", d.annuncioZona);
+    setText("modal-annuncio-provincia", d.annuncioProvincia);
+
+    setHref("modal-annuncio-apri", d.annuncioApriUrl);
+    setHref("modal-annuncio-chat", d.annuncioChatUrl);
+    setHref("modal-annuncio-mail", d.annuncioMailUrl);
+
+    setHref("modal-annuncio-approva", d.annuncioApprovaUrl);
+    setHref("modal-annuncio-rifiuta", d.annuncioRifiutaUrl);
+    setHref("modal-annuncio-toggle", d.annuncioToggleUrl);
+
+    const toggleBtn = document.getElementById("modal-annuncio-toggle");
+    if (toggleBtn) {
+      if (d.annuncioStato === "approvato") {
+        toggleBtn.textContent = "Disattiva";
+      } else if (d.annuncioStato === "disattivato" || d.annuncioStato === "rifiutato") {
+        toggleBtn.textContent = "Attiva";
+      } else {
+        toggleBtn.textContent = "Attiva/Disattiva";
+      }
+    }
+
+    backdrop.classList.add("is-open");
+    backdrop.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeAnnuncioModal = () => {
+    backdrop.classList.remove("is-open");
+    backdrop.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+
+  document.querySelectorAll(".annuncio-row").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("a, button, input, select")) return;
+      openAnnuncioModal(row);
+    });
+  });
+
+  closeBtn.addEventListener("click", closeAnnuncioModal);
+
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closeAnnuncioModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAnnuncioModal();
+  });
+});
+</script>
+
 {% endblock %}

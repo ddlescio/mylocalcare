@@ -24,20 +24,32 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 /* ===== CONTATORI ===== */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
     margin-bottom: 16px;
-}
-
-@media (min-width: 640px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
 }
 
 @media (min-width: 1024px) {
     .stats-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+    }
+}
+
+@media (max-width: 639px) {
+    .stat-card {
+        padding: 12px 12px;
+        border-radius: 18px;
+    }
+
+    .stat-label {
+        font-size: 0.68rem;
+        line-height: 1.15;
+        min-height: 1.6em;
+    }
+
+    .stat-value {
+        font-size: 1.45rem;
     }
 }
 

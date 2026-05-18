@@ -6801,11 +6801,12 @@ def admin_annunci():
             a.zona,
             a.provincia,
             a.stato,
+            a.data_pubblicazione,
             a.utente_id,
             u.nome,
             u.cognome,
             u.email,
-
+            
             /* BOOST LISTA */
             CASE WHEN EXISTS (
                 SELECT 1
