@@ -6796,6 +6796,8 @@ def admin_annunci():
         SELECT
             a.id,
             a.titolo,
+            a.descrizione,
+            a.media,
             a.categoria,
             a.tipo_annuncio,
             a.zona,
@@ -6806,7 +6808,7 @@ def admin_annunci():
             u.nome,
             u.cognome,
             u.email,
-            
+                        
             /* BOOST LISTA */
             CASE WHEN EXISTS (
                 SELECT 1

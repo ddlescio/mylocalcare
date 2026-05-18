@@ -415,6 +415,34 @@
     word-break: break-word;
 }
 
+.annuncio-modal-description {
+    white-space: pre-line;
+    line-height: 1.45;
+    font-weight: 500;
+    color: #334155;
+}
+
+.annuncio-modal-media-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.annuncio-modal-media-img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.annuncio-modal-empty-media {
+    font-size: 0.86rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
 .annuncio-modal-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -637,6 +665,8 @@
                 <tr class="border-b annuncio-row"
                     data-annuncio-id="{{ a.id }}"
                     data-annuncio-titolo="{{ a.titolo or '-' }}"
+                    data-annuncio-descrizione="{{ a.descrizione or '' }}"
+                    data-annuncio-media="{{ a.media or '' }}"
                     data-annuncio-utente="{{ (a.nome or '') ~ ' ' ~ (a.cognome or '') }}"
                     data-annuncio-categoria="{{ a.categoria or '-' }}"
                     data-annuncio-tipo="{{ a.tipo_annuncio or '-' }}"
@@ -864,6 +894,18 @@
           <div class="annuncio-modal-info">
             <div class="annuncio-modal-label">Provincia</div>
             <div id="modal-annuncio-provincia" class="annuncio-modal-value">-</div>
+          </div>
+
+          <div class="annuncio-modal-info full">
+            <div class="annuncio-modal-label">Descrizione</div>
+            <div id="modal-annuncio-descrizione" class="annuncio-modal-value annuncio-modal-description">-</div>
+          </div>
+
+          <div class="annuncio-modal-info full">
+            <div class="annuncio-modal-label">Foto</div>
+            <div id="modal-annuncio-media" class="annuncio-modal-media-grid">
+              <div class="annuncio-modal-empty-media">Nessuna foto presente</div>
+            </div>
           </div>
 
         </div>
@@ -1205,6 +1247,68 @@ document.addEventListener("DOMContentLoaded", () => {
     setText("modal-annuncio-data", d.annuncioData);
     setText("modal-annuncio-zona", d.annuncioZona);
     setText("modal-annuncio-provincia", d.annuncioProvincia);
+    setText("modal-annuncio-descrizione", d.annuncioDescrizione || "Nessuna descrizione presente");
+
+    const mediaBox = document.getElementById("modal-annuncio-media");
+
+    if (mediaBox) {
+      mediaBox.innerHTML = "";
+
+      let media = [];
+
+      try {
+        const raw = d.annuncioMedia || "";
+
+        if (raw.trim().startsWith("[") || raw.trim().startsWith("{")) {
+          const parsed = JSON.parse(raw);
+
+          if (Array.isArray(parsed)) {
+            media = parsed;
+          } else if (parsed && Array.isArray(parsed.files)) {
+            media = parsed.files;
+          } else if (parsed && Array.isArray(parsed.images)) {
+            media = parsed.images;
+          } else if (parsed && parsed.url) {
+            media = [parsed.url];
+          }
+        } else if (raw.trim()) {
+          media = raw.split(",").map(x => x.trim()).filter(Boolean);
+        }
+      } catch (e) {
+        media = (d.annuncioMedia || "")
+          .split(",")
+          .map(x => x.trim())
+          .filter(Boolean);
+      }
+
+      media = media
+        .map(item => {
+          if (typeof item === "string") return item;
+          if (item && item.url) return item.url;
+          if (item && item.path) return item.path;
+          if (item && item.filename) return item.filename;
+          return "";
+        })
+        .filter(Boolean);
+
+      if (!media.length) {
+        mediaBox.innerHTML = `<div class="annuncio-modal-empty-media">Nessuna foto presente</div>`;
+      } else {
+        media.forEach(src => {
+          const img = document.createElement("img");
+
+          if (src.startsWith("http") || src.startsWith("/")) {
+            img.src = src;
+          } else {
+            img.src = "/static/uploads/" + src.replace(/^\/+/, "");
+          }
+
+          img.alt = "Foto annuncio";
+          img.className = "annuncio-modal-media-img";
+          mediaBox.appendChild(img);
+        });
+      }
+    }
 
     setHref("modal-annuncio-apri", d.annuncioApriUrl);
     setHref("modal-annuncio-chat", d.annuncioChatUrl);
