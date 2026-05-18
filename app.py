@@ -4847,7 +4847,7 @@ def admin_utenti():
             u.username,
             u.attivo,
             u.sospeso,
-            u.created_at,
+            u.data_creazione AS created_at,
 
             CASE
                 WHEN COALESCE(u.email, '') LIKE ?
@@ -4855,7 +4855,7 @@ def admin_utenti():
                 THEN 1
                 ELSE 0
             END AS eliminato,
-
+            
             (
               SELECT 1
               FROM attivazioni_servizi a
@@ -4945,7 +4945,7 @@ def admin_utenti():
         totale_filtrati=totale_filtrati,
         has_filters=has_filters
     )
-    
+
 @app.route("/admin/utenti/toggle/<int:id>")
 @admin_required
 def toggle_utente_admin(id):
