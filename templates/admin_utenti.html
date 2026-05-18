@@ -9,15 +9,9 @@
 /* ====== CARD CONTATORI ====== */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
     margin-bottom: 16px;
-}
-
-@media (min-width: 640px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
 }
 
 .stat-card {
@@ -30,6 +24,23 @@
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.04),
         0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+@media (max-width: 639px) {
+    .stat-card {
+        padding: 12px 12px;
+        border-radius: 18px;
+    }
+
+    .stat-label {
+        font-size: 0.68rem;
+        line-height: 1.15;
+        min-height: 1.6em;
+    }
+
+    .stat-value {
+        font-size: 1.45rem;
+    }
 }
 
 .stat-label {
@@ -62,6 +73,55 @@
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.04),
         0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.filter-main-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.filter-status-field {
+    min-width: 0;
+}
+
+.filter-toggle-btn {
+    display: inline-flex;
+    white-space: nowrap;
+}
+
+.filter-extra-panel {
+    margin-top: 12px;
+}
+
+/* Mobile + tablet: i filtri extra sono chiusi di default */
+@media (max-width: 1023px) {
+    .filter-extra-panel {
+        display: none;
+    }
+
+    .filter-extra-panel.is-open {
+        display: block;
+    }
+}
+
+/* Desktop: tutti i filtri sempre visibili, pulsante nascosto */
+@media (min-width: 1024px) {
+    .filter-main-row {
+        grid-template-columns: 1fr;
+        max-width: 260px;
+        margin-bottom: 12px;
+    }
+
+    .filter-toggle-btn {
+        display: none;
+    }
+
+    .filter-extra-panel {
+        display: block;
+        margin-top: 0;
+    }
 }
 
 .filter-grid {
@@ -207,6 +267,210 @@
     white-space: nowrap;
 }
 </style>
+<style>
+  /* ====== MODALE UTENTE MOBILE/TABLET ====== */
+  .user-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+  }
+
+  .user-modal-backdrop.is-open {
+      display: flex;
+  }
+
+  .user-modal-card {
+      width: 100%;
+      max-width: 680px;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 28px 28px 0 0;
+      box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.24);
+      padding: 18px;
+      animation: userModalUp 0.2s ease-out;
+  }
+
+  @keyframes userModalUp {
+      from {
+          transform: translateY(24px);
+          opacity: 0;
+      }
+      to {
+          transform: translateY(0);
+          opacity: 1;
+      }
+  }
+
+  .user-modal-handle {
+      width: 48px;
+      height: 5px;
+      border-radius: 9999px;
+      background: #cbd5e1;
+      margin: 0 auto 14px;
+  }
+
+  .user-modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+  }
+
+  .user-modal-title {
+      font-size: 1.2rem;
+      line-height: 1.2;
+      font-weight: 800;
+      color: #0f172a;
+  }
+
+  .user-modal-subtitle {
+      margin-top: 4px;
+      font-size: 0.84rem;
+      color: #64748b;
+      word-break: break-word;
+  }
+
+  .user-modal-close {
+      width: 38px;
+      height: 38px;
+      border-radius: 9999px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #475569;
+      font-size: 1.15rem;
+      line-height: 1;
+  }
+
+  .user-modal-status {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      padding: 5px 11px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-top: 10px;
+  }
+
+  .user-modal-status.attivo {
+      background: #dcfce7;
+      color: #166534;
+  }
+
+  .user-modal-status.sospeso {
+      background: #fef9c3;
+      color: #854d0e;
+  }
+
+  .user-modal-status.non-attivo,
+  .user-modal-status.eliminato {
+      background: #fee2e2;
+      color: #991b1b;
+  }
+
+  .user-modal-grid {
+      display: grid;
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+      gap: 10px;
+  }
+
+  @media (min-width: 640px) {
+      .user-modal-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+  }
+
+  .user-modal-info {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 12px;
+  }
+
+  .user-modal-info-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 4px;
+  }
+
+  .user-modal-info-value {
+      font-size: 0.92rem;
+      font-weight: 650;
+      color: #0f172a;
+      word-break: break-word;
+  }
+
+  .user-modal-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+  }
+
+  .user-modal-action {
+      min-height: 42px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.86rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+  }
+
+  .user-modal-action.primary {
+      background: #2563eb;
+      color: white;
+  }
+
+  .user-modal-action.secondary {
+      background: #f8fafc;
+      color: #334155;
+      border-color: #dbe3ee;
+  }
+
+  .user-modal-action.danger {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fecaca;
+  }
+
+  .user-modal-action.disabled {
+      grid-column: 1 / -1;
+      background: #f1f5f9;
+      color: #94a3b8;
+      border-color: #e2e8f0;
+      cursor: not-allowed;
+  }
+
+  @media (min-width: 1024px) {
+      .user-modal-backdrop {
+          display: none !important;
+      }
+  }
+
+  @media (max-width: 1023px) {
+      .admin-user-row {
+          cursor: pointer;
+      }
+
+      .admin-user-row:active {
+          background: #eff6ff;
+      }
+  }
+
+</style>
 
 <!-- CONTATORI -->
 <div class="stats-grid">
@@ -222,51 +486,12 @@
 </div>
 
 <!-- FILTRI -->
-<form method="get" class="filter-box">
+<form method="get" class="filter-box" id="admin-users-filter-form">
 
-    <div class="filter-grid">
+    <!-- FILTRO SEMPRE VISIBILE: STATO -->
+    <div class="filter-main-row">
 
-        <div class="filter-field">
-            <label>Nome / Cognome</label>
-            <input type="text" name="nome" value="{{ request.args.get('nome','') }}" placeholder="Cerca nome">
-        </div>
-
-        <div class="filter-field">
-            <label>Email</label>
-            <input type="text" name="email" value="{{ request.args.get('email','') }}" placeholder="Email">
-        </div>
-
-        <div class="filter-field relative">
-          <label>Città</label>
-          <input
-            type="text"
-            id="citta-autocomplete"
-            name="citta"
-            value="{{ request.args.get('citta','') }}"
-            placeholder="Città"
-          >
-
-          <div id="citta-suggerimenti"
-               class="filter-suggestions hidden">
-          </div>
-        </div>
-
-        <div class="filter-field relative">
-          <label>Provincia</label>
-          <input
-            type="text"
-            id="provincia-autocomplete"
-            name="provincia"
-            value="{{ request.args.get('provincia','') }}"
-            placeholder="Es. MI, PV, RM"
-          >
-
-          <div id="provincia-suggerimenti"
-               class="filter-suggestions hidden">
-          </div>
-        </div>
-
-        <div class="filter-field">
+        <div class="filter-field filter-status-field">
             <label>Stato account</label>
             <select name="stato">
                 <option value="">Tutti</option>
@@ -279,6 +504,61 @@
                 <option value="eliminato"
                   {% if request.args.get('stato')=='eliminato' %}selected{% endif %}>Eliminato</option>
             </select>
+        </div>
+
+        <button type="button"
+                id="toggle-extra-filters"
+                class="filter-btn-secondary filter-toggle-btn">
+            Altri filtri
+        </button>
+
+    </div>
+
+    <!-- FILTRI SECONDARI: COLLASSATI SU MOBILE/TABLET -->
+    <div class="filter-extra-panel" id="extra-filters-panel">
+
+        <div class="filter-grid">
+
+            <div class="filter-field">
+                <label>Nome / Cognome</label>
+                <input type="text" name="nome" value="{{ request.args.get('nome','') }}" placeholder="Cerca nome">
+            </div>
+
+            <div class="filter-field">
+                <label>Email</label>
+                <input type="text" name="email" value="{{ request.args.get('email','') }}" placeholder="Email">
+            </div>
+
+            <div class="filter-field relative">
+              <label>Città</label>
+              <input
+                type="text"
+                id="citta-autocomplete"
+                name="citta"
+                value="{{ request.args.get('citta','') }}"
+                placeholder="Città"
+              >
+
+              <div id="citta-suggerimenti"
+                   class="filter-suggestions hidden">
+              </div>
+            </div>
+
+            <div class="filter-field relative">
+              <label>Provincia</label>
+              <input
+                type="text"
+                id="provincia-autocomplete"
+                name="provincia"
+                value="{{ request.args.get('provincia','') }}"
+                placeholder="Es. MI, PV, RM"
+              >
+
+              <div id="provincia-suggerimenti"
+                   class="filter-suggestions hidden">
+              </div>
+            </div>
+
         </div>
 
     </div>
@@ -316,7 +596,23 @@
 
         <tbody class="divide-y divide-gray-100">
             {% for u in utenti %}
-            <tr class="hover:bg-gray-50">
+            <tr class="hover:bg-gray-50 admin-user-row"
+                data-user-id="{{ u.id }}"
+                data-user-nome="{{ u.nome or '-' }}"
+                data-user-cognome="{{ u.cognome or '-' }}"
+                data-user-email="{{ u.email or '-' }}"
+                data-user-username="{{ u.username or '-' }}"
+                data-user-citta="{{ u.citta or '-' }}"
+                data-user-provincia="{{ u.provincia or '-' }}"
+                data-user-created="{% if u.data_creazione %}{{ u.data_creazione|fmt_it }}{% else %}-{% endif %}"
+                data-user-stato="{% if u.eliminato == 1 %}Eliminato{% elif u.sospeso == 1 %}Sospeso{% elif u.attivo == 1 %}Attivo{% else %}Non attivo{% endif %}"
+                data-user-eliminato="{{ u.eliminato }}"
+                data-user-attivo="{{ u.attivo }}"
+                data-user-chat-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('chat_conversazione_view', other_id=u.id) }}{% endif %}"
+                data-user-mail-url="{% if u.eliminato == 1 %}#{% else %}mailto:{{ u.email }}{% endif %}"
+                data-user-toggle-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('toggle_utente_admin', id=u.id) }}{% endif %}"
+                data-user-delete-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('elimina_utente_route', id=u.id) }}{% endif %}"
+                data-user-contatti="{{ 1 if u.contatti_attivi else 0 }}">
 
                 <td>{{ u.id }}</td>
 
@@ -347,8 +643,8 @@
                 <td>{{ u.provincia or "-" }}</td>
 
                 <td>
-                  {% if u.created_at %}
-                    {{ u.created_at|fmt_it }}
+                  {% if u.data_creazione %}
+                    {{ u.data_creazione|fmt_it }}
                   {% else %}
                     -
                   {% endif %}
@@ -401,12 +697,109 @@
 
                   {% endif %}
 
-                </td>                
+                </td>
               </tr>
             {% endfor %}
         </tbody>
     </table>
 
+</div>
+<!-- MODALE UTENTE MOBILE/TABLET -->
+<div id="user-modal-backdrop" class="user-modal-backdrop" aria-hidden="true">
+  <div class="user-modal-card" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+
+    <div class="user-modal-handle"></div>
+
+    <div class="user-modal-header">
+      <div>
+        <div id="user-modal-title" class="user-modal-title">
+          Utente
+        </div>
+        <div id="user-modal-subtitle" class="user-modal-subtitle">
+          -
+        </div>
+        <div id="user-modal-status" class="user-modal-status non-attivo">
+          -
+        </div>
+      </div>
+
+      <button type="button"
+              id="user-modal-close"
+              class="user-modal-close"
+              aria-label="Chiudi">
+        ×
+      </button>
+    </div>
+
+    <div class="user-modal-grid">
+      <div class="user-modal-info">
+        <div class="user-modal-info-label">ID</div>
+        <div id="modal-user-id" class="user-modal-info-value">-</div>
+      </div>
+
+      <div class="user-modal-info">
+        <div class="user-modal-info-label">Username</div>
+        <div id="modal-user-username" class="user-modal-info-value">-</div>
+      </div>
+
+      <div class="user-modal-info">
+        <div class="user-modal-info-label">Nome</div>
+        <div id="modal-user-nome" class="user-modal-info-value">-</div>
+      </div>
+
+      <div class="user-modal-info">
+        <div class="user-modal-info-label">Cognome</div>
+        <div id="modal-user-cognome" class="user-modal-info-value">-</div>
+      </div>
+
+      <div class="user-modal-info">
+        <div class="user-modal-info-label">Email</div>
+        <div id="modal-user-email" class="user-modal-info-value">-</div>
+      </div>
+
+      <div class="user-modal-info">
+        <div class="user-modal-info-label">Città</div>
+        <div id="modal-user-citta" class="user-modal-info-value">-</div>
+      </div>
+
+      <div class="user-modal-info">
+        <div class="user-modal-info-label">Provincia</div>
+        <div id="modal-user-provincia" class="user-modal-info-value">-</div>
+      </div>
+
+      <div class="user-modal-info">
+        <div class="user-modal-info-label">Registrato il</div>
+        <div id="modal-user-created" class="user-modal-info-value">-</div>
+      </div>
+    </div>
+
+    <div id="modal-user-actions" class="user-modal-actions">
+      <a id="modal-user-chat" href="#" class="user-modal-action primary">
+        💬 Chat
+      </a>
+
+      <a id="modal-user-mail" href="#" class="user-modal-action secondary">
+        ✉️ Email
+      </a>
+
+      <a id="modal-user-toggle" href="#" class="user-modal-action secondary">
+        Stato
+      </a>
+
+      <button id="modal-user-contatti"
+              type="button"
+              class="user-modal-action secondary">
+        📞 Contatti
+      </button>
+
+      <a id="modal-user-delete"
+         href="#"
+         class="user-modal-action danger">
+        Elimina
+      </a>
+    </div>
+
+  </div>
 </div>
 
 <script>
@@ -586,6 +979,152 @@ function toggleContattiProfilo(utenteId) {
   })
   .catch(() => alert("Errore di rete"));
 }
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const backdrop = document.getElementById("user-modal-backdrop");
+  const closeBtn = document.getElementById("user-modal-close");
+
+  if (!backdrop || !closeBtn) return;
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value || "-";
+  };
+
+  const openModal = (row) => {
+    if (window.innerWidth >= 1024) return;
+
+    const d = row.dataset;
+
+    const fullName = `${d.userNome || ""} ${d.userCognome || ""}`.trim() || "Utente";
+    const stato = d.userStato || "Non attivo";
+    const eliminato = d.userEliminato === "1";
+
+    setText("user-modal-title", fullName);
+    setText("user-modal-subtitle", d.userEmail || "-");
+
+    const statusEl = document.getElementById("user-modal-status");
+    if (statusEl) {
+      statusEl.textContent = stato;
+      statusEl.className = "user-modal-status";
+
+      if (stato === "Attivo") {
+        statusEl.classList.add("attivo");
+      } else if (stato === "Sospeso") {
+        statusEl.classList.add("sospeso");
+      } else if (stato === "Eliminato") {
+        statusEl.classList.add("eliminato");
+      } else {
+        statusEl.classList.add("non-attivo");
+      }
+    }
+
+    setText("modal-user-id", d.userId);
+    setText("modal-user-username", d.userUsername);
+    setText("modal-user-nome", d.userNome);
+    setText("modal-user-cognome", d.userCognome);
+    setText("modal-user-email", d.userEmail);
+    setText("modal-user-citta", d.userCitta);
+    setText("modal-user-provincia", d.userProvincia);
+    setText("modal-user-created", d.userCreated);
+
+    const chat = document.getElementById("modal-user-chat");
+    const mail = document.getElementById("modal-user-mail");
+    const toggle = document.getElementById("modal-user-toggle");
+    const del = document.getElementById("modal-user-delete");
+    const contatti = document.getElementById("modal-user-contatti");
+
+    if (chat) chat.href = d.userChatUrl || "#";
+    if (mail) mail.href = d.userMailUrl || "#";
+
+    if (toggle) {
+      toggle.href = d.userToggleUrl || "#";
+      toggle.textContent = d.userAttivo === "1" ? "Disattiva" : "Attiva";
+    }
+
+    if (del) {
+      del.href = d.userDeleteUrl || "#";
+      del.onclick = () => confirm("Eliminare questo utente?");
+    }
+
+    if (contatti) {
+      contatti.textContent = d.userContatti === "1" ? "📞 Contatti attivi" : "📞 Attiva contatti";
+      contatti.onclick = () => toggleContattiProfilo(Number(d.userId));
+    }
+
+    const actions = document.getElementById("modal-user-actions");
+
+    if (actions) {
+      actions.querySelectorAll("a, button").forEach(el => {
+        el.classList.remove("disabled");
+        el.style.pointerEvents = "";
+        el.disabled = false;
+      });
+
+      if (eliminato) {
+        actions.innerHTML = `
+          <button type="button" class="user-modal-action disabled">
+            Account eliminato: nessuna azione disponibile
+          </button>
+        `;
+      }
+    }
+
+    backdrop.classList.add("is-open");
+    backdrop.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeModal = () => {
+    backdrop.classList.remove("is-open");
+    backdrop.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+
+  document.querySelectorAll(".admin-user-row").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("a, button, input, select")) return;
+      openModal(row);
+    });
+  });
+
+  closeBtn.addEventListener("click", closeModal);
+
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closeModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+});
+</script>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const toggleBtn = document.getElementById("toggle-extra-filters");
+  const panel = document.getElementById("extra-filters-panel");
+
+  if (!toggleBtn || !panel) return;
+
+  const hasExtraFilters =
+    "{{ request.args.get('nome','')|e }}" ||
+    "{{ request.args.get('email','')|e }}" ||
+    "{{ request.args.get('citta','')|e }}" ||
+    "{{ request.args.get('provincia','')|e }}";
+
+  if (hasExtraFilters) {
+    panel.classList.add("is-open");
+    toggleBtn.textContent = "Nascondi filtri";
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    const isOpen = panel.classList.toggle("is-open");
+    toggleBtn.textContent = isOpen ? "Nascondi filtri" : "Altri filtri";
+  });
+});
 </script>
 
 {% endblock %}
