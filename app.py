@@ -3524,7 +3524,7 @@ def admin_counters():
         }
 
         return jsonify(payload), 200
-        
+
     finally:
         try:
             if cur:
@@ -4813,12 +4813,29 @@ def admin_utenti():
     has_filters = any([nome, email, citta, provincia, stato])
 
     conn = get_db_connection()
-
     c = get_cursor(conn)
 
-    c.execute(sql("SELECT COUNT(*) FROM utenti"))
+    # =====================================================
+    # UTENTI TOTALI REALI
+    # Esclude gli account anonimizzati/eliminati.
+    # =====================================================
+    c.execute(sql("""
+        SELECT COUNT(*) AS totale
+        FROM utenti
+        WHERE COALESCE(email, '') NOT LIKE ?
+          AND COALESCE(username, '') NOT LIKE ?
+    """), (
+        "deleted_user_%@mylocalcare.local",
+        "utente_eliminato_%"
+    ))
+
     totale_utenti = fetchone_value(c.fetchone())
 
+    # =====================================================
+    # LISTA UTENTI
+    # Default: NON mostra eliminati.
+    # Se stato = eliminato, mostra SOLO eliminati.
+    # =====================================================
     query = f"""
         SELECT
             u.id,
@@ -4830,6 +4847,14 @@ def admin_utenti():
             u.username,
             u.attivo,
             u.sospeso,
+            u.created_at,
+
+            CASE
+                WHEN COALESCE(u.email, '') LIKE ?
+                  OR COALESCE(u.username, '') LIKE ?
+                THEN 1
+                ELSE 0
+            END AS eliminato,
 
             (
               SELECT 1
@@ -4846,39 +4871,67 @@ def admin_utenti():
         FROM utenti u
         WHERE 1=1
     """
-    params = []
+
+    params = [
+        "deleted_user_%@mylocalcare.local",
+        "utente_eliminato_%"
+    ]
+
+    # Stato eliminato: mostra solo anonimizzati/eliminati.
+    if stato == "eliminato":
+        query += """
+            AND (
+                COALESCE(u.email, '') LIKE ?
+                OR COALESCE(u.username, '') LIKE ?
+            )
+        """
+        params.extend([
+            "deleted_user_%@mylocalcare.local",
+            "utente_eliminato_%"
+        ])
+
+    else:
+        # Default e tutti gli altri stati: esclude eliminati.
+        query += """
+            AND COALESCE(u.email, '') NOT LIKE ?
+            AND COALESCE(u.username, '') NOT LIKE ?
+        """
+        params.extend([
+            "deleted_user_%@mylocalcare.local",
+            "utente_eliminato_%"
+        ])
 
     if nome:
-        query += " AND (LOWER(nome) LIKE ? OR LOWER(cognome) LIKE ?)"
+        query += " AND (LOWER(u.nome) LIKE ? OR LOWER(u.cognome) LIKE ?)"
         like = f"%{nome.lower()}%"
         params.extend([like, like])
 
     if email:
-        query += " AND LOWER(email) LIKE ?"
+        query += " AND LOWER(u.email) LIKE ?"
         params.append(f"%{email.lower()}%")
 
     if citta:
-        query += " AND LOWER(citta) LIKE ?"
+        query += " AND LOWER(u.citta) LIKE ?"
         params.append(f"%{citta.lower()}%")
 
     if provincia:
-        query += " AND LOWER(provincia) LIKE ?"
+        query += " AND LOWER(u.provincia) LIKE ?"
         params.append(f"%{provincia.lower()}%")
 
     if stato == "attivo":
-        query += " AND attivo = 1 AND sospeso = 0"
+        query += " AND u.attivo = 1 AND u.sospeso = 0"
     elif stato == "sospeso":
-        query += " AND sospeso = 1"
+        query += " AND u.sospeso = 1"
     elif stato == "non_attivo":
-        query += " AND attivo = 0"
+        query += " AND u.attivo = 0"
+    elif stato == "eliminato":
+        pass
 
-    query += " ORDER BY cognome ASC, nome ASC"
+    query += " ORDER BY u.id DESC"
 
     c.execute(sql(query), params)
     utenti = c.fetchall()
     totale_filtrati = len(utenti)
-
-
 
     return render_template(
         "admin_utenti.html",
@@ -4892,7 +4945,7 @@ def admin_utenti():
         totale_filtrati=totale_filtrati,
         has_filters=has_filters
     )
-
+    
 @app.route("/admin/utenti/toggle/<int:id>")
 @admin_required
 def toggle_utente_admin(id):

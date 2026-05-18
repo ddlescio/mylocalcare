@@ -276,6 +276,8 @@
                   {% if request.args.get('stato')=='sospeso' %}selected{% endif %}>Sospeso</option>
                 <option value="non_attivo"
                   {% if request.args.get('stato')=='non_attivo' %}selected{% endif %}>Non attivo</option>
+                <option value="eliminato"
+                  {% if request.args.get('stato')=='eliminato' %}selected{% endif %}>Eliminato</option>
             </select>
         </div>
 
@@ -306,6 +308,7 @@
                 <th>Username</th>
                 <th>Città</th>
                 <th>Provincia</th>
+                <th>Registrato il</th>
                 <th>Stato</th>
                 <th class="text-center">Azioni</th>
             </tr>
@@ -344,7 +347,17 @@
                 <td>{{ u.provincia or "-" }}</td>
 
                 <td>
-                    {% if u.sospeso == 1 %}
+                  {% if u.created_at %}
+                    {{ u.created_at|fmt_it }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td>
+                    {% if u.eliminato == 1 %}
+                        <span class="badge badge-red">Eliminato</span>
+                    {% elif u.sospeso == 1 %}
                         <span class="badge badge-yellow">Sospeso</span>
                     {% elif u.attivo == 1 %}
                         <span class="badge badge-green">Attivo</span>
@@ -355,32 +368,40 @@
 
                 <td class="text-center flex items-center justify-center gap-3">
 
-                  <a href="{{ url_for('toggle_utente_admin', id=u.id) }}"
-                     class="text-blue-600 hover:underline">
-                    {{ 'Disattiva' if u.attivo else 'Attiva' }}
-                  </a>
+                  {% if u.eliminato == 1 %}
+                    <span class="text-xs text-slate-400 italic">
+                      Account eliminato
+                    </span>
+                  {% else %}
 
-                  <a href="{{ url_for('elimina_utente_route', id=u.id) }}"
-                     onclick="return confirm('Eliminare questo utente?');"
-                     class="text-red-600 hover:underline">
-                    Elimina
-                  </a>
+                    <a href="{{ url_for('toggle_utente_admin', id=u.id) }}"
+                       class="text-blue-600 hover:underline">
+                      {{ 'Disattiva' if u.attivo else 'Attiva' }}
+                    </a>
 
-                  <button
-                    type="button"
-                    onclick="toggleContattiProfilo({{ u.id }})"
-                    class="
-                      px-3 py-1.5 rounded-full text-xs font-semibold border transition
-                      {% if u.contatti_attivi %}
-                        bg-blue-600 text-white border-blue-600 hover:bg-blue-700
-                      {% else %}
-                        bg-white text-gray-500 border-gray-300 hover:bg-gray-100
-                      {% endif %}
-                    ">
-                    📞 Contatti
-                  </button>
+                    <a href="{{ url_for('elimina_utente_route', id=u.id) }}"
+                       onclick="return confirm('Eliminare questo utente?');"
+                       class="text-red-600 hover:underline">
+                      Elimina
+                    </a>
 
-                </td>
+                    <button
+                      type="button"
+                      onclick="toggleContattiProfilo({{ u.id }})"
+                      class="
+                        px-3 py-1.5 rounded-full text-xs font-semibold border transition
+                        {% if u.contatti_attivi %}
+                          bg-blue-600 text-white border-blue-600 hover:bg-blue-700
+                        {% else %}
+                          bg-white text-gray-500 border-gray-300 hover:bg-gray-100
+                        {% endif %}
+                      ">
+                      📞 Contatti
+                    </button>
+
+                  {% endif %}
+
+                </td>                
               </tr>
             {% endfor %}
         </tbody>
