@@ -489,6 +489,78 @@
     border-color: #fde68a;
 }
 
+/* --- SERVIZI NEL MODALE ANNUNCIO --- */
+.annuncio-modal-services {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.annuncio-modal-services-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+}
+
+.annuncio-modal-services-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.annuncio-modal-service-btn {
+    min-height: 34px;
+    border-radius: 9999px;
+    padding: 6px 9px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    border: 1px solid #dbe3ee;
+    background: #f8fafc;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.1;
+}
+
+.annuncio-modal-service-btn.is-active {
+    color: white;
+    border-color: transparent;
+}
+
+.annuncio-modal-service-btn.vetrina.is-active {
+    background: #9333ea;
+}
+
+.annuncio-modal-service-btn.lista.is-active {
+    background: #2563eb;
+}
+
+.annuncio-modal-service-btn.evidenza.is-active {
+    background: #f59e0b;
+}
+
+.annuncio-modal-service-btn.affidabilita.is-active {
+    background: #16a34a;
+}
+
+.annuncio-modal-service-btn.urgente.is-active {
+    background: #dc2626;
+}
+
+.annuncio-modal-service-btn.pacchetto-visibilita.is-active {
+    background: #1d4ed8;
+}
+
+.annuncio-modal-service-btn.pacchetto-premium.is-active {
+    background: #d97706;
+}
+
 @media (min-width: 1024px) {
     .annuncio-modal-backdrop {
         display: none !important;
@@ -667,6 +739,14 @@
                     data-annuncio-titolo="{{ a.titolo or '-' }}"
                     data-annuncio-descrizione="{{ a.descrizione or '' }}"
                     data-annuncio-media="{{ a.media or '' }}"
+                    data-annuncio-utente-id="{{ a.utente_id }}"
+                    data-annuncio-has-vetrina="{{ 1 if a.has_vetrina else 0 }}"
+                    data-annuncio-has-boost-lista="{{ 1 if a.has_boost_lista else 0 }}"
+                    data-annuncio-has-badge-evidenza="{{ 1 if a.has_badge_evidenza else 0 }}"
+                    data-annuncio-has-affidabilita="{{ 1 if a.has_affidabilita else 0 }}"
+                    data-annuncio-has-urgente="{{ 1 if a.has_urgente else 0 }}"
+                    data-annuncio-has-pacchetto-visibilita="{{ 1 if a.has_pacchetto_visibilita else 0 }}"
+                    data-annuncio-has-pacchetto-premium="{{ 1 if a.has_pacchetto_premium else 0 }}"
                     data-annuncio-utente="{{ (a.nome or '') ~ ' ' ~ (a.cognome or '') }}"
                     data-annuncio-categoria="{{ a.categoria or '-' }}"
                     data-annuncio-tipo="{{ a.tipo_annuncio or '-' }}"
@@ -937,6 +1017,70 @@
           </a>
 
         </div>
+        <div class="annuncio-modal-services">
+
+  <div class="annuncio-modal-services-title">Servizi annuncio</div>
+
+  <div class="annuncio-modal-services-grid">
+    <button type="button"
+            id="modal-service-vetrina"
+            class="annuncio-modal-service-btn vetrina toggle-servizio"
+            data-servizio="vetrina_annuncio">
+      Vetrina
+    </button>
+
+    <button type="button"
+            id="modal-service-boost-lista"
+            class="annuncio-modal-service-btn lista toggle-servizio"
+            data-servizio="boost_lista">
+      Lista
+    </button>
+
+    <button type="button"
+            id="modal-service-badge-evidenza"
+            class="annuncio-modal-service-btn evidenza toggle-servizio"
+            data-servizio="badge_evidenza">
+      Evidenza
+    </button>
+
+    <button type="button"
+            id="modal-service-urgente"
+            class="annuncio-modal-service-btn urgente toggle-servizio"
+            data-servizio="annuncio_urgente">
+      🚨 Urgente
+    </button>
+  </div>
+
+  <div class="annuncio-modal-services-title">Servizi profilo</div>
+
+  <div class="annuncio-modal-services-grid">
+    <button type="button"
+            id="modal-service-affidabilita"
+            class="annuncio-modal-service-btn affidabilita toggle-servizio"
+            data-servizio="badge_affidabilita">
+      Affidabilità
+    </button>
+  </div>
+
+  <div class="annuncio-modal-services-title">Pacchetti</div>
+
+  <div class="annuncio-modal-services-grid">
+    <button type="button"
+            id="modal-package-visibilita"
+            class="annuncio-modal-service-btn pacchetto-visibilita toggle-pacchetto"
+            data-pacchetto="pacchetto_visibilita">
+      📦 Visibilità
+    </button>
+
+    <button type="button"
+            id="modal-package-premium"
+            class="annuncio-modal-service-btn pacchetto-premium toggle-pacchetto"
+            data-pacchetto="pacchetto_premium">
+      🌟 Premium
+    </button>
+  </div>
+
+</div>
 
       </div>
     </div>
@@ -1340,7 +1484,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             mediaBox.appendChild(img);
           });
-        }      
+        }
     }
 
     setHref("modal-annuncio-apri", d.annuncioApriUrl);
@@ -1361,6 +1505,60 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleBtn.textContent = "Attiva/Disattiva";
       }
     }
+
+    const setServiceButton = (id, isActive, extraData = {}) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+
+      btn.classList.toggle("is-active", isActive === "1");
+
+      if (extraData.annuncioId) {
+        btn.dataset.annuncio = extraData.annuncioId;
+      } else {
+        delete btn.dataset.annuncio;
+      }
+
+      if (extraData.utenteId) {
+        btn.dataset.utente = extraData.utenteId;
+      }
+    };
+
+    const modalAnnuncioId = d.annuncioId || "";
+    const modalUtenteId = d.annuncioUtenteId || "";
+
+    setServiceButton("modal-service-vetrina", d.annuncioHasVetrina, {
+      annuncioId: modalAnnuncioId,
+      utenteId: modalUtenteId
+    });
+
+    setServiceButton("modal-service-boost-lista", d.annuncioHasBoostLista, {
+      annuncioId: modalAnnuncioId,
+      utenteId: modalUtenteId
+    });
+
+    setServiceButton("modal-service-badge-evidenza", d.annuncioHasBadgeEvidenza, {
+      annuncioId: modalAnnuncioId,
+      utenteId: modalUtenteId
+    });
+
+    setServiceButton("modal-service-urgente", d.annuncioHasUrgente, {
+      annuncioId: modalAnnuncioId,
+      utenteId: modalUtenteId
+    });
+
+    setServiceButton("modal-service-affidabilita", d.annuncioHasAffidabilita, {
+      utenteId: modalUtenteId
+    });
+
+    setServiceButton("modal-package-visibilita", d.annuncioHasPacchettoVisibilita, {
+      annuncioId: modalAnnuncioId,
+      utenteId: modalUtenteId
+    });
+
+    setServiceButton("modal-package-premium", d.annuncioHasPacchettoPremium, {
+      annuncioId: modalAnnuncioId,
+      utenteId: modalUtenteId
+    });    
 
     backdrop.classList.add("is-open");
     backdrop.setAttribute("aria-hidden", "false");
