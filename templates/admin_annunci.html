@@ -1291,23 +1291,56 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .filter(Boolean);
 
-      if (!media.length) {
-        mediaBox.innerHTML = `<div class="annuncio-modal-empty-media">Nessuna foto presente</div>`;
-      } else {
-        media.forEach(src => {
-          const img = document.createElement("img");
+        if (!media.length) {
+          mediaBox.innerHTML = `<div class="annuncio-modal-empty-media">Nessuna foto presente</div>`;
+        } else {
+          media.forEach(src => {
+            const img = document.createElement("img");
 
-          if (src.startsWith("http") || src.startsWith("/")) {
-            img.src = src;
-          } else {
-            img.src = "/static/uploads/" + src.replace(/^\/+/, "");
-          }
+            let cleanSrc = String(src || "").trim();
 
-          img.alt = "Foto annuncio";
-          img.className = "annuncio-modal-media-img";
-          mediaBox.appendChild(img);
-        });
-      }
+            /*
+              Normalizzazione robusta:
+              - se è già URL assoluto, lo lasciamo com'è
+              - se parte già da /static/uploads/, lo lasciamo com'è
+              - se parte da static/uploads/, aggiungiamo solo /
+              - se parte da /uploads/ o uploads/, lo trasformiamo in /static/uploads/
+              - se è solo un nome file/cartella, lo agganciamo a /static/uploads/
+            */
+
+            if (cleanSrc.startsWith("http://") || cleanSrc.startsWith("https://")) {
+              img.src = cleanSrc;
+
+            } else if (cleanSrc.startsWith("/static/uploads/")) {
+              img.src = cleanSrc;
+
+            } else if (cleanSrc.startsWith("static/uploads/")) {
+              img.src = "/" + cleanSrc;
+
+            } else if (cleanSrc.startsWith("/uploads/")) {
+              img.src = "/static" + cleanSrc;
+
+            } else if (cleanSrc.startsWith("uploads/")) {
+              img.src = "/static/" + cleanSrc;
+
+            } else {
+              img.src = "/static/uploads/" + cleanSrc.replace(/^\/+/, "");
+            }
+
+            img.alt = "Foto annuncio";
+            img.className = "annuncio-modal-media-img";
+
+            img.onerror = () => {
+              console.warn("Foto annuncio non caricata:", {
+                originale: src,
+                finale: img.src
+              });
+              img.style.display = "none";
+            };
+
+            mediaBox.appendChild(img);
+          });
+        }      
     }
 
     setHref("modal-annuncio-apri", d.annuncioApriUrl);
