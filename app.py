@@ -4815,6 +4815,11 @@ def admin_utenti():
     conn = get_db_connection()
     c = get_cursor(conn)
 
+    # Pattern eliminati compatibili con vecchio e nuovo formato
+    deleted_email_pattern_1 = "deleted_user_%@deleted.local"
+    deleted_email_pattern_2 = "deleted_user_%@mylocalcare.local"
+    deleted_username_pattern = "utente_eliminato_%"
+
     # =====================================================
     # UTENTI TOTALI REALI
     # Esclude gli account anonimizzati/eliminati.
@@ -4822,11 +4827,13 @@ def admin_utenti():
     c.execute(sql("""
         SELECT COUNT(*) AS totale
         FROM utenti
-        WHERE COALESCE(email, '') NOT LIKE ?
-          AND COALESCE(username, '') NOT LIKE ?
+        WHERE COALESCE(email, '') NOT ILIKE ?
+          AND COALESCE(email, '') NOT ILIKE ?
+          AND COALESCE(username, '') NOT ILIKE ?
     """), (
-        "deleted_user_%@mylocalcare.local",
-        "utente_eliminato_%"
+        deleted_email_pattern_1,
+        deleted_email_pattern_2,
+        deleted_username_pattern
     ))
 
     totale_utenti = fetchone_value(c.fetchone())
@@ -4850,12 +4857,13 @@ def admin_utenti():
             u.data_creazione AS created_at,
 
             CASE
-                WHEN COALESCE(u.email, '') LIKE ?
-                  OR COALESCE(u.username, '') LIKE ?
+                WHEN COALESCE(u.email, '') ILIKE ?
+                  OR COALESCE(u.email, '') ILIKE ?
+                  OR COALESCE(u.username, '') ILIKE ?
                 THEN 1
                 ELSE 0
             END AS eliminato,
-            
+
             (
               SELECT 1
               FROM attivazioni_servizi a
@@ -4873,32 +4881,37 @@ def admin_utenti():
     """
 
     params = [
-        "deleted_user_%@mylocalcare.local",
-        "utente_eliminato_%"
+        deleted_email_pattern_1,
+        deleted_email_pattern_2,
+        deleted_username_pattern
     ]
 
     # Stato eliminato: mostra solo anonimizzati/eliminati.
     if stato == "eliminato":
         query += """
             AND (
-                COALESCE(u.email, '') LIKE ?
-                OR COALESCE(u.username, '') LIKE ?
+                COALESCE(u.email, '') ILIKE ?
+                OR COALESCE(u.email, '') ILIKE ?
+                OR COALESCE(u.username, '') ILIKE ?
             )
         """
         params.extend([
-            "deleted_user_%@mylocalcare.local",
-            "utente_eliminato_%"
+            deleted_email_pattern_1,
+            deleted_email_pattern_2,
+            deleted_username_pattern
         ])
 
     else:
         # Default e tutti gli altri stati: esclude eliminati.
         query += """
-            AND COALESCE(u.email, '') NOT LIKE ?
-            AND COALESCE(u.username, '') NOT LIKE ?
+            AND COALESCE(u.email, '') NOT ILIKE ?
+            AND COALESCE(u.email, '') NOT ILIKE ?
+            AND COALESCE(u.username, '') NOT ILIKE ?
         """
         params.extend([
-            "deleted_user_%@mylocalcare.local",
-            "utente_eliminato_%"
+            deleted_email_pattern_1,
+            deleted_email_pattern_2,
+            deleted_username_pattern
         ])
 
     if nome:
@@ -4945,7 +4958,7 @@ def admin_utenti():
         totale_filtrati=totale_filtrati,
         has_filters=has_filters
     )
-
+    
 @app.route("/admin/utenti/toggle/<int:id>")
 @admin_required
 def toggle_utente_admin(id):
