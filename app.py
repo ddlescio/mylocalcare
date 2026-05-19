@@ -10615,7 +10615,7 @@ def api_attiva():
 @app.route("/api/crea-payment-intent", methods=["POST"])
 @login_required
 def crea_payment_intent():
-    data = request.get_json()
+    data = request.get_json() or {}
 
     annuncio_id = data.get("annuncio_id")
     piano_id = data.get("piano_id")
@@ -10625,7 +10625,6 @@ def crea_payment_intent():
         return jsonify({"error": "Dati non validi"}), 400
 
     conn = get_db_connection()
-
     cur = get_cursor(conn)
 
     try:
@@ -10635,7 +10634,9 @@ def crea_payment_intent():
                 FROM servizi_piani
                 WHERE id = ? AND attivo = 1
             """), (piano_id,))
+
             piano = cur.fetchone()
+
             if not piano:
                 return jsonify({"error": "Piano servizio non trovato"}), 404
 
@@ -10644,11 +10645,13 @@ def crea_payment_intent():
 
         else:
             cur.execute(sql("""
-                SELECT pacchetto_id, prezzo_cent
+                SELECT id, pacchetto_id, prezzo_cent
                 FROM pacchetti_piani
                 WHERE id = ? AND attivo = 1
             """), (piano_id,))
+
             piano = cur.fetchone()
+
             if not piano:
                 return jsonify({"error": "Piano pacchetto non trovato"}), 404
 
@@ -10657,13 +10660,25 @@ def crea_payment_intent():
 
         prezzo = int(piano["prezzo_cent"])
 
-        # crea acquisto locale (stato: creato)
+        if prezzo <= 0:
+            return jsonify({"error": "Prezzo non valido"}), 400
+
         acquisto_id = insert_and_get_id(
             cur,
             f"""
             INSERT INTO acquisti
-            (utente_id, tipo, ref_id, prezzo_id, metodo, importo_cent, stato, annuncio_id, created_at)
-            VALUES (?, ?, ?, ?, 'stripe', ?, 'creato', ?, {now_sql()})
+            (
+                utente_id,
+                tipo,
+                ref_id,
+                prezzo_id,
+                metodo,
+                importo_cent,
+                stato,
+                annuncio_id,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, 'stripe', ?, 'pending', ?, {now_sql()})
             """,
             (
                 g.utente["id"],
@@ -10675,28 +10690,62 @@ def crea_payment_intent():
             )
         )
 
+        intent = stripe.PaymentIntent.create(
+            amount=prezzo,
+            currency="eur",
+            automatic_payment_methods={"enabled": True},
+            metadata={
+                "acquisto_id": str(acquisto_id),
+                "piano_id": str(piano_id),
+                "tipo": str(tipo),
+                "annuncio_id": str(annuncio_id),
+                "utente_id": str(g.utente["id"])
+            }
+        )
+
+        cur.execute(sql("""
+            UPDATE acquisti
+            SET riferimento_esterno = ?
+            WHERE id = ?
+        """), (intent.id, acquisto_id))
+
         conn.commit()
+
+        security_log(
+            "💳 [STRIPE] PaymentIntent creato con metadata",
+            {
+                "payment_intent": intent.id,
+                "acquisto_id": acquisto_id,
+                "tipo": tipo_acquisto,
+                "ref_id": ref_id,
+                "piano_id": piano_id,
+                "annuncio_id": annuncio_id,
+                "utente_id": g.utente["id"]
+            },
+            production=True
+        )
+
+        return jsonify({
+            "client_secret": intent.client_secret
+        })
+
+    except Exception as e:
+        conn.rollback()
+
+        log_exception_safe(
+            "❌ [STRIPE] errore creazione PaymentIntent",
+            e,
+            production=True
+        )
+
+        return jsonify({"error": "Errore creazione pagamento"}), 500
 
     finally:
         try:
             conn.close()
         except:
             pass
-
-
-    # PaymentIntent Stripe
-    intent = stripe.PaymentIntent.create(
-        amount=prezzo,
-        currency="eur",
-        metadata={
-            "acquisto_id": acquisto_id
-        }
-    )
-
-    return jsonify({
-        "client_secret": intent.client_secret
-    })
-
+            
 def gestisci_pagamento_confermato(payment_intent):
     # Stripe può passare sia dict sia StripeObject.
     # NON usare dict(payment_intent): su alcuni StripeObject genera KeyError(0).
@@ -10732,7 +10781,7 @@ def gestisci_pagamento_confermato(payment_intent):
             production=True
         )
         return
-        
+
     security_log(
         "💳 [STRIPE] START gestisci_pagamento_confermato",
         {
