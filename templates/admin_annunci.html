@@ -8,6 +8,25 @@
     padding-top: 10px;
 }
 
+/* --- LARGHEZZA PAGINA DESKTOP --- */
+@media (min-width: 1024px) {
+    .page-wrapper {
+        position: relative;
+        left: 50%;
+        width: calc(100vw - 48px);
+        max-width: 1500px;
+        margin-left: calc(-50vw + 24px);
+    }
+}
+
+@media (min-width: 1536px) {
+    .page-wrapper {
+        width: calc(100vw - 64px);
+        max-width: 1640px;
+        margin-left: calc(-50vw + 32px);
+    }
+}
+
 /* --- SHELL iOS --- */
 .admin-shell {
     background: rgba(255, 255, 255, 0.88);
@@ -265,6 +284,14 @@
     padding: 12px;
     border-top: 1px solid #e5e7eb;
     white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+    .table-wrapper table th,
+    .table-wrapper table td {
+        padding: 10px 9px;
+        font-size: 0.82rem;
+    }
 }
 
 .table-wrapper tr:hover {
@@ -1558,7 +1585,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setServiceButton("modal-package-premium", d.annuncioHasPacchettoPremium, {
       annuncioId: modalAnnuncioId,
       utenteId: modalUtenteId
-    });    
+    });
 
     backdrop.classList.add("is-open");
     backdrop.setAttribute("aria-hidden", "false");
