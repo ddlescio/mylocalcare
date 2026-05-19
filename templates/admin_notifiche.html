@@ -7,45 +7,231 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
 
 {% block admin_content %}
 
-<!-- 🔹 CARD: Statistiche notifiche -->
-<div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-8">
+<style>
+  .notify-page-shell {
+    max-width: 1120px;
+    margin: 0 auto;
+  }
 
-  <h3 class="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-    📊 Stato notifiche attuali
-  </h3>
+  .notify-card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 22px;
+    box-shadow:
+      0 18px 45px rgba(15, 23, 42, 0.08),
+      0 2px 8px rgba(15, 23, 42, 0.04);
+    backdrop-filter: blur(14px);
+  }
 
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  .notify-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.025em;
+  }
 
-    <!-- Totali -->
-    <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 text-center">
-      <p class="text-slate-500 text-sm">Totali</p>
-      <p class="text-3xl font-bold text-slate-800">{{ stats.totali or 0 }}</p>
+  .notify-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .notify-stat-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 18px 14px;
+    text-align: center;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  }
+
+  .notify-stat-card::after {
+    content: "";
+    position: absolute;
+    inset: auto -20px -38px auto;
+    width: 82px;
+    height: 82px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  .notify-stat-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+
+  .notify-stat-number {
+    font-size: clamp(1.45rem, 5vw, 2.15rem);
+    line-height: 1;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.05em;
+  }
+
+  .notify-stat-yellow {
+    background: linear-gradient(180deg, #fffdf4 0%, #fffbeb 100%);
+  }
+
+  .notify-stat-yellow .notify-stat-number {
+    color: #ca8a04;
+  }
+
+  .notify-stat-green {
+    background: linear-gradient(180deg, #f7fff9 0%, #ecfdf5 100%);
+  }
+
+  .notify-stat-green .notify-stat-number {
+    color: #16a34a;
+  }
+
+  .notify-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 6px 2px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    scrollbar-width: none;
+  }
+
+  .notify-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 9px 13px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    transition: all .18s ease;
+  }
+
+  .tab-btn:hover {
+    background: #eef6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+  }
+
+  .tab-btn.text-blue-600 {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border-color: #1d4ed8;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+  }
+
+  .notify-field {
+    border-radius: 14px;
+    border: 1px solid #dbe3ef;
+    background: #ffffff;
+    padding: 12px 14px;
+    transition: all .18s ease;
+  }
+
+  .notify-field:focus {
+    outline: none;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
+  }
+
+  .notify-submit-btn {
+    width: 100%;
+    border-radius: 16px;
+    padding: 14px 18px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.22);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+
+  .notify-submit-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 34px rgba(37, 99, 235, 0.28);
+  }
+
+  @media (max-width: 640px) {
+    .notify-card {
+      border-radius: 20px;
+    }
+
+    .notify-card-mobile-padding {
+      padding: 18px !important;
+    }
+
+    .notify-stats-grid {
+      gap: 8px;
+    }
+
+    .notify-stat-card {
+      padding: 14px 8px;
+      border-radius: 15px;
+    }
+
+    .notify-stat-label {
+      font-size: 0.68rem;
+    }
+
+    .notify-stat-number {
+      font-size: 1.35rem;
+    }
+
+    .notify-card-header {
+      font-size: 1.05rem;
+    }
+  }
+</style>
+
+<div class="notify-page-shell">
+
+  <!-- 🔹 CARD: Statistiche notifiche -->
+  <div class="notify-card notify-card-mobile-padding p-6 mb-8">
+
+    <h3 class="notify-card-header text-lg mb-5">
+      <span>📊</span>
+      <span>Stato notifiche attuali</span>
+    </h3>
+
+    <div class="notify-stats-grid">
+
+      <!-- Totali -->
+      <div class="notify-stat-card">
+        <p class="notify-stat-label">Totali</p>
+        <p class="notify-stat-number">{{ stats.totali or 0 }}</p>
+      </div>
+
+      <!-- Non lette -->
+      <div class="notify-stat-card notify-stat-yellow">
+        <p class="notify-stat-label text-yellow-700">Non lette</p>
+        <p class="notify-stat-number">{{ stats.non_lette or 0 }}</p>
+      </div>
+
+      <!-- Lette -->
+      <div class="notify-stat-card notify-stat-green">
+        <p class="notify-stat-label text-green-700">Lette</p>
+        <p class="notify-stat-number">{{ stats.lette or 0 }}</p>
+      </div>
+
     </div>
-
-    <!-- Non lette -->
-    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-center">
-      <p class="text-yellow-600 text-sm">Non lette</p>
-      <p class="text-3xl font-bold text-yellow-600">{{ stats.non_lette or 0 }}</p>
-    </div>
-
-    <!-- Lette -->
-    <div class="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
-      <p class="text-green-600 text-sm">Lette</p>
-      <p class="text-3xl font-bold text-green-600">{{ stats.lette or 0 }}</p>
-    </div>
-
-  </div>
 
 </div>
 
 <!-- 🔹 CARD: Storico notifiche inviate da Admin -->
-<div class="bg-white border border-slate-200 rounded-xl shadow-sm mb-10">
+<div class="notify-card mb-10 overflow-hidden">
 
   <!-- HEADER CLICCABILE -->
   <button
     type="button"
     id="toggleStorico"
-    class="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 rounded-xl">
+    class="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-slate-50 transition">
 
     <div class="flex items-center gap-2">
       🗂️
@@ -199,10 +385,11 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
 </div>
 
 <!-- 🔹 CARD: Invio nuova notifica/email -->
-<div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-10">
+<div class="notify-card notify-card-mobile-padding p-6 mb-10">
 
-  <h3 class="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-    📨 Invia nuova notifica o email
+  <h3 class="notify-card-header text-lg mb-6">
+    <span>📨</span>
+    <span>Invia nuova notifica o email</span>
   </h3>
 
   <form action="{{ url_for('admin_invia_notifica') }}" method="post" class="space-y-6">
@@ -229,7 +416,7 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
       <p class="font-medium mb-2 text-slate-700">Destinatari</p>
 
       <!-- Tabs -->
-      <div class="flex flex-wrap gap-3 text-sm mb-4 border-b pb-2">
+      <div class="notify-tabs mb-4">
         <button type="button" class="tab-btn font-medium" data-tab="u-singolo">Utente singolo</button>
         <button type="button" class="tab-btn" data-tab="u-multipli">Selezione multipla</button>
         <button type="button" class="tab-btn" data-tab="u-zona">Per zona</button>
@@ -244,7 +431,7 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
       <div class="tab-panel hidden" id="u-singolo">
         <label class="block text-sm font-medium mb-1">Email o username utente</label>
         <input type="text" name="utente_singolo"
-               class="w-full border rounded-lg px-3 py-2"
+               class="w-full notify-field"
                placeholder="Inserisci email o username">
       </div>
 
@@ -269,7 +456,7 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
 
         <!-- Input libero (puoi mettere anche più zone separate da virgola) -->
         <input type="text" name="zona"
-               class="w-full border rounded-lg px-3 py-2"
+               class="w-full notify-field"
                placeholder="Esempio: Milano, Pavia, Abbiategrasso">
 
         <!-- Toggle sorgenti zona -->
@@ -342,7 +529,7 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
   <div class="mb-4">
     <label class="block text-sm font-medium mb-2">Zona</label>
     <input type="text" name="zona"
-           class="w-full border rounded-lg px-3 py-2"
+           class="w-full notify-field"
            placeholder="Esempio: Milano, Pavia, Abbiategrasso">
     <div class="mt-2 flex flex-wrap gap-4 text-sm">
       <label class="flex items-center gap-2">
@@ -397,12 +584,12 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
 
       <div class="flex flex-col">
         <label class="text-sm font-medium mb-1">Titolo</label>
-        <input type="text" name="titolo" class="border rounded-lg px-3 py-2" required>
+        <input type="text" name="titolo" class="notify-field" required>
       </div>
 
       <div class="flex flex-col">
         <label class="text-sm font-medium mb-1">Link (opzionale)</label>
-        <input type="text" name="link" class="border rounded-lg px-3 py-2"
+        <input type="text" name="link" class="notify-field"
                placeholder="/cerca?categoria=babysitter">
       </div>
 
@@ -411,17 +598,16 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
     <div>
       <label class="text-sm font-medium mb-1">Messaggio</label>
       <textarea name="messaggio"
-                class="w-full border rounded-lg px-3 py-2 h-32"
+                class="w-full notify-field h-36"
                 required></textarea>
     </div>
 
     <!-- Bottone invio -->
     <button
       type="submit"
-      class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition">
+      class="notify-submit-btn">
       📨 Invia notifica
     </button>
-
   </form>
 </div>
 
@@ -551,5 +737,7 @@ document.getElementById("messageModal")?.addEventListener("click", (e) => {
   }
 });
 </script>
+
+</div>
 
 {% endblock %}
