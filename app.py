@@ -4887,7 +4887,7 @@ def admin_utenti():
                 AND (a.data_fine IS NULL OR a.data_fine > {now_sql()})
               LIMIT 1
             ) AS affidabilita_attiva
-            
+
         FROM utenti u
         WHERE 1=1
     """
@@ -10698,34 +10698,41 @@ def crea_payment_intent():
     })
 
 def gestisci_pagamento_confermato(payment_intent):
-    # Stripe può passare oggetti StripeObject, non sempre dict puri.
-    # Convertiamo subito in dict normale per evitare errori tipo AttributeError('keys').
+    # Stripe può passare sia dict sia StripeObject.
+    # NON usare dict(payment_intent): su alcuni StripeObject genera KeyError(0).
     try:
-        if hasattr(payment_intent, "to_dict_recursive"):
-            payment_intent_data = payment_intent.to_dict_recursive()
-        elif isinstance(payment_intent, dict):
-            payment_intent_data = dict(payment_intent)
+        if isinstance(payment_intent, dict):
+            riferimento_esterno = payment_intent.get("id")
+            metadata_raw = payment_intent.get("metadata") or {}
+
         else:
-            payment_intent_data = dict(payment_intent)
+            riferimento_esterno = getattr(payment_intent, "id", None)
+
+            if hasattr(payment_intent, "get"):
+                metadata_raw = payment_intent.get("metadata") or {}
+            else:
+                metadata_raw = getattr(payment_intent, "metadata", {}) or {}
+
+        if hasattr(metadata_raw, "to_dict_recursive"):
+            metadata = metadata_raw.to_dict_recursive()
+        elif isinstance(metadata_raw, dict):
+            metadata = dict(metadata_raw)
+        else:
+            metadata = {
+                k: metadata_raw[k]
+                for k in metadata_raw.keys()
+            } if hasattr(metadata_raw, "keys") else {}
+
+        acquisto_id = metadata.get("acquisto_id")
+
     except Exception as e:
         log_exception_safe(
-            "❌ [STRIPE] impossibile normalizzare payment_intent",
+            "❌ [STRIPE] impossibile leggere payment_intent/metadata",
             e,
             production=True
         )
         return
-
-    riferimento_esterno = payment_intent_data.get("id")
-
-    metadata_raw = payment_intent_data.get("metadata") or {}
-
-    try:
-        metadata = dict(metadata_raw)
-    except Exception:
-        metadata = {}
-
-    acquisto_id = metadata.get("acquisto_id")
-
+        
     security_log(
         "💳 [STRIPE] START gestisci_pagamento_confermato",
         {
