@@ -5504,21 +5504,10 @@ def admin_statistiche():
 # ==========================================================
 # ADMIN – NOTIFICHE DI SISTEMA
 # ==========================================================
-@app.route("/admin/notifiche", methods=["GET", "POST"])
+@app.route("/admin/notifiche", methods=["GET"])
 @admin_required
 def admin_notifiche():
-    """Gestione parametri del sistema notifiche"""
-    ttl_corrente = app.config.get("NOTIFICHE_TTL_GIORNI", 10)
-
-    if request.method == "POST":
-        nuovo_ttl = request.form.get("scadenza_giorni", type=int)
-        if nuovo_ttl and nuovo_ttl > 0:
-            app.config["NOTIFICHE_TTL_GIORNI"] = nuovo_ttl
-            flash(f"Durata notifiche lette impostata a {nuovo_ttl} giorni ✅", "success")
-        else:
-            flash("Valore non valido. Inserisci un numero positivo.", "warning")
-        return redirect(url_for("admin_notifiche"))
-
+    """Gestione invio e storico notifiche admin"""
     conn = get_db_connection()
 
     stats = conn.execute(sql("""
@@ -5566,21 +5555,11 @@ def admin_notifiche():
 
     return render_template(
         "admin_notifiche.html",
-        ttl_corrente=ttl_corrente,
         stats=stats,
         utenti=utenti,
         categorie=categorie,
         notifiche_admin=notifiche_admin
     )
-
-
-@app.route("/admin/notifiche/pulisci")
-@admin_required
-def admin_pulisci_notifiche():
-    """Elimina subito le notifiche lette e scadute"""
-    pulisci_notifiche_vecchie()
-    flash("Notifiche scadute eliminate con successo 🧹", "info")
-    return redirect(url_for("admin_notifiche"))
 
 @app.route("/admin/notifiche/invia", methods=["POST"])
 @admin_required
@@ -6808,7 +6787,7 @@ def admin_annunci():
             u.nome,
             u.cognome,
             u.email,
-                        
+
             /* BOOST LISTA */
             CASE WHEN EXISTS (
                 SELECT 1
@@ -7099,17 +7078,158 @@ def elimina_notifica_singola_route(id):
 
     return jsonify({"success": True})
 
-def pulisci_notifiche_vecchie():
-    """Elimina notifiche lette e scadute in base al TTL configurato"""
-    giorni = app.config.get("NOTIFICHE_TTL_GIORNI", 10)
-    conn = get_db_connection()
-    conn.execute(sql(f"""
-        DELETE FROM notifiche
-        WHERE letta = 1
-          AND data_lettura < {now_sql()} - INTERVAL '{giorni} days'
-    """))
-    conn.commit()
+def pulisci_notifiche_vecchie(giorni=None):
+    """
+    Elimina automaticamente le notifiche lette da più di X giorni.
 
+    Regole:
+    - NON elimina notifiche non lette;
+    - NON elimina notifiche lette senza data_lettura;
+    - default: 30 giorni;
+    - compatibile PostgreSQL + SQLite;
+    - sicura anche se chiamata da background task.
+    """
+
+    if giorni is None:
+        giorni = app.config.get("NOTIFICHE_TTL_GIORNI", 30)
+
+    try:
+        giorni = int(giorni)
+    except Exception:
+        giorni = 30
+
+    if giorni < 1:
+        giorni = 30
+
+    conn = None
+    cur = None
+
+    try:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+
+        if app.config.get("IS_POSTGRES"):
+            cur.execute("""
+                DELETE FROM notifiche
+                WHERE letta = 1
+                  AND data_lettura IS NOT NULL
+                  AND data_lettura < CURRENT_TIMESTAMP - (? * INTERVAL '1 day')
+            """, (giorni,))
+        else:
+            cur.execute("""
+                DELETE FROM notifiche
+                WHERE letta = 1
+                  AND data_lettura IS NOT NULL
+                  AND data_lettura < datetime('now', '-' || ? || ' days')
+            """, (giorni,))
+
+        eliminate = cur.rowcount if cur.rowcount is not None else 0
+
+        conn.commit()
+
+        security_log(
+            "🧹 Pulizia notifiche vecchie completata",
+            {
+                "giorni": giorni,
+                "eliminate": eliminate
+            },
+            production=True
+        )
+
+        return eliminate
+
+    except Exception as e:
+        try:
+            if conn:
+                conn.rollback()
+        except Exception:
+            pass
+
+        log_exception_safe(
+            "⚠️ Errore pulizia notifiche vecchie",
+            e,
+            {
+                "giorni": giorni
+            },
+            production=True
+        )
+
+        return 0
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
+
+
+def pulizia_notifiche_background_loop():
+    """
+    Pulizia automatica periodica delle notifiche lette.
+
+    Usa Redis come lock distribuito, così su Render:
+    - anche se ci sono più worker web;
+    - anche se il servizio viene scalato;
+    - anche se il task parte più volte;
+
+    la pulizia viene eseguita da un solo processo alla volta.
+    """
+
+    # Aspetta un minuto dopo l'avvio del worker,
+    # così non rallenta il boot dell'app.
+    socketio.sleep(60)
+
+    while True:
+        lock_key = "lock:pulizia_notifiche_vecchie"
+        lock_token = secrets.token_hex(16)
+
+        try:
+            lock_acquisito = redis_client.set(
+                lock_key,
+                lock_token,
+                nx=True,
+                ex=600
+            )
+
+            if lock_acquisito:
+                with app.app_context():
+                    pulisci_notifiche_vecchie()
+
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Errore loop pulizia notifiche vecchie",
+                e,
+                production=True
+            )
+
+        finally:
+            try:
+                valore_lock = redis_client.get(lock_key)
+
+                if valore_lock:
+                    if isinstance(valore_lock, bytes):
+                        valore_lock = valore_lock.decode("utf-8")
+
+                    if valore_lock == lock_token:
+                        redis_client.delete(lock_key)
+
+            except Exception:
+                pass
+
+        # Ripete la pulizia ogni 6 ore.
+        socketio.sleep(6 * 60 * 60)
+
+# 🧹 Avvia pulizia automatica notifiche vecchie solo sul servizio web.
+# Il servizio realtime/chat non deve occuparsi della manutenzione DB ordinaria.
+if APP_RUNTIME_ROLE == "web":
+    socketio.start_background_task(pulizia_notifiche_background_loop)
 
 # Rende disponibile in tutti i template un helper per le notifiche non lette
 @app.context_processor
@@ -8799,10 +8919,8 @@ def service_worker():
 @app.route('/notifiche')
 @login_required
 def notifiche():
-    pulisci_notifiche_vecchie()  # 🧹 Mantiene pulito il DB
     notifiche = get_notifiche_utente(g.utente['id'])
     return render_template('notifiche.html', notifiche=notifiche)
-
 
 
 @app.route('/recensioni-ricevute', methods=["GET", "POST"])
