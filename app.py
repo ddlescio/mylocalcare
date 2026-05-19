@@ -6857,9 +6857,84 @@ def admin_annunci():
                   AND act.annuncio_id IS NULL
                   AND s.codice = 'badge_affidabilita'
                   AND act.stato = 'attivo'
-            ) THEN 1 ELSE 0 END AS has_affidabilita
+            ) THEN 1 ELSE 0 END AS has_affidabilita,
 
-        FROM annunci a
+            /* PACCHETTO VISIBILITÀ
+               Attivo solo se TUTTI i servizi collegati al pacchetto risultano attivi.
+               I servizi profilo vengono controllati su utente_id + annuncio_id NULL.
+               I servizi annuncio vengono controllati su annuncio_id.
+            */
+            CASE WHEN EXISTS (
+                SELECT 1
+                FROM pacchetti p
+                WHERE p.codice = 'pacchetto_visibilita'
+                  AND p.attivo = 1
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM pacchetti_servizi ps
+                    JOIN servizi s ON s.id = ps.servizio_id
+                    WHERE ps.pacchetto_id = p.id
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM attivazioni_servizi act
+                        WHERE act.servizio_id = s.id
+                          AND act.utente_id = a.utente_id
+                          AND (
+                            (
+                              s.ambito = 'profilo'
+                              AND act.annuncio_id IS NULL
+                            )
+                            OR
+                            (
+                              s.ambito <> 'profilo'
+                              AND act.annuncio_id = a.id
+                            )
+                          )
+                          AND act.stato = 'attivo'
+                          AND act.data_inizio <= {now_sql()}
+                          AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
+                      )
+                  )
+            ) THEN 1 ELSE 0 END AS has_pacchetto_visibilita,
+
+            /* VISIBILITÀ PREMIUM
+               Nel database il codice reale è 'visibilita_premium',
+               non 'pacchetto_premium'.
+            */
+            CASE WHEN EXISTS (
+                SELECT 1
+                FROM pacchetti p
+                WHERE p.codice = 'visibilita_premium'
+                  AND p.attivo = 1
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM pacchetti_servizi ps
+                    JOIN servizi s ON s.id = ps.servizio_id
+                    WHERE ps.pacchetto_id = p.id
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM attivazioni_servizi act
+                        WHERE act.servizio_id = s.id
+                          AND act.utente_id = a.utente_id
+                          AND (
+                            (
+                              s.ambito = 'profilo'
+                              AND act.annuncio_id IS NULL
+                            )
+                            OR
+                            (
+                              s.ambito <> 'profilo'
+                              AND act.annuncio_id = a.id
+                            )
+                          )
+                          AND act.stato = 'attivo'
+                          AND act.data_inizio <= {now_sql()}
+                          AND (act.data_fine IS NULL OR act.data_fine > {now_sql()})
+                      )
+                  )
+            ) THEN 1 ELSE 0 END AS has_visibilita_premium
+
+        FROM annunci a        
         JOIN utenti u ON a.utente_id = u.id
         WHERE 1=1
     """
