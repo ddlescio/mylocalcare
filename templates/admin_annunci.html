@@ -100,18 +100,20 @@
 .stat-value-blue { color: #2563eb; }
 .stat-value-amber { color: #b45309; }
 
-/* --- FILTRI --- */
+/* --- FILTRI PREMIUM MOBILE-FIRST --- */
 .filter-box {
-    background: rgba(255, 255, 255, 0.84);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    border-radius: 22px;
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(226, 232, 240, 0.98);
+    border-radius: 26px;
     padding: 14px;
     margin-bottom: 18px;
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.04),
-        0 8px 24px rgba(15, 23, 42, 0.04);
+        0 14px 36px rgba(15, 23, 42, 0.07);
 }
 
 .filter-main-row {
@@ -127,114 +129,119 @@
 
 .filter-toggle-btn {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     white-space: nowrap;
+    min-height: 44px;
+    padding: 0 15px;
+    border-radius: 9999px;
+    background: rgba(248, 250, 252, 0.95);
+    color: #334155;
+    font-size: 0.88rem;
+    font-weight: 750;
+    border: 1px solid #dbe3ee;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.filter-toggle-btn::before {
+    content: "⚙️";
+    margin-right: 6px;
+    font-size: 0.88rem;
 }
 
 .filter-extra-panel {
+    display: none;
     margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(226, 232, 240, 0.95);
 }
 
-/* Mobile + tablet: visibile solo Stato, gli altri filtri sono chiusi */
-@media (max-width: 1023px) {
-    .filter-extra-panel {
-        display: none;
-    }
-
-    .filter-extra-panel.is-open {
-        display: block;
-    }
-}
-
-/* Desktop: tutti i filtri sempre visibili */
-@media (min-width: 1024px) {
-    .filter-main-row {
-        grid-template-columns: 1fr;
-        max-width: 260px;
-        margin-bottom: 12px;
-    }
-
-    .filter-toggle-btn {
-        display: none;
-    }
-
-    .filter-extra-panel {
-        display: block;
-        margin-top: 0;
-    }
+.filter-extra-panel.is-open {
+    display: block;
 }
 
 .filter-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: 1fr;
+    gap: 11px;
 }
 
-@media (min-width: 640px) {
-    .filter-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (min-width: 1024px) {
-    .filter-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
+.filter-field {
+    position: relative;
 }
 
 .filter-field label {
     display: block;
     font-size: 0.72rem;
-    font-weight: 700;
+    font-weight: 800;
     color: #64748b;
-    margin-bottom: 5px;
-    letter-spacing: 0.01em;
+    margin-bottom: 6px;
+    letter-spacing: 0.015em;
 }
 
 .filter-box input,
 .filter-box select {
     width: 100%;
-    min-height: 40px;
-    border-radius: 14px;
+    min-height: 46px;
+    border-radius: 17px;
     border: 1px solid #dbe3ee;
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.96);
+    padding: 9px 14px;
+    background: rgba(255,255,255,0.98);
     color: #0f172a;
-    font-size: 0.92rem;
+    font-size: 0.96rem;
+    font-weight: 550;
     transition: all 0.16s ease;
-    box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.02);
+    box-shadow:
+        inset 0 1px 1px rgba(15, 23, 42, 0.025),
+        0 1px 0 rgba(255,255,255,0.75);
+}
+
+.filter-box input::placeholder {
+    color: #94a3b8;
+    font-weight: 500;
 }
 
 .filter-box input:focus,
 .filter-box select:focus {
     outline: none;
     border-color: #93c5fd;
-    box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.18);
+    box-shadow:
+        0 0 0 4px rgba(147, 197, 253, 0.18),
+        inset 0 1px 1px rgba(15, 23, 42, 0.025);
     background: #fff;
 }
 
 .filter-actions {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: 10px;
-    margin-top: 12px;
+    margin-top: 13px;
 }
 
 .filter-btn-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 40px;
-    padding: 0 16px;
+    min-height: 46px;
+    padding: 0 18px;
     border-radius: 9999px;
     background: linear-gradient(180deg, #3b82f6, #2563eb);
     color: white;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 800;
     border: none;
     box-shadow:
-        0 6px 18px rgba(37, 99, 235, 0.18),
-        inset 0 1px 0 rgba(255,255,255,0.2);
+        0 8px 22px rgba(37, 99, 235, 0.22),
+        inset 0 1px 0 rgba(255,255,255,0.25);
     transition: all 0.18s ease;
+}
+
+.filter-btn-primary::before {
+    content: "🔎";
+    margin-right: 7px;
+    font-size: 0.9rem;
 }
 
 .filter-btn-primary:hover {
@@ -245,20 +252,115 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 40px;
-    padding: 0 16px;
+    min-height: 46px;
+    padding: 0 17px;
     border-radius: 9999px;
-    background: #f8fafc;
+    background: rgba(248, 250, 252, 0.96);
     color: #475569;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 0.92rem;
+    font-weight: 750;
     border: 1px solid #dbe3ee;
+    text-decoration: none;
     transition: all 0.18s ease;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
 }
 
 .filter-btn-secondary:hover {
     background: #f1f5f9;
     border-color: #cbd5e1;
+}
+
+/* Header compatto dentro i filtri */
+.filter-compact-label {
+    display: none;
+}
+
+/* Tablet */
+@media (min-width: 640px) {
+    .filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .filter-actions {
+        display: flex;
+        flex-wrap: wrap;
+    }
+}
+
+/* Desktop: filtri più bassi e tutti visibili */
+@media (min-width: 1024px) {
+    .filter-box {
+        padding: 16px;
+    }
+
+    .filter-main-row {
+        grid-template-columns: 240px;
+        max-width: none;
+        margin-bottom: 12px;
+    }
+
+    .filter-toggle-btn {
+        display: none;
+    }
+
+    .filter-extra-panel {
+        display: block;
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+    }
+
+    .filter-grid {
+        grid-template-columns: 1.2fr 1fr 0.9fr 1fr 0.8fr;
+        gap: 10px;
+    }
+
+    .filter-actions {
+        display: flex;
+        align-items: center;
+        margin-top: 12px;
+    }
+
+    .filter-box input,
+    .filter-box select {
+        min-height: 42px;
+        border-radius: 15px;
+        font-size: 0.9rem;
+    }
+
+    .filter-btn-primary,
+    .filter-btn-secondary {
+        min-height: 42px;
+    }
+}
+
+/* Mobile stretto: evita effetto bloccone enorme */
+@media (max-width: 430px) {
+    .filter-box {
+        border-radius: 24px;
+        padding: 13px;
+    }
+
+    .filter-main-row {
+        grid-template-columns: 1fr auto;
+    }
+
+    .filter-toggle-btn {
+        padding: 0 13px;
+        font-size: 0.84rem;
+    }
+
+    .filter-actions {
+        grid-template-columns: 1fr auto;
+    }
+
+    .filter-btn-primary {
+        padding: 0 16px;
+    }
+
+    .filter-btn-secondary {
+        padding: 0 15px;
+    }
 }
 
 /* --- TABELLA --- */
@@ -637,37 +739,39 @@
     <!-- FILTRI ANNUNCI -->
     <form method="GET" class="filter-box" id="admin-annunci-filter-form">
 
-      <!-- FILTRO SEMPRE VISIBILE: STATO -->
+      <!-- RIGA COMPATTA MOBILE: STATO + APRI FILTRI -->
       <div class="filter-main-row">
 
         <div class="filter-field filter-status-field">
-            <label>Stato</label>
-            <select name="stato">
-                <option value="">Tutti</option>
-                <option value="in_attesa"  {% if request.args.get('stato') == 'in_attesa' %}selected{% endif %}>In attesa</option>
-                <option value="approvato" {% if request.args.get('stato') == 'approvato' %}selected{% endif %}>Approvato</option>
-                <option value="rifiutato" {% if request.args.get('stato') == 'rifiutato' %}selected{% endif %}>Rifiutato</option>
-                <option value="disattivato" {% if request.args.get('stato') == 'disattivato' %}selected{% endif %}>Disattivato</option>
-            </select>
+          <label>Stato</label>
+          <select name="stato">
+            <option value="">Tutti</option>
+            <option value="in_attesa" {% if request.args.get('stato') == 'in_attesa' %}selected{% endif %}>In attesa</option>
+            <option value="approvato" {% if request.args.get('stato') == 'approvato' %}selected{% endif %}>Approvato</option>
+            <option value="rifiutato" {% if request.args.get('stato') == 'rifiutato' %}selected{% endif %}>Rifiutato</option>
+            <option value="disattivato" {% if request.args.get('stato') == 'disattivato' %}selected{% endif %}>Disattivato</option>
+          </select>
         </div>
 
         <button type="button"
                 id="toggle-extra-annunci-filters"
-                class="filter-btn-secondary filter-toggle-btn">
-          Altri filtri
+                class="filter-toggle-btn">
+          Altri
         </button>
 
       </div>
 
-      <!-- FILTRI SECONDARI: CHIUSI SU MOBILE/TABLET -->
+      <!-- FILTRI SECONDARI -->
       <div class="filter-extra-panel" id="extra-annunci-filters-panel">
 
         <div class="filter-grid">
 
           <div class="filter-field">
-              <label>Utente</label>
-              <input type="text" name="utente" value="{{ request.args.get('utente','') }}"
-                     placeholder="Nome o cognome">
+            <label>Utente</label>
+            <input type="text"
+                   name="utente"
+                   value="{{ request.args.get('utente','') }}"
+                   placeholder="Nome o cognome">
           </div>
 
           <div class="filter-field">
@@ -687,39 +791,34 @@
             <label>Tipo</label>
             <select name="tipo_annuncio">
               <option value="">Tutti</option>
-              <option value="offro"
-                {% if request.args.get('tipo_annuncio') == 'offro' %}selected{% endif %}>
-                Offro
-              </option>
-              <option value="cerco"
-                {% if request.args.get('tipo_annuncio') == 'cerco' %}selected{% endif %}>
-                Cerco
-              </option>
+              <option value="offro" {% if request.args.get('tipo_annuncio') == 'offro' %}selected{% endif %}>Offro</option>
+              <option value="cerco" {% if request.args.get('tipo_annuncio') == 'cerco' %}selected{% endif %}>Cerco</option>
             </select>
           </div>
 
-          <div class="filter-field relative">
+          <div class="filter-field">
             <label>Comune</label>
             <input id="zona-autocomplete"
                    type="text"
                    placeholder="Comune"
-                   value="{{ request.args.get('zona','') }}"
-                   class="w-full">
-            <input type="hidden" name="zona" id="zona" value="{{ request.args.get('zona','') }}">
+                   value="{{ request.args.get('zona','') }}">
+            <input type="hidden"
+                   name="zona"
+                   id="zona"
+                   value="{{ request.args.get('zona','') }}">
 
             <div id="zona-suggerimenti"
                  class="suggestion-box hidden">
             </div>
           </div>
 
-          <div class="filter-field relative">
+          <div class="filter-field">
             <label>Provincia</label>
             <input id="provincia-visibile"
                    type="text"
                    name="provincia"
                    value="{{ request.args.get('provincia','') }}"
-                   placeholder="Es. MI, PV, RM">
-
+                   placeholder="MI">
             <div id="provincia-suggerimenti"
                  class="suggestion-box hidden">
             </div>
@@ -730,14 +829,16 @@
       </div>
 
       <div class="filter-actions">
-          <button class="filter-btn-primary">
-              Filtra
-          </button>
-          <a href="{{ url_for('admin_annunci') }}"
-             class="filter-btn-secondary">
-              Reset
-          </a>
+        <button class="filter-btn-primary" type="submit">
+          Filtra
+        </button>
+
+        <a href="{{ url_for('admin_annunci') }}"
+           class="filter-btn-secondary">
+          Reset
+        </a>
       </div>
+
     </form>
 
     {% if annunci %}
@@ -1104,7 +1205,7 @@
             class="annuncio-modal-service-btn pacchetto-premium toggle-pacchetto"
             data-pacchetto="visibilita_premium">
       🌟 Premium
-    </button>    
+    </button>
   </div>
 
 </div>
@@ -1368,12 +1469,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (hasExtraFilters) {
     panel.classList.add("is-open");
-    toggleBtn.textContent = "Nascondi filtri";
+    toggleBtn.textContent = "Nascondi";
   }
 
   toggleBtn.addEventListener("click", () => {
     const isOpen = panel.classList.toggle("is-open");
-    toggleBtn.textContent = isOpen ? "Nascondi filtri" : "Altri filtri";
+    toggleBtn.textContent = isOpen ? "Nascondi" : "Altri";
   });
 });
 </script>
