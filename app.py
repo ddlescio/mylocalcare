@@ -4417,7 +4417,7 @@ PACCHETTI = {
         "badge_evidenza",
         "contatti",
     ],
-    "pacchetto_premium": [
+    "visibilita_premium": [
         "boost_lista",
         "vetrina_annuncio",
         "badge_evidenza",
@@ -6934,7 +6934,7 @@ def admin_annunci():
                   )
             ) THEN 1 ELSE 0 END AS has_visibilita_premium
 
-        FROM annunci a        
+        FROM annunci a
         JOIN utenti u ON a.utente_id = u.id
         WHERE 1=1
     """

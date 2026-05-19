@@ -773,7 +773,7 @@
                     data-annuncio-has-affidabilita="{{ 1 if a.has_affidabilita else 0 }}"
                     data-annuncio-has-urgente="{{ 1 if a.has_urgente else 0 }}"
                     data-annuncio-has-pacchetto-visibilita="{{ 1 if a.has_pacchetto_visibilita else 0 }}"
-                    data-annuncio-has-pacchetto-premium="{{ 1 if a.has_pacchetto_premium else 0 }}"
+                    data-annuncio-has-pacchetto-premium="{{ 1 if a.has_visibilita_premium else 0 }}"
                     data-annuncio-utente="{{ (a.nome or '') ~ ' ' ~ (a.cognome or '') }}"
                     data-annuncio-categoria="{{ a.categoria or '-' }}"
                     data-annuncio-tipo="{{ a.tipo_annuncio or '-' }}"
@@ -916,8 +916,8 @@
 
                         <button
                           class="toggle-pacchetto px-2 py-1 rounded text-xs font-semibold
-                            {% if a.has_pacchetto_premium %}bg-amber-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
-                          data-pacchetto="pacchetto_premium"
+                            {% if a.has_visibilita_premium %}bg-amber-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                          data-pacchetto="visibilita_premium"
                           data-annuncio="{{ a.id }}"
                           data-utente="{{ a.utente_id }}">
                           🌟 Premium
@@ -1102,9 +1102,9 @@
     <button type="button"
             id="modal-package-premium"
             class="annuncio-modal-service-btn pacchetto-premium toggle-pacchetto"
-            data-pacchetto="pacchetto_premium">
+            data-pacchetto="visibilita_premium">
       🌟 Premium
-    </button>
+    </button>    
   </div>
 
 </div>
