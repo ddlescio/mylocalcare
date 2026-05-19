@@ -457,7 +457,7 @@
   .user-modal-action-wide {
       grid-column: 1 / -1;
   }
-  
+
   @media (min-width: 1024px) {
       .user-modal-backdrop {
           display: none !important;
@@ -616,7 +616,8 @@
                 data-user-mail-url="{% if u.eliminato == 1 %}#{% else %}mailto:{{ u.email }}{% endif %}"
                 data-user-toggle-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('toggle_utente_admin', id=u.id) }}{% endif %}"
                 data-user-delete-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('elimina_utente_route', id=u.id) }}{% endif %}"
-                data-user-contatti="{{ 1 if u.contatti_attivi else 0 }}">
+                data-user-contatti="{{ 1 if u.contatti_attivi else 0 }}"
+                data-user-affidabilita="{{ 1 if u.affidabilita_attiva else 0 }}">
 
                 <td>{{ u.id }}</td>
 
@@ -697,6 +698,19 @@
                         {% endif %}
                       ">
                       📞 Contatti
+                    </button>
+                    <button
+                      type="button"
+                      onclick="toggleAffidabilitaProfilo({{ u.id }})"
+                      class="
+                        px-3 py-1.5 rounded-full text-xs font-semibold border transition
+                        {% if u.affidabilita_attiva %}
+                          bg-green-600 text-white border-green-600 hover:bg-green-700
+                        {% else %}
+                          bg-white text-gray-500 border-gray-300 hover:bg-gray-100
+                        {% endif %}
+                      ">
+                      🛡️ Affidabilità
                     </button>
 
                   {% endif %}
@@ -801,6 +815,12 @@
               class="user-modal-action secondary user-modal-action-wide">
         📞 Contatti
       </button>
+      <button id="modal-user-affidabilita"
+              type="button"
+              class="user-modal-action secondary user-modal-action-wide">
+        🛡️ Affidabilità
+      </button>
+
     </div>
 
   </div>
@@ -961,7 +981,7 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 <script>
-function toggleContattiProfilo(utenteId) {
+function toggleServizioProfilo(codiceServizio, utenteId) {
   fetch("/admin/toggle-servizio", {
     method: "POST",
     headers: {
@@ -969,7 +989,7 @@ function toggleContattiProfilo(utenteId) {
       "X-CSRF-Token": window.CSRF_TOKEN
     },
     body: JSON.stringify({
-      codice_servizio: "contatti",
+      codice_servizio: codiceServizio,
       utente_id: utenteId
     })
   })
@@ -982,6 +1002,14 @@ function toggleContattiProfilo(utenteId) {
     location.reload();
   })
   .catch(() => alert("Errore di rete"));
+}
+
+function toggleContattiProfilo(utenteId) {
+  toggleServizioProfilo("contatti", utenteId);
+}
+
+function toggleAffidabilitaProfilo(utenteId) {
+  toggleServizioProfilo("badge_affidabilita", utenteId);
 }
 </script>
 <script>
@@ -1038,6 +1066,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const toggle = document.getElementById("modal-user-toggle");
     const del = document.getElementById("modal-user-delete");
     const contatti = document.getElementById("modal-user-contatti");
+    const affidabilita = document.getElementById("modal-user-affidabilita");
 
     if (chat) chat.href = d.userChatUrl || "#";
     if (mail) mail.href = d.userMailUrl || "#";
@@ -1057,6 +1086,11 @@ document.addEventListener("DOMContentLoaded", () => {
       contatti.onclick = () => toggleContattiProfilo(Number(d.userId));
     }
 
+    if (affidabilita) {
+      affidabilita.textContent = d.userAffidabilita === "1" ? "🛡️ Affidabilità attiva" : "🛡️ Attiva affidabilità";
+      affidabilita.onclick = () => toggleAffidabilitaProfilo(Number(d.userId));
+    }
+    
     const actions = document.getElementById("modal-user-actions");
 
     if (actions) {

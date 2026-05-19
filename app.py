@@ -4874,8 +4874,20 @@ def admin_utenti():
                 AND a.data_inizio <= {now_sql()}
                 AND (a.data_fine IS NULL OR a.data_fine > {now_sql()})
               LIMIT 1
-            ) AS contatti_attivi
+            ) AS contatti_attivi,
 
+            (
+              SELECT 1
+              FROM attivazioni_servizi a
+              JOIN servizi s ON s.id = a.servizio_id
+              WHERE a.utente_id = u.id
+                AND s.codice = 'badge_affidabilita'
+                AND a.stato = 'attivo'
+                AND a.data_inizio <= {now_sql()}
+                AND (a.data_fine IS NULL OR a.data_fine > {now_sql()})
+              LIMIT 1
+            ) AS affidabilita_attiva
+            
         FROM utenti u
         WHERE 1=1
     """
