@@ -6,6 +6,29 @@
 {% block admin_content %}
 
 <style>
+  /* ====== LARGHEZZA PAGINA DESKTOP ====== */
+  .admin-users-wide {
+      width: 100%;
+  }
+
+  @media (min-width: 1024px) {
+      .admin-users-wide {
+          position: relative;
+          left: 50%;
+          width: calc(100vw - 48px);
+          max-width: 1500px;
+          margin-left: calc(-50vw + 24px);
+      }
+  }
+
+  @media (min-width: 1536px) {
+      .admin-users-wide {
+          width: calc(100vw - 64px);
+          max-width: 1640px;
+          margin-left: calc(-50vw + 32px);
+      }
+  }
+
 /* ====== CARD CONTATORI ====== */
 .stats-grid {
     display: grid;
@@ -475,6 +498,8 @@
   }
 
 </style>
+
+<div class="admin-users-wide">
 
 <!-- CONTATORI -->
 <div class="stats-grid">
@@ -1090,7 +1115,7 @@ document.addEventListener("DOMContentLoaded", () => {
       affidabilita.textContent = d.userAffidabilita === "1" ? "🛡️ Affidabilità attiva" : "🛡️ Attiva affidabilità";
       affidabilita.onclick = () => toggleAffidabilitaProfilo(Number(d.userId));
     }
-    
+
     const actions = document.getElementById("modal-user-actions");
 
     if (actions) {
@@ -1164,5 +1189,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
+
+</div>
 
 {% endblock %}
