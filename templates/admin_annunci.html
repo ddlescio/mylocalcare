@@ -588,13 +588,13 @@
     background: #d97706;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
     .annuncio-modal-backdrop {
         display: none !important;
     }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
     .annuncio-row {
         cursor: pointer;
     }
@@ -1403,7 +1403,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const openAnnuncioModal = (row) => {
-    if (window.innerWidth >= 1024) return;
+    if (window.innerWidth >= 1080) return;
 
     const d = row.dataset;
 

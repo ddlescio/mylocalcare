@@ -566,13 +566,13 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
     cursor: not-allowed;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
     .review-modal-backdrop {
         display: none !important;
     }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
     .review-row {
         cursor: pointer;
     }
@@ -1104,7 +1104,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const openReviewModal = (row) => {
-    if (window.innerWidth >= 1024) return;
+    if (window.innerWidth >= 1080) return;
 
     const d = row.dataset;
 

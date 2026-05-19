@@ -481,22 +481,21 @@
       grid-column: 1 / -1;
   }
 
-  @media (min-width: 1024px) {
-      .user-modal-backdrop {
-          display: none !important;
-      }
-  }
+  @media (min-width: 1280px) {
+        .user-modal-backdrop {
+            display: none !important;
+        }
+    }
 
-  @media (max-width: 1023px) {
-      .admin-user-row {
-          cursor: pointer;
-      }
+    @media (max-width: 1279px) {
+        .admin-user-row {
+            cursor: pointer;
+        }
 
-      .admin-user-row:active {
-          background: #eff6ff;
-      }
-  }
-
+        .admin-user-row:active {
+            background: #eff6ff;
+        }
+    }
 </style>
 
 <div class="admin-users-wide">
@@ -1050,7 +1049,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const openModal = (row) => {
-    if (window.innerWidth >= 1024) return;
+    if (window.innerWidth >= 1080) return;
 
     const d = row.dataset;
 
