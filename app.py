@@ -10349,264 +10349,89 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
     conn = get_db_connection()
     cur = get_cursor(conn)
 
-    codice = (codice or "").strip()
+    # servizio
+    cur.execute(sql("""
+        SELECT id, ambito
+        FROM servizi
+        WHERE codice = ? AND attivo = 1
+    """), (codice,))
+    servizio = cur.fetchone()
 
-    try:
-        # =====================================================
-        # 1) PRIMA: provo a interpretare il codice come SERVIZIO
-        # =====================================================
-        cur.execute(sql("""
-            SELECT id, ambito
-            FROM servizi
-            WHERE codice = ?
-              AND attivo = 1
-            LIMIT 1
-        """), (codice,))
+    if not servizio:
+        return jsonify({"error": "Servizio non trovato"}), 404
 
-        servizio = cur.fetchone()
-
-        if servizio:
-            # query dinamica in base all’ambito:
-            # - profilo: servizio legato all’utente
-            # - annuncio: servizio legato all’annuncio
-            if servizio["ambito"] == "profilo":
-                cur.execute(sql(f"""
-                    SELECT
-                        id,
-                        data_inizio,
-                        data_fine,
-                        stato,
-                        attivato_da
-                    FROM attivazioni_servizi
-                    WHERE servizio_id = ?
-                      AND utente_id = ?
-                      AND annuncio_id IS NULL
-                      AND stato = 'attivo'
-                      AND data_inizio <= {now_sql()}
-                      AND (data_fine IS NULL OR data_fine > {now_sql()})
-                    ORDER BY
-                        CASE WHEN data_fine IS NULL THEN 1 ELSE 0 END DESC,
-                        data_fine DESC,
-                        {order_datetime("data_inizio")} DESC
-                    LIMIT 1
-                """), (
-                    servizio["id"],
-                    g.utente["id"]
-                ))
-
-            else:
-                cur.execute(sql(f"""
-                    SELECT
-                        id,
-                        data_inizio,
-                        data_fine,
-                        stato,
-                        attivato_da
-                    FROM attivazioni_servizi
-                    WHERE servizio_id = ?
-                      AND annuncio_id = ?
-                      AND utente_id = ?
-                      AND stato = 'attivo'
-                      AND data_inizio <= {now_sql()}
-                      AND (data_fine IS NULL OR data_fine > {now_sql()})
-                    ORDER BY
-                        CASE WHEN data_fine IS NULL THEN 1 ELSE 0 END DESC,
-                        data_fine DESC,
-                        {order_datetime("data_inizio")} DESC
-                    LIMIT 1
-                """), (
-                    servizio["id"],
-                    annuncio_id,
-                    g.utente["id"]
-                ))
-
-            att = cur.fetchone()
-
-            if not att:
-                return jsonify({
-                    "tipo": "servizio",
-                    "codice": codice,
-                    "attivo": False,
-                    "stato": "non_attivo",
-                    "data_inizio": None,
-                    "data_fine": None,
-                    "permanente": False
-                })
-
-            def solo_data(v):
-                if not v:
-                    return None
-                return str(v)[:10]
-
-            return jsonify({
-                "tipo": "servizio",
-                "codice": codice,
-                "attivo": True,
-                "stato": "attivo",
-                "data_inizio": solo_data(att["data_inizio"]),
-                "data_fine": solo_data(att["data_fine"]),
-                "permanente": not att["data_fine"],
-                "attivato_da": att["attivato_da"]
-            })
-
-        # =====================================================
-        # 2) SE NON È UN SERVIZIO: provo come PACCHETTO
-        # =====================================================
-        cur.execute(sql("""
-            SELECT id, codice, nome
-            FROM pacchetti
-            WHERE codice = ?
-              AND attivo = 1
-            LIMIT 1
-        """), (codice,))
-
-        pacchetto = cur.fetchone()
-
-        if not pacchetto:
-            return jsonify({"error": "Servizio o pacchetto non trovato"}), 404
-
-        # Recupera i servizi contenuti nel pacchetto
-        cur.execute(sql("""
+    # query dinamica in base all’ambito:
+    # prende la MIGLIORE copertura attiva del servizio
+    # priorità:
+    # 1) permanente (data_fine NULL)
+    # 2) scadenza più lontana
+    # 3) attivazione più recente
+    if servizio["ambito"] == "profilo":
+        cur.execute(sql(f"""
             SELECT
-                s.id,
-                s.codice,
-                s.ambito
-            FROM pacchetti_servizi ps
-            JOIN servizi s ON s.id = ps.servizio_id
-            WHERE ps.pacchetto_id = ?
-              AND s.attivo = 1
-            ORDER BY s.id ASC
-        """), (pacchetto["id"],))
+                id,
+                data_inizio,
+                data_fine,
+                stato,
+                attivato_da
+            FROM attivazioni_servizi
+            WHERE servizio_id = ?
+              AND utente_id = ?
+              AND annuncio_id IS NULL
+              AND stato = 'attivo'
+              AND (data_fine IS NULL OR data_fine > {now_sql()})
+            ORDER BY
+                CASE WHEN data_fine IS NULL THEN 1 ELSE 0 END DESC,
+                data_fine DESC,
+                {order_datetime("data_inizio")} DESC
+            LIMIT 1
+        """), (servizio["id"], g.utente["id"]))
+    else:
+        cur.execute(sql(f"""
+            SELECT
+                id,
+                data_inizio,
+                data_fine,
+                stato,
+                attivato_da
+            FROM attivazioni_servizi
+            WHERE servizio_id = ?
+              AND annuncio_id = ?
+              AND utente_id = ?
+              AND stato = 'attivo'
+              AND (data_fine IS NULL OR data_fine > {now_sql()})
+            ORDER BY
+                CASE WHEN data_fine IS NULL THEN 1 ELSE 0 END DESC,
+                data_fine DESC,
+                {order_datetime("data_inizio")} DESC
+            LIMIT 1
+        """), (servizio["id"], annuncio_id, g.utente["id"]))
 
-        servizi_pacchetto = cur.fetchall()
+    att = cur.fetchone()
 
-        if not servizi_pacchetto:
-            return jsonify({
-                "tipo": "pacchetto",
-                "codice": codice,
-                "attivo": False,
-                "stato": "non_attivo",
-                "servizi": []
-            })
-
-        servizi_stato = []
-        date_fine = []
-        almeno_uno_attivo = False
-        tutti_attivi = True
-
-        for servizio_p in servizi_pacchetto:
-            servizio_id = int(servizio_p["id"])
-            servizio_codice = servizio_p["codice"]
-            servizio_ambito = servizio_p["ambito"]
-
-            if servizio_ambito == "profilo":
-                cur.execute(sql(f"""
-                    SELECT
-                        id,
-                        data_inizio,
-                        data_fine,
-                        stato,
-                        attivato_da
-                    FROM attivazioni_servizi
-                    WHERE servizio_id = ?
-                      AND utente_id = ?
-                      AND annuncio_id IS NULL
-                      AND stato = 'attivo'
-                      AND data_inizio <= {now_sql()}
-                      AND (data_fine IS NULL OR data_fine > {now_sql()})
-                    ORDER BY
-                        CASE WHEN data_fine IS NULL THEN 1 ELSE 0 END DESC,
-                        data_fine DESC,
-                        {order_datetime("data_inizio")} DESC
-                    LIMIT 1
-                """), (
-                    servizio_id,
-                    g.utente["id"]
-                ))
-
-            else:
-                cur.execute(sql(f"""
-                    SELECT
-                        id,
-                        data_inizio,
-                        data_fine,
-                        stato,
-                        attivato_da
-                    FROM attivazioni_servizi
-                    WHERE servizio_id = ?
-                      AND annuncio_id = ?
-                      AND utente_id = ?
-                      AND stato = 'attivo'
-                      AND data_inizio <= {now_sql()}
-                      AND (data_fine IS NULL OR data_fine > {now_sql()})
-                    ORDER BY
-                        CASE WHEN data_fine IS NULL THEN 1 ELSE 0 END DESC,
-                        data_fine DESC,
-                        {order_datetime("data_inizio")} DESC
-                    LIMIT 1
-                """), (
-                    servizio_id,
-                    annuncio_id,
-                    g.utente["id"]
-                ))
-
-            att = cur.fetchone()
-            servizio_attivo = bool(att)
-
-            if servizio_attivo:
-                almeno_uno_attivo = True
-                if att["data_fine"]:
-                    date_fine.append(att["data_fine"])
-            else:
-                tutti_attivi = False
-
-            servizi_stato.append({
-                "codice": servizio_codice,
-                "attivo": servizio_attivo,
-                "data_inizio": str(att["data_inizio"])[:10] if att and att["data_inizio"] else None,
-                "data_fine": str(att["data_fine"])[:10] if att and att["data_fine"] else None,
-                "permanente": bool(att and not att["data_fine"]),
-                "attivato_da": att["attivato_da"] if att else None
-            })
-
-        # Per mostrare lo stato del pacchetto:
-        # - attivo solo se tutti i servizi del pacchetto risultano attivi
-        # - data_fine = la più vicina tra quelle dei servizi, perché il pacchetto perde completezza alla prima scadenza
-        pacchetto_attivo = tutti_attivi and almeno_uno_attivo
-
-        data_fine_pacchetto = None
-        permanente = False
-
-        if pacchetto_attivo:
-            if date_fine:
-                data_fine_pacchetto = str(min(date_fine))[:10]
-                permanente = False
-            else:
-                data_fine_pacchetto = None
-                permanente = True
-
+    if not att:
         return jsonify({
-            "tipo": "pacchetto",
-            "codice": codice,
-            "attivo": pacchetto_attivo,
-            "stato": "attivo" if pacchetto_attivo else "non_attivo",
+            "attivo": False,
+            "stato": "non_attivo",
             "data_inizio": None,
-            "data_fine": data_fine_pacchetto,
-            "permanente": permanente,
-            "servizi": servizi_stato
+            "data_fine": None,
+            "permanente": False
         })
 
-    finally:
-        try:
-            cur.close()
-        except Exception:
-            pass
+    def solo_data(v):
+        if not v:
+            return None
+        return str(v)[:10]
 
-        try:
-            conn.close()
-        except Exception:
-            pass
-            
+    return jsonify({
+        "attivo": True,
+        "stato": "attivo",
+        "data_inizio": solo_data(att["data_inizio"]),
+        "data_fine": solo_data(att["data_fine"]),
+        "permanente": not att["data_fine"],
+        "attivato_da": att["attivato_da"]
+    })
+
 @app.route("/api/pacchetti/<codice>/piani")
 @login_required
 def api_pacchetti_piani(codice):
