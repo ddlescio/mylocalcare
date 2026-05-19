@@ -10745,7 +10745,7 @@ def crea_payment_intent():
             conn.close()
         except:
             pass
-            
+
 def gestisci_pagamento_confermato(payment_intent):
     # Stripe può passare sia dict sia StripeObject.
     # NON usare dict(payment_intent): su alcuni StripeObject genera KeyError(0).
@@ -10794,18 +10794,86 @@ def gestisci_pagamento_confermato(payment_intent):
 
     if not acquisto_id:
         security_log(
-            "❌ [STRIPE] metadata.acquisto_id mancante",
+            "⚠️ [STRIPE] metadata.acquisto_id mancante — tento recupero da riferimento_esterno",
             {
                 "payment_intent": riferimento_esterno,
                 "metadata_keys": list(metadata.keys()) if metadata else []
             },
             production=True
         )
-        return
+
+        if not riferimento_esterno:
+            security_log(
+                "❌ [STRIPE] impossibile recuperare acquisto: payment_intent.id mancante",
+                production=True
+            )
+            return
+
+        conn_lookup = None
+        cur_lookup = None
+
+        try:
+            conn_lookup = get_db_connection()
+            cur_lookup = get_cursor(conn_lookup)
+
+            cur_lookup.execute(sql("""
+                SELECT id
+                FROM acquisti
+                WHERE riferimento_esterno = ?
+                ORDER BY id DESC
+                LIMIT 1
+            """), (riferimento_esterno,))
+
+            row_lookup = cur_lookup.fetchone()
+
+            if not row_lookup:
+                security_log(
+                    "❌ [STRIPE] acquisto non trovato nemmeno tramite riferimento_esterno",
+                    {
+                        "payment_intent": riferimento_esterno
+                    },
+                    production=True
+                )
+                return
+
+            acquisto_id = row_lookup["id"]
+
+            security_log(
+                "✅ [STRIPE] acquisto recuperato tramite riferimento_esterno",
+                {
+                    "payment_intent": riferimento_esterno,
+                    "acquisto_id": acquisto_id
+                },
+                production=True
+            )
+
+        except Exception as e:
+            log_exception_safe(
+                "❌ [STRIPE] errore recupero acquisto tramite riferimento_esterno",
+                e,
+                {
+                    "payment_intent": riferimento_esterno
+                },
+                production=True
+            )
+            return
+
+        finally:
+            try:
+                if cur_lookup:
+                    cur_lookup.close()
+            except Exception:
+                pass
+
+            try:
+                if conn_lookup:
+                    conn_lookup.close()
+            except Exception:
+                pass
 
     conn = get_db_connection()
     cur = get_cursor(conn)
-
+    
     try:
         # SQLite: lock esplicito
         # PostgreSQL: la transazione è già gestita dalla connessione
