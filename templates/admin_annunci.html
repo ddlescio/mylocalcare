@@ -106,129 +106,181 @@
 }
 
 .filter-card {
+    position: relative;
+    border-radius: 24px;
+    padding: 10px;
     background:
-        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92));
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    border-radius: 22px;
-    padding: 12px;
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
+    border: 1px solid rgba(219, 226, 238, 0.96);
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.04),
-        0 10px 28px rgba(15, 23, 42, 0.06);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+        0 12px 30px rgba(15, 23, 42, 0.065);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
+/* Riga sempre visibile: Stato + bottone */
 .filter-main-row {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 9px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
     align-items: end;
 }
 
+/* Pannello tendina */
 .filter-extra-panel {
     display: none;
-    margin-top: 11px;
-    padding-top: 11px;
-    border-top: 1px solid rgba(226, 232, 240, 0.9);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(226, 232, 240, 0.88);
 }
 
 .filter-extra-panel.is-open {
     display: block;
 }
 
+/* Griglia campi avanzati */
 .filter-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 9px;
+    gap: 8px;
 }
 
 .filter-field {
     position: relative;
+    min-width: 0;
 }
 
+/* Label più elegante e compatta */
 .filter-field label {
     display: block;
-    margin-bottom: 4px;
-    font-size: 0.68rem;
+    margin: 0 0 4px 2px;
+    font-size: 0.66rem;
     line-height: 1;
-    font-weight: 800;
+    font-weight: 850;
     color: #64748b;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.035em;
 }
 
+/* Uniforma input e select */
 .filter-box input[type="text"],
 .filter-box select {
+    display: block;
     width: 100%;
-    min-height: 40px;
-    border-radius: 14px;
-    border: 1px solid #dbe3ee;
-    background: rgba(255,255,255,0.96);
+    height: 38px;
+    min-height: 38px;
+    max-height: 38px;
+    box-sizing: border-box;
+    border-radius: 15px;
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    background-color: rgba(255, 255, 255, 0.96);
     color: #0f172a;
-    padding: 7px 11px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    padding: 0 38px 0 12px;
+    font-size: 0.86rem;
+    line-height: 38px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
     box-shadow:
         inset 0 1px 1px rgba(15, 23, 42, 0.025),
-        0 1px 0 rgba(255,255,255,0.75);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        0 1px 0 rgba(255,255,255,0.85);
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease,
+        transform 0.15s ease;
 }
 
+/* Select reso uguale agli input */
+.filter-box select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #64748b 50%),
+        linear-gradient(135deg, #64748b 50%, transparent 50%);
+    background-position:
+        calc(100% - 17px) 16px,
+        calc(100% - 12px) 16px;
+    background-size:
+        5px 5px,
+        5px 5px;
+    background-repeat: no-repeat;
+}
+
+/* Placeholder */
 .filter-box input[type="text"]::placeholder {
     color: #94a3b8;
-    font-weight: 500;
+    font-weight: 600;
 }
 
+/* Focus premium */
 .filter-box input[type="text"]:focus,
 .filter-box select:focus {
     outline: none;
-    border-color: #93c5fd;
-    background: #fff;
+    border-color: rgba(59, 130, 246, 0.72);
+    background-color: #fff;
     box-shadow:
-        0 0 0 3px rgba(147, 197, 253, 0.18),
+        0 0 0 3px rgba(59, 130, 246, 0.14),
         inset 0 1px 1px rgba(15, 23, 42, 0.025);
 }
 
+/* Bottone Filtri */
 .filter-toggle-btn {
-    min-height: 40px;
+    height: 38px;
+    min-height: 38px;
     padding: 0 13px;
     border-radius: 9999px;
-    border: 1px solid #dbe3ee;
-    background: rgba(248,250,252,0.95);
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
     color: #334155;
     font-size: 0.82rem;
-    font-weight: 800;
+    font-weight: 850;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     white-space: nowrap;
     box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.04),
-        inset 0 1px 0 rgba(255,255,255,0.8);
+        0 1px 2px rgba(15, 23, 42, 0.045),
+        inset 0 1px 0 rgba(255,255,255,0.9);
 }
 
 .filter-toggle-btn::before {
     content: "⚙️";
     margin-right: 5px;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
 }
 
+.filter-toggle-btn:active,
+.filter-btn-primary:active,
+.filter-btn-secondary:active {
+    transform: scale(0.98);
+}
+
+/* Azioni */
 .filter-actions {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 9px;
-    margin-top: 11px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 .filter-btn-primary,
 .filter-btn-secondary {
+    height: 40px;
     min-height: 40px;
     border-radius: 9999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    font-size: 0.88rem;
-    font-weight: 800;
+    font-size: 0.87rem;
+    font-weight: 850;
+    line-height: 1;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        background 0.15s ease;
 }
 
 .filter-btn-primary {
@@ -236,51 +288,67 @@
     background: linear-gradient(180deg, #3b82f6, #2563eb);
     color: white;
     box-shadow:
-        0 8px 20px rgba(37, 99, 235, 0.2),
-        inset 0 1px 0 rgba(255,255,255,0.24);
+        0 8px 20px rgba(37, 99, 235, 0.22),
+        inset 0 1px 0 rgba(255,255,255,0.26);
 }
 
 .filter-btn-primary::before {
     content: "🔎";
     margin-right: 6px;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
 }
 
 .filter-btn-secondary {
-    border: 1px solid #dbe3ee;
-    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
     color: #475569;
     padding: 0 15px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.035),
+        inset 0 1px 0 rgba(255,255,255,0.85);
 }
 
+/* Autocomplete */
 .suggestion-box {
     position: absolute;
-    z-index: 20;
+    z-index: 30;
+    left: 0;
+    right: 0;
     width: 100%;
+    margin-top: 5px;
     background: rgba(255,255,255,0.98);
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.10);
-    max-height: 240px;
+    border: 1px solid rgba(226, 232, 240, 0.98);
+    border-radius: 16px;
+    box-shadow:
+        0 14px 34px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255,255,255,0.9);
+    max-height: 230px;
     overflow: auto;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
 }
 
-/* tablet */
+/* Tablet */
 @media (min-width: 640px) {
+    .filter-card {
+        padding: 12px;
+    }
+
     .filter-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .filter-actions {
         display: flex;
+        align-items: center;
     }
 }
 
-/* desktop */
+/* Desktop */
 @media (min-width: 1024px) {
     .filter-card {
-        padding: 13px;
+        padding: 12px;
     }
 
     .filter-main-row {
@@ -290,8 +358,8 @@
 
     .filter-extra-panel {
         display: block;
-        margin-top: 11px;
-        padding-top: 11px;
+        margin-top: 10px;
+        padding-top: 10px;
     }
 
     .filter-toggle-btn {
@@ -300,53 +368,71 @@
 
     .filter-grid {
         grid-template-columns: 1.2fr 1fr 0.85fr 1fr 0.75fr;
+        gap: 9px;
     }
 
     .filter-actions {
         display: flex;
-        margin-top: 11px;
+        margin-top: 10px;
     }
 
     .filter-box input[type="text"],
-    .filter-box select,
-    .filter-toggle-btn,
+    .filter-box select {
+        height: 37px;
+        min-height: 37px;
+        max-height: 37px;
+        line-height: 37px;
+        font-size: 0.84rem;
+    }
+
     .filter-btn-primary,
     .filter-btn-secondary {
+        height: 38px;
         min-height: 38px;
     }
 }
 
-/* mobile stretto */
+/* Mobile stretto */
 @media (max-width: 430px) {
     .filter-card {
-        padding: 11px;
-        border-radius: 20px;
+        padding: 10px;
+        border-radius: 21px;
     }
 
     .filter-main-row {
-        grid-template-columns: 1fr auto;
         gap: 8px;
     }
 
     .filter-box input[type="text"],
-    .filter-box select,
-    .filter-toggle-btn,
-    .filter-btn-primary,
-    .filter-btn-secondary {
-        min-height: 38px;
+    .filter-box select {
+        height: 37px;
+        min-height: 37px;
+        max-height: 37px;
+        line-height: 37px;
         font-size: 0.84rem;
+        border-radius: 14px;
     }
 
     .filter-field label {
-        font-size: 0.66rem;
+        font-size: 0.64rem;
     }
 
     .filter-toggle-btn {
+        height: 37px;
+        min-height: 37px;
         padding: 0 11px;
+        font-size: 0.8rem;
     }
 
     .filter-actions {
-        margin-top: 10px;
+        margin-top: 9px;
+    }
+
+    .filter-btn-primary,
+    .filter-btn-secondary {
+        height: 39px;
+        min-height: 39px;
+        font-size: 0.84rem;
     }
 }
 
@@ -1454,7 +1540,7 @@ document.addEventListener("click", async (e) => {
       toggleBtn.addEventListener("click", () => {
         const isOpen = panel.classList.toggle("is-open");
         toggleBtn.textContent = isOpen ? "Nascondi" : "Filtri";
-      });    
+      });
   });
 </script>
 <script>
