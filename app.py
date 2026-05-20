@@ -5522,7 +5522,7 @@ def admin_statistiche():
     utenti_recensiti = fetchone_value(c.fetchone())
 
     c.execute(sql("""
-        SELECT COUNT(DISTINCT recensione_id) AS valore
+        SELECT COUNT(DISTINCT id_recensione) AS valore
         FROM risposte_recensioni
     """))
     recensioni_con_risposta = fetchone_value(c.fetchone())
@@ -5585,7 +5585,7 @@ def admin_statistiche():
         notifiche_ricevute=notifiche_ricevute,
         notifiche_da_leggere=notifiche_da_leggere
     )
-        
+
 # ==========================================================
 # ADMIN – NOTIFICHE DI SISTEMA
 # ==========================================================
