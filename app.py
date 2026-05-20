@@ -1192,8 +1192,12 @@ app.config['MAIL_TIMEOUT'] = 20
 app.config['MAIL_MAX_EMAILS'] = None
 app.config['MAIL_DEBUG'] = (os.getenv("FLASK_ENV") == "development")
 
-# 🌐 Base URL per generare link assoluti (prod vs locale)
-app.config["APP_BASE_URL"] = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
+# 🌐 Base URL per generare link assoluti nelle email
+# In produzione deve essere sempre il dominio principale con www.
+app.config["APP_BASE_URL"] = os.getenv(
+    "APP_BASE_URL",
+    "https://www.mylocalcare.it"
+).rstrip("/")
 
 # 🔐 Salt usato per i token di reset password (mettilo anche in mail.env se vuoi)
 app.config['SECURITY_PASSWORD_SALT'] = os.getenv(
@@ -6317,7 +6321,13 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             "TextBody": text_finale,
             "HtmlBody": html_finale or "",
             "MessageStream": message_stream,
-            "ReplyTo": from_address
+            "ReplyTo": from_address,
+
+            # Riduce elementi traccianti nelle email transazionali.
+            # Utile soprattutto con Outlook/Hotmail, che può penalizzare email nuove
+            # con link tracciati o contenuto troppo "marketing".
+            "TrackOpens": False,
+            "TrackLinks": "None"
         }
 
         response = requests.post(
@@ -9330,8 +9340,15 @@ def register():
 
         email_inviata = _invia_email(
             destinazione=email,
-            oggetto="Conferma la tua registrazione su MyLocalCare",
-            corpo=f"Ciao {nome},\n\nconferma il tuo account MyLocalCare aprendo questo link:\n{link}\n\nMyLocalCare",
+            oggetto="Conferma il tuo account MyLocalCare",
+            corpo=(
+                f"Ciao {nome},\n\n"
+                "abbiamo ricevuto una richiesta di registrazione su MyLocalCare con questo indirizzo email.\n\n"
+                "Per confermare l’account e completare l’attivazione, apri questo link:\n"
+                f"{link}\n\n"
+                "Se non hai richiesto tu questa registrazione, puoi ignorare questa email.\n\n"
+                "MyLocalCare"
+            ),
             html_template="email/conferma_account.html",
             nome=nome,
             link=link

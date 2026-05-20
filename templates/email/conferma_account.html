@@ -2,30 +2,44 @@
 
 {% block content %}
 
-<h2 style="color:#111; margin-top:0;">
-Benvenuto su MyLocalCare, {{ nome }} 👋
+<h2 style="color:#111827; margin-top:0; margin-bottom:16px; font-size:22px; line-height:1.3;">
+Conferma il tuo account
 </h2>
 
-<p style="color:#555; font-size:16px; line-height:1.6;">
-Per completare la registrazione e attivare il tuo account,
-clicca sul pulsante qui sotto.
+<p style="color:#374151; font-size:16px; line-height:1.6; margin:0 0 18px;">
+Ciao {{ nome }},
+</p>
+
+<p style="color:#374151; font-size:16px; line-height:1.6; margin:0 0 22px;">
+abbiamo ricevuto una richiesta di registrazione su MyLocalCare con questo indirizzo email.
+</p>
+
+<p style="color:#374151; font-size:16px; line-height:1.6; margin:0 0 26px;">
+Per completare l’attivazione dell’account, clicca sul pulsante qui sotto.
 </p>
 
 <a href="{{ link }}" style="
 display:inline-block;
-margin-top:20px;
-padding:14px 30px;
+padding:14px 28px;
 background:#2563eb;
-color:white;
+color:#ffffff;
 text-decoration:none;
 border-radius:6px;
 font-weight:bold;
 font-size:16px;">
-Conferma il tuo account
+Conferma account
 </a>
 
-<p style="margin-top:30px; font-size:14px; color:#777;">
-Se non hai richiesto questa registrazione, puoi ignorare questa email.
+<p style="margin:28px 0 0; font-size:13px; line-height:1.5; color:#6b7280;">
+Se il pulsante non funziona, copia e incolla questo link nel browser:
+</p>
+
+<p style="margin:8px 0 0; font-size:12px; line-height:1.5; color:#2563eb; word-break:break-all;">
+{{ link }}
+</p>
+
+<p style="margin:28px 0 0; font-size:13px; line-height:1.5; color:#6b7280;">
+Se non hai richiesto tu questa registrazione, puoi ignorare questa email.
 </p>
 
 {% endblock %}
