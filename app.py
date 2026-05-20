@@ -3492,6 +3492,90 @@ def admin_counters():
         except Exception as e:
             raise RuntimeError(f"Errore lettura valore admin_counters step=video_minuti: {repr(e)}")
 
+        step = "statistiche_annunci_totali"
+        annunci_totali = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM annunci
+            WHERE COALESCE(stato, '') <> 'eliminato'
+        """, step=step)
+
+        step = "statistiche_utenti_con_annunci"
+        utenti_con_annunci = get_count(cur, """
+            SELECT COUNT(DISTINCT utente_id) AS valore
+            FROM annunci
+            WHERE COALESCE(stato, '') <> 'eliminato'
+        """, step=step)
+
+        step = "statistiche_utenti_senza_annunci"
+        utenti_senza_annunci = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM utenti u
+            WHERE u.attivo = 1
+              AND u.sospeso = 0
+              AND COALESCE(u.disattivato_admin, 0) = 0
+              AND COALESCE(u.email, '') NOT LIKE ?
+              AND COALESCE(u.username, '') NOT LIKE ?
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM annunci a
+                  WHERE a.utente_id = u.id
+                    AND COALESCE(a.stato, '') <> 'eliminato'
+              )
+        """, (
+            "deleted_user_%@mylocalcare.local",
+            "utente_eliminato_%"
+        ), step=step)
+
+        step = "statistiche_utenti_recensiti"
+        utenti_recensiti = get_count(cur, """
+            SELECT COUNT(DISTINCT id_destinatario) AS valore
+            FROM recensioni
+            WHERE stato = 'approvato'
+        """, step=step)
+
+        step = "statistiche_recensioni_con_risposta"
+        recensioni_con_risposta = get_count(cur, """
+            SELECT COUNT(DISTINCT id_recensione) AS valore
+            FROM risposte_recensioni
+        """, step=step)
+
+        step = "statistiche_chat_totali"
+        chat_totali = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM (
+                SELECT
+                    CASE
+                        WHEN mittente_id < destinatario_id THEN mittente_id
+                        ELSE destinatario_id
+                    END AS a,
+                    CASE
+                        WHEN mittente_id > destinatario_id THEN mittente_id
+                        ELSE destinatario_id
+                    END AS b
+                FROM messaggi_chat
+                GROUP BY a, b
+            ) AS chat_uniche
+        """, step=step)
+
+        step = "statistiche_messaggi_inviati"
+        messaggi_inviati = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM messaggi_chat
+        """, step=step)
+
+        step = "statistiche_notifiche_ricevute"
+        notifiche_ricevute = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM notifiche
+        """, step=step)
+
+        step = "statistiche_notifiche_da_leggere"
+        notifiche_da_leggere = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM notifiche
+            WHERE letta = 0
+        """, step=step)
+
         payload = {
             "utenti": totale_utenti,
             "annunci": pending_annunci,
@@ -3499,7 +3583,21 @@ def admin_counters():
             "risposte": pending_risposte,
             "messaggi": messaggi_non_letti,
             "totale": pending_annunci + pending_recensioni_totali,
-            "video_minuti": video_minuti
+            "video_minuti": video_minuti,
+
+            "statistiche": {
+                "utenti_attivi": totale_utenti,
+                "annunci_totali": annunci_totali,
+                "utenti_con_annunci": utenti_con_annunci,
+                "utenti_senza_annunci": utenti_senza_annunci,
+                "utenti_recensiti": utenti_recensiti,
+                "recensioni_con_risposta": recensioni_con_risposta,
+                "chat_totali": chat_totali,
+                "messaggi_inviati": messaggi_inviati,
+                "messaggi_non_letti": messaggi_non_letti,
+                "notifiche_ricevute": notifiche_ricevute,
+                "notifiche_da_leggere": notifiche_da_leggere
+            }
         }
 
         cache["payload"] = payload

@@ -61,58 +61,128 @@
 
     <div class="stat-card">
         <div class="stat-label text-blue-700">Utenti attivi</div>
-        <div class="stat-value text-blue-800">{{ utenti_attivi }}</div>
+        <div class="stat-value text-blue-800" data-counter="statistiche.utenti_attivi">{{ utenti_attivi }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-amber-700">Annunci totali</div>
-        <div class="stat-value text-amber-800">{{ annunci_totali }}</div>
+        <div class="stat-value text-amber-800" data-counter="statistiche.annunci_totali">{{ annunci_totali }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-emerald-700">Utenti con annunci</div>
-        <div class="stat-value text-emerald-800">{{ utenti_con_annunci }}</div>
+        <div class="stat-value text-emerald-800" data-counter="statistiche.utenti_con_annunci">{{ utenti_con_annunci }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-rose-700">Utenti senza annunci</div>
-        <div class="stat-value text-rose-800">{{ utenti_senza_annunci }}</div>
+        <div class="stat-value text-rose-800" data-counter="statistiche.utenti_senza_annunci">{{ utenti_senza_annunci }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-purple-700">Utenti recensiti</div>
-        <div class="stat-value text-purple-800">{{ utenti_recensiti }}</div>
+        <div class="stat-value text-purple-800" data-counter="statistiche.utenti_recensiti">{{ utenti_recensiti }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-fuchsia-700">Recensioni con risposta</div>
-        <div class="stat-value text-fuchsia-800">{{ recensioni_con_risposta }}</div>
+        <div class="stat-value text-fuchsia-800" data-counter="statistiche.recensioni_con_risposta">{{ recensioni_con_risposta }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-slate-700">Chat create</div>
-        <div class="stat-value text-slate-900">{{ chat_totali }}</div>
+        <div class="stat-value text-slate-900" data-counter="statistiche.chat_totali">{{ chat_totali }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-indigo-700">Messaggi inviati</div>
-        <div class="stat-value text-indigo-800">{{ messaggi_inviati }}</div>
+        <div class="stat-value text-indigo-800" data-counter="statistiche.messaggi_inviati">{{ messaggi_inviati }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-orange-700">Messaggi non letti</div>
-        <div class="stat-value text-orange-800">{{ messaggi_non_letti }}</div>
+        <div class="stat-value text-orange-800" data-counter="statistiche.messaggi_non_letti">{{ messaggi_non_letti }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-cyan-700">Notifiche ricevute</div>
-        <div class="stat-value text-cyan-800">{{ notifiche_ricevute }}</div>
+        <div class="stat-value text-cyan-800" data-counter="statistiche.notifiche_ricevute">{{ notifiche_ricevute }}</div>
     </div>
 
     <div class="stat-card">
         <div class="stat-label text-red-700">Notifiche da leggere</div>
-        <div class="stat-value text-red-800">{{ notifiche_da_leggere }}</div>
+        <div class="stat-value text-red-800" data-counter="statistiche.notifiche_da_leggere">{{ notifiche_da_leggere }}</div>
     </div>
 
 </div>
+
+<script>
+(function () {
+    function getNestedValue(obj, path) {
+        return path.split(".").reduce(function (acc, key) {
+            if (acc && Object.prototype.hasOwnProperty.call(acc, key)) {
+                return acc[key];
+            }
+            return undefined;
+        }, obj);
+    }
+
+    async function aggiornaStatisticheAdmin() {
+        try {
+            const response = await fetch("/admin/counters", {
+                method: "GET",
+                credentials: "same-origin",
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            document.querySelectorAll("[data-counter]").forEach(function (el) {
+                const path = el.getAttribute("data-counter");
+                const value = getNestedValue(data, path);
+
+                if (value !== undefined && value !== null) {
+                    el.textContent = value;
+                }
+            });
+
+        } catch (err) {
+            console.warn("Statistiche admin non aggiornate:", err);
+        }
+    }
+
+    function registraListenerStatisticheAdmin() {
+        aggiornaStatisticheAdmin();
+
+        if (!window.socket) {
+            return;
+        }
+
+        if (window.__adminStatisticheCountersHandler) {
+            window.socket.off(
+                "update_admin_counters",
+                window.__adminStatisticheCountersHandler
+            );
+        }
+
+        window.__adminStatisticheCountersHandler = aggiornaStatisticheAdmin;
+
+        window.socket.on(
+            "update_admin_counters",
+            window.__adminStatisticheCountersHandler
+        );
+    }
+
+    document.addEventListener("DOMContentLoaded", registraListenerStatisticheAdmin);
+
+    window.addEventListener("focus", aggiornaStatisticheAdmin);
+})();
+</script>
+
 {% endblock %}
