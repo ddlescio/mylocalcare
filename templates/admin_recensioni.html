@@ -249,9 +249,10 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 /* Azioni */
 .filter-actions {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     margin-top: 10px;
+    align-items: center;
 }
 
 .filter-btn-primary,
@@ -266,6 +267,8 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
     font-size: 0.87rem;
     font-weight: 850;
     line-height: 1;
+    white-space: nowrap;
+    box-sizing: border-box;
     transition:
         transform 0.15s ease,
         box-shadow 0.15s ease,
@@ -273,6 +276,8 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 }
 
 .filter-btn-primary {
+    min-width: 112px;
+    padding: 0 18px;
     border: none;
     background: linear-gradient(180deg, #3b82f6, #2563eb);
     color: white;
@@ -288,11 +293,12 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 }
 
 .filter-btn-secondary {
+    min-width: 88px;
+    padding: 0 15px;
     border: 1px solid rgba(203, 213, 225, 0.95);
     background:
         linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
     color: #475569;
-    padding: 0 15px;
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.035),
         inset 0 1px 0 rgba(255,255,255,0.85);
@@ -350,7 +356,17 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
     .filter-actions {
         display: flex;
         justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
         margin-top: 10px;
+    }
+
+    .filter-btn-primary {
+        min-width: 118px;
+    }
+
+    .filter-btn-secondary {
+        min-width: 90px;
     }
 
     .filter-box input[type="text"],
@@ -405,6 +421,16 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
         margin-top: 9px;
     }
 
+    .filter-btn-primary {
+        min-width: 0;
+        padding: 0 16px;
+    }
+
+    .filter-btn-secondary {
+        min-width: 82px;
+        padding: 0 14px;
+    }
+    
     .filter-btn-primary,
     .filter-btn-secondary {
         height: 39px;
@@ -1223,7 +1249,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleBtn.addEventListener("click", () => {
       const isOpen = panel.classList.toggle("is-open");
       toggleBtn.textContent = isOpen ? "Nascondi" : "Filtri";
-    });  
+    });
 });
 </script>
 
