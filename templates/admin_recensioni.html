@@ -82,6 +82,43 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
         0 8px 22px rgba(15, 23, 42, 0.04);
 }
 
+.stat-card-link {
+    display: block;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        transform 0.16s ease,
+        border-color 0.16s ease,
+        background 0.16s ease,
+        box-shadow 0.16s ease;
+}
+
+.stat-card-link:hover {
+    transform: translateY(-1px);
+}
+
+.stat-card-link:active {
+    transform: scale(0.985);
+}
+
+.stat-card-link-amber:hover {
+    border-color: rgba(245, 158, 11, 0.45);
+    background:
+        linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.96));
+    box-shadow:
+        0 2px 4px rgba(15, 23, 42, 0.05),
+        0 12px 26px rgba(245, 158, 11, 0.12);
+}
+
+.stat-card-link-emerald:hover {
+    border-color: rgba(16, 185, 129, 0.45);
+    background:
+        linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.96));
+    box-shadow:
+        0 2px 4px rgba(15, 23, 42, 0.05),
+        0 12px 26px rgba(16, 185, 129, 0.12);
+}
+
 .stat-label {
     font-size: 0.78rem;
     font-weight: 600;
@@ -822,15 +859,17 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
       <p class="stat-value stat-value-blue">{{ totale_filtrate|default(recensioni|length, true) }}</p>
     </div>
 
-    <div class="stat-card">
+    <a href="{{ url_for('admin_recensioni', stato='in_attesa') }}"
+       class="stat-card stat-card-link stat-card-link-amber">
       <p class="stat-label">Recensioni in attesa</p>
       <p class="stat-value stat-value-amber">{{ totale_in_attesa|default(0, true) }}</p>
-    </div>
+    </a>
 
-    <div class="stat-card">
+    <a href="{{ url_for('admin_recensioni', stato='in_attesa') }}"
+       class="stat-card stat-card-link stat-card-link-emerald">
       <p class="stat-label">Risposte in attesa</p>
       <p class="stat-value stat-value-emerald">{{ totale_risposte_in_attesa|default(0, true) }}</p>
-    </div>
+    </a>
   </div>
 
   <!-- FILTRI -->
@@ -1172,7 +1211,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
         <div class="review-modal-label">Testo risposta</div>
         <div id="modal-review-risposta" class="review-modal-value">-</div>
       </div>
-      
+
     </div>
 
     <div id="review-modal-actions" class="review-modal-actions">
