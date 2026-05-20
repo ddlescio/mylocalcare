@@ -22,9 +22,25 @@
 }
 
 .stat-value {
-    font-size: 2rem;
+    font-size: 1.65rem;
     font-weight: 700;
     margin-top: 6px;
+}
+
+@media (max-width: 640px) {
+    .stat-card {
+        padding: 12px 8px;
+        border-radius: 16px;
+    }
+
+    .stat-value {
+        font-size: 1.35rem;
+    }
+
+    .stat-label {
+        font-size: 0.68rem;
+        line-height: 1.15;
+    }
 }
 
 .stat-label {
@@ -41,7 +57,7 @@
 
 
 <!-- 📌 DASHBOARD MODERNA -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+<div class="grid grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
 
     <div class="stat-card">
         <div class="stat-label text-blue-700">Utenti attivi</div>
@@ -69,10 +85,34 @@
     </div>
 
     <div class="stat-card">
+        <div class="stat-label text-fuchsia-700">Recensioni con risposta</div>
+        <div class="stat-value text-fuchsia-800">{{ recensioni_con_risposta }}</div>
+    </div>
+
+    <div class="stat-card">
         <div class="stat-label text-slate-700">Chat create</div>
         <div class="stat-value text-slate-900">{{ chat_totali }}</div>
     </div>
 
-</div>
+    <div class="stat-card">
+        <div class="stat-label text-indigo-700">Messaggi inviati</div>
+        <div class="stat-value text-indigo-800">{{ messaggi_inviati }}</div>
+    </div>
 
+    <div class="stat-card">
+        <div class="stat-label text-orange-700">Messaggi non letti</div>
+        <div class="stat-value text-orange-800">{{ messaggi_non_letti }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label text-cyan-700">Notifiche ricevute</div>
+        <div class="stat-value text-cyan-800">{{ notifiche_ricevute }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label text-red-700">Notifiche da leggere</div>
+        <div class="stat-value text-red-800">{{ notifiche_da_leggere }}</div>
+    </div>
+
+</div>
 {% endblock %}

@@ -5465,33 +5465,70 @@ def admin_acquisti_export():
 @admin_required
 def admin_statistiche():
     conn = get_db_connection()
-
     c = get_cursor(conn)
 
-    c.execute(sql("SELECT COUNT(*) FROM utenti WHERE attivo = 1"))
+    c.execute(sql("""
+        SELECT COUNT(*) AS valore
+        FROM utenti
+        WHERE attivo = 1
+          AND sospeso = 0
+          AND COALESCE(disattivato_admin, 0) = 0
+          AND COALESCE(email, '') NOT LIKE ?
+          AND COALESCE(username, '') NOT LIKE ?
+    """), (
+        "deleted_user_%@mylocalcare.local",
+        "utente_eliminato_%"
+    ))
     utenti_attivi = fetchone_value(c.fetchone())
 
-    c.execute(sql("SELECT COUNT(*) FROM annunci"))
+    c.execute(sql("""
+        SELECT COUNT(*) AS valore
+        FROM annunci
+        WHERE COALESCE(stato, '') <> 'eliminato'
+    """))
     annunci_totali = fetchone_value(c.fetchone())
 
-    c.execute(sql("SELECT COUNT(DISTINCT utente_id) FROM annunci"))
+    c.execute(sql("""
+        SELECT COUNT(DISTINCT utente_id) AS valore
+        FROM annunci
+        WHERE COALESCE(stato, '') <> 'eliminato'
+    """))
     utenti_con_annunci = fetchone_value(c.fetchone())
 
     c.execute(sql("""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS valore
         FROM utenti
-        WHERE id NOT IN (SELECT DISTINCT utente_id FROM annunci)
-    """))
+        WHERE attivo = 1
+          AND sospeso = 0
+          AND COALESCE(disattivato_admin, 0) = 0
+          AND COALESCE(email, '') NOT LIKE ?
+          AND COALESCE(username, '') NOT LIKE ?
+          AND id NOT IN (
+              SELECT DISTINCT utente_id
+              FROM annunci
+              WHERE COALESCE(stato, '') <> 'eliminato'
+          )
+    """), (
+        "deleted_user_%@mylocalcare.local",
+        "utente_eliminato_%"
+    ))
     utenti_senza_annunci = fetchone_value(c.fetchone())
 
     c.execute(sql("""
-        SELECT COUNT(DISTINCT id_destinatario)
+        SELECT COUNT(DISTINCT id_destinatario) AS valore
         FROM recensioni
+        WHERE stato = 'approvato'
     """))
     utenti_recensiti = fetchone_value(c.fetchone())
 
     c.execute(sql("""
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT recensione_id) AS valore
+        FROM risposte_recensioni
+    """))
+    recensioni_con_risposta = fetchone_value(c.fetchone())
+
+    c.execute(sql("""
+        SELECT COUNT(*) AS valore
         FROM (
             SELECT
                 CASE
@@ -5504,9 +5541,35 @@ def admin_statistiche():
                 END AS b
             FROM messaggi_chat
             GROUP BY a, b
-        )
+        ) AS chat_uniche
     """))
     chat_totali = fetchone_value(c.fetchone())
+
+    c.execute(sql("""
+        SELECT COUNT(*) AS valore
+        FROM messaggi_chat
+    """))
+    messaggi_inviati = fetchone_value(c.fetchone())
+
+    c.execute(sql("""
+        SELECT COUNT(*) AS valore
+        FROM messaggi_chat
+        WHERE letto = 0
+    """))
+    messaggi_non_letti = fetchone_value(c.fetchone())
+
+    c.execute(sql("""
+        SELECT COUNT(*) AS valore
+        FROM notifiche
+    """))
+    notifiche_ricevute = fetchone_value(c.fetchone())
+
+    c.execute(sql("""
+        SELECT COUNT(*) AS valore
+        FROM notifiche
+        WHERE letta = 0
+    """))
+    notifiche_da_leggere = fetchone_value(c.fetchone())
 
     return render_template(
         "admin_statistiche.html",
@@ -5515,8 +5578,14 @@ def admin_statistiche():
         utenti_con_annunci=utenti_con_annunci,
         utenti_senza_annunci=utenti_senza_annunci,
         utenti_recensiti=utenti_recensiti,
-        chat_totali=chat_totali
+        recensioni_con_risposta=recensioni_con_risposta,
+        chat_totali=chat_totali,
+        messaggi_inviati=messaggi_inviati,
+        messaggi_non_letti=messaggi_non_letti,
+        notifiche_ricevute=notifiche_ricevute,
+        notifiche_da_leggere=notifiche_da_leggere
     )
+        
 # ==========================================================
 # ADMIN – NOTIFICHE DI SISTEMA
 # ==========================================================
