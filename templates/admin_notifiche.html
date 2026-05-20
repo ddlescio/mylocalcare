@@ -188,6 +188,194 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
       font-size: 1.05rem;
     }
   }
+
+  .admin-history-card {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    padding: 16px;
+  }
+
+  .admin-history-top {
+    display: grid;
+    grid-template-columns: 118px minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .admin-history-date {
+    border-radius: 15px;
+    background: #f1f5f9;
+    padding: 12px;
+    text-align: center;
+    align-self: start;
+  }
+
+  .admin-history-date-day {
+    font-weight: 800;
+    color: #334155;
+    font-size: 0.95rem;
+  }
+
+  .admin-history-date-time {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .admin-history-main {
+    min-width: 0;
+  }
+
+  .admin-history-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .admin-history-title {
+    font-size: 1rem;
+    font-weight: 850;
+    color: #0f172a;
+    line-height: 1.25;
+    margin: 0;
+  }
+
+  .admin-history-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .admin-history-badge {
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: #475569;
+    background: #e2e8f0;
+    border-radius: 999px;
+    padding: 5px 9px;
+  }
+
+  .admin-history-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 7px;
+    font-size: 0.82rem;
+    color: #64748b;
+  }
+
+  .admin-history-dot {
+    color: #cbd5e1;
+  }
+
+  .admin-history-link {
+    color: #2563eb;
+    text-decoration: underline;
+    font-weight: 700;
+  }
+
+  .admin-history-message {
+    margin-top: 12px;
+    font-size: 0.92rem;
+    color: #475569;
+    line-height: 1.45;
+  }
+
+  .admin-history-message-label {
+    color: #64748b;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+
+  .admin-history-open {
+    color: #2563eb;
+    font-size: 0.82rem;
+    font-weight: 750;
+    margin-left: 6px;
+    text-decoration: underline;
+  }
+
+  .admin-history-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 13px;
+  }
+
+  .admin-history-filter {
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 5px 9px;
+  }
+
+  .admin-history-filter-blue {
+    color: #1d4ed8;
+    background: #eff6ff;
+    border-color: #bfdbfe;
+  }
+
+  .admin-history-filter-green {
+    color: #047857;
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+  }
+
+  .admin-history-details {
+    margin-top: 12px;
+    font-size: 0.82rem;
+  }
+
+  .admin-history-details summary {
+    color: #2563eb;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .admin-history-recipients {
+    margin-top: 8px;
+    padding-left: 18px;
+    color: #475569;
+    list-style: disc;
+    line-height: 1.5;
+  }
+
+  .admin-history-recipients span {
+    color: #94a3b8;
+  }
+
+  @media (max-width: 700px) {
+    .admin-history-top {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .admin-history-date {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-align: left;
+    }
+
+    .admin-history-title-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .admin-history-badges {
+      justify-content: flex-start;
+    }
+  }
+
 </style>
 
 <div class="notify-page-shell">
@@ -244,142 +432,147 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
   </button>
 
   <!-- CONTENUTO NASCOSTO -->
-  <div id="storicoBody" class="hidden px-6 pb-6">
+  <div id="storicoBody" class="hidden px-4 sm:px-6 pb-6">
 
     {% if not notifiche_admin %}
       <p class="text-sm text-slate-500 italic">
         Nessuna notifica inviata dall’admin finora.
       </p>
     {% else %}
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-sm border border-slate-200 rounded-lg table-fixed">
-          <thead class="bg-slate-100 sticky top-0 z-10">
-            <tr>
-              <th class="px-3 py-2 text-left w-40">Data</th>
-              <th class="px-3 py-2 text-left">Contenuto</th>
-              <th class="px-3 py-2 text-left w-[520px]">Filtri</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for n in notifiche_admin %}
-          {% set filtri = n.filtro_json | fromjson %}
-          {% set destinatari = n.destinatari_json | fromjson if n.destinatari_json else None %}
 
-          <tr class="border-t align-top hover:bg-slate-50">
+      <div class="space-y-4">
 
-            <!-- DATA -->
-            <td class="px-3 py-3 text-slate-500 whitespace-nowrap">
-              <div class="font-medium">
+        {% for n in notifiche_admin %}
+        {% set filtri = n.filtro_json | fromjson %}
+        {% set destinatari = n.destinatari_json | fromjson if n.destinatari_json else None %}
+
+        <article class="admin-history-card">
+
+          <!-- Riga superiore -->
+          <div class="admin-history-top">
+
+            <!-- Data -->
+            <div class="admin-history-date">
+              <div class="admin-history-date-day">
                 {{ n.created_at.strftime('%d/%m/%Y') }}
               </div>
-              <div class="text-xs text-slate-400">
+              <div class="admin-history-date-time">
                 {{ n.created_at.strftime('%H:%M') }}
               </div>
-            </td>
+            </div>
 
-            <!-- CONTENUTO -->
-            <td class="px-3 py-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <div class="font-semibold text-slate-800">{{ n.titolo }}</div>
-                  {% if n.link %}
-                    <a href="{{ n.link }}" class="text-xs text-blue-600 underline inline-block mt-1">
-                      {{ n.link }}
-                    </a>
-                  {% endif %}
-                </div>
+            <!-- Contenuto principale -->
+            <div class="admin-history-main">
 
-                <!-- tipo+dest mini (riassunto) -->
-                <div class="flex flex-col items-end gap-1">
-                  <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+              <div class="admin-history-title-row">
+                <h4 class="admin-history-title">
+                  {{ n.titolo }}
+                </h4>
+
+                <div class="admin-history-badges">
+                  <span class="admin-history-badge">
                     {{ n.tipo_invio }}
                   </span>
-                  <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+                  <span class="admin-history-badge">
                     {{ n.destinatari_count }} dest.
                   </span>
                 </div>
               </div>
 
-              <!-- Messaggio: solo preview -->
-              <div class="mt-2 text-sm text-slate-600">
-                <span class="text-slate-500">Messaggio:</span>
-                {{ n.messaggio[:70] }}{% if n.messaggio|length > 70 %}…{% endif %}
+              <div class="admin-history-meta">
+                <span>
+                  <strong>Metodo:</strong> {{ n.tab_attivo }}
+                </span>
+
+                {% if n.link %}
+                  <span class="admin-history-dot">•</span>
+                  <a href="{{ n.link }}" class="admin-history-link">
+                    Apri link
+                  </a>
+                {% endif %}
+              </div>
+
+              <div class="admin-history-message">
+                <span class="admin-history-message-label">Messaggio:</span>
+                <span>
+                  {{ n.messaggio[:140] }}{% if n.messaggio|length > 140 %}…{% endif %}
+                </span>
+
                 <button
                   type="button"
-                  class="open-message-btn text-blue-600 text-xs ml-1 underline"
+                  class="open-message-btn admin-history-open"
                   data-title="{{ n.titolo }}"
                   data-message="{{ n.messaggio | e }}"
                 >
-                  Apri
+                  Leggi tutto
                 </button>
               </div>
-            </td>
 
-            <!-- FILTRI (badge) -->
-            <td class="px-3 py-3 text-sm text-slate-700">
-              <div class="space-y-2">
+              <!-- Filtri -->
+              <div class="admin-history-filters">
 
-                <div class="text-xs text-slate-500">
-                  <strong class="text-slate-700">Metodo:</strong> {{ n.tab_attivo }}
-                </div>
+                {% if filtri.zona %}
+                  <span class="admin-history-filter admin-history-filter-blue">
+                    Zona: {{ filtri.zona | join(", ") }}
+                  </span>
+                {% endif %}
 
-                <div class="flex flex-wrap gap-2">
-                  {% if filtri.zona %}
-                    <span class="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-                      Zona: {{ filtri.zona | join(", ") }}
-                    </span>
-                  {% endif %}
+                {% if filtri.categorie %}
+                  <span class="admin-history-filter admin-history-filter-green">
+                    Categorie: {{ filtri.categorie | join(", ") }}
+                  </span>
+                {% endif %}
 
-                  {% if filtri.categorie %}
-                    <span class="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                      Categorie: {{ filtri.categorie | join(", ") }}
-                    </span>
-                  {% endif %}
-                </div>
+                {% if filtri.zona_info %}
+                  <span class="admin-history-filter">INFO</span>
+                {% endif %}
 
-                <div class="flex flex-wrap gap-2">
-                  {% if filtri.zona_info %}
-                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">INFO</span>
-                  {% endif %}
-                  {% if filtri.zona_annunci %}
-                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">ANNUNCI</span>
-                  {% endif %}
-                  {% if filtri.cat_cerco_info %}
-                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">CERCO (info)</span>
-                  {% endif %}
-                  {% if filtri.cat_offro_info %}
-                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">OFFRO (info)</span>
-                  {% endif %}
-                  {% if filtri.cat_annunci %}
-                    <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">ANNUNCI (cat.)</span>
-                  {% endif %}
-                </div>
+                {% if filtri.zona_annunci %}
+                  <span class="admin-history-filter">ANNUNCI</span>
+                {% endif %}
 
-                {% if destinatari %}
-                  <details class="mt-1">
-                    <summary class="cursor-pointer text-blue-600 text-xs">
-                      Mostra destinatari ({{ destinatari|length }})
-                    </summary>
-                    <ul class="mt-2 text-xs text-slate-600 list-disc pl-4 space-y-1">
-                      {% for u in destinatari %}
-                        <li>
-                          {{ u.nome }} {{ u.cognome }}
-                          {% if u.email %}<span class="text-slate-400">— {{ u.email }}</span>{% endif %}
-                        </li>
-                      {% endfor %}
-                    </ul>
-                  </details>
+                {% if filtri.cat_cerco_info %}
+                  <span class="admin-history-filter">CERCO info</span>
+                {% endif %}
+
+                {% if filtri.cat_offro_info %}
+                  <span class="admin-history-filter">OFFRO info</span>
+                {% endif %}
+
+                {% if filtri.cat_annunci %}
+                  <span class="admin-history-filter">ANNUNCI cat.</span>
                 {% endif %}
 
               </div>
-            </td>
 
+              {% if destinatari %}
+                <details class="admin-history-details">
+                  <summary>
+                    Mostra destinatari ({{ destinatari|length }})
+                  </summary>
 
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+                  <ul class="admin-history-recipients">
+                    {% for u in destinatari %}
+                      <li>
+                        {{ u.nome }} {{ u.cognome }}
+                        {% if u.email %}
+                          <span>— {{ u.email }}</span>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </details>
+              {% endif %}
+
+            </div>
+          </div>
+
+        </article>
+
+        {% endfor %}
+
       </div>
+
     {% endif %}
   </div>
 </div>
