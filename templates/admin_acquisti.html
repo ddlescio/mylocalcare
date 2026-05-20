@@ -35,87 +35,152 @@
     </div>
 
     <!-- FILTRI -->
-    <form method="get"
-          class="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] shadow-sm p-4">
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+    <div class="admin-filter-card">
 
-        <div class="flex-1 min-w-0">
-          <label for="q" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Cerca
-          </label>
-          <input
-            id="q"
-            name="q"
-            type="text"
-            value="{{ request.args.get('q', '') }}"
-            placeholder="Email, oggetto, annuncio, categoria, provincia, metodo..."
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-          >
+      <button
+        type="button"
+        id="toggleAcquistiFilters"
+        class="admin-filter-toggle"
+      >
+        <span class="admin-filter-toggle-left">
+          <span class="admin-filter-icon">🔎</span>
+          <span>
+            <span class="admin-filter-title">Filtri acquisti</span>
+            <span class="admin-filter-subtitle">
+              Cerca per utente, servizio, categoria, provincia, stato o metodo
+            </span>
+          </span>
+        </span>
+
+        <span id="acquistiFiltersChevron" class="admin-filter-chevron">▾</span>
+      </button>
+
+      <form
+        id="acquistiFiltersBody"
+        method="get"
+        class="admin-filter-body"
+      >
+
+        <div class="admin-filter-grid">
+
+          <div class="admin-filter-field admin-filter-field-wide">
+            <label for="q">Cerca</label>
+            <input
+              id="q"
+              name="q"
+              type="text"
+              value="{{ request.args.get('q', '') }}"
+              placeholder="Email, oggetto, annuncio, categoria, provincia, metodo..."
+            >
+          </div>
+
+          <div class="admin-filter-field">
+            <label for="tipo">Tipo</label>
+            <select id="tipo" name="tipo">
+              <option value="">Tutti</option>
+              <option value="servizio" {% if request.args.get('tipo') == 'servizio' %}selected{% endif %}>Servizio</option>
+              <option value="pacchetto" {% if request.args.get('tipo') == 'pacchetto' %}selected{% endif %}>Pacchetto</option>
+            </select>
+          </div>
+
+          <div class="admin-filter-field">
+            <label for="stato">Stato</label>
+            <select id="stato" name="stato">
+              <option value="">Tutti</option>
+              <option value="attivo" {% if request.args.get('stato') == 'attivo' %}selected{% endif %}>Attivo</option>
+              <option value="rinnovato" {% if request.args.get('stato') == 'rinnovato' %}selected{% endif %}>Rinnovato</option>
+              <option value="revocato" {% if request.args.get('stato') == 'revocato' %}selected{% endif %}>Revocato</option>
+              <option value="in_attesa" {% if request.args.get('stato') == 'in_attesa' %}selected{% endif %}>In attesa</option>
+              <option value="scaduto" {% if request.args.get('stato') == 'scaduto' %}selected{% endif %}>Scaduto</option>
+            </select>
+          </div>
+
+          <div class="admin-filter-field">
+            <label for="metodo">Metodo</label>
+            <select id="metodo" name="metodo">
+              <option value="">Tutti</option>
+              <option value="stripe" {% if request.args.get('metodo') == 'stripe' %}selected{% endif %}>Stripe</option>
+              <option value="admin" {% if request.args.get('metodo') == 'admin' %}selected{% endif %}>Admin</option>
+            </select>
+          </div>
+
         </div>
 
-        <div class="w-full lg:w-44">
-          <label for="tipo" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Tipo
-          </label>
-          <select
-            id="tipo"
-            name="tipo"
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-          >
-            <option value="">Tutti</option>
-            <option value="servizio" {% if request.args.get('tipo') == 'servizio' %}selected{% endif %}>Servizio</option>
-            <option value="pacchetto" {% if request.args.get('tipo') == 'pacchetto' %}selected{% endif %}>Pacchetto</option>
-          </select>
-        </div>
-
-        <div class="w-full lg:w-44">
-          <label for="stato" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Stato
-          </label>
-          <select
-            id="stato"
-            name="stato"
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-          >
-            <option value="">Tutti</option>
-            <option value="attivo" {% if request.args.get('stato') == 'attivo' %}selected{% endif %}>Attivo</option>
-            <option value="rinnovato" {% if request.args.get('stato') == 'rinnovato' %}selected{% endif %}>Rinnovato</option>
-            <option value="revocato" {% if request.args.get('stato') == 'revocato' %}selected{% endif %}>Revocato</option>
-            <option value="in_attesa" {% if request.args.get('stato') == 'in_attesa' %}selected{% endif %}>In attesa</option>
-            <option value="scaduto" {% if request.args.get('stato') == 'scaduto' %}selected{% endif %}>Scaduto</option>
-          </select>
-        </div>
-
-        <div class="w-full lg:w-40">
-          <label for="metodo" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Metodo
-          </label>
-          <select
-            id="metodo"
-            name="metodo"
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-          >
-            <option value="">Tutti</option>
-            <option value="stripe" {% if request.args.get('metodo') == 'stripe' %}selected{% endif %}>Stripe</option>
-            <option value="admin" {% if request.args.get('metodo') == 'admin' %}selected{% endif %}>Admin</option>
-          </select>
-        </div>
-
-        <div class="flex gap-2 lg:self-end">
-          <button type="submit"
-                  class="inline-flex items-center justify-center px-4 py-2.5 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-sm transition">
-            Applica
+        <div class="admin-filter-actions">
+          <button type="submit" class="admin-filter-submit">
+            Applica filtri
           </button>
 
-          <a href="{{ url_for('admin_acquisti') }}"
-             class="inline-flex items-center justify-center px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition">
+          <a href="{{ url_for('admin_acquisti') }}" class="admin-filter-reset">
             Reset
           </a>
         </div>
-      </div>
-    </form>
 
-    <div class="overflow-x-auto">
+      </form>
+    </div>
+
+    <!-- LISTA RESPONSIVE MOBILE / TABLET -->
+    <div id="acquisti-mobile-list" class="acquisti-mobile-list">
+      {% for a in acquisti %}
+      <button
+        type="button"
+        class="acquisto-mobile-card"
+        data-open-acquisto-modal="acq-{{ a.acquisto_id }}"
+      >
+        <div class="acquisto-mobile-top">
+          <div class="min-w-0">
+            <div class="acquisto-mobile-date">
+              {{ a.created_at | dt_roma_admin }}
+            </div>
+
+            <div class="acquisto-mobile-title">
+              {{ a.pacchetto_nome or a.servizio_nome or '—' }}
+            </div>
+
+            <div class="acquisto-mobile-user">
+              {{ a.email }}
+            </div>
+          </div>
+
+          <div class="acquisto-mobile-price">
+            {{ '%.2f'|format(a.importo_cent / 100) }} €
+          </div>
+        </div>
+
+        <div class="acquisto-mobile-meta">
+          {% if a.tipo == 'pacchetto' %}
+            <span class="mobile-pill mobile-pill-indigo">Pacchetto</span>
+          {% else %}
+            <span class="mobile-pill mobile-pill-green">Servizio</span>
+          {% endif %}
+
+          {% if a.stato_visuale == 'attivo' %}
+            <span class="mobile-pill mobile-pill-green">Attivo</span>
+          {% elif a.stato_visuale == 'rinnovato' %}
+            <span class="mobile-pill mobile-pill-amber">Rinnovato</span>
+          {% elif a.stato_visuale == 'revocato' %}
+            <span class="mobile-pill mobile-pill-slate">Revocato</span>
+          {% elif a.stato_visuale == 'in_attesa' %}
+            <span class="mobile-pill mobile-pill-blue">In attesa</span>
+          {% else %}
+            <span class="mobile-pill mobile-pill-rose">Scaduto</span>
+          {% endif %}
+
+          {% if a.annuncio_id %}
+            <span class="mobile-pill mobile-pill-slate">Annuncio #{{ a.annuncio_id }}</span>
+          {% endif %}
+        </div>
+
+        <div class="acquisto-mobile-footer">
+          <span>{{ a.categoria_visuale }}</span>
+          <span>{{ a.provincia_visuale }}</span>
+          <span>Apri dettagli →</span>
+        </div>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="acquisti-table-wrapper overflow-x-auto">
       <table id="acquisti-table" class="w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
         <thead class="bg-slate-50 border-b">
           <tr>
@@ -401,7 +466,787 @@
 
   </div>
 </div>
+
+<!-- MODALI DETTAGLIO ACQUISTO MOBILE / TABLET -->
+{% for a in acquisti %}
+<div
+  id="acquisto-modal-acq-{{ a.acquisto_id }}"
+  class="acquisto-modal hidden"
+  aria-hidden="true"
+>
+  <div class="acquisto-modal-backdrop" data-close-acquisto-modal></div>
+
+  <div class="acquisto-modal-panel" role="dialog" aria-modal="true">
+
+    <div class="acquisto-modal-header">
+      <div class="min-w-0">
+        <div class="acquisto-modal-kicker">
+          Acquisto #{{ a.acquisto_id }}
+        </div>
+
+        <h2 class="acquisto-modal-title">
+          {{ a.pacchetto_nome or a.servizio_nome or 'Dettaglio acquisto' }}
+        </h2>
+      </div>
+
+      <button
+        type="button"
+        class="acquisto-modal-close"
+        data-close-acquisto-modal
+        aria-label="Chiudi dettaglio"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="acquisto-modal-body">
+
+      <div class="acquisto-modal-summary">
+        <div>
+          <span>Importo</span>
+          <strong>{{ '%.2f'|format(a.importo_cent / 100) }} €</strong>
+        </div>
+
+        <div>
+          <span>Tipo</span>
+          <strong>{{ a.tipo|capitalize }}</strong>
+        </div>
+
+        <div>
+          <span>Stato</span>
+          <strong>{{ a.stato_visuale|replace('_', ' ')|capitalize }}</strong>
+        </div>
+      </div>
+
+      <div class="acquisto-modal-grid">
+
+        <div class="acquisto-modal-item">
+          <span>Data acquisto</span>
+          <strong>{{ a.created_at | dt_roma_admin }}</strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Utente</span>
+          <strong>{{ a.email }}</strong>
+          <small>ID {{ a.utente_id }} — @{{ a.username or '—' }}</small>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Oggetto</span>
+          <strong>{{ a.pacchetto_nome or a.servizio_nome or '—' }}</strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Annuncio</span>
+          <strong>
+            {% if a.annuncio_id %}
+              #{{ a.annuncio_id }}
+            {% else %}
+              —
+            {% endif %}
+          </strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Categoria annuncio</span>
+          <strong>{{ a.categoria_visuale }}</strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Provincia annuncio</span>
+          <strong>{{ a.provincia_visuale }}</strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Durata iniziale</span>
+          <strong>
+            {% if a.durata_iniziale_giorni %}
+              {{ a.durata_iniziale_giorni }} giorni
+            {% else %}
+              Permanente / non indicata
+            {% endif %}
+          </strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Scadenza</span>
+          <strong>
+            {% if a.tipo == 'pacchetto' %}
+              Vedi servizi inclusi
+            {% elif a.data_fine %}
+              {{ a.data_fine | dt_roma_admin }}
+            {% else %}
+              ∞
+            {% endif %}
+          </strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Metodo</span>
+          <strong>{{ a.metodo or '—' }}</strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Attivazioni</span>
+          <strong>{{ a.numero_attivazioni or 0 }}</strong>
+        </div>
+
+      </div>
+
+      {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
+      <div class="acquisto-modal-services">
+        <div class="acquisto-modal-section-title">
+          Servizi inclusi nel pacchetto
+        </div>
+
+        <div class="acquisto-modal-services-list">
+          {% for d in a.dettagli_servizi %}
+          <div class="acquisto-modal-service-row">
+            <div>
+              <strong>{{ d.servizio_nome }}</strong>
+              <span>
+                {% if d.data_fine %}
+                  Scade: {{ d.data_fine | dt_roma_admin }}
+                {% else %}
+                  Scadenza: ∞
+                {% endif %}
+              </span>
+            </div>
+
+            <em class="service-status service-status-{{ d.stato }}">
+              {{ d.stato|capitalize }}
+            </em>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+  </div>
+</div>
+{% endfor %}
+
 <style>
+  .admin-filter-card {
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: 22px;
+    background:
+      linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
+    box-shadow:
+      0 12px 30px rgba(15, 23, 42, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    overflow: hidden;
+  }
+
+  .admin-filter-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 20px;
+    text-align: left;
+    transition: background 0.18s ease;
+  }
+
+  .admin-filter-toggle:hover {
+    background: rgba(248, 250, 252, 0.9);
+  }
+
+  .admin-filter-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .admin-filter-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eff6ff;
+    color: #2563eb;
+    flex-shrink: 0;
+  }
+
+  .admin-filter-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 850;
+    color: #0f172a;
+    line-height: 1.15;
+  }
+
+  .admin-filter-subtitle {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.25;
+  }
+
+  .admin-filter-chevron {
+    color: #64748b;
+    font-size: 1.2rem;
+    transition: transform 0.18s ease;
+    flex-shrink: 0;
+  }
+
+  .admin-filter-card.is-collapsed .admin-filter-chevron {
+    transform: rotate(-90deg);
+  }
+
+  .admin-filter-body {
+    border-top: 1px solid rgba(226, 232, 240, 0.9);
+    padding: 18px 20px 20px;
+  }
+
+  .admin-filter-card.is-collapsed .admin-filter-body {
+    display: none;
+  }
+
+  .admin-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.8fr) repeat(3, minmax(150px, 0.7fr));
+    gap: 14px;
+    align-items: end;
+  }
+
+  .admin-filter-field {
+    min-width: 0;
+  }
+
+  .admin-filter-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.055em;
+    color: #64748b;
+  }
+
+  .admin-filter-field input,
+  .admin-filter-field select {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.94);
+    padding: 11px 13px;
+    font-size: 0.9rem;
+    color: #334155;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    outline: none;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      background 0.18s ease;
+  }
+
+  .admin-filter-field input:focus,
+  .admin-filter-field select:focus {
+    border-color: #60a5fa;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
+  }
+
+  .admin-filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .admin-filter-submit,
+  .admin-filter-reset {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    border-radius: 15px;
+    padding: 0 18px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      background 0.18s ease;
+  }
+
+  .admin-filter-submit {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+  }
+
+  .admin-filter-submit:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.27);
+  }
+
+  .admin-filter-reset {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .admin-filter-reset:hover {
+    background: #e2e8f0;
+  }
+
+  @media (max-width: 1100px) {
+    .admin-filter-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-filter-field-wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .admin-filter-toggle {
+      padding: 15px 16px;
+    }
+
+    .admin-filter-body {
+      padding: 16px;
+    }
+
+    .admin-filter-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .admin-filter-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .admin-filter-submit,
+    .admin-filter-reset {
+      width: 100%;
+    }
+
+    .admin-filter-subtitle {
+      display: none;
+    }
+  }
+
+  .acquisti-mobile-list {
+    display: none;
+  }
+
+  .acquisto-mobile-card {
+    width: 100%;
+    display: block;
+    text-align: left;
+    border-radius: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background:
+      linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    padding: 16px;
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      border-color 0.18s ease;
+  }
+
+  .acquisto-mobile-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.28);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+  }
+
+  .acquisto-mobile-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .acquisto-mobile-date {
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: #64748b;
+    margin-bottom: 5px;
+  }
+
+  .acquisto-mobile-title {
+    font-size: 1rem;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.18;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .acquisto-mobile-user {
+    margin-top: 4px;
+    font-size: 0.78rem;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .acquisto-mobile-price {
+    flex-shrink: 0;
+    font-size: 1rem;
+    font-weight: 900;
+    color: #0f172a;
+    background: #f1f5f9;
+    border-radius: 14px;
+    padding: 8px 10px;
+  }
+
+  .acquisto-mobile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 13px;
+  }
+
+  .mobile-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    border: 1px solid transparent;
+  }
+
+  .mobile-pill-indigo {
+    background: #eef2ff;
+    color: #4338ca;
+    border-color: #c7d2fe;
+  }
+
+  .mobile-pill-green {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #bbf7d0;
+  }
+
+  .mobile-pill-amber {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+  }
+
+  .mobile-pill-slate {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+  }
+
+  .mobile-pill-blue {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+  }
+
+  .mobile-pill-rose {
+    background: #fff1f2;
+    color: #be123c;
+    border-color: #fecdd3;
+  }
+
+  .acquisto-mobile-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  .acquisto-mobile-footer span:last-child {
+    margin-left: auto;
+    color: #2563eb;
+  }
+
+  /* MODALE */
+  .acquisto-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+  }
+
+  .acquisto-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.46);
+    backdrop-filter: blur(6px);
+  }
+
+  .acquisto-modal-panel {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(760px, calc(100vw - 24px));
+    max-height: min(86vh, 860px);
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 26px;
+    background: #ffffff;
+    box-shadow:
+      0 30px 80px rgba(15, 23, 42, 0.28),
+      0 2px 10px rgba(15, 23, 42, 0.12);
+  }
+
+  .acquisto-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 22px;
+    border-bottom: 1px solid #e2e8f0;
+    background:
+      linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  }
+
+  .acquisto-modal-kicker {
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 5px;
+  }
+
+  .acquisto-modal-title {
+    font-size: 1.2rem;
+    line-height: 1.15;
+    font-weight: 950;
+    color: #0f172a;
+  }
+
+  .acquisto-modal-close {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 900;
+    flex-shrink: 0;
+  }
+
+  .acquisto-modal-close:hover {
+    background: #e2e8f0;
+  }
+
+  .acquisto-modal-body {
+    padding: 20px 22px 24px;
+    overflow-y: auto;
+  }
+
+  .acquisto-modal-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .acquisto-modal-summary > div {
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 14px 12px;
+    text-align: center;
+  }
+
+  .acquisto-modal-summary span,
+  .acquisto-modal-item span {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    margin-bottom: 5px;
+  }
+
+  .acquisto-modal-summary strong {
+    display: block;
+    font-size: 1rem;
+    font-weight: 950;
+    color: #0f172a;
+  }
+
+  .acquisto-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .acquisto-modal-item {
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 13px 14px;
+  }
+
+  .acquisto-modal-item strong {
+    display: block;
+    font-size: 0.92rem;
+    line-height: 1.25;
+    color: #0f172a;
+    word-break: break-word;
+  }
+
+  .acquisto-modal-item small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.76rem;
+    color: #64748b;
+  }
+
+  .acquisto-modal-services {
+    margin-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 18px;
+  }
+
+  .acquisto-modal-section-title {
+    font-size: 0.78rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #475569;
+    margin-bottom: 10px;
+  }
+
+  .acquisto-modal-services-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .acquisto-modal-service-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 12px 14px;
+  }
+
+  .acquisto-modal-service-row strong {
+    display: block;
+    color: #0f172a;
+    font-size: 0.9rem;
+  }
+
+  .acquisto-modal-service-row span {
+    display: block;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 0.78rem;
+  }
+
+  .service-status {
+    flex-shrink: 0;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 0.72rem;
+    font-style: normal;
+    font-weight: 850;
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .service-status-attivo {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .service-status-rinnovato {
+    background: #fffbeb;
+    color: #b45309;
+  }
+
+  .service-status-revocato {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .service-status-scaduto {
+    background: #fff1f2;
+    color: #be123c;
+  }
+
+  body.acquisto-modal-open {
+    overflow: hidden;
+  }
+
+  @media (max-width: 1180px) {
+    .acquisti-mobile-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .acquisti-table-wrapper {
+      display: none;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .acquisti-mobile-list {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .acquisto-modal-panel {
+      width: calc(100vw - 16px);
+      max-height: 88vh;
+      border-radius: 24px;
+    }
+
+    .acquisto-modal-header {
+      padding: 18px;
+    }
+
+    .acquisto-modal-body {
+      padding: 16px 18px 20px;
+    }
+
+    .acquisto-modal-summary {
+      grid-template-columns: 1fr;
+    }
+
+    .acquisto-modal-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .acquisto-modal-service-row {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .acquisto-mobile-footer span:last-child {
+      width: 100%;
+      margin-left: 0;
+    }
+  }
+
   #acquisti-table {
     border-collapse: separate;
     border-spacing: 0;
@@ -492,6 +1337,22 @@
 document.addEventListener("DOMContentLoaded", () => {
   const tbody = document.getElementById("acquisti-tbody");
   const sortButtons = document.querySelectorAll(".sort-btn");
+  const filterCard = document.querySelector(".admin-filter-card");
+  const filterToggle = document.getElementById("toggleAcquistiFilters");
+
+  if (filterCard && filterToggle) {
+    const hasActiveFilters = Boolean(
+      new URLSearchParams(window.location.search).toString()
+    );
+
+    if (!hasActiveFilters && window.innerWidth < 900) {
+      filterCard.classList.add("is-collapsed");
+    }
+
+    filterToggle.addEventListener("click", () => {
+      filterCard.classList.toggle("is-collapsed");
+    });
+  }
 
   let currentSortKey = "data";
   let currentSortDirection = "desc";
@@ -603,6 +1464,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
     toggleBtn.setAttribute("aria-expanded", isOpen ? "false" : "true");
     detailRow.classList.toggle("hidden", isOpen);
+  });
+
+  function openAcquistoModal(groupId) {
+    const modal = document.getElementById(`acquisto-modal-${groupId}`);
+    if (!modal) return;
+
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("acquisto-modal-open");
+  }
+
+  function closeAcquistoModal(modal) {
+    if (!modal) return;
+
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("acquisto-modal-open");
+  }
+
+  document.querySelectorAll("[data-open-acquisto-modal]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      openAcquistoModal(btn.dataset.openAcquistoModal);
+    });
+  });
+
+  document.querySelectorAll("[data-close-acquisto-modal]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      closeAcquistoModal(btn.closest(".acquisto-modal"));
+    });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+
+    const openModal = document.querySelector(".acquisto-modal:not(.hidden)");
+    closeAcquistoModal(openModal);
   });
 
   updateIcons();
