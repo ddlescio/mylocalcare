@@ -537,7 +537,7 @@
         <button type="button"
                 id="toggle-extra-filters"
                 class="filter-btn-secondary filter-toggle-btn">
-            Altri filtri
+            Filtri
         </button>
 
     </div>
@@ -1177,15 +1177,15 @@ document.addEventListener("DOMContentLoaded", () => {
     "{{ request.args.get('citta','')|e }}" ||
     "{{ request.args.get('provincia','')|e }}";
 
-  if (hasExtraFilters) {
-    panel.classList.add("is-open");
-    toggleBtn.textContent = "Nascondi filtri";
-  }
+    if (hasExtraFilters) {
+      panel.classList.add("is-open");
+      toggleBtn.textContent = "Nascondi";
+    }
 
-  toggleBtn.addEventListener("click", () => {
-    const isOpen = panel.classList.toggle("is-open");
-    toggleBtn.textContent = isOpen ? "Nascondi filtri" : "Altri filtri";
-  });
+    toggleBtn.addEventListener("click", () => {
+      const isOpen = panel.classList.toggle("is-open");
+      toggleBtn.textContent = isOpen ? "Nascondi" : "Filtri";
+    });  
 });
 </script>
 

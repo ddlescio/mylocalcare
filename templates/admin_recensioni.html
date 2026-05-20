@@ -248,23 +248,23 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
 /* Azioni */
 .filter-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-    margin-top: 10px;
+    display: flex;
     align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    margin-top: 14px;
 }
 
 .filter-btn-primary,
 .filter-btn-secondary {
-    height: 40px;
-    min-height: 40px;
+    height: 46px;
+    min-height: 46px;
     border-radius: 9999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    font-size: 0.87rem;
+    font-size: 0.95rem;
     font-weight: 850;
     line-height: 1;
     white-space: nowrap;
@@ -276,8 +276,9 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 }
 
 .filter-btn-primary {
-    min-width: 112px;
-    padding: 0 18px;
+    width: auto;
+    min-width: 108px;
+    padding: 0 24px;
     border: none;
     background: linear-gradient(180deg, #3b82f6, #2563eb);
     color: white;
@@ -288,13 +289,14 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
 .filter-btn-primary::before {
     content: "🔎";
-    margin-right: 6px;
-    font-size: 0.8rem;
+    margin-right: 7px;
+    font-size: 0.9rem;
 }
 
 .filter-btn-secondary {
-    min-width: 88px;
-    padding: 0 15px;
+    width: auto;
+    min-width: 104px;
+    padding: 0 24px;
     border: 1px solid rgba(203, 213, 225, 0.95);
     background:
         linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
@@ -322,8 +324,9 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
     .filter-actions {
         display: flex;
-        justify-content: flex-end;
         align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
     }
 }
 
@@ -355,18 +358,18 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
     .filter-actions {
         display: flex;
-        justify-content: flex-end;
+        justify-content: flex-start;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         margin-top: 10px;
     }
 
     .filter-btn-primary {
-        min-width: 118px;
+        min-width: 108px;
     }
 
     .filter-btn-secondary {
-        min-width: 90px;
+        min-width: 104px;
     }
 
     .filter-box input[type="text"],
@@ -418,25 +421,31 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
     }
 
     .filter-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
         margin-top: 9px;
     }
 
-    .filter-btn-primary {
-        min-width: 0;
-        padding: 0 16px;
-    }
-
-    .filter-btn-secondary {
-        min-width: 82px;
-        padding: 0 14px;
-    }
-    
     .filter-btn-primary,
     .filter-btn-secondary {
         height: 39px;
         min-height: 39px;
         font-size: 0.84rem;
     }
+
+    .filter-btn-primary {
+        width: auto;
+        min-width: 100px;
+        padding: 0 20px;
+    }
+
+    .filter-btn-secondary {
+        width: auto;
+        min-width: 96px;
+        padding: 0 20px;
+    }    
 }
 
 /* ===== TABELLA ===== */
