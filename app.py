@@ -4077,7 +4077,7 @@ def admin_toggle_servizio():
         # non devono mai richiedere annuncio_id.
         if codice_servizio in ("contatti", "badge_affidabilita"):
             ambito = "profilo"
-    
+
         # 2️⃣ cerca attivazione attiva
         if ambito == "annuncio":
 
@@ -4097,18 +4097,36 @@ def admin_toggle_servizio():
 
         else:
 
-            attiva = conn.execute(sql(f"""
-                SELECT id
-                FROM attivazioni_servizi
-                WHERE servizio_id = ?
-                  AND utente_id = ?
-                  AND annuncio_id IS NULL
-                  AND stato = 'attivo'
-                  AND data_inizio <= {now_sql()}
-                  AND (data_fine IS NULL OR data_fine > {now_sql()})
-                LIMIT 1
-            """), (servizio["id"], utente_id)).fetchone()
+            # ✅ Replica esatta del comportamento di /admin/utenti:
+            # per contatti e badge_affidabilita controlliamo il servizio
+            # sull'utente, senza pretendere annuncio_id IS NULL.
+            # Questo evita falsi "non attivo" se esiste già una vecchia
+            # attivazione collegata all'utente.
+            if codice_servizio in ("contatti", "badge_affidabilita"):
+                attiva = conn.execute(sql(f"""
+                    SELECT id
+                    FROM attivazioni_servizi
+                    WHERE servizio_id = ?
+                      AND utente_id = ?
+                      AND stato = 'attivo'
+                      AND data_inizio <= {now_sql()}
+                      AND (data_fine IS NULL OR data_fine > {now_sql()})
+                    LIMIT 1
+                """), (servizio["id"], utente_id)).fetchone()
 
+            else:
+                attiva = conn.execute(sql(f"""
+                    SELECT id
+                    FROM attivazioni_servizi
+                    WHERE servizio_id = ?
+                      AND utente_id = ?
+                      AND annuncio_id IS NULL
+                      AND stato = 'attivo'
+                      AND data_inizio <= {now_sql()}
+                      AND (data_fine IS NULL OR data_fine > {now_sql()})
+                    LIMIT 1
+                """), (servizio["id"], utente_id)).fetchone()
+                
         # 3️⃣ toggle
         if attiva:
             ok, msg = revoca_attivazione(attiva["id"], eseguito_da="admin")
