@@ -712,7 +712,7 @@
 
                     <button
                       type="button"
-                      onclick="toggleContattiProfilo({{ u.id }})"
+                      onclick="toggleContattiProfilo({{ u.id }}, this)"
                       class="
                         px-3 py-1.5 rounded-full text-xs font-semibold border transition
                         {% if u.contatti_attivi %}
@@ -725,7 +725,7 @@
                     </button>
                     <button
                       type="button"
-                      onclick="toggleAffidabilitaProfilo({{ u.id }})"
+                      onclick="toggleAffidabilitaProfilo({{ u.id }}, this)"
                       class="
                         px-3 py-1.5 rounded-full text-xs font-semibold border transition
                         {% if u.affidabilita_attiva %}
@@ -736,7 +736,6 @@
                       ">
                       🛡️ Affidabilità
                     </button>
-
                   {% endif %}
 
                 </td>
@@ -1005,7 +1004,91 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 <script>
-function toggleServizioProfilo(codiceServizio, utenteId) {
+function aggiornaBottoneServizioProfilo(btn, codiceServizio, isActive) {
+  if (!btn) return;
+
+  btn.classList.remove(
+    "bg-blue-600", "bg-blue-700",
+    "bg-green-600", "bg-green-700",
+    "bg-white",
+    "text-white", "text-gray-500",
+    "border-blue-600", "border-green-600", "border-gray-300",
+    "hover:bg-blue-700", "hover:bg-green-700", "hover:bg-gray-100"
+  );
+
+  if (!isActive) {
+    btn.classList.add(
+      "bg-white",
+      "text-gray-500",
+      "border-gray-300",
+      "hover:bg-gray-100"
+    );
+
+    if (codiceServizio === "contatti") {
+      btn.textContent = "📞 Contatti";
+    } else if (codiceServizio === "badge_affidabilita") {
+      btn.textContent = "🛡️ Affidabilità";
+    }
+
+    return;
+  }
+
+  btn.classList.add("text-white");
+
+  if (codiceServizio === "contatti") {
+    btn.classList.add(
+      "bg-blue-600",
+      "border-blue-600",
+      "hover:bg-blue-700"
+    );
+    btn.textContent = "📞 Contatti";
+  }
+
+  if (codiceServizio === "badge_affidabilita") {
+    btn.classList.add(
+      "bg-green-600",
+      "border-green-600",
+      "hover:bg-green-700"
+    );
+    btn.textContent = "🛡️ Affidabilità";
+  }
+}
+
+function aggiornaDatasetRigaUtente(utenteId, codiceServizio, isActive) {
+  const row = document.querySelector(`.admin-user-row[data-user-id="${utenteId}"]`);
+  if (!row) return;
+
+  if (codiceServizio === "contatti") {
+    row.dataset.userContatti = isActive ? "1" : "0";
+  }
+
+  if (codiceServizio === "badge_affidabilita") {
+    row.dataset.userAffidabilita = isActive ? "1" : "0";
+  }
+}
+
+function aggiornaBottoneModaleUtente(codiceServizio, isActive) {
+  if (codiceServizio === "contatti") {
+    const btn = document.getElementById("modal-user-contatti");
+    if (btn) {
+      btn.textContent = isActive ? "📞 Contatti attivi" : "📞 Attiva contatti";
+    }
+  }
+
+  if (codiceServizio === "badge_affidabilita") {
+    const btn = document.getElementById("modal-user-affidabilita");
+    if (btn) {
+      btn.textContent = isActive ? "🛡️ Affidabilità attiva" : "🛡️ Attiva affidabilità";
+    }
+  }
+}
+
+function toggleServizioProfilo(codiceServizio, utenteId, btn = null) {
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = "0.65";
+  }
+
   fetch("/admin/toggle-servizio", {
     method: "POST",
     headers: {
@@ -1023,17 +1106,30 @@ function toggleServizioProfilo(codiceServizio, utenteId) {
       alert(data.error || "Errore");
       return;
     }
-    location.reload();
+
+    const isActive = data.azione === "attivato";
+
+    aggiornaBottoneServizioProfilo(btn, codiceServizio, isActive);
+    aggiornaDatasetRigaUtente(utenteId, codiceServizio, isActive);
+    aggiornaBottoneModaleUtente(codiceServizio, isActive);
   })
-  .catch(() => alert("Errore di rete"));
+  .catch(() => {
+    alert("Errore di rete");
+  })
+  .finally(() => {
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "";
+    }
+  });
 }
 
-function toggleContattiProfilo(utenteId) {
-  toggleServizioProfilo("contatti", utenteId);
+function toggleContattiProfilo(utenteId, btn = null) {
+  toggleServizioProfilo("contatti", utenteId, btn);
 }
 
-function toggleAffidabilitaProfilo(utenteId) {
-  toggleServizioProfilo("badge_affidabilita", utenteId);
+function toggleAffidabilitaProfilo(utenteId, btn = null) {
+  toggleServizioProfilo("badge_affidabilita", utenteId, btn);
 }
 </script>
 <script>
@@ -1107,12 +1203,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (contatti) {
       contatti.textContent = d.userContatti === "1" ? "📞 Contatti attivi" : "📞 Attiva contatti";
-      contatti.onclick = () => toggleContattiProfilo(Number(d.userId));
+      contatti.onclick = () => toggleContattiProfilo(Number(d.userId), contatti);
     }
 
     if (affidabilita) {
       affidabilita.textContent = d.userAffidabilita === "1" ? "🛡️ Affidabilità attiva" : "🛡️ Attiva affidabilità";
-      affidabilita.onclick = () => toggleAffidabilitaProfilo(Number(d.userId));
+      affidabilita.onclick = () => toggleAffidabilitaProfilo(Number(d.userId), affidabilita);
     }
 
     const actions = document.getElementById("modal-user-actions");
@@ -1185,7 +1281,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleBtn.addEventListener("click", () => {
       const isOpen = panel.classList.toggle("is-open");
       toggleBtn.textContent = isOpen ? "Nascondi" : "Filtri";
-    });  
+    });
 });
 </script>
 

@@ -1094,42 +1094,49 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
           </td>
 
           <!-- AZIONI RECENSIONE -->
-          <td class="space-x-1">
+          <td class="space-x-1 review-actions-cell">
             {% if r.get('stato') == 'in_attesa' %}
               <a href="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
-                 class="action-btn action-green">
+                 class="action-btn action-green js-review-action"
+                 data-action="approva-recensione">
                 Approva
               </a>
+
               <a href="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
-                 class="action-btn action-red">
+                 class="action-btn action-red js-review-action"
+                 data-action="rifiuta-recensione">
                 Rifiuta
               </a>
 
             {% elif r.get('stato') == 'approvato' %}
               <a href="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
-                 class="action-btn action-red">
+                 class="action-btn action-red js-review-action"
+                 data-action="rifiuta-recensione">
                 Rifiuta
               </a>
 
             {% elif r.get('stato') == 'rifiutato' %}
               <a href="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
-                 class="action-btn action-green">
+                 class="action-btn action-green js-review-action"
+                 data-action="approva-recensione">
                 Approva
               </a>
             {% endif %}
           </td>
 
           <!-- AZIONI RISPOSTA -->
-          <td>
+          <td class="reply-actions-cell">
             {% if r.get('risposta_id') %}
               {% if r.get('risposta_stato') == 'approvato' %}
                 <a href="{{ url_for('rifiuta_risposta', id=r.get('risposta_id'), next=request.full_path) }}"
-                   class="action-btn action-red">
+                   class="action-btn action-red js-review-action"
+                   data-action="rifiuta-risposta">
                   Rifiuta
                 </a>
               {% else %}
                 <a href="{{ url_for('approva_risposta', id=r.get('risposta_id'), next=request.full_path) }}"
-                   class="action-btn action-green">
+                   class="action-btn action-green js-review-action"
+                   data-action="approva-risposta">
                   Approva
                 </a>
               {% endif %}
@@ -1411,6 +1418,188 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape") closeReviewModal();
   });
 });
+</script>
+<script>
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".js-review-action");
+  if (!btn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const row = btn.closest(".review-row");
+  if (!row) return;
+
+  const url = btn.getAttribute("href");
+  const action = btn.dataset.action;
+
+  if (!url || url === "#") return;
+
+  btn.style.opacity = "0.65";
+  btn.style.pointerEvents = "none";
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      redirect: "follow"
+    });
+
+    if (!res.ok) {
+      alert("Errore durante l’aggiornamento.");
+      return;
+    }
+
+    if (action === "approva-recensione") {
+      aggiornaStatoRecensioneInPagina(row, "approvato");
+    }
+
+    if (action === "rifiuta-recensione") {
+      aggiornaStatoRecensioneInPagina(row, "rifiutato");
+    }
+
+    if (action === "approva-risposta") {
+      aggiornaStatoRispostaInPagina(row, "approvato");
+    }
+
+    if (action === "rifiuta-risposta") {
+      aggiornaStatoRispostaInPagina(row, "rifiutato");
+    }
+
+  } catch (err) {
+    alert("Errore di rete.");
+  } finally {
+    btn.style.opacity = "";
+    btn.style.pointerEvents = "";
+  }
+});
+
+function badgeStatoRecensione(stato) {
+  if (stato === "approvato") {
+    return `<span class="badge-pill badge-green">Approvato</span>`;
+  }
+
+  if (stato === "rifiutato") {
+    return `<span class="badge-pill badge-red">Rifiutato</span>`;
+  }
+
+  return `<span class="badge-pill badge-yellow">In attesa</span>`;
+}
+
+function badgeStatoRisposta(stato) {
+  if (stato === "approvato") {
+    return `<span class="badge-pill badge-green">Approvata</span>`;
+  }
+
+  if (stato === "rifiutato") {
+    return `<span class="badge-pill badge-red">Rifiutata</span>`;
+  }
+
+  return `<span class="badge-pill badge-yellow">In attesa</span>`;
+}
+
+function aggiornaStatoRecensioneInPagina(row, nuovoStato) {
+  row.dataset.reviewStato = nuovoStato;
+
+  const statoCell = row.children[5];
+  const azioniCell = row.querySelector(".review-actions-cell");
+
+  if (statoCell) {
+    statoCell.innerHTML = badgeStatoRecensione(nuovoStato);
+  }
+
+  if (azioniCell) {
+    const approveUrl = row.dataset.reviewApprovaUrl;
+    const rejectUrl = row.dataset.reviewRifiutaUrl;
+
+    if (nuovoStato === "approvato") {
+      azioniCell.innerHTML = `
+        <a href="${rejectUrl}"
+           class="action-btn action-red js-review-action"
+           data-action="rifiuta-recensione">
+          Rifiuta
+        </a>
+      `;
+    }
+
+    if (nuovoStato === "rifiutato") {
+      azioniCell.innerHTML = `
+        <a href="${approveUrl}"
+           class="action-btn action-green js-review-action"
+           data-action="approva-recensione">
+          Approva
+        </a>
+      `;
+    }
+  }
+
+  const modalStato = document.getElementById("modal-review-stato");
+  if (modalStato) {
+    modalStato.textContent = nuovoStato;
+  }
+}
+
+function aggiornaStatoRispostaInPagina(row, nuovoStato) {
+  row.dataset.reviewRispostaStato = nuovoStato;
+
+  const statoCell = row.children[7];
+  const azioniCell = row.querySelector(".reply-actions-cell");
+
+  if (statoCell) {
+    statoCell.innerHTML = badgeStatoRisposta(nuovoStato);
+  }
+
+  if (azioniCell) {
+    const approveUrl = row.dataset.replyApprovaUrl;
+    const rejectUrl = row.dataset.replyRifiutaUrl;
+
+    if (nuovoStato === "approvato") {
+      azioniCell.innerHTML = `
+        <a href="${rejectUrl}"
+           class="action-btn action-red js-review-action"
+           data-action="rifiuta-risposta">
+          Rifiuta
+        </a>
+      `;
+    }
+
+    if (nuovoStato === "rifiutato") {
+      azioniCell.innerHTML = `
+        <a href="${approveUrl}"
+           class="action-btn action-green js-review-action"
+           data-action="approva-risposta">
+          Approva
+        </a>
+      `;
+    }
+  }
+
+  const modalStatoRisposta = document.getElementById("modal-review-risposta-stato");
+  if (modalStatoRisposta) {
+    modalStatoRisposta.textContent = nuovoStato;
+  }
+
+  const modalReplyAction = document.getElementById("modal-reply-action");
+  if (modalReplyAction && row.classList.contains("review-row")) {
+    if (nuovoStato === "approvato") {
+      modalReplyAction.textContent = "Rifiuta risposta";
+      modalReplyAction.href = row.dataset.replyRifiutaUrl || "#";
+      modalReplyAction.className = "review-modal-action red js-review-action";
+      modalReplyAction.dataset.action = "rifiuta-risposta";
+      modalReplyAction.style.pointerEvents = "";
+    }
+
+    if (nuovoStato === "rifiutato") {
+      modalReplyAction.textContent = "Approva risposta";
+      modalReplyAction.href = row.dataset.replyApprovaUrl || "#";
+      modalReplyAction.className = "review-modal-action green js-review-action";
+      modalReplyAction.dataset.action = "approva-risposta";
+      modalReplyAction.style.pointerEvents = "";
+    }
+  }
+}
 </script>
 
 {% endblock %}
