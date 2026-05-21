@@ -4150,13 +4150,78 @@ def admin_toggle_servizio():
                 "messaggio": msg
             })
         else:
-            ok, msg, att_id = attiva_servizio(
-                utente_id=int(utente_id),
-                codice_servizio=codice_servizio,
-                annuncio_id=int(annuncio_id) if ambito == "annuncio" else None,
-                attivato_da="admin",
-                note="Attivazione manuale admin"
-            )
+            # =====================================================
+            # FIX: "contatti" deve comportarsi come servizio profilo
+            # anche se nel DB il suo ambito storico risulta diverso.
+            #
+            # Non modifichiamo il DB:
+            # inseriamo manualmente l'attivazione profilo
+            # con utente_id valorizzato e annuncio_id NULL,
+            # esattamente come poi viene letta da admin_utenti/admin_annunci.
+            # =====================================================
+            if codice_servizio == "contatti":
+                try:
+                    cur = get_cursor(conn)
+
+                    att_id = insert_and_get_id(
+                        cur,
+                        f"""
+                        INSERT INTO attivazioni_servizi (
+                            servizio_id,
+                            utente_id,
+                            annuncio_id,
+                            stato,
+                            data_inizio,
+                            data_fine,
+                            attivato_da,
+                            note
+                        )
+                        VALUES (?, ?, NULL, 'attivo', {now_sql()}, NULL, ?, ?)
+                        """,
+                        (
+                            int(servizio["id"]),
+                            int(utente_id),
+                            "admin",
+                            "Attivazione manuale admin"
+                        )
+                    )
+
+                    conn.commit()
+
+                    ok = True
+                    msg = "Servizio attivato."
+
+                except Exception as e:
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+
+                    log_exception_safe(
+                        "❌ Errore attivazione manuale servizio contatti",
+                        e,
+                        {
+                            "codice_servizio": codice_servizio,
+                            "utente_id": utente_id,
+                            "annuncio_id": annuncio_id,
+                            "servizio_id": servizio["id"]
+                        },
+                        production=True
+                    )
+
+                    return jsonify({
+                        "ok": False,
+                        "error": "Errore durante l’attivazione del servizio contatti."
+                    }), 500
+
+            else:
+                ok, msg, att_id = attiva_servizio(
+                    utente_id=int(utente_id),
+                    codice_servizio=codice_servizio,
+                    annuncio_id=int(annuncio_id) if ambito == "annuncio" else None,
+                    attivato_da="admin",
+                    note="Attivazione manuale admin"
+                )
 
             # 🔔 NOTIFICA URGENTE — SOLO SE HA SENSO
             if ok and codice_servizio == "annuncio_urgente" and annuncio_id:
@@ -4169,7 +4234,6 @@ def admin_toggle_servizio():
                 except Exception as e:
                     # ⚠️ Non blocca il toggle se la notifica fallisce
                     print(f"⚠️ Errore notifica urgente: {e}")
-
 
             security_log(
                 "🟩 /admin/toggle-servizio attivazione",
@@ -4191,6 +4255,7 @@ def admin_toggle_servizio():
                 "messaggio": msg,
                 "attivazione_id": att_id
             })
+
     except Exception as e:
         log_exception_safe(
             "❌ ERRORE /admin/toggle-servizio",
