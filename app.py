@@ -5162,7 +5162,7 @@ def admin_recensioni():
             )
 
         return ok
-        
+
     recensioni_filtrate = [r for r in recensioni_dict if match(r)]
 
     totale_recensioni = len(recensioni_dict)
@@ -7076,6 +7076,17 @@ def admin_annunci():
                   AND act.stato = 'attivo'
             ) THEN 1 ELSE 0 END AS has_affidabilita,
 
+            /* CONTATTI PROFILO */
+            CASE WHEN EXISTS (
+                SELECT 1
+                FROM attivazioni_servizi act
+                JOIN servizi s ON s.id = act.servizio_id
+                WHERE act.utente_id = a.utente_id
+                  AND act.annuncio_id IS NULL
+                  AND s.codice = 'contatti'
+                  AND act.stato = 'attivo'
+            ) THEN 1 ELSE 0 END AS has_contatti,
+            
             /* PACCHETTO VISIBILITÀ
                Attivo solo se TUTTI i servizi collegati al pacchetto risultano attivi.
                I servizi profilo vengono controllati su utente_id + annuncio_id NULL.

@@ -803,6 +803,10 @@
     background: #16a34a;
 }
 
+.annuncio-modal-service-btn.contatti.is-active {
+    background: #2563eb;
+}
+
 .annuncio-modal-service-btn.urgente.is-active {
     background: #dc2626;
 }
@@ -1003,6 +1007,7 @@
                     data-annuncio-has-boost-lista="{{ 1 if a.has_boost_lista else 0 }}"
                     data-annuncio-has-badge-evidenza="{{ 1 if a.has_badge_evidenza else 0 }}"
                     data-annuncio-has-affidabilita="{{ 1 if a.has_affidabilita else 0 }}"
+                    data-annuncio-has-contatti="{{ 1 if a.has_contatti else 0 }}"
                     data-annuncio-has-urgente="{{ 1 if a.has_urgente else 0 }}"
                     data-annuncio-has-pacchetto-visibilita="{{ 1 if a.has_pacchetto_visibilita else 0 }}"
                     data-annuncio-has-pacchetto-premium="{{ 1 if a.has_visibilita_premium else 0 }}"
@@ -1085,51 +1090,69 @@
                     </td>
 
                     <td class="p-2 text-center">
-                      <div class="flex flex-wrap justify-center gap-1">
+                      <div class="flex flex-col items-center gap-1">
 
-                        <button
-                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
-                            {% if a.has_vetrina %}bg-purple-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
-                          data-servizio="vetrina_annuncio"
-                          data-annuncio="{{ a.id }}"
-                          data-utente="{{ a.utente_id }}">
-                          Vetrina
-                        </button>
+                        <!-- Riga servizi annuncio -->
+                        <div class="flex flex-wrap justify-center gap-1">
 
-                        <button
-                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
-                            {% if a.has_boost_lista %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
-                          data-servizio="boost_lista"
-                          data-annuncio="{{ a.id }}"
-                          data-utente="{{ a.utente_id }}">
-                          Lista
-                        </button>
+                          <button
+                            class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                              {% if a.has_vetrina %}bg-purple-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                            data-servizio="vetrina_annuncio"
+                            data-annuncio="{{ a.id }}"
+                            data-utente="{{ a.utente_id }}">
+                            Vetrina
+                          </button>
 
-                        <button
-                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
-                            {% if a.has_badge_evidenza %}bg-amber-500 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
-                          data-servizio="badge_evidenza"
-                          data-annuncio="{{ a.id }}"
-                          data-utente="{{ a.utente_id }}">
-                          Evidenza
-                        </button>
+                          <button
+                            class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                              {% if a.has_boost_lista %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                            data-servizio="boost_lista"
+                            data-annuncio="{{ a.id }}"
+                            data-utente="{{ a.utente_id }}">
+                            Lista
+                          </button>
 
-                        <button
-                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
-                            {% if a.has_affidabilita %}bg-green-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
-                          data-servizio="badge_affidabilita"
-                          data-utente="{{ a.utente_id }}">
-                          Affidabilità
-                        </button>
+                          <button
+                            class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                              {% if a.has_badge_evidenza %}bg-amber-500 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                            data-servizio="badge_evidenza"
+                            data-annuncio="{{ a.id }}"
+                            data-utente="{{ a.utente_id }}">
+                            Evidenza
+                          </button>
 
-                        <button
-                          class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
-                            {% if a.has_urgente %}bg-red-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
-                          data-servizio="annuncio_urgente"
-                          data-annuncio="{{ a.id }}"
-                          data-utente="{{ a.utente_id }}">
-                          🚨 Urgente
-                        </button>
+                          <button
+                            class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                              {% if a.has_urgente %}bg-red-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                            data-servizio="annuncio_urgente"
+                            data-annuncio="{{ a.id }}"
+                            data-utente="{{ a.utente_id }}">
+                            🚨 Urgente
+                          </button>
+
+                        </div>
+
+                        <!-- Riga servizi profilo -->
+                        <div class="flex flex-wrap justify-center gap-1 leading-none">
+
+                          <button
+                            class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                              {% if a.has_affidabilita %}bg-green-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                            data-servizio="badge_affidabilita"
+                            data-utente="{{ a.utente_id }}">
+                            🛡️ Affidabilità
+                          </button>
+
+                          <button
+                            class="toggle-servizio px-2 py-1 rounded text-xs font-semibold
+                              {% if a.has_contatti %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                            data-servizio="contatti"
+                            data-utente="{{ a.utente_id }}">
+                            📞 Contatti
+                          </button>
+
+                        </div>
 
                       </div>
                     </td>
@@ -1317,7 +1340,14 @@
             id="modal-service-affidabilita"
             class="annuncio-modal-service-btn affidabilita toggle-servizio"
             data-servizio="badge_affidabilita">
-      Affidabilità
+      🛡️ Affidabilità
+    </button>
+
+    <button type="button"
+            id="modal-service-contatti"
+            class="annuncio-modal-service-btn contatti toggle-servizio"
+            data-servizio="contatti">
+      📞 Contatti
     </button>
   </div>
 
@@ -1809,11 +1839,15 @@ document.addEventListener("DOMContentLoaded", () => {
       utenteId: modalUtenteId
     });
 
+    setServiceButton("modal-service-contatti", d.annuncioHasContatti, {
+      utenteId: modalUtenteId
+    });
+
     setServiceButton("modal-package-visibilita", d.annuncioHasPacchettoVisibilita, {
       annuncioId: modalAnnuncioId,
       utenteId: modalUtenteId
     });
-
+    
     setServiceButton("modal-package-premium", d.annuncioHasPacchettoPremium, {
       annuncioId: modalAnnuncioId,
       utenteId: modalUtenteId
