@@ -4126,10 +4126,23 @@ def admin_toggle_servizio():
                       AND (data_fine IS NULL OR data_fine > {now_sql()})
                     LIMIT 1
                 """), (servizio["id"], utente_id)).fetchone()
-                
+
         # 3️⃣ toggle
         if attiva:
             ok, msg = revoca_attivazione(attiva["id"], eseguito_da="admin")
+
+            security_log(
+                "🟦 /admin/toggle-servizio revoca",
+                {
+                    "ok": ok,
+                    "msg": msg,
+                    "codice_servizio": codice_servizio,
+                    "utente_id": utente_id,
+                    "annuncio_id": annuncio_id,
+                    "attivazione_id": attiva["id"]
+                },
+                production=True
+            )
 
             return jsonify({
                 "ok": ok,
@@ -4158,16 +4171,50 @@ def admin_toggle_servizio():
                     print(f"⚠️ Errore notifica urgente: {e}")
 
 
+            security_log(
+                "🟩 /admin/toggle-servizio attivazione",
+                {
+                    "ok": ok,
+                    "msg": msg,
+                    "codice_servizio": codice_servizio,
+                    "utente_id": utente_id,
+                    "annuncio_id": annuncio_id,
+                    "ambito": ambito,
+                    "attivazione_id": att_id
+                },
+                production=True
+            )
+
             return jsonify({
                 "ok": ok,
                 "azione": "attivato",
                 "messaggio": msg,
                 "attivazione_id": att_id
             })
-
     except Exception as e:
+        log_exception_safe(
+            "❌ ERRORE /admin/toggle-servizio",
+            e,
+            {
+                "codice_servizio": codice_servizio,
+                "utente_id": utente_id,
+                "annuncio_id": annuncio_id,
+                "ambito": ambito if "ambito" in locals() else None,
+                "servizio_id": servizio["id"] if "servizio" in locals() and servizio else None
+            },
+            production=True
+        )
 
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({
+            "ok": False,
+            "error": str(e),
+            "debug": {
+                "codice_servizio": codice_servizio,
+                "utente_id": utente_id,
+                "annuncio_id": annuncio_id,
+                "ambito": ambito if "ambito" in locals() else None
+            }
+        }), 500
 
 @app.route("/admin/servizi/<int:servizio_id>/piani")
 @admin_required
