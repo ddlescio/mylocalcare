@@ -5878,13 +5878,80 @@ def admin_notifiche():
 
     categorie = sorted(list(data.keys()))
 
+    daily_matches_settings = get_daily_matches_settings()
+
     return render_template(
         "admin_notifiche.html",
         stats=stats,
         utenti=utenti,
         categorie=categorie,
-        notifiche_admin=notifiche_admin
+        notifiche_admin=notifiche_admin,
+        daily_matches_settings=daily_matches_settings
     )
+
+@app.route("/admin/notifiche/daily-matches/salva", methods=["POST"])
+@admin_required
+def admin_daily_matches_salva():
+    verify_csrf()
+
+    enabled = request.form.get("daily_matches_enabled") == "1"
+    time_value = (request.form.get("daily_matches_time") or "08:00").strip()
+    channel = (request.form.get("daily_matches_channel") or "internal").strip()
+
+    try:
+        set_daily_matches_settings(
+            enabled=enabled,
+            time_value=time_value,
+            channel=channel
+        )
+
+        flash("Impostazioni Daily Matches aggiornate.", "success")
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore salvataggio impostazioni Daily Matches",
+            e,
+            production=True
+        )
+
+        flash("Errore durante il salvataggio delle impostazioni Daily Matches.", "error")
+
+    return redirect(url_for("admin_notifiche"))
+
+
+@app.route("/admin/notifiche/daily-matches/test", methods=["POST"])
+@admin_required
+def admin_daily_matches_test():
+    verify_csrf()
+
+    settings = get_daily_matches_settings()
+
+    try:
+        result = processa_match_nuovi_annunci(
+            channel=settings.get("channel", "internal")
+        )
+
+        if result.get("ok"):
+            flash(
+                "Test Daily Matches completato: "
+                f"{result.get('annunci_processati', 0)} annunci processati, "
+                f"{result.get('utenti_notificati', 0)} utenti notificati, "
+                f"{result.get('match_creati', 0)} match creati.",
+                "success"
+            )
+        else:
+            flash("Test Daily Matches non riuscito.", "error")
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore test Daily Matches",
+            e,
+            production=True
+        )
+
+        flash("Errore durante il test Daily Matches.", "error")
+
+    return redirect(url_for("admin_notifiche"))
 
 @app.route("/admin/notifiche/invia", methods=["POST"])
 @admin_required
@@ -6413,112 +6480,465 @@ def _crea_notifica(id_utente, titolo, messaggio, tipo="generica", link=None):
         except:
             pass
 
-def processa_match_nuovi_annunci():
-    import sqlite3
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
+def get_daily_matches_settings():
+    """
+    Legge configurazione Daily Matches da app_settings.
 
-    conn = sqlite3.connect("database.db", timeout=30)
+    Chiavi usate:
+    - daily_matches_enabled: 1/0
+    - daily_matches_time: HH:MM
+    - daily_matches_channel: internal / email / both
+    """
+    defaults = {
+        "enabled": True,
+        "time": "08:00",
+        "channel": "internal"
+    }
 
-    c = get_cursor(conn)
+    conn = get_db_connection()
+    cur = get_cursor(conn)
 
-    nuovi = c.execute(sql("""
-        SELECT id, utente_id, categoria, zona
-        FROM annunci
-        WHERE stato = 'approvato'
-          AND match_da_processare = 1
-    """)).fetchall()
+    try:
+        cur.execute(sql("""
+            SELECT chiave, valore
+            FROM app_settings
+            WHERE chiave IN (
+                'daily_matches_enabled',
+                'daily_matches_time',
+                'daily_matches_channel'
+            )
+        """))
 
-    if not nuovi:
+        rows = cur.fetchall()
+        values = {r["chiave"]: r["valore"] for r in rows}
 
-        return 0
+        enabled_raw = str(values.get("daily_matches_enabled", "1")).strip()
+        time_raw = str(values.get("daily_matches_time", defaults["time"])).strip()
+        channel_raw = str(values.get("daily_matches_channel", defaults["channel"])).strip()
+
+        if not re.match(r"^\d{2}:\d{2}$", time_raw):
+            time_raw = defaults["time"]
+
+        if channel_raw not in ("internal", "email", "both"):
+            channel_raw = defaults["channel"]
+
+        return {
+            "enabled": enabled_raw == "1",
+            "time": time_raw,
+            "channel": channel_raw
+        }
+
+    except Exception as e:
+        log_exception_safe(
+            "⚠️ Errore lettura configurazione Daily Matches",
+            e,
+            production=True
+        )
+        return defaults
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def set_daily_matches_settings(enabled: bool, time_value: str, channel: str):
+    """
+    Salva configurazione Daily Matches in app_settings.
+    """
+    time_value = (time_value or "08:00").strip()
+    channel = (channel or "internal").strip()
+
+    if not re.match(r"^\d{2}:\d{2}$", time_value):
+        time_value = "08:00"
+
+    if channel not in ("internal", "email", "both"):
+        channel = "internal"
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        settings = {
+            "daily_matches_enabled": "1" if enabled else "0",
+            "daily_matches_time": time_value,
+            "daily_matches_channel": channel
+        }
+
+        for chiave, valore in settings.items():
+            if app.config.get("IS_POSTGRES"):
+                cur.execute("""
+                    INSERT INTO app_settings (chiave, valore)
+                    VALUES (%s, %s)
+                    ON CONFLICT (chiave)
+                    DO UPDATE SET valore = EXCLUDED.valore
+                """, (chiave, valore))
+            else:
+                cur.execute("""
+                    INSERT INTO app_settings (chiave, valore)
+                    VALUES (?, ?)
+                    ON CONFLICT(chiave)
+                    DO UPDATE SET valore = excluded.valore
+                """, (chiave, valore))
+
+        conn.commit()
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def invia_email_daily_match(user_id, categorie_count):
+    """
+    Invia email riepilogativa Daily Matches all'utente.
+    Non blocca il processo se fallisce.
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT email, nome, username, email_notifiche
+            FROM utenti
+            WHERE id = ?
+              AND attivo = 1
+              AND sospeso = 0
+              AND COALESCE(disattivato_admin, 0) = 0
+            LIMIT 1
+        """), (int(user_id),))
+
+        user = cur.fetchone()
+
+        if not user:
+            return False
+
+        if int(user["email_notifiche"] or 0) != 1:
+            return False
+
+        righe = []
+        for categoria, count in categorie_count.items():
+            label = "nuovo annuncio" if count == 1 else "nuovi annunci"
+            righe.append(f"- {categoria}: {count} {label}")
+
+        nome = user["nome"] or user["username"] or "utente"
+
+        corpo = (
+            f"Ciao {nome},\n\n"
+            "abbiamo trovato nuovi annunci compatibili con le tue preferenze:\n\n"
+            + "\n".join(righe)
+            + "\n\nPuoi consultarli su MyLocalCare:\n"
+            + build_external_url("cerca")
+            + "\n\nMyLocalCare"
+        )
+
+        return _invia_email(
+            destinazione=user["email"],
+            oggetto="Nuovi annunci compatibili su MyLocalCare",
+            corpo=corpo
+        )
+
+    except Exception as e:
+        log_exception_safe(
+            "⚠️ Errore invio email Daily Matches",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
+        return False
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def processa_match_nuovi_annunci(channel=None):
+    """
+    Processa solo annunci approvati con match_da_processare = 1.
+
+    Regola anti-duplicazione:
+    - ogni annuncio viene notificato una sola volta;
+    - dopo il processamento viene portato a match_da_processare = 0.
+
+    Logica:
+    - annuncio OFFRO  -> notifica utenti che CERCANO quella categoria;
+    - annuncio CERCO  -> notifica utenti che OFFRONO quella categoria.
+
+    channel:
+    - internal = solo notifica interna
+    - email    = solo email
+    - both     = entrambe
+    """
+    settings = get_daily_matches_settings()
+    channel = channel or settings.get("channel", "internal")
+
+    if channel not in ("internal", "email", "both"):
+        channel = "internal"
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
 
     annunci_processati = []
     notifiche_per_utente = {}
 
-    for a in nuovi:
-        annuncio_id = a["id"]
-        offre_id = a["utente_id"]
-        categoria = (a["categoria"] or "").strip()
-        zona = (a["zona"] or "").strip()
+    try:
+        cur.execute(sql("""
+            SELECT
+                id,
+                utente_id,
+                categoria,
+                tipo_annuncio,
+                zona,
+                provincia,
+                titolo
+            FROM annunci
+            WHERE stato = 'approvato'
+              AND COALESCE(match_da_processare, 0) = 1
+            ORDER BY data_pubblicazione ASC
+        """))
 
-        idx = CATEGORIA_TO_INDEX.get(to_slug(categoria))
-        if not idx:
-            annunci_processati.append(annuncio_id)
-            continue
+        nuovi = cur.fetchall()
 
-        utenti = c.execute(sql(f"""
-            SELECT id, citta
-            FROM utenti
-            WHERE cerco_{idx} = 1
-              AND attivo = 1
-              AND sospeso = 0
-              AND visibile_pubblicamente = 1
-              AND id != ?
-        """), (offre_id,)).fetchall()
+        if not nuovi:
+            security_log(
+                "ℹ️ Daily Matches: nessun nuovo annuncio da processare",
+                production=True
+            )
+            return {
+                "ok": True,
+                "annunci_processati": 0,
+                "utenti_notificati": 0,
+                "match_creati": 0
+            }
 
-        for u in utenti:
-            if not place_match(zona, u["citta"] or ""):
+        match_creati = 0
+
+        for annuncio in nuovi:
+            annuncio_id = int(annuncio["id"])
+            autore_id = int(annuncio["utente_id"])
+            categoria = (annuncio["categoria"] or "").strip()
+            tipo_annuncio = (annuncio["tipo_annuncio"] or "").strip().lower()
+            zona = (annuncio["zona"] or "").strip()
+            provincia = (annuncio["provincia"] or "").strip()
+            titolo = (annuncio["titolo"] or "").strip()
+
+            idx = CATEGORIA_TO_INDEX.get(to_slug(categoria))
+
+            if not idx:
+                annunci_processati.append(annuncio_id)
                 continue
 
-            try:
-                c.execute(sql("""
-                    INSERT INTO match_utenti
-                    (utente_cerca_id, utente_offre_id, categoria, zona, annuncio_id)
-                    VALUES (?, ?, ?, ?, ?)
-                """), (u["id"], offre_id, categoria, zona, annuncio_id))
+            if tipo_annuncio == "offro":
+                colonna_match = f"cerco_{idx}"
+                tipo_match = "cerco"
+            elif tipo_annuncio == "cerco":
+                colonna_match = f"offro_{idx}"
+                tipo_match = "offro"
+            else:
+                annunci_processati.append(annuncio_id)
+                continue
 
-                notifiche_per_utente.setdefault(u["id"], {})
-                notifiche_per_utente[u["id"]].setdefault(categoria, 0)
-                notifiche_per_utente[u["id"]][categoria] += 1
+            cur.execute(sql(f"""
+                SELECT id, citta, provincia, email_notifiche
+                FROM utenti
+                WHERE COALESCE({colonna_match}, 0) = 1
+                  AND attivo = 1
+                  AND sospeso = 0
+                  AND COALESCE(disattivato_admin, 0) = 0
+                  AND id != ?
+            """), (autore_id,))
 
-            except sqlite3.IntegrityError:
-                pass
+            utenti = cur.fetchall()
 
-        annunci_processati.append(annuncio_id)
+            for utente in utenti:
+                uid = int(utente["id"])
 
-    # 🔔 NOTIFICHE RIASSUNTIVE (1 PER UTENTE)
-    now = datetime.now(ZoneInfo("Europe/Rome"))
+                citta_utente = utente["citta"] or ""
+                provincia_utente = utente["provincia"] or ""
 
-    for user_id, cats in notifiche_per_utente.items():
+                match_zona = False
 
-        righe = []
-        for categoria, n in cats.items():
-            label = "annuncio" if n == 1 else "annunci"
-            righe.append(f"• {categoria} ({n})")
+                if zona and citta_utente:
+                    match_zona = place_match(zona, citta_utente)
 
-        messaggio = (
-            "Nuovi annunci nella tua zona:\n"
-            + "\n".join(righe)
-        )
+                if not match_zona and provincia and provincia_utente:
+                    match_zona = norm_place(provincia) == norm_place(provincia_utente)
 
-        c.execute(sql("""
-            INSERT INTO notifiche (
-                id_utente, titolo, messaggio, link, tipo, data
+                if not match_zona:
+                    continue
+
+                try:
+                    cur.execute(sql("""
+                        INSERT INTO match_utenti (
+                            utente_cerca_id,
+                            utente_offre_id,
+                            categoria,
+                            zona,
+                            annuncio_id
+                        )
+                        VALUES (?, ?, ?, ?, ?)
+                    """), (
+                        uid if tipo_match == "cerco" else autore_id,
+                        autore_id if tipo_match == "cerco" else uid,
+                        categoria,
+                        zona,
+                        annuncio_id
+                    ))
+
+                    match_creati += 1
+
+                except Exception as e:
+                    # Se il match esiste già o l'inserimento fallisce per un singolo utente,
+                    # non blocchiamo l'intero ciclo.
+                    # Non facciamo rollback qui perché la connessione lavora in autocommit
+                    # su PostgreSQL nel wrapper attuale, e un rollback nel ciclo rischierebbe
+                    # di annullare altre operazioni già valide in locale/SQLite.
+                    log_exception_safe(
+                        "⚠️ Daily Matches: match singolo non inserito",
+                        e,
+                        {
+                            "annuncio_id": annuncio_id,
+                            "user_id": uid
+                        }
+                    )
+                    
+                notifiche_per_utente.setdefault(uid, {})
+                notifiche_per_utente[uid].setdefault(categoria, 0)
+                notifiche_per_utente[uid][categoria] += 1
+
+            annunci_processati.append(annuncio_id)
+
+        # =====================================================
+        # NOTIFICHE RIEPILOGATIVE: massimo 1 per utente
+        # =====================================================
+        utenti_notificati = 0
+
+        for user_id, categorie_count in notifiche_per_utente.items():
+            righe = []
+
+            for categoria, n in categorie_count.items():
+                label = "nuovo annuncio" if n == 1 else "nuovi annunci"
+                righe.append(f"• {categoria} ({n} {label})")
+
+            messaggio = (
+                "Abbiamo trovato nuovi annunci compatibili con le tue preferenze:\n"
+                + "\n".join(righe)
             )
-            VALUES (?, ?, ?, ?, ?, ?)
-        """), (
-            user_id,
-            "Nuovi annunci disponibili",
-            messaggio,
-            "/cerca",
-            "match",
-            now
-        ))
 
-    # Segna match come notificati
-    c.execute(sql("UPDATE match_utenti SET notificato = 1 WHERE notificato = 0"))
+            if channel in ("internal", "both"):
+                cur.execute(sql("""
+                    INSERT INTO notifiche (
+                        id_utente,
+                        titolo,
+                        messaggio,
+                        link,
+                        tipo,
+                        letta
+                    )
+                    VALUES (?, ?, ?, ?, ?, 0)
+                """), (
+                    int(user_id),
+                    "Nuovi annunci compatibili",
+                    messaggio,
+                    "/cerca",
+                    "match"
+                ))
 
-    if annunci_processati:
-        q = ",".join("?" * len(annunci_processati))
-        c.execute(
-            f"UPDATE annunci SET match_da_processare = 0 WHERE id IN ({q})",
-            annunci_processati
+                emit_update_notifications(int(user_id))
+
+            if channel in ("email", "both"):
+                invia_email_daily_match(
+                    user_id=int(user_id),
+                    categorie_count=categorie_count
+                )
+
+            utenti_notificati += 1
+
+        # =====================================================
+        # SEGNA ANNUNCI COME PROCESSATI
+        # =====================================================
+        if annunci_processati:
+            placeholders = ",".join(["?"] * len(annunci_processati))
+
+            cur.execute(sql(f"""
+                UPDATE annunci
+                SET match_da_processare = 0
+                WHERE id IN ({placeholders})
+            """), annunci_processati)
+
+        conn.commit()
+
+        result = {
+            "ok": True,
+            "annunci_processati": len(annunci_processati),
+            "utenti_notificati": utenti_notificati,
+            "match_creati": match_creati
+        }
+
+        security_log(
+            "✅ Daily Matches completato",
+            result,
+            production=True
         )
 
-    conn.commit()
+        return result
 
-    return len(annunci_processati)
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        log_exception_safe(
+            "❌ Errore Daily Matches",
+            e,
+            production=True
+        )
+
+        return {
+            "ok": False,
+            "error": "daily_matches_failed",
+            "annunci_processati": 0,
+            "utenti_notificati": 0,
+            "match_creati": 0
+        }
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=None, **kwargs):
@@ -7674,6 +8094,104 @@ def pulizia_notifiche_background_loop():
 # Il servizio realtime/chat non deve occuparsi della manutenzione DB ordinaria.
 if APP_RUNTIME_ROLE == "web":
     socketio.start_background_task(pulizia_notifiche_background_loop)
+
+# ==========================================================
+# 🔁 DAILY MATCHES — LOOP AUTOMATICO GIORNALIERO
+# ==========================================================
+
+def daily_matches_background_loop():
+    """
+    Esegue il controllo Daily Matches ogni giorno all'orario configurato.
+
+    Protezioni:
+    - gira solo sul servizio web;
+    - usa Redis lock per evitare doppie esecuzioni su più worker;
+    - salva in Redis la data dell'ultima esecuzione per non ripetere lo stesso giorno.
+    """
+
+    socketio.sleep(30)
+
+    while True:
+        try:
+            with app.app_context():
+                settings = get_daily_matches_settings()
+
+                if not settings.get("enabled", True):
+                    socketio.sleep(60)
+                    continue
+
+                now_rome = datetime.now(ZoneInfo("Europe/Rome"))
+                today_key = now_rome.strftime("%Y-%m-%d")
+                current_hm = now_rome.strftime("%H:%M")
+                target_hm = settings.get("time", "08:00")
+
+                last_run_key = "daily_matches:last_run_date"
+                lock_key = "lock:daily_matches"
+
+                last_run = redis_client.get(last_run_key)
+
+                if isinstance(last_run, bytes):
+                    last_run = last_run.decode("utf-8")
+
+                if current_hm >= target_hm and last_run != today_key:
+                    lock_token = secrets.token_hex(16)
+
+                    lock_acquired = redis_client.set(
+                        lock_key,
+                        lock_token,
+                        nx=True,
+                        ex=1800
+                    )
+
+                    if lock_acquired:
+                        try:
+                            result = processa_match_nuovi_annunci(
+                                channel=settings.get("channel", "internal")
+                            )
+
+                            redis_client.set(
+                                last_run_key,
+                                today_key,
+                                ex=60 * 60 * 48
+                            )
+
+                            security_log(
+                                "✅ Daily Matches automatico eseguito",
+                                {
+                                    "date": today_key,
+                                    "time": current_hm,
+                                    "settings": settings,
+                                    "result": result
+                                },
+                                production=True
+                            )
+
+                        finally:
+                            try:
+                                valore_lock = redis_client.get(lock_key)
+
+                                if isinstance(valore_lock, bytes):
+                                    valore_lock = valore_lock.decode("utf-8")
+
+                                if valore_lock == lock_token:
+                                    redis_client.delete(lock_key)
+
+                            except Exception:
+                                pass
+
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Errore loop Daily Matches",
+                e,
+                production=True
+            )
+
+        socketio.sleep(60)
+
+
+# Avvio automatico solo sul servizio web.
+if APP_RUNTIME_ROLE == "web":
+    socketio.start_background_task(daily_matches_background_loop)
 
 # Rende disponibile in tutti i template un helper per le notifiche non lette
 @app.context_processor
