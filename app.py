@@ -4070,6 +4070,14 @@ def admin_toggle_servizio():
 
         ambito = servizio["ambito"]
 
+        # 🔒 Alcuni servizi sono SEMPRE di profilo anche se vengono cliccati
+        # dalla pagina admin_annunci. Replichiamo il comportamento della pagina admin_utenti:
+        # - contatti
+        # - badge_affidabilita
+        # non devono mai richiedere annuncio_id.
+        if codice_servizio in ("contatti", "badge_affidabilita"):
+            ambito = "profilo"
+    
         # 2️⃣ cerca attivazione attiva
         if ambito == "annuncio":
 
@@ -7086,7 +7094,7 @@ def admin_annunci():
                   AND s.codice = 'contatti'
                   AND act.stato = 'attivo'
             ) THEN 1 ELSE 0 END AS has_contatti,
-            
+
             /* PACCHETTO VISIBILITÀ
                Attivo solo se TUTTI i servizi collegati al pacchetto risultano attivi.
                I servizi profilo vengono controllati su utente_id + annuncio_id NULL.
