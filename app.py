@@ -6752,6 +6752,58 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin", conn
             except Exception:
                 pass
 
+def redirect_admin_recensioni_next():
+    """
+    Redirect sicuro verso admin_recensioni conservando eventuali filtri.
+    Usa prima ?next=..., poi request.referrer, poi fallback pulito.
+    """
+    from urllib.parse import urlparse
+
+    next_url = request.args.get("next") or request.referrer
+
+    if next_url:
+        parsed = urlparse(next_url)
+
+        # Caso 1: path interno tipo /admin/recensioni?stato=in_attesa
+        if not parsed.netloc and parsed.path == url_for("admin_recensioni"):
+            query = f"?{parsed.query}" if parsed.query else ""
+            return redirect(parsed.path + query)
+
+        # Caso 2: referrer assoluto stesso dominio
+        if parsed.netloc == request.host and parsed.path == url_for("admin_recensioni"):
+            query = f"?{parsed.query}" if parsed.query else ""
+            return redirect(parsed.path + query)
+
+    return redirect(url_for("admin_recensioni"))
+
+def redirect_admin_annunci_next():
+    """
+    Redirect sicuro verso admin_annunci conservando eventuali filtri.
+
+    Priorità:
+    1. ?next=/admin/annunci?...
+    2. request.referrer se arriva da /admin/annunci?...
+    3. fallback a /admin/annunci
+    """
+    from urllib.parse import urlparse
+
+    next_url = request.args.get("next") or request.referrer
+
+    if next_url:
+        parsed = urlparse(next_url)
+
+        # Caso 1: path interno tipo /admin/annunci?stato=in_attesa
+        if not parsed.netloc and parsed.path == url_for("admin_annunci"):
+            query = f"?{parsed.query}" if parsed.query else ""
+            return redirect(parsed.path + query)
+
+        # Caso 2: referrer assoluto stesso dominio
+        if parsed.netloc == request.host and parsed.path == url_for("admin_annunci"):
+            query = f"?{parsed.query}" if parsed.query else ""
+            return redirect(parsed.path + query)
+
+    return redirect(url_for("admin_annunci"))
+
 # ==========================================================
 # APPROVA / RIFIUTA RECENSIONI E RISPOSTE
 # ==========================================================
@@ -6804,8 +6856,10 @@ def approva_recensione(id):
     if next_url and next_url.startswith("/admin/recensioni"):
         return redirect(next_url)
 
-    return redirect(url_for("admin_recensioni"))
+    except Exception as e:
+        flash(f"Errore durante l'approvazione: {e}", "danger")
 
+    return redirect_admin_recensioni_next()
 
 @app.route("/admin/recensioni/rifiuta/<int:id>")
 @admin_required
@@ -6839,11 +6893,7 @@ def rifiuta_recensione(id):
     except Exception as e:
         flash(f"Errore durante il rifiuto: {e}", "danger")
 
-    next_url = request.args.get("next")
-    if next_url and next_url.startswith("/admin/recensioni"):
-        return redirect(next_url)
-
-    return redirect(url_for("admin_recensioni"))
+    return redirect_admin_recensioni_next()
 
 @app.route("/admin/risposte/approva/<int:id>")
 @admin_required
@@ -6884,11 +6934,7 @@ def approva_risposta(id):
     except Exception as e:
         flash(f"Errore durante l'approvazione della risposta: {e}", "danger")
 
-    next_url = request.args.get("next")
-    if next_url and next_url.startswith("/admin/recensioni"):
-        return redirect(next_url)
-
-    return redirect(url_for("admin_recensioni"))
+    return redirect_admin_recensioni_next()
 
 @app.route("/admin/risposte/rifiuta/<int:id>")
 @admin_required
@@ -6926,12 +6972,7 @@ def rifiuta_risposta(id):
     except Exception as e:
         flash(f"Errore durante il rifiuto della risposta: {e}", "danger")
 
-    next_url = request.args.get("next")
-    if next_url and next_url.startswith("/admin/recensioni"):
-        return redirect(next_url)
-
-    return redirect(url_for("admin_recensioni"))
-
+    return redirect_admin_recensioni_next()
 # ==========================================================
 # ADMIN – LISTA ANNUNCI
 # ==========================================================
@@ -7217,10 +7258,7 @@ def approva_annuncio(id):
     # 🔁 Aggiorna counters admin (annunci in attesa)
     invalidate_admin_counters()
 
-    next_url = request.args.get("next")
-    if next_url and next_url.startswith("/admin/annunci"):
-        return redirect(next_url)
-    return redirect(url_for("admin_annunci"))
+    return redirect_admin_annunci_next()
 
 @app.route("/admin/annunci/rifiuta/<int:id>")
 @admin_required
@@ -7259,12 +7297,8 @@ def rifiuta_annuncio(id):
 
     flash("Annuncio rifiutato ❌", "warning")
 
-    next_url = request.args.get("next")
-    if next_url and next_url.startswith("/admin/annunci"):
-        return redirect(next_url)
-
-    return redirect(url_for("admin_annunci"))
-
+    return redirect_admin_annunci_next()
+    
 # ==========================================================
 # NOTIFICHE - FUNZIONI DI SUPPORTO (AGGIUNTA)
 # ==========================================================
