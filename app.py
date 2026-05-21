@@ -4173,16 +4173,14 @@ def admin_toggle_servizio():
                             stato,
                             data_inizio,
                             data_fine,
-                            attivato_da,
-                            note
+                            attivato_da
                         )
-                        VALUES (?, ?, NULL, 'attivo', {now_sql()}, NULL, ?, ?)
+                        VALUES (?, ?, NULL, 'attivo', {now_sql()}, NULL, ?)
                         """,
                         (
                             int(servizio["id"]),
                             int(utente_id),
-                            "admin",
-                            "Attivazione manuale admin"
+                            "admin"
                         )
                     )
 
