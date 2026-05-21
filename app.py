@@ -5153,10 +5153,16 @@ def admin_recensioni():
                 return False
 
         if stato:
-            ok = ok and (str(r.get("stato") or "").lower() == stato)
+            stato_recensione = str(r.get("stato") or "").lower()
+            stato_risposta = str(r.get("risposta_stato") or "").lower()
+
+            ok = ok and (
+                stato_recensione == stato
+                or stato_risposta == stato
+            )
 
         return ok
-
+        
     recensioni_filtrate = [r for r in recensioni_dict if match(r)]
 
     totale_recensioni = len(recensioni_dict)
@@ -6853,7 +6859,7 @@ def approva_recensione(id):
         flash(f"Errore durante l'approvazione: {e}", "danger")
 
     return redirect_admin_recensioni_next()
-    
+
 @app.route("/admin/recensioni/rifiuta/<int:id>")
 @admin_required
 def rifiuta_recensione(id):
