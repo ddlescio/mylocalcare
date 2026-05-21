@@ -982,11 +982,11 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
             data-review-autore-mail="{% if r.get('autore_email') %}mailto:{{ r.get('autore_email') }}{% else %}#{% endif %}"
             data-review-dest-chat="{% if r.get('dest_id') %}{{ url_for('chat_conversazione_view', other_id=r.get('dest_id')) }}{% else %}#{% endif %}"
             data-review-dest-mail="{% if r.get('dest_email') %}mailto:{{ r.get('dest_email') }}{% else %}#{% endif %}"
-            data-review-approva-url="{% if r.get('stato') != 'approvato' %}{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}{% else %}#{% endif %}"
-            data-review-rifiuta-url="{% if r.get('stato') != 'rifiutato' %}{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}{% else %}#{% endif %}"
+            data-review-approva-url="{{ url_for('approva_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
+            data-review-rifiuta-url="{{ url_for('rifiuta_recensione', id=r.get('recensione_id'), next=request.full_path) }}"
             data-reply-id="{{ r.get('risposta_id') or '' }}"
-            data-reply-approva-url="{% if r.get('risposta_id') and r.get('risposta_stato') != 'approvato' %}{{ url_for('approva_risposta', id=r.get('risposta_id'), next=request.full_path) }}{% else %}#{% endif %}"
-            data-reply-rifiuta-url="{% if r.get('risposta_id') and r.get('risposta_stato') == 'approvato' %}{{ url_for('rifiuta_risposta', id=r.get('risposta_id'), next=request.full_path) }}{% else %}#{% endif %}">
+            data-reply-approva-url="{% if r.get('risposta_id') %}{{ url_for('approva_risposta', id=r.get('risposta_id'), next=request.full_path) }}{% else %}#{% endif %}"
+            data-reply-rifiuta-url="{% if r.get('risposta_id') %}{{ url_for('rifiuta_risposta', id=r.get('risposta_id'), next=request.full_path) }}{% else %}#{% endif %}">
 
           <!-- AUTORE -->
           <td class="text-gray-800 font-medium">
@@ -1338,6 +1338,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const openReviewModal = (row) => {
     if (window.innerWidth >= 1080) return;
 
+    window.__currentReviewModalRow = row;
+
     const d = row.dataset;
 
     setText("review-modal-title", "Recensione #" + (d.reviewId || "-"));
@@ -1359,6 +1361,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setHref("modal-review-approve", d.reviewApprovaUrl);
     setHref("modal-review-reject", d.reviewRifiutaUrl);
+    const modalApprove = document.getElementById("modal-review-approve");
+    const modalReject = document.getElementById("modal-review-reject");
+
+    if (modalApprove) {
+      modalApprove.classList.add("js-review-action");
+      modalApprove.dataset.action = "approva-recensione";
+    }
+
+    if (modalReject) {
+      modalReject.classList.add("js-review-action");
+      modalReject.dataset.action = "rifiuta-recensione";
+    }
 
     const replyAction = document.getElementById("modal-reply-action");
 
@@ -1374,13 +1388,15 @@ document.addEventListener("DOMContentLoaded", () => {
         replyAction.textContent = "Approva risposta";
         replyAction.href = d.replyApprovaUrl;
         replyAction.classList.remove("disabled");
-        replyAction.classList.add("green");
+        replyAction.classList.add("green", "js-review-action");
+        replyAction.dataset.action = "approva-risposta";
         replyAction.style.pointerEvents = "";
       } else if (d.replyRifiutaUrl && d.replyRifiutaUrl !== "#") {
         replyAction.textContent = "Rifiuta risposta";
         replyAction.href = d.replyRifiutaUrl;
         replyAction.classList.remove("disabled");
-        replyAction.classList.add("red");
+        replyAction.classList.add("red", "js-review-action");
+        replyAction.dataset.action = "rifiuta-risposta";
         replyAction.style.pointerEvents = "";
       } else {
         replyAction.textContent = "Risposta già gestita";
@@ -1427,7 +1443,14 @@ document.addEventListener("click", async (e) => {
   e.preventDefault();
   e.stopPropagation();
 
-  const row = btn.closest(".review-row");
+  let row = btn.closest(".review-row");
+
+  // Se il click arriva dalla modale, il bottone non è dentro la riga.
+  // Recuperiamo quindi la riga che ha aperto la modale.
+  if (!row && window.__currentReviewModalRow) {
+    row = window.__currentReviewModalRow;
+  }
+
   if (!row) return;
 
   const url = btn.getAttribute("href");
@@ -1510,10 +1533,10 @@ function aggiornaStatoRecensioneInPagina(row, nuovoStato) {
     statoCell.innerHTML = badgeStatoRecensione(nuovoStato);
   }
 
-  if (azioniCell) {
-    const approveUrl = row.dataset.reviewApprovaUrl;
-    const rejectUrl = row.dataset.reviewRifiutaUrl;
+  const approveUrl = row.dataset.reviewApprovaUrl;
+  const rejectUrl = row.dataset.reviewRifiutaUrl;
 
+  if (azioniCell) {
     if (nuovoStato === "approvato") {
       azioniCell.innerHTML = `
         <a href="${rejectUrl}"
@@ -1539,6 +1562,37 @@ function aggiornaStatoRecensioneInPagina(row, nuovoStato) {
   if (modalStato) {
     modalStato.textContent = nuovoStato;
   }
+
+  const modalApprove = document.getElementById("modal-review-approve");
+  const modalReject = document.getElementById("modal-review-reject");
+
+  if (modalApprove && modalReject) {
+    modalApprove.classList.add("js-review-action");
+    modalReject.classList.add("js-review-action");
+
+    modalApprove.dataset.action = "approva-recensione";
+    modalReject.dataset.action = "rifiuta-recensione";
+
+    if (nuovoStato === "approvato") {
+      modalApprove.href = "#";
+      modalApprove.classList.add("disabled");
+      modalApprove.style.pointerEvents = "none";
+
+      modalReject.href = rejectUrl;
+      modalReject.classList.remove("disabled");
+      modalReject.style.pointerEvents = "";
+    }
+
+    if (nuovoStato === "rifiutato") {
+      modalReject.href = "#";
+      modalReject.classList.add("disabled");
+      modalReject.style.pointerEvents = "none";
+
+      modalApprove.href = approveUrl;
+      modalApprove.classList.remove("disabled");
+      modalApprove.style.pointerEvents = "";
+    }
+  }
 }
 
 function aggiornaStatoRispostaInPagina(row, nuovoStato) {
@@ -1551,10 +1605,10 @@ function aggiornaStatoRispostaInPagina(row, nuovoStato) {
     statoCell.innerHTML = badgeStatoRisposta(nuovoStato);
   }
 
-  if (azioniCell) {
-    const approveUrl = row.dataset.replyApprovaUrl;
-    const rejectUrl = row.dataset.replyRifiutaUrl;
+  const approveUrl = row.dataset.replyApprovaUrl;
+  const rejectUrl = row.dataset.replyRifiutaUrl;
 
+  if (azioniCell) {
     if (nuovoStato === "approvato") {
       azioniCell.innerHTML = `
         <a href="${rejectUrl}"
@@ -1582,24 +1636,27 @@ function aggiornaStatoRispostaInPagina(row, nuovoStato) {
   }
 
   const modalReplyAction = document.getElementById("modal-reply-action");
-  if (modalReplyAction && row.classList.contains("review-row")) {
+
+  if (modalReplyAction) {
+    modalReplyAction.classList.remove("disabled", "green", "red", "secondary");
+    modalReplyAction.classList.add("js-review-action");
+
     if (nuovoStato === "approvato") {
       modalReplyAction.textContent = "Rifiuta risposta";
-      modalReplyAction.href = row.dataset.replyRifiutaUrl || "#";
-      modalReplyAction.className = "review-modal-action red js-review-action";
+      modalReplyAction.href = rejectUrl;
+      modalReplyAction.classList.add("red");
       modalReplyAction.dataset.action = "rifiuta-risposta";
       modalReplyAction.style.pointerEvents = "";
     }
 
     if (nuovoStato === "rifiutato") {
       modalReplyAction.textContent = "Approva risposta";
-      modalReplyAction.href = row.dataset.replyApprovaUrl || "#";
-      modalReplyAction.className = "review-modal-action green js-review-action";
+      modalReplyAction.href = approveUrl;
+      modalReplyAction.classList.add("green");
       modalReplyAction.dataset.action = "approva-risposta";
       modalReplyAction.style.pointerEvents = "";
     }
   }
 }
 </script>
-
 {% endblock %}
