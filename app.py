@@ -6811,6 +6811,7 @@ def redirect_admin_annunci_next():
 @admin_required
 def approva_recensione(id):
     from models import approva_elemento
+
     try:
         approva_elemento("recensioni", id)
 
@@ -6823,7 +6824,6 @@ def approva_recensione(id):
             WHERE r.id = ?
         """), (id,))
         row = c.fetchone()
-
 
         if row:
             id_autore = list(row.values())[0]
@@ -6852,15 +6852,8 @@ def approva_recensione(id):
     except Exception as e:
         flash(f"Errore durante l'approvazione: {e}", "danger")
 
-    next_url = request.args.get("next")
-    if next_url and next_url.startswith("/admin/recensioni"):
-        return redirect(next_url)
-
-    except Exception as e:
-        flash(f"Errore durante l'approvazione: {e}", "danger")
-
     return redirect_admin_recensioni_next()
-
+    
 @app.route("/admin/recensioni/rifiuta/<int:id>")
 @admin_required
 def rifiuta_recensione(id):
@@ -7298,7 +7291,7 @@ def rifiuta_annuncio(id):
     flash("Annuncio rifiutato ❌", "warning")
 
     return redirect_admin_annunci_next()
-    
+
 # ==========================================================
 # NOTIFICHE - FUNZIONI DI SUPPORTO (AGGIUNTA)
 # ==========================================================
