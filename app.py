@@ -9746,7 +9746,7 @@ def internal_push_send():
             str(body),
             url=push_url
         )
-        
+
         security_log(
             "✅ [internal_push_send] invia_push completata",
             {"user_id": user_id}
@@ -10817,20 +10817,73 @@ def logout():
         )
         return redirect(url_for('login'))
 
+    user_id = session.get("utente_id")
+
     # 🔵 Caso normale
+    # Prima di cancellare la sessione, rimuoviamo anche le push subscription
+    # collegate all'utente attualmente loggato.
+    if user_id:
+        conn = None
+        cur = None
 
-    # 🧹 Reset token e fingerprint admin nel DB (solo se era loggato)
-    if session.get("utente_id"):
-        conn = get_db_connection()
-        conn.execute(sql("""
-            UPDATE utenti
-            SET admin_session_token = NULL,
-                admin_session_expiry = NULL,
-                admin_browser_fingerprint = NULL
-            WHERE id = ?
-        """), (session["utente_id"],))
-        conn.commit()
+        try:
+            conn = get_db_connection()
+            cur = get_cursor(conn)
 
+            # 🧹 Reset token e fingerprint admin nel DB
+            cur.execute(sql("""
+                UPDATE utenti
+                SET admin_session_token = NULL,
+                    admin_session_expiry = NULL,
+                    admin_browser_fingerprint = NULL
+                WHERE id = ?
+            """), (user_id,))
+
+            # 🔕 Logout = questo utente non deve più ricevere push
+            # su subscription associate a questa sessione/account.
+            cur.execute(sql("""
+                DELETE FROM push_subscriptions
+                WHERE utente_id = ?
+            """), (user_id,))
+
+            conn.commit()
+
+            security_log(
+                "🔕 [logout] push subscriptions rimosse",
+                {
+                    "user_id": user_id
+                },
+                production=True
+            )
+
+        except Exception as e:
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+
+            log_exception_safe(
+                "⚠️ [logout] errore pulizia sessione/push",
+                e,
+                {
+                    "user_id": user_id
+                },
+                production=True
+            )
+
+        finally:
+            try:
+                if cur:
+                    cur.close()
+            except Exception:
+                pass
+
+            try:
+                if conn:
+                    conn.close()
+            except Exception:
+                pass
 
     session.pop("dek_b64", None)
     session.pop("id_priv_b64", None)
@@ -10840,7 +10893,7 @@ def logout():
 
     flash('Sei uscito correttamente.', 'info')
     return redirect(url_for('login'))
-
+    
 # ==========================================================
 # 6️⃣ ROTTE PUBBLICHE
 # ==========================================================
