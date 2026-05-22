@@ -2709,29 +2709,28 @@ window.addEventListener("load", async () => {
       pagePath === "/home" ||
       pagePath.startsWith("/cerca");
 
-    const isIosDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isStandaloneApp =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true;
+      const isStandaloneApp =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
 
-    /*
-      iPhone/iPad:
-      le Web Push hanno senso solo nella PWA installata.
-      Nel browser Safari normale non mostriamo il prompt "Attiva notifiche".
-    */
-    if (isIosDevice && !isStandaloneApp) {
-      console.log("🔔 Push skip: iOS/iPadOS in browser normale, serve PWA installata");
-      return;
-    }
+      /*
+        Regola MyLocalCare:
+        le notifiche push vengono proposte solo nella PWA installata.
+        Nel browser normale — Safari Mac, Safari iPhone, Chrome, ecc. —
+        non mostriamo il prompt "Attiva notifiche".
+      */
+      if (!isStandaloneApp) {
+        console.log("🔔 Push skip: browser normale, notifiche proposte solo in PWA installata");
+        return;
+      }
 
-    console.log("🔔 Push page check:", {
-      pagePath,
-      allowedPage,
-      permission: Notification.permission,
-      isIosDevice,
-      isStandaloneApp
-    });
-    
+      console.log("🔔 Push page check:", {
+        pagePath,
+        allowedPage,
+        permission: Notification.permission,
+        isStandaloneApp
+      });
+          
     if (!allowedPage) {
       console.log("🔔 Push sync skip: pagina non target", pagePath);
       return;
