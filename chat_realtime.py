@@ -289,9 +289,9 @@ def register_chat_socket_handlers(
                     )
                     _invia_push_via_web_service(
                         destinatario_id,
-                        "Nuovo messaggio su MyLocalCare",
+                        "Nuovo messaggio",
                         testo[:100],
-                        push_url="/chat"
+                        "/utente/messaggi"
                     )
 
                     print(

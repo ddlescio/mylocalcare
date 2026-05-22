@@ -9715,6 +9715,7 @@ def internal_push_send():
         user_id = data.get("user_id")
         title = data.get("title")
         body = data.get("body")
+        push_url = data.get("url") or None
         push_url = data.get("url")
 
         if not user_id or not title or body is None:
@@ -9743,9 +9744,9 @@ def internal_push_send():
             int(user_id),
             str(title),
             str(body),
-            url=str(push_url) if push_url else None
+            url=push_url
         )
-
+        
         security_log(
             "✅ [internal_push_send] invia_push completata",
             {"user_id": user_id}
