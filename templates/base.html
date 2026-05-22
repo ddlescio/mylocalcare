@@ -2709,12 +2709,29 @@ window.addEventListener("load", async () => {
       pagePath === "/home" ||
       pagePath.startsWith("/cerca");
 
+    const isIosDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandaloneApp =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+
+    /*
+      iPhone/iPad:
+      le Web Push hanno senso solo nella PWA installata.
+      Nel browser Safari normale non mostriamo il prompt "Attiva notifiche".
+    */
+    if (isIosDevice && !isStandaloneApp) {
+      console.log("🔔 Push skip: iOS/iPadOS in browser normale, serve PWA installata");
+      return;
+    }
+
     console.log("🔔 Push page check:", {
       pagePath,
       allowedPage,
-      permission: Notification.permission
+      permission: Notification.permission,
+      isIosDevice,
+      isStandaloneApp
     });
-
+    
     if (!allowedPage) {
       console.log("🔔 Push sync skip: pagina non target", pagePath);
       return;
@@ -2771,7 +2788,7 @@ window.addEventListener("load", async () => {
 
       console.log("🔔 Push già valutata per user", currentUserId, lastSynced);
       return;
-    }    
+    }
     /*
       Caso C:
       Permesso non ancora richiesto.
