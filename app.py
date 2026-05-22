@@ -6693,12 +6693,14 @@ def invia_email_daily_match(user_id, categorie_count):
 
         nome = user["nome"] or user["username"] or "utente"
 
+        home_url = f"{app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')}/home"
+
         corpo = (
             f"Ciao {nome},\n\n"
             "abbiamo trovato nuovi annunci compatibili con le tue preferenze:\n\n"
             + "\n".join(righe)
             + "\n\nPuoi consultarli su MyLocalCare:\n"
-            + build_external_url("cerca")
+            + home_url
             + "\n\nMyLocalCare"
         )
 
@@ -9378,7 +9380,7 @@ import os
 from psycopg2.extras import RealDictCursor
 
 
-def invia_push(user_id, title, body):
+def invia_push(user_id, title, body, url=None):
     conn = None
     cur = None
 
@@ -9446,6 +9448,8 @@ def invia_push(user_id, title, body):
             endpoint = sub["endpoint"]
 
             try:
+                push_url = url or "/notifiche"
+
                 webpush(
                     subscription_info={
                         "endpoint": endpoint,
@@ -9457,7 +9461,7 @@ def invia_push(user_id, title, body):
                     data=json.dumps({
                         "title": title,
                         "body": body,
-                        "url": "/utente/messaggi"
+                        "url": push_url
                     }),
                     vapid_private_key=VAPID_PRIVATE_KEY,
                     vapid_claims={
@@ -9627,9 +9631,10 @@ def notifica_admin_evento(titolo, messaggio, link=None, push=True):
                     invia_push(
                         admin_id,
                         titolo,
-                        messaggio
+                        messaggio,
+                        url=link or url_for("admin_dashboard")
                     )
-
+    
             except Exception as e:
                 log_exception_safe(
                     "⚠️ Errore notifica_admin_evento per singolo admin",
