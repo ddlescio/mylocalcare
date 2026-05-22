@@ -6930,6 +6930,8 @@ def processa_match_nuovi_annunci(channel=None):
             )
 
             if channel in ("internal", "both"):
+                link_notifica = url_for("home_v2")
+
                 cur.execute(sql("""
                     INSERT INTO notifiche (
                         id_utente,
@@ -6944,11 +6946,31 @@ def processa_match_nuovi_annunci(channel=None):
                     int(user_id),
                     "Nuovi annunci compatibili",
                     messaggio,
-                    url_for("home_v2"),
+                    link_notifica,
                     "match"
                 ))
 
                 emit_update_notifications(int(user_id))
+
+                # REGOLA DAILY MATCHES:
+                # - internal = notifica interna + push
+                # - both = email + notifica interna, NO push
+                # - email = solo email, NO push
+                if channel == "internal":
+                    try:
+                        invia_push(
+                            int(user_id),
+                            "Nuovi annunci compatibili",
+                            messaggio,
+                            url=link_notifica
+                        )
+                    except Exception as e:
+                        log_exception_safe(
+                            "⚠️ Errore push Daily Matches",
+                            e,
+                            {"user_id": int(user_id)},
+                            production=True
+                        )
 
             if channel in ("email", "both"):
                 invia_email_daily_match(
@@ -9634,7 +9656,7 @@ def notifica_admin_evento(titolo, messaggio, link=None, push=True):
                         messaggio,
                         url=link or url_for("admin_dashboard")
                     )
-    
+
             except Exception as e:
                 log_exception_safe(
                     "⚠️ Errore notifica_admin_evento per singolo admin",
@@ -9693,8 +9715,10 @@ def internal_push_send():
         user_id = data.get("user_id")
         title = data.get("title")
         body = data.get("body")
+        push_url = data.get("url")
 
         if not user_id or not title or body is None:
+
             security_log(
                 "❌ [internal_push_send] payload non valido",
                 {
@@ -9715,7 +9739,12 @@ def internal_push_send():
             }
         )
 
-        invia_push(int(user_id), str(title), str(body))
+        invia_push(
+            int(user_id),
+            str(title),
+            str(body),
+            url=str(push_url) if push_url else None
+        )
 
         security_log(
             "✅ [internal_push_send] invia_push completata",
