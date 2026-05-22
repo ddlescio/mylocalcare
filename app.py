@@ -1212,8 +1212,23 @@ safe_log("APP_BASE_URL configurata", production=True)
 # 📧 FUNZIONI EMAIL – UTENTE
 # ---------------------------------------------------------
 def build_external_url(endpoint: str, **values) -> str:
-    base = (app.config.get("APP_BASE_URL") or "").rstrip("/")
-    path = url_for(endpoint, _external=False, **values)   # /conferma/<token>
+    """
+    Costruisce URL assoluti usando APP_BASE_URL.
+
+    Funziona sia dentro una normale request Flask,
+    sia dentro background task come Daily Matches,
+    dove non esiste una request attiva.
+    """
+    base = (app.config.get("APP_BASE_URL") or "https://www.mylocalcare.it").rstrip("/")
+
+    try:
+        # Caso normale: siamo dentro una request attiva
+        path = url_for(endpoint, _external=False, **values)
+    except RuntimeError:
+        # Caso background task: non c'è request context
+        with app.test_request_context(base_url=base):
+            path = url_for(endpoint, _external=False, **values)
+
     return f"{base}{path}"
 
 def send_async_email(app, msg):
@@ -6029,10 +6044,30 @@ def admin_invia_notifica():
         print("❌ ERRORE storico notifiche_admin:", e)
 
     # 3️⃣ INVIO NOTIFICHE
+    invia_notifica_interna = (
+        "notifica" in tipo_invio
+        or "entrambi" in tipo_invio
+    )
+
+    invia_email = (
+        "email" in tipo_invio
+        or "entrambi" in tipo_invio
+    )
+
+    # Regola richiesta:
+    # - solo notifica interna => anche push
+    # - email + notifica interna => niente push
+    # - solo email => niente push
+    invia_push_notification = (
+        invia_notifica_interna
+        and not invia_email
+    )
+
     inviati = 0
+
     for user in destinatari:
 
-        if "notifica" in tipo_invio or "entrambi" in tipo_invio:
+        if invia_notifica_interna:
             _crea_notifica(
                 user["id"],
                 titolo,
@@ -6040,9 +6075,25 @@ def admin_invia_notifica():
                 tipo="generica",
                 link=link
             )
+
             emit_update_notifications(user["id"])
 
-        if "email" in tipo_invio or "entrambi" in tipo_invio:
+            if invia_push_notification:
+                try:
+                    invia_push(
+                        user["id"],
+                        titolo,
+                        messaggio
+                    )
+                except Exception as e:
+                    log_exception_safe(
+                        "⚠️ Errore push notifica admin",
+                        e,
+                        {"user_id": user["id"]},
+                        production=True
+                    )
+
+        if invia_email:
             _invia_email(
                 destinazione=user["email"],
                 oggetto=titolo,
@@ -6706,6 +6757,7 @@ def processa_match_nuovi_annunci(channel=None):
 
     annunci_processati = []
     notifiche_per_utente = {}
+    match_ids_creati = []
 
     try:
         cur.execute(sql("""
@@ -6794,31 +6846,55 @@ def processa_match_nuovi_annunci(channel=None):
                     continue
 
                 try:
-                    cur.execute(sql("""
-                        INSERT INTO match_utenti (
-                            utente_cerca_id,
-                            utente_offre_id,
+                    if app.config.get("IS_POSTGRES"):
+                        cur.execute(sql("""
+                            INSERT INTO match_utenti (
+                                utente_cerca_id,
+                                utente_offre_id,
+                                categoria,
+                                zona,
+                                annuncio_id
+                            )
+                            VALUES (?, ?, ?, ?, ?)
+                            RETURNING id
+                        """), (
+                            uid if tipo_match == "cerco" else autore_id,
+                            autore_id if tipo_match == "cerco" else uid,
                             categoria,
                             zona,
                             annuncio_id
-                        )
-                        VALUES (?, ?, ?, ?, ?)
-                    """), (
-                        uid if tipo_match == "cerco" else autore_id,
-                        autore_id if tipo_match == "cerco" else uid,
-                        categoria,
-                        zona,
-                        annuncio_id
-                    ))
+                        ))
+
+                        row_match = cur.fetchone()
+                        if row_match and row_match["id"]:
+                            match_ids_creati.append(int(row_match["id"]))
+
+                    else:
+                        cur.execute(sql("""
+                            INSERT INTO match_utenti (
+                                utente_cerca_id,
+                                utente_offre_id,
+                                categoria,
+                                zona,
+                                annuncio_id
+                            )
+                            VALUES (?, ?, ?, ?, ?)
+                        """), (
+                            uid if tipo_match == "cerco" else autore_id,
+                            autore_id if tipo_match == "cerco" else uid,
+                            categoria,
+                            zona,
+                            annuncio_id
+                        ))
+
+                        if cur.lastrowid:
+                            match_ids_creati.append(int(cur.lastrowid))
 
                     match_creati += 1
 
                 except Exception as e:
                     # Se il match esiste già o l'inserimento fallisce per un singolo utente,
                     # non blocchiamo l'intero ciclo.
-                    # Non facciamo rollback qui perché la connessione lavora in autocommit
-                    # su PostgreSQL nel wrapper attuale, e un rollback nel ciclo rischierebbe
-                    # di annullare altre operazioni già valide in locale/SQLite.
                     log_exception_safe(
                         "⚠️ Daily Matches: match singolo non inserito",
                         e,
@@ -6827,7 +6903,7 @@ def processa_match_nuovi_annunci(channel=None):
                             "user_id": uid
                         }
                     )
-                    
+
                 notifiche_per_utente.setdefault(uid, {})
                 notifiche_per_utente[uid].setdefault(categoria, 0)
                 notifiche_per_utente[uid][categoria] += 1
@@ -6866,7 +6942,7 @@ def processa_match_nuovi_annunci(channel=None):
                     int(user_id),
                     "Nuovi annunci compatibili",
                     messaggio,
-                    "/cerca",
+                    url_for("home_v2"),
                     "match"
                 ))
 
@@ -6879,6 +6955,18 @@ def processa_match_nuovi_annunci(channel=None):
                 )
 
             utenti_notificati += 1
+
+        # =====================================================
+        # SEGNA MATCH COME NOTIFICATI
+        # =====================================================
+        if match_ids_creati:
+            placeholders_match = ",".join(["?"] * len(match_ids_creati))
+
+            cur.execute(sql(f"""
+                UPDATE match_utenti
+                SET notificato = 1
+                WHERE id IN ({placeholders_match})
+            """), match_ids_creati)
 
         # =====================================================
         # SEGNA ANNUNCI COME PROCESSATI
@@ -6898,7 +6986,8 @@ def processa_match_nuovi_annunci(channel=None):
             "ok": True,
             "annunci_processati": len(annunci_processati),
             "utenti_notificati": utenti_notificati,
-            "match_creati": match_creati
+            "match_creati": match_creati,
+            "match_notificati": len(match_ids_creati)
         }
 
         security_log(
@@ -8149,11 +8238,12 @@ def daily_matches_background_loop():
                                 channel=settings.get("channel", "internal")
                             )
 
-                            redis_client.set(
-                                last_run_key,
-                                today_key,
-                                ex=60 * 60 * 48
-                            )
+                            if result.get("ok"):
+                                redis_client.set(
+                                    last_run_key,
+                                    today_key,
+                                    ex=60 * 60 * 48
+                                )
 
                             security_log(
                                 "✅ Daily Matches automatico eseguito",
