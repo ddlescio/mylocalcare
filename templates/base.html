@@ -2764,9 +2764,14 @@ window.addEventListener("load", async () => {
       possiamo riproporlo in futuro.
     */
     if (lastSynced && lastSynced !== "dismissed") {
+      if (lastSynced === "subscribe_failed") {
+        console.log("🔔 Push skip: subscribe già fallita su questo dispositivo");
+        return;
+      }
+
       console.log("🔔 Push già valutata per user", currentUserId, lastSynced);
       return;
-    }
+    }    
     /*
       Caso C:
       Permesso non ancora richiesto.
@@ -2868,8 +2873,16 @@ function showPushActivationPrompt(currentUserId, syncKey) {
         }
 
         if (Notification.permission === "granted" && ok !== true) {
+          localStorage.setItem(syncKey, "subscribe_failed");
+
           btn.disabled = false;
-          btn.textContent = "Riprova";
+          btn.textContent = "Non attivabili";
+
+          const text = prompt.querySelector(".text-xs");
+          if (text) {
+            text.textContent = "Le notifiche sono autorizzate, ma Safari non ha completato la registrazione push su questo dispositivo.";
+          }
+
           return;
         }
 
