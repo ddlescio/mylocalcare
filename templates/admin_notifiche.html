@@ -412,15 +412,107 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
     border-color: #fecaca;
   }
 
+  .daily-match-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    text-align: left;
+  }
+
+  .daily-match-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .daily-match-toggle-title {
+    min-width: 0;
+  }
+
+  .daily-match-toggle-subtitle {
+    margin-top: 3px;
+    font-size: 0.82rem;
+    color: #64748b;
+    line-height: 1.35;
+  }
+
+  .daily-match-toggle-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .daily-match-chevron {
+    color: #94a3b8;
+    font-size: 1.25rem;
+    line-height: 1;
+    transition: transform .18s ease;
+  }
+
+  .daily-match-chevron-open {
+    transform: rotate(90deg);
+  }
+
+  .daily-match-body {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+  }
+
   .daily-match-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 14px;
   }
 
-  @media (min-width: 768px) {
-    .daily-match-grid {
-      grid-template-columns: 1fr 1fr 1fr;
+  .daily-match-row-compact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .daily-match-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .daily-match-save-btn,
+  .daily-match-test-btn {
+    width: 100%;
+    text-align: center;
+    border-radius: 999px;
+    padding: 11px 14px;
+    font-size: 0.88rem;
+    font-weight: 850;
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+
+  @media (max-width: 420px) {
+    .daily-match-toggle {
+      align-items: flex-start;
+    }
+
+    .daily-match-toggle-right {
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .daily-match-row-compact {
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .daily-match-save-btn,
+    .daily-match-test-btn {
+      font-size: 0.78rem;
+      padding: 10px 9px;
     }
   }
 
@@ -437,22 +529,6 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
     font-size: 0.78rem;
     line-height: 1.4;
     color: #64748b;
-  }
-
-  .daily-match-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 18px;
-  }
-
-  .daily-match-save-btn,
-  .daily-match-test-btn {
-    border-radius: 999px;
-    padding: 11px 17px;
-    font-size: 0.88rem;
-    font-weight: 850;
-    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
   }
 
   .daily-match-save-btn {
@@ -522,125 +598,141 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
 <!-- 🔁 CARD: Daily Matches automatici -->
 <div class="daily-match-card notify-card-mobile-padding p-6 mb-8">
 
-  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
+  <!-- HEADER CHIUSO / CLICCABILE -->
+  <button
+    type="button"
+    id="toggleDailyMatches"
+    class="daily-match-toggle">
 
-    <div>
-      <h3 class="notify-card-header text-lg mb-2">
-        <span>🔁</span>
-        <span>Daily Matches automatici</span>
-      </h3>
+    <div class="daily-match-toggle-left">
+      <div class="daily-match-toggle-title">
+        <h3 class="notify-card-header text-lg mb-0">
+          <span>🔁</span>
+          <span>Daily Matches automatici</span>
+        </h3>
 
-      <p class="text-sm text-slate-500 leading-relaxed">
-        Invia ogni giorno un riepilogo agli utenti quando ci sono nuovi annunci compatibili
-        con le loro preferenze. Gli annunci già processati non vengono reinviati.
-      </p>
-    </div>
-
-    {% if daily_matches_settings.enabled %}
-      <span class="daily-match-status daily-match-status-on">
-        <span>●</span>
-        <span>Attivo</span>
-      </span>
-    {% else %}
-      <span class="daily-match-status daily-match-status-off">
-        <span>●</span>
-        <span>Disattivo</span>
-      </span>
-    {% endif %}
-
-  </div>
-
-  <form action="{{ url_for('admin_daily_matches_salva') }}" method="post">
-
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-    <div class="daily-match-grid">
-
-      <!-- Attivazione -->
-      <div>
-        <label class="daily-match-field-label">
-          Stato servizio
-        </label>
-
-        <select name="daily_matches_enabled" class="notify-field w-full">
-          <option value="1" {% if daily_matches_settings.enabled %}selected{% endif %}>
-            Attivo
-          </option>
-          <option value="0" {% if not daily_matches_settings.enabled %}selected{% endif %}>
-            Disattivo
-          </option>
-        </select>
-
-        <p class="daily-match-help">
-          Se disattivo, il controllo automatico giornaliero non invia nulla.
+        <p class="daily-match-toggle-subtitle">
+          Riepilogo giornaliero dei nuovi annunci compatibili.
         </p>
       </div>
-
-      <!-- Orario -->
-      <div>
-        <label class="daily-match-field-label">
-          Orario giornaliero
-        </label>
-
-        <input
-          type="time"
-          name="daily_matches_time"
-          value="{{ daily_matches_settings.time or '08:00' }}"
-          class="notify-field w-full">
-
-        <p class="daily-match-help">
-          Orario italiano. Per testare puoi impostare un orario già passato di pochi minuti.
-        </p>
-      </div>
-
-      <!-- Canale -->
-      <div>
-        <label class="daily-match-field-label">
-          Canale invio
-        </label>
-
-        <select name="daily_matches_channel" class="notify-field w-full">
-          <option value="internal" {% if daily_matches_settings.channel == 'internal' %}selected{% endif %}>
-            Solo notifica interna
-          </option>
-          <option value="email" {% if daily_matches_settings.channel == 'email' %}selected{% endif %}>
-            Solo email
-          </option>
-          <option value="both" {% if daily_matches_settings.channel == 'both' %}selected{% endif %}>
-            Notifica interna + email
-          </option>
-        </select>
-
-        <p class="daily-match-help">
-          Le email rispettano la preferenza email_notifiche dell’utente.
-        </p>
-      </div>
-
     </div>
 
-    <div class="daily-match-actions">
-      <button type="submit" class="daily-match-save-btn">
-        💾 Salva impostazioni
-      </button>
+    <div class="daily-match-toggle-right">
+      {% if daily_matches_settings.enabled %}
+        <span class="daily-match-status daily-match-status-on">
+          <span>●</span>
+          <span>Attivo</span>
+        </span>
+      {% else %}
+        <span class="daily-match-status daily-match-status-off">
+          <span>●</span>
+          <span>Disattivo</span>
+        </span>
+      {% endif %}
+
+      <span id="dailyMatchesIcon" class="daily-match-chevron">▸</span>
     </div>
 
-  </form>
+  </button>
 
-  <form action="{{ url_for('admin_daily_matches_test') }}" method="post" class="daily-match-actions">
+  <!-- CONTENUTO NASCOSTO -->
+  <div id="dailyMatchesBody" class="daily-match-body hidden">
 
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p class="text-sm text-slate-500 leading-relaxed mb-5">
+      Invia ogni giorno un riepilogo agli utenti quando ci sono nuovi annunci compatibili
+      con le loro preferenze. Gli annunci già processati non vengono reinviati.
+    </p>
 
-    <button type="submit" class="daily-match-test-btn">
-      🧪 Esegui test adesso
-    </button>
+    <form action="{{ url_for('admin_daily_matches_salva') }}" method="post">
 
-  </form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-  <div class="daily-match-note">
-    <strong>Nota test:</strong>
-    il test manuale processa subito solo gli annunci con
-    <code>match_da_processare = 1</code>. Dopo il test, quegli annunci vengono marcati come processati,
-    quindi non verranno reinviati nel ciclo automatico successivo.
+      <div class="daily-match-grid">
+
+        <!-- Attivazione -->
+        <div>
+          <label class="daily-match-field-label">
+            Stato servizio
+          </label>
+
+          <select name="daily_matches_enabled" class="notify-field w-full">
+            <option value="1" {% if daily_matches_settings.enabled %}selected{% endif %}>
+              Attivo
+            </option>
+            <option value="0" {% if not daily_matches_settings.enabled %}selected{% endif %}>
+              Disattivo
+            </option>
+          </select>
+
+          <p class="daily-match-help">
+            Se disattivo, il controllo automatico giornaliero non invia nulla.
+          </p>
+        </div>
+
+        <!-- Orario + Canale affiancati -->
+        <div class="daily-match-row-compact">
+
+          <!-- Orario -->
+          <div>
+            <label class="daily-match-field-label">
+              Orario
+            </label>
+
+            <input
+              type="time"
+              name="daily_matches_time"
+              value="{{ daily_matches_settings.time or '08:00' }}"
+              class="notify-field w-full">
+          </div>
+
+          <!-- Canale -->
+          <div>
+            <label class="daily-match-field-label">
+              Canale invio
+            </label>
+
+            <select name="daily_matches_channel" class="notify-field w-full">
+              <option value="internal" {% if daily_matches_settings.channel == 'internal' %}selected{% endif %}>
+                Solo notifica
+              </option>
+              <option value="email" {% if daily_matches_settings.channel == 'email' %}selected{% endif %}>
+                Solo email
+              </option>
+              <option value="both" {% if daily_matches_settings.channel == 'both' %}selected{% endif %}>
+                Notifica + email
+              </option>
+            </select>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="daily-match-actions">
+        <button type="submit" class="daily-match-save-btn">
+          💾 Salva
+        </button>
+
+        <button
+          type="submit"
+          class="daily-match-test-btn"
+          form="dailyMatchesTestForm">
+          🧪 Test adesso
+        </button>
+      </div>
+
+    </form>
+
+    <form
+      id="dailyMatchesTestForm"
+      action="{{ url_for('admin_daily_matches_test') }}"
+      method="post"
+      class="hidden">
+
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    </form>
+
   </div>
 
 </div>
@@ -821,7 +913,7 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
   <form action="{{ url_for('admin_invia_notifica') }}" method="post" class="space-y-6">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="tab-attivo" id="tab-attivo" value="u-singolo">
-    
+
     <!-- 🔸 Tipo di invio -->
     <div>
       <p class="font-medium mb-2 text-slate-700">Tipo di invio</p>
@@ -1162,6 +1254,23 @@ document.getElementById("messageModal")?.addEventListener("click", (e) => {
   if (e.target.id === "messageModal") {
     closeMessageModal();
   }
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("toggleDailyMatches");
+  const body = document.getElementById("dailyMatchesBody");
+  const icon = document.getElementById("dailyMatchesIcon");
+
+  if (!btn || !body || !icon) return;
+
+  btn.addEventListener("click", () => {
+    const isOpen = !body.classList.contains("hidden");
+
+    body.classList.toggle("hidden");
+    icon.classList.toggle("daily-match-chevron-open", !isOpen);
+    icon.textContent = isOpen ? "▸" : "▸";
+  });
 });
 </script>
 
