@@ -8749,17 +8749,30 @@ def utente_update_info():
 
     except Exception as e:
         conn.rollback()
-        flash(f"Errore nel salvataggio: {e}", "error")
         print("❌ ERRORE SALVATAGGIO:", e)
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({
+                "ok": False,
+                "error": str(e)
+            }), 500
+
+        flash(f"Errore nel salvataggio: {e}", "error")
+
     finally:
         try:
             conn.close()
         except:
             pass
 
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({
+            "ok": True
+        })
 
+    flash("✅ Modifiche salvate con successo.", "success")
     return redirect(url_for("dashboard"))
-
+    
 @app.route("/utente/update_esperienza", methods=["POST"])
 @login_required
 def utente_update_esperienza():
@@ -10893,7 +10906,7 @@ def logout():
 
     flash('Sei uscito correttamente.', 'info')
     return redirect(url_for('login'))
-    
+
 # ==========================================================
 # 6️⃣ ROTTE PUBBLICHE
 # ==========================================================
