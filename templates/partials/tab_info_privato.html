@@ -85,24 +85,17 @@
           <div class="ov-head">
             <h4 class="ov-title">🪪 Informazioni di base</h4>
             <p class="ov-subtitle">
-              Completa i dettagli principali del tuo profilo: città, lingue, attività e frase personale.
+              Queste informazioni aiutano gli altri a conoscerti meglio e a trovare match più adatti a ciò che offri o cerchi.
             </p>
           </div>
 
           <div class="ov-stack">
 
-            <!-- ZONA E LINGUE -->
+            <!-- CITTÀ E LINGUE -->
             <div class="ov-card ov-main-card">
-              <div class="ov-card-head ov-main-card-head">
-                <div>
-                  <h5 class="ov-card-title ov-main-title">Zona e lingue</h5>
-                  <p class="ov-card-sub ov-main-sub">
-                    La zona serve per filtrare match e annunci visualizzati.
-                  </p>
-                </div>
-              </div>
 
               <div class="ov-grid ov-grid-2 ov-main-grid">
+
                 <!-- Città -->
                 <div class="ov-field">
                   <label class="ov-label ov-main-label">
@@ -134,6 +127,10 @@
                     </ul>
                   </div>
                 </div>
+
+                <p class="ov-help ov-main-help ov-zone-help">
+                  La città serve per filtrare match e annunci visualizzati.
+                </p>
 
                 <!-- Lingue parlate -->
                 <div class="ov-field">
@@ -2773,6 +2770,11 @@ main#info-content section,
       color: #64748b !important;
     }
 
+    #form-info-base .ov-zone-help {
+      grid-column: 1 / -1 !important;
+      margin: -0.12rem 0 0.12rem 6.7rem !important;
+    }
+
     #form-info-base .ov-main-card .lingue-dropdown {
       left: auto !important;
       right: 0 !important;
@@ -2811,6 +2813,10 @@ main#info-content section,
     #form-info-base .ov-main-card #lingue-toggle-text {
       font-size: 0.86rem !important;
     }
+
+    #form-info-base .ov-zone-help {
+      margin-left: 5.95rem !important;
+    }    
   }
 </style>
 <style>
@@ -3097,13 +3103,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function scrollInfoContentInAlto() {
-    const content = infoBox.querySelector("#info-content");
-    if (!content) return;
+    const targetHeader = infoBox.querySelector(".info-sidebar-profile-head");
+    if (!targetHeader) return;
 
     const offset = window.innerWidth <= 640 ? 92 : 105;
 
     const targetTop =
-      content.getBoundingClientRect().top + window.scrollY - offset;
+      targetHeader.getBoundingClientRect().top + window.scrollY - offset;
 
     window.scrollTo({
       top: Math.max(0, targetTop),
@@ -3122,7 +3128,7 @@ document.addEventListener("DOMContentLoaded", () => {
       */
       if (window.innerWidth < 1024) {
         setTimeout(scrollInfoContentInAlto, 80);
-      }      
+      }
     });
   });
 
