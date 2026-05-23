@@ -91,18 +91,24 @@
 
           <div class="ov-stack">
 
-            <!-- CITTÀ E LINGUE -->
-            <div class="ov-card">
-              <div class="ov-card-head">
-                <h5 class="ov-card-title">Dati principali</h5>
-                <p class="ov-card-sub">Indica dove ti trovi e quali lingue parli.</p>
+            <!-- ZONA E LINGUE -->
+            <div class="ov-card ov-main-card">
+              <div class="ov-card-head ov-main-card-head">
+                <div>
+                  <h5 class="ov-card-title ov-main-title">Zona e lingue</h5>
+                  <p class="ov-card-sub ov-main-sub">
+                    La zona serve per filtrare match e annunci visualizzati.
+                  </p>
+                </div>
               </div>
 
-              <div class="ov-grid ov-grid-2">
-
+              <div class="ov-grid ov-grid-2 ov-main-grid">
                 <!-- Città -->
                 <div class="ov-field">
-                  <label class="ov-label">Città</label>
+                  <label class="ov-label ov-main-label">
+                    <span class="ov-main-label-icon">📍</span>
+                    <span>Città</span>
+                  </label>
 
                   <div class="relative">
                     <input
@@ -131,7 +137,10 @@
 
                 <!-- Lingue parlate -->
                 <div class="ov-field">
-                  <label class="ov-label">Lingue parlate</label>
+                  <label class="ov-label ov-main-label">
+                    <span class="ov-main-label-icon">🌐</span>
+                    <span>Lingue</span>
+                  </label>
 
                   {% set lingue_salvate = (utente.get('lingue') or '').split(',') %}
                   {% set lingue_salvate = lingue_salvate | map('trim') | reject('equalto', '') | list %}
@@ -207,7 +216,7 @@
                   </div>
 
                   {% if not pubblico %}
-                  <p class="ov-help">Puoi selezionare più lingue.</p>
+                  <p class="ov-help ov-main-help">Puoi selezionare più lingue.</p>
                   {% endif %}
                 </div>
 
@@ -2618,99 +2627,153 @@ main#info-content section,
 </style>
 <style>
   /* ============================================================
-     MOBILE FIRST — DATI PRINCIPALI COMPATTI PREMIUM
-     Riduce altezza di Città/Lingue senza modificare HTML o JS
+     MOBILE FIRST — ZONA E LINGUE PREMIUM, RAPIDO A COLPO D'OCCHIO
   ============================================================ */
+
+  .ov-main-card {
+    overflow: visible !important;
+  }
+
+  .ov-main-card-head {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 0.8rem !important;
+  }
+
+  .ov-main-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+  }
+
+  .ov-main-sub {
+    max-width: 34rem;
+  }
+
+  .ov-main-label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.38rem !important;
+  }
+
+  .ov-main-label-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 1.35rem !important;
+    height: 1.35rem !important;
+    border-radius: 0.55rem !important;
+    background: linear-gradient(180deg, rgba(239,246,255,0.95), rgba(219,234,254,0.72)) !important;
+    border: 1px solid rgba(147,197,253,0.45) !important;
+    font-size: 0.72rem !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.9),
+      0 3px 7px rgba(37,99,235,0.06) !important;
+  }
 
   @media (max-width: 900px) {
 
-    /* Solo la prima card della sezione overview: "Dati principali" */
-    #form-info-base .ov-stack > .ov-card:first-child {
-      padding: 0.78rem 0.78rem 0.82rem !important;
-      border-radius: 1.08rem !important;
-      box-shadow:
-        0 6px 16px rgba(15,23,42,0.045),
-        0 14px 30px rgba(15,23,42,0.06),
-        inset 0 1px 0 rgba(255,255,255,0.92) !important;
-    }
-
-    #form-info-base .ov-stack > .ov-card:first-child .ov-card-head {
-      margin-bottom: 0.62rem !important;
-    }
-
-    #form-info-base .ov-stack > .ov-card:first-child .ov-card-title {
-      font-size: 0.96rem !important;
-      line-height: 1.05 !important;
-      letter-spacing: -0.025em !important;
-    }
-
-    #form-info-base .ov-stack > .ov-card:first-child .ov-card-sub {
-      margin-top: 0.12rem !important;
-      font-size: 0.76rem !important;
-      line-height: 1.22 !important;
-    }
-
-    /* I due campi diventano righe compatte */
-    #form-info-base .ov-stack > .ov-card:first-child .ov-grid-2 {
-      grid-template-columns: 1fr !important;
-      gap: 0.54rem !important;
-    }
-
-    #form-info-base .ov-stack > .ov-card:first-child .ov-field {
-      display: grid !important;
-      grid-template-columns: 4.65rem minmax(0, 1fr) !important;
-      align-items: center !important;
-      gap: 0.55rem !important;
-    }
-
-    #form-info-base .ov-stack > .ov-card:first-child .ov-label {
-      margin: 0 !important;
-      color: #475569 !important;
-      font-size: 0.77rem !important;
-      line-height: 1.05 !important;
-      font-weight: 760 !important;
-      letter-spacing: -0.015em !important;
-    }
-
-    #form-info-base .ov-stack > .ov-card:first-child .relative,
-    #form-info-base .ov-stack > .ov-card:first-child .lingue-selector-wrap {
-      min-width: 0 !important;
-      width: 100% !important;
-    }
-
-    #form-info-base .ov-stack > .ov-card:first-child .ov-input {
-      min-height: 2.68rem !important;
-      height: 2.68rem !important;
-      padding: 0.58rem 0.82rem !important;
-      border-radius: 0.92rem !important;
-      font-size: 0.92rem !important;
-      line-height: 1.1 !important;
+    #form-info-base .ov-main-card {
+      padding: 0.82rem 0.82rem 0.78rem !important;
+      border-radius: 1.15rem !important;
       background:
+        radial-gradient(circle at 0% 0%, rgba(59,130,246,0.12), transparent 34%),
         linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.94)) !important;
+      border: 1px solid rgba(191,219,254,0.75) !important;
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.85),
-        0 3px 8px rgba(15,23,42,0.035) !important;
+        0 7px 18px rgba(37,99,235,0.055),
+        0 16px 34px rgba(15,23,42,0.055),
+        inset 0 1px 0 rgba(255,255,255,0.95) !important;
     }
 
-    #form-info-base .ov-stack > .ov-card:first-child .lingue-toggle {
-      min-height: 2.68rem !important;
+    #form-info-base .ov-main-card-head {
+      margin-bottom: 0.68rem !important;
+      padding-bottom: 0.58rem !important;
+      border-bottom: 1px solid rgba(219,234,254,0.72) !important;
     }
 
-    #form-info-base .ov-stack > .ov-card:first-child #lingue-toggle-text {
-      font-size: 0.92rem !important;
-      line-height: 1.1 !important;
+    #form-info-base .ov-main-title {
+      font-size: 0.98rem !important;
+      line-height: 1.05 !important;
+      color: #1e40af !important;
+      letter-spacing: -0.03em !important;
     }
 
-    #form-info-base .ov-stack > .ov-card:first-child .ov-help {
-      grid-column: 2 / 3 !important;
-      margin: -0.18rem 0 0 !important;
-      font-size: 0.68rem !important;
-      line-height: 1.18 !important;
+    #form-info-base .ov-main-sub {
+      margin-top: 0.18rem !important;
+      font-size: 0.74rem !important;
+      line-height: 1.28 !important;
       color: #64748b !important;
     }
 
-    /* Dropdown lingue: resta leggibile anche partendo da una riga compatta */
-    #form-info-base .ov-stack > .ov-card:first-child .lingue-dropdown {
+    #form-info-base .ov-main-grid {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 0.42rem !important;
+    }
+
+    #form-info-base .ov-main-card .ov-field {
+      display: grid !important;
+      grid-template-columns: 6.15rem minmax(0, 1fr) !important;
+      align-items: center !important;
+      gap: 0.55rem !important;
+      min-height: 2.72rem !important;
+      padding: 0.26rem 0.34rem 0.26rem 0.28rem !important;
+      border-radius: 0.95rem !important;
+      background: rgba(255,255,255,0.68) !important;
+      border: 1px solid rgba(226,232,240,0.68) !important;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.82),
+        0 3px 8px rgba(15,23,42,0.025) !important;
+    }
+
+    #form-info-base .ov-main-card .ov-label {
+      margin: 0 !important;
+      color: #475569 !important;
+      font-size: 0.76rem !important;
+      line-height: 1.05 !important;
+      font-weight: 820 !important;
+      letter-spacing: -0.015em !important;
+    }
+
+    #form-info-base .ov-main-card .relative,
+    #form-info-base .ov-main-card .lingue-selector-wrap {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    #form-info-base .ov-main-card .ov-input {
+      min-height: 2.28rem !important;
+      height: 2.28rem !important;
+      padding: 0.48rem 0.72rem !important;
+      border-radius: 0.78rem !important;
+      border-color: rgba(203,213,225,0.78) !important;
+      background: rgba(255,255,255,0.96) !important;
+      font-size: 0.91rem !important;
+      line-height: 1.05 !important;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.9) !important;
+    }
+
+    #form-info-base .ov-main-card .lingue-toggle {
+      min-height: 2.28rem !important;
+    }
+
+    #form-info-base .ov-main-card #lingue-toggle-text {
+      font-size: 0.91rem !important;
+      line-height: 1.05 !important;
+    }
+
+    #form-info-base .ov-main-help {
+      grid-column: 2 / 3 !important;
+      margin: -0.08rem 0 0.08rem !important;
+      font-size: 0.66rem !important;
+      line-height: 1.12 !important;
+      color: #64748b !important;
+    }
+
+    #form-info-base .ov-main-card .lingue-dropdown {
       left: auto !important;
       right: 0 !important;
       width: min(22rem, calc(100vw - 2rem)) !important;
@@ -2718,26 +2781,35 @@ main#info-content section,
   }
 
   @media (max-width: 420px) {
-    #form-info-base .ov-stack > .ov-card:first-child .ov-field {
-      grid-template-columns: 4.25rem minmax(0, 1fr) !important;
-      gap: 0.46rem !important;
+    #form-info-base .ov-main-card .ov-field {
+      grid-template-columns: 5.55rem minmax(0, 1fr) !important;
+      gap: 0.42rem !important;
+      padding-left: 0.24rem !important;
+      padding-right: 0.28rem !important;
     }
 
-    #form-info-base .ov-stack > .ov-card:first-child .ov-label {
-      font-size: 0.73rem !important;
+    #form-info-base .ov-main-card .ov-label {
+      font-size: 0.72rem !important;
     }
 
-    #form-info-base .ov-stack > .ov-card:first-child .ov-input,
-    #form-info-base .ov-stack > .ov-card:first-child .lingue-toggle {
-      min-height: 2.55rem !important;
-      height: 2.55rem !important;
-      padding-left: 0.74rem !important;
-      padding-right: 0.74rem !important;
-      font-size: 0.88rem !important;
+    #form-info-base .ov-main-label-icon {
+      width: 1.22rem !important;
+      height: 1.22rem !important;
+      font-size: 0.66rem !important;
+      border-radius: 0.48rem !important;
     }
 
-    #form-info-base .ov-stack > .ov-card:first-child #lingue-toggle-text {
-      font-size: 0.88rem !important;
+    #form-info-base .ov-main-card .ov-input,
+    #form-info-base .ov-main-card .lingue-toggle {
+      min-height: 2.2rem !important;
+      height: 2.2rem !important;
+      padding-left: 0.62rem !important;
+      padding-right: 0.62rem !important;
+      font-size: 0.86rem !important;
+    }
+
+    #form-info-base .ov-main-card #lingue-toggle-text {
+      font-size: 0.86rem !important;
     }
   }
 </style>
