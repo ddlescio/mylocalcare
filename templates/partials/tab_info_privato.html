@@ -2816,269 +2816,8 @@ main#info-content section,
 
     #form-info-base .ov-zone-help {
       margin-left: 5.95rem !important;
-    }    
-  }
-</style>
-<style>
-  /* ============================================================
-     MOBILE FIRST — UNIFORMA CARD OFFRO/CERCO + FRASE
-     Stessa famiglia visiva della card Zona e lingue
-     Mantiene dimensioni attuali, cambia solo gerarchia visiva/colore
-  ============================================================ */
-
-  #form-info-base .ov-action-card,
-  #form-info-base .ov-quote-card.ov-soft-card {
-    background:
-      radial-gradient(circle at 0% 0%, rgba(59,130,246,0.12), transparent 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.94)) !important;
-    border: 1px solid rgba(191,219,254,0.72) !important;
-    box-shadow:
-      0 7px 18px rgba(37,99,235,0.050),
-      0 16px 34px rgba(15,23,42,0.055),
-      inset 0 1px 0 rgba(255,255,255,0.95) !important;
-  }
-
-  #form-info-base .ov-action-card .ov-card-head,
-  #form-info-base .ov-quote-card.ov-soft-card .ov-card-head {
-    padding-bottom: 0.58rem !important;
-    border-bottom: 1px solid rgba(219,234,254,0.72) !important;
-  }
-
-  #form-info-base .ov-action-card .ov-card-title,
-  #form-info-base .ov-quote-card.ov-soft-card .ov-card-title {
-    color: #1e40af !important;
-  }
-
-  #form-info-base .ov-action-card .ov-card-sub,
-  #form-info-base .ov-quote-card.ov-soft-card .ov-card-sub {
-    color: #64748b !important;
-  }
-
-  /* ============================================================
-     FRASE — override forte perché esiste ancora .ov-quote-card
-  ============================================================ */
-
-  #form-info-base .ov-quote-card.ov-soft-card {
-    background:
-      radial-gradient(circle at 100% 0%, rgba(99,102,241,0.13), transparent 36%),
-      radial-gradient(circle at 0% 100%, rgba(59,130,246,0.08), transparent 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.94)) !important;
-    border-color: rgba(199,210,254,0.82) !important;
-  }
-
-  #form-info-base .ov-quote-card.ov-soft-card .ov-input,
-  #form-info-base .ov-quote-card.ov-soft-card .ov-textarea {
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.95)) !important;
-    border-color: rgba(199,210,254,0.78) !important;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.92),
-      0 4px 10px rgba(99,102,241,0.045) !important;
-  }
-
-  #form-info-base .ov-quote-card.ov-soft-card .ov-input:focus,
-  #form-info-base .ov-quote-card.ov-soft-card .ov-textarea:focus {
-    border-color: rgba(129,140,248,0.82) !important;
-    box-shadow:
-      0 0 0 3px rgba(129,140,248,0.16),
-      0 7px 16px rgba(99,102,241,0.08) !important;
-  }
-
-  /* ============================================================
-     OFFRO / CERCO — rifinitura premium senza cambiare dimensioni
-  ============================================================ */
-
-  #form-info-base .ov-action-card {
-    background:
-      radial-gradient(circle at 0% 0%, rgba(59,130,246,0.12), transparent 32%),
-      radial-gradient(circle at 100% 0%, rgba(14,165,233,0.08), transparent 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.94)) !important;
-  }
-
-  #form-info-base .ov-action-card .ov-attivita-card {
-    position: relative !important;
-    overflow: hidden !important;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.97), rgba(248,250,252,0.90)) !important;
-    border: 1px solid rgba(203,213,225,0.80) !important;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.92),
-      0 4px 10px rgba(15,23,42,0.032) !important;
-  }
-
-  /* Piccolo accento colore laterale: non modifica altezza/larghezza */
-  #form-info-base .ov-action-card .ov-attivita-card::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0.62rem;
-    bottom: 0.62rem;
-    width: 3px;
-    border-radius: 9999px;
-    background: linear-gradient(180deg, #3b82f6, #60a5fa);
-    opacity: 0.72;
-  }
-
-  /* Colori delicati alternati per rendere la griglia più leggibile */
-  #form-info-base .ov-action-card .ov-attivita-card:nth-child(2n)::before {
-    background: linear-gradient(180deg, #06b6d4, #67e8f9);
-  }
-
-  #form-info-base .ov-action-card .ov-attivita-card:nth-child(3n)::before {
-    background: linear-gradient(180deg, #6366f1, #a5b4fc);
-  }
-
-  #form-info-base .ov-action-card .ov-attivita-card:nth-child(4n)::before {
-    background: linear-gradient(180deg, #10b981, #6ee7b7);
-  }
-
-  #form-info-base .ov-action-card .ov-attivita-title {
-    color: #334155 !important;
-    font-weight: 760 !important;
-  }
-
-  #form-info-base .ov-action-card .ov-pill {
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.90)) !important;
-    border-color: rgba(203,213,225,0.88) !important;
-    color: #64748b !important;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.92),
-      0 2px 5px rgba(15,23,42,0.025) !important;
-  }
-
-  #form-info-base .ov-action-card .ov-pill:hover {
-    background: #eff6ff !important;
-    border-color: rgba(147,197,253,0.88) !important;
-    color: #2563eb !important;
-  }
-
-  #form-info-base .ov-action-card .ov-pill[data-active="1"] {
-    background:
-      radial-gradient(circle at 30% 18%, rgba(255,255,255,0.28), transparent 34%),
-      linear-gradient(135deg, #2563eb, #3b82f6) !important;
-    color: #ffffff !important;
-    border-color: rgba(96,165,250,0.95) !important;
-    box-shadow:
-      0 6px 13px rgba(37,99,235,0.16),
-      inset 0 1px 0 rgba(255,255,255,0.25) !important;
-  }
-
-  /* Mobile/tablet: mantiene le dimensioni che hai ora */
-  @media (max-width: 900px) {
-    #form-info-base .ov-action-card,
-    #form-info-base .ov-quote-card.ov-soft-card {
-      padding: 0.82rem 0.82rem 0.86rem !important;
-      border-radius: 1.15rem !important;
-    }
-
-    #form-info-base .ov-action-card .ov-card-head,
-    #form-info-base .ov-quote-card.ov-soft-card .ov-card-head {
-      margin-bottom: 0.72rem !important;
-    }
-
-    #form-info-base .ov-action-card .ov-card-title,
-    #form-info-base .ov-quote-card.ov-soft-card .ov-card-title {
-      font-size: 0.98rem !important;
-      line-height: 1.05 !important;
-      letter-spacing: -0.03em !important;
-    }
-
-    #form-info-base .ov-action-card .ov-card-sub,
-    #form-info-base .ov-quote-card.ov-soft-card .ov-card-sub {
-      margin-top: 0.18rem !important;
-      font-size: 0.74rem !important;
-      line-height: 1.28 !important;
-    }
-
-    #form-info-base .ov-action-card .ov-attivita-grid {
-      gap: 0.58rem !important;
-    }
-
-    #form-info-base .ov-action-card .ov-attivita-card {
-      border-radius: 0.92rem !important;
-      padding: 0.62rem 0.58rem !important;
-    }
-
-    #form-info-base .ov-action-card .ov-attivita-title {
-      font-size: 0.76rem !important;
-      line-height: 1.12 !important;
-      margin-bottom: 0.44rem !important;
-    }
-
-    #form-info-base .ov-action-card .ov-pill {
-      font-size: 0.7rem !important;
-      padding: 0.30rem 0.32rem !important;
-    }
-
-    #form-info-base .ov-quote-card.ov-soft-card .ov-textarea {
-      min-height: 82px !important;
     }
   }
-</style>
-<style>
-  /* ============================================================
-     REFINEMENT — OFFRO/CERCO PIÙ LEGGIBILI SENZA CAMBIARE DIMENSIONI
-  ============================================================ */
-
-  #form-info-base .ov-action-card .ov-pill[data-target^="offro_"] {
-    color: #2563eb !important;
-    border-color: rgba(147,197,253,0.85) !important;
-    background:
-      linear-gradient(180deg, rgba(239,246,255,0.92), rgba(255,255,255,0.96)) !important;
-  }
-
-  #form-info-base .ov-action-card .ov-pill[data-target^="cerco_"] {
-    color: #0f766e !important;
-    border-color: rgba(94,234,212,0.72) !important;
-    background:
-      linear-gradient(180deg, rgba(240,253,250,0.88), rgba(255,255,255,0.96)) !important;
-  }
-
-  #form-info-base .ov-action-card .ov-pill[data-target^="offro_"][data-active="1"] {
-    background:
-      radial-gradient(circle at 30% 18%, rgba(255,255,255,0.28), transparent 34%),
-      linear-gradient(135deg, #2563eb, #3b82f6) !important;
-    color: #ffffff !important;
-    border-color: rgba(96,165,250,0.95) !important;
-  }
-
-  #form-info-base .ov-action-card .ov-pill[data-target^="cerco_"][data-active="1"] {
-    background:
-      radial-gradient(circle at 30% 18%, rgba(255,255,255,0.28), transparent 34%),
-      linear-gradient(135deg, #0d9488, #14b8a6) !important;
-    color: #ffffff !important;
-    border-color: rgba(45,212,191,0.95) !important;
-  }
-
-  #form-info-base .ov-action-card .ov-pill[data-target^="offro_"]:hover {
-    color: #1d4ed8 !important;
-    border-color: rgba(96,165,250,0.95) !important;
-    background: #eff6ff !important;
-  }
-
-  #form-info-base .ov-action-card .ov-pill[data-target^="cerco_"]:hover {
-    color: #0f766e !important;
-    border-color: rgba(45,212,191,0.95) !important;
-    background: #f0fdfa !important;
-  }
-
-  #form-info-base .ov-quote-card.ov-soft-card {
-    background:
-      radial-gradient(circle at 100% 0%, rgba(99,102,241,0.14), transparent 34%),
-      radial-gradient(circle at 0% 100%, rgba(236,72,153,0.07), transparent 32%),
-      linear-gradient(180deg, rgba(255,255,255,0.99), rgba(250,250,255,0.95)) !important;
-    border-color: rgba(199,210,254,0.88) !important;
-  }
-
-  #form-info-base .ov-quote-card.ov-soft-card .ov-card-title::before {
-    content: "💬 ";
-  }
-
-  #form-info-base .ov-quote-card.ov-soft-card .ov-textarea {
-    font-style: italic;
-  }
-
 </style>
 
 
@@ -3137,25 +2876,46 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll(".pill").forEach(btn => {
+  const infoForm = document.getElementById("form-info-base");
+  if (!infoForm) return;
+
+  infoForm.querySelectorAll(".pill[data-autosave-ui='pill']").forEach(btn => {
     btn.addEventListener("click", () => {
-      const active = btn.dataset.active === "1" ? "0" : "1";
-      btn.dataset.active = active;
+      const nuovoValore = btn.dataset.active === "1" ? "0" : "1";
 
-      const input = document.querySelector(`input[name='${btn.dataset.target}']`);
-      if (input) {
-        input.value = active;
-      }
-
-      if (active === "1") {
-        btn.classList.add("bg-blue-600", "text-white", "border-blue-600");
+      /*
+        1) Aggiornamento UI immediato.
+        Usiamo solo data-active perché il CSS dei bottoni lavora già su:
+        .ov-pill[data-active="1"]
+        Evitiamo classi Tailwind aggiunte/rimosse, che su Safari iOS possono
+        creare repaint meno prevedibili insieme agli override !important.
+      */
+      if (nuovoValore === "1") {
+        btn.dataset.active = "1";
       } else {
-        btn.classList.remove("bg-blue-600", "text-white", "border-blue-600");
+        delete btn.dataset.active;
       }
 
-      if (typeof window.scheduleInfoBaseAutosave === "function") {
-        window.scheduleInfoBaseAutosave(150);
+      /*
+        2) Aggiornamento immediato del campo hidden collegato.
+      */
+      const input = infoForm.querySelector(`input[name="${btn.dataset.target}"]`);
+      if (input) {
+        input.value = nuovoValore;
       }
+
+      /*
+        3) Lasciamo respirare Safari iOS prima del fetch.
+        Così il colore del bottone viene renderizzato subito,
+        e il salvataggio parte dopo.
+      */
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (typeof window.scheduleInfoBaseAutosave === "function") {
+            window.scheduleInfoBaseAutosave(900);
+          }
+        });
+      });
     });
   });
 });
