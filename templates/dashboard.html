@@ -4496,28 +4496,48 @@ nav::before {
   }
 </style>
 <style>
-/* ============================================================
-   PROFILO MOBILE — RIDUCE SPAZIO TRA TAB PRINCIPALI E CONTENUTO
-   Annunci / Info / Foto / Recensioni
-============================================================ */
-@media (max-width: 640px) {
-  .profilo-content-wrapper > .sticky {
-    margin-bottom: 0 !important;
-  }
+  /* ============================================================
+     PROFILO MOBILE — SPAZIO MINIMO TRA TAB PRINCIPALI E CONTENUTO
+     Annunci / Info / Foto / Recensioni
+  ============================================================ */
+  @media (max-width: 640px) {
+    .profilo-content-wrapper > .sticky {
+      margin-bottom: 0 !important;
+    }
 
-  .profilo-content-wrapper > section > .tab-pane > div,
-  #tab-info .tab-info-shell {
-    padding-top: 0.55rem !important;
-  }
+    .profilo-content-wrapper > .sticky nav {
+      margin-top: 0.45rem !important;
+      margin-bottom: 0 !important;
+    }
 
-  #tab-info .tab-info-panel {
-    margin-top: 0 !important;
-  }
+    .profilo-content-wrapper > section {
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+    }
 
-  #tab-info .info-wrapper {
-    margin-top: 0 !important;
+    .profilo-content-wrapper > section > .tab-pane {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+
+    .profilo-content-wrapper > section > .tab-pane > div,
+    #tab-info .tab-info-shell {
+      padding-top: 0.18rem !important;
+    }
+
+    #tab-info {
+      padding-top: 0.2rem !important;
+    }
+
+    #tab-info .tab-info-panel {
+      margin-top: 0 !important;
+      padding-top: 0.55rem !important;
+    }
+
+    #tab-info .info-wrapper {
+      margin-top: 0 !important;
+    }
   }
-}
 </style>
 <style>
 /* ============================================================

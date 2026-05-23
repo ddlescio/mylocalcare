@@ -2839,15 +2839,20 @@ main#info-content section,
   }
 
   .info-sidebar-profile-title {
-    font-size: 1.48rem !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.42rem !important;
+    font-size: 1.62rem !important;
     line-height: 1.02 !important;
     font-weight: 950 !important;
     color: #0f172a !important;
-    letter-spacing: -0.06em !important;
+    letter-spacing: -0.065em !important;
     text-align: center !important;
     text-shadow:
-      0 1px 0 rgba(255,255,255,0.95),
-      0 8px 18px rgba(15,23,42,0.10);
+      0 1px 0 rgba(255,255,255,0.96),
+      0 10px 22px rgba(15,23,42,0.13) !important;
   }
 
   .info-sidebar-profile-title-icon {
@@ -3116,17 +3121,16 @@ main#info-content section,
   ------------------------------------------------------------ */
 
   @media (max-width: 640px) {
-    @media (max-width: 640px) {
-      .info-sidebar-profile-title {
-        font-size: 1.36rem !important;
-        line-height: 1.02 !important;
-      }
-      
+    .info-sidebar-profile-title {
+      font-size: 1.48rem !important;
+      line-height: 1.02 !important;
+    }
+
     .info-sidebar-nav-premium {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       gap: 0.52rem !important;
     }
-
+    
     .info-menu-card {
       min-height: 3.35rem !important;
       padding: 0.62rem 0.66rem !important;
