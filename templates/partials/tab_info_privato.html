@@ -3096,18 +3096,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (target) target.classList.remove("hidden");
   }
 
-  function scrollMenuInfoInAlto() {
-    const menu = infoBox.querySelector(".info-sidebar-nav-premium");
-    if (!menu) return;
+  function scrollInfoContentInAlto() {
+    const content = infoBox.querySelector("#info-content");
+    if (!content) return;
 
-    /*
-      Ora lo scroll non punta più al box profilo,
-      ma direttamente alla prima voce del menu premium.
-    */
     const offset = window.innerWidth <= 640 ? 92 : 105;
 
     const targetTop =
-      menu.getBoundingClientRect().top + window.scrollY - offset;
+      content.getBoundingClientRect().top + window.scrollY - offset;
 
     window.scrollTo({
       top: Math.max(0, targetTop),
@@ -3125,8 +3121,8 @@ document.addEventListener("DOMContentLoaded", () => {
         quindi non deve muovere la pagina.
       */
       if (window.innerWidth < 1024) {
-        setTimeout(scrollMenuInfoInAlto, 80);
-      }
+        setTimeout(scrollInfoContentInAlto, 80);
+      }      
     });
   });
 

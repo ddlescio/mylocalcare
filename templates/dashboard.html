@@ -4649,6 +4649,173 @@ nav::before {
   }
 }
 </style>
+<style>
+/* ============================================================
+   INFO PRIVATO — MENU 4 VOCI IN PILLOLE 2x2 SU MOBILE/TABLET
+   Mantiene JS e struttura HTML attuali
+============================================================ */
+
+@media (max-width: 1023px) {
+
+  /* Il contenitore laterale diventa una card compatta sopra al contenuto */
+  .info-sidebar {
+    padding: 0.72rem !important;
+    border-radius: 1.25rem !important;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(59,130,246,0.10), transparent 36%),
+      linear-gradient(180deg, rgba(255,255,255,0.97), rgba(248,250,252,0.90)) !important;
+    border: 1px solid rgba(191,219,254,0.58) !important;
+    box-shadow:
+      0 8px 18px rgba(15,23,42,0.055),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+  }
+
+  /* Header molto più basso */
+  .info-sidebar-profile-head {
+    margin-bottom: 0.58rem !important;
+    padding: 0.48rem 0.6rem 0.52rem !important;
+    border-radius: 0.95rem !important;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.72), rgba(248,250,252,0.48)) !important;
+  }
+
+  .info-sidebar-profile-head::before {
+    display: none !important;
+  }
+
+  .info-sidebar-profile-title {
+    font-size: 1rem !important;
+    line-height: 1.05 !important;
+    letter-spacing: -0.045em !important;
+  }
+
+  .info-sidebar-profile-title-icon {
+    font-size: 0.74rem !important;
+  }
+
+  .info-sidebar-profile-subtitle {
+    margin-top: 0.22rem !important;
+    max-width: 15rem !important;
+    font-size: 0.62rem !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Da elenco verticale a griglia 2x2 */
+  .info-sidebar-nav-premium {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.48rem !important;
+  }
+
+  /* Ogni voce diventa una pill/card compatta */
+  .info-menu-card {
+    min-height: 3.15rem !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 0.48rem !important;
+    padding: 0.52rem 0.56rem !important;
+    border-radius: 1rem !important;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,252,0.82)) !important;
+    border: 1px solid rgba(226,232,240,0.82) !important;
+    box-shadow:
+      0 4px 10px rgba(15,23,42,0.035),
+      inset 0 1px 0 rgba(255,255,255,0.90) !important;
+  }
+
+  .info-menu-card:hover {
+    transform: translateY(-1px) !important;
+  }
+
+  /* Icona più piccola e pulita */
+  .info-menu-icon {
+    width: 1.72rem !important;
+    height: 1.72rem !important;
+    flex: 0 0 1.72rem !important;
+    border-radius: 0.72rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .info-menu-text {
+    gap: 0 !important;
+  }
+
+  .info-menu-label {
+    font-size: 0.75rem !important;
+    line-height: 1.05 !important;
+    font-weight: 850 !important;
+    letter-spacing: -0.028em !important;
+    color: #334155 !important;
+  }
+
+  /* Nasconde la descrizione lunga per recuperare spazio */
+  .info-menu-desc {
+    display: none !important;
+  }
+
+  /* La freccia non serve più nella versione pill */
+  .info-menu-arrow {
+    display: none !important;
+  }
+
+  /* Stato attivo */
+  .info-menu-card.bg-blue-100 {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(37,99,235,0.16), transparent 44%),
+      linear-gradient(180deg, rgba(239,246,255,0.98), rgba(219,234,254,0.78)) !important;
+    border-color: rgba(96,165,250,0.72) !important;
+    box-shadow:
+      0 7px 14px rgba(37,99,235,0.105),
+      inset 0 1px 0 rgba(255,255,255,0.95) !important;
+  }
+
+  .info-menu-card.bg-blue-100::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-label {
+    color: #1e40af !important;
+  }
+
+  .info-menu-card.bg-blue-100 .info-menu-icon {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(219,234,254,0.90)) !important;
+    border-color: rgba(147,197,253,0.78) !important;
+  }
+}
+
+/* Ancora più compatto sugli schermi stretti */
+@media (max-width: 420px) {
+  .info-sidebar {
+    padding: 0.62rem !important;
+  }
+
+  .info-sidebar-nav-premium {
+    gap: 0.42rem !important;
+  }
+
+  .info-menu-card {
+    min-height: 2.95rem !important;
+    padding: 0.48rem 0.5rem !important;
+    gap: 0.42rem !important;
+    border-radius: 0.9rem !important;
+  }
+
+  .info-menu-icon {
+    width: 1.58rem !important;
+    height: 1.58rem !important;
+    flex-basis: 1.58rem !important;
+    font-size: 0.68rem !important;
+  }
+
+  .info-menu-label {
+    font-size: 0.7rem !important;
+  }
+}
+</style>
+
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
