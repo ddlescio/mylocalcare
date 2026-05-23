@@ -85,7 +85,7 @@
           <div class="ov-head">
             <h4 class="ov-title">🪪 Informazioni di base</h4>
             <p class="ov-subtitle">
-              Queste informazioni aiutano gli altri a conoscerti meglio e a trovare match più adatti a ciò che offri o cerchi.
+              Fatti conoscere. Trova match più adatti.
             </p>
           </div>
 
@@ -2839,12 +2839,15 @@ main#info-content section,
   }
 
   .info-sidebar-profile-title {
-    font-size: 1.26rem !important;
-    line-height: 1.05 !important;
+    font-size: 1.48rem !important;
+    line-height: 1.02 !important;
     font-weight: 950 !important;
     color: #0f172a !important;
-    letter-spacing: -0.055em !important;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.9);
+    letter-spacing: -0.06em !important;
+    text-align: center !important;
+    text-shadow:
+      0 1px 0 rgba(255,255,255,0.95),
+      0 8px 18px rgba(15,23,42,0.10);
   }
 
   .info-sidebar-profile-title-icon {
@@ -3048,30 +3051,6 @@ main#info-content section,
     pointer-events: none;
   }
 
-  #form-info-base .ov-action-card .ov-attivita-card::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0.72rem;
-    bottom: 0.72rem;
-    width: 3px;
-    border-radius: 9999px;
-    background: rgba(96,165,250,0.62);
-    pointer-events: none;
-  }
-
-  #form-info-base .ov-action-card .ov-attivita-card:nth-child(2n)::after {
-    background: rgba(45,212,191,0.56);
-  }
-
-  #form-info-base .ov-action-card .ov-attivita-card:nth-child(3n)::after {
-    background: rgba(129,140,248,0.58);
-  }
-
-  #form-info-base .ov-action-card .ov-attivita-card:nth-child(4n)::after {
-    background: rgba(52,211,153,0.54);
-  }
-
   #form-info-base .ov-action-card .ov-attivita-title,
   #form-info-base .ov-action-card .ov-attivita-actions {
     position: relative !important;
@@ -3137,10 +3116,12 @@ main#info-content section,
   ------------------------------------------------------------ */
 
   @media (max-width: 640px) {
-    .info-sidebar-profile-title {
-      font-size: 1.18rem !important;
-    }
-
+    @media (max-width: 640px) {
+      .info-sidebar-profile-title {
+        font-size: 1.36rem !important;
+        line-height: 1.02 !important;
+      }
+      
     .info-sidebar-nav-premium {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       gap: 0.52rem !important;
@@ -3208,7 +3189,42 @@ main#info-content section,
       font-size: 0.7rem !important;
       font-weight: 720 !important;
     }
+
+    #form-info-base .ov-main-card .lingue-toggle {
+      min-height: 1.92rem !important;
+      height: 1.92rem !important;
+      font-size: 0.82rem !important;
+      padding-top: 0.34rem !important;
+      padding-bottom: 0.34rem !important;
+    }
+
+    #form-info-base .ov-main-card #lingue-toggle-text {
+      font-size: 0.82rem !important;
+    }
+
+    #form-info-base .ov-main-card .ov-field:has(#lingue-toggle) {
+      min-height: 2.18rem !important;
+    }
   }
+
+  /* Campo Lingue leggermente più compatto rispetto a Città */
+  #form-info-base .ov-main-card .lingue-toggle {
+    min-height: 1.96rem !important;
+    height: 1.96rem !important;
+    padding-top: 0.36rem !important;
+    padding-bottom: 0.36rem !important;
+    font-size: 0.84rem !important;
+  }
+
+  #form-info-base .ov-main-card #lingue-toggle-text {
+    font-size: 0.84rem !important;
+    line-height: 1.05 !important;
+  }
+
+  #form-info-base .ov-main-card .ov-field:has(#lingue-toggle) {
+    min-height: 2.24rem !important;
+  }
+
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
