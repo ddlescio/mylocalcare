@@ -8728,7 +8728,6 @@ def utente_update_info():
     try:
         c.execute(sql(query_update), valori)
         conn.commit()
-        flash("✅ Modifiche salvate con successo.", "success")
 
         # 🔁 ALLINEA LA MACRO-AREA COME IN LANDING
         if citta:
@@ -8772,7 +8771,7 @@ def utente_update_info():
 
     flash("✅ Modifiche salvate con successo.", "success")
     return redirect(url_for("dashboard"))
-    
+
 @app.route("/utente/update_esperienza", methods=["POST"])
 @login_required
 def utente_update_esperienza():
