@@ -376,11 +376,16 @@ button, input[type="submit"] {
           {% endif %}
         </div>
 
-        <!-- 🔹 Hamburger mobile -->
-        <div class="2xl:hidden">
-          <button id="nav-toggle" class="text-gray-700 focus:outline-none text-3xl flex-shrink-0" aria-label="Apri menu">☰</button>
+        <!-- 🔹 Hamburger menu globale -->
+        <div class="flex flex-shrink-0">
+          <button id="nav-toggle"
+                  class="text-gray-700 focus:outline-none text-3xl flex-shrink-0"
+                  aria-label="Apri menu"
+                  type="button">
+            ☰
+          </button>
         </div>
-
+        
     <!-- 🔍 Barra inline per /cerca -->
     <div id="inline-search"
          class="hidden fixed top-16 left-0 right-0 bg-white border-b border-gray-200 shadow z-40 px-4 py-3">
@@ -543,40 +548,62 @@ button, input[type="submit"] {
     </div>
     </nav>
     <div id="installBanner"
-     class="only-browser hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] bg-white shadow-xl border border-gray-200 rounded-2xl px-5 py-3 flex items-center gap-4">
+         class="only-browser hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] bg-white shadow-xl border border-gray-200 rounded-2xl px-5 py-4 w-[92%] max-w-sm">
 
-    <div class="text-sm">
-      <div class="font-semibold text-gray-800">Installa MyLocalCare</div>
-      <div class="text-gray-500 text-xs">Accesso rapido e notifiche in tempo reale</div>
+      <div class="text-sm">
+        <div class="font-semibold text-gray-800">Installa MyLocalCare</div>
+        <div class="text-gray-500 text-xs mt-1">
+          Accesso rapido e notifiche in tempo reale.
+        </div>
+      </div>
+
+      <label class="mt-3 flex items-center gap-2 text-xs text-gray-500 select-none">
+        <input id="dontShowInstallBanner"
+               type="checkbox"
+               class="w-4 h-4 rounded border-gray-300">
+        <span>Non mostrare più</span>
+      </label>
+
+      <div class="mt-4 flex items-center justify-end gap-2">
+        <button id="closeInstallBanner"
+                type="button"
+                class="text-gray-500 hover:text-gray-700 text-sm px-3 py-1.5 rounded-full">
+          Non ora
+        </button>
+
+        <button id="installBtn"
+                type="button"
+                class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm hover:bg-blue-700 transition">
+          Installa
+        </button>
+      </div>
     </div>
 
-    <button id="installBtn"
-            class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm hover:bg-blue-700 transition">
-      Installa
-    </button>
+    <div id="iosInstallBanner"
+         class="only-browser hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] bg-white shadow-xl border border-gray-200 rounded-2xl px-5 py-4 w-[90%] max-w-sm text-sm">
 
-    <button id="closeInstallBanner"
-            class="text-gray-400 hover:text-gray-600 text-sm">
-      ✕
-    </button>
-  </div>
-  <div id="iosInstallBanner"
-     class="only-browser hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] bg-white shadow-xl border border-gray-200 rounded-2xl px-5 py-4 w-[90%] max-w-sm text-sm">
+      <div class="font-semibold text-gray-800 mb-2">
+        Installa MyLocalCare su iPhone
+      </div>
 
-  <div class="font-semibold text-gray-800 mb-2">
-    Installa MyLocalCare su iPhone
-  </div>
+      <div class="text-gray-600 mb-3 leading-snug">
+        1️⃣ Tocca <strong>Condividi</strong> (⬆️)<br>
+        2️⃣ Seleziona <strong>Aggiungi alla schermata Home</strong>
+      </div>
 
-  <div class="text-gray-600 mb-3 leading-snug">
-    1️⃣ Tocca <strong>Condividi</strong> (⬆️)<br>
-    2️⃣ Seleziona <strong>Aggiungi alla schermata Home</strong>
-  </div>
+      <label class="mb-3 flex items-center gap-2 text-xs text-gray-500 select-none">
+        <input id="dontShowIosInstallBanner"
+               type="checkbox"
+               class="w-4 h-4 rounded border-gray-300">
+        <span>Non mostrare più</span>
+      </label>
 
-  <button id="closeIosBanner"
-          class="w-full bg-blue-600 text-white py-2 rounded-full text-sm">
-    Ho capito
-  </button>
-</div>
+      <button id="closeIosBanner"
+              type="button"
+              class="w-full bg-blue-600 text-white py-2 rounded-full text-sm">
+        Ho capito
+      </button>
+    </div>
 
     {% with flashes = get_flashed_messages(with_categories=true) %}
       {% if flashes %}
@@ -2325,44 +2352,105 @@ if ('serviceWorker' in navigator) {
 <script>
 let deferredPrompt = null;
 
-window.addEventListener('beforeinstallprompt', (e) => {
+function isMobileOrTabletDevice() {
+  const ua = navigator.userAgent || "";
+
+  const isMobileUA =
+    /android|iphone|ipad|ipod|mobile|tablet/i.test(ua);
+
+  const hasTouch =
+    navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+
+  const isSmallScreen =
+    window.matchMedia("(max-width: 1024px)").matches;
+
+  return isMobileUA || (hasTouch && isSmallScreen);
+}
+
+function shouldHideInstallBanner() {
+  return localStorage.getItem("lc_hide_install_banner") === "1";
+}
+
+function hideInstallBannerForeverIfChecked() {
+  const checkbox = document.getElementById("dontShowInstallBanner");
+
+  if (checkbox && checkbox.checked) {
+    localStorage.setItem("lc_hide_install_banner", "1");
+  }
+}
+
+window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
+
+  /*
+    PC / Mac / desktop:
+    non mostriamo mai il banner installazione.
+  */
+  if (!isMobileOrTabletDevice()) {
+    deferredPrompt = null;
+    console.log("PWA install banner skip: desktop");
+    return;
+  }
+
+  /*
+    Utente non interessato:
+    non riproponiamo più il banner.
+  */
+  if (shouldHideInstallBanner()) {
+    deferredPrompt = null;
+    console.log("PWA install banner skip: nascosto dall'utente");
+    return;
+  }
+
   deferredPrompt = e;
 
   const banner = document.getElementById("installBanner");
-  if (banner && document.documentElement.classList.contains("pwa-browser")) {
+
+  if (
+    banner &&
+    document.documentElement.classList.contains("pwa-browser")
+  ) {
     banner.classList.remove("hidden");
   }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-
   const installBtn = document.getElementById("installBtn");
   const banner = document.getElementById("installBanner");
   const closeBtn = document.getElementById("closeInstallBanner");
 
+  if (banner && (!isMobileOrTabletDevice() || shouldHideInstallBanner())) {
+    banner.classList.add("hidden");
+  }
+
   if (installBtn) {
     installBtn.addEventListener("click", async () => {
-      if (!deferredPrompt) return;
+      if (!deferredPrompt) {
+        banner?.classList.add("hidden");
+        return;
+      }
 
       deferredPrompt.prompt();
+
       const choice = await deferredPrompt.userChoice;
 
       if (choice.outcome === "accepted") {
         console.log("PWA installata");
+      } else {
+        hideInstallBannerForeverIfChecked();
       }
 
       deferredPrompt = null;
-      banner.classList.add("hidden");
+      banner?.classList.add("hidden");
     });
   }
 
   if (closeBtn) {
     closeBtn.addEventListener("click", () => {
-      banner.classList.add("hidden");
+      hideInstallBannerForeverIfChecked();
+      banner?.classList.add("hidden");
     });
   }
-
 });
 </script>
 <script>
@@ -2376,18 +2464,44 @@ document.addEventListener("DOMContentLoaded", function() {
     return ('standalone' in window.navigator) && window.navigator.standalone;
   }
 
+  function shouldHideIosInstallBanner() {
+    return localStorage.getItem("lc_hide_ios_install_banner") === "1";
+  }
+
+  function hideIosInstallBannerForeverIfChecked() {
+    const checkbox = document.getElementById("dontShowIosInstallBanner");
+
+    if (checkbox && checkbox.checked) {
+      localStorage.setItem("lc_hide_ios_install_banner", "1");
+    }
+  }
+
   const iosBanner = document.getElementById("iosInstallBanner");
   const closeBtn = document.getElementById("closeIosBanner");
 
-  if (isIos() && !isInStandaloneMode()) {
-    if (iosBanner && document.documentElement.classList.contains("pwa-browser")) {
+  /*
+    iOS/iPadOS:
+    mostra istruzioni installazione solo su iPhone/iPad,
+    solo nel browser normale,
+    e solo se l'utente non ha scelto "Non mostrare più".
+  */
+  if (
+    isIos() &&
+    !isInStandaloneMode() &&
+    !shouldHideIosInstallBanner()
+  ) {
+    if (
+      iosBanner &&
+      document.documentElement.classList.contains("pwa-browser")
+    ) {
       iosBanner.classList.remove("hidden");
     }
   }
 
   if (closeBtn) {
     closeBtn.addEventListener("click", function() {
-      iosBanner.classList.add("hidden");
+      hideIosInstallBannerForeverIfChecked();
+      iosBanner?.classList.add("hidden");
     });
   }
 
@@ -2730,7 +2844,7 @@ window.addEventListener("load", async () => {
         permission: Notification.permission,
         isStandaloneApp
       });
-          
+
     if (!allowedPage) {
       console.log("🔔 Push sync skip: pagina non target", pagePath);
       return;
