@@ -4966,7 +4966,7 @@ nav::before {
     display: flex !important;
   }
 
-  #tab-annunci .intro-contact-icon {
+  #tab-annunci .intro-contact-icon:not(.hidden) {
     width: 2.12rem !important;
     height: 2.12rem !important;
     flex: 0 0 2.12rem !important;
@@ -4981,10 +4981,14 @@ nav::before {
       inset 0 1px 0 rgba(255,255,255,0.78) !important;
   }
 
-  #tab-annunci .intro-contact-icon:hover {
-    transform: translateY(-1px);
+  #tab-annunci .intro-contact-icon.hidden {
+    display: none !important;
   }
 
+  #tab-annunci .intro-contact-icon:not(.hidden):hover {
+    transform: translateY(-1px);
+  }
+  
   #tab-annunci .intro-contact-whatsapp {
     background: #25D366 !important;
   }
@@ -5136,7 +5140,7 @@ nav::before {
       inset 0 1px 0 rgba(255,255,255,1),
       inset 0 -1px 0 rgba(147,197,253,0.26) !important;
   }
-  
+
   /* Contatti Intro: label più premium, senza aumentare ingombro */
   #tab-annunci #intro-contatti-wrapper > p {
     width: fit-content !important;
