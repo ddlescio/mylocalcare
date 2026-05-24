@@ -163,7 +163,7 @@
                         {% if lingue_salvate %}
                           {{ lingue_salvate | join(', ') }}
                         {% else %}
-                          Ciao? Hi? Hallo?
+                          Ciao? Hi? Hola?
                         {% endif %}
                       </span>
 
@@ -3130,7 +3130,7 @@ main#info-content section,
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       gap: 0.52rem !important;
     }
-    
+
     .info-menu-card {
       min-height: 3.35rem !important;
       padding: 0.62rem 0.66rem !important;
@@ -3351,7 +3351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     hiddenInput.value = selected.join(", ");
     toggleText.textContent = selected.length
       ? selected.join(", ")
-      : "Ciao? Hi? Hallo?";
+      : "Ciao? Hi? Hola?";
 
     if (triggerSave) {
       hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3743,6 +3743,89 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!form) return;
 
+  function aggiornaIntroContatti() {
+    const email = form.querySelector('[name="email_pubblica"]')?.value?.trim() || "";
+    const telefono = form.querySelector('[name="telefono"]')?.value?.trim() || "";
+    const indirizzo = form.querySelector('[name="indirizzo_studio"]')?.value?.trim() || "";
+    const sito = form.querySelector('[name="sito_web"]')?.value?.trim() || "";
+    const instagram = form.querySelector('[name="instagram"]')?.value?.trim() || "";
+    const facebook = form.querySelector('[name="facebook"]')?.value?.trim() || "";
+    const linkedin = form.querySelector('[name="linkedin"]')?.value?.trim() || "";
+
+    const wrapper = document.getElementById("intro-contatti-wrapper");
+
+    /*
+      Se il wrapper non esiste, significa che nel template profilo.html
+      la sezione contatti Intro viene ancora creata solo quando i contatti
+      sono già presenti al caricamento pagina.
+      In quel caso il JS non può aggiornare qualcosa che non è nel DOM.
+    */
+    if (!wrapper) return;
+
+    const haContatti =
+      email || telefono || indirizzo || sito || instagram || facebook || linkedin;
+
+    wrapper.classList.toggle("hidden", !haContatti);
+
+    const icons = document.getElementById("intro-contatti-icons");
+    icons?.classList.toggle("hidden", !telefono && !email);
+
+    const telPulito = telefono.replace(/\s+/g, "");
+
+    const whatsappLink = document.getElementById("intro-whatsapp-link");
+    if (whatsappLink) {
+      whatsappLink.href = `https://wa.me/${telPulito}`;
+      whatsappLink.classList.toggle("hidden", !telefono);
+    }
+
+    const telefonoLink = document.getElementById("intro-telefono-link");
+    if (telefonoLink) {
+      telefonoLink.href = `tel:${telPulito}`;
+      telefonoLink.classList.toggle("hidden", !telefono);
+    }
+
+    const emailLink = document.getElementById("intro-email-link");
+    if (emailLink) {
+      emailLink.href = `mailto:${email}`;
+      emailLink.classList.toggle("hidden", !email);
+    }
+
+    const indirizzoRow = document.getElementById("intro-indirizzo-row");
+    const indirizzoValue = document.getElementById("intro-indirizzo-value");
+
+    if (indirizzoRow && indirizzoValue) {
+      indirizzoValue.textContent = indirizzo;
+      indirizzoRow.classList.toggle("hidden", !indirizzo);
+    }
+
+    const socialRow = document.getElementById("intro-social-row");
+    socialRow?.classList.toggle("hidden", !sito && !instagram && !facebook && !linkedin);
+
+    const instagramLink = document.getElementById("intro-instagram-link");
+    if (instagramLink) {
+      instagramLink.href = instagram;
+      instagramLink.classList.toggle("hidden", !instagram);
+    }
+
+    const facebookLink = document.getElementById("intro-facebook-link");
+    if (facebookLink) {
+      facebookLink.href = facebook;
+      facebookLink.classList.toggle("hidden", !facebook);
+    }
+
+    const linkedinLink = document.getElementById("intro-linkedin-link");
+    if (linkedinLink) {
+      linkedinLink.href = linkedin;
+      linkedinLink.classList.toggle("hidden", !linkedin);
+    }
+
+    const sitoLink = document.getElementById("intro-sito-link");
+    if (sitoLink) {
+      sitoLink.href = sito.startsWith("http") ? sito : `https://${sito}`;
+      sitoLink.classList.toggle("hidden", !sito);
+    }
+  }
+
   let autosaveTimer = null;
   let autosaveInCorso = false;
   let queuedAutosave = false;
@@ -3804,6 +3887,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       setStatus("success", "Modifiche salvate");
+
+      /*
+        Aggiorna subito la card Intro nella tab Annunci,
+        senza aspettare refresh pagina.
+      */
+      aggiornaIntroContatti();
+
       clearStatusLater();
 
     } catch (err) {
