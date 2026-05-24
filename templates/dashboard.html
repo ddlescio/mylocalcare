@@ -5054,198 +5054,31 @@ nav::before {
 </style>
 <style>
 /* ============================================================
-   FIX DEFINITIVO MOBILE — ELIMINA ANGOLI INTERNI SQUADRATI
-   Intro profilo + Annunci pubblicati
-   Deve stare DOPO tutti gli altri CSS della pagina
+   FIX MOBILE DEFINITIVO — INTRO + ANNUNCI
+   Un solo blocco, senza sovrapposizioni successive
 ============================================================ */
 
 @media (max-width: 640px) {
 
-  /* Card madri: diventano veri contenitori arrotondati con respiro interno */
-  #tab-annunci .intro-panel,
-  #tab-annunci .annunci-premium-panel {
-    padding: 0.42rem !important;
-    border-radius: 1.55rem !important;
-    overflow: hidden !important;
-    background:
-      radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
-      radial-gradient(circle at bottom left, rgba(99,102,241,0.08), transparent 38%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
-    background-clip: padding-box !important;
+  /*
+    Sfondo pagina/tab come prima: chiaro, non scuro.
+    Non deve diventare trasparente, perché altrimenti emergono
+    livelli sottostanti e si creano forme/triangoli.
+  */
+  #tab-annunci {
+    background: #fafbff !important;
+    padding-top: 0 !important;
+    padding-bottom: 1.5rem !important;
   }
 
-  /* Fondo interno: segue il raggio e non crea più rettangoli ai bordi */
-  #tab-annunci .intro-panel::before,
-  #tab-annunci .annunci-premium-panel::before {
-    inset: 0.42rem !important;
-    border-radius: 1.18rem !important;
-  }
-
-  /* Tolgo il riflesso lineare alto che accentuava lo scalino */
-  #tab-annunci .intro-panel::after,
-  #tab-annunci .annunci-premium-panel::after {
-    display: none !important;
-    content: none !important;
-  }
-
-  /* HEADER INTRO: non deve più usare margini negativi fino al bordo */
-  #tab-annunci .intro-panel > .flex.items-start.justify-between {
-    margin: 0 0 0.78rem 0 !important;
-    padding: 0.82rem 0.9rem 0.72rem !important;
-    border-radius: 1.18rem !important;
-    border: 1px solid rgba(226,232,240,0.72) !important;
-    overflow: hidden !important;
-    background:
-      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
-      linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.76)) !important;
-    background-clip: padding-box !important;
-  }
-
-  /* HEADER ANNUNCI: stesso principio dell'intro */
-  #tab-annunci .annunci-premium-header {
-    margin: 0 !important;
-    padding: 0.86rem 0.9rem 0.78rem !important;
-    border-radius: 1.18rem !important;
-    border: 1px solid rgba(226,232,240,0.72) !important;
-    overflow: hidden !important;
-    background:
-      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
-      linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.76)) !important;
-    background-clip: padding-box !important;
-  }
-
-  /* Lista annunci: niente fondo rettangolare attaccato ai bordi */
-  #tab-annunci .annunci-premium-list {
-    padding: 0.9rem 0.05rem 0.05rem !important;
-    background: transparent !important;
-  }
-
-  /* Empty state, se non ci sono annunci */
-  #tab-annunci .annunci-premium-empty {
-    margin: 0.9rem 0.05rem 0.05rem !important;
-    border-radius: 1.18rem !important;
-  }
-
-  /* Contatti: niente sottocard con bordo arrotondato interno che crea scalini */
-  #tab-annunci #intro-contatti-wrapper {
-    border-radius: 0 !important;
-    overflow: visible !important;
-    padding-bottom: 0 !important;
-  }
-}
-</style>
-<style>
-/* ============================================================
-   FIX REALE MOBILE — RIMUOVE IL PANNELLO RETTANGOLARE DIETRO GLI ANNUNCI
-   Ora il problema residuo è .annunci-premium-panel, non #tab-annunci
-============================================================ */
-
-@media (max-width: 640px) {
-
-  /* Sfondo generale della tab: nessun rettangolo pieno */
-  #tab-annunci,
   #tab-annunci > div,
   .profilo-content-wrapper > section {
     background: transparent !important;
   }
 
-  #tab-annunci {
-    padding-top: 0 !important;
-  }
-
   /*
     INTRO PROFILO:
-    resta una card vera, quindi mantiene il suo sfondo premium.
-  */
-  #tab-annunci .intro-panel {
-    background:
-      radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
-      radial-gradient(circle at bottom left, rgba(99,102,241,0.08), transparent 38%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
-  }
-
-  /*
-    ANNUNCI PUBBLICATI:
-    il contenitore madre NON deve più avere fondo.
-    Altrimenti crea il rettangolo grigio sotto le card.
-  */
-  #tab-annunci .annunci-premium-panel {
-    background: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    outline: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-  }
-
-  #tab-annunci .annunci-premium-panel::before,
-  #tab-annunci .annunci-premium-panel::after {
-    display: none !important;
-    content: none !important;
-  }
-
-  /*
-    Header "Annunci pubblicati":
-    diventa lui una card autonoma arrotondata.
-  */
-  #tab-annunci .annunci-premium-header {
-    margin: 0 0 0.9rem 0 !important;
-    padding: 0.86rem 0.9rem 0.78rem !important;
-    border-radius: 1.18rem !important;
-    border: 1px solid rgba(226,232,240,0.72) !important;
-    overflow: hidden !important;
-    background:
-      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
-      linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.76)) !important;
-    box-shadow:
-      0 10px 22px rgba(15,23,42,0.055),
-      inset 0 1px 0 rgba(255,255,255,0.92) !important;
-    background-clip: padding-box !important;
-  }
-
-  /*
-    Lista annunci:
-    nessun fondo, nessun pannello sotto.
-  */
-  #tab-annunci .annunci-premium-list {
-    padding: 0 !important;
-    background: transparent !important;
-    gap: 1.05rem !important;
-  }
-
-  /*
-    Singole card annuncio:
-    restano le uniche superfici visibili sotto l'header.
-  */
-  #tab-annunci .profile-annuncio-premium-card {
-    border-radius: 1.34rem !important;
-    overflow: hidden !important;
-  }
-
-  /*
-    Stato vuoto, se non ci sono annunci:
-    anche questo diventa card autonoma, senza pannello dietro.
-  */
-  #tab-annunci .annunci-premium-empty {
-    margin: 0 !important;
-    border-radius: 1.18rem !important;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.86), rgba(248,250,252,0.78)) !important;
-  }
-}
-</style>
-<style>
-/* ============================================================
-   FIX MOBILE — INTRO PROFILO: RIPRISTINA SFONDO CARD
-   E RIMUOVE SOLO IL LIVELLO INTERNO CHE CREA IL TRIANGOLO
-============================================================ */
-
-@media (max-width: 640px) {
-
-  /*
-    Il problema non era lo sfondo della card,
-    ma il livello interno/pseudo-elemento dietro.
-    Quindi lo sfondo premium torna sulla card madre.
+    mantiene lo sfondo premium già corretto.
   */
   #tab-annunci .intro-panel {
     padding: 0.42rem !important;
@@ -5268,19 +5101,46 @@ nav::before {
   }
 
   /*
-    Questo è il livello che crea l'effetto "pannello dietro"
-    e può generare il triangolo/sfasamento nella parte bassa.
-    Lo togliamo SOLO su mobile.
+    ANNUNCI PUBBLICATI:
+    copia la logica dell'Intro.
+    Non deve essere trasparente.
+  */
+  #tab-annunci .annunci-premium-panel {
+    padding: 0.42rem !important;
+    border-radius: 1.55rem !important;
+    overflow: hidden !important;
+
+    background:
+      radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
+      radial-gradient(circle at bottom left, rgba(99,102,241,0.08), transparent 38%),
+      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
+
+    border: 1px solid rgba(255,255,255,0.82) !important;
+
+    box-shadow:
+      0 16px 34px rgba(15,23,42,0.10),
+      0 5px 14px rgba(15,23,42,0.055),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+
+    outline: 0 !important;
+    background-clip: padding-box !important;
+  }
+
+  /*
+    Tolgo solo i livelli interni che possono creare triangoli/sfasamenti.
+    La card madre mantiene lo sfondo.
   */
   #tab-annunci .intro-panel::before,
-  #tab-annunci .intro-panel::after {
+  #tab-annunci .intro-panel::after,
+  #tab-annunci .annunci-premium-panel::before,
+  #tab-annunci .annunci-premium-panel::after {
     display: none !important;
     content: none !important;
     background: none !important;
   }
 
   /*
-    Header Intro resta card interna autonoma.
+    Header Intro: card interna arrotondata.
   */
   #tab-annunci .intro-panel > .flex.items-start.justify-between {
     margin: 0 0 0.78rem 0 !important;
@@ -5302,8 +5162,55 @@ nav::before {
   }
 
   /*
-    Il blocco contatti non deve diventare una sottocard
-    né avere overflow/tagli strani in basso.
+    Header Annunci: stesso comportamento dell'header Intro.
+  */
+  #tab-annunci .annunci-premium-header {
+    margin: 0 0 0.78rem 0 !important;
+    padding: 0.82rem 0.9rem 0.72rem !important;
+
+    border-radius: 1.18rem !important;
+    border: 1px solid rgba(226,232,240,0.72) !important;
+    overflow: hidden !important;
+
+    background:
+      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
+      linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.76)) !important;
+
+    box-shadow:
+      0 8px 18px rgba(15,23,42,0.045),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+
+    background-clip: padding-box !important;
+    border-bottom: 1px solid rgba(226,232,240,0.72) !important;
+  }
+
+  /*
+    Lista annunci dentro la card madre.
+  */
+  #tab-annunci .annunci-premium-list {
+    padding: 0 !important;
+    gap: 1.05rem !important;
+    background: transparent !important;
+  }
+
+  /*
+    Singole card annuncio.
+  */
+  #tab-annunci .profile-annuncio-premium-card {
+    border-radius: 1.34rem !important;
+    overflow: hidden !important;
+  }
+
+  /*
+    Stato vuoto.
+  */
+  #tab-annunci .annunci-premium-empty {
+    margin: 0 !important;
+    border-radius: 1.18rem !important;
+  }
+
+  /*
+    Contatti Intro: non deve diventare una sottocard.
   */
   #tab-annunci #intro-contatti-wrapper {
     background: transparent !important;
