@@ -5054,16 +5054,15 @@ nav::before {
 </style>
 <style>
 /* ============================================================
-   FIX MOBILE DEFINITIVO — INTRO + ANNUNCI
-   Un solo blocco, senza sovrapposizioni successive
+   FIX MOBILE REALE — CLIPPING CARD INTRO + ANNUNCI
+   Sostituisce il precedente "FIX MOBILE DEFINITIVO — INTRO + ANNUNCI"
 ============================================================ */
 
 @media (max-width: 640px) {
 
   /*
-    Sfondo pagina/tab come prima: chiaro, non scuro.
-    Non deve diventare trasparente, perché altrimenti emergono
-    livelli sottostanti e si creano forme/triangoli.
+    Sfondo generale come prima: chiaro.
+    Non tocchiamo più il colore della pagina.
   */
   #tab-annunci {
     background: #fafbff !important;
@@ -5077,38 +5076,17 @@ nav::before {
   }
 
   /*
-    INTRO PROFILO:
-    mantiene lo sfondo premium già corretto.
+    CARD MADRI:
+    qui il punto non è il colore, ma il ritaglio.
+    Su Safari mobile forziamo il clipping vero.
   */
-  #tab-annunci .intro-panel {
-    padding: 0.42rem !important;
-    border-radius: 1.55rem !important;
-    overflow: hidden !important;
-
-    background:
-      radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
-      radial-gradient(circle at bottom left, rgba(99,102,241,0.08), transparent 38%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
-
-    border: 1px solid rgba(255,255,255,0.82) !important;
-
-    box-shadow:
-      0 16px 34px rgba(15,23,42,0.10),
-      0 5px 14px rgba(15,23,42,0.055),
-      inset 0 1px 0 rgba(255,255,255,0.92) !important;
-
-    background-clip: padding-box !important;
-  }
-
-  /*
-    ANNUNCI PUBBLICATI:
-    copia la logica dell'Intro.
-    Non deve essere trasparente.
-  */
+  #tab-annunci .intro-panel,
   #tab-annunci .annunci-premium-panel {
+    position: relative !important;
+    z-index: 0 !important;
+
     padding: 0.42rem !important;
     border-radius: 1.55rem !important;
-    overflow: hidden !important;
 
     background:
       radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
@@ -5122,13 +5100,17 @@ nav::before {
       0 5px 14px rgba(15,23,42,0.055),
       inset 0 1px 0 rgba(255,255,255,0.92) !important;
 
-    outline: 0 !important;
+    overflow: hidden !important;
+    contain: paint !important;
+    clip-path: inset(0 round 1.55rem) !important;
+    -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
     background-clip: padding-box !important;
+    isolation: isolate !important;
   }
 
   /*
-    Tolgo solo i livelli interni che possono creare triangoli/sfasamenti.
-    La card madre mantiene lo sfondo.
+    Tolgo i livelli interni assoluti.
+    Sono quelli che possono creare lo sfondo che sembra uscire dai bordi.
   */
   #tab-annunci .intro-panel::before,
   #tab-annunci .intro-panel::after,
@@ -5140,37 +5122,19 @@ nav::before {
   }
 
   /*
-    Header Intro: card interna arrotondata.
+    HEADER INTRO e HEADER ANNUNCI:
+    devono essere card interne indipendenti, non fondi che arrivano al bordo.
   */
-  #tab-annunci .intro-panel > .flex.items-start.justify-between {
-    margin: 0 0 0.78rem 0 !important;
-    padding: 0.82rem 0.9rem 0.72rem !important;
-
-    border-radius: 1.18rem !important;
-    border: 1px solid rgba(226,232,240,0.72) !important;
-    overflow: hidden !important;
-
-    background:
-      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
-      linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.76)) !important;
-
-    box-shadow:
-      0 8px 18px rgba(15,23,42,0.045),
-      inset 0 1px 0 rgba(255,255,255,0.92) !important;
-
-    background-clip: padding-box !important;
-  }
-
-  /*
-    Header Annunci: stesso comportamento dell'header Intro.
-  */
+  #tab-annunci .intro-panel > .flex.items-start.justify-between,
   #tab-annunci .annunci-premium-header {
+    position: relative !important;
+    z-index: 2 !important;
+
     margin: 0 0 0.78rem 0 !important;
     padding: 0.82rem 0.9rem 0.72rem !important;
 
     border-radius: 1.18rem !important;
     border: 1px solid rgba(226,232,240,0.72) !important;
-    overflow: hidden !important;
 
     background:
       radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
@@ -5180,37 +5144,56 @@ nav::before {
       0 8px 18px rgba(15,23,42,0.045),
       inset 0 1px 0 rgba(255,255,255,0.92) !important;
 
+    overflow: hidden !important;
+    contain: paint !important;
+    clip-path: inset(0 round 1.18rem) !important;
+    -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
     background-clip: padding-box !important;
     border-bottom: 1px solid rgba(226,232,240,0.72) !important;
   }
 
   /*
-    Lista annunci dentro la card madre.
+    Lista annunci:
+    deve stare dentro la card madre senza creare un rettangolo proprio.
   */
   #tab-annunci .annunci-premium-list {
+    position: relative !important;
+    z-index: 2 !important;
     padding: 0 !important;
     gap: 1.05rem !important;
     background: transparent !important;
+    overflow: visible !important;
   }
 
   /*
-    Singole card annuncio.
+    Singole card annuncio:
+    anche qui forziamo clipping, perché hanno gradienti interni.
   */
   #tab-annunci .profile-annuncio-premium-card {
     border-radius: 1.34rem !important;
     overflow: hidden !important;
+    contain: paint !important;
+    clip-path: inset(0 round 1.34rem) !important;
+    -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+    background-clip: padding-box !important;
   }
 
   /*
-    Stato vuoto.
+    Empty state.
   */
   #tab-annunci .annunci-premium-empty {
     margin: 0 !important;
     border-radius: 1.18rem !important;
+    overflow: hidden !important;
+    contain: paint !important;
+    clip-path: inset(0 round 1.18rem) !important;
+    -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+    background-clip: padding-box !important;
   }
 
   /*
-    Contatti Intro: non deve diventare una sottocard.
+    Contatti Intro:
+    niente sottocard o tagli strani in basso.
   */
   #tab-annunci #intro-contatti-wrapper {
     background: transparent !important;
