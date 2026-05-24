@@ -575,6 +575,9 @@
 
 <script>
 (function () {
+  if (window.__annuncioOpeningLoaderInit) return;
+  window.__annuncioOpeningLoaderInit = true;
+
   let openingInProgress = false;
 
   function showOpeningOverlay(card) {
@@ -583,13 +586,19 @@
 
     overlay.classList.remove("hidden");
     overlay.classList.add("flex");
+    overlay.setAttribute("aria-hidden", "false");
+
+    /*
+      Forza Safari/iPhone a calcolare subito il layout.
+      Serve perché l'overlay venga realmente disegnato prima della navigazione.
+    */
+    void overlay.offsetHeight;
 
     if (card) {
       card.classList.add("annuncio-opening");
     }
 
-    document.body.classList.add("pointer-events-none");
-    overlay.classList.remove("pointer-events-none");
+    document.body.classList.add("annuncio-navigation-loading");
   }
 
   function openAnnuncioCard(card) {
@@ -599,17 +608,28 @@
     if (!url) return;
 
     openingInProgress = true;
+
     showOpeningOverlay(card);
 
+    /*
+      Doppio requestAnimationFrame:
+      lascia al browser il tempo di disegnare overlay + blur + spinner
+      prima di cambiare pagina.
+    */
     requestAnimationFrame(() => {
-      setTimeout(() => {
-        window.location.href = url;
-      }, 60);
+      requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          window.location.href = url;
+        }, 120);
+      });
     });
   }
 
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".js-open-annuncio").forEach((card) => {
+      if (card.dataset.annuncioClickInit === "1") return;
+      card.dataset.annuncioClickInit = "1";
+
       card.addEventListener("click", (e) => {
         if (
           e.target.closest("a, button, input, textarea, select, label, form")
@@ -617,8 +637,28 @@
           return;
         }
 
+        e.preventDefault();
+        e.stopPropagation();
+
         openAnnuncioCard(card);
       });
+    });
+  });
+
+  window.addEventListener("pageshow", () => {
+    openingInProgress = false;
+
+    const overlay = document.getElementById("annuncio-loading-overlay");
+    if (overlay) {
+      overlay.classList.add("hidden");
+      overlay.classList.remove("flex");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+
+    document.body.classList.remove("annuncio-navigation-loading");
+
+    document.querySelectorAll(".annuncio-opening").forEach((card) => {
+      card.classList.remove("annuncio-opening");
     });
   });
 })();
@@ -642,6 +682,21 @@
 
 @keyframes annuncioSpin {
   to { transform: rotate(360deg); }
+}
+
+body.annuncio-navigation-loading {
+  cursor: wait !important;
+}
+
+body.annuncio-navigation-loading .js-open-annuncio,
+body.annuncio-navigation-loading a,
+body.annuncio-navigation-loading button {
+  pointer-events: none !important;
+}
+
+body.annuncio-navigation-loading #annuncio-loading-overlay,
+body.annuncio-navigation-loading #annuncio-loading-overlay * {
+  pointer-events: auto !important;
 }
 </style>
 <style>
@@ -1462,7 +1517,7 @@
     transform: translateY(-0.5px);
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18));
   }
-  
+
   @keyframes urgentPulse {
     0%   { transform: scale(1); }
     50%  { transform: scale(1.04); }
