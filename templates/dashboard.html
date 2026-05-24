@@ -475,7 +475,7 @@
 
                   <!-- SOCIAL + SITO WEB -->
                   <div id="intro-social-row"
-                       class="flex justify-center gap-4 text-[13px] pt-1 flex-wrap {% if not instagram and not facebook and not linkedin %}hidden{% endif %}"
+                       class="flex justify-center gap-4 text-[13px] pt-1 flex-wrap {% if not instagram and not facebook and not linkedin %}hidden{% endif %}">
 
                     <a id="intro-instagram-link"
                        href="{{ instagram }}"
@@ -4785,6 +4785,13 @@ nav::before {
   #tab-annunci .intro-panel {
     padding: 0.92rem !important;
     border-radius: 1.42rem !important;
+    overflow: hidden !important;
+    background-clip: padding-box !important;
+  }
+
+  #tab-annunci .intro-panel::before {
+    border-radius: 1.12rem !important;
+    inset: 0.32rem !important;
   }
 
   #tab-annunci .intro-panel > .flex.items-start.justify-between {
@@ -4792,6 +4799,9 @@ nav::before {
     padding: 0.82rem 0.9rem 0.72rem !important;
     gap: 0.55rem !important;
     align-items: center !important;
+    border-radius: 1.42rem 1.42rem 0 0 !important;
+    overflow: hidden !important;
+    background-clip: padding-box !important;
   }
 
   #tab-annunci .intro-panel > .flex.items-start.justify-between > div:first-child {
@@ -4923,6 +4933,16 @@ nav::before {
     display: grid !important;
     gap: 0.62rem !important;
     border-top: 1px solid rgba(226,232,240,0.78) !important;
+  }
+
+  #tab-annunci .intro-panel > *:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  #tab-annunci #intro-contatti-wrapper {
+    padding-bottom: 0.18rem !important;
+    border-radius: 0 0 1.12rem 1.12rem !important;
+    overflow: hidden !important;
   }
 
   #tab-annunci #intro-contatti-wrapper > p {
