@@ -385,7 +385,7 @@ button, input[type="submit"] {
             ☰
           </button>
         </div>
-        
+
     <!-- 🔍 Barra inline per /cerca -->
     <div id="inline-search"
          class="hidden fixed top-16 left-0 right-0 bg-white border-b border-gray-200 shadow z-40 px-4 py-3">
@@ -3127,6 +3127,272 @@ window.addEventListener("beforeunload", () => {
   }
 }
 </style>
+<!-- 🔄 Pull to refresh globale stile app -->
+<div id="lcPullRefresh" aria-hidden="true">
+  <div class="lc-pull-refresh-card">
+    <div id="lcPullRefreshSpinner" class="lc-pull-refresh-spinner"></div>
+    <span id="lcPullRefreshText">Trascina per aggiornare</span>
+  </div>
+</div>
+
+<style>
+/* =========================================================
+   PULL TO REFRESH GLOBALE — MOBILE / PWA
+========================================================= */
+
+#lcPullRefresh {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  left: 0;
+  right: 0;
+  z-index: 999999;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-1.25rem);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+#lcPullRefresh.lc-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#lcPullRefresh.lc-ready .lc-pull-refresh-card {
+  border-color: rgba(37,99,235,0.45);
+  box-shadow:
+    0 18px 38px rgba(37,99,235,0.16),
+    0 6px 16px rgba(15,23,42,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.lc-pull-refresh-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.55rem;
+  padding: 0.48rem 0.9rem;
+  border-radius: 9999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.86));
+  border: 1px solid rgba(203,213,225,0.86);
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    0 14px 30px rgba(15,23,42,0.13),
+    0 4px 10px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.lc-pull-refresh-spinner {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 9999px;
+  border: 2px solid rgba(147,197,253,0.95);
+  border-top-color: #2563eb;
+  transform: rotate(0deg);
+}
+
+#lcPullRefresh.lc-loading .lc-pull-refresh-spinner {
+  animation: lcPullRefreshSpin 0.75s linear infinite;
+}
+
+@keyframes lcPullRefreshSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (min-width: 1025px) {
+  #lcPullRefresh {
+    display: none !important;
+  }
+}
+</style>
+
+<script>
+(function () {
+  if (window.__lcPullRefreshInitialized) return;
+  window.__lcPullRefreshInitialized = true;
+
+  const MIN_PULL_DISTANCE = 82;
+  const MAX_VISUAL_PULL = 118;
+
+  let startY = 0;
+  let currentY = 0;
+  let pulling = false;
+  let ready = false;
+  let refreshing = false;
+
+  function isTouchDevice() {
+    return window.matchMedia("(max-width: 1024px)").matches || navigator.maxTouchPoints > 0;
+  }
+
+  function isAtTop() {
+    return window.scrollY <= 0 || document.documentElement.scrollTop <= 0;
+  }
+
+  function hasOpenModal() {
+    return document.body.classList.contains("modal-open")
+      || !!document.querySelector(
+        "#videoOverlay:not(.hidden), #incomingCallModal:not(.hidden), #maggiorenneModal:not(.hidden), #modale-visibilita:not(.hidden), #modale-servizio:not(.hidden), #modale-conferma:not(.hidden)"
+      );
+  }
+
+  function isInteractiveElement(target) {
+    return !!target.closest("input, textarea, select, button, a, label, details, summary");
+  }
+
+  function isInsideScrollableElement(target) {
+    const scrollable = target.closest(
+      "#nav-menu, #categorieScroll, #modale-visibilita-card, .overflow-y-auto, .overflow-auto, .overflow-scroll"
+    );
+
+    if (!scrollable) return false;
+
+    return scrollable.scrollHeight > scrollable.clientHeight;
+  }
+
+  function getPullEl() {
+    return document.getElementById("lcPullRefresh");
+  }
+
+  function getTextEl() {
+    return document.getElementById("lcPullRefreshText");
+  }
+
+  function resetPullRefresh() {
+    const el = getPullEl();
+    const text = getTextEl();
+
+    pulling = false;
+    ready = false;
+
+    if (el) {
+      el.classList.remove("lc-visible", "lc-ready", "lc-loading");
+      el.style.transform = "";
+    }
+
+    if (text) {
+      text.textContent = "Trascina per aggiornare";
+    }
+
+    document.body.style.transform = "";
+    document.body.style.transition = "";
+  }
+
+  function updatePullRefresh(distance) {
+    const el = getPullEl();
+    const text = getTextEl();
+
+    if (!el) return;
+
+    const visualDistance = Math.min(distance * 0.45, MAX_VISUAL_PULL);
+    ready = distance >= MIN_PULL_DISTANCE;
+
+    el.classList.add("lc-visible");
+    el.classList.toggle("lc-ready", ready);
+    el.style.transform = `translateY(${Math.max(0, visualDistance - 28)}px)`;
+
+    if (text) {
+      text.textContent = ready ? "Rilascia per aggiornare" : "Trascina per aggiornare";
+    }
+
+    document.body.style.transition = "none";
+    document.body.style.transform = `translateY(${Math.min(visualDistance * 0.28, 28)}px)`;
+  }
+
+  function startRefresh() {
+    if (refreshing) return;
+
+    refreshing = true;
+
+    const el = getPullEl();
+    const text = getTextEl();
+
+    if (el) {
+      el.classList.add("lc-visible", "lc-loading");
+      el.classList.remove("lc-ready");
+      el.style.transform = "translateY(0)";
+    }
+
+    if (text) {
+      text.textContent = "Aggiornamento...";
+    }
+
+    document.body.style.transition = "transform 0.18s ease";
+    document.body.style.transform = "translateY(18px)";
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 250);
+  }
+
+  document.addEventListener("touchstart", function (e) {
+    if (!isTouchDevice()) return;
+    if (refreshing) return;
+    if (!isAtTop()) return;
+    if (hasOpenModal()) return;
+    if (e.touches.length !== 1) return;
+    if (isInteractiveElement(e.target)) return;
+    if (isInsideScrollableElement(e.target)) return;
+
+    startY = e.touches[0].clientY;
+    currentY = startY;
+    pulling = true;
+    ready = false;
+  }, { passive: true });
+
+  document.addEventListener("touchmove", function (e) {
+    if (!pulling || refreshing) return;
+    if (e.touches.length !== 1) return;
+
+    currentY = e.touches[0].clientY;
+
+    const distance = currentY - startY;
+
+    if (distance <= 0) {
+      resetPullRefresh();
+      return;
+    }
+
+    if (!isAtTop()) {
+      resetPullRefresh();
+      return;
+    }
+
+    updatePullRefresh(distance);
+  }, { passive: true });
+
+  document.addEventListener("touchend", function () {
+    if (!pulling || refreshing) return;
+
+    if (ready) {
+      startRefresh();
+      return;
+    }
+
+    document.body.style.transition = "transform 0.18s ease";
+    document.body.style.transform = "translateY(0)";
+
+    setTimeout(resetPullRefresh, 180);
+  }, { passive: true });
+
+  document.addEventListener("touchcancel", function () {
+    if (refreshing) return;
+    resetPullRefresh();
+  }, { passive: true });
+
+})();
+</script>
+
 
 </body>
 </html>
