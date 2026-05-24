@@ -5234,6 +5234,71 @@ nav::before {
   }
 }
 </style>
+<style>
+/* ============================================================
+   FIX MOBILE — RIMUOVE IL RETTANGOLO BASSO DENTRO INTRO PROFILO
+   Il problema residuo era il fondo interno generato da .intro-panel::before
+============================================================ */
+
+@media (max-width: 640px) {
+
+  /*
+    La card Intro deve avere un solo fondo continuo.
+    Il ::before interno creava una seconda superficie grigia visibile in basso.
+  */
+  #tab-annunci .intro-panel::before,
+  #tab-annunci .intro-panel::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  /*
+    Manteniamo Intro profilo come card vera,
+    ma senza pannello interno aggiuntivo.
+  */
+  #tab-annunci .intro-panel {
+    background:
+      radial-gradient(circle at top right, rgba(59,130,246,0.10), transparent 34%),
+      radial-gradient(circle at bottom left, rgba(99,102,241,0.06), transparent 38%),
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94)) !important;
+    border: 1px solid rgba(226,232,240,0.82) !important;
+    box-shadow:
+      0 12px 26px rgba(15,23,42,0.07),
+      0 4px 10px rgba(15,23,42,0.045),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+    overflow: hidden !important;
+  }
+
+  /*
+    Header Intro resta una card interna arrotondata,
+    ma non deve sporcare il corpo sotto.
+  */
+  #tab-annunci .intro-panel > .flex.items-start.justify-between {
+    margin: 0 0 0.78rem 0 !important;
+    border-radius: 1.18rem !important;
+  }
+
+  /*
+    La parte contatti non deve creare un blocco basso separato.
+  */
+  #tab-annunci #intro-contatti-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0.15rem !important;
+  }
+
+  #tab-annunci #intro-contatti-icons,
+  #tab-annunci #intro-indirizzo-row,
+  #tab-annunci #intro-social-row {
+    background: transparent !important;
+  }
+}
+</style>
+
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".tab-btn");
