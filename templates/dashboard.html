@@ -4930,9 +4930,12 @@ nav::before {
   #tab-annunci #intro-contatti-wrapper {
     margin-top: 0.82rem !important;
     padding-top: 0.78rem !important;
-    display: grid !important;
     gap: 0.62rem !important;
     border-top: 1px solid rgba(226,232,240,0.78) !important;
+  }
+
+  #tab-annunci #intro-contatti-wrapper:not(.hidden) {
+    display: grid !important;
   }
 
   #tab-annunci .intro-panel > *:last-child {
@@ -4953,11 +4956,14 @@ nav::before {
   }
 
   #tab-annunci #intro-contatti-icons {
-    display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     gap: 0.62rem !important;
     margin: 0 !important;
+  }
+
+  #tab-annunci #intro-contatti-icons:not(.hidden) {
+    display: flex !important;
   }
 
   #tab-annunci .intro-contact-icon {
@@ -5058,7 +5064,7 @@ nav::before {
    Sostituisce il precedente "FIX MOBILE DEFINITIVO — INTRO + ANNUNCI"
 ============================================================ */
 
-@media (max-width: 640px) {
+@media (max-width: 1023px) {
 
   /*
     Sfondo generale come prima: chiaro.
@@ -5106,6 +5112,23 @@ nav::before {
     -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
     background-clip: padding-box !important;
     isolation: isolate !important;
+  }
+
+  /* Intro: più profondità rispetto alla pagina, senza rompere il clipping */
+  #tab-annunci .intro-panel {
+    background:
+      radial-gradient(circle at 88% 8%, rgba(59,130,246,0.22), transparent 34%),
+      radial-gradient(circle at 8% 92%, rgba(99,102,241,0.16), transparent 40%),
+      linear-gradient(180deg, #ffffff 0%, #eef4ff 48%, #e8eef9 100%) !important;
+
+    border: 1.5px solid rgba(147,197,253,0.58) !important;
+
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.88),
+      0 18px 38px rgba(37,99,235,0.12),
+      0 8px 18px rgba(15,23,42,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.98),
+      inset 0 -1px 0 rgba(147,197,253,0.18) !important;
   }
 
   /*
