@@ -5116,21 +5116,80 @@ nav::before {
 
   /* Intro: più profondità rispetto alla pagina, senza rompere il clipping */
   #tab-annunci .intro-panel {
+    padding-bottom: 0.72rem !important;
+
     background:
-      radial-gradient(circle at 88% 8%, rgba(59,130,246,0.22), transparent 34%),
-      radial-gradient(circle at 8% 92%, rgba(99,102,241,0.16), transparent 40%),
+      radial-gradient(circle at 88% 8%, rgba(59,130,246,0.24), transparent 34%),
+      radial-gradient(circle at 8% 92%, rgba(99,102,241,0.17), transparent 40%),
       linear-gradient(180deg, #ffffff 0%, #eef4ff 48%, #e8eef9 100%) !important;
 
-    border: 1.5px solid rgba(147,197,253,0.58) !important;
+    border: 1.5px solid rgba(147,197,253,0.62) !important;
 
     box-shadow:
-      0 0 0 1px rgba(255,255,255,0.88),
-      0 18px 38px rgba(37,99,235,0.12),
-      0 8px 18px rgba(15,23,42,0.08),
+      0 0 0 1px rgba(255,255,255,0.92),
+      0 0 0 4px rgba(239,246,255,0.88),
+      0 18px 38px rgba(37,99,235,0.13),
+      0 8px 18px rgba(15,23,42,0.085),
+      inset 0 0 0 1px rgba(255,255,255,0.82),
+      inset 0 0 0 2px rgba(191,219,254,0.28),
       inset 0 1px 0 rgba(255,255,255,0.98),
-      inset 0 -1px 0 rgba(147,197,253,0.18) !important;
+      inset 0 -1px 0 rgba(147,197,253,0.22) !important;
   }
 
+  /* Contatti Intro: label più premium, senza aumentare ingombro */
+  #tab-annunci #intro-contatti-wrapper > p {
+    width: fit-content !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 0.28rem 0.72rem !important;
+    border-radius: 9999px !important;
+
+    color: #3b82f6 !important;
+    font-weight: 950 !important;
+    letter-spacing: 0.18em !important;
+
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(239,246,255,0.78)) !important;
+
+    border: 1px solid rgba(255,255,255,0.95) !important;
+
+    box-shadow:
+      0 0 0 1px rgba(147,197,253,0.28),
+      0 6px 14px rgba(37,99,235,0.075),
+      inset 0 1px 0 rgba(255,255,255,0.98) !important;
+
+    text-shadow:
+      0 1px 0 rgba(255,255,255,0.95),
+      0 0 10px rgba(147,197,253,0.35);
+  }
+
+  /* Bottoni contatto: bordo bianco premium interno + rilievo soft */
+  #tab-annunci .intro-contact-icon {
+    border: 1px solid rgba(255,255,255,0.95) !important;
+
+    box-shadow:
+      0 0 0 1px rgba(148,163,184,0.18),
+      0 7px 15px rgba(15,23,42,0.09),
+      inset 0 1px 0 rgba(255,255,255,0.90),
+      inset 0 0 0 1px rgba(255,255,255,0.42) !important;
+  }
+
+  #tab-annunci .intro-contact-whatsapp {
+    box-shadow:
+      0 0 0 1px rgba(34,197,94,0.20),
+      0 8px 16px rgba(34,197,94,0.18),
+      inset 0 1px 0 rgba(255,255,255,0.58),
+      inset 0 0 0 1px rgba(255,255,255,0.28) !important;
+  }
+
+  #tab-annunci .intro-contact-neutral {
+    box-shadow:
+      0 0 0 1px rgba(147,197,253,0.24),
+      0 7px 15px rgba(37,99,235,0.075),
+      inset 0 1px 0 rgba(255,255,255,0.96),
+      inset 0 0 0 1px rgba(255,255,255,0.52) !important;
+  }
+  
   /*
     Tolgo i livelli interni assoluti.
     Sono quelli che possono creare lo sfondo che sembra uscire dai bordi.
