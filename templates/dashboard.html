@@ -5236,14 +5236,41 @@ nav::before {
 </style>
 <style>
 /* ============================================================
-   FIX MOBILE — INTRO PROFILO SENZA FONDO GRIGIO BASSO
-   Il residuo era ormai il background della card .intro-panel stessa
+   FIX MOBILE — INTRO PROFILO: RIPRISTINA SFONDO CARD
+   E RIMUOVE SOLO IL LIVELLO INTERNO CHE CREA IL TRIANGOLO
 ============================================================ */
 
 @media (max-width: 640px) {
 
   /*
-    Eliminiamo definitivamente i fondi interni/pseudo-elementi.
+    Il problema non era lo sfondo della card,
+    ma il livello interno/pseudo-elemento dietro.
+    Quindi lo sfondo premium torna sulla card madre.
+  */
+  #tab-annunci .intro-panel {
+    padding: 0.42rem !important;
+    border-radius: 1.55rem !important;
+    overflow: hidden !important;
+
+    background:
+      radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
+      radial-gradient(circle at bottom left, rgba(99,102,241,0.08), transparent 38%),
+      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
+
+    border: 1px solid rgba(255,255,255,0.82) !important;
+
+    box-shadow:
+      0 16px 34px rgba(15,23,42,0.10),
+      0 5px 14px rgba(15,23,42,0.055),
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+
+    background-clip: padding-box !important;
+  }
+
+  /*
+    Questo è il livello che crea l'effetto "pannello dietro"
+    e può generare il triangolo/sfasamento nella parte bassa.
+    Lo togliamo SOLO su mobile.
   */
   #tab-annunci .intro-panel::before,
   #tab-annunci .intro-panel::after {
@@ -5253,58 +5280,38 @@ nav::before {
   }
 
   /*
-    Card Intro: fondo quasi bianco uniforme.
-    Niente gradienti azzurri/grigi nella parte bassa.
-  */
-  #tab-annunci .intro-panel {
-    padding: 0.42rem !important;
-    border-radius: 1.55rem !important;
-    overflow: hidden !important;
-    background: rgba(255,255,255,0.96) !important;
-    border: 1px solid rgba(226,232,240,0.82) !important;
-    box-shadow:
-      0 12px 26px rgba(15,23,42,0.07),
-      0 4px 10px rgba(15,23,42,0.045),
-      inset 0 1px 0 rgba(255,255,255,0.96) !important;
-    background-clip: padding-box !important;
-  }
-
-  /*
-    Header Intro resta separato e premium.
+    Header Intro resta card interna autonoma.
   */
   #tab-annunci .intro-panel > .flex.items-start.justify-between {
     margin: 0 0 0.78rem 0 !important;
     padding: 0.82rem 0.9rem 0.72rem !important;
+
     border-radius: 1.18rem !important;
     border: 1px solid rgba(226,232,240,0.72) !important;
     overflow: hidden !important;
+
     background:
-      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.98), transparent 30%),
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.82)) !important;
+      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
+      linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.76)) !important;
+
     box-shadow:
       0 8px 18px rgba(15,23,42,0.045),
-      inset 0 1px 0 rgba(255,255,255,0.96) !important;
+      inset 0 1px 0 rgba(255,255,255,0.92) !important;
+
     background-clip: padding-box !important;
   }
 
   /*
-    Corpo Intro: nessun fondo proprio, così non crea più blocchi.
+    Il blocco contatti non deve diventare una sottocard
+    né avere overflow/tagli strani in basso.
   */
-  #tab-annunci #intro-info-base,
-  #tab-annunci #intro-attivita-wrapper,
   #tab-annunci #intro-contatti-wrapper {
     background: transparent !important;
     box-shadow: none !important;
-  }
-
-  /*
-    Contatti: rimuove definitivamente la zona grigio/azzurra inferiore.
-  */
-  #tab-annunci #intro-contatti-wrapper {
     border-radius: 0 !important;
     overflow: visible !important;
     margin-bottom: 0 !important;
-    padding-bottom: 0.12rem !important;
+    padding-bottom: 0 !important;
   }
 
   #tab-annunci #intro-contatti-icons,
@@ -5314,17 +5321,8 @@ nav::before {
     background: transparent !important;
     box-shadow: none !important;
   }
-
-  /*
-    Piccolo alleggerimento: evita che il fondo della card si veda come fascia sotto l'indirizzo.
-  */
-  #tab-annunci #intro-indirizzo-row {
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-  }
 }
 </style>
-
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".tab-btn");
