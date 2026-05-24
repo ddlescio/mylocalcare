@@ -5134,6 +5134,41 @@ nav::before {
   }
 }
 </style>
+<style>
+/* ============================================================
+   FIX REALE MOBILE — RIMUOVE IL RETTANGOLO DI SFONDO DIETRO LE CARD
+   Il problema non era la card, ma il background della tab Annunci
+============================================================ */
+
+@media (max-width: 640px) {
+
+  /* Questo è il rettangolo chiaro dietro Intro e Annunci */
+  #tab-annunci {
+    background: transparent !important;
+    padding-top: 0 !important;
+  }
+
+  /* Anche il wrapper interno non deve generare pannelli pieni */
+  #tab-annunci > div {
+    background: transparent !important;
+  }
+
+  /* Evita che la sezione contenitore crei una fascia colorata dietro */
+  .profilo-content-wrapper > section {
+    background: transparent !important;
+  }
+
+  /* Manteniamo lo sfondo solo dentro le card vere */
+  #tab-annunci .intro-panel,
+  #tab-annunci .annunci-premium-panel {
+    background:
+      radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
+      radial-gradient(circle at bottom left, rgba(99,102,241,0.08), transparent 38%),
+      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
+  }
+}
+</style>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".tab-btn");
