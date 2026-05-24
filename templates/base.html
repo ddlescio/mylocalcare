@@ -3392,7 +3392,334 @@ window.addEventListener("beforeunload", () => {
 
 })();
 </script>
+<!-- ⏳ Loader globale navigazione MyLocalCare -->
+<div id="lcGlobalLoader" class="hidden" aria-hidden="true">
+  <div class="lc-global-loader-backdrop"></div>
 
+  <div class="lc-global-loader-card">
+    <div class="lc-global-loader-logo-wrap">
+      <img
+        src="{{ url_for('static', filename='img/logo.png') }}"
+        alt="MyLocalCare"
+        class="lc-global-loader-logo"
+      >
+      <div class="lc-global-loader-spinner"></div>
+    </div>
+
+    <div class="lc-global-loader-title">
+      Caricamento...
+    </div>
+
+    <div id="lcGlobalLoaderText" class="lc-global-loader-text">
+      Stiamo aprendo la pagina.
+    </div>
+  </div>
+</div>
+
+<style>
+/* =========================================================
+   LOADER GLOBALE NAVIGAZIONE — MyLocalCare
+========================================================= */
+
+#lcGlobalLoader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  pointer-events: auto;
+}
+
+#lcGlobalLoader.hidden {
+  display: none !important;
+}
+
+.lc-global-loader-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(59,130,246,0.16), transparent 38%),
+    rgba(248,250,252,0.76);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+}
+
+.lc-global-loader-card {
+  position: relative;
+  z-index: 2;
+  width: min(86vw, 320px);
+  border-radius: 2rem;
+  padding: 1.35rem 1.25rem 1.25rem;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.97), rgba(248,250,252,0.90));
+  border: 1px solid rgba(255,255,255,0.95);
+  box-shadow:
+    0 26px 60px rgba(15,23,42,0.20),
+    0 8px 20px rgba(15,23,42,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.98);
+}
+
+.lc-global-loader-logo-wrap {
+  position: relative;
+  width: 4.25rem;
+  height: 4.25rem;
+  margin: 0 auto 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lc-global-loader-logo {
+  width: 2.85rem;
+  height: 2.85rem;
+  object-fit: contain;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 6px 10px rgba(37,99,235,0.16));
+}
+
+.lc-global-loader-spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 3px solid rgba(191,219,254,0.82);
+  border-top-color: #2563eb;
+  animation: lcGlobalLoaderSpin 0.75s linear infinite;
+}
+
+@keyframes lcGlobalLoaderSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lc-global-loader-title {
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.lc-global-loader-text {
+  margin-top: 0.35rem;
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  font-weight: 550;
+}
+
+body.lc-navigation-loading {
+  cursor: wait !important;
+}
+
+body.lc-navigation-loading a,
+body.lc-navigation-loading button,
+body.lc-navigation-loading input,
+body.lc-navigation-loading textarea,
+body.lc-navigation-loading select {
+  pointer-events: none !important;
+}
+
+body.lc-navigation-loading #lcGlobalLoader,
+body.lc-navigation-loading #lcGlobalLoader * {
+  pointer-events: auto !important;
+}
+</style>
+
+<script>
+(function () {
+  if (window.__lcGlobalLoaderInitialized) return;
+  window.__lcGlobalLoaderInitialized = true;
+
+  let loaderTimer = null;
+  let slowTimer = null;
+  let loaderShown = false;
+
+  const LOADER_DELAY_MS = 180;
+  const SLOW_CONNECTION_MS = 2600;
+
+  function getLoader() {
+    return document.getElementById("lcGlobalLoader");
+  }
+
+  function getLoaderText() {
+    return document.getElementById("lcGlobalLoaderText");
+  }
+
+  function showGlobalLoader(message) {
+    if (loaderShown) return;
+
+    loaderShown = true;
+
+    const loader = getLoader();
+    const text = getLoaderText();
+
+    if (text) {
+      text.textContent = message || "Stiamo aprendo la pagina.";
+    }
+
+    if (loader) {
+      loader.classList.remove("hidden");
+      loader.setAttribute("aria-hidden", "false");
+    }
+
+    document.body.classList.add("lc-navigation-loading");
+
+    slowTimer = window.setTimeout(() => {
+      const slowText = getLoaderText();
+      if (slowText) {
+        slowText.textContent = "Connessione lenta, attendi ancora qualche istante...";
+      }
+    }, SLOW_CONNECTION_MS);
+  }
+
+  function scheduleGlobalLoader(message) {
+    clearGlobalLoaderTimers();
+
+    loaderTimer = window.setTimeout(() => {
+      showGlobalLoader(message);
+    }, LOADER_DELAY_MS);
+  }
+
+  function hideGlobalLoader() {
+    clearGlobalLoaderTimers();
+
+    loaderShown = false;
+
+    const loader = getLoader();
+
+    if (loader) {
+      loader.classList.add("hidden");
+      loader.setAttribute("aria-hidden", "true");
+    }
+
+    document.body.classList.remove("lc-navigation-loading");
+  }
+
+  function clearGlobalLoaderTimers() {
+    if (loaderTimer) {
+      window.clearTimeout(loaderTimer);
+      loaderTimer = null;
+    }
+
+    if (slowTimer) {
+      window.clearTimeout(slowTimer);
+      slowTimer = null;
+    }
+  }
+
+  function isModifiedClick(event) {
+    return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
+  }
+
+  function isInternalNavigationLink(link) {
+    if (!link) return false;
+
+    const href = link.getAttribute("href");
+
+    if (!href) return false;
+    if (href === "#") return false;
+    if (href.startsWith("#")) return false;
+    if (href.startsWith("mailto:")) return false;
+    if (href.startsWith("tel:")) return false;
+    if (href.startsWith("sms:")) return false;
+    if (href.startsWith("whatsapp:")) return false;
+    if (href.startsWith("javascript:")) return false;
+
+    if (link.target && link.target !== "_self") return false;
+    if (link.hasAttribute("download")) return false;
+
+    const url = new URL(href, window.location.origin);
+
+    if (url.origin !== window.location.origin) return false;
+
+    /*
+      Se cambia solo hash nella stessa pagina, non è una vera navigazione.
+    */
+    const currentWithoutHash = window.location.origin + window.location.pathname + window.location.search;
+    const nextWithoutHash = url.origin + url.pathname + url.search;
+
+    if (currentWithoutHash === nextWithoutHash && url.hash) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function shouldIgnoreClickTarget(target) {
+    if (!target) return true;
+
+    /*
+      Evita conflitti con componenti che aprono/chiudono elementi in pagina.
+    */
+    if (target.closest("[data-no-global-loader]")) return true;
+    if (target.closest("details, summary")) return true;
+    if (target.closest("#nav-toggle")) return true;
+    if (target.closest("#nav-menu")) return false;
+
+    /*
+      Bottoni JS e modali: non sono navigazione pagina.
+    */
+    if (target.closest("button:not([type='submit'])")) return true;
+
+    return false;
+  }
+
+  document.addEventListener("click", function (event) {
+    if (isModifiedClick(event)) return;
+    if (shouldIgnoreClickTarget(event.target)) return;
+
+    const link = event.target.closest("a");
+
+    if (!isInternalNavigationLink(link)) return;
+
+    scheduleGlobalLoader("Stiamo aprendo la pagina.");
+  }, true);
+
+  document.addEventListener("submit", function (event) {
+    const form = event.target;
+
+    if (!form || !(form instanceof HTMLFormElement)) return;
+    if (form.hasAttribute("data-no-global-loader")) return;
+    if (form.target && form.target !== "_self") return;
+
+    /*
+      Evita loader su form gestiti solo via JS/AJAX.
+      Se un form deve inviare normalmente ma non vuoi loader,
+      aggiungi data-no-global-loader al form.
+    */
+    scheduleGlobalLoader("Stiamo inviando i dati.");
+  }, true);
+
+  /*
+    Se la pagina torna visibile senza vera navigazione, reset.
+    Utile su Safari/iPhone e bfcache.
+  */
+  window.addEventListener("pageshow", function () {
+    hideGlobalLoader();
+  });
+
+  window.addEventListener("pagehide", function () {
+    clearGlobalLoaderTimers();
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+      hideGlobalLoader();
+    }
+  });
+
+  /*
+    API pubbliche, utili se vuoi richiamarlo manualmente da funzioni JS specifiche.
+  */
+  window.lcShowGlobalLoader = showGlobalLoader;
+  window.lcHideGlobalLoader = hideGlobalLoader;
+})();
+</script>
 
 </body>
 </html>
