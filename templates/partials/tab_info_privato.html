@@ -3396,6 +3396,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!form) return;
 
+  const cittaInputVisibile = document.getElementById("citta-autocomplete");
+  const cittaHidden = document.getElementById("citta_hidden");
+
+  /*
+    La città/zona non può essere salvata vuota.
+    Memorizziamo l'ultimo valore valido già presente al caricamento pagina.
+  */
+  let ultimaCittaValida = (
+    cittaHidden?.value?.trim() ||
+    cittaInputVisibile?.value?.trim() ||
+    ""
+  );
+
+  function ripristinaCittaSeVuota() {
+    if (!cittaHidden) return true;
+
+    const valoreHidden = cittaHidden.value.trim();
+    const valoreVisibile = cittaInputVisibile?.value?.trim() || "";
+
+    /*
+      Se almeno uno dei due campi contiene un valore, lo consideriamo valido
+      e aggiorniamo il riferimento.
+    */
+    if (valoreHidden || valoreVisibile) {
+      const valoreValido = valoreHidden || valoreVisibile;
+
+      ultimaCittaValida = valoreValido;
+      cittaHidden.value = valoreValido;
+
+      if (cittaInputVisibile) {
+        cittaInputVisibile.value = valoreValido;
+      }
+
+      return true;
+    }
+
+    /*
+      Se l'utente ha svuotato il campo, ripristiniamo il valore precedente.
+    */
+    if (ultimaCittaValida) {
+      cittaHidden.value = ultimaCittaValida;
+
+      if (cittaInputVisibile) {
+        cittaInputVisibile.value = ultimaCittaValida;
+      }
+
+      return true;
+    }
+
+    /*
+      Caso limite: non esiste nessun valore precedente.
+      In quel caso impediamo comunque il salvataggio vuoto.
+    */
+    return false;
+  }
+
   function aggiornaIntroInfoBase() {
     const citta = document.getElementById("citta_hidden")?.value?.trim() || "";
     const lingue = document.getElementById("lingue_hidden")?.value?.trim() || "";
@@ -3530,6 +3586,13 @@ document.addEventListener("DOMContentLoaded", () => {
     setStatus("saving", "Salvataggio...");
 
     try {
+      const cittaOk = ripristinaCittaSeVuota();
+
+      if (!cittaOk) {
+        setStatus("error", "La città non può essere vuota");
+        return;
+      }
+
       const formData = new FormData(form);
 
       const res = await fetch(form.action, {
@@ -3631,10 +3694,16 @@ document.addEventListener("DOMContentLoaded", () => {
     el.addEventListener("change", () => pianificaAutosave(200));
   });
 
-  const cittaInputVisibile = document.getElementById("citta-autocomplete");
   if (cittaInputVisibile) {
     cittaInputVisibile.addEventListener("blur", () => {
+      ripristinaCittaSeVuota();
       pianificaAutosave(250);
+    });
+  }
+
+  if (cittaHidden) {
+    cittaHidden.addEventListener("change", () => {
+      ripristinaCittaSeVuota();
     });
   }
 });
