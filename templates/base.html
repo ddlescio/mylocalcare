@@ -3535,12 +3535,12 @@ body.lc-navigation-loading #lcGlobalLoader * {
   if (window.__lcGlobalLoaderInitialized) return;
   window.__lcGlobalLoaderInitialized = true;
 
-  let loaderTimer = null;
   let slowTimer = null;
   let loaderShown = false;
+  let manualNavigationStarted = false;
 
-  const LOADER_DELAY_MS = 180;
   const SLOW_CONNECTION_MS = 2600;
+  const NAVIGATION_PAUSE_MS = 90;
 
   function getLoader() {
     return document.getElementById("lcGlobalLoader");
@@ -3548,6 +3548,13 @@ body.lc-navigation-loading #lcGlobalLoader * {
 
   function getLoaderText() {
     return document.getElementById("lcGlobalLoaderText");
+  }
+
+  function clearGlobalLoaderTimers() {
+    if (slowTimer) {
+      window.clearTimeout(slowTimer);
+      slowTimer = null;
+    }
   }
 
   function showGlobalLoader(message) {
@@ -3565,6 +3572,12 @@ body.lc-navigation-loading #lcGlobalLoader * {
     if (loader) {
       loader.classList.remove("hidden");
       loader.setAttribute("aria-hidden", "false");
+
+      /*
+        Forza Safari/iPhone a calcolare subito il layout.
+        Serve per evitare che il loader venga preparato ma non disegnato.
+      */
+      void loader.offsetHeight;
     }
 
     document.body.classList.add("lc-navigation-loading");
@@ -3577,18 +3590,11 @@ body.lc-navigation-loading #lcGlobalLoader * {
     }, SLOW_CONNECTION_MS);
   }
 
-  function scheduleGlobalLoader(message) {
-    clearGlobalLoaderTimers();
-
-    loaderTimer = window.setTimeout(() => {
-      showGlobalLoader(message);
-    }, LOADER_DELAY_MS);
-  }
-
   function hideGlobalLoader() {
     clearGlobalLoaderTimers();
 
     loaderShown = false;
+    manualNavigationStarted = false;
 
     const loader = getLoader();
 
@@ -3600,20 +3606,14 @@ body.lc-navigation-loading #lcGlobalLoader * {
     document.body.classList.remove("lc-navigation-loading");
   }
 
-  function clearGlobalLoaderTimers() {
-    if (loaderTimer) {
-      window.clearTimeout(loaderTimer);
-      loaderTimer = null;
-    }
-
-    if (slowTimer) {
-      window.clearTimeout(slowTimer);
-      slowTimer = null;
-    }
-  }
-
   function isModifiedClick(event) {
-    return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
+    return (
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    );
   }
 
   function isInternalNavigationLink(link) {
@@ -3637,12 +3637,15 @@ body.lc-navigation-loading #lcGlobalLoader * {
 
     if (url.origin !== window.location.origin) return false;
 
+    const currentWithoutHash =
+      window.location.origin + window.location.pathname + window.location.search;
+
+    const nextWithoutHash =
+      url.origin + url.pathname + url.search;
+
     /*
       Se cambia solo hash nella stessa pagina, non è una vera navigazione.
     */
-    const currentWithoutHash = window.location.origin + window.location.pathname + window.location.search;
-    const nextWithoutHash = url.origin + url.pathname + url.search;
-
     if (currentWithoutHash === nextWithoutHash && url.hash) {
       return false;
     }
@@ -3653,13 +3656,9 @@ body.lc-navigation-loading #lcGlobalLoader * {
   function shouldIgnoreClickTarget(target) {
     if (!target) return true;
 
-    /*
-      Evita conflitti con componenti che aprono/chiudono elementi in pagina.
-    */
     if (target.closest("[data-no-global-loader]")) return true;
     if (target.closest("details, summary")) return true;
     if (target.closest("#nav-toggle")) return true;
-    if (target.closest("#nav-menu")) return false;
 
     /*
       Bottoni JS e modali: non sono navigazione pagina.
@@ -3669,7 +3668,29 @@ body.lc-navigation-loading #lcGlobalLoader * {
     return false;
   }
 
+  function navigateAfterPaint(url) {
+    /*
+      Doppio requestAnimationFrame:
+      - primo frame: il DOM cambia;
+      - secondo frame: Safari ha il tempo di disegnare overlay/backdrop/card.
+    */
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          window.location.href = url;
+        }, NAVIGATION_PAUSE_MS);
+      });
+    });
+  }
+
   document.addEventListener("click", function (event) {
+    if (manualNavigationStarted) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
+
     if (isModifiedClick(event)) return;
     if (shouldIgnoreClickTarget(event.target)) return;
 
@@ -3677,7 +3698,21 @@ body.lc-navigation-loading #lcGlobalLoader * {
 
     if (!isInternalNavigationLink(link)) return;
 
-    scheduleGlobalLoader("Stiamo aprendo la pagina.");
+    const destinationUrl = link.href;
+
+    /*
+      Punto chiave:
+      su iPhone/Safari non aspettiamo un timer mentre la navigazione è già partita.
+      Blocchiamo il click, mostriamo subito il loader, poi navighiamo noi.
+    */
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    manualNavigationStarted = true;
+    showGlobalLoader("Stiamo aprendo la pagina.");
+
+    navigateAfterPaint(destinationUrl);
   }, true);
 
   document.addEventListener("submit", function (event) {
@@ -3687,17 +3722,27 @@ body.lc-navigation-loading #lcGlobalLoader * {
     if (form.hasAttribute("data-no-global-loader")) return;
     if (form.target && form.target !== "_self") return;
 
-    /*
-      Evita loader su form gestiti solo via JS/AJAX.
-      Se un form deve inviare normalmente ma non vuoi loader,
-      aggiungi data-no-global-loader al form.
-    */
-    scheduleGlobalLoader("Stiamo inviando i dati.");
+    if (manualNavigationStarted) {
+      event.preventDefault();
+      return;
+    }
+
+    event.preventDefault();
+
+    manualNavigationStarted = true;
+    showGlobalLoader("Stiamo inviando i dati.");
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          form.submit();
+        }, NAVIGATION_PAUSE_MS);
+      });
+    });
   }, true);
 
   /*
-    Se la pagina torna visibile senza vera navigazione, reset.
-    Utile su Safari/iPhone e bfcache.
+    Reset utile con Safari/iPhone, bfcache e tasto indietro.
   */
   window.addEventListener("pageshow", function () {
     hideGlobalLoader();
@@ -3713,9 +3758,6 @@ body.lc-navigation-loading #lcGlobalLoader * {
     }
   });
 
-  /*
-    API pubbliche, utili se vuoi richiamarlo manualmente da funzioni JS specifiche.
-  */
   window.lcShowGlobalLoader = showGlobalLoader;
   window.lcHideGlobalLoader = hideGlobalLoader;
 })();
