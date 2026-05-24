@@ -4882,6 +4882,199 @@ nav::before {
   }
 }
 </style>
+<style>
+/* ============================================================
+   INTRO PROFILO MOBILE — VERSIONE COMPATTA E ORDINATA
+   Da tenere DOPO tutti gli altri CSS della pagina profilo
+============================================================ */
+
+@media (max-width: 640px) {
+
+  /* Card Intro più compatta */
+  #tab-annunci .intro-panel {
+    padding: 0.85rem !important;
+    border-radius: 1.35rem !important;
+  }
+
+  /* Header più basso */
+  #tab-annunci .intro-panel > .flex.items-start.justify-between {
+    margin: -0.85rem -0.85rem 0.65rem !important;
+    padding: 0.78rem 0.82rem 0.68rem !important;
+    min-height: auto !important;
+  }
+
+  #tab-annunci .intro-panel h3 {
+    font-size: 0.98rem !important;
+    line-height: 1.05 !important;
+  }
+
+  #tab-annunci .intro-panel h3 + p,
+  #tab-annunci .intro-panel > .flex.items-start.justify-between p {
+    margin-top: 0.18rem !important;
+    font-size: 0.68rem !important;
+    line-height: 1.22 !important;
+  }
+
+  /* Bottone Modifica più piccolo ma leggibile */
+  #tab-annunci .intro-panel a[data-jump="info"] {
+    height: 25px !important;
+    min-height: 25px !important;
+    padding: 0 0.55rem !important;
+  }
+
+  #tab-annunci .intro-panel a[data-jump="info"]::after {
+    font-size: 0.65rem !important;
+  }
+
+  /* Info base: meno aria tra città, lingue e frase */
+  #tab-annunci #intro-info-base {
+    gap: 0.34rem !important;
+  }
+
+  #tab-annunci #intro-info-base > div,
+  #tab-annunci #intro-frase-row.intro-quote-row {
+    min-height: 0 !important;
+    padding: 0.02rem 0.1rem !important;
+    gap: 0.42rem !important;
+    border-radius: 0.75rem !important;
+  }
+
+  #tab-annunci #intro-info-base > div:hover {
+    background: transparent !important;
+  }
+
+  /* Iconcine info più piccole */
+  #tab-annunci #intro-info-base > div > span:first-child,
+  #tab-annunci #intro-frase-row .intro-quote-icon {
+    width: 1.26rem !important;
+    height: 1.26rem !important;
+    flex: 0 0 1.26rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  /* Testi info compatti */
+  #tab-annunci #intro-info-base span:not(:first-child),
+  #tab-annunci #intro-citta-value,
+  #tab-annunci #intro-lingue-value,
+  #tab-annunci #intro-frase-row .intro-quote-text,
+  #tab-annunci #intro-frase-row .intro-quote-text *,
+  #tab-annunci #intro-frase-value {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Sezione Offro/Cerco più compatta */
+  #tab-annunci #intro-attivita-wrapper {
+    margin-top: 0.62rem !important;
+    padding-top: 0.62rem !important;
+    gap: 0.58rem !important;
+    border-top-color: rgba(226,232,240,0.72) !important;
+  }
+
+  #tab-annunci #intro-offro-section,
+  #tab-annunci #intro-cerco-section {
+    margin: 0 !important;
+  }
+
+  #tab-annunci #intro-attivita-wrapper p {
+    margin-bottom: 0.35rem !important;
+    font-size: 0.54rem !important;
+    line-height: 1 !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  #tab-annunci #intro-offro-list,
+  #tab-annunci #intro-cerco-list {
+    gap: 0.32rem !important;
+  }
+
+  #tab-annunci #intro-offro-list span,
+  #tab-annunci #intro-cerco-list span {
+    padding: 0.16rem 0.42rem !important;
+    font-size: 0.56rem !important;
+    line-height: 1.05 !important;
+  }
+
+  /* Contatti: da blocco alto a riepilogo compatto */
+  #tab-annunci #intro-contatti-wrapper {
+    margin-top: 0.65rem !important;
+    padding-top: 0.62rem !important;
+    gap: 0.48rem !important;
+    border-top: 1px solid rgba(226,232,240,0.72) !important;
+  }
+
+  #tab-annunci #intro-contatti-wrapper > p {
+    margin: 0 0 0.35rem !important;
+    font-size: 0.54rem !important;
+    line-height: 1 !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  /* Le icone contatto diventano piccole e compatte */
+  #tab-annunci #intro-contatti-icons {
+    gap: 0.48rem !important;
+    margin: 0 !important;
+  }
+
+  #tab-annunci #intro-whatsapp-link,
+  #tab-annunci #intro-telefono-link,
+  #tab-annunci #intro-email-link {
+    width: 2.05rem !important;
+    height: 2.05rem !important;
+    flex: 0 0 2.05rem !important;
+    box-shadow:
+      0 4px 9px rgba(15,23,42,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.75) !important;
+  }
+
+  #tab-annunci #intro-whatsapp-link svg {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+
+  #tab-annunci #intro-telefono-link span,
+  #tab-annunci #intro-email-link span {
+    font-size: 0.82rem !important;
+  }
+
+  /* Indirizzo più piccolo, non deve dominare la card */
+  #tab-annunci #intro-indirizzo-row {
+    padding-top: 0.15rem !important;
+    gap: 0.32rem !important;
+    font-size: 11.5px !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+  }
+
+  #tab-annunci #intro-indirizzo-value {
+    max-width: 100% !important;
+    color: #475569 !important;
+    font-size: 11.5px !important;
+    line-height: 1.25 !important;
+    word-break: break-word !important;
+  }
+
+  /* Social/sito più compatto */
+  #tab-annunci #intro-social-row {
+    padding-top: 0.08rem !important;
+    gap: 0.45rem !important;
+    font-size: 11.5px !important;
+    line-height: 1.2 !important;
+  }
+
+  #tab-annunci #intro-social-row a {
+    font-size: 11.5px !important;
+    line-height: 1.2 !important;
+    gap: 0.22rem !important;
+  }
+
+  #tab-annunci #intro-social-row svg {
+    width: 0.78rem !important;
+    height: 0.78rem !important;
+  }
+}
+</style>
+
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
