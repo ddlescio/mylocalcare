@@ -3528,6 +3528,57 @@ body.lc-navigation-loading #lcGlobalLoader,
 body.lc-navigation-loading #lcGlobalLoader * {
   pointer-events: auto !important;
 }
+
+/* =========================================================
+   MINI LOADER NAVIGAZIONE — feedback immediato leggero
+========================================================= */
+
+#lcMiniLoader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 1000002;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+  transition: opacity 0.12s ease;
+}
+
+#lcMiniLoader.is-visible {
+  opacity: 1;
+}
+
+.lc-mini-loader-bar {
+  height: 100%;
+  width: 38%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa, #ec4899);
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.45);
+  animation: lcMiniLoaderMove 0.95s ease-in-out infinite;
+}
+
+@keyframes lcMiniLoaderMove {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(280%);
+  }
+}
+
+/*
+  Durante la navigazione già avviata:
+  blocchiamo nuovi click su link e bottoni,
+  ma senza mostrare subito il loader grande.
+*/
+body.lc-navigation-pending a,
+body.lc-navigation-pending button {
+  pointer-events: none !important;
+}
+
 </style>
 
 <script>
@@ -3535,10 +3586,13 @@ body.lc-navigation-loading #lcGlobalLoader * {
   if (window.__lcGlobalLoaderInitialized) return;
   window.__lcGlobalLoaderInitialized = true;
 
+  let overlayTimer = null;
   let slowTimer = null;
   let loaderShown = false;
+  let miniLoaderShown = false;
   let manualNavigationStarted = false;
 
+  const OVERLAY_DELAY_MS = 650;
   const SLOW_CONNECTION_MS = 2600;
   const NAVIGATION_PAUSE_MS = 90;
 
@@ -3550,7 +3604,49 @@ body.lc-navigation-loading #lcGlobalLoader * {
     return document.getElementById("lcGlobalLoaderText");
   }
 
+  function ensureMiniLoader() {
+    let mini = document.getElementById("lcMiniLoader");
+
+    if (mini) return mini;
+
+    mini = document.createElement("div");
+    mini.id = "lcMiniLoader";
+    mini.innerHTML = `<div class="lc-mini-loader-bar"></div>`;
+
+    document.body.appendChild(mini);
+
+    return mini;
+  }
+
+  function showMiniLoader() {
+    if (miniLoaderShown) return;
+
+    miniLoaderShown = true;
+
+    const mini = ensureMiniLoader();
+    mini.classList.add("is-visible");
+
+    document.body.classList.add("lc-navigation-pending");
+  }
+
+  function hideMiniLoader() {
+    miniLoaderShown = false;
+
+    const mini = document.getElementById("lcMiniLoader");
+
+    if (mini) {
+      mini.classList.remove("is-visible");
+    }
+
+    document.body.classList.remove("lc-navigation-pending");
+  }
+
   function clearGlobalLoaderTimers() {
+    if (overlayTimer) {
+      window.clearTimeout(overlayTimer);
+      overlayTimer = null;
+    }
+
     if (slowTimer) {
       window.clearTimeout(slowTimer);
       slowTimer = null;
@@ -3595,6 +3691,8 @@ body.lc-navigation-loading #lcGlobalLoader * {
 
     loaderShown = false;
     manualNavigationStarted = false;
+
+    hideMiniLoader();
 
     const loader = getLoader();
 
@@ -3710,7 +3808,11 @@ body.lc-navigation-loading #lcGlobalLoader * {
     event.stopImmediatePropagation();
 
     manualNavigationStarted = true;
-    showGlobalLoader("Stiamo aprendo la pagina.");
+    showMiniLoader();
+
+    overlayTimer = window.setTimeout(() => {
+      showGlobalLoader("Stiamo aprendo la pagina.");
+    }, OVERLAY_DELAY_MS);
 
     navigateAfterPaint(destinationUrl);
   }, true);
