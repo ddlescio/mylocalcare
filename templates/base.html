@@ -3821,7 +3821,48 @@ body.lc-navigation-pending button {
     const form = event.target;
 
     if (!form || !(form instanceof HTMLFormElement)) return;
+
+    /*
+      Esclusioni:
+      - form marcati manualmente con data-no-global-loader
+      - pagina chat
+      - form interni alla chat
+      - form AJAX / realtime / messaggi
+    */
     if (form.hasAttribute("data-no-global-loader")) return;
+
+    if (document.body.dataset.chat === "true") return;
+
+    if (
+      form.closest(
+        "#chatContainer, .chat-container, .chat-wrapper, .messages-container, [data-chat-form='true']"
+      )
+    ) {
+      return;
+    }
+
+    if (
+      form.id &&
+      (
+        form.id.toLowerCase().includes("chat") ||
+        form.id.toLowerCase().includes("message") ||
+        form.id.toLowerCase().includes("messaggio")
+      )
+    ) {
+      return;
+    }
+
+    if (
+      form.action &&
+      (
+        form.action.includes("/chat") ||
+        form.action.includes("/messaggi") ||
+        form.action.includes("/message")
+      )
+    ) {
+      return;
+    }
+
     if (form.target && form.target !== "_self") return;
 
     if (manualNavigationStarted) {
@@ -3842,7 +3883,7 @@ body.lc-navigation-pending button {
       });
     });
   }, true);
-
+  
   /*
     Reset utile con Safari/iPhone, bfcache e tasto indietro.
   */
