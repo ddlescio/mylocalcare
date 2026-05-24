@@ -5052,8 +5052,88 @@ nav::before {
   }
 }
 </style>
+<style>
+/* ============================================================
+   FIX DEFINITIVO MOBILE — ELIMINA ANGOLI INTERNI SQUADRATI
+   Intro profilo + Annunci pubblicati
+   Deve stare DOPO tutti gli altri CSS della pagina
+============================================================ */
 
+@media (max-width: 640px) {
 
+  /* Card madri: diventano veri contenitori arrotondati con respiro interno */
+  #tab-annunci .intro-panel,
+  #tab-annunci .annunci-premium-panel {
+    padding: 0.42rem !important;
+    border-radius: 1.55rem !important;
+    overflow: hidden !important;
+    background:
+      radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%),
+      radial-gradient(circle at bottom left, rgba(99,102,241,0.08), transparent 38%),
+      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
+    background-clip: padding-box !important;
+  }
+
+  /* Fondo interno: segue il raggio e non crea più rettangoli ai bordi */
+  #tab-annunci .intro-panel::before,
+  #tab-annunci .annunci-premium-panel::before {
+    inset: 0.42rem !important;
+    border-radius: 1.18rem !important;
+  }
+
+  /* Tolgo il riflesso lineare alto che accentuava lo scalino */
+  #tab-annunci .intro-panel::after,
+  #tab-annunci .annunci-premium-panel::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* HEADER INTRO: non deve più usare margini negativi fino al bordo */
+  #tab-annunci .intro-panel > .flex.items-start.justify-between {
+    margin: 0 0 0.78rem 0 !important;
+    padding: 0.82rem 0.9rem 0.72rem !important;
+    border-radius: 1.18rem !important;
+    border: 1px solid rgba(226,232,240,0.72) !important;
+    overflow: hidden !important;
+    background:
+      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
+      linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.76)) !important;
+    background-clip: padding-box !important;
+  }
+
+  /* HEADER ANNUNCI: stesso principio dell'intro */
+  #tab-annunci .annunci-premium-header {
+    margin: 0 !important;
+    padding: 0.86rem 0.9rem 0.78rem !important;
+    border-radius: 1.18rem !important;
+    border: 1px solid rgba(226,232,240,0.72) !important;
+    overflow: hidden !important;
+    background:
+      radial-gradient(circle at 92% 8%, rgba(255,255,255,0.96), transparent 30%),
+      linear-gradient(180deg, rgba(255,255,255,0.965), rgba(248,250,252,0.76)) !important;
+    background-clip: padding-box !important;
+  }
+
+  /* Lista annunci: niente fondo rettangolare attaccato ai bordi */
+  #tab-annunci .annunci-premium-list {
+    padding: 0.9rem 0.05rem 0.05rem !important;
+    background: transparent !important;
+  }
+
+  /* Empty state, se non ci sono annunci */
+  #tab-annunci .annunci-premium-empty {
+    margin: 0.9rem 0.05rem 0.05rem !important;
+    border-radius: 1.18rem !important;
+  }
+
+  /* Contatti: niente sottocard con bordo arrotondato interno che crea scalini */
+  #tab-annunci #intro-contatti-wrapper {
+    border-radius: 0 !important;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+}
+</style>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".tab-btn");
