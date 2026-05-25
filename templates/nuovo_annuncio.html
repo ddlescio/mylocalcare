@@ -331,13 +331,26 @@
 
         <div class="space-y-2">
 
-          <label for="titolo" class="flex items-center gap-1.5 text-base font-bold text-slate-800">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 
-            <span>Titolo annuncio</span>
+            <label for="titolo" class="flex items-center gap-1.5 text-base font-bold text-slate-800">
 
-            <span class="text-blue-600 font-extrabold">*</span>
+              <span>Titolo annuncio</span>
 
-          </label>
+              <span class="text-blue-600 font-extrabold">*</span>
+
+            </label>
+
+            <button
+              type="button"
+              id="open-ai-writing-helper"
+              class="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-sm font-bold hover:bg-indigo-100 transition"
+            >
+              <span>✨</span>
+              <span>Aiuto scrittura</span>
+            </button>
+
+          </div>
 
           <input type="text" id="titolo" name="titolo"
 
@@ -558,6 +571,218 @@
   </script>
 
 {% endif %}
+<!-- ✨ MODALE AIUTO SCRITTURA ANNUNCIO -->
+<div
+  id="ai-writing-modal"
+  class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4"
+  aria-hidden="true"
+>
+  <div class="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+
+    <!-- HEADER -->
+    <div class="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-blue-50">
+
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-indigo-700 text-xs font-bold border border-indigo-100 mb-3">
+          <span>✨</span>
+          <span>Aiuto scrittura</span>
+        </div>
+
+        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">
+          Migliora il testo del tuo annuncio
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-600">
+          Puoi scrivere una bozza anche in un’altra lingua: il testo finale resterà sempre modificabile prima della pubblicazione.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        id="close-ai-writing-modal"
+        class="shrink-0 w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-bold"
+        aria-label="Chiudi"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <!-- STEP AVVERTENZE -->
+    <div id="ai-writing-warning-step" class="p-5 sm:p-6 space-y-5">
+
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 leading-relaxed">
+        <p class="font-bold mb-2">Prima di continuare</p>
+
+        <p>
+          Usa questo aiuto solo per migliorare o tradurre il testo del tuo annuncio.
+          Non inserire dati sensibili, documenti, informazioni mediche, informazioni economiche private
+          o dettagli personali non necessari.
+        </p>
+
+        <p class="mt-2">
+          Il testo generato sarà solo una proposta: potrai leggerlo, modificarlo e decidere se usarlo.
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+        <button
+          type="button"
+          id="cancel-ai-writing-helper"
+          class="px-5 py-3 rounded-2xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+        >
+          Annulla
+        </button>
+
+        <button
+          type="button"
+          id="confirm-ai-writing-warning"
+          class="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm"
+        >
+          Ho capito, continua
+        </button>
+      </div>
+
+    </div>
+
+    <!-- STEP FORM AI -->
+    <div id="ai-writing-form-step" class="hidden p-5 sm:p-6 space-y-5">
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div class="space-y-2">
+          <label for="ai-writing-language" class="text-sm font-bold text-slate-800">
+            Lingua della bozza
+          </label>
+
+          <select
+            id="ai-writing-language"
+            class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
+          >
+            <option value="auto">Rileva automaticamente</option>
+            <option value="it">Italiano</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="ro">Română</option>
+            <option value="ar">العربية</option>
+            <option value="uk">Українська</option>
+          </select>
+        </div>
+
+        <div class="space-y-2">
+          <label for="ai-writing-action" class="text-sm font-bold text-slate-800">
+            Cosa vuoi fare?
+          </label>
+
+          <select
+            id="ai-writing-action"
+            class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
+          >
+            <option value="improve">Migliora il testo</option>
+            <option value="translate_it">Migliora e traduci in italiano</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div
+        id="ai-writing-language-help"
+        class="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600 leading-relaxed"
+      >
+        Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.
+      </div>
+
+      <div class="space-y-2">
+        <label for="ai-writing-title-input" class="text-sm font-bold text-slate-800">
+          Titolo o idea titolo
+        </label>
+
+        <input
+          type="text"
+          id="ai-writing-title-input"
+          class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
+          placeholder="Puoi lasciarlo vuoto: l’AI potrà suggerirlo dalla descrizione"
+        >
+      </div>
+
+      <div class="space-y-2">
+        <label for="ai-writing-description-input" class="text-sm font-bold text-slate-800">
+          Bozza descrizione
+        </label>
+
+        <textarea
+          id="ai-writing-description-input"
+          rows="6"
+          maxlength="1500"
+          class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
+          placeholder="Scrivi qui la tua bozza, anche in modo semplice o in un’altra lingua."
+        ></textarea>
+
+        <p class="text-xs text-slate-500">
+          Massimo 1500 caratteri. Non inserire dati sensibili o informazioni private non necessarie.
+        </p>
+      </div>
+
+      <!-- RISULTATO FUTURO -->
+      <div id="ai-writing-result-box" class="hidden rounded-2xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+
+        <p class="text-sm font-extrabold text-emerald-800">
+          Proposta generata
+        </p>
+
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-emerald-900">Titolo suggerito</label>
+          <input
+            type="text"
+            id="ai-writing-result-title"
+            class="w-full border border-emerald-200 rounded-xl p-3 text-slate-900 bg-white"
+          >
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-emerald-900">Descrizione suggerita</label>
+          <textarea
+            id="ai-writing-result-description"
+            rows="6"
+            class="w-full border border-emerald-200 rounded-xl p-3 text-slate-900 bg-white"
+          ></textarea>
+        </div>
+
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 sm:justify-end pt-2">
+
+        <button
+          type="button"
+          id="back-ai-writing-warning"
+          class="px-5 py-3 rounded-2xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+        >
+          Indietro
+        </button>
+
+        <button
+          type="button"
+          id="generate-ai-writing-preview"
+          class="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm"
+        >
+          Genera proposta
+        </button>
+
+        <button
+          type="button"
+          id="use-ai-writing-result"
+          class="hidden px-5 py-3 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-sm"
+        >
+          Usa questo testo
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
 
 {% endblock %}
 
@@ -565,6 +790,170 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const openBtn = document.getElementById("open-ai-writing-helper");
+  const modal = document.getElementById("ai-writing-modal");
+
+  const closeBtn = document.getElementById("close-ai-writing-modal");
+  const cancelBtn = document.getElementById("cancel-ai-writing-helper");
+  const confirmBtn = document.getElementById("confirm-ai-writing-warning");
+  const backBtn = document.getElementById("back-ai-writing-warning");
+
+  const warningStep = document.getElementById("ai-writing-warning-step");
+  const formStep = document.getElementById("ai-writing-form-step");
+
+  const languageSelect = document.getElementById("ai-writing-language");
+  const languageHelp = document.getElementById("ai-writing-language-help");
+
+  const aiTitleInput = document.getElementById("ai-writing-title-input");
+  const aiDescriptionInput = document.getElementById("ai-writing-description-input");
+
+  const realTitleInput = document.getElementById("titolo");
+  const realDescriptionInput = document.getElementById("descrizione");
+
+  const generateBtn = document.getElementById("generate-ai-writing-preview");
+  const useBtn = document.getElementById("use-ai-writing-result");
+  const resultBox = document.getElementById("ai-writing-result-box");
+  const resultTitle = document.getElementById("ai-writing-result-title");
+  const resultDescription = document.getElementById("ai-writing-result-description");
+
+  if (!openBtn || !modal) return;
+
+  const helpTexts = {
+    auto: "Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.",
+    it: "Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.",
+    en: "Write simply what you offer or what you are looking for. Include area, availability, experience and price if useful.",
+    es: "Escribe de forma sencilla qué ofreces o qué buscas. Indica zona, disponibilidad, experiencia y precio si es útil.",
+    fr: "Écris simplement ce que tu proposes ou ce que tu recherches. Indique la zone, les disponibilités, l’expérience et le prix si utile.",
+    ro: "Scrie simplu ce oferi sau ce cauți. Include zona, disponibilitatea, experiența și prețul dacă este util.",
+    ar: "اكتب ببساطة ما الذي تقدمه أو ما الذي تبحث عنه. اذكر المنطقة، التوفر، الخبرة والسعر إذا كان مفيدًا.",
+    uk: "Напишіть просто, що ви пропонуєте або шукаєте. Вкажіть район, доступність, досвід і ціну, якщо це корисно."
+  };
+
+  function openModal() {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    modal.setAttribute("aria-hidden", "false");
+
+    warningStep.classList.remove("hidden");
+    formStep.classList.add("hidden");
+
+    resultBox.classList.add("hidden");
+    useBtn.classList.add("hidden");
+
+    if (realTitleInput && aiTitleInput) {
+      aiTitleInput.value = realTitleInput.value || "";
+    }
+
+    if (realDescriptionInput && aiDescriptionInput) {
+      aiDescriptionInput.value = realDescriptionInput.value || "";
+    }
+  }
+
+  function closeModal() {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  function showFormStep() {
+    warningStep.classList.add("hidden");
+    formStep.classList.remove("hidden");
+
+    setTimeout(() => {
+      if (aiDescriptionInput) {
+        aiDescriptionInput.focus();
+      }
+    }, 100);
+  }
+
+  function showWarningStep() {
+    formStep.classList.add("hidden");
+    warningStep.classList.remove("hidden");
+  }
+
+  function updateLanguageHelp() {
+    const lang = languageSelect ? languageSelect.value : "auto";
+    languageHelp.textContent = helpTexts[lang] || helpTexts.auto;
+  }
+
+  openBtn.addEventListener("click", openModal);
+
+  [closeBtn, cancelBtn].forEach((btn) => {
+    if (!btn) return;
+    btn.addEventListener("click", closeModal);
+  });
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener("click", showFormStep);
+  }
+
+  if (backBtn) {
+    backBtn.addEventListener("click", showWarningStep);
+  }
+
+  if (languageSelect) {
+    languageSelect.addEventListener("change", updateLanguageHelp);
+  }
+
+  modal.addEventListener("click", function (event) {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+      closeModal();
+    }
+  });
+
+  if (generateBtn) {
+    generateBtn.addEventListener("click", function () {
+      const titolo = (aiTitleInput?.value || "").trim();
+      const descrizione = (aiDescriptionInput?.value || "").trim();
+
+      if (!descrizione) {
+        alert("Scrivi prima una bozza della descrizione.");
+        aiDescriptionInput?.focus();
+        return;
+      }
+
+      /*
+        STEP SUCCESSIVO:
+        qui collegheremo la chiamata alla rotta Flask /api/ai/aiuto-scrittura-annuncio.
+
+        Per ora simuliamo solo l’anteprima per verificare che la modale funzioni.
+      */
+
+      resultTitle.value = titolo || "Titolo suggerito dall’AI";
+      resultDescription.value = descrizione;
+
+      resultBox.classList.remove("hidden");
+      useBtn.classList.remove("hidden");
+    });
+  }
+
+  if (useBtn) {
+    useBtn.addEventListener("click", function () {
+      if (realTitleInput && resultTitle.value.trim()) {
+        realTitleInput.value = resultTitle.value.trim();
+      }
+
+      if (realDescriptionInput && resultDescription.value.trim()) {
+        realDescriptionInput.value = resultDescription.value.trim();
+      }
+
+      closeModal();
+    });
+  }
+
+  updateLanguageHelp();
+});
+</script>
+
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const categoria = document.getElementById("categoria");
