@@ -6930,7 +6930,7 @@ def processa_match_nuovi_annunci(channel=None):
             )
 
             if channel in ("internal", "both"):
-                link_notifica = url_for("home_v2")
+                link_notifica = "/home"
 
                 cur.execute(sql("""
                     INSERT INTO notifiche (
