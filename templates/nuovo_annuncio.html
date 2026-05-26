@@ -893,6 +893,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const MAX_AI_ATTEMPTS = 3;
   let aiAttemptsUsed = 0;
+  let pageScrollYBeforeModal = 0;
 
   if (!openBtn || !modal) return;
 
@@ -900,6 +901,13 @@ document.addEventListener("DOMContentLoaded", function () {
   let lastDraftBeforeProposal = {
     title: "",
     description: ""
+  };
+
+  let lastGeneratedSnapshot = {
+    title: "",
+    description: "",
+    action: "",
+    language: ""
   };
 
   const texts = {
@@ -934,7 +942,8 @@ document.addEventListener("DOMContentLoaded", function () {
       suggestedTitle: "Titolo suggerito dall’AI",
       attemptsRemainingSingular: "Hai ancora 1 tentativo per questo annuncio.",
       attemptsRemainingPlural: "Hai ancora {n} tentativi per questo annuncio.",
-      attemptsFinished: "Hai usato i 3 tentativi disponibili per questo annuncio."
+      attemptsFinished: "Hai usato i 3 tentativi disponibili per questo annuncio.",
+      unchangedRegenerate: "Modifica prima il testo attuale, poi potrai rigenerare una nuova proposta per migliorarlo."
     },
     en: {
       badge: "Writing help",
@@ -967,7 +976,8 @@ document.addEventListener("DOMContentLoaded", function () {
       suggestedTitle: "AI suggested title",
       attemptsRemainingSingular: "You have 1 attempt left for this listing.",
       attemptsRemainingPlural: "You have {n} attempts left for this listing.",
-      attemptsFinished: "You have used the 3 attempts available for this listing."
+      attemptsFinished: "You have used the 3 attempts available for this listing.",
+      unchangedRegenerate: "Edit the current text first, then you can regenerate a new proposal to improve it."
     },
     fr: {
       badge: "Aide à la rédaction",
@@ -1000,7 +1010,8 @@ document.addEventListener("DOMContentLoaded", function () {
       suggestedTitle: "Titre suggéré par l’IA",
       attemptsRemainingSingular: "Il te reste 1 tentative pour cette annonce.",
       attemptsRemainingPlural: "Il te reste {n} tentatives pour cette annonce.",
-      attemptsFinished: "Tu as utilisé les 3 tentatives disponibles pour cette annonce."
+      attemptsFinished: "Tu as utilisé les 3 tentatives disponibles pour cette annonce.",
+      unchangedRegenerate: "Modifie d’abord le texte actuel, puis tu pourras générer une nouvelle proposition pour l’améliorer."
     },
     es: {
       badge: "Ayuda de escritura",
@@ -1033,7 +1044,8 @@ document.addEventListener("DOMContentLoaded", function () {
       suggestedTitle: "Título sugerido por la IA",
       attemptsRemainingSingular: "Te queda 1 intento para este anuncio.",
       attemptsRemainingPlural: "Te quedan {n} intentos para este anuncio.",
-      attemptsFinished: "Has usado los 3 intentos disponibles para este anuncio."
+      attemptsFinished: "Has usado los 3 intentos disponibles para este anuncio.",
+      unchangedRegenerate: "Primero modifica el texto actual, luego podrás generar una nueva propuesta para mejorarlo."
     }
   };
 
@@ -1042,6 +1054,28 @@ document.addEventListener("DOMContentLoaded", function () {
   function getCurrentTexts() {
     const lang = uiLanguageSelect ? uiLanguageSelect.value : "it";
     return texts[lang] || fallbackText;
+  }
+
+  function lockPageScroll() {
+    pageScrollYBeforeModal = window.scrollY || document.documentElement.scrollTop || 0;
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${pageScrollYBeforeModal}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+  }
+
+  function unlockPageScroll() {
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+
+    window.scrollTo(0, pageScrollYBeforeModal || 0);
   }
 
   function updateAttemptsNote() {
@@ -1162,6 +1196,8 @@ document.addEventListener("DOMContentLoaded", function () {
     modal.classList.add("flex");
     modal.setAttribute("aria-hidden", "false");
 
+    lockPageScroll();
+
     modal.scrollTop = 0;
 
     warningStep.classList.remove("hidden");
@@ -1197,6 +1233,8 @@ document.addEventListener("DOMContentLoaded", function () {
     modal.classList.add("hidden");
     modal.classList.remove("flex");
     modal.setAttribute("aria-hidden", "true");
+
+    unlockPageScroll();
   }
 
   function showFormStep() {
@@ -1275,11 +1313,38 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const titolo = (aiTitleInput?.value || "").trim();
       const descrizione = (aiDescriptionInput?.value || "").trim();
+      const selectedAction = actionSelect ? actionSelect.value : "translate_it";
+      const selectedLanguage = uiLanguageSelect ? uiLanguageSelect.value : "it";
+
+      // Se la lingua è italiano, anche l'opzione "traduci in italiano"
+      // viene trattata internamente come solo miglioramento.
+      const effectiveAction =
+        selectedLanguage === "it" ? "improve" : selectedAction;
 
       if (!descrizione) {
         alert(t.emptyDescription);
         aiDescriptionInput?.focus();
         return;
+      }
+
+      if (aiProposalGenerated) {
+        const currentSnapshot = {
+          title: titolo,
+          description: descrizione,
+          action: effectiveAction,
+          language: selectedLanguage
+        };
+
+        const sameAsLastGenerated =
+          currentSnapshot.title === lastGeneratedSnapshot.title &&
+          currentSnapshot.description === lastGeneratedSnapshot.description &&
+          currentSnapshot.action === lastGeneratedSnapshot.action &&
+          currentSnapshot.language === lastGeneratedSnapshot.language;
+
+        if (sameAsLastGenerated) {
+          alert(t.unchangedRegenerate);
+          return;
+        }
       }
 
       lastDraftBeforeProposal = {
@@ -1293,7 +1358,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         Nota logica:
         - l'utente lavora nella lingua scelta;
-        - se ha scelto "translate_it", la traduzione italiana definitiva verrà prodotta alla fine;
+        - se la lingua scelta è italiano, non serve traduzione finale;
+        - se la lingua scelta non è italiano e effectiveAction è "translate_it",
+          la traduzione italiana definitiva verrà prodotta alla fine;
         - per ora simuliamo solo la proposta per verificare UX e flusso.
       */
 
@@ -1307,13 +1374,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
       aiAttemptsUsed += 1;
 
+      lastGeneratedSnapshot = {
+        title: (aiTitleInput?.value || "").trim(),
+        description: (aiDescriptionInput?.value || "").trim(),
+        action: effectiveAction,
+        language: selectedLanguage
+      };
+
       setProposalMode(true);
       updateAttemptsNote();
 
       formStep.scrollTop = 0;
     });
   }
-
+  
   if (useBtn) {
     useBtn.addEventListener("click", function () {
       if (realTitleInput && aiTitleInput.value.trim()) {
