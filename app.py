@@ -2441,7 +2441,8 @@ def get_openai_month_stats():
             params={
                 "start_time": start_time,
                 "end_time": end_time,
-                "bucket_width": "1d"
+                "bucket_width": "1d",
+                "limit": 31
             },
             timeout=15
         )
@@ -2491,7 +2492,8 @@ def get_openai_month_stats():
             params={
                 "start_time": start_time,
                 "end_time": end_time,
-                "bucket_width": "1d"
+                "bucket_width": "1d",
+                "limit": 31
             },
             timeout=15
         )
