@@ -910,6 +910,14 @@ document.addEventListener("DOMContentLoaded", function () {
     language: ""
   };
 
+  let lastDetectedLanguage = "";
+  let lastGeneratedWasMixedText = false;
+
+  let lastUseIntent = {
+    action: "improve",
+    language: "it"
+  };
+
   let texts = {
     it: {
       badge: "Aiuto scrittura",
@@ -943,7 +951,13 @@ document.addEventListener("DOMContentLoaded", function () {
       attemptsRemainingSingular: "Hai ancora 1 tentativo per questo annuncio.",
       attemptsRemainingPlural: "Hai ancora {n} tentativi per questo annuncio.",
       attemptsFinished: "Hai usato i 3 tentativi disponibili per questo annuncio.",
-      unchangedRegenerate: "Modifica prima il testo attuale, poi potrai rigenerare una nuova proposta per migliorarlo."
+      attemptsRemainingSingular: "Hai ancora 1 tentativo per questo annuncio.",
+      attemptsRemainingPlural: "Hai ancora {n} tentativi per questo annuncio.",
+      attemptsFinished: "Hai usato i 3 tentativi disponibili per questo annuncio.",
+      unchangedRegenerate: "Modifica prima il testo attuale, poi potrai rigenerare una nuova proposta per migliorarlo.",
+      finalTranslating: "Traduco in italiano...",
+      finalTranslationDone: "Il testo inserito nell’annuncio è esattamente quello che hai scelto, tradotto in italiano.",
+      finalTranslationError: "Non sono riuscito a tradurre il testo in italiano. Riprova."
     }
   };
 
@@ -1245,9 +1259,14 @@ document.addEventListener("DOMContentLoaded", function () {
       const selectedAction = actionSelect ? actionSelect.value : "translate_it";
       const selectedLanguage = uiLanguageSelect ? uiLanguageSelect.value : "it";
 
-      // Se la lingua è italiano, anche l'opzione "traduci in italiano"
-      // viene trattata internamente come solo miglioramento.
-      const effectiveAction =
+      /*
+        IMPORTANTE:
+        - "Genera" deve SOLO migliorare il testo nella lingua scelta.
+        - La traduzione in italiano avverrà eventualmente solo quando l'utente clicca "Usa questo testo".
+      */
+      const previewAction = "improve";
+
+      const finalUseAction =
         selectedLanguage === "it" ? "improve" : selectedAction;
 
       if (!descrizione) {
@@ -1260,7 +1279,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const currentSnapshot = {
           title: titolo,
           description: descrizione,
-          action: effectiveAction,
+          action: previewAction,
           language: selectedLanguage
         };
 
@@ -1281,6 +1300,11 @@ document.addEventListener("DOMContentLoaded", function () {
         description: descrizione
       };
 
+      lastUseIntent = {
+        action: finalUseAction,
+        language: selectedLanguage
+      };
+
       const originalButtonText = generateBtn.textContent;
 
       generateBtn.disabled = true;
@@ -1298,7 +1322,7 @@ document.addEventListener("DOMContentLoaded", function () {
             titolo: titolo,
             descrizione: descrizione,
             lingua: selectedLanguage,
-            azione: effectiveAction
+            azione: previewAction
           })
         });
 
@@ -1321,12 +1345,15 @@ document.addEventListener("DOMContentLoaded", function () {
           aiDescriptionInput.value = (result.descrizione || descrizione || "").trim();
         }
 
+        lastDetectedLanguage = (result.lingua_rilevata || selectedLanguage || "").trim().toLowerCase();
+        lastGeneratedWasMixedText = result.testo_misto === true;
+
         aiAttemptsUsed += 1;
 
         lastGeneratedSnapshot = {
           title: (aiTitleInput?.value || "").trim(),
           description: (aiDescriptionInput?.value || "").trim(),
-          action: effectiveAction,
+          action: previewAction,
           language: selectedLanguage
         };
 
@@ -1350,18 +1377,108 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
-  
+
   if (useBtn) {
-    useBtn.addEventListener("click", function () {
-      if (realTitleInput && aiTitleInput.value.trim()) {
-        realTitleInput.value = aiTitleInput.value.trim();
+    useBtn.addEventListener("click", async function () {
+      const t = getCurrentTexts();
+
+      const titolo = (aiTitleInput?.value || "").trim();
+      const descrizione = (aiDescriptionInput?.value || "").trim();
+
+      if (!descrizione) {
+        alert(t.emptyDescription || fallbackText.emptyDescription);
+        aiDescriptionInput?.focus();
+        return;
       }
 
-      if (realDescriptionInput && aiDescriptionInput.value.trim()) {
-        realDescriptionInput.value = aiDescriptionInput.value.trim();
+      const selectedLanguage = uiLanguageSelect ? uiLanguageSelect.value : "it";
+
+      /*
+        Regola finale:
+        - se l'utente ha scelto "Migliora e traduciamo in italiano alla fine"
+        - e la lingua scelta NON è italiano
+        allora, quando clicca "Usa questo testo", traduciamo in italiano
+        e inseriamo nella scheda principale il testo italiano.
+      */
+      const shouldTranslateBeforeUse =
+        lastUseIntent.action === "translate_it" &&
+        selectedLanguage !== "it";
+
+      if (!shouldTranslateBeforeUse) {
+        if (realTitleInput && titolo) {
+          realTitleInput.value = titolo;
+        }
+
+        if (realDescriptionInput && descrizione) {
+          realDescriptionInput.value = descrizione;
+        }
+
+        closeModal();
+        return;
       }
 
-      closeModal();
+      const originalUseText = useBtn.textContent;
+
+      useBtn.disabled = true;
+      useBtn.classList.add("opacity-60", "cursor-not-allowed");
+      useBtn.textContent = t.finalTranslating || fallbackText.finalTranslating || "Traduco in italiano...";
+
+      try {
+        const response = await fetch("{{ url_for('api_ai_aiuto_scrittura_annuncio') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": "{{ csrf_token() }}"
+          },
+          body: JSON.stringify({
+            titolo: titolo,
+            descrizione: descrizione,
+            lingua: selectedLanguage,
+            azione: "final_translate_it"
+          })
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result || !result.ok) {
+          alert(
+            result && result.error
+              ? result.error
+              : (t.finalTranslationError || fallbackText.finalTranslationError || "Non sono riuscito a tradurre il testo in italiano. Riprova.")
+          );
+          return;
+        }
+
+        if (realTitleInput) {
+          realTitleInput.value = (result.titolo || titolo).trim();
+        }
+
+        if (realDescriptionInput) {
+          realDescriptionInput.value = (result.descrizione || descrizione).trim();
+        }
+
+        alert(
+          t.finalTranslationDone ||
+          fallbackText.finalTranslationDone ||
+          "Il testo inserito nell’annuncio è esattamente quello che hai scelto, tradotto in italiano."
+        );
+
+        closeModal();
+
+      } catch (error) {
+        console.error("Errore traduzione finale AI:", error);
+
+        alert(
+          t.finalTranslationError ||
+          fallbackText.finalTranslationError ||
+          "Errore di connessione durante la traduzione finale. Riprova tra poco."
+        );
+
+      } finally {
+        useBtn.disabled = false;
+        useBtn.classList.remove("opacity-60", "cursor-not-allowed");
+        useBtn.textContent = originalUseText;
+      }
     });
   }
 

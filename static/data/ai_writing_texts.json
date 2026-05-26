@@ -31,7 +31,10 @@
     "attemptsRemainingSingular": "You have 1 attempt left for this listing.",
     "attemptsRemainingPlural": "You have {n} attempts left for this listing.",
     "attemptsFinished": "You have used the 3 attempts available for this listing.",
-    "unchangedRegenerate": "Edit the current text first, then you can regenerate a new proposal to improve it."
+    "unchangedRegenerate": "Edit the current text first, then you can regenerate a new proposal to improve it.",
+    "finalTranslating": "Translating into Italian...",
+    "finalTranslationDone": "The text added to the listing is exactly the one you chose, translated into Italian.",
+    "finalTranslationError": "I could not translate the text into Italian. Please try again."
   },
   "fr": {
     "badge": "Aide à la rédaction",
@@ -65,7 +68,10 @@
     "attemptsRemainingSingular": "Il te reste 1 tentative pour cette annonce.",
     "attemptsRemainingPlural": "Il te reste {n} tentatives pour cette annonce.",
     "attemptsFinished": "Tu as utilisé les 3 tentatives disponibles pour cette annonce.",
-    "unchangedRegenerate": "Modifie d’abord le texte actuel, puis tu pourras générer une nouvelle proposition pour l’améliorer."
+    "unchangedRegenerate": "Modifie d’abord le texte actuel, puis tu pourras générer une nouvelle proposition pour l’améliorer.",
+    "finalTranslating": "Traduction en italien...",
+    "finalTranslationDone": "Le texte inséré dans l’annonce est exactement celui que tu as choisi, traduit en italien.",
+    "finalTranslationError": "Je n’ai pas réussi à traduire le texte en italien. Réessaie."
   },
   "es": {
     "badge": "Ayuda de escritura",
@@ -99,7 +105,10 @@
     "attemptsRemainingSingular": "Te queda 1 intento para este anuncio.",
     "attemptsRemainingPlural": "Te quedan {n} intentos para este anuncio.",
     "attemptsFinished": "Has usado los 3 intentos disponibles para este anuncio.",
-    "unchangedRegenerate": "Primero modifica el texto actual, luego podrás generar una nueva propuesta para mejorarlo."
+    "unchangedRegenerate": "Primero modifica el texto actual, luego podrás generar una nueva propuesta para mejorarlo.",
+    "finalTranslating": "Traduciendo al italiano...",
+    "finalTranslationDone": "El texto añadido al anuncio es exactamente el que elegiste, traducido al italiano.",
+    "finalTranslationError": "No he podido traducir el texto al italiano. Inténtalo de nuevo."
   },
   "pt": {
     "badge": "Ajuda de escrita",
@@ -133,7 +142,10 @@
     "attemptsRemainingSingular": "Tens mais 1 tentativa para este anúncio.",
     "attemptsRemainingPlural": "Tens mais {n} tentativas para este anúncio.",
     "attemptsFinished": "Usaste as 3 tentativas disponíveis para este anúncio.",
-    "unchangedRegenerate": "Modifica primeiro o texto atual, depois poderás gerar uma nova proposta para melhorá-lo."
+    "unchangedRegenerate": "Modifica primeiro o texto atual, depois poderás gerar uma nova proposta para melhorá-lo.",
+    "finalTranslating": "A traduzir para italiano...",
+    "finalTranslationDone": "O texto inserido no anúncio é exatamente o que escolheste, traduzido para italiano.",
+    "finalTranslationError": "Não consegui traduzir o texto para italiano. Tenta novamente."
   },
   "ro": {
     "badge": "Ajutor la scriere",
@@ -167,7 +179,10 @@
     "attemptsRemainingSingular": "Mai ai 1 încercare pentru acest anunț.",
     "attemptsRemainingPlural": "Mai ai {n} încercări pentru acest anunț.",
     "attemptsFinished": "Ai folosit cele 3 încercări disponibile pentru acest anunț.",
-    "unchangedRegenerate": "Modifică mai întâi textul actual, apoi vei putea regenera o nouă propunere pentru a-l îmbunătăți."
+    "unchangedRegenerate": "Modifică mai întâi textul actual, apoi vei putea regenera o nouă propunere pentru a-l îmbunătăți.",
+    "finalTranslating": "Traduc în italiană...",
+    "finalTranslationDone": "Textul introdus în anunț este exact cel pe care l-ai ales, tradus în italiană.",
+    "finalTranslationError": "Nu am reușit să traduc textul în italiană. Încearcă din nou."
   },
   "uk": {
     "badge": "Допомога з текстом",
@@ -201,7 +216,10 @@
     "attemptsRemainingSingular": "У вас залишилася 1 спроба для цього оголошення.",
     "attemptsRemainingPlural": "У вас залишилося {n} спроби для цього оголошення.",
     "attemptsFinished": "Ви використали 3 доступні спроби для цього оголошення.",
-    "unchangedRegenerate": "Спочатку змініть поточний текст, потім зможете згенерувати нову пропозицію для покращення."
+    "unchangedRegenerate": "Спочатку змініть поточний текст, потім зможете згенерувати нову пропозицію для покращення.",
+    "finalTranslating": "Перекладаю італійською...",
+    "finalTranslationDone": "Текст, доданий до оголошення, є саме тим, який ви вибрали, перекладеним італійською.",
+    "finalTranslationError": "Не вдалося перекласти текст італійською. Спробуйте ще раз."
   },
   "ru": {
     "badge": "Помощь с текстом",
@@ -235,7 +253,10 @@
     "attemptsRemainingSingular": "У вас осталась 1 попытка для этого объявления.",
     "attemptsRemainingPlural": "У вас осталось {n} попытки для этого объявления.",
     "attemptsFinished": "Вы использовали 3 доступные попытки для этого объявления.",
-    "unchangedRegenerate": "Сначала измените текущий текст, затем сможете сгенерировать новое предложение для улучшения."
+    "unchangedRegenerate": "Сначала измените текущий текст, затем сможете сгенерировать новое предложение для улучшения.",
+    "finalTranslating": "Перевожу на итальянский...",
+    "finalTranslationDone": "Текст, добавленный в объявление, — это именно тот текст, который вы выбрали, переведённый на итальянский.",
+    "finalTranslationError": "Не удалось перевести текст на итальянский. Попробуйте ещё раз."
   },
   "tl": {
     "badge": "Tulong sa pagsusulat",
@@ -269,7 +290,10 @@
     "attemptsRemainingSingular": "Mayroon ka pang 1 pagtatangka para sa anunsyong ito.",
     "attemptsRemainingPlural": "Mayroon ka pang {n} pagtatangka para sa anunsyong ito.",
     "attemptsFinished": "Nagamit mo na ang 3 pagtatangkang available para sa anunsyong ito.",
-    "unchangedRegenerate": "Baguhin muna ang kasalukuyang teksto, pagkatapos maaari kang gumawa ng bagong mungkahi para pagandahin ito."
+    "unchangedRegenerate": "Baguhin muna ang kasalukuyang teksto, pagkatapos maaari kang gumawa ng bagong mungkahi para pagandahin ito.",
+    "finalTranslating": "Isinasalin sa Italyano...",
+    "finalTranslationDone": "Ang tekstong inilagay sa anunsyo ay eksaktong tekstong pinili mo, isinalin sa Italyano.",
+    "finalTranslationError": "Hindi naisalin ang teksto sa Italyano. Subukan muli."
   },
   "ar": {
     "badge": "مساعدة في الكتابة",
@@ -303,7 +327,10 @@
     "attemptsRemainingSingular": "تبقت لديك محاولة واحدة لهذا الإعلان.",
     "attemptsRemainingPlural": "تبقت لديك {n} محاولات لهذا الإعلان.",
     "attemptsFinished": "لقد استخدمت المحاولات الثلاث المتاحة لهذا الإعلان.",
-    "unchangedRegenerate": "عدّل النص الحالي أولًا، ثم يمكنك إنشاء اقتراح جديد لتحسينه."
+    "unchangedRegenerate": "عدّل النص الحالي أولًا، ثم يمكنك إنشاء اقتراح جديد لتحسينه.",
+    "finalTranslating": "جارٍ الترجمة إلى الإيطالية...",
+    "finalTranslationDone": "النص الذي أُضيف إلى الإعلان هو بالضبط النص الذي اخترته، مترجمًا إلى الإيطالية.",
+    "finalTranslationError": "لم أتمكن من ترجمة النص إلى الإيطالية. حاول مرة أخرى."
   },
   "sq": {
     "badge": "Ndihmë për shkrimin",
@@ -337,7 +364,10 @@
     "attemptsRemainingSingular": "Ke edhe 1 përpjekje për këtë njoftim.",
     "attemptsRemainingPlural": "Ke edhe {n} përpjekje për këtë njoftim.",
     "attemptsFinished": "Ke përdorur 3 përpjekjet e disponueshme për këtë njoftim.",
-    "unchangedRegenerate": "Ndrysho më parë tekstin aktual, pastaj mund të rigjenerosh një propozim të ri për ta përmirësuar."
+    "unchangedRegenerate": "Ndrysho më parë tekstin aktual, pastaj mund të rigjenerosh një propozim të ri për ta përmirësuar.",
+    "finalTranslating": "Po përkthehet në italisht...",
+    "finalTranslationDone": "Teksti i vendosur në njoftim është saktësisht ai që zgjodhe, i përkthyer në italisht.",
+    "finalTranslationError": "Nuk arrita ta përkthej tekstin në italisht. Provo përsëri."
   },
   "pl": {
     "badge": "Pomoc w pisaniu",
@@ -371,7 +401,10 @@
     "attemptsRemainingSingular": "Masz jeszcze 1 próbę dla tego ogłoszenia.",
     "attemptsRemainingPlural": "Masz jeszcze {n} próby dla tego ogłoszenia.",
     "attemptsFinished": "Wykorzystano 3 dostępne próby dla tego ogłoszenia.",
-    "unchangedRegenerate": "Najpierw zmień obecny tekst, potem możesz wygenerować nową propozycję, aby go ulepszyć."
+    "unchangedRegenerate": "Najpierw zmień obecny tekst, potem możesz wygenerować nową propozycję, aby go ulepszyć.",
+    "finalTranslating": "Tłumaczę na włoski...",
+    "finalTranslationDone": "Tekst dodany do ogłoszenia jest dokładnie tym, który wybrałeś, przetłumaczonym na włoski.",
+    "finalTranslationError": "Nie udało się przetłumaczyć tekstu na włoski. Spróbuj ponownie."
   },
   "de": {
     "badge": "Schreibhilfe",
@@ -405,7 +438,10 @@
     "attemptsRemainingSingular": "Du hast noch 1 Versuch für diese Anzeige.",
     "attemptsRemainingPlural": "Du hast noch {n} Versuche für diese Anzeige.",
     "attemptsFinished": "Du hast die 3 verfügbaren Versuche für diese Anzeige verwendet.",
-    "unchangedRegenerate": "Ändere zuerst den aktuellen Text, dann kannst du einen neuen Vorschlag zur Verbesserung generieren."
+    "unchangedRegenerate": "Ändere zuerst den aktuellen Text, dann kannst du einen neuen Vorschlag zur Verbesserung generieren.",
+    "finalTranslating": "Übersetze ins Italienische...",
+    "finalTranslationDone": "Der in die Anzeige eingefügte Text ist genau der von dir gewählte Text, ins Italienische übersetzt.",
+    "finalTranslationError": "Der Text konnte nicht ins Italienische übersetzt werden. Bitte versuche es erneut."
   },
   "mo": {
     "badge": "Ajutor la scriere",
@@ -439,7 +475,10 @@
     "attemptsRemainingSingular": "Mai ai 1 încercare pentru acest anunț.",
     "attemptsRemainingPlural": "Mai ai {n} încercări pentru acest anunț.",
     "attemptsFinished": "Ai folosit cele 3 încercări disponibile pentru acest anunț.",
-    "unchangedRegenerate": "Modifică mai întâi textul actual, apoi vei putea regenera o nouă propunere pentru a-l îmbunătăți."
+    "unchangedRegenerate": "Modifică mai întâi textul actual, apoi vei putea regenera o nouă propunere pentru a-l îmbunătăți.",
+    "finalTranslating": "Traduc în italiană...",
+    "finalTranslationDone": "Textul introdus în anunț este exact cel pe care l-ai ales, tradus în italiană.",
+    "finalTranslationError": "Nu am reușit să traduc textul în italiană. Încearcă din nou."
   },
   "bg": {
     "badge": "Помощ при писане",
@@ -473,7 +512,10 @@
     "attemptsRemainingSingular": "Имаш още 1 опит за тази обява.",
     "attemptsRemainingPlural": "Имаш още {n} опита за тази обява.",
     "attemptsFinished": "Използва 3-те налични опита за тази обява.",
-    "unchangedRegenerate": "Първо промени текущия текст, после можеш да генерираш ново предложение за подобрение."
+    "unchangedRegenerate": "Първо промени текущия текст, после можеш да генерираш ново предложение за подобрение.",
+    "finalTranslating": "Превеждам на италиански...",
+    "finalTranslationDone": "Текстът, добавен в обявата, е точно този, който избра, преведен на италиански.",
+    "finalTranslationError": "Не успях да преведа текста на италиански. Опитай отново."
   },
   "ka": {
     "badge": "წერის დახმარება",
@@ -507,7 +549,10 @@
     "attemptsRemainingSingular": "ამ განცხადებისთვის კიდევ 1 მცდელობა გაქვს.",
     "attemptsRemainingPlural": "ამ განცხადებისთვის კიდევ {n} მცდელობა გაქვს.",
     "attemptsFinished": "ამ განცხადებისთვის ხელმისაწვდომი 3 მცდელობა უკვე გამოიყენე.",
-    "unchangedRegenerate": "ჯერ შეცვალე მიმდინარე ტექსტი, შემდეგ შეძლებ ახალი შეთავაზების გენერირებას მის გასაუმჯობესებლად."
+    "unchangedRegenerate": "ჯერ შეცვალე მიმდინარე ტექსტი, შემდეგ შეძლებ ახალი შეთავაზების გენერირებას მის გასაუმჯობესებლად.",
+    "finalTranslating": "იტალიურად ითარგმნება...",
+    "finalTranslationDone": "განცხადებაში დამატებული ტექსტი ზუსტად ისაა, რაც აირჩიე, იტალიურად ნათარგმნი.",
+    "finalTranslationError": "ტექსტის იტალიურად თარგმნა ვერ მოხერხდა. სცადე ხელახლა."
   },
   "sr": {
     "badge": "Помоћ при писању",
@@ -541,7 +586,10 @@
     "attemptsRemainingSingular": "Имаш још 1 покушај за овај оглас.",
     "attemptsRemainingPlural": "Имаш још {n} покушаја за овај оглас.",
     "attemptsFinished": "Искористио си 3 доступна покушаја за овај оглас.",
-    "unchangedRegenerate": "Прво измени тренутни текст, затим можеш генерисати нови предлог за побољшање."
+    "unchangedRegenerate": "Прво измени тренутни текст, затим можеш генерисати нови предлог за побољшање.",
+    "finalTranslating": "Преводим на италијански...",
+    "finalTranslationDone": "Текст додат у оглас је управо онај који си изабрао, преведен на италијански.",
+    "finalTranslationError": "Нисам успео да преведем текст на италијански. Покушај поново."
   },
   "hr": {
     "badge": "Pomoć pri pisanju",
@@ -575,7 +623,10 @@
     "attemptsRemainingSingular": "Imaš još 1 pokušaj za ovaj oglas.",
     "attemptsRemainingPlural": "Imaš još {n} pokušaja za ovaj oglas.",
     "attemptsFinished": "Iskoristio si 3 dostupna pokušaja za ovaj oglas.",
-    "unchangedRegenerate": "Prvo izmijeni trenutni tekst, zatim možeš generirati novi prijedlog za poboljšanje."
+    "unchangedRegenerate": "Prvo izmijeni trenutni tekst, zatim možeš generirati novi prijedlog za poboljšanje.",
+    "finalTranslating": "Prevodi se na talijanski...",
+    "finalTranslationDone": "Tekst unesen u oglas točno je onaj koji si odabrao, preveden na talijanski.",
+    "finalTranslationError": "Nije bilo moguće prevesti tekst na talijanski. Pokušaj ponovno."
   },
   "bs": {
     "badge": "Pomoć pri pisanju",
@@ -609,7 +660,10 @@
     "attemptsRemainingSingular": "Imaš još 1 pokušaj za ovaj oglas.",
     "attemptsRemainingPlural": "Imaš još {n} pokušaja za ovaj oglas.",
     "attemptsFinished": "Iskoristio si 3 dostupna pokušaja za ovaj oglas.",
-    "unchangedRegenerate": "Prvo izmijeni trenutni tekst, zatim možeš generisati novi prijedlog za poboljšanje."
+    "unchangedRegenerate": "Prvo izmijeni trenutni tekst, zatim možeš generisati novi prijedlog za poboljšanje.",
+    "finalTranslating": "Prevodi se na italijanski...",
+    "finalTranslationDone": "Tekst unesen u oglas je tačno onaj koji si odabrao, preveden na italijanski.",
+    "finalTranslationError": "Nije bilo moguće prevesti tekst na italijanski. Pokušaj ponovo."
   },
   "mk": {
     "badge": "Помош при пишување",
@@ -643,7 +697,10 @@
     "attemptsRemainingSingular": "Имаш уште 1 обид за овој оглас.",
     "attemptsRemainingPlural": "Имаш уште {n} обиди за овој оглас.",
     "attemptsFinished": "Ги искористи 3-те достапни обиди за овој оглас.",
-    "unchangedRegenerate": "Прво измени го тековниот текст, потоа можеш да генерираш нов предлог за подобрување."
+    "unchangedRegenerate": "Прво измени го тековниот текст, потоа можеш да генерираш нов предлог за подобрување.",
+    "finalTranslating": "Се преведува на италијански...",
+    "finalTranslationDone": "Текстот внесен во огласот е токму оној што го избра, преведен на италијански.",
+    "finalTranslationError": "Не успеав да го преведам текстот на италијански. Обиди се повторно."
   },
   "el": {
     "badge": "Βοήθεια γραφής",
@@ -677,7 +734,10 @@
     "attemptsRemainingSingular": "Έχεις ακόμη 1 προσπάθεια για αυτή την αγγελία.",
     "attemptsRemainingPlural": "Έχεις ακόμη {n} προσπάθειες για αυτή την αγγελία.",
     "attemptsFinished": "Χρησιμοποίησες τις 3 διαθέσιμες προσπάθειες για αυτή την αγγελία.",
-    "unchangedRegenerate": "Τροποποίησε πρώτα το τρέχον κείμενο και μετά μπορείς να δημιουργήσεις νέα πρόταση για να το βελτιώσεις."
+    "unchangedRegenerate": "Τροποποίησε πρώτα το τρέχον κείμενο και μετά μπορείς να δημιουργήσεις νέα πρόταση για να το βελτιώσεις.",
+    "finalTranslating": "Μετάφραση στα ιταλικά...",
+    "finalTranslationDone": "Το κείμενο που προστέθηκε στην αγγελία είναι ακριβώς αυτό που επέλεξες, μεταφρασμένο στα ιταλικά.",
+    "finalTranslationError": "Δεν ήταν δυνατή η μετάφραση του κειμένου στα ιταλικά. Δοκίμασε ξανά."
   },
   "zh": {
     "badge": "写作帮助",
@@ -711,7 +771,10 @@
     "attemptsRemainingSingular": "此广告还剩1次尝试。",
     "attemptsRemainingPlural": "此广告还剩{n}次尝试。",
     "attemptsFinished": "你已用完此广告可用的3次尝试。",
-    "unchangedRegenerate": "请先修改当前文字，然后再重新生成新的优化建议。"
+    "unchangedRegenerate": "请先修改当前文字，然后再重新生成新的优化建议。",
+    "finalTranslating": "正在翻译成意大利语...",
+    "finalTranslationDone": "已添加到广告中的文字正是你选择的文字，并已翻译成意大利语。",
+    "finalTranslationError": "无法将文字翻译成意大利语。请重试。"
   },
   "hi": {
     "badge": "लेखन सहायता",
@@ -745,7 +808,10 @@
     "attemptsRemainingSingular": "इस विज्ञापन के लिए आपके पास 1 प्रयास बचा है।",
     "attemptsRemainingPlural": "इस विज्ञापन के लिए आपके पास {n} प्रयास बचे हैं।",
     "attemptsFinished": "आपने इस विज्ञापन के लिए उपलब्ध 3 प्रयासों का उपयोग कर लिया है।",
-    "unchangedRegenerate": "पहले वर्तमान टेक्स्ट को बदलें, फिर आप उसे बेहतर करने के लिए नया सुझाव बना सकते हैं।"
+    "unchangedRegenerate": "पहले वर्तमान टेक्स्ट को बदलें, फिर आप उसे बेहतर करने के लिए नया सुझाव बना सकते हैं।",
+    "finalTranslating": "इतालवी में अनुवाद किया जा रहा है...",
+    "finalTranslationDone": "विज्ञापन में डाला गया पाठ ठीक वही है जिसे आपने चुना था, इतालवी में अनुवादित।",
+    "finalTranslationError": "पाठ को इतालवी में अनुवाद नहीं किया जा सका। कृपया फिर से प्रयास करें।"
   },
   "bn": {
     "badge": "লেখার সাহায্য",
@@ -779,7 +845,10 @@
     "attemptsRemainingSingular": "এই বিজ্ঞাপনের জন্য আপনার আরও 1টি চেষ্টা বাকি আছে।",
     "attemptsRemainingPlural": "এই বিজ্ঞাপনের জন্য আপনার আরও {n}টি চেষ্টা বাকি আছে।",
     "attemptsFinished": "আপনি এই বিজ্ঞাপনের জন্য উপলব্ধ 3টি চেষ্টা ব্যবহার করেছেন।",
-    "unchangedRegenerate": "প্রথমে বর্তমান লেখাটি পরিবর্তন করুন, তারপর উন্নতির জন্য নতুন প্রস্তাব তৈরি করতে পারবেন।"
+    "unchangedRegenerate": "প্রথমে বর্তমান লেখাটি পরিবর্তন করুন, তারপর উন্নতির জন্য নতুন প্রস্তাব তৈরি করতে পারবেন।",
+    "finalTranslating": "ইতালীয় ভাষায় অনুবাদ করা হচ্ছে...",
+    "finalTranslationDone": "বিজ্ঞাপনে যোগ করা লেখাটি ঠিক সেই লেখাই যা আপনি বেছে নিয়েছিলেন, ইতালীয় ভাষায় অনুবাদ করা।",
+    "finalTranslationError": "লেখাটি ইতালীয় ভাষায় অনুবাদ করা যায়নি। আবার চেষ্টা করুন।"
   },
   "ur": {
     "badge": "لکھنے میں مدد",
@@ -813,7 +882,10 @@
     "attemptsRemainingSingular": "اس اشتہار کے لیے آپ کے پاس 1 کوشش باقی ہے۔",
     "attemptsRemainingPlural": "اس اشتہار کے لیے آپ کے پاس {n} کوششیں باقی ہیں۔",
     "attemptsFinished": "آپ نے اس اشتہار کے لیے دستیاب 3 کوششیں استعمال کر لی ہیں۔",
-    "unchangedRegenerate": "پہلے موجودہ متن میں تبدیلی کریں، پھر اسے بہتر بنانے کے لیے نئی تجویز بنا سکیں گے۔"
+    "unchangedRegenerate": "پہلے موجودہ متن میں تبدیلی کریں، پھر اسے بہتر بنانے کے لیے نئی تجویز بنا سکیں گے۔",
+    "finalTranslating": "اطالوی میں ترجمہ کیا جا رہا ہے...",
+    "finalTranslationDone": "اشتہار میں شامل کیا گیا متن بالکل وہی ہے جو آپ نے منتخب کیا تھا، اطالوی میں ترجمہ شدہ۔",
+    "finalTranslationError": "متن کا اطالوی میں ترجمہ نہیں ہو سکا۔ دوبارہ کوشش کریں۔"
   },
   "si": {
     "badge": "ලිවීමේ උදව්",
@@ -847,7 +919,10 @@
     "attemptsRemainingSingular": "මෙම දැන්වීම සඳහා තවත් උත්සාහයක් 1ක් ඇත.",
     "attemptsRemainingPlural": "මෙම දැන්වීම සඳහා තවත් උත්සාහ {n}ක් ඇත.",
     "attemptsFinished": "මෙම දැන්වීම සඳහා ලබා දී ඇති උත්සාහ 3 භාවිතා කර ඇත.",
-    "unchangedRegenerate": "පළමුව වත්මන් පෙළ වෙනස් කරන්න, පසුව එය වැඩිදියුණු කිරීමට නව යෝජනාවක් නිර්මාණය කළ හැක."
+    "unchangedRegenerate": "පළමුව වත්මන් පෙළ වෙනස් කරන්න, පසුව එය වැඩිදියුණු කිරීමට නව යෝජනාවක් නිර්මාණය කළ හැක.",
+    "finalTranslating": "ඉතාලි භාෂාවට පරිවර්තනය වෙමින් පවතී...",
+    "finalTranslationDone": "දැන්වීමට එක් කළ පෙළ ඔබ තෝරාගත් පෙළම වන අතර එය ඉතාලි භාෂාවට පරිවර්තනය කර ඇත.",
+    "finalTranslationError": "පෙළ ඉතාලි භාෂාවට පරිවර්තනය කළ නොහැකි විය. නැවත උත්සාහ කරන්න."
   },
   "ta": {
     "badge": "எழுத்து உதவி",
@@ -881,7 +956,10 @@
     "attemptsRemainingSingular": "இந்த விளம்பரத்திற்கு இன்னும் 1 முயற்சி உள்ளது.",
     "attemptsRemainingPlural": "இந்த விளம்பரத்திற்கு இன்னும் {n} முயற்சிகள் உள்ளன.",
     "attemptsFinished": "இந்த விளம்பரத்திற்கு கிடைத்த 3 முயற்சிகளையும் பயன்படுத்திவிட்டீர்கள்.",
-    "unchangedRegenerate": "முதலில் தற்போதைய உரையை மாற்றுங்கள், பின்னர் அதை மேம்படுத்த புதிய பரிந்துரையை உருவாக்கலாம்."
+    "unchangedRegenerate": "முதலில் தற்போதைய உரையை மாற்றுங்கள், பின்னர் அதை மேம்படுத்த புதிய பரிந்துரையை உருவாக்கலாம்.",
+    "finalTranslating": "இத்தாலிய மொழிக்கு மொழிபெயர்க்கப்படுகிறது...",
+    "finalTranslationDone": "விளம்பரத்தில் சேர்க்கப்பட்ட உரை நீங்கள் தேர்ந்தெடுத்த அதே உரை, இத்தாலிய மொழிக்கு மொழிபெயர்க்கப்பட்டது.",
+    "finalTranslationError": "உரையை இத்தாலிய மொழிக்கு மொழிபெயர்க்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."
   },
   "ml": {
     "badge": "എഴുത്ത് സഹായം",
@@ -915,7 +993,10 @@
     "attemptsRemainingSingular": "ഈ പരസ്യത്തിന് ഇനി 1 ശ്രമം ബാക്കി.",
     "attemptsRemainingPlural": "ഈ പരസ്യത്തിന് ഇനി {n} ശ്രമങ്ങൾ ബാക്കി.",
     "attemptsFinished": "ഈ പരസ്യത്തിന് ലഭ്യമായ 3 ശ്രമങ്ങളും നിങ്ങൾ ഉപയോഗിച്ചു.",
-    "unchangedRegenerate": "ആദ്യം നിലവിലെ വാചകം തിരുത്തുക, ശേഷം മെച്ചപ്പെടുത്താൻ പുതിയ നിർദ്ദേശം സൃഷ്ടിക്കാം."
+    "unchangedRegenerate": "ആദ്യം നിലവിലെ വാചകം തിരുത്തുക, ശേഷം മെച്ചപ്പെടുത്താൻ പുതിയ നിർദ്ദേശം സൃഷ്ടിക്കാം.",
+    "finalTranslating": "ഇറ്റാലിയനിലേക്ക് വിവർത്തനം ചെയ്യുന്നു...",
+    "finalTranslationDone": "പരസ്യത്തിൽ ചേർത്ത വാചകം നിങ്ങൾ തിരഞ്ഞെടുത്തതുതന്നെയാണ്, ഇറ്റാലിയനിലേക്ക് വിവർത്തനം ചെയ്തത്.",
+    "finalTranslationError": "വാചകം ഇറ്റാലിയനിലേക്ക് വിവർത്തനം ചെയ്യാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
   },
   "pa": {
     "badge": "ਲਿਖਣ ਵਿੱਚ ਮਦਦ",
@@ -949,7 +1030,10 @@
     "attemptsRemainingSingular": "ਇਸ ਇਸ਼ਤਿਹਾਰ ਲਈ ਤੁਹਾਡੇ ਕੋਲ 1 ਕੋਸ਼ਿਸ਼ ਬਾਕੀ ਹੈ।",
     "attemptsRemainingPlural": "ਇਸ ਇਸ਼ਤਿਹਾਰ ਲਈ ਤੁਹਾਡੇ ਕੋਲ {n} ਕੋਸ਼ਿਸ਼ਾਂ ਬਾਕੀ ਹਨ।",
     "attemptsFinished": "ਤੁਸੀਂ ਇਸ ਇਸ਼ਤਿਹਾਰ ਲਈ ਉਪਲਬਧ 3 ਕੋਸ਼ਿਸ਼ਾਂ ਵਰਤ ਲਈਆਂ ਹਨ।",
-    "unchangedRegenerate": "ਪਹਿਲਾਂ ਮੌਜੂਦਾ ਲਿਖਤ ਬਦਲੋ, ਫਿਰ ਇਸਨੂੰ ਸੁਧਾਰਣ ਲਈ ਨਵਾਂ ਸੁਝਾਅ ਤਿਆਰ ਕਰ ਸਕਦੇ ਹੋ।"
+    "unchangedRegenerate": "ਪਹਿਲਾਂ ਮੌਜੂਦਾ ਲਿਖਤ ਬਦਲੋ, ਫਿਰ ਇਸਨੂੰ ਸੁਧਾਰਣ ਲਈ ਨਵਾਂ ਸੁਝਾਅ ਤਿਆਰ ਕਰ ਸਕਦੇ ਹੋ।",
+    "finalTranslating": "ਇਤਾਲਵੀ ਵਿੱਚ ਅਨੁਵਾਦ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...",
+    "finalTranslationDone": "ਇਸ਼ਤਿਹਾਰ ਵਿੱਚ ਜੋੜਿਆ ਗਿਆ ਲਿਖਤ ਬਿਲਕੁਲ ਉਹੀ ਹੈ ਜੋ ਤੁਸੀਂ ਚੁਣਿਆ ਸੀ, ਇਤਾਲਵੀ ਵਿੱਚ ਅਨੁਵਾਦ ਕੀਤਾ ਹੋਇਆ।",
+    "finalTranslationError": "ਲਿਖਤ ਨੂੰ ਇਤਾਲਵੀ ਵਿੱਚ ਅਨੁਵਾਦ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ। ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
   },
   "ne": {
     "badge": "लेखन सहयोग",
@@ -983,7 +1067,10 @@
     "attemptsRemainingSingular": "यो विज्ञापनका लागि तपाईंको 1 प्रयास बाँकी छ।",
     "attemptsRemainingPlural": "यो विज्ञापनका लागि तपाईंका {n} प्रयास बाँकी छन्।",
     "attemptsFinished": "तपाईंले यो विज्ञापनका लागि उपलब्ध 3 प्रयास प्रयोग गरिसक्नुभयो।",
-    "unchangedRegenerate": "पहिले हालको पाठ परिवर्तन गर्नुहोस्, त्यसपछि सुधारका लागि नयाँ सुझाव बनाउन सक्नुहुन्छ।"
+    "unchangedRegenerate": "पहिले हालको पाठ परिवर्तन गर्नुहोस्, त्यसपछि सुधारका लागि नयाँ सुझाव बनाउन सक्नुहुन्छ।",
+    "finalTranslating": "इटालियनमा अनुवाद हुँदैछ...",
+    "finalTranslationDone": "विज्ञापनमा राखिएको पाठ तपाईंले छानेको ठीक त्यही पाठ हो, इटालियनमा अनुवाद गरिएको।",
+    "finalTranslationError": "पाठलाई इटालियनमा अनुवाद गर्न सकिएन। फेरि प्रयास गर्नुहोस्।"
   },
   "id": {
     "badge": "Bantuan menulis",
@@ -1017,7 +1104,10 @@
     "attemptsRemainingSingular": "Anda masih memiliki 1 percobaan untuk iklan ini.",
     "attemptsRemainingPlural": "Anda masih memiliki {n} percobaan untuk iklan ini.",
     "attemptsFinished": "Anda telah menggunakan 3 percobaan yang tersedia untuk iklan ini.",
-    "unchangedRegenerate": "Ubah teks saat ini terlebih dahulu, lalu Anda dapat membuat saran baru untuk memperbaikinya."
+    "unchangedRegenerate": "Ubah teks saat ini terlebih dahulu, lalu Anda dapat membuat saran baru untuk memperbaikinya.",
+    "finalTranslating": "Menerjemahkan ke bahasa Italia...",
+    "finalTranslationDone": "Teks yang dimasukkan ke iklan adalah persis teks yang Anda pilih, diterjemahkan ke bahasa Italia.",
+    "finalTranslationError": "Teks tidak dapat diterjemahkan ke bahasa Italia. Silakan coba lagi."
   },
   "vi": {
     "badge": "Hỗ trợ viết",
@@ -1051,7 +1141,10 @@
     "attemptsRemainingSingular": "Bạn còn 1 lần thử cho tin đăng này.",
     "attemptsRemainingPlural": "Bạn còn {n} lần thử cho tin đăng này.",
     "attemptsFinished": "Bạn đã dùng 3 lần thử có sẵn cho tin đăng này.",
-    "unchangedRegenerate": "Trước tiên hãy chỉnh sửa nội dung hiện tại, sau đó bạn có thể tạo gợi ý mới để cải thiện."
+    "unchangedRegenerate": "Trước tiên hãy chỉnh sửa nội dung hiện tại, sau đó bạn có thể tạo gợi ý mới để cải thiện.",
+    "finalTranslating": "Đang dịch sang tiếng Ý...",
+    "finalTranslationDone": "Nội dung được đưa vào tin đăng chính xác là nội dung bạn đã chọn, được dịch sang tiếng Ý.",
+    "finalTranslationError": "Không thể dịch nội dung sang tiếng Ý. Vui lòng thử lại."
   },
   "th": {
     "badge": "ช่วยเขียน",
@@ -1085,7 +1178,10 @@
     "attemptsRemainingSingular": "คุณเหลือ 1 ครั้งสำหรับประกาศนี้",
     "attemptsRemainingPlural": "คุณเหลือ {n} ครั้งสำหรับประกาศนี้",
     "attemptsFinished": "คุณใช้ครบ 3 ครั้งที่มีสำหรับประกาศนี้แล้ว",
-    "unchangedRegenerate": "แก้ไขข้อความปัจจุบันก่อน แล้วจึงสร้างข้อเสนอแนะใหม่เพื่อปรับปรุงได้"
+    "unchangedRegenerate": "แก้ไขข้อความปัจจุบันก่อน แล้วจึงสร้างข้อเสนอแนะใหม่เพื่อปรับปรุงได้",
+    "finalTranslating": "กำลังแปลเป็นภาษาอิตาลี...",
+    "finalTranslationDone": "ข้อความที่เพิ่มในประกาศคือข้อความที่คุณเลือกไว้ทุกประการ และแปลเป็นภาษาอิตาลีแล้ว",
+    "finalTranslationError": "ไม่สามารถแปลข้อความเป็นภาษาอิตาลีได้ กรุณาลองอีกครั้ง"
   },
   "ja": {
     "badge": "文章作成サポート",
@@ -1119,7 +1215,10 @@
     "attemptsRemainingSingular": "この掲載にはあと1回試行できます。",
     "attemptsRemainingPlural": "この掲載にはあと{n}回試行できます。",
     "attemptsFinished": "この掲載で利用できる3回の試行を使い切りました。",
-    "unchangedRegenerate": "先に現在の文章を変更してください。その後、改善のための新しい提案を生成できます。"
+    "unchangedRegenerate": "先に現在の文章を変更してください。その後、改善のための新しい提案を生成できます。",
+    "finalTranslating": "イタリア語に翻訳しています...",
+    "finalTranslationDone": "掲載文に追加された文章は、あなたが選んだ文章そのもので、イタリア語に翻訳されています。",
+    "finalTranslationError": "文章をイタリア語に翻訳できませんでした。もう一度お試しください。"
   },
   "ko": {
     "badge": "글쓰기 도움",
@@ -1153,7 +1252,10 @@
     "attemptsRemainingSingular": "이 게시글에 대해 1번의 시도가 남았습니다.",
     "attemptsRemainingPlural": "이 게시글에 대해 {n}번의 시도가 남았습니다.",
     "attemptsFinished": "이 게시글에 사용 가능한 3번의 시도를 모두 사용했습니다.",
-    "unchangedRegenerate": "먼저 현재 문구를 수정한 다음, 개선을 위한 새 제안을 생성할 수 있습니다."
+    "unchangedRegenerate": "먼저 현재 문구를 수정한 다음, 개선을 위한 새 제안을 생성할 수 있습니다.",
+    "finalTranslating": "이탈리아어로 번역 중...",
+    "finalTranslationDone": "게시글에 추가된 문구는 사용자가 선택한 바로 그 문구이며, 이탈리아어로 번역되었습니다.",
+    "finalTranslationError": "문구를 이탈리아어로 번역하지 못했습니다. 다시 시도해 주세요."
   },
   "sw": {
     "badge": "Msaada wa kuandika",
@@ -1187,7 +1289,10 @@
     "attemptsRemainingSingular": "Una jaribio 1 lililobaki kwa tangazo hili.",
     "attemptsRemainingPlural": "Una majaribio {n} yaliyobaki kwa tangazo hili.",
     "attemptsFinished": "Umetumia majaribio 3 yanayopatikana kwa tangazo hili.",
-    "unchangedRegenerate": "Badilisha kwanza maandishi ya sasa, kisha unaweza kuzalisha pendekezo jipya kuyaboresha."
+    "unchangedRegenerate": "Badilisha kwanza maandishi ya sasa, kisha unaweza kuzalisha pendekezo jipya kuyaboresha.",
+    "finalTranslating": "Inatafsiriwa kwa Kiitaliano...",
+    "finalTranslationDone": "Maandishi yaliyowekwa kwenye tangazo ni yale yale uliyoyachagua, yametafsiriwa kwa Kiitaliano.",
+    "finalTranslationError": "Sikuweza kutafsiri maandishi kwa Kiitaliano. Tafadhali jaribu tena."
   },
   "am": {
     "badge": "የመጻፍ እገዛ",
@@ -1221,7 +1326,10 @@
     "attemptsRemainingSingular": "ለዚህ ማስታወቂያ 1 ሙከራ ቀርቶዎታል።",
     "attemptsRemainingPlural": "ለዚህ ማስታወቂያ {n} ሙከራዎች ቀርተዋል።",
     "attemptsFinished": "ለዚህ ማስታወቂያ ያሉትን 3 ሙከራዎች ተጠቅመዋል።",
-    "unchangedRegenerate": "መጀመሪያ ያለውን ጽሑፍ ያስተካክሉ፣ ከዚያ ለማሻሻል አዲስ ሀሳብ ማፍጠር ይችላሉ።"
+    "unchangedRegenerate": "መጀመሪያ ያለውን ጽሑፍ ያስተካክሉ፣ ከዚያ ለማሻሻል አዲስ ሀሳብ ማፍጠር ይችላሉ።",
+    "finalTranslating": "ወደ ጣልያንኛ በመተርጎም ላይ...",
+    "finalTranslationDone": "በማስታወቂያው ውስጥ የተጨመረው ጽሑፍ እርስዎ የመረጡት ትክክለኛው ጽሑፍ ነው፣ ወደ ጣልያንኛ ተተርጎሟል።",
+    "finalTranslationError": "ጽሑፉን ወደ ጣልያንኛ መተርጎም አልተቻለም። እንደገና ይሞክሩ።"
   },
   "ti": {
     "badge": "ሓገዝ ጽሕፈት",
@@ -1255,7 +1363,10 @@
     "attemptsRemainingSingular": "ንዚ ምልክታ 1 ፈተነ ተሪፉካ።",
     "attemptsRemainingPlural": "ንዚ ምልክታ {n} ፈተናታት ተሪፎምኻ።",
     "attemptsFinished": "ንዚ ምልክታ ዘለዉ 3 ፈተናታት ተጠቒምካሎም።",
-    "unchangedRegenerate": "መጀመርታ ዘሎ ጽሑፍ ቀይር፣ ድሕሪኡ ንምምሕያሽ ሓድሽ ሓሳብ ክትፈጥር ትኽእል።"
+    "unchangedRegenerate": "መጀመርታ ዘሎ ጽሑፍ ቀይር፣ ድሕሪኡ ንምምሕያሽ ሓድሽ ሓሳብ ክትፈጥር ትኽእል።",
+    "finalTranslating": "ናብ ጣልያንኛ ይትርጎም ኣሎ...",
+    "finalTranslationDone": "ኣብ ምልክታ ዝተወሰኸ ጽሑፍ ብትኽክል እቲ ዝመረጽካዮ ጽሑፍ እዩ፣ ናብ ጣልያንኛ ተተርጒሙ።",
+    "finalTranslationError": "ጽሑፍ ናብ ጣልያንኛ ምትርጓም ኣይተኻእለን። እንደገና ፈትን።"
   },
   "so": {
     "badge": "Caawinta qorista",
@@ -1289,7 +1400,10 @@
     "attemptsRemainingSingular": "Waxaad haysataa 1 isku day oo ka haray xayeysiiskan.",
     "attemptsRemainingPlural": "Waxaad haysataa {n} isku day oo ka haray xayeysiiskan.",
     "attemptsFinished": "Waxaad isticmaashay 3-da isku day ee xayeysiiskan.",
-    "unchangedRegenerate": "Marka hore beddel qoraalka hadda jira, kadib waxaad samayn kartaa talo cusub si loo hagaajiyo."
+    "unchangedRegenerate": "Marka hore beddel qoraalka hadda jira, kadib waxaad samayn kartaa talo cusub si loo hagaajiyo.",
+    "finalTranslating": "Waxaa loo turjumayaa Talyaani...",
+    "finalTranslationDone": "Qoraalka lagu daray xayeysiiska waa isla qoraalkii aad dooratay, waxaana loo turjumay Talyaani.",
+    "finalTranslationError": "Qoraalka looma turjumi karin Talyaani. Fadlan mar kale isku day."
   },
   "ha": {
     "badge": "Taimakon rubutu",
@@ -1323,7 +1437,10 @@
     "attemptsRemainingSingular": "Kana da ƙoƙari 1 da ya rage don wannan talla.",
     "attemptsRemainingPlural": "Kana da ƙoƙari {n} da suka rage don wannan talla.",
     "attemptsFinished": "Ka yi amfani da ƙoƙari 3 da ke akwai don wannan talla.",
-    "unchangedRegenerate": "Da farko gyara rubutun yanzu, sannan za ka iya samar da sabuwar shawara don inganta shi."
+    "unchangedRegenerate": "Da farko gyara rubutun yanzu, sannan za ka iya samar da sabuwar shawara don inganta shi.",
+    "finalTranslating": "Ana fassara zuwa Italiyanci...",
+    "finalTranslationDone": "Rubutun da aka saka a tallan shi ne daidai rubutun da ka zaɓa, an fassara shi zuwa Italiyanci.",
+    "finalTranslationError": "Ba a iya fassara rubutun zuwa Italiyanci ba. Sake gwadawa."
   },
   "yo": {
     "badge": "Ìrànwọ́ ìkọ̀wé",
@@ -1357,7 +1474,10 @@
     "attemptsRemainingSingular": "Ìgbìyànjú 1 ṣì kù fún ìpolówó yìí.",
     "attemptsRemainingPlural": "Ìgbìyànjú {n} ṣì kù fún ìpolówó yìí.",
     "attemptsFinished": "O ti lo ìgbìyànjú 3 tó wà fún ìpolówó yìí.",
-    "unchangedRegenerate": "Ṣàtúnṣe ọ̀rọ̀ tó wà báyìí kọ́kọ́, lẹ́yìn náà o lè dá àbá tuntun láti mú un dára síi."
+    "unchangedRegenerate": "Ṣàtúnṣe ọ̀rọ̀ tó wà báyìí kọ́kọ́, lẹ́yìn náà o lè dá àbá tuntun láti mú un dára síi.",
+    "finalTranslating": "A ń túmọ̀ sí Italian...",
+    "finalTranslationDone": "Ọ̀rọ̀ tí a fi sínú ìpolówó náà jẹ́ gangan ohun tí o yan, tí a túmọ̀ sí Italian.",
+    "finalTranslationError": "A kò lè túmọ̀ ọ̀rọ̀ náà sí Italian. Gbìyànjú lẹ́ẹ̀kansi."
   },
   "ig": {
     "badge": "Enyemaka ide ihe",
@@ -1391,7 +1511,10 @@
     "attemptsRemainingSingular": "Ị ka nwere mbọ 1 maka mgbasa ozi a.",
     "attemptsRemainingPlural": "Ị ka nwere mbọ {n} maka mgbasa ozi a.",
     "attemptsFinished": "Ị jiri mbọ 3 dị maka mgbasa ozi a.",
-    "unchangedRegenerate": "Gbanwee ederede dị ugbu a mbụ, mgbe ahụ ị nwere ike mepụta aro ọhụrụ iji meziwanye ya."
+    "unchangedRegenerate": "Gbanwee ederede dị ugbu a mbụ, mgbe ahụ ị nwere ike mepụta aro ọhụrụ iji meziwanye ya.",
+    "finalTranslating": "A na-atụgharị ya n’asụsụ Italian...",
+    "finalTranslationDone": "Ederede etinyere na mgbasa ozi bụ kpọmkwem ederede ị họọrọ, tụgharịrị n’asụsụ Italian.",
+    "finalTranslationError": "Enweghị ike ịtụgharị ederede ahụ n’asụsụ Italian. Biko nwaa ọzọ."
   },
   "wo": {
     "badge": "Ndimbal ci bind",
@@ -1425,7 +1548,10 @@
     "attemptsRemainingSingular": "Des na la 1 jéem ci xibaar bii.",
     "attemptsRemainingPlural": "Des na la {n} jéem ci xibaar bii.",
     "attemptsFinished": "Jëfandikoo nga 3 jéem yi am ci xibaar bii.",
-    "unchangedRegenerate": "Soppi bind bi nekk léegi njëkk, gannaaw loolu mën nga generate xelal bu bees ngir mu gën baax."
+    "unchangedRegenerate": "Soppi bind bi nekk léegi njëkk, gannaaw loolu mën nga generate xelal bu bees ngir mu gën baax.",
+    "finalTranslating": "Yangi tekki ci italien...",
+    "finalTranslationDone": "Texte bi dugal ci xibaar bi mooy li nga tànn, te tekki nañu ko ci italien.",
+    "finalTranslationError": "Mënul woon tekki texte bi ci italien. Jéemaatal."
   },
   "bm": {
     "badge": "Sɛbɛnni dɛmɛ",
@@ -1459,7 +1585,10 @@
     "attemptsRemainingSingular": "I bolo jɛman 1 ka to ilan nin kama.",
     "attemptsRemainingPlural": "I bolo jɛman {n} ka to ilan nin kama.",
     "attemptsFinished": "I ye jɛman 3 kɛ min bɛ se ka kɛ ilan nin kama.",
-    "unchangedRegenerate": "Sɛbɛnni min bɛ yen sisan yɛlɛma fɔlɔ, o kɔfɛ i bɛ se ka hakilinata kura generate ka a nyɛ."
+    "unchangedRegenerate": "Sɛbɛnni min bɛ yen sisan yɛlɛma fɔlɔ, o kɔfɛ i bɛ se ka hakilinata kura generate ka a nyɛ.",
+    "finalTranslating": "A bɛ bamanankan na Italian kan na...",
+    "finalTranslationDone": "Sɛbɛnni min donnen bɛ ilan na, o ye i ye min sugandi kelen-kelen ye, a bamanankan na Italian kan na.",
+    "finalTranslationError": "Sɛbɛnni ma se ka bamanankan na Italian kan na. Seginka ka a kɛ tuguni."
   },
   "ln": {
     "badge": "Lisungi ya kokoma",
@@ -1493,7 +1622,10 @@
     "attemptsRemainingSingular": "Ozali na tentative 1 oyo etikali mpo na annonce oyo.",
     "attemptsRemainingPlural": "Ozali na ba tentative {n} oyo etikali mpo na annonce oyo.",
     "attemptsFinished": "Osaleli ba tentative 3 oyo ezalaki mpo na annonce oyo.",
-    "unchangedRegenerate": "Bongisa liboso makomi ya sikoyo, sima okoki kobimisa proposition ya sika mpo na kobongisa yango."
+    "unchangedRegenerate": "Bongisa liboso makomi ya sikoyo, sima okoki kobimisa proposition ya sika mpo na kobongisa yango.",
+    "finalTranslating": "Nazali kobongola na italien...",
+    "finalTranslationDone": "Makomi oyo ekɔtaki na annonce ezali kaka oyo oponaki, ebongolami na italien.",
+    "finalTranslationError": "Nakokaki te kobongola makomi na italien. Meká lisusu."
   },
   "ff": {
     "badge": "Ballal binndol",
@@ -1527,7 +1659,10 @@
     "attemptsRemainingSingular": "Ɓiiɗo 1 heddii e ɗaɓɓitorde ndee.",
     "attemptsRemainingPlural": "Ɓiiɗe {n} heddii e ɗaɓɓitorde ndee.",
     "attemptsFinished": "A huutorii ɓiiɗe 3 ɗe ngoodi e ɗaɓɓitorde ndee.",
-    "unchangedRegenerate": "Waylu binndol gonangol jooni adii, caggal ɗum aɗa waawi generate eɓɓoore hesere ngam ɓeydude ɗum."
+    "unchangedRegenerate": "Waylu binndol gonangol jooni adii, caggal ɗum aɗa waawi generate eɓɓoore hesere ngam ɓeydude ɗum.",
+    "finalTranslating": "Nana firta e Italian...",
+    "finalTranslationDone": "Binndol naatnangol e ɗaɓɓitorde ndee ko ngal cuɓi-ɗaa, firtaama e Italian.",
+    "finalTranslationError": "Binndol ngal waawaa firtude e Italian. Ƴeewto kadi."
   },
   "nl": {
     "badge": "Schrijfhulp",
@@ -1561,7 +1696,10 @@
     "attemptsRemainingSingular": "Je hebt nog 1 poging voor deze advertentie.",
     "attemptsRemainingPlural": "Je hebt nog {n} pogingen voor deze advertentie.",
     "attemptsFinished": "Je hebt de 3 beschikbare pogingen voor deze advertentie gebruikt.",
-    "unchangedRegenerate": "Wijzig eerst de huidige tekst, daarna kun je een nieuw voorstel genereren om hem te verbeteren."
+    "unchangedRegenerate": "Wijzig eerst de huidige tekst, daarna kun je een nieuw voorstel genereren om hem te verbeteren.",
+    "finalTranslating": "Vertalen naar het Italiaans...",
+    "finalTranslationDone": "De tekst die in de advertentie is geplaatst, is precies de tekst die je hebt gekozen, vertaald naar het Italiaans.",
+    "finalTranslationError": "De tekst kon niet naar het Italiaans worden vertaald. Probeer het opnieuw."
   },
   "tr": {
     "badge": "Yazma yardımı",
@@ -1595,7 +1733,10 @@
     "attemptsRemainingSingular": "Bu ilan için 1 hakkınız kaldı.",
     "attemptsRemainingPlural": "Bu ilan için {n} hakkınız kaldı.",
     "attemptsFinished": "Bu ilan için mevcut 3 hakkı kullandınız.",
-    "unchangedRegenerate": "Önce mevcut metni değiştirin, sonra onu iyileştirmek için yeni bir öneri oluşturabilirsiniz."
+    "unchangedRegenerate": "Önce mevcut metni değiştirin, sonra onu iyileştirmek için yeni bir öneri oluşturabilirsiniz.",
+    "finalTranslating": "İtalyancaya çevriliyor...",
+    "finalTranslationDone": "İlana eklenen metin, seçtiğiniz metnin aynısıdır ve İtalyancaya çevrilmiştir.",
+    "finalTranslationError": "Metin İtalyancaya çevrilemedi. Lütfen tekrar deneyin."
   },
   "fi": {
     "badge": "Kirjoitusapu",
@@ -1629,7 +1770,10 @@
     "attemptsRemainingSingular": "Sinulla on vielä 1 yritys tälle ilmoitukselle.",
     "attemptsRemainingPlural": "Sinulla on vielä {n} yritystä tälle ilmoitukselle.",
     "attemptsFinished": "Olet käyttänyt tälle ilmoitukselle käytettävissä olevat 3 yritystä.",
-    "unchangedRegenerate": "Muokkaa ensin nykyistä tekstiä, sitten voit luoda uuden ehdotuksen sen parantamiseksi."
+    "unchangedRegenerate": "Muokkaa ensin nykyistä tekstiä, sitten voit luoda uuden ehdotuksen sen parantamiseksi.",
+    "finalTranslating": "Käännetään italiaksi...",
+    "finalTranslationDone": "Ilmoitukseen lisätty teksti on täsmälleen valitsemasi teksti, italiaksi käännettynä.",
+    "finalTranslationError": "Tekstiä ei voitu kääntää italiaksi. Yritä uudelleen."
   },
   "sv": {
     "badge": "Skrivhjälp",
@@ -1663,7 +1807,10 @@
     "attemptsRemainingSingular": "Du har 1 försök kvar för denna annons.",
     "attemptsRemainingPlural": "Du har {n} försök kvar för denna annons.",
     "attemptsFinished": "Du har använt de 3 tillgängliga försöken för denna annons.",
-    "unchangedRegenerate": "Ändra först den aktuella texten, sedan kan du skapa ett nytt förslag för att förbättra den."
+    "unchangedRegenerate": "Ändra först den aktuella texten, sedan kan du skapa ett nytt förslag för att förbättra den.",
+    "finalTranslating": "Översätter till italienska...",
+    "finalTranslationDone": "Texten som lagts till i annonsen är exakt den du valde, översatt till italienska.",
+    "finalTranslationError": "Texten kunde inte översättas till italienska. Försök igen."
   },
   "da": {
     "badge": "Skrivehjælp",
@@ -1697,7 +1844,10 @@
     "attemptsRemainingSingular": "Du har 1 forsøg tilbage til denne annonce.",
     "attemptsRemainingPlural": "Du har {n} forsøg tilbage til denne annonce.",
     "attemptsFinished": "Du har brugt de 3 tilgængelige forsøg til denne annonce.",
-    "unchangedRegenerate": "Ændr først den aktuelle tekst, derefter kan du generere et nyt forslag for at forbedre den."
+    "unchangedRegenerate": "Ændr først den aktuelle tekst, derefter kan du generere et nyt forslag for at forbedre den.",
+    "finalTranslating": "Oversætter til italiensk...",
+    "finalTranslationDone": "Teksten, der er indsat i annoncen, er præcis den tekst, du valgte, oversat til italiensk.",
+    "finalTranslationError": "Teksten kunne ikke oversættes til italiensk. Prøv igen."
   },
   "no": {
     "badge": "Skrivehjelp",
@@ -1731,6 +1881,9 @@
     "attemptsRemainingSingular": "Du har 1 forsøk igjen for denne annonsen.",
     "attemptsRemainingPlural": "Du har {n} forsøk igjen for denne annonsen.",
     "attemptsFinished": "Du har brukt de 3 tilgjengelige forsøkene for denne annonsen.",
-    "unchangedRegenerate": "Endre først den nåværende teksten, deretter kan du generere et nytt forslag for å forbedre den."
+    "unchangedRegenerate": "Endre først den nåværende teksten, deretter kan du generere et nytt forslag for å forbedre den.",
+    "finalTranslating": "Oversetter til italiensk...",
+    "finalTranslationDone": "Teksten som er lagt inn i annonsen, er nøyaktig den du valgte, oversatt til italiensk.",
+    "finalTranslationError": "Teksten kunne ikke oversettes til italiensk. Prøv igjen."
   }
 }

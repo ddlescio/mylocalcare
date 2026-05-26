@@ -11407,10 +11407,14 @@ def api_ai_aiuto_scrittura_annuncio():
     titolo = (data.get("titolo") or "").strip()
     descrizione = (data.get("descrizione") or "").strip()
     lingua = (data.get("lingua") or "it").strip().lower()
-    azione = (data.get("azione") or "translate_it").strip().lower()
+    azione = (data.get("azione") or "improve").strip().lower()
 
-    if azione not in ("improve", "translate_it"):
-        azione = "translate_it"
+    # Azioni supportate:
+    # - improve: migliora nella lingua scelta dall'utente
+    # - translate_it: durante la preview migliora comunque nella lingua scelta
+    # - final_translate_it: traduzione finale in italiano prima di inserire nell'annuncio
+    if azione not in ("improve", "translate_it", "final_translate_it"):
+        azione = "improve"
 
     if lingua == "it":
         azione = "improve"
@@ -11440,6 +11444,7 @@ def api_ai_aiuto_scrittura_annuncio():
 Sei l'assistente di scrittura di MyLocalCare, una piattaforma italiana di annunci locali.
 
 Devi aiutare l'utente a migliorare un annuncio.
+
 Regole obbligatorie:
 - Rispondi SOLO con JSON valido.
 - Non aggiungere markdown.
@@ -11450,13 +11455,26 @@ Regole obbligatorie:
 - La descrizione deve essere chiara, ordinata e credibile.
 - Non usare linguaggio troppo commerciale o esagerato.
 - Non usare emoji nel titolo o nella descrizione.
-- Se l'azione è "improve", mantieni la lingua scelta dall'utente.
-- Se l'azione è "translate_it", migliora il testo e restituisci titolo e descrizione finale in italiano.
-- Restituisci sempre esattamente queste chiavi JSON:
-  {
-    "titolo": "...",
-    "descrizione": "..."
-  }
+
+Gestione lingua:
+- Rileva sempre la lingua effettiva del testo scritto dall'utente, indipendentemente dalla lingua scelta nell'interfaccia.
+- Se il testo contiene parti significative in più lingue, imposta "testo_misto": true.
+- Se il testo è sostanzialmente in una sola lingua, imposta "testo_misto": false.
+- Il valore di "lingua_rilevata" deve essere un codice breve minuscolo, per esempio: "it", "en", "fr", "es", "ro", "ar", "uk", "ru", "de", "altro".
+
+Gestione azione:
+- Se l'azione è "improve", migliora titolo e descrizione mantenendo la lingua effettiva del testo originale.
+- Se l'azione è "translate_it", NON tradurre ancora in italiano: migliora titolo e descrizione mantenendo la lingua effettiva del testo originale.
+- Se l'azione è "final_translate_it", traduci e migliora titolo e descrizione in italiano.
+- Se l'azione è "final_translate_it" ma il testo è già completamente in italiano e "testo_misto" è false, puoi semplicemente migliorarlo in italiano senza traduzione artificiale.
+
+Restituisci sempre esattamente queste chiavi JSON:
+{
+  "titolo": "...",
+  "descrizione": "...",
+  "lingua_rilevata": "...",
+  "testo_misto": true
+}
 """
 
         prompt_utente = {
@@ -11503,6 +11521,15 @@ Regole obbligatorie:
 
         titolo_generato = (result.get("titolo") or "").strip()
         descrizione_generata = (result.get("descrizione") or "").strip()
+        lingua_rilevata = (result.get("lingua_rilevata") or lingua or "altro").strip().lower()
+
+        testo_misto_raw = result.get("testo_misto", False)
+        if isinstance(testo_misto_raw, bool):
+            testo_misto = testo_misto_raw
+        elif isinstance(testo_misto_raw, str):
+            testo_misto = testo_misto_raw.strip().lower() in ("true", "1", "yes", "si", "sì")
+        else:
+            testo_misto = False
 
         if not descrizione_generata:
             return jsonify({
@@ -11516,9 +11543,11 @@ Regole obbligatorie:
         return jsonify({
             "ok": True,
             "titolo": titolo_generato[:120],
-            "descrizione": descrizione_generata[:2500]
+            "descrizione": descrizione_generata[:2500],
+            "lingua_rilevata": lingua_rilevata[:20],
+            "testo_misto": testo_misto
         })
-
+        
     except Exception as e:
         log_exception_safe(
             "❌ Errore /api/ai/aiuto-scrittura-annuncio",
