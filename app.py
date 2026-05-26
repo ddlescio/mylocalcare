@@ -11463,8 +11463,11 @@ Gestione lingua:
 - Il valore di "lingua_rilevata" deve essere un codice breve minuscolo, per esempio: "it", "en", "fr", "es", "ro", "ar", "uk", "ru", "de", "altro".
 
 Gestione azione:
-- Se l'azione è "improve", migliora titolo e descrizione mantenendo la lingua effettiva del testo originale.
-- Se l'azione è "translate_it", NON tradurre ancora in italiano: migliora titolo e descrizione mantenendo la lingua effettiva del testo originale.
+- Prima rileva sempre la lingua effettiva del testo originale.
+- Se "lingua_scelta" è "it" e la lingua effettiva del testo originale NON è italiano, traduci e migliora titolo e descrizione in italiano, anche se l'azione ricevuta è "improve" o "translate_it".
+- Se "lingua_scelta" è "it" e la lingua effettiva del testo originale è italiano, migliora titolo e descrizione in italiano.
+- Se "lingua_scelta" è diversa da "it" e l'azione è "improve", migliora titolo e descrizione mantenendo la lingua effettiva del testo originale.
+- Se "lingua_scelta" è diversa da "it" e l'azione è "translate_it", NON tradurre ancora in italiano: migliora titolo e descrizione mantenendo la lingua effettiva del testo originale.
 - Se l'azione è "final_translate_it", traduci e migliora titolo e descrizione in italiano.
 - Se l'azione è "final_translate_it" ma il testo è già completamente in italiano e "testo_misto" è false, puoi semplicemente migliorarlo in italiano senza traduzione artificiale.
 
@@ -11547,7 +11550,7 @@ Restituisci sempre esattamente queste chiavi JSON:
             "lingua_rilevata": lingua_rilevata[:20],
             "testo_misto": testo_misto
         })
-        
+
     except Exception as e:
         log_exception_safe(
             "❌ Errore /api/ai/aiuto-scrittura-annuncio",
