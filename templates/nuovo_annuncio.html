@@ -1232,7 +1232,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   if (generateBtn) {
-    generateBtn.addEventListener("click", function () {
+    generateBtn.addEventListener("click", async function () {
       const t = getCurrentTexts();
 
       if (aiAttemptsUsed >= MAX_AI_ATTEMPTS) {
@@ -1281,42 +1281,76 @@ document.addEventListener("DOMContentLoaded", function () {
         description: descrizione
       };
 
-      /*
-        STEP SUCCESSIVO:
-        qui collegheremo la chiamata alla rotta Flask /api/ai/aiuto-scrittura-annuncio.
+      const originalButtonText = generateBtn.textContent;
 
-        Nota logica:
-        - l'utente lavora nella lingua scelta;
-        - se la lingua scelta è italiano, non serve traduzione finale;
-        - se la lingua scelta non è italiano e effectiveAction è "translate_it",
-          la traduzione italiana definitiva verrà prodotta alla fine;
-        - per ora simuliamo solo la proposta per verificare UX e flusso.
-      */
+      generateBtn.disabled = true;
+      generateBtn.classList.add("opacity-60", "cursor-not-allowed");
+      generateBtn.textContent = "Genero...";
 
-      if (aiTitleInput && !titolo) {
-        aiTitleInput.value = t.suggestedTitle;
+      try {
+        const response = await fetch("{{ url_for('api_ai_aiuto_scrittura_annuncio') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": "{{ csrf_token() }}"
+          },
+          body: JSON.stringify({
+            titolo: titolo,
+            descrizione: descrizione,
+            lingua: selectedLanguage,
+            azione: effectiveAction
+          })
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result || !result.ok) {
+          alert(
+            result && result.error
+              ? result.error
+              : "Non sono riuscito a generare la proposta. Riprova."
+          );
+          return;
+        }
+
+        if (aiTitleInput) {
+          aiTitleInput.value = (result.titolo || titolo || "").trim();
+        }
+
+        if (aiDescriptionInput) {
+          aiDescriptionInput.value = (result.descrizione || descrizione || "").trim();
+        }
+
+        aiAttemptsUsed += 1;
+
+        lastGeneratedSnapshot = {
+          title: (aiTitleInput?.value || "").trim(),
+          description: (aiDescriptionInput?.value || "").trim(),
+          action: effectiveAction,
+          language: selectedLanguage
+        };
+
+        setProposalMode(true);
+        updateAttemptsNote();
+
+        formStep.scrollTop = 0;
+
+      } catch (error) {
+        console.error("Errore chiamata AI:", error);
+        alert("Errore di connessione durante la generazione. Riprova tra poco.");
+
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.classList.remove("opacity-60", "cursor-not-allowed");
+
+        const currentTexts = getCurrentTexts();
+        generateBtn.textContent = aiProposalGenerated
+          ? currentTexts.regenerate
+          : originalButtonText;
       }
-
-      if (aiDescriptionInput) {
-        aiDescriptionInput.value = descrizione;
-      }
-
-      aiAttemptsUsed += 1;
-
-      lastGeneratedSnapshot = {
-        title: (aiTitleInput?.value || "").trim(),
-        description: (aiDescriptionInput?.value || "").trim(),
-        action: effectiveAction,
-        language: selectedLanguage
-      };
-
-      setProposalMode(true);
-      updateAttemptsNote();
-
-      formStep.scrollTop = 0;
     });
   }
-
+  
   if (useBtn) {
     useBtn.addEventListener("click", function () {
       if (realTitleInput && aiTitleInput.value.trim()) {

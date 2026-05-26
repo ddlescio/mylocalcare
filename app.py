@@ -268,8 +268,26 @@ def is_admin(user_id):
     return row and row["ruolo"] == "admin"
 
 import requests
+from openai import OpenAI
 
 DAILY_BASE_URL = "https://api.daily.co/v1"
+
+
+# ==========================================================
+# 🤖 AI — AIUTO SCRITTURA ANNUNCI
+# ==========================================================
+
+def get_openai_client():
+    """
+    Crea il client OpenAI solo quando serve.
+    La chiave deve stare in variabile ambiente OPENAI_API_KEY.
+    """
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY non configurata")
+
+    return OpenAI(api_key=api_key)
 
 
 def crea_room_daily(nome_room: str):
@@ -11377,6 +11395,143 @@ def elimina_risposta_route(id):
     elimina_risposta(id, id_autore=g.utente["id"])
     flash("Risposta eliminata con successo ✅", "success")
     return redirect(request.referrer or url_for("mie_recensioni_ricevute"))
+
+@app.route("/api/ai/aiuto-scrittura-annuncio", methods=["POST"])
+@login_required
+@foto_obbligatoria
+def api_ai_aiuto_scrittura_annuncio():
+    verify_csrf()
+
+    data = request.get_json(silent=True) or {}
+
+    titolo = (data.get("titolo") or "").strip()
+    descrizione = (data.get("descrizione") or "").strip()
+    lingua = (data.get("lingua") or "it").strip().lower()
+    azione = (data.get("azione") or "translate_it").strip().lower()
+
+    if azione not in ("improve", "translate_it"):
+        azione = "translate_it"
+
+    if lingua == "it":
+        azione = "improve"
+
+    if not descrizione:
+        return jsonify({
+            "ok": False,
+            "error": "Descrizione mancante."
+        }), 400
+
+    if len(descrizione) > 1500:
+        return jsonify({
+            "ok": False,
+            "error": "La descrizione supera il limite massimo di 1500 caratteri."
+        }), 400
+
+    if len(titolo) > 120:
+        return jsonify({
+            "ok": False,
+            "error": "Il titolo supera il limite massimo di 120 caratteri."
+        }), 400
+
+    try:
+        client = get_openai_client()
+
+        istruzioni = """
+Sei l'assistente di scrittura di MyLocalCare, una piattaforma italiana di annunci locali.
+
+Devi aiutare l'utente a migliorare un annuncio.
+Regole obbligatorie:
+- Rispondi SOLO con JSON valido.
+- Non aggiungere markdown.
+- Non inventare qualifiche, certificazioni, esperienza, prezzi, disponibilità o dati personali non forniti.
+- Non inserire dati sensibili.
+- Mantieni un tono umano, chiaro, affidabile e semplice.
+- Il titolo deve essere breve, naturale e adatto a un annuncio locale.
+- La descrizione deve essere chiara, ordinata e credibile.
+- Non usare linguaggio troppo commerciale o esagerato.
+- Non usare emoji nel titolo o nella descrizione.
+- Se l'azione è "improve", mantieni la lingua scelta dall'utente.
+- Se l'azione è "translate_it", migliora il testo e restituisci titolo e descrizione finale in italiano.
+- Restituisci sempre esattamente queste chiavi JSON:
+  {
+    "titolo": "...",
+    "descrizione": "..."
+  }
+"""
+
+        prompt_utente = {
+            "lingua_scelta": lingua,
+            "azione": azione,
+            "titolo_originale": titolo,
+            "descrizione_originale": descrizione
+        }
+
+        response = client.responses.create(
+            model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.2-mini"),
+            instructions=istruzioni,
+            input=json.dumps(prompt_utente, ensure_ascii=False),
+            text={
+                "format": {
+                    "type": "json_object"
+                }
+            },
+            store=False
+        )
+
+        raw_text = (response.output_text or "").strip()
+
+        try:
+            result = json.loads(raw_text)
+        except Exception:
+            log_exception_safe(
+                "❌ AI aiuto scrittura: risposta non JSON",
+                extra={
+                    "user_id": g.utente["id"] if g.utente else None,
+                    "raw_preview": raw_text[:300]
+                },
+                production=True
+            )
+
+            return jsonify({
+                "ok": False,
+                "error": "Non sono riuscito a generare una proposta valida. Riprova."
+            }), 502
+
+        titolo_generato = (result.get("titolo") or "").strip()
+        descrizione_generata = (result.get("descrizione") or "").strip()
+
+        if not descrizione_generata:
+            return jsonify({
+                "ok": False,
+                "error": "La proposta generata non contiene una descrizione valida."
+            }), 502
+
+        if not titolo_generato:
+            titolo_generato = titolo or "Titolo suggerito"
+
+        return jsonify({
+            "ok": True,
+            "titolo": titolo_generato[:120],
+            "descrizione": descrizione_generata[:2500]
+        })
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore /api/ai/aiuto-scrittura-annuncio",
+            e,
+            {
+                "user_id": g.utente["id"] if g.utente else None,
+                "lingua": lingua,
+                "azione": azione
+            },
+            production=True
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": "Errore durante la generazione della proposta. Riprova più tardi."
+        }), 500
+
 
 @app.route('/api/operatori')
 def api_operatori():

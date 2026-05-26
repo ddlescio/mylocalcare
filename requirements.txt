@@ -29,3 +29,5 @@ whitenoise
 openpyxl==3.1.5
 
 webauthn
+
+openai>=1.0.0
