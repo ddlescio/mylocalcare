@@ -605,7 +605,7 @@
           id="ai-writing-subtitle"
           class="mt-2 text-sm text-slate-600"
         >
-          Puoi scrivere una bozza anche in un’altra lingua: il testo finale resterà sempre modificabile prima della pubblicazione.
+          Puoi scrivere una bozza anche in un’altra lingua: poi ti aiutiamo a migliorarla e, se vuoi, a tradurla in italiano.
         </p>
       </div>
 
@@ -709,7 +709,7 @@
         id="ai-writing-language-help"
         class="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600 leading-relaxed"
       >
-        Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.
+        Scrivi cosa vuoi comunicare su di te e su quello che offri o cerchi. Puoi scrivere in modo semplice: penseremo noi a renderlo più chiaro.
       </div>
 
       <!-- AZIONE -->
@@ -786,6 +786,10 @@
         >
           Usa questo testo
         </button>
+        <p
+          id="ai-writing-attempts-note"
+          class="hidden w-full text-center sm:text-right text-xs font-semibold text-slate-500"
+        ></p>
 
       </div>
 
@@ -846,6 +850,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const generateBtn = document.getElementById("generate-ai-writing-preview");
   const useBtn = document.getElementById("use-ai-writing-result");
 
+  const attemptsNote = document.getElementById("ai-writing-attempts-note");
+
+  const MAX_AI_ATTEMPTS = 3;
+  let aiAttemptsUsed = 0;
+
   if (!openBtn || !modal) return;
 
   let aiProposalGenerated = false;
@@ -858,7 +867,7 @@ document.addEventListener("DOMContentLoaded", function () {
     it: {
       badge: "Aiuto scrittura",
       title: "Migliora il testo del tuo annuncio",
-      subtitle: "Puoi scrivere una bozza anche in un’altra lingua: il testo finale resterà sempre modificabile prima della pubblicazione.",
+      subtitle: "Puoi scrivere una bozza anche in un’altra lingua: poi ti aiutiamo a migliorarla e, se vuoi, a tradurla in italiano.",
       languageLabel: "Scegli la tua lingua",
       languageNote: "La guida continuerà nella lingua scelta.",
       warningTitle: "Prima di continuare",
@@ -866,7 +875,7 @@ document.addEventListener("DOMContentLoaded", function () {
       warning2: "Il testo generato sarà solo una proposta: potrai leggerlo, modificarlo e decidere se usarlo.",
       cancel: "Annulla",
       continue: "Ho capito, continua",
-      help: "Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.",
+      help: "Scrivi cosa vuoi comunicare su di te e su quello che offri o cerchi. Puoi scrivere in modo semplice: penseremo noi a renderlo più chiaro.",
       actionLabel: "Cosa vuoi fare?",
       improve: "Migliora il testo",
       translate: "Migliora ora e traduci in italiano alla fine",
@@ -883,12 +892,15 @@ document.addEventListener("DOMContentLoaded", function () {
       proposalTitle: "Controlla e modifica la proposta",
       proposalSubtitle: "Puoi modificarla direttamente qui, rigenerarla oppure usarla nel tuo annuncio.",
       emptyDescription: "Scrivi prima una bozza della descrizione.",
-      suggestedTitle: "Titolo suggerito dall’AI"
+      suggestedTitle: "Titolo suggerito dall’AI",
+      attemptsRemainingSingular: "Hai ancora 1 tentativo per questo annuncio.",
+      attemptsRemainingPlural: "Hai ancora {n} tentativi per questo annuncio.",
+      attemptsFinished: "Hai usato i 3 tentativi disponibili per questo annuncio."
     },
     en: {
       badge: "Writing help",
       title: "Improve your listing text",
-      subtitle: "You can write a draft in your own language. The final text can always be edited before publishing.",
+      subtitle: "You can write a draft in your own language: we will help you improve it and, if you want, translate it into Italian.",
       languageLabel: "Choose your language",
       languageNote: "The guide will continue in the selected language.",
       warningTitle: "Before continuing",
@@ -896,7 +908,7 @@ document.addEventListener("DOMContentLoaded", function () {
       warning2: "The generated text is only a suggestion: you can read it, edit it and decide whether to use it.",
       cancel: "Cancel",
       continue: "I understand, continue",
-      help: "Write simply what you offer or what you are looking for. Include area, availability, experience and price if useful.",
+      help: "Write what you want to say about yourself and about what you offer or are looking for. You can write simply: we will help make it clearer.",
       actionLabel: "What do you want to do?",
       improve: "Improve the text",
       translate: "Improve now and translate into Italian at the end",
@@ -913,12 +925,15 @@ document.addEventListener("DOMContentLoaded", function () {
       proposalTitle: "Review and edit the proposal",
       proposalSubtitle: "You can edit it here, regenerate it or use it in your listing.",
       emptyDescription: "Please write a description draft first.",
-      suggestedTitle: "AI suggested title"
+      suggestedTitle: "AI suggested title",
+      attemptsRemainingSingular: "You have 1 attempt left for this listing.",
+      attemptsRemainingPlural: "You have {n} attempts left for this listing.",
+      attemptsFinished: "You have used the 3 attempts available for this listing."
     },
     fr: {
       badge: "Aide à la rédaction",
       title: "Améliore le texte de ton annonce",
-      subtitle: "Tu peux écrire une ébauche dans ta langue. Le texte final restera modifiable avant publication.",
+      subtitle: "Tu peux écrire une ébauche dans ta langue : nous t’aiderons à l’améliorer et, si tu veux, à la traduire en italien.",
       languageLabel: "Choisis ta langue",
       languageNote: "Le guide continuera dans la langue choisie.",
       warningTitle: "Avant de continuer",
@@ -926,7 +941,7 @@ document.addEventListener("DOMContentLoaded", function () {
       warning2: "Le texte généré est seulement une proposition : tu peux le lire, le modifier et décider de l’utiliser.",
       cancel: "Annuler",
       continue: "J’ai compris, continuer",
-      help: "Écris simplement ce que tu proposes ou ce que tu recherches. Indique la zone, les disponibilités, l’expérience et le prix si utile.",
+      help: "Écris ce que tu veux communiquer sur toi et sur ce que tu proposes ou recherches. Tu peux écrire simplement : nous t’aiderons à le rendre plus clair.",
       actionLabel: "Que veux-tu faire ?",
       improve: "Améliorer le texte",
       translate: "Améliorer maintenant et traduire en italien à la fin",
@@ -943,12 +958,15 @@ document.addEventListener("DOMContentLoaded", function () {
       proposalTitle: "Vérifie et modifie la proposition",
       proposalSubtitle: "Tu peux la modifier ici, la régénérer ou l’utiliser dans ton annonce.",
       emptyDescription: "Écris d’abord un brouillon de description.",
-      suggestedTitle: "Titre suggéré par l’IA"
+      suggestedTitle: "Titre suggéré par l’IA",
+      attemptsRemainingSingular: "Il te reste 1 tentative pour cette annonce.",
+      attemptsRemainingPlural: "Il te reste {n} tentatives pour cette annonce.",
+      attemptsFinished: "Tu as utilisé les 3 tentatives disponibles pour cette annonce."
     },
     es: {
       badge: "Ayuda de escritura",
       title: "Mejora el texto de tu anuncio",
-      subtitle: "Puedes escribir un borrador en tu idioma. El texto final siempre se podrá modificar antes de publicarlo.",
+      subtitle: "Puedes escribir un borrador en tu idioma: te ayudaremos a mejorarlo y, si quieres, a traducirlo al italiano.",
       languageLabel: "Elige tu idioma",
       languageNote: "La guía continuará en el idioma elegido.",
       warningTitle: "Antes de continuar",
@@ -956,7 +974,7 @@ document.addEventListener("DOMContentLoaded", function () {
       warning2: "El texto generado es solo una propuesta: podrás leerlo, modificarlo y decidir si usarlo.",
       cancel: "Cancelar",
       continue: "Entendido, continuar",
-      help: "Escribe de forma sencilla qué ofreces o qué buscas. Indica zona, disponibilidad, experiencia y precio si es útil.",
+      help: "Escribe lo que quieres comunicar sobre ti y sobre lo que ofreces o buscas. Puedes escribir de forma sencilla: te ayudaremos a hacerlo más claro.",
       actionLabel: "¿Qué quieres hacer?",
       improve: "Mejorar el texto",
       translate: "Mejorar ahora y traducir al italiano al final",
@@ -973,7 +991,10 @@ document.addEventListener("DOMContentLoaded", function () {
       proposalTitle: "Revisa y modifica la propuesta",
       proposalSubtitle: "Puedes modificarla aquí, regenerarla o usarla en tu anuncio.",
       emptyDescription: "Primero escribe un borrador de la descripción.",
-      suggestedTitle: "Título sugerido por la IA"
+      suggestedTitle: "Título sugerido por la IA",
+      attemptsRemainingSingular: "Te queda 1 intento para este anuncio.",
+      attemptsRemainingPlural: "Te quedan {n} intentos para este anuncio.",
+      attemptsFinished: "Has usado los 3 intentos disponibles para este anuncio."
     }
   };
 
@@ -982,6 +1003,37 @@ document.addEventListener("DOMContentLoaded", function () {
   function getCurrentTexts() {
     const lang = uiLanguageSelect ? uiLanguageSelect.value : "it";
     return texts[lang] || fallbackText;
+  }
+
+  function updateAttemptsNote() {
+    if (!attemptsNote) return;
+
+    const t = getCurrentTexts();
+    const remaining = Math.max(MAX_AI_ATTEMPTS - aiAttemptsUsed, 0);
+
+    if (!aiProposalGenerated) {
+      attemptsNote.classList.add("hidden");
+      attemptsNote.textContent = "";
+      return;
+    }
+
+    attemptsNote.classList.remove("hidden");
+
+    if (remaining <= 0) {
+      attemptsNote.textContent = t.attemptsFinished;
+      attemptsNote.classList.remove("text-slate-500");
+      attemptsNote.classList.add("text-amber-700");
+      return;
+    }
+
+    attemptsNote.classList.remove("text-amber-700");
+    attemptsNote.classList.add("text-slate-500");
+
+    if (remaining === 1) {
+      attemptsNote.textContent = t.attemptsRemainingSingular;
+    } else {
+      attemptsNote.textContent = t.attemptsRemainingPlural.replace("{n}", remaining);
+    }
   }
 
   function applyLanguageTexts() {
@@ -1024,6 +1076,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if (backBtn) backBtn.textContent = t.back;
     if (generateBtn) generateBtn.textContent = aiProposalGenerated ? t.regenerate : t.generate;
     if (useBtn) useBtn.textContent = t.use;
+
+    updateAttemptsNote();
   }
 
   function setProposalMode(active) {
@@ -1053,6 +1107,10 @@ document.addEventListener("DOMContentLoaded", function () {
       useBtn.classList.toggle("hidden", !active);
     }
 
+    if (attemptsNote) {
+      attemptsNote.classList.toggle("hidden", !active);
+    }
+
     if (generateBtn) {
       generateBtn.textContent = active ? t.regenerate : t.generate;
     }
@@ -1074,6 +1132,8 @@ document.addEventListener("DOMContentLoaded", function () {
     formStep.scrollTop = 0;
 
     setProposalMode(false);
+    aiAttemptsUsed = 0;
+    updateAttemptsNote();
 
     if (realTitleInput && aiTitleInput) {
       aiTitleInput.value = realTitleInput.value || "";
@@ -1121,6 +1181,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       setProposalMode(false);
+      updateAttemptsNote();
       formStep.scrollTop = 0;
       return;
     }
@@ -1165,6 +1226,11 @@ document.addEventListener("DOMContentLoaded", function () {
     generateBtn.addEventListener("click", function () {
       const t = getCurrentTexts();
 
+      if (aiAttemptsUsed >= MAX_AI_ATTEMPTS) {
+        alert(t.attemptsFinished);
+        return;
+      }
+
       const titolo = (aiTitleInput?.value || "").trim();
       const descrizione = (aiDescriptionInput?.value || "").trim();
 
@@ -1197,7 +1263,11 @@ document.addEventListener("DOMContentLoaded", function () {
         aiDescriptionInput.value = descrizione;
       }
 
+      aiAttemptsUsed += 1;
+
       setProposalMode(true);
+      updateAttemptsNote();
+
       formStep.scrollTop = 0;
     });
   }
