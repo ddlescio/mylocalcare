@@ -11467,7 +11467,7 @@ Regole obbligatorie:
         }
 
         response = client.responses.create(
-            model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.2-mini"),
+            model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini"),
             instructions=istruzioni,
             input=json.dumps(prompt_utente, ensure_ascii=False),
             text={
