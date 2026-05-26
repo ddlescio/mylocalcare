@@ -769,7 +769,7 @@
       <!-- DESCRIZIONE PRIMA DEL TITOLO -->
       <div class="space-y-2">
         <label for="ai-writing-description-input" id="ai-writing-description-label" class="text-sm font-bold text-slate-800">
-          Bozza descrizione
+          Descrizione
         </label>
 
         <textarea
@@ -777,7 +777,7 @@
           rows="6"
           maxlength="1500"
           class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
-          placeholder="Scrivi qui la tua bozza, anche in modo semplice."
+          placeholder="Scrivi qui il tuo testo, anche in modo semplice."
         ></textarea>
 
         <p id="ai-writing-limit-note" class="text-xs text-slate-500">
@@ -796,7 +796,7 @@
           id="ai-writing-title-input"
           maxlength="120"
           class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
-          placeholder="Puoi scriverlo tu oppure verrà suggerito dopo Genera proposta"
+          placeholder="Puoi scriverlo tu oppure verrà suggerito dopo Genera"
         >
       </div>
 
@@ -815,7 +815,7 @@
           id="generate-ai-writing-preview"
           class="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm"
         >
-          Genera proposta
+          Genera
         </button>
 
         <button
@@ -910,11 +910,11 @@ document.addEventListener("DOMContentLoaded", function () {
     language: ""
   };
 
-  const texts = {
+  let texts = {
     it: {
       badge: "Aiuto scrittura",
       title: "Migliora il testo del tuo annuncio",
-      subtitle: "Puoi scrivere una bozza anche in un’altra lingua: poi ti aiutiamo a migliorarla e, se vuoi, a tradurla in italiano.",
+      subtitle: "Puoi scrivere un testo anche in un’altra lingua: poi ti aiutiamo a migliorarlo e, se vuoi, a tradurlo in italiano.",
       languageLabel: "Scegli la tua lingua",
       languageNote: "La guida continuerà nella lingua scelta.",
       warningTitle: "Prima di continuare",
@@ -926,130 +926,57 @@ document.addEventListener("DOMContentLoaded", function () {
       actionLabel: "Cosa vuoi fare?",
       improve: "Migliora ora e lasciamo nella tua lingua",
       translate: "Migliora ora e traduciamo in italiano alla fine",
-      descriptionLabel: "Bozza descrizione",
-      descriptionPlaceholder: "Scrivi qui la tua bozza, anche in modo semplice.",
+      descriptionLabel: "Descrizione",
+      descriptionPlaceholder: "Scrivi qui il tuo testo, anche in modo semplice.",
       titleLabel: "Titolo o idea titolo",
-      titlePlaceholder: "Puoi scriverlo tu oppure verrà suggerito dopo Genera proposta",
+      titlePlaceholder: "Puoi scriverlo tu oppure verrà suggerito dopo Genera",
       limit: "Massimo 1500 caratteri. Non inserire dati sensibili o informazioni private non necessarie.",
       back: "Indietro",
-      generate: "Genera proposta",
-      regenerate: "Rigenera proposta",
+      generate: "Genera",
+      regenerate: "Rigenera",
       use: "Usa questo testo",
       proposalBadge: "Proposta generata",
       proposalTitle: "Controlla e modifica la proposta",
       proposalSubtitle: "Puoi modificarla direttamente qui, rigenerarla oppure usarla nel tuo annuncio.",
-      emptyDescription: "Scrivi prima una bozza della descrizione.",
+      emptyDescription: "Scrivi prima una descrizione.",
       suggestedTitle: "Titolo suggerito dall’AI",
       attemptsRemainingSingular: "Hai ancora 1 tentativo per questo annuncio.",
       attemptsRemainingPlural: "Hai ancora {n} tentativi per questo annuncio.",
       attemptsFinished: "Hai usato i 3 tentativi disponibili per questo annuncio.",
       unchangedRegenerate: "Modifica prima il testo attuale, poi potrai rigenerare una nuova proposta per migliorarlo."
-    },
-    en: {
-      badge: "Writing help",
-      title: "Improve your listing text",
-      subtitle: "You can write a draft in your own language: we will help you improve it and, if you want, translate it into Italian.",
-      languageLabel: "Choose your language",
-      languageNote: "The guide will continue in the selected language.",
-      warningTitle: "Before continuing",
-      warning1: "Use this help only to improve or translate your listing text. Do not enter sensitive data, documents, medical information, private financial information or unnecessary personal details.",
-      warning2: "The generated text is only a suggestion: you can read it, edit it and decide whether to use it.",
-      cancel: "Cancel",
-      continue: "I understand, continue",
-      help: "Write what you want to say about yourself and about what you offer or are looking for. You can write simply: we will help make it clearer.",
-      actionLabel: "What do you want to do?",
-      improve: "Improve it now and keep it in your language",
-      translate: "Improve it now and translate it into Italian at the end",
-      descriptionLabel: "Description draft",
-      descriptionPlaceholder: "Write your draft here, even in a simple way.",
-      titleLabel: "Title or title idea",
-      titlePlaceholder: "You can write it yourself or it will be suggested after Generate proposal",
-      limit: "Maximum 1500 characters. Do not enter sensitive data or unnecessary private information.",
-      back: "Back",
-      generate: "Generate proposal",
-      regenerate: "Regenerate proposal",
-      use: "Use this text",
-      proposalBadge: "Generated proposal",
-      proposalTitle: "Review and edit the proposal",
-      proposalSubtitle: "You can edit it here, regenerate it or use it in your listing.",
-      emptyDescription: "Please write a description draft first.",
-      suggestedTitle: "AI suggested title",
-      attemptsRemainingSingular: "You have 1 attempt left for this listing.",
-      attemptsRemainingPlural: "You have {n} attempts left for this listing.",
-      attemptsFinished: "You have used the 3 attempts available for this listing.",
-      unchangedRegenerate: "Edit the current text first, then you can regenerate a new proposal to improve it."
-    },
-    fr: {
-      badge: "Aide à la rédaction",
-      title: "Améliore le texte de ton annonce",
-      subtitle: "Tu peux écrire une ébauche dans ta langue : nous t’aiderons à l’améliorer et, si tu veux, à la traduire en italien.",
-      languageLabel: "Choisis ta langue",
-      languageNote: "Le guide continuera dans la langue choisie.",
-      warningTitle: "Avant de continuer",
-      warning1: "Utilise cette aide uniquement pour améliorer ou traduire le texte de ton annonce. N’insère pas de données sensibles, documents, informations médicales, informations économiques privées ou détails personnels inutiles.",
-      warning2: "Le texte généré est seulement une proposition : tu peux le lire, le modifier et décider de l’utiliser.",
-      cancel: "Annuler",
-      continue: "J’ai compris, continuer",
-      help: "Écris ce que tu veux communiquer sur toi et sur ce que tu proposes ou recherches. Tu peux écrire simplement : nous t’aiderons à le rendre plus clair.",
-      actionLabel: "Que veux-tu faire ?",
-      improve: "Améliorer maintenant et garder le texte dans ta langue",
-      translate: "Améliorer maintenant et traduire en italien à la fin",
-      descriptionLabel: "Brouillon de description",
-      descriptionPlaceholder: "Écris ici ton brouillon, même simplement.",
-      titleLabel: "Titre ou idée de titre",
-      titlePlaceholder: "Tu peux l’écrire toi-même ou il sera suggéré après Générer la proposition",
-      limit: "Maximum 1500 caractères. N’insère pas de données sensibles ou d’informations privées inutiles.",
-      back: "Retour",
-      generate: "Générer la proposition",
-      regenerate: "Régénérer la proposition",
-      use: "Utiliser ce texte",
-      proposalBadge: "Proposition générée",
-      proposalTitle: "Vérifie et modifie la proposition",
-      proposalSubtitle: "Tu peux la modifier ici, la régénérer ou l’utiliser dans ton annonce.",
-      emptyDescription: "Écris d’abord un brouillon de description.",
-      suggestedTitle: "Titre suggéré par l’IA",
-      attemptsRemainingSingular: "Il te reste 1 tentative pour cette annonce.",
-      attemptsRemainingPlural: "Il te reste {n} tentatives pour cette annonce.",
-      attemptsFinished: "Tu as utilisé les 3 tentatives disponibles pour cette annonce.",
-      unchangedRegenerate: "Modifie d’abord le texte actuel, puis tu pourras générer une nouvelle proposition pour l’améliorer."
-    },
-    es: {
-      badge: "Ayuda de escritura",
-      title: "Mejora el texto de tu anuncio",
-      subtitle: "Puedes escribir un borrador en tu idioma: te ayudaremos a mejorarlo y, si quieres, a traducirlo al italiano.",
-      languageLabel: "Elige tu idioma",
-      languageNote: "La guía continuará en el idioma elegido.",
-      warningTitle: "Antes de continuar",
-      warning1: "Usa esta ayuda solo para mejorar o traducir el texto de tu anuncio. No introduzcas datos sensibles, documentos, información médica, información económica privada o detalles personales innecesarios.",
-      warning2: "El texto generado es solo una propuesta: podrás leerlo, modificarlo y decidir si usarlo.",
-      cancel: "Cancelar",
-      continue: "Entendido, continuar",
-      help: "Escribe lo que quieres comunicar sobre ti y sobre lo que ofreces o buscas. Puedes escribir de forma sencilla: te ayudaremos a hacerlo más claro.",
-      actionLabel: "¿Qué quieres hacer?",
-      improve: "Mejorar ahora y dejarlo en tu idioma",
-      translate: "Mejorar ahora y traducirlo al italiano al final",
-      descriptionLabel: "Borrador de descripción",
-      descriptionPlaceholder: "Escribe aquí tu borrador, aunque sea sencillo.",
-      titleLabel: "Título o idea de título",
-      titlePlaceholder: "Puedes escribirlo tú o se sugerirá después de Generar propuesta",
-      limit: "Máximo 1500 caracteres. No introduzcas datos sensibles ni información privada innecesaria.",
-      back: "Atrás",
-      generate: "Generar propuesta",
-      regenerate: "Regenerar propuesta",
-      use: "Usar este texto",
-      proposalBadge: "Propuesta generada",
-      proposalTitle: "Revisa y modifica la propuesta",
-      proposalSubtitle: "Puedes modificarla aquí, regenerarla o usarla en tu anuncio.",
-      emptyDescription: "Primero escribe un borrador de la descripción.",
-      suggestedTitle: "Título sugerido por la IA",
-      attemptsRemainingSingular: "Te queda 1 intento para este anuncio.",
-      attemptsRemainingPlural: "Te quedan {n} intentos para este anuncio.",
-      attemptsFinished: "Has usado los 3 intentos disponibles para este anuncio.",
-      unchangedRegenerate: "Primero modifica el texto actual, luego podrás generar una nueva propuesta para mejorarlo."
     }
   };
 
   const fallbackText = texts.it;
+
+  async function loadExternalAiWritingTexts() {
+    try {
+      const response = await fetch("{{ url_for('static', filename='data/ai_writing_texts.json') }}", {
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        console.warn("Impossibile caricare ai_writing_texts.json:", response.status);
+        return;
+      }
+
+      const externalTexts = await response.json();
+
+      if (!externalTexts || typeof externalTexts !== "object") {
+        console.warn("ai_writing_texts.json non valido");
+        return;
+      }
+
+      texts = {
+        ...texts,
+        ...externalTexts
+      };
+    } catch (error) {
+      console.warn("Errore caricamento ai_writing_texts.json:", error);
+    }
+  }
+
+  const aiWritingTextsPromise = loadExternalAiWritingTexts();
 
   function getCurrentTexts() {
     const lang = uiLanguageSelect ? uiLanguageSelect.value : "it";
@@ -1191,7 +1118,9 @@ document.addEventListener("DOMContentLoaded", function () {
     applyLanguageTexts();
   }
 
-  function openModal() {
+  async function openModal() {
+    await aiWritingTextsPromise;
+
     modal.classList.remove("hidden");
     modal.classList.add("flex");
     modal.setAttribute("aria-hidden", "false");
@@ -1387,7 +1316,7 @@ document.addEventListener("DOMContentLoaded", function () {
       formStep.scrollTop = 0;
     });
   }
-  
+
   if (useBtn) {
     useBtn.addEventListener("click", function () {
       if (realTitleInput && aiTitleInput.value.trim()) {
