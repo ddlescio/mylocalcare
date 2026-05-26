@@ -11469,7 +11469,11 @@ Regole obbligatorie:
         response = client.responses.create(
             model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini"),
             instructions=istruzioni,
-            input=json.dumps(prompt_utente, ensure_ascii=False),
+            input=(
+                "Restituisci una risposta in formato json valido.\n\n"
+                "Dati dell'annuncio da migliorare:\n"
+                + json.dumps(prompt_utente, ensure_ascii=False)
+            ),
             text={
                 "format": {
                     "type": "json_object"
