@@ -80,6 +80,23 @@
     </div>
   </a>
 
+  <!-- 🤖 OpenAI -->
+  <a href="{{ url_for('admin_openai_usage') }}"
+     class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex flex-col items-center justify-center text-center min-h-[150px] sm:min-h-[190px] lg:min-h-[220px]
+            transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+
+    <div class="p-3 rounded-xl bg-emerald-100 text-emerald-700 text-xl
+                group-hover:bg-emerald-200 transition mb-4">
+      🤖
+    </div>
+
+    <div class="flex flex-col items-center text-center">
+      <p class="text-sm font-medium text-slate-500">Costo OpenAI mese</p>
+      <p id="dash-openai-costo" class="text-2xl font-bold text-slate-800 mt-2">—</p>
+    </div>
+  </a>
+
   <!-- 🧾 Acquisti -->
   <a href="{{ url_for('admin_acquisti') }}"
      class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
@@ -141,7 +158,8 @@ document.addEventListener("DOMContentLoaded", () => {
         setText("dash-annunci", data.annunci);
         setText("dash-recensioni", data.recensioni);
         setText("dash-video-minuti", data.video_minuti);
-      })      
+        setText("dash-openai-costo", data.openai_costo || "—");        
+      })
       .catch(() => {});
   }
 

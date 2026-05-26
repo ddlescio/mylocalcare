@@ -2374,6 +2374,64 @@ def admin_required(view_func):
 
     return wrapped_view
 
+def get_openai_month_cost():
+    """
+    Recupera costo ufficiale OpenAI del mese corrente.
+    Restituisce float oppure None.
+    """
+
+    api_key = os.getenv("OPENAI_ADMIN_KEY")
+
+    if not api_key:
+        return None
+
+    try:
+        now = datetime.now(timezone.utc)
+
+        start_month = datetime(
+            now.year,
+            now.month,
+            1,
+            tzinfo=timezone.utc
+        )
+
+        start_time = int(start_month.timestamp())
+        end_time = int(now.timestamp())
+
+        response = requests.get(
+            "https://api.openai.com/v1/organization/costs",
+            headers={
+                "Authorization": f"Bearer {api_key}"
+            },
+            params={
+                "start_time": start_time,
+                "end_time": end_time
+            },
+            timeout=15
+        )
+
+        if response.status_code != 200:
+            print("❌ OpenAI Costs API error:", response.text)
+            return None
+
+        data = response.json()
+
+        total_cost = 0.0
+
+        for item in data.get("data", []):
+            amount = (
+                item.get("amount", {})
+                    .get("value", 0)
+            )
+
+            total_cost += float(amount)
+
+        return round(total_cost, 2)
+
+    except Exception as e:
+        print("❌ Errore OpenAI costs:", e)
+        return None
+
 @app.route("/admin/sblocca", methods=["GET"])
 @admin_required
 def admin_unlock():
@@ -3525,7 +3583,11 @@ def admin_counters():
         except Exception as e:
             raise RuntimeError(f"Errore lettura valore admin_counters step=video_minuti: {repr(e)}")
 
+        step = "openai_costo"
+        openai_costo = get_openai_month_cost()
+
         step = "statistiche_annunci_totali"
+
         annunci_totali = get_count(cur, """
             SELECT COUNT(*) AS valore
             FROM annunci
@@ -3618,6 +3680,12 @@ def admin_counters():
             "totale": pending_annunci + pending_recensioni_totali,
             "video_minuti": video_minuti,
 
+            "openai_costo": (
+                f"€ {openai_costo:.2f}"
+                if openai_costo is not None
+                else "—"
+            ),
+
             "statistiche": {
                 "utenti_attivi": totale_utenti,
                 "annunci_totali": annunci_totali,
@@ -3655,7 +3723,8 @@ def admin_counters():
             "risposte": 0,
             "messaggi": 0,
             "totale": 0,
-            "video_minuti": 0
+            "video_minuti": 0,
+            "openai_costo": "—"
         }
 
         return jsonify(payload), 200
@@ -3678,6 +3747,15 @@ def admin_counters():
 def admin_counters_page():
     return render_template("admin_counters_page.html")
 
+@app.route("/admin/openai-usage")
+@admin_required
+def admin_openai_usage():
+    costo_mese = get_openai_month_cost()
+
+    return render_template(
+        "admin_openai_usage.html",
+        costo_mese=costo_mese
+    )
 
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA

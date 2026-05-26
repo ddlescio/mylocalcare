@@ -1,0 +1,25 @@
+{% extends "layout_admin.html" %}
+
+{% block admin_content %}
+
+<h1 class="text-2xl font-bold text-slate-800 mb-6">
+  🤖 Utilizzo OpenAI
+</h1>
+
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+
+  <p class="text-slate-500 mb-2">
+    Costo ufficiale OpenAI del mese corrente
+  </p>
+
+  <p class="text-4xl font-bold text-emerald-600">
+    {% if costo_mese is not none %}
+      € {{ "%.2f"|format(costo_mese) }}
+    {% else %}
+      —
+    {% endif %}
+  </p>
+
+</div>
+
+{% endblock %}
