@@ -100,6 +100,8 @@ from webauthn.helpers.structs import (
     PublicKeyCredentialDescriptor,
 )
 
+from decimal import Decimal, InvalidOperation
+
 # ==========================================================
 # DB POOL (Postgres) + Connessione riutilizzabile per-request
 # ==========================================================
@@ -2374,16 +2376,46 @@ def admin_required(view_func):
 
     return wrapped_view
 
-def get_openai_month_cost():
+def _decimal_from_openai_amount(value):
+    try:
+        return Decimal(str(value or "0"))
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal("0")
+
+
+def format_openai_euro(value):
+    if value is None:
+        return "—"
+
+    value = Decimal(str(value))
+
+    if value == 0:
+        return "€ 0"
+
+    if value < Decimal("0.01"):
+        return f"€ {value:.6f}"
+
+    return f"€ {value:.4f}"
+
+
+def get_openai_month_stats():
     """
-    Recupera costo ufficiale OpenAI del mese corrente.
-    Restituisce float oppure None.
+    Recupera dati ufficiali OpenAI del mese corrente:
+    - costo totale preciso
+    - numero richieste
+    - dettagli giornalieri
     """
 
     api_key = os.getenv("OPENAI_ADMIN_KEY")
 
     if not api_key:
-        return None
+        return {
+            "ok": False,
+            "error": "OPENAI_ADMIN_KEY mancante",
+            "total_cost": None,
+            "total_requests": None,
+            "daily": []
+        }
 
     try:
         now = datetime.now(timezone.utc)
@@ -2398,39 +2430,141 @@ def get_openai_month_cost():
         start_time = int(start_month.timestamp())
         end_time = int(now.timestamp())
 
-        response = requests.get(
+        headers = {
+            "Authorization": f"Bearer {api_key}"
+        }
+
+        # COSTI UFFICIALI
+        costs_response = requests.get(
             "https://api.openai.com/v1/organization/costs",
-            headers={
-                "Authorization": f"Bearer {api_key}"
-            },
+            headers=headers,
             params={
                 "start_time": start_time,
-                "end_time": end_time
+                "end_time": end_time,
+                "bucket_width": "1d"
             },
             timeout=15
         )
 
-        if response.status_code != 200:
-            print("❌ OpenAI Costs API error:", response.text)
-            return None
+        if costs_response.status_code != 200:
+            print("❌ OpenAI Costs API error:", costs_response.text)
+            return {
+                "ok": False,
+                "error": costs_response.text,
+                "total_cost": None,
+                "total_requests": None,
+                "daily": []
+            }
 
-        data = response.json()
+        costs_data = costs_response.json()
 
-        total_cost = 0.0
+        daily_map = {}
+        total_cost = Decimal("0")
 
-        for item in data.get("data", []):
-            amount = (
-                item.get("amount", {})
-                    .get("value", 0)
-            )
+        for bucket in costs_data.get("data", []):
+            bucket_start = bucket.get("start_time")
 
-            total_cost += float(amount)
+            giorno = datetime.fromtimestamp(
+                bucket_start,
+                timezone.utc
+            ).strftime("%d/%m/%Y") if bucket_start else "—"
 
-        return round(total_cost, 2)
+            daily_map.setdefault(giorno, {
+                "data": giorno,
+                "costo": Decimal("0"),
+                "richieste": 0,
+                "input_tokens": 0,
+                "output_tokens": 0
+            })
+
+            for result in bucket.get("results", []):
+                amount = result.get("amount", {})
+                value = _decimal_from_openai_amount(amount.get("value"))
+
+                daily_map[giorno]["costo"] += value
+                total_cost += value
+
+        # USAGE / RICHIESTE UFFICIALI
+        usage_response = requests.get(
+            "https://api.openai.com/v1/organization/usage/completions",
+            headers=headers,
+            params={
+                "start_time": start_time,
+                "end_time": end_time,
+                "bucket_width": "1d"
+            },
+            timeout=15
+        )
+
+        total_requests = 0
+
+        if usage_response.status_code == 200:
+            usage_data = usage_response.json()
+
+            for bucket in usage_data.get("data", []):
+                bucket_start = bucket.get("start_time")
+
+                giorno = datetime.fromtimestamp(
+                    bucket_start,
+                    timezone.utc
+                ).strftime("%d/%m/%Y") if bucket_start else "—"
+
+                daily_map.setdefault(giorno, {
+                    "data": giorno,
+                    "costo": Decimal("0"),
+                    "richieste": 0,
+                    "input_tokens": 0,
+                    "output_tokens": 0
+                })
+
+                for result in bucket.get("results", []):
+                    richieste = int(result.get("num_model_requests") or 0)
+                    input_tokens = int(result.get("input_tokens") or 0)
+                    output_tokens = int(result.get("output_tokens") or 0)
+
+                    daily_map[giorno]["richieste"] += richieste
+                    daily_map[giorno]["input_tokens"] += input_tokens
+                    daily_map[giorno]["output_tokens"] += output_tokens
+
+                    total_requests += richieste
+        else:
+            print("❌ OpenAI Usage API error:", usage_response.text)
+
+        daily = sorted(
+            daily_map.values(),
+            key=lambda x: datetime.strptime(x["data"], "%d/%m/%Y"),
+            reverse=True
+        )
+
+        for row in daily:
+            row["costo_raw"] = str(row["costo"])
+            row["costo"] = format_openai_euro(row["costo"])
+
+        return {
+            "ok": True,
+            "error": None,
+            "total_cost": total_cost,
+            "total_cost_raw": str(total_cost),
+            "total_cost_formatted": format_openai_euro(total_cost),
+            "total_requests": total_requests,
+            "daily": daily
+        }
 
     except Exception as e:
-        print("❌ Errore OpenAI costs:", e)
-        return None
+        print("❌ Errore OpenAI stats:", e)
+
+        return {
+            "ok": False,
+            "error": str(e),
+            "total_cost": None,
+            "total_requests": None,
+            "daily": []
+        }
+
+
+def get_openai_month_cost():
+    stats = get_openai_month_stats()
+    return stats.get("total_cost") if stats.get("ok") else None
 
 @app.route("/admin/sblocca", methods=["GET"])
 @admin_required
@@ -3680,11 +3814,7 @@ def admin_counters():
             "totale": pending_annunci + pending_recensioni_totali,
             "video_minuti": video_minuti,
 
-            "openai_costo": (
-                f"€ {openai_costo:.2f}"
-                if openai_costo is not None
-                else "—"
-            ),
+            "openai_costo": format_openai_euro(openai_costo),
 
             "statistiche": {
                 "utenti_attivi": totale_utenti,
@@ -3746,6 +3876,16 @@ def admin_counters():
 @admin_required
 def admin_counters_page():
     return render_template("admin_counters_page.html")
+
+@app.route("/admin/openai-usage")
+@admin_required
+def admin_openai_usage():
+    stats = get_openai_month_stats()
+
+    return render_template(
+        "admin_openai_usage.html",
+        stats=stats
+    )
 
 @app.route("/admin/openai-usage")
 @admin_required

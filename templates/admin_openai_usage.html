@@ -6,19 +6,89 @@
   🤖 Utilizzo OpenAI
 </h1>
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
 
-  <p class="text-slate-500 mb-2">
-    Costo ufficiale OpenAI del mese corrente
-  </p>
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <p class="text-slate-500 mb-2">Costo ufficiale mese corrente</p>
+    <p class="text-4xl font-bold text-emerald-600">
+      {{ stats.total_cost_formatted if stats.ok else "—" }}
+    </p>
 
-  <p class="text-4xl font-bold text-emerald-600">
-    {% if costo_mese is not none %}
-      € {{ "%.2f"|format(costo_mese) }}
-    {% else %}
-      —
+    {% if stats.total_cost_raw %}
+      <p class="text-xs text-slate-400 mt-2">
+        Valore preciso: {{ stats.total_cost_raw }}
+      </p>
     {% endif %}
-  </p>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <p class="text-slate-500 mb-2">Richieste AI mese corrente</p>
+    <p class="text-4xl font-bold text-slate-800">
+      {{ stats.total_requests if stats.ok else "—" }}
+    </p>
+  </div>
+
+</div>
+
+{% if not stats.ok %}
+  <div class="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-4 mb-6">
+    Errore lettura dati OpenAI: {{ stats.error }}
+  </div>
+{% endif %}
+
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+  <div class="p-5 border-b border-slate-100">
+    <h2 class="text-lg font-semibold text-slate-800">
+      Dettaglio per giorno
+    </h2>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500">
+        <tr>
+          <th class="text-left px-5 py-3">Data</th>
+          <th class="text-right px-5 py-3">Costo</th>
+          <th class="text-right px-5 py-3">Richieste</th>
+          <th class="text-right px-5 py-3">Input token</th>
+          <th class="text-right px-5 py-3">Output token</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-100">
+        {% for row in stats.daily %}
+          <tr>
+            <td class="px-5 py-3 text-slate-700">
+              {{ row.data }}
+            </td>
+
+            <td class="px-5 py-3 text-right font-semibold text-emerald-700">
+              {{ row.costo }}
+            </td>
+
+            <td class="px-5 py-3 text-right text-slate-700">
+              {{ row.richieste }}
+            </td>
+
+            <td class="px-5 py-3 text-right text-slate-500">
+              {{ row.input_tokens }}
+            </td>
+
+            <td class="px-5 py-3 text-right text-slate-500">
+              {{ row.output_tokens }}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="5" class="px-5 py-8 text-center text-slate-400">
+              Nessun dato OpenAI disponibile per il mese corrente.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
 </div>
 
