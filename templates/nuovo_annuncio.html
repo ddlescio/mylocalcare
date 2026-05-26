@@ -634,33 +634,72 @@
           id="ai-writing-ui-language"
           class="w-full border-2 border-indigo-200 rounded-2xl p-3.5 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-semibold"
         >
-          <option value="it">🇮🇹 Italiano</option>
-          <option value="en">🇬🇧 English</option>
-          <option value="fr">🇫🇷 Français</option>
-          <option value="es">🇪🇸 Español</option>
-          <option value="de">🇩🇪 Deutsch</option>
-          <option value="pt">🇵🇹 Português</option>
-          <option value="ro">🇷🇴 Română</option>
-          <option value="uk">🇺🇦 Українська</option>
-          <option value="ru">🇷🇺 Русский</option>
-          <option value="ar">العربية</option>
-          <option value="zh">🇨🇳 中文</option>
-          <option value="hi">🇮🇳 हिन्दी</option>
-          <option value="bn">বাংলা</option>
-          <option value="ur">اردو</option>
-          <option value="tr">🇹🇷 Türkçe</option>
-          <option value="pl">🇵🇱 Polski</option>
-          <option value="nl">🇳🇱 Nederlands</option>
-          <option value="sq">🇦🇱 Shqip</option>
-          <option value="el">🇬🇷 Ελληνικά</option>
-          <option value="sr">🇷🇸 Српски</option>
-          <option value="hr">🇭🇷 Hrvatski</option>
-          <option value="fi">🇫🇮 Suomi</option>
-          <option value="sv">🇸🇪 Svenska</option>
-          <option value="da">🇩🇰 Dansk</option>
-          <option value="no">🇳🇴 Norsk</option>
-          <option value="ja">🇯🇵 日本語</option>
-          <option value="ko">🇰🇷 한국어</option>
+          <optgroup label="Lingue più usate in Italia">
+            <option value="it">🇮🇹 Italiano</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="pt">🇵🇹 Português</option>
+            <option value="ro">🇷🇴 Română</option>
+            <option value="uk">🇺🇦 Українська</option>
+            <option value="ru">🇷🇺 Русский</option>
+            <option value="tl">🇵🇭 Filipino / Tagalog</option>
+            <option value="ar">العربية</option>
+            <option value="sq">🇦🇱 Shqip</option>
+            <option value="pl">🇵🇱 Polski</option>
+            <option value="de">🇩🇪 Deutsch</option>
+          </optgroup>
+
+          <optgroup label="Europa dell’Est / Balcani / Caucaso">
+            <option value="mo">Moldovenească / Moldovan</option>
+            <option value="bg">🇧🇬 Български</option>
+            <option value="ka">🇬🇪 ქართული</option>
+            <option value="sr">🇷🇸 Српски</option>
+            <option value="hr">🇭🇷 Hrvatski</option>
+            <option value="bs">🇧🇦 Bosanski</option>
+            <option value="mk">🇲🇰 Македонски</option>
+            <option value="el">🇬🇷 Ελληνικά</option>
+          </optgroup>
+
+          <optgroup label="Asia">
+            <option value="zh">🇨🇳 中文</option>
+            <option value="hi">🇮🇳 हिन्दी</option>
+            <option value="bn">বাংলা</option>
+            <option value="ur">اردو</option>
+            <option value="si">🇱🇰 සිංහල / Sinhala</option>
+            <option value="ta">தமிழ் / Tamil</option>
+            <option value="ml">മലയാളം / Malayalam</option>
+            <option value="pa">ਪੰਜਾਬੀ / Punjabi</option>
+            <option value="ne">🇳🇵 नेपाली</option>
+            <option value="id">🇮🇩 Bahasa Indonesia</option>
+            <option value="vi">🇻🇳 Tiếng Việt</option>
+            <option value="th">🇹🇭 ไทย</option>
+            <option value="ja">🇯🇵 日本語</option>
+            <option value="ko">🇰🇷 한국어</option>
+          </optgroup>
+
+          <optgroup label="Africa">
+            <option value="sw">Kiswahili / Swahili</option>
+            <option value="am">🇪🇹 አማርኛ / Amharic</option>
+            <option value="ti">ትግርኛ / Tigrinya</option>
+            <option value="so">🇸🇴 Soomaali</option>
+            <option value="ha">Hausa</option>
+            <option value="yo">Yorùbá</option>
+            <option value="ig">Igbo</option>
+            <option value="wo">Wolof</option>
+            <option value="bm">Bamanankan / Bambara</option>
+            <option value="ln">Lingála</option>
+            <option value="ff">Fulfulde / Fula</option>
+          </optgroup>
+
+          <optgroup label="Altre lingue comuni">
+            <option value="nl">🇳🇱 Nederlands</option>
+            <option value="tr">🇹🇷 Türkçe</option>
+            <option value="fi">🇫🇮 Suomi</option>
+            <option value="sv">🇸🇪 Svenska</option>
+            <option value="da">🇩🇰 Dansk</option>
+            <option value="no">🇳🇴 Norsk</option>
+          </optgroup>
         </select>
 
         <p id="ai-writing-language-note" class="text-xs text-slate-500">
@@ -722,8 +761,8 @@
           id="ai-writing-action"
           class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
         >
-          <option value="improve">Migliora il testo</option>
-          <option value="translate_it">Migliora ora e traduci in italiano alla fine</option>
+          <option value="translate_it" selected>Migliora ora e traduciamo in italiano alla fine</option>
+          <option value="improve">Migliora ora e lasciamo nella tua lingua</option>
         </select>
       </div>
 
@@ -877,8 +916,8 @@ document.addEventListener("DOMContentLoaded", function () {
       continue: "Ho capito, continua",
       help: "Scrivi cosa vuoi comunicare su di te e su quello che offri o cerchi. Puoi scrivere in modo semplice: penseremo noi a renderlo più chiaro.",
       actionLabel: "Cosa vuoi fare?",
-      improve: "Migliora il testo",
-      translate: "Migliora ora e traduci in italiano alla fine",
+      improve: "Migliora ora e lasciamo nella tua lingua",
+      translate: "Migliora ora e traduciamo in italiano alla fine",
       descriptionLabel: "Bozza descrizione",
       descriptionPlaceholder: "Scrivi qui la tua bozza, anche in modo semplice.",
       titleLabel: "Titolo o idea titolo",
@@ -910,8 +949,8 @@ document.addEventListener("DOMContentLoaded", function () {
       continue: "I understand, continue",
       help: "Write what you want to say about yourself and about what you offer or are looking for. You can write simply: we will help make it clearer.",
       actionLabel: "What do you want to do?",
-      improve: "Improve the text",
-      translate: "Improve now and translate into Italian at the end",
+      improve: "Improve it now and keep it in your language",
+      translate: "Improve it now and translate it into Italian at the end",
       descriptionLabel: "Description draft",
       descriptionPlaceholder: "Write your draft here, even in a simple way.",
       titleLabel: "Title or title idea",
@@ -943,7 +982,7 @@ document.addEventListener("DOMContentLoaded", function () {
       continue: "J’ai compris, continuer",
       help: "Écris ce que tu veux communiquer sur toi et sur ce que tu proposes ou recherches. Tu peux écrire simplement : nous t’aiderons à le rendre plus clair.",
       actionLabel: "Que veux-tu faire ?",
-      improve: "Améliorer le texte",
+      improve: "Améliorer maintenant et garder le texte dans ta langue",
       translate: "Améliorer maintenant et traduire en italien à la fin",
       descriptionLabel: "Brouillon de description",
       descriptionPlaceholder: "Écris ici ton brouillon, même simplement.",
@@ -976,8 +1015,8 @@ document.addEventListener("DOMContentLoaded", function () {
       continue: "Entendido, continuar",
       help: "Escribe lo que quieres comunicar sobre ti y sobre lo que ofreces o buscas. Puedes escribir de forma sencilla: te ayudaremos a hacerlo más claro.",
       actionLabel: "¿Qué quieres hacer?",
-      improve: "Mejorar el texto",
-      translate: "Mejorar ahora y traducir al italiano al final",
+      improve: "Mejorar ahora y dejarlo en tu idioma",
+      translate: "Mejorar ahora y traducirlo al italiano al final",
       descriptionLabel: "Borrador de descripción",
       descriptionPlaceholder: "Escribe aquí tu borrador, aunque sea sencillo.",
       titleLabel: "Título o idea de título",
@@ -1132,8 +1171,11 @@ document.addEventListener("DOMContentLoaded", function () {
     formStep.scrollTop = 0;
 
     setProposalMode(false);
-    aiAttemptsUsed = 0;
     updateAttemptsNote();
+
+    if (actionSelect) {
+      actionSelect.value = "translate_it";
+    }
 
     if (realTitleInput && aiTitleInput) {
       aiTitleInput.value = realTitleInput.value || "";
