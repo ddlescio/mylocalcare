@@ -3887,16 +3887,6 @@ def admin_openai_usage():
         stats=stats
     )
 
-@app.route("/admin/openai-usage")
-@admin_required
-def admin_openai_usage():
-    costo_mese = get_openai_month_cost()
-
-    return render_template(
-        "admin_openai_usage.html",
-        costo_mese=costo_mese
-    )
-
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA
 # ==========================================================
