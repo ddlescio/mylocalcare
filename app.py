@@ -2562,9 +2562,32 @@ def get_openai_month_stats():
         }
 
 
+_openai_cost_cache = {
+    "value": None,
+    "expires_at": 0
+}
+
+
 def get_openai_month_cost():
+    now_ts = time.time()
+
+    if (
+        _openai_cost_cache["value"] is not None
+        and _openai_cost_cache["expires_at"] > now_ts
+    ):
+        return _openai_cost_cache["value"]
+
     stats = get_openai_month_stats()
-    return stats.get("total_cost") if stats.get("ok") else None
+
+    if stats.get("ok"):
+        value = stats.get("total_cost")
+
+        _openai_cost_cache["value"] = value
+        _openai_cost_cache["expires_at"] = now_ts + 300
+
+        return value
+
+    return None
 
 @app.route("/admin/sblocca", methods=["GET"])
 @admin_required
