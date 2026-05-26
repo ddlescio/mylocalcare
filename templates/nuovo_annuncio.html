@@ -580,19 +580,31 @@
   <div class="w-full max-w-2xl max-h-[calc(100dvh-8rem)] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
 
     <!-- HEADER -->
-    <div class="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-blue-50">
+    <div
+      id="ai-writing-modal-header"
+      class="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-blue-50"
+    >
 
       <div>
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-indigo-700 text-xs font-bold border border-indigo-100 mb-3">
+        <div
+          id="ai-writing-badge"
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-indigo-700 text-xs font-bold border border-indigo-100 mb-3"
+        >
           <span>✨</span>
-          <span>Aiuto scrittura</span>
+          <span id="ai-writing-badge-text">Aiuto scrittura</span>
         </div>
 
-        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">
+        <h2
+          id="ai-writing-title"
+          class="text-xl sm:text-2xl font-extrabold text-slate-900"
+        >
           Migliora il testo del tuo annuncio
         </h2>
 
-        <p class="mt-2 text-sm text-slate-600">
+        <p
+          id="ai-writing-subtitle"
+          class="mt-2 text-sm text-slate-600"
+        >
           Puoi scrivere una bozza anche in un’altra lingua: il testo finale resterà sempre modificabile prima della pubblicazione.
         </p>
       </div>
@@ -611,16 +623,61 @@
     <!-- STEP AVVERTENZE -->
     <div id="ai-writing-warning-step" class="p-5 sm:p-6 space-y-5 overflow-y-auto">
 
-      <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 leading-relaxed">
-        <p class="font-bold mb-2">Prima di continuare</p>
+      <!-- SCELTA LINGUA -->
+      <div class="space-y-2">
+        <label for="ai-writing-ui-language" class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+          <span>🌍</span>
+          <span id="ai-writing-language-label">Scegli la tua lingua</span>
+        </label>
 
-        <p>
+        <select
+          id="ai-writing-ui-language"
+          class="w-full border-2 border-indigo-200 rounded-2xl p-3.5 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-semibold"
+        >
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="pt">🇵🇹 Português</option>
+          <option value="ro">🇷🇴 Română</option>
+          <option value="uk">🇺🇦 Українська</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="ar">العربية</option>
+          <option value="zh">🇨🇳 中文</option>
+          <option value="hi">🇮🇳 हिन्दी</option>
+          <option value="bn">বাংলা</option>
+          <option value="ur">اردو</option>
+          <option value="tr">🇹🇷 Türkçe</option>
+          <option value="pl">🇵🇱 Polski</option>
+          <option value="nl">🇳🇱 Nederlands</option>
+          <option value="sq">🇦🇱 Shqip</option>
+          <option value="el">🇬🇷 Ελληνικά</option>
+          <option value="sr">🇷🇸 Српски</option>
+          <option value="hr">🇭🇷 Hrvatski</option>
+          <option value="fi">🇫🇮 Suomi</option>
+          <option value="sv">🇸🇪 Svenska</option>
+          <option value="da">🇩🇰 Dansk</option>
+          <option value="no">🇳🇴 Norsk</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="ko">🇰🇷 한국어</option>
+        </select>
+
+        <p id="ai-writing-language-note" class="text-xs text-slate-500">
+          La guida continuerà nella lingua scelta.
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 leading-relaxed">
+        <p id="ai-writing-warning-title" class="font-bold mb-2">Prima di continuare</p>
+
+        <p id="ai-writing-warning-text-1">
           Usa questo aiuto solo per migliorare o tradurre il testo del tuo annuncio.
           Non inserire dati sensibili, documenti, informazioni mediche, informazioni economiche private
           o dettagli personali non necessari.
         </p>
 
-        <p class="mt-2">
+        <p id="ai-writing-warning-text-2" class="mt-2">
           Il testo generato sarà solo una proposta: potrai leggerlo, modificarlo e decidere se usarlo.
         </p>
       </div>
@@ -648,44 +705,6 @@
     <!-- STEP FORM AI -->
     <div id="ai-writing-form-step" class="hidden p-5 sm:p-6 space-y-5 overflow-y-auto">
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-        <div class="space-y-2">
-          <label for="ai-writing-language" class="text-sm font-bold text-slate-800">
-            Lingua della bozza
-          </label>
-
-          <select
-            id="ai-writing-language"
-            class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
-          >
-            <option value="auto">Rileva automaticamente</option>
-            <option value="it">Italiano</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
-            <option value="ro">Română</option>
-            <option value="ar">العربية</option>
-            <option value="uk">Українська</option>
-          </select>
-        </div>
-
-        <div class="space-y-2">
-          <label for="ai-writing-action" class="text-sm font-bold text-slate-800">
-            Cosa vuoi fare?
-          </label>
-
-          <select
-            id="ai-writing-action"
-            class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
-          >
-            <option value="improve">Migliora il testo</option>
-            <option value="translate_it">Migliora e traduci in italiano</option>
-          </select>
-        </div>
-
-      </div>
-
       <div
         id="ai-writing-language-help"
         class="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600 leading-relaxed"
@@ -693,21 +712,24 @@
         Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.
       </div>
 
+      <!-- AZIONE -->
       <div class="space-y-2">
-        <label for="ai-writing-title-input" class="text-sm font-bold text-slate-800">
-          Titolo o idea titolo
+        <label for="ai-writing-action" id="ai-writing-action-label" class="text-sm font-bold text-slate-800">
+          Cosa vuoi fare?
         </label>
 
-        <input
-          type="text"
-          id="ai-writing-title-input"
+        <select
+          id="ai-writing-action"
           class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
-          placeholder="Puoi lasciarlo vuoto: l’AI potrà suggerirlo dalla descrizione"
         >
+          <option value="improve">Migliora il testo</option>
+          <option value="translate_it">Migliora ora e traduci in italiano alla fine</option>
+        </select>
       </div>
 
+      <!-- DESCRIZIONE PRIMA DEL TITOLO -->
       <div class="space-y-2">
-        <label for="ai-writing-description-input" class="text-sm font-bold text-slate-800">
+        <label for="ai-writing-description-input" id="ai-writing-description-label" class="text-sm font-bold text-slate-800">
           Bozza descrizione
         </label>
 
@@ -716,39 +738,27 @@
           rows="6"
           maxlength="1500"
           class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
-          placeholder="Scrivi qui la tua bozza, anche in modo semplice o in un’altra lingua."
+          placeholder="Scrivi qui la tua bozza, anche in modo semplice."
         ></textarea>
 
-        <p class="text-xs text-slate-500">
+        <p id="ai-writing-limit-note" class="text-xs text-slate-500">
           Massimo 1500 caratteri. Non inserire dati sensibili o informazioni private non necessarie.
         </p>
       </div>
 
-      <!-- RISULTATO FUTURO -->
-      <div id="ai-writing-result-box" class="hidden rounded-2xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+      <!-- TITOLO DOPO DESCRIZIONE -->
+      <div class="space-y-2">
+        <label for="ai-writing-title-input" id="ai-writing-title-label" class="text-sm font-bold text-slate-800">
+          Titolo o idea titolo
+        </label>
 
-        <p class="text-sm font-extrabold text-emerald-800">
-          Proposta generata
-        </p>
-
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-emerald-900">Titolo suggerito</label>
-          <input
-            type="text"
-            id="ai-writing-result-title"
-            class="w-full border border-emerald-200 rounded-xl p-3 text-slate-900 bg-white"
-          >
-        </div>
-
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-emerald-900">Descrizione suggerita</label>
-          <textarea
-            id="ai-writing-result-description"
-            rows="6"
-            class="w-full border border-emerald-200 rounded-xl p-3 text-slate-900 bg-white"
-          ></textarea>
-        </div>
-
+        <input
+          type="text"
+          id="ai-writing-title-input"
+          maxlength="120"
+          class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
+          placeholder="Puoi scriverlo tu oppure verrà suggerito dopo Genera proposta"
+        >
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3 sm:justify-end pt-2">
@@ -803,33 +813,252 @@ document.addEventListener("DOMContentLoaded", function () {
   const warningStep = document.getElementById("ai-writing-warning-step");
   const formStep = document.getElementById("ai-writing-form-step");
 
-  const languageSelect = document.getElementById("ai-writing-language");
+  const uiLanguageSelect = document.getElementById("ai-writing-ui-language");
+
+  const modalHeader = document.getElementById("ai-writing-modal-header");
+  const badge = document.getElementById("ai-writing-badge");
+  const badgeText = document.getElementById("ai-writing-badge-text");
+  const modalTitle = document.getElementById("ai-writing-title");
+  const modalSubtitle = document.getElementById("ai-writing-subtitle");
+
+  const languageLabel = document.getElementById("ai-writing-language-label");
+  const languageNote = document.getElementById("ai-writing-language-note");
+
+  const warningTitle = document.getElementById("ai-writing-warning-title");
+  const warningText1 = document.getElementById("ai-writing-warning-text-1");
+  const warningText2 = document.getElementById("ai-writing-warning-text-2");
+
   const languageHelp = document.getElementById("ai-writing-language-help");
+
+  const actionSelect = document.getElementById("ai-writing-action");
+  const actionLabel = document.getElementById("ai-writing-action-label");
 
   const aiTitleInput = document.getElementById("ai-writing-title-input");
   const aiDescriptionInput = document.getElementById("ai-writing-description-input");
+
+  const aiTitleLabel = document.getElementById("ai-writing-title-label");
+  const aiDescriptionLabel = document.getElementById("ai-writing-description-label");
+  const limitNote = document.getElementById("ai-writing-limit-note");
 
   const realTitleInput = document.getElementById("titolo");
   const realDescriptionInput = document.getElementById("descrizione");
 
   const generateBtn = document.getElementById("generate-ai-writing-preview");
   const useBtn = document.getElementById("use-ai-writing-result");
-  const resultBox = document.getElementById("ai-writing-result-box");
-  const resultTitle = document.getElementById("ai-writing-result-title");
-  const resultDescription = document.getElementById("ai-writing-result-description");
 
   if (!openBtn || !modal) return;
 
-  const helpTexts = {
-    auto: "Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.",
-    it: "Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.",
-    en: "Write simply what you offer or what you are looking for. Include area, availability, experience and price if useful.",
-    es: "Escribe de forma sencilla qué ofreces o qué buscas. Indica zona, disponibilidad, experiencia y precio si es útil.",
-    fr: "Écris simplement ce que tu proposes ou ce que tu recherches. Indique la zone, les disponibilités, l’expérience et le prix si utile.",
-    ro: "Scrie simplu ce oferi sau ce cauți. Include zona, disponibilitatea, experiența și prețul dacă este util.",
-    ar: "اكتب ببساطة ما الذي تقدمه أو ما الذي تبحث عنه. اذكر المنطقة، التوفر، الخبرة والسعر إذا كان مفيدًا.",
-    uk: "Напишіть просто, що ви пропонуєте або шукаєте. Вкажіть район, доступність, досвід і ціну, якщо це корисно."
+  let aiProposalGenerated = false;
+  let lastDraftBeforeProposal = {
+    title: "",
+    description: ""
   };
+
+  const texts = {
+    it: {
+      badge: "Aiuto scrittura",
+      title: "Migliora il testo del tuo annuncio",
+      subtitle: "Puoi scrivere una bozza anche in un’altra lingua: il testo finale resterà sempre modificabile prima della pubblicazione.",
+      languageLabel: "Scegli la tua lingua",
+      languageNote: "La guida continuerà nella lingua scelta.",
+      warningTitle: "Prima di continuare",
+      warning1: "Usa questo aiuto solo per migliorare o tradurre il testo del tuo annuncio. Non inserire dati sensibili, documenti, informazioni mediche, informazioni economiche private o dettagli personali non necessari.",
+      warning2: "Il testo generato sarà solo una proposta: potrai leggerlo, modificarlo e decidere se usarlo.",
+      cancel: "Annulla",
+      continue: "Ho capito, continua",
+      help: "Scrivi in modo semplice cosa offri o cosa cerchi. Indica zona, disponibilità, esperienza e prezzo se utile.",
+      actionLabel: "Cosa vuoi fare?",
+      improve: "Migliora il testo",
+      translate: "Migliora ora e traduci in italiano alla fine",
+      descriptionLabel: "Bozza descrizione",
+      descriptionPlaceholder: "Scrivi qui la tua bozza, anche in modo semplice.",
+      titleLabel: "Titolo o idea titolo",
+      titlePlaceholder: "Puoi scriverlo tu oppure verrà suggerito dopo Genera proposta",
+      limit: "Massimo 1500 caratteri. Non inserire dati sensibili o informazioni private non necessarie.",
+      back: "Indietro",
+      generate: "Genera proposta",
+      regenerate: "Rigenera proposta",
+      use: "Usa questo testo",
+      proposalBadge: "Proposta generata",
+      proposalTitle: "Controlla e modifica la proposta",
+      proposalSubtitle: "Puoi modificarla direttamente qui, rigenerarla oppure usarla nel tuo annuncio.",
+      emptyDescription: "Scrivi prima una bozza della descrizione.",
+      suggestedTitle: "Titolo suggerito dall’AI"
+    },
+    en: {
+      badge: "Writing help",
+      title: "Improve your listing text",
+      subtitle: "You can write a draft in your own language. The final text can always be edited before publishing.",
+      languageLabel: "Choose your language",
+      languageNote: "The guide will continue in the selected language.",
+      warningTitle: "Before continuing",
+      warning1: "Use this help only to improve or translate your listing text. Do not enter sensitive data, documents, medical information, private financial information or unnecessary personal details.",
+      warning2: "The generated text is only a suggestion: you can read it, edit it and decide whether to use it.",
+      cancel: "Cancel",
+      continue: "I understand, continue",
+      help: "Write simply what you offer or what you are looking for. Include area, availability, experience and price if useful.",
+      actionLabel: "What do you want to do?",
+      improve: "Improve the text",
+      translate: "Improve now and translate into Italian at the end",
+      descriptionLabel: "Description draft",
+      descriptionPlaceholder: "Write your draft here, even in a simple way.",
+      titleLabel: "Title or title idea",
+      titlePlaceholder: "You can write it yourself or it will be suggested after Generate proposal",
+      limit: "Maximum 1500 characters. Do not enter sensitive data or unnecessary private information.",
+      back: "Back",
+      generate: "Generate proposal",
+      regenerate: "Regenerate proposal",
+      use: "Use this text",
+      proposalBadge: "Generated proposal",
+      proposalTitle: "Review and edit the proposal",
+      proposalSubtitle: "You can edit it here, regenerate it or use it in your listing.",
+      emptyDescription: "Please write a description draft first.",
+      suggestedTitle: "AI suggested title"
+    },
+    fr: {
+      badge: "Aide à la rédaction",
+      title: "Améliore le texte de ton annonce",
+      subtitle: "Tu peux écrire une ébauche dans ta langue. Le texte final restera modifiable avant publication.",
+      languageLabel: "Choisis ta langue",
+      languageNote: "Le guide continuera dans la langue choisie.",
+      warningTitle: "Avant de continuer",
+      warning1: "Utilise cette aide uniquement pour améliorer ou traduire le texte de ton annonce. N’insère pas de données sensibles, documents, informations médicales, informations économiques privées ou détails personnels inutiles.",
+      warning2: "Le texte généré est seulement une proposition : tu peux le lire, le modifier et décider de l’utiliser.",
+      cancel: "Annuler",
+      continue: "J’ai compris, continuer",
+      help: "Écris simplement ce que tu proposes ou ce que tu recherches. Indique la zone, les disponibilités, l’expérience et le prix si utile.",
+      actionLabel: "Que veux-tu faire ?",
+      improve: "Améliorer le texte",
+      translate: "Améliorer maintenant et traduire en italien à la fin",
+      descriptionLabel: "Brouillon de description",
+      descriptionPlaceholder: "Écris ici ton brouillon, même simplement.",
+      titleLabel: "Titre ou idée de titre",
+      titlePlaceholder: "Tu peux l’écrire toi-même ou il sera suggéré après Générer la proposition",
+      limit: "Maximum 1500 caractères. N’insère pas de données sensibles ou d’informations privées inutiles.",
+      back: "Retour",
+      generate: "Générer la proposition",
+      regenerate: "Régénérer la proposition",
+      use: "Utiliser ce texte",
+      proposalBadge: "Proposition générée",
+      proposalTitle: "Vérifie et modifie la proposition",
+      proposalSubtitle: "Tu peux la modifier ici, la régénérer ou l’utiliser dans ton annonce.",
+      emptyDescription: "Écris d’abord un brouillon de description.",
+      suggestedTitle: "Titre suggéré par l’IA"
+    },
+    es: {
+      badge: "Ayuda de escritura",
+      title: "Mejora el texto de tu anuncio",
+      subtitle: "Puedes escribir un borrador en tu idioma. El texto final siempre se podrá modificar antes de publicarlo.",
+      languageLabel: "Elige tu idioma",
+      languageNote: "La guía continuará en el idioma elegido.",
+      warningTitle: "Antes de continuar",
+      warning1: "Usa esta ayuda solo para mejorar o traducir el texto de tu anuncio. No introduzcas datos sensibles, documentos, información médica, información económica privada o detalles personales innecesarios.",
+      warning2: "El texto generado es solo una propuesta: podrás leerlo, modificarlo y decidir si usarlo.",
+      cancel: "Cancelar",
+      continue: "Entendido, continuar",
+      help: "Escribe de forma sencilla qué ofreces o qué buscas. Indica zona, disponibilidad, experiencia y precio si es útil.",
+      actionLabel: "¿Qué quieres hacer?",
+      improve: "Mejorar el texto",
+      translate: "Mejorar ahora y traducir al italiano al final",
+      descriptionLabel: "Borrador de descripción",
+      descriptionPlaceholder: "Escribe aquí tu borrador, aunque sea sencillo.",
+      titleLabel: "Título o idea de título",
+      titlePlaceholder: "Puedes escribirlo tú o se sugerirá después de Generar propuesta",
+      limit: "Máximo 1500 caracteres. No introduzcas datos sensibles ni información privada innecesaria.",
+      back: "Atrás",
+      generate: "Generar propuesta",
+      regenerate: "Regenerar propuesta",
+      use: "Usar este texto",
+      proposalBadge: "Propuesta generada",
+      proposalTitle: "Revisa y modifica la propuesta",
+      proposalSubtitle: "Puedes modificarla aquí, regenerarla o usarla en tu anuncio.",
+      emptyDescription: "Primero escribe un borrador de la descripción.",
+      suggestedTitle: "Título sugerido por la IA"
+    }
+  };
+
+  const fallbackText = texts.it;
+
+  function getCurrentTexts() {
+    const lang = uiLanguageSelect ? uiLanguageSelect.value : "it";
+    return texts[lang] || fallbackText;
+  }
+
+  function applyLanguageTexts() {
+    const t = getCurrentTexts();
+
+    if (badgeText) badgeText.textContent = aiProposalGenerated ? t.proposalBadge : t.badge;
+    if (modalTitle) modalTitle.textContent = aiProposalGenerated ? t.proposalTitle : t.title;
+    if (modalSubtitle) modalSubtitle.textContent = aiProposalGenerated ? t.proposalSubtitle : t.subtitle;
+
+    if (languageLabel) languageLabel.textContent = t.languageLabel;
+    if (languageNote) languageNote.textContent = t.languageNote;
+
+    if (warningTitle) warningTitle.textContent = t.warningTitle;
+    if (warningText1) warningText1.textContent = t.warning1;
+    if (warningText2) warningText2.textContent = t.warning2;
+
+    if (cancelBtn) cancelBtn.textContent = t.cancel;
+    if (confirmBtn) confirmBtn.textContent = t.continue;
+
+    if (languageHelp) languageHelp.textContent = t.help;
+
+    if (actionLabel) actionLabel.textContent = t.actionLabel;
+
+    if (actionSelect) {
+      const improveOption = actionSelect.querySelector('option[value="improve"]');
+      const translateOption = actionSelect.querySelector('option[value="translate_it"]');
+
+      if (improveOption) improveOption.textContent = t.improve;
+      if (translateOption) translateOption.textContent = t.translate;
+    }
+
+    if (aiDescriptionLabel) aiDescriptionLabel.textContent = t.descriptionLabel;
+    if (aiDescriptionInput) aiDescriptionInput.placeholder = t.descriptionPlaceholder;
+
+    if (aiTitleLabel) aiTitleLabel.textContent = t.titleLabel;
+    if (aiTitleInput) aiTitleInput.placeholder = t.titlePlaceholder;
+
+    if (limitNote) limitNote.textContent = t.limit;
+
+    if (backBtn) backBtn.textContent = t.back;
+    if (generateBtn) generateBtn.textContent = aiProposalGenerated ? t.regenerate : t.generate;
+    if (useBtn) useBtn.textContent = t.use;
+  }
+
+  function setProposalMode(active) {
+    aiProposalGenerated = active;
+
+    const t = getCurrentTexts();
+
+    if (modalHeader) {
+      modalHeader.classList.toggle("from-indigo-50", !active);
+      modalHeader.classList.toggle("to-blue-50", !active);
+      modalHeader.classList.toggle("from-emerald-50", active);
+      modalHeader.classList.toggle("to-teal-50", active);
+    }
+
+    if (badge) {
+      badge.classList.toggle("text-indigo-700", !active);
+      badge.classList.toggle("border-indigo-100", !active);
+      badge.classList.toggle("text-emerald-700", active);
+      badge.classList.toggle("border-emerald-100", active);
+    }
+
+    if (formStep) {
+      formStep.classList.toggle("bg-emerald-50", active);
+    }
+
+    if (useBtn) {
+      useBtn.classList.toggle("hidden", !active);
+    }
+
+    if (generateBtn) {
+      generateBtn.textContent = active ? t.regenerate : t.generate;
+    }
+
+    applyLanguageTexts();
+  }
 
   function openModal() {
     modal.classList.remove("hidden");
@@ -844,8 +1073,7 @@ document.addEventListener("DOMContentLoaded", function () {
     warningStep.scrollTop = 0;
     formStep.scrollTop = 0;
 
-    resultBox.classList.add("hidden");
-    useBtn.classList.add("hidden");
+    setProposalMode(false);
 
     if (realTitleInput && aiTitleInput) {
       aiTitleInput.value = realTitleInput.value || "";
@@ -854,6 +1082,13 @@ document.addEventListener("DOMContentLoaded", function () {
     if (realDescriptionInput && aiDescriptionInput) {
       aiDescriptionInput.value = realDescriptionInput.value || "";
     }
+
+    lastDraftBeforeProposal = {
+      title: aiTitleInput ? aiTitleInput.value : "",
+      description: aiDescriptionInput ? aiDescriptionInput.value : ""
+    };
+
+    applyLanguageTexts();
   }
 
   function closeModal() {
@@ -874,15 +1109,25 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }, 100);
   }
-  
+
   function showWarningStep() {
+    if (aiProposalGenerated) {
+      if (aiTitleInput) {
+        aiTitleInput.value = lastDraftBeforeProposal.title || "";
+      }
+
+      if (aiDescriptionInput) {
+        aiDescriptionInput.value = lastDraftBeforeProposal.description || "";
+      }
+
+      setProposalMode(false);
+      formStep.scrollTop = 0;
+      return;
+    }
+
     formStep.classList.add("hidden");
     warningStep.classList.remove("hidden");
-  }
-
-  function updateLanguageHelp() {
-    const lang = languageSelect ? languageSelect.value : "auto";
-    languageHelp.textContent = helpTexts[lang] || helpTexts.auto;
+    warningStep.scrollTop = 0;
   }
 
   openBtn.addEventListener("click", openModal);
@@ -900,8 +1145,8 @@ document.addEventListener("DOMContentLoaded", function () {
     backBtn.addEventListener("click", showWarningStep);
   }
 
-  if (languageSelect) {
-    languageSelect.addEventListener("change", updateLanguageHelp);
+  if (uiLanguageSelect) {
+    uiLanguageSelect.addEventListener("change", applyLanguageTexts);
   }
 
   modal.addEventListener("click", function (event) {
@@ -918,48 +1163,62 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (generateBtn) {
     generateBtn.addEventListener("click", function () {
+      const t = getCurrentTexts();
+
       const titolo = (aiTitleInput?.value || "").trim();
       const descrizione = (aiDescriptionInput?.value || "").trim();
 
       if (!descrizione) {
-        alert("Scrivi prima una bozza della descrizione.");
+        alert(t.emptyDescription);
         aiDescriptionInput?.focus();
         return;
       }
+
+      lastDraftBeforeProposal = {
+        title: titolo,
+        description: descrizione
+      };
 
       /*
         STEP SUCCESSIVO:
         qui collegheremo la chiamata alla rotta Flask /api/ai/aiuto-scrittura-annuncio.
 
-        Per ora simuliamo solo l’anteprima per verificare che la modale funzioni.
+        Nota logica:
+        - l'utente lavora nella lingua scelta;
+        - se ha scelto "translate_it", la traduzione italiana definitiva verrà prodotta alla fine;
+        - per ora simuliamo solo la proposta per verificare UX e flusso.
       */
 
-      resultTitle.value = titolo || "Titolo suggerito dall’AI";
-      resultDescription.value = descrizione;
+      if (aiTitleInput && !titolo) {
+        aiTitleInput.value = t.suggestedTitle;
+      }
 
-      resultBox.classList.remove("hidden");
-      useBtn.classList.remove("hidden");
+      if (aiDescriptionInput) {
+        aiDescriptionInput.value = descrizione;
+      }
+
+      setProposalMode(true);
+      formStep.scrollTop = 0;
     });
   }
 
   if (useBtn) {
     useBtn.addEventListener("click", function () {
-      if (realTitleInput && resultTitle.value.trim()) {
-        realTitleInput.value = resultTitle.value.trim();
+      if (realTitleInput && aiTitleInput.value.trim()) {
+        realTitleInput.value = aiTitleInput.value.trim();
       }
 
-      if (realDescriptionInput && resultDescription.value.trim()) {
-        realDescriptionInput.value = resultDescription.value.trim();
+      if (realDescriptionInput && aiDescriptionInput.value.trim()) {
+        realDescriptionInput.value = aiDescriptionInput.value.trim();
       }
 
       closeModal();
     });
   }
 
-  updateLanguageHelp();
+  applyLanguageTexts();
 });
 </script>
-
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
