@@ -648,6 +648,7 @@
 
                       <form method="POST"
                             action="{{ url_for('elimina_annuncio', id=a['id']) }}"
+                            data-no-global-loader
                             onsubmit="return confirm('Sei sicuro di voler eliminare questo annuncio?');"
                             class="inline">
 
@@ -657,7 +658,7 @@
                           <span>Elimina</span>
                         </button>
 
-                      </form>
+                      </form>                      
                     </div>
                   {% endif %}
 
