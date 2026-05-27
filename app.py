@@ -9093,6 +9093,26 @@ def modifica_annuncio(id):
         # =====================================================
         # 🛡️ VALIDAZIONI
         # =====================================================
+
+        if not titolo:
+
+            flash("Inserisci un titolo per l’annuncio.", "warning")
+            return redirect(url_for("modifica_annuncio", id=id))
+
+        if not descrizione:
+
+            flash("Inserisci una descrizione dettagliata.", "warning")
+            return redirect(url_for("modifica_annuncio", id=id))
+
+        if contiene_contatti_nel_testo(descrizione):
+
+            flash(
+                "Non inserire telefono, email o altri contatti nella descrizione. "
+                "Usa i campi Telefono ed Email nella sezione Dettagli e contatti.",
+                "warning"
+            )
+            return redirect(url_for("modifica_annuncio", id=id))
+
         if tipo_annuncio not in ("offro", "cerco"):
 
             flash("Devi specificare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
@@ -13796,6 +13816,18 @@ def cambia_copertina():
     return render_template("forms/cambia_copertina.html")
 
 #NUOVO Annuncio
+def contiene_contatti_nel_testo(testo):
+    valore = str(testo or "")
+
+    email_regex = r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"
+    telefono_regex = r"(?:\+?\d[\s().-]*){8,}"
+    parole_contatto_regex = r"\b(?:whatsapp|wa\.me|telegram|tel\.|cellulare|telefono|chiamami|scrivimi al|contattami al)\b"
+
+    return (
+        re.search(email_regex, valore, re.IGNORECASE) is not None
+        or re.search(telefono_regex, valore) is not None
+        or re.search(parole_contatto_regex, valore, re.IGNORECASE) is not None
+    )
 
 @app.route("/nuovo-annuncio", methods=["GET", "POST"])
 @login_required
@@ -13850,6 +13882,15 @@ def nuovo_annuncio():
         if not descrizione:
 
             flash("Inserisci una descrizione dettagliata.", "warning")
+            return redirect(url_for("nuovo_annuncio"))
+
+        if contiene_contatti_nel_testo(descrizione):
+
+            flash(
+                "Non inserire telefono, email o altri contatti nella descrizione. "
+                "Usa i campi Telefono ed Email nella sezione Dettagli e contatti.",
+                "warning"
+            )
             return redirect(url_for("nuovo_annuncio"))
 
         # 🔹 ZONA + PROVINCIA

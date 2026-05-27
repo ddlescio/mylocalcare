@@ -597,6 +597,20 @@ document.addEventListener("DOMContentLoaded", function () {
       const titolo = document.getElementById("titolo");
       const descrizione = document.getElementById("descrizione");
 
+      function contieneContattiNelTesto(testo) {
+        const valore = String(testo || "");
+
+        const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+        const telefonoRegex = /(?:\+?\d[\s().-]*){8,}/;
+        const paroleContattoRegex = /\b(?:whatsapp|wa\.me|telegram|tel\.|cellulare|telefono|chiamami|scrivimi al|contattami al)\b/i;
+
+        return (
+          emailRegex.test(valore) ||
+          telefonoRegex.test(valore) ||
+          paroleContattoRegex.test(valore)
+        );
+      }
+
       const filtriContainer = document.getElementById("filtri-container");
       const filtriCheckboxes = document.getElementById("filtri-checkboxes");
       const filtriDisponibili = filtriCheckboxes
@@ -633,6 +647,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!descrizione || !descrizione.value.trim()) {
         errori.push("Inserisci la descrizione dettagliata.");
+      }
+
+      if (descrizione && contieneContattiNelTesto(descrizione.value)) {
+        errori.push("Non inserire telefono, email o altri contatti nella descrizione. Usa i campi Telefono ed Email nella sezione Dettagli e contatti.");
       }
 
       if (errori.length > 0) {
