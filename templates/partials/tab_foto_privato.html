@@ -32,14 +32,19 @@
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {% for f in foto_list %}
           {% if f.strip() %}
-            <label class="relative block group">
-              <img src="{{ url_for('static', filename=f.strip()) }}"
-                   class="w-full aspect-square object-cover rounded-xl border group-hover:opacity-80 transition">
-              {% if not pubblico %}
-                <input type="checkbox" name="remove" value="{{ f.strip() }}"
-                       class="absolute top-2 right-2 w-5 h-5 accent-red-600">
-              {% endif %}
-            </label>
+          <div class="relative block group">
+            <img src="{{ url_for('static', filename=f.strip()) }}"
+                 class="w-full aspect-square object-cover rounded-xl border group-hover:opacity-80 transition">
+
+            {% if not pubblico %}
+              <button
+                type="button"
+                class="btn-rimuovi-foto absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-full px-2 py-1 shadow"
+                data-foto="{{ f.strip() }}">
+                Elimina
+              </button>
+            {% endif %}
+          </div>
           {% endif %}
         {% endfor %}
       </div>
@@ -86,18 +91,10 @@
             ⏳ Caricamento foto in corso... Attendi senza chiudere la pagina.
           </div>
 
-          <div id="azioni-rimozione-galleria" class="flex justify-end">
-            <button type="submit"
-                    id="btn-salva-rimozioni"
-                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm flex items-center gap-2">
-              🗑️ Conferma rimozione
-            </button>
-          </div>
         </div>
 
         <p class="text-xs text-gray-500 mt-2">
-          Le nuove foto si caricano automaticamente appena le selezioni.
-          Se invece selezioni foto da eliminare, premi <b>Conferma rimozione</b>.
+          Per eliminare una foto, premi <b>Elimina</b> sulla foto interessata.
         </p>
       {% endif %}
     </form>
@@ -192,7 +189,7 @@
       right: 0.85rem;
     }
   }
-    
+
 </style>
 
 
@@ -205,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const chiudiBtn = document.getElementById("chiudi-alert");
   const uploadStatus = document.getElementById("upload-status-galleria");
   const formGalleria = document.getElementById("form-galleria") || document.getElementById("form-galleria-empty");
-  const btnSalvaRimozioni = document.getElementById("btn-salva-rimozioni");
+  const removeButtons = document.querySelectorAll(".btn-rimuovi-foto");
 
   if (!inputFoto || !alertBox || !formGalleria) return;
 
@@ -238,9 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chiudiBtn.classList.add("text-yellow-700", "hover:text-yellow-900");
     }
 
-    if (alertText) {
-      alertText.innerHTML = html;
-    }
+    if (alertText) alertText.innerHTML = html;
 
     requestAnimationFrame(() => {
       alertBox.classList.add("opacity-100");
@@ -256,43 +251,43 @@ document.addEventListener("DOMContentLoaded", () => {
   function bloccaUIUpload() {
     uploadInCorso = true;
 
-    /*
-      IMPORTANTE:
-      Non disabilitare inputFoto prima del submit.
-      Se un input type="file" è disabled, il browser può non inviare il file.
-    */
     inputFoto.classList.add("opacity-50", "cursor-not-allowed");
     inputFoto.style.pointerEvents = "none";
 
-    if (btnSalvaRimozioni) {
-      btnSalvaRimozioni.disabled = true;
-      btnSalvaRimozioni.classList.add("opacity-50", "cursor-not-allowed");
-    }
+    removeButtons.forEach((btn) => {
+      btn.disabled = true;
+      btn.classList.add("opacity-50", "cursor-not-allowed");
+    });
 
     if (uploadStatus) {
       uploadStatus.classList.remove("hidden");
     }
 
-    mostraAlert("info", "⏳ Caricamento foto in corso... Attendi il completamento prima di fare altre operazioni.");
+    mostraAlert("info", "⏳ Operazione in corso... Attendi senza chiudere la pagina.");
   }
 
-  function gestisciSubmitManualeRimozioni() {
-    if (!btnSalvaRimozioni || !formGalleria) return;
-
-    btnSalvaRimozioni.addEventListener("click", (e) => {
-      e.preventDefault();
-
+  removeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
       if (uploadInCorso) {
         mostraAlert("info", "⏳ È già in corso un'operazione. Attendi il completamento.");
         return;
       }
 
-      const checkboxSelezionate = formGalleria.querySelectorAll('input[name="remove"]:checked');
+      const foto = btn.dataset.foto;
+      if (!foto) return;
 
-      if (!checkboxSelezionate.length) {
-        mostraAlert("warning", "Seleziona almeno una foto da rimuovere prima di continuare.");
-        return;
-      }
+      const conferma = confirm("Vuoi eliminare questa foto dalla galleria?");
+      if (!conferma) return;
+
+      formGalleria.querySelectorAll('input[name="remove"][data-auto-remove="1"]').forEach(el => el.remove());
+
+      const hiddenRemove = document.createElement("input");
+      hiddenRemove.type = "hidden";
+      hiddenRemove.name = "remove";
+      hiddenRemove.value = foto;
+      hiddenRemove.dataset.autoRemove = "1";
+
+      formGalleria.appendChild(hiddenRemove);
 
       bloccaUIUpload();
 
@@ -304,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }, 50);
     });
-  }
+  });
 
   inputFoto.addEventListener("click", (e) => {
     if (uploadInCorso) {
@@ -317,7 +312,7 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       mostraAlert(
         "warning",
-        "📸 Hai raggiunto il limite massimo di 4 foto.<br>Per aggiungerne di nuove, seleziona prima le foto da rimuovere."
+        "📸 Hai raggiunto il limite massimo di 4 foto.<br>Per aggiungerne di nuove, elimina prima una foto."
       );
     }
   });
@@ -339,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
       inputFoto.value = "";
       mostraAlert(
         "warning",
-        `📸 Puoi avere massimo ${maxFoto} foto in galleria.<br>Quelle attuali: ${fotoEsistenti}. Selezione annullata.`
+        `📸 Puoi avere massimo ${maxFoto} foto in galleria.<br>Quelle attuali: ${fotoEsistenti}. Elimina prima una foto.`
       );
       return;
     }
@@ -359,8 +354,6 @@ document.addEventListener("DOMContentLoaded", () => {
     alertBox.classList.remove("opacity-100");
     setTimeout(() => alertBox.classList.add("hidden"), 300);
   });
-
-  gestisciSubmitManualeRimozioni();
 });
 </script>
 {% if pubblico %}
