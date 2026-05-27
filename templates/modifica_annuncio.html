@@ -28,7 +28,7 @@
       </div>
 
     </div>
-    
+
     {% set current_username = annuncio['username'] if modalita == 'modifica' else (request.form.get('username') or (g.utente['username'] if g.utente else '')) %}
     {% set current_tipo_annuncio = annuncio['tipo_annuncio'] if modalita == 'modifica' else (request.form.get('tipo_annuncio', '')) %}
     {% set current_categoria = annuncio['categoria'] if modalita == 'modifica' else (request.form.get('categoria', '')) %}
@@ -70,8 +70,9 @@
             <span class="text-blue-600 font-extrabold">*</span>
           </label>
 
-          <div class="flex flex-wrap gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
+          <div class="grid grid-cols-2 gap-3">
+
+            <label class="flex items-center gap-2 cursor-pointer min-w-0">
               <input
                 type="radio"
                 name="tipo_annuncio"
@@ -79,12 +80,13 @@
                 class="accent-green-600"
                 required
                 {% if current_tipo_annuncio == 'offro' %}checked{% endif %}>
-              <span class="inline-flex items-center gap-2 text-lg font-bold bg-green-100 text-green-700 px-4 py-2 rounded-full border border-green-200 shadow-sm">
+
+              <span class="w-full inline-flex items-center justify-center gap-2 text-base sm:text-lg font-bold bg-green-100 text-green-700 px-4 py-2 rounded-full border border-green-200 shadow-sm">
                 🟢 Offro
               </span>
             </label>
 
-            <label class="flex items-center gap-2 cursor-pointer">
+            <label class="flex items-center gap-2 cursor-pointer min-w-0">
               <input
                 type="radio"
                 name="tipo_annuncio"
@@ -92,12 +94,14 @@
                 class="accent-blue-600"
                 required
                 {% if current_tipo_annuncio == 'cerco' %}checked{% endif %}>
-              <span class="inline-flex items-center gap-2 text-lg font-bold bg-blue-100 text-blue-700 px-4 py-2 rounded-full border border-blue-200 shadow-sm">
+
+              <span class="w-full inline-flex items-center justify-center gap-2 text-base sm:text-lg font-bold bg-blue-100 text-blue-700 px-4 py-2 rounded-full border border-blue-200 shadow-sm">
                 🔵 Cerco
               </span>
             </label>
-          </div>
 
+          </div>
+          
           <p class="text-sm text-slate-500">
             Seleziona se stai offrendo qualcosa o se stai cercando.
           </p>
