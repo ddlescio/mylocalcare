@@ -83,7 +83,7 @@ from realtime_auth import build_realtime_token
 from io import BytesIO
 from flask import send_file
 from openpyxl import Workbook
-
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from webauthn import (
     generate_registration_options,
     verify_registration_response,
@@ -2390,7 +2390,7 @@ def format_openai_euro(value):
     value = Decimal(str(value))
 
     if value == 0:
-        return "€ 0"
+        return "€ 0.000000"
 
     if value < Decimal("0.01"):
         return f"€ {value:.6f}"
@@ -2532,8 +2532,18 @@ def get_openai_month_stats():
         else:
             print("❌ OpenAI Usage API error:", usage_response.text)
 
+        daily = [
+            row for row in daily_map.values()
+            if (
+                int(row.get("richieste") or 0) > 0
+                or int(row.get("input_tokens") or 0) > 0
+                or int(row.get("output_tokens") or 0) > 0
+                or Decimal(str(row.get("costo") or "0")) > Decimal("0")
+            )
+        ]
+
         daily = sorted(
-            daily_map.values(),
+            daily,
             key=lambda x: datetime.strptime(x["data"], "%d/%m/%Y"),
             reverse=True
         )
@@ -2590,6 +2600,111 @@ def get_openai_month_cost():
         return value
 
     return None
+
+def ensure_openai_usage_storico_table():
+    conn = get_db_connection()
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS openai_usage_giornaliero (
+            data TEXT PRIMARY KEY,
+            mese TEXT NOT NULL,
+            costo_raw TEXT DEFAULT '0',
+            richieste INTEGER DEFAULT 0,
+            input_tokens INTEGER DEFAULT 0,
+            output_tokens INTEGER DEFAULT 0,
+            aggiornato_il TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def salva_openai_usage_giornaliero(stats):
+    if not stats or not stats.get("ok"):
+        return
+
+    ensure_openai_usage_storico_table()
+
+    conn = get_db_connection()
+
+    for row in stats.get("daily", []):
+        richieste = int(row.get("richieste") or 0)
+        input_tokens = int(row.get("input_tokens") or 0)
+        output_tokens = int(row.get("output_tokens") or 0)
+        costo_raw = str(row.get("costo_raw") or "0")
+
+        if richieste == 0 and input_tokens == 0 and output_tokens == 0 and Decimal(costo_raw) == 0:
+            continue
+
+        data_it = row.get("data")  # es. 26/05/2026
+        giorno, mese, anno = data_it.split("/")
+        data_iso = f"{anno}-{mese}-{giorno}"
+        mese_iso = f"{anno}-{mese}"
+
+        conn.execute("""
+            INSERT INTO openai_usage_giornaliero
+                (data, mese, costo_raw, richieste, input_tokens, output_tokens, aggiornato_il)
+            VALUES
+                (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(data) DO UPDATE SET
+                mese = excluded.mese,
+                costo_raw = excluded.costo_raw,
+                richieste = excluded.richieste,
+                input_tokens = excluded.input_tokens,
+                output_tokens = excluded.output_tokens,
+                aggiornato_il = CURRENT_TIMESTAMP
+        """, (
+            data_iso,
+            mese_iso,
+            costo_raw,
+            richieste,
+            input_tokens,
+            output_tokens
+        ))
+
+    conn.commit()
+    conn.close()
+
+
+def carica_openai_usage_storico():
+    ensure_openai_usage_storico_table()
+
+    conn = get_db_connection()
+
+    rows = conn.execute("""
+        SELECT
+            data,
+            mese,
+            costo_raw,
+            richieste,
+            input_tokens,
+            output_tokens
+        FROM openai_usage_giornaliero
+        ORDER BY data DESC
+    """).fetchall()
+
+    conn.close()
+
+    daily = []
+
+    for row in rows:
+        data_iso = row["data"]
+        anno, mese, giorno = data_iso.split("-")
+
+        costo_decimal = Decimal(str(row["costo_raw"] or "0"))
+
+        daily.append({
+            "data": f"{giorno}/{mese}/{anno}",
+            "mese": row["mese"],
+            "costo_raw": str(costo_decimal),
+            "costo": format_openai_euro(costo_decimal),
+            "richieste": int(row["richieste"] or 0),
+            "input_tokens": int(row["input_tokens"] or 0),
+            "output_tokens": int(row["output_tokens"] or 0)
+        })
+
+    return daily
 
 @app.route("/admin/sblocca", methods=["GET"])
 @admin_required
@@ -3907,10 +4022,113 @@ def admin_counters_page():
 def admin_openai_usage():
     stats = get_openai_month_stats()
 
+    if stats.get("ok"):
+        salva_openai_usage_giornaliero(stats)
+        stats["daily"] = carica_openai_usage_storico()
+
     return render_template(
         "admin_openai_usage.html",
         stats=stats
     )
+
+@app.route("/admin/openai-usage/export")
+@admin_required
+def admin_openai_usage_export():
+    daily = carica_openai_usage_storico()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "OpenAI Usage"
+
+    headers = [
+        "Data",
+        "Mese",
+        "Costo",
+        "Richieste",
+        "Input token",
+        "Output token"
+    ]
+
+    ws.append(headers)
+
+    header_fill = PatternFill("solid", fgColor="E2E8F0")
+    header_font = Font(bold=True, color="0F172A")
+    thin = Side(style="thin", color="CBD5E1")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = border
+
+    for row in daily:
+        ws.append([
+            row.get("data"),
+            row.get("mese"),
+            float(row.get("costo_raw") or 0),
+            int(row.get("richieste") or 0),
+            int(row.get("input_tokens") or 0),
+            int(row.get("output_tokens") or 0)
+        ])
+
+    for row in ws.iter_rows(min_row=2):
+        for cell in row:
+            cell.border = border
+
+    for cell in ws["C"]:
+        cell.number_format = '€ #,##0.000000'
+
+    for cell in ws["D"]:
+        cell.number_format = '#,##0'
+
+    for cell in ws["E"]:
+        cell.number_format = '#,##0'
+
+    for cell in ws["F"]:
+        cell.number_format = '#,##0'
+
+    ws.column_dimensions["A"].width = 14
+    ws.column_dimensions["B"].width = 12
+    ws.column_dimensions["C"].width = 16
+    ws.column_dimensions["D"].width = 14
+    ws.column_dimensions["E"].width = 16
+    ws.column_dimensions["F"].width = 16
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="openai_usage_storico.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@app.route("/cron/openai-usage/monthly-save")
+def cron_openai_usage_monthly_save():
+    secret = request.args.get("secret")
+
+    if not secret or secret != os.getenv("OPENAI_CRON_SECRET"):
+        abort(403)
+
+    stats = get_openai_month_stats()
+
+    if stats.get("ok"):
+        salva_openai_usage_giornaliero(stats)
+
+        return jsonify({
+            "ok": True,
+            "message": "Storico OpenAI salvato correttamente",
+            "total_requests": stats.get("total_requests"),
+            "total_cost": stats.get("total_cost_raw")
+        })
+
+    return jsonify({
+        "ok": False,
+        "error": stats.get("error")
+    }), 500
 
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA
