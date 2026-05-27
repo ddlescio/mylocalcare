@@ -647,17 +647,15 @@
                       {% endif %}
 
                       <a href="{{ url_for('elimina_annuncio', id=a['id']) }}"
-                         onclick="return confirm('Eliminare questo annuncio?');"
+                         onclick="event.stopPropagation(); return confirm('Eliminare questo annuncio?');"
                          class="profile-annuncio-delete-btn">
                         <span>🗑️</span>
                         <span>Elimina</span>
                       </a>
 
                     </div>
-                  
-                  </div>
                   {% endif %}
-
+                  
                 </article>
                 {% endfor %}
               </div>
