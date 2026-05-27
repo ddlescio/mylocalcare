@@ -647,15 +647,23 @@
                       {% endif %}
 
                       <a href="{{ url_for('elimina_annuncio', id=a['id']) }}"
-                         onclick="event.stopPropagation(); return confirm('Eliminare questo annuncio?');"
+                         onclick="
+                           event.preventDefault();
+                           event.stopPropagation();
+
+                           if (confirm('Vuoi davvero eliminare questo annuncio? Questa azione non può essere annullata.')) {
+                             window.location.href = this.href;
+                           }
+
+                           return false;
+                         "
                          class="profile-annuncio-delete-btn">
                         <span>🗑️</span>
                         <span>Elimina</span>
                       </a>
-
                     </div>
                   {% endif %}
-                  
+
                 </article>
                 {% endfor %}
               </div>
