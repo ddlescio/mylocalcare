@@ -8,9 +8,12 @@
 
 <div class="mb-6">
   <a href="{{ url_for('admin_openai_usage_export') }}"
+     download
+     data-no-loader="true"
+     onclick="event.stopPropagation();"
      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow-sm hover:bg-emerald-700 transition">
     📥 Scarica Excel
-  </a>
+  </a>  
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
