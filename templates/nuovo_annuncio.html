@@ -24,11 +24,10 @@
 
   <div class="bg-white shadow-md rounded-3xl p-5 sm:p-8 border border-gray-100">
 
-    <!-- HEADER PAGINA -->
+    <!-- HEADER PAGINA COMPATTO -->
+    <div class="mb-5 flex items-center justify-center gap-3 text-center">
 
-    <div class="mb-8 text-center">
-
-      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100 mb-4">
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100">
 
         <span>📌</span>
 
@@ -36,14 +35,15 @@
 
       </div>
 
-      <p class="mt-2 text-sm text-gray-400 max-w-2xl mx-auto">
+      <div class="inline-flex items-center gap-1 text-xs text-gray-400">
 
-        <span class="text-blue-600 font-bold">*</span> campi essenziali
+        <span class="text-blue-600 font-bold">*</span>
+        <span>campi essenziali</span>
 
-      </p>
+      </div>
 
     </div>
-
+    
     {% set current_username = annuncio['username'] if modalita == 'modifica' else (request.form.get('username') or (g.utente['username'] if g.utente else '')) %}
 
     {% set current_tipo_annuncio = annuncio['tipo_annuncio'] if modalita == 'modifica' else (request.form.get('tipo_annuncio', '')) %}
