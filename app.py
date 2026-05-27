@@ -9145,6 +9145,11 @@ def modifica_annuncio(id):
 
         for foto in nuove_foto:
             if foto and foto.filename:
+
+                if not foto.mimetype.startswith("image/"):
+                    flash("Puoi caricare solo immagini, non video.", "warning")
+                    return redirect(url_for("modifica_annuncio", id=id))
+
                 nome_file = f"{uuid.uuid4().hex}_{foto.filename}"
                 percorso = os.path.join(upload_dir, nome_file)
                 foto.save(percorso)
@@ -13950,6 +13955,10 @@ def nuovo_annuncio():
 
         for file in media_files:
             if file and file.filename:
+                if not file.mimetype.startswith("image/"):
+                    flash("Puoi caricare solo immagini, non video.", "warning")
+                    return redirect(url_for("nuovo_annuncio"))
+                
                 filename = f"{uuid.uuid4().hex}_{file.filename}"
                 file.save(os.path.join(upload_dir, filename))
                 media_paths.append(f"uploads/annunci/{filename}")

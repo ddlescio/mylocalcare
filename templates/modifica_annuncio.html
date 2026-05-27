@@ -101,7 +101,7 @@
             </label>
 
           </div>
-          
+
           <p class="text-sm text-slate-500">
             Seleziona se stai offrendo qualcosa o se stai cercando.
           </p>
@@ -284,21 +284,20 @@
             4 · Media
           </span>
 
-          <h3 class="text-2xl font-bold text-slate-900">Immagini e video</h3>
+          <h3 class="text-2xl font-bold text-slate-900">Immagini</h3>
 
-          <p class="text-sm sm:text-base text-slate-600">Carica immagini o video per rendere l’annuncio più efficace.</p>
+          <p class="text-sm sm:text-base text-slate-600">Carica una o più foto per rendere l’annuncio più efficace.</p>
         </div>
 
         <div class="space-y-2">
           <label for="media" class="flex items-center gap-2 text-base font-bold text-slate-800">
-            <span>Immagini o video</span>
+            <span>Immagini</span>
             <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
           </label>
 
-          <input type="file" id="media" name="media" multiple accept="image/*,video/*"
+          <input type="file" id="media" name="media" multiple accept="image/*"
                  class="block w-full text-sm text-slate-700 border-2 border-amber-200 rounded-2xl cursor-pointer bg-white focus:outline-none p-3.5 shadow-sm">
-
-          <p class="text-xs text-slate-500 mt-1">Puoi caricare più file (max 10MB ciascuno)</p>
+          <p class="text-xs text-slate-500 mt-1">Puoi caricare più foto (max 10MB ciascuna)</p>
 
           {% if modalita == 'modifica' and annuncio['media'] %}
             <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
