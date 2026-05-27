@@ -9,48 +9,26 @@
 
   <div class="relative bg-white shadow-md rounded-3xl p-5 sm:p-8 border border-gray-100">
 
-    <!-- HEADER PAGINA -->
-    <div class="mb-8 text-center relative">
+    <!-- HEADER PAGINA COMPATTO -->
+    <div class="mb-5 flex items-center justify-center gap-3 text-center">
 
-      <a href="javascript:history.back()"
-         class="absolute left-0 top-0 group inline-flex items-center gap-2 rounded-full
-                bg-gradient-to-br from-white via-blue-50 to-indigo-50
-                border border-white/80
-                px-3.5 py-2
-                text-blue-700
-                shadow-[0_10px_24px_rgba(37,99,235,0.12),inset_0_1px_0_rgba(255,255,255,0.95)]
-                hover:shadow-[0_14px_30px_rgba(37,99,235,0.18),inset_0_1px_0_rgba(255,255,255,0.98)]
-                hover:-translate-y-0.5
-                hover:text-blue-800
-                transition-all duration-200"
-         aria-label="Torna indietro">
-        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full
-                     bg-white/85 border border-blue-100
-                     shadow-sm
-                     text-lg leading-none
-                     group-hover:bg-blue-100 transition">
-          ←
-        </span>
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100">
 
-        <span class="hidden sm:inline text-sm font-bold tracking-[-0.02em]">
-          Torna
-        </span>
-      </a>
-
-      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100 mb-4">
         <span>📌</span>
+
         <span>{{ "Gestione annuncio" if modalita == "modifica" else "Nuovo annuncio" }}</span>
+
       </div>
 
-      <p class="mt-3 text-base text-gray-500 max-w-2xl mx-auto">
-        Compila i campi in modo chiaro e completo per rendere il tuo annuncio più efficace e facile da trovare.
-      </p>
+      <div class="inline-flex items-center gap-1 text-xs text-gray-400">
 
-      <p class="mt-2 text-sm text-gray-400 max-w-2xl mx-auto">
-        <span class="text-blue-600 font-bold">*</span> campi essenziali
-      </p>
+        <span class="text-blue-600 font-bold">*</span>
+        <span>campi essenziali</span>
+
+      </div>
+
     </div>
-
+    
     {% set current_username = annuncio['username'] if modalita == 'modifica' else (request.form.get('username') or (g.utente['username'] if g.utente else '')) %}
     {% set current_tipo_annuncio = annuncio['tipo_annuncio'] if modalita == 'modifica' else (request.form.get('tipo_annuncio', '')) %}
     {% set current_categoria = annuncio['categoria'] if modalita == 'modifica' else (request.form.get('categoria', '')) %}
@@ -83,19 +61,6 @@
           </span>
 
           <p class="text-sm sm:text-base text-slate-600">Definisci il tipo di annuncio e dove deve comparire.</p>
-        </div>
-
-        <!-- Username -->
-        <div class="space-y-2">
-          <label for="username" class="flex items-center gap-2 text-base font-bold text-slate-800">
-            <span>Nome utente</span>
-            <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 font-semibold">visibile</span>
-          </label>
-
-          <input type="text" id="username" name="username"
-                 value="{{ current_username }}"
-                 class="block w-full border-2 border-slate-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
-                 placeholder="Il tuo username (puoi modificarlo)">
         </div>
 
         <!-- Tipo annuncio -->
@@ -224,9 +189,6 @@
             2 · Contenuto annuncio
           </span>
 
-          <h3 class="text-2xl font-bold text-slate-900">Presentazione</h3>
-
-          <p class="text-sm sm:text-base text-slate-600">Scrivi in modo chiaro cosa offri o cosa stai cercando.</p>
         </div>
 
         <!-- Titolo -->
@@ -264,9 +226,6 @@
             3 · Dettagli e contatti
           </span>
 
-          <h3 class="text-2xl font-bold text-slate-900">Informazioni aggiuntive</h3>
-
-          <p class="text-sm sm:text-base text-slate-600">Aggiungi informazioni utili per chi visualizza l’annuncio.</p>
         </div>
 
         <!-- Prezzo -->
@@ -424,54 +383,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       });
     }, 180);
-  }
-
-  forzaRenderFiltriModifica();
-});
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const categoria = document.getElementById("categoria");
-  const filtriContainer = document.getElementById("filtri-container");
-  const filtriCheckboxes = document.getElementById("filtri-checkboxes");
-
-  if (!categoria || !filtriContainer || !filtriCheckboxes) return;
-
-  let filtriSelezionati = [];
-
-  const jsonFiltri = document.getElementById("filtri-selezionati");
-
-  if (jsonFiltri) {
-    try {
-      filtriSelezionati = JSON.parse(jsonFiltri.textContent || "[]")
-        .map(v => String(v).trim())
-        .filter(Boolean);
-    } catch (e) {
-      filtriSelezionati = [];
-    }
-  }
-
-  function forzaRenderFiltriModifica() {
-    if (!categoria.value) return;
-
-    categoria.dispatchEvent(new Event("change", { bubbles: true }));
-
-    setTimeout(() => {
-      const checkboxes = filtriCheckboxes.querySelectorAll('input[type="checkbox"]');
-
-      if (checkboxes.length > 0) {
-        filtriContainer.classList.remove("hidden");
-      }
-
-      checkboxes.forEach((cb) => {
-        const valore = String(cb.value || "").trim();
-
-        if (filtriSelezionati.includes(valore)) {
-          cb.checked = true;
-        }
-      });
-    }, 120);
   }
 
   forzaRenderFiltriModifica();

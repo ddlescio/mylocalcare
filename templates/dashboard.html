@@ -630,30 +630,30 @@
                   {% if not pubblico %}
                   <div class="profile-annuncio-actions">
 
+                    <a href="{{ url_for('modifica_annuncio', id=a['id']) }}"
+                       class="profile-annuncio-secondary-btn">
+                      <span>✏️</span>
+                      <span>Modifica</span>
+                    </a>
+
                     {% if a['stato'] == 'approvato' %}
-                    <button
-                      type="button"
-                      onclick="apriVisibilita({{ a['id'] }})"
-                      class="profile-annuncio-boost-btn">
-                      <span>🚀</span>
-                      <span>Aumenta visibilità</span>
-                    </button>
+                      <button
+                        type="button"
+                        onclick="apriVisibilita({{ a['id'] }})"
+                        class="profile-annuncio-boost-btn">
+                        <span>🚀</span>
+                        <span>Aumenta visibilità</span>
+                      </button>
                     {% else %}
-                      <a href="{{ url_for('modifica_annuncio', id=a['id']) }}"
-                         class="profile-annuncio-secondary-btn">
-                        <span>✏️</span>
-                        <span>Modifica</span>
+                      <a href="{{ url_for('elimina_annuncio', id=a['id']) }}"
+                         onclick="return confirm('Eliminare questo annuncio?');"
+                         class="profile-annuncio-delete-btn">
+                        <span>🗑️</span>
+                        <span>Elimina</span>
                       </a>
                     {% endif %}
 
-                    <a href="{{ url_for('elimina_annuncio', id=a['id']) }}"
-                       onclick="return confirm('Eliminare questo annuncio?');"
-                       class="profile-annuncio-delete-btn">
-                      <span>🗑️</span>
-                      <span>Elimina</span>
-                    </a>
-
-                  </div>
+                  </div>                  
                   {% endif %}
 
                 </article>
