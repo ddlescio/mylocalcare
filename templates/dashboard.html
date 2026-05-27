@@ -648,15 +648,16 @@
 
                       <form method="POST"
                             action="{{ url_for('elimina_annuncio', id=a['id']) }}"
-                            onsubmit="return confirm('Vuoi davvero eliminare questo annuncio? Questa azione non può essere annullata.');"
+                            onsubmit="return confirm('Sei sicuro di voler eliminare questo annuncio?');"
                             class="inline">
+
                         <button type="submit"
                                 class="profile-annuncio-delete-btn">
                           <span>🗑️</span>
                           <span>Elimina</span>
                         </button>
-                      </form>
 
+                      </form>
                     </div>
                   {% endif %}
 
