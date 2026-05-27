@@ -646,21 +646,17 @@
                         </button>
                       {% endif %}
 
-                      <a href="{{ url_for('elimina_annuncio', id=a['id']) }}"
-                         onclick="
-                           event.preventDefault();
-                           event.stopPropagation();
+                      <form method="POST"
+                            action="{{ url_for('elimina_annuncio', id=a['id']) }}"
+                            onsubmit="return confirm('Vuoi davvero eliminare questo annuncio? Questa azione non può essere annullata.');"
+                            class="inline">
+                        <button type="submit"
+                                class="profile-annuncio-delete-btn">
+                          <span>🗑️</span>
+                          <span>Elimina</span>
+                        </button>
+                      </form>
 
-                           if (confirm('Vuoi davvero eliminare questo annuncio? Questa azione non può essere annullata.')) {
-                             window.location.href = this.href;
-                           }
-
-                           return false;
-                         "
-                         class="profile-annuncio-delete-btn">
-                        <span>🗑️</span>
-                        <span>Elimina</span>
-                      </a>
                     </div>
                   {% endif %}
 

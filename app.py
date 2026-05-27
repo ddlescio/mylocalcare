@@ -9649,7 +9649,7 @@ def utente_update_galleria():
 
     return redirect(url_for("dashboard") + "#tab-foto")
 
-@app.route('/annuncio/<int:id>/elimina')
+@app.route('/annuncio/<int:id>/elimina', methods=["POST"])
 @login_required
 def elimina_annuncio(id):
     conn = get_db_connection()
