@@ -4435,7 +4435,7 @@ def admin_video_calls():
         video_calls_enabled=is_video_calls_enabled(),
         daily_stats=daily_stats
     )
-    
+
 # ---------------------------------------------------------
 # 💰 ADMIN - SERVIZI (MONETIZZAZIONE) - SOLO CONFIG (STEP 3)
 # ---------------------------------------------------------
@@ -8131,13 +8131,26 @@ def rifiuta_recensione(id):
         if row:
             id_autore = list(row.values())[0]
 
+            messaggio_notifica = "La tua recensione è stata rifiutata per contenuto poco appropriato. Modificala e inviala di nuovo. ❌"
+            link_notifica = url_for("mie_recensioni")
+
             crea_notifica(
                 id_autore,
-                "La tua recensione è stata rifiutata per contenuto poco appropriato. Modificala e inviala di nuovo. ❌",
-                link=url_for("mie_recensioni")
+                messaggio_notifica,
+                link=link_notifica
             )
 
             emit_update_notifications(id_autore)
+
+            try:
+                invia_push(
+                    id_autore,
+                    "Recensione rifiutata ❌",
+                    messaggio_notifica,
+                    url=link_notifica
+                )
+            except Exception as e:
+                log_exception_safe("⚠️ Errore push rifiuto recensione", e, {"user_id": id_autore}, production=True)
 
         # 🔁 Aggiorna counters admin (recensioni in attesa)
         invalidate_admin_counters()
@@ -8512,13 +8525,26 @@ def approva_annuncio(id):
 
 
     if utente_id:
+        messaggio_notifica = "Il tuo annuncio è stato approvato ed è ora visibile su MyLocalCare ✅"
+        link_notifica = url_for("dashboard") + "?tab=annunci"
+
         crea_notifica(
             utente_id,
-            "Il tuo annuncio è stato approvato ed è ora visibile su MyLocalCare ✅",
-            link=url_for("dashboard") + "?tab=annunci"
+            messaggio_notifica,
+            link=link_notifica
         )
 
         emit_update_notifications(utente_id)
+
+        try:
+            invia_push(
+                utente_id,
+                "Annuncio approvato ✅",
+                messaggio_notifica,
+                url=link_notifica
+            )
+        except Exception as e:
+            log_exception_safe("⚠️ Errore push approvazione annuncio", e, {"user_id": utente_id}, production=True)
 
     # 🔁 Aggiorna counters admin (annunci in attesa)
     invalidate_admin_counters()
@@ -8549,14 +8575,29 @@ def rifiuta_annuncio(id):
 
     # 3️⃣ Notifica dopo commit completo
     if utente_id:
+        messaggio_notifica = (
+            "Il tuo annuncio è stato rifiutato perché non conforme alle linee guida di MyLocalCare. "
+            "Puoi modificarlo e ripubblicarlo. ❌"
+        )
+        link_notifica = url_for("dashboard") + "?tab=annunci"
+
         crea_notifica(
             utente_id,
-            "Il tuo annuncio è stato rifiutato perché non conforme alle linee guida di MyLocalCare. "
-            "Puoi modificarlo e ripubblicarlo. ❌",
-            link=url_for("dashboard") + "?tab=annunci"
+            messaggio_notifica,
+            link=link_notifica
         )
 
         emit_update_notifications(utente_id)
+
+        try:
+            invia_push(
+                utente_id,
+                "Annuncio rifiutato ❌",
+                messaggio_notifica,
+                url=link_notifica
+            )
+        except Exception as e:
+            log_exception_safe("⚠️ Errore push rifiuto annuncio", e, {"user_id": utente_id}, production=True)
 
     invalidate_admin_counters()
 
