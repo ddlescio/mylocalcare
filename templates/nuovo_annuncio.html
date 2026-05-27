@@ -43,7 +43,7 @@
       </div>
 
     </div>
-    
+
     {% set current_username = annuncio['username'] if modalita == 'modifica' else (request.form.get('username') or (g.utente['username'] if g.utente else '')) %}
 
     {% set current_tipo_annuncio = annuncio['tipo_annuncio'] if modalita == 'modifica' else (request.form.get('tipo_annuncio', '')) %}
@@ -764,7 +764,7 @@
         >
       </div>
 
-      <div class="flex flex-col sm:flex-row gap-3 sm:justify-end pt-2">
+      <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-2">
 
         <button
           type="button"
