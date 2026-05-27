@@ -436,6 +436,40 @@ def crea_tabella_video_config():
     conn.commit()
     conn.close()
     print("✅ Tabella 'video_config' pronta.")
+
+# ---------------------------------------------------------
+# 🤖 STORICO UTILIZZO OPENAI
+# ---------------------------------------------------------
+def crea_tabella_openai_usage_giornaliero():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql("""
+    CREATE TABLE IF NOT EXISTS openai_usage_giornaliero (
+        data TEXT PRIMARY KEY,
+        mese TEXT NOT NULL,
+        costo_raw TEXT DEFAULT '0',
+        richieste INTEGER DEFAULT 0,
+        input_tokens INTEGER DEFAULT 0,
+        output_tokens INTEGER DEFAULT 0,
+        aggiornato_il TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """))
+
+    if IS_POSTGRES:
+        try:
+            c.execute(sql("""
+                GRANT SELECT, INSERT, UPDATE, DELETE
+                ON TABLE openai_usage_giornaliero
+                TO localcare_app;
+            """))
+        except Exception as e:
+            print("⚠️ GRANT openai_usage_giornaliero non eseguito:", e)
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'openai_usage_giornaliero' pronta.")
+
 # ---------------------------------------------------------
 # ⭐ TABELLA RECENSIONI
 # ---------------------------------------------------------
@@ -1322,6 +1356,7 @@ def inizializza_database():
     crea_tabella_video_call_log()
     crea_tabella_video_limiti_mensili()
     crea_tabella_video_config()
+    crea_tabella_openai_usage_giornaliero()
 
     # 💳 Monetizzazione / Boost / Vetrina / Contatti
     crea_tabella_servizi()

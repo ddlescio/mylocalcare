@@ -2604,21 +2604,31 @@ def get_openai_month_cost():
 def ensure_openai_usage_storico_table():
     conn = get_db_connection()
 
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS openai_usage_giornaliero (
-            data TEXT PRIMARY KEY,
-            mese TEXT NOT NULL,
-            costo_raw TEXT DEFAULT '0',
-            richieste INTEGER DEFAULT 0,
-            input_tokens INTEGER DEFAULT 0,
-            output_tokens INTEGER DEFAULT 0,
-            aggiornato_il TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS openai_usage_giornaliero (
+                data TEXT PRIMARY KEY,
+                mese TEXT NOT NULL,
+                costo_raw TEXT DEFAULT '0',
+                richieste INTEGER DEFAULT 0,
+                input_tokens INTEGER DEFAULT 0,
+                output_tokens INTEGER DEFAULT 0,
+                aggiornato_il TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
-    conn.commit()
-    conn.close()
+        conn.commit()
 
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        print("❌ Impossibile creare tabella openai_usage_giornaliero:", e)
+
+    finally:
+        conn.close()
 
 def salva_openai_usage_giornaliero(stats):
     if not stats or not stats.get("ok"):
