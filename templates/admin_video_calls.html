@@ -63,88 +63,181 @@
     </div>
   </div>
 
-  {% if not mesi %}
-    <div class="bg-white border rounded-xl shadow-sm p-5">
-      <p class="text-slate-500">Nessuna chiamata registrata.</p>
+  <!-- TAB TIPO FINESTRA BROWSER -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+
+    <!-- TESTATA TAB -->
+    <div class="flex items-center gap-2 bg-slate-100 px-3 pt-3 border-b border-slate-200">
+      <button type="button"
+              id="tabLocalCare"
+              class="video-tab-btn px-4 py-2 rounded-t-xl bg-white text-slate-800 font-semibold text-sm border border-b-white shadow-sm">
+        Dati LocalCare
+      </button>
+
+      <button type="button"
+              id="tabDaily"
+              class="video-tab-btn px-4 py-2 rounded-t-xl bg-slate-200 text-slate-500 font-semibold text-sm border border-transparent hover:bg-white hover:text-slate-800 transition">
+        Dati Daily ufficiali
+      </button>
     </div>
-  {% endif %}
 
-  {% for mese, data in mesi.items() %}
-    <div class="mb-4">
+    <div class="p-4">
 
-      <!-- HEADER MESE -->
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-xl font-bold text-slate-700">
-          📅 {{ mese }}
-        </h2>
+      <!-- PANNELLO LOCALCARE -->
+      <div id="panelLocalCare">
 
-        <div class="text-sm text-slate-600">
-          <div class="text-right">
-            <div>
-              <b>{{ data.participant_used }}</b> / 10000 participant-minutes
-            </div>
-
-            <div class="text-xs text-slate-500">
-              Restanti: {{ data.participant_remaining }}
-            </div>
-
-            <div class="mt-1 font-semibold">
-              Costo mese: € {{ '%.2f' % (data.costo / 100) }}
-            </div>
+        {% if not mesi %}
+          <div class="bg-white border rounded-xl shadow-sm p-5">
+            <p class="text-slate-500">Nessuna chiamata registrata.</p>
           </div>
-        </div>
+        {% endif %}
+
+        {% for mese, data in mesi.items() %}
+          <div class="mb-4">
+
+            <!-- HEADER MESE -->
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-xl font-bold text-slate-700">
+                📅 {{ mese }}
+              </h2>
+
+              <div class="text-sm text-slate-600">
+                <div class="text-right">
+                  <div>
+                    <b>{{ data.participant_used }}</b> / 10000 participant-minutes
+                  </div>
+
+                  <div class="text-xs text-slate-500">
+                    Restanti: {{ data.participant_remaining }}
+                  </div>
+
+                  <div class="mt-1 font-semibold">
+                    Costo mese: € {{ '%.2f' % (data.costo / 100) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TABELLA LOCALCARE -->
+            <div class="overflow-x-auto bg-white border rounded-xl shadow-sm">
+              <table class="min-w-full text-sm">
+                <thead class="bg-slate-100 text-slate-600">
+                  <tr>
+                    <th class="p-3 text-left">Utente 1</th>
+                    <th class="p-3 text-left">Utente 2</th>
+                    <th class="p-3">Inizio</th>
+                    <th class="p-3">Fine</th>
+                    <th class="p-3">Durata</th>
+                    <th class="p-3">Costo</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for c in data.calls %}
+                    <tr class="border-t hover:bg-slate-50">
+                      <td class="p-3 font-medium">
+                        {{ c.user1_name }}
+                      </td>
+
+                      <td class="p-3 font-medium">
+                        {{ c.user2_name }}
+                      </td>
+
+                      <td class="p-3 text-center">
+                        {{ c.start_date }}<br>
+                        <span class="text-slate-500 text-xs">{{ c.start_time }}</span>
+                      </td>
+
+                      <td class="p-3 text-center">
+                        {{ c.end_time }}
+                      </td>
+
+                      <td class="p-3 text-center">
+                        {{ (c.durata_secondi or 0) // 60 }} min
+                      </td>
+
+                      <td class="p-3 text-center font-semibold text-purple-600">
+                        € {{ '%.2f' % ((c.costo_stimato_cent or 0) / 100) }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        {% endfor %}
+
       </div>
 
-      <!-- TABELLA -->
-      <div class="overflow-x-auto bg-white border rounded-xl shadow-sm">
-        <table class="min-w-full text-sm">
-          <thead class="bg-slate-100 text-slate-600">
-            <tr>
-              <th class="p-3 text-left">Utente 1</th>
-              <th class="p-3 text-left">Utente 2</th>
-              <th class="p-3">Inizio</th>
-              <th class="p-3">Fine</th>
-              <th class="p-3">Durata</th>
-              <th class="p-3">Costo</th>
-            </tr>
-          </thead>
+      <!-- PANNELLO DAILY -->
+      <div id="panelDaily" class="hidden">
 
-          <tbody>
-            {% for c in data.calls %}
-              <tr class="border-t hover:bg-slate-50">
-                <td class="p-3 font-medium">
-                  {{ c.user1_name }}
-                </td>
+        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+          <div class="text-3xl mb-2">📡</div>
 
-                <td class="p-3 font-medium">
-                  {{ c.user2_name }}
-                </td>
+          <h2 class="text-lg font-bold text-slate-800">
+            Dati Daily ufficiali
+          </h2>
 
-                <td class="p-3 text-center">
-                  {{ c.start_date }}<br>
-                  <span class="text-slate-500 text-xs">{{ c.start_time }}</span>
-                </td>
+          <p class="text-sm text-slate-500 mt-2 max-w-xl mx-auto">
+            Qui mostreremo i dati ufficiali letti direttamente da Daily:
+            sessioni, durata reale, participant-minutes e confronto con i dati salvati in LocalCare.
+          </p>
 
-                <td class="p-3 text-center">
-                  {{ c.end_time }}
-                </td>
+          <p class="text-xs text-slate-400 mt-4">
+            Nel prossimo passaggio colleghiamo questa sezione alle API Daily.
+          </p>
+        </div>
 
-                <td class="p-3 text-center">
-                  {{ (c.durata_secondi or 0) // 60 }} min
-                </td>
-
-                <td class="p-3 text-center font-semibold text-purple-600">
-                  € {{ '%.2f' % ((c.costo_stimato_cent or 0) / 100) }}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
       </div>
 
     </div>
-  {% endfor %}
+  </div>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const tabLocalCare = document.getElementById("tabLocalCare");
+  const tabDaily = document.getElementById("tabDaily");
+  const panelLocalCare = document.getElementById("panelLocalCare");
+  const panelDaily = document.getElementById("panelDaily");
+
+  function setActiveTab(active) {
+    if (!tabLocalCare || !tabDaily || !panelLocalCare || !panelDaily) return;
+
+    if (active === "localcare") {
+      panelLocalCare.classList.remove("hidden");
+      panelDaily.classList.add("hidden");
+
+      tabLocalCare.className =
+        "video-tab-btn px-4 py-2 rounded-t-xl bg-white text-slate-800 font-semibold text-sm border border-b-white shadow-sm";
+
+      tabDaily.className =
+        "video-tab-btn px-4 py-2 rounded-t-xl bg-slate-200 text-slate-500 font-semibold text-sm border border-transparent hover:bg-white hover:text-slate-800 transition";
+    }
+
+    if (active === "daily") {
+      panelDaily.classList.remove("hidden");
+      panelLocalCare.classList.add("hidden");
+
+      tabDaily.className =
+        "video-tab-btn px-4 py-2 rounded-t-xl bg-white text-slate-800 font-semibold text-sm border border-b-white shadow-sm";
+
+      tabLocalCare.className =
+        "video-tab-btn px-4 py-2 rounded-t-xl bg-slate-200 text-slate-500 font-semibold text-sm border border-transparent hover:bg-white hover:text-slate-800 transition";
+    }
+  }
+
+  tabLocalCare?.addEventListener("click", () => {
+    setActiveTab("localcare");
+  });
+
+  tabDaily?.addEventListener("click", () => {
+    setActiveTab("daily");
+  });
+});
+</script>
 
 {% endblock %}
