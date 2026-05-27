@@ -173,25 +173,120 @@
       <!-- PANNELLO DAILY -->
       <div id="panelDaily" class="hidden">
 
-        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-          <div class="text-3xl mb-2">📡</div>
+        {% if not daily_stats.ok %}
+          <div class="rounded-2xl border border-red-200 bg-red-50 p-6">
+            <h2 class="text-lg font-bold text-red-700">
+              Errore lettura dati Daily
+            </h2>
 
-          <h2 class="text-lg font-bold text-slate-800">
-            Dati Daily ufficiali
-          </h2>
+            <p class="text-sm text-red-600 mt-2">
+              {{ daily_stats.error }}
+            </p>
+          </div>
 
-          <p class="text-sm text-slate-500 mt-2 max-w-xl mx-auto">
-            Qui mostreremo i dati ufficiali letti direttamente da Daily:
-            sessioni, durata reale, participant-minutes e confronto con i dati salvati in LocalCare.
-          </p>
+        {% else %}
 
-          <p class="text-xs text-slate-400 mt-4">
-            Nel prossimo passaggio colleghiamo questa sezione alle API Daily.
-          </p>
-        </div>
+          <!-- RIEPILOGO DAILY -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+            <div class="bg-white border rounded-2xl shadow-sm p-5">
+              <p class="text-sm text-slate-500">Meeting ufficiali Daily</p>
+              <p class="text-3xl font-bold text-slate-800 mt-2">
+                {{ daily_stats.total_meetings }}
+              </p>
+            </div>
+
+            <div class="bg-white border rounded-2xl shadow-sm p-5">
+              <p class="text-sm text-slate-500">Durata totale</p>
+              <p class="text-3xl font-bold text-purple-700 mt-2">
+                {{ (daily_stats.total_duration_seconds // 60) }} min
+              </p>
+            </div>
+
+            <div class="bg-white border rounded-2xl shadow-sm p-5">
+              <p class="text-sm text-slate-500">Participant-minutes ufficiali</p>
+              <p class="text-3xl font-bold text-blue-700 mt-2">
+                {{ daily_stats.total_participant_minutes }}
+              </p>
+            </div>
+
+          </div>
+
+          {% if not daily_stats.meetings %}
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+              <div class="text-3xl mb-2">📡</div>
+
+              <h2 class="text-lg font-bold text-slate-800">
+                Nessun meeting Daily nel mese corrente
+              </h2>
+
+              <p class="text-sm text-slate-500 mt-2">
+                Daily non ha restituito sessioni ufficiali per il periodo selezionato.
+              </p>
+            </div>
+
+          {% else %}
+
+            <!-- TABELLA DAILY -->
+            <div class="overflow-x-auto bg-white border rounded-xl shadow-sm">
+              <table class="min-w-full text-sm">
+                <thead class="bg-slate-100 text-slate-600">
+                  <tr>
+                    <th class="p-3 text-left">Room</th>
+                    <th class="p-3">Inizio</th>
+                    <th class="p-3">Durata</th>
+                    <th class="p-3">Partecipanti</th>
+                    <th class="p-3">Participant-minutes</th>
+                    <th class="p-3">Stato</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for m in daily_stats.meetings %}
+                    <tr class="border-t hover:bg-slate-50">
+                      <td class="p-3 font-medium text-slate-700">
+                        {{ m.room }}
+                      </td>
+
+                      <td class="p-3 text-center">
+                        {{ m.start_date }}<br>
+                        <span class="text-slate-500 text-xs">{{ m.start_time }}</span>
+                      </td>
+
+                      <td class="p-3 text-center">
+                        {{ m.duration_minutes }} min
+                      </td>
+
+                      <td class="p-3 text-center">
+                        {{ m.participant_count }}
+                      </td>
+
+                      <td class="p-3 text-center font-semibold text-blue-700">
+                        {{ m.participant_minutes }}
+                      </td>
+
+                      <td class="p-3 text-center">
+                        {% if m.ongoing %}
+                          <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 text-xs font-semibold px-3 py-1">
+                            In corso
+                          </span>
+                        {% else %}
+                          <span class="inline-flex items-center rounded-full bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1">
+                            Terminata
+                          </span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          {% endif %}
+
+        {% endif %}
 
       </div>
-
     </div>
   </div>
 

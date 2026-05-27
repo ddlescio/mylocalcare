@@ -4245,6 +4245,110 @@ from datetime import datetime, timedelta
 # ==========================================================
 # 🎥 ADMIN — VIDEO CALLS STORICO COMPLETO
 # ==========================================================
+def get_daily_meetings_month():
+    api_key = os.getenv("DAILY_API_KEY")
+
+    if not api_key:
+        return {
+            "ok": False,
+            "error": "DAILY_API_KEY mancante",
+            "meetings": [],
+            "total_meetings": 0,
+            "total_duration_seconds": 0,
+            "total_participant_minutes": 0
+        }
+
+    try:
+        now = datetime.now(timezone.utc)
+        start_month = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+
+        start_time = int(start_month.timestamp())
+        end_time = int(now.timestamp())
+
+        response = requests.get(
+            "https://api.daily.co/v1/meetings",
+            headers={
+                "Authorization": f"Bearer {api_key}"
+            },
+            params={
+                "timeframe_start": start_time,
+                "timeframe_end": end_time,
+                "limit": 100
+            },
+            timeout=15
+        )
+
+        if response.status_code != 200:
+            return {
+                "ok": False,
+                "error": response.text,
+                "meetings": [],
+                "total_meetings": 0,
+                "total_duration_seconds": 0,
+                "total_participant_minutes": 0
+            }
+
+        data = response.json()
+        meetings = []
+
+        total_duration_seconds = 0
+        total_participant_minutes = 0
+
+        for item in data.get("data", []):
+            start_ts = item.get("start_time")
+            duration = int(item.get("duration") or 0)
+            room = item.get("room") or "—"
+            ongoing = bool(item.get("ongoing"))
+
+            participants = item.get("participants") or {}
+            participant_count = len(participants) if isinstance(participants, dict) else 0
+
+            participant_minutes = 0
+            if participants and isinstance(participants, dict):
+                for _, p in participants.items():
+                    join_time = p.get("join_time")
+                    leave_time = p.get("leave_time")
+
+                    if join_time and leave_time:
+                        participant_minutes += max(0, int((leave_time - join_time) / 60))
+
+            if participant_minutes == 0 and participant_count > 0 and duration > 0:
+                participant_minutes = int((duration * participant_count) / 60)
+
+            total_duration_seconds += duration
+            total_participant_minutes += participant_minutes
+
+            meetings.append({
+                "id": item.get("id"),
+                "room": room,
+                "start_date": datetime.fromtimestamp(start_ts, timezone.utc).strftime("%d/%m/%Y") if start_ts else "—",
+                "start_time": datetime.fromtimestamp(start_ts, timezone.utc).strftime("%H:%M") if start_ts else "—",
+                "duration_minutes": int(duration / 60),
+                "ongoing": ongoing,
+                "participant_count": participant_count,
+                "participant_minutes": participant_minutes
+            })
+
+        return {
+            "ok": True,
+            "error": None,
+            "meetings": meetings,
+            "total_meetings": len(meetings),
+            "total_duration_seconds": total_duration_seconds,
+            "total_participant_minutes": total_participant_minutes
+        }
+
+    except Exception as e:
+        return {
+            "ok": False,
+            "error": str(e),
+            "meetings": [],
+            "total_meetings": 0,
+            "total_duration_seconds": 0,
+            "total_participant_minutes": 0
+        }
+
+
 @app.route("/admin/video-calls")
 @admin_required
 def admin_video_calls():
@@ -4323,12 +4427,15 @@ def admin_video_calls():
 
         mesi[mese]["calls"].append(call)
 
+    daily_stats = get_daily_meetings_month()
+
     return render_template(
         "admin_video_calls.html",
         mesi=mesi,
-        video_calls_enabled=is_video_calls_enabled()
+        video_calls_enabled=is_video_calls_enabled(),
+        daily_stats=daily_stats
     )
-
+    
 # ---------------------------------------------------------
 # 💰 ADMIN - SERVIZI (MONETIZZAZIONE) - SOLO CONFIG (STEP 3)
 # ---------------------------------------------------------
