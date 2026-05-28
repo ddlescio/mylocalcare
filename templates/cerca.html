@@ -175,8 +175,11 @@
           {% elif categoria == 'escursioni & sport' %}Escursioni & Sport
           {% elif categoria == 'biglietti spettacoli' %}Biglietti Spettacoli
           {% elif categoria == 'libri scuola' %}Libri Scuola
-          {% else %}{{ categoria|capitalize }}
-          {% endif %}
+          {% elif categoria == 'family-kids' %}Family & Kids
+          {% elif categoria == 'eventi-socialita' %}Eventi & Socialità
+          {% elif categoria == 'spazi-sale' %}Spazi & Sale
+          {% else %}{{ categoria|replace('-', ' ')|title }}
+          {% endif %}          
         </h2>
       </div>
 

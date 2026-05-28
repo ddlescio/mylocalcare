@@ -385,18 +385,26 @@ def ensure_x25519_keys(user_id):
 
 # Slug -> chiave nel JSON + label umana
 CATEGORY_MAP = {
-    "operatori-benessere": ("operatori benessere", "Operatori Benessere"),
-    "operatori benessere": ("operatori benessere", "Operatori Benessere"),
+    "operatori-benessere": ("operatori-benessere", "Operatori Benessere"),
+    "operatori benessere": ("operatori-benessere", "Operatori Benessere"),
+
     "babysitter": ("babysitter", "Babysitter"),
-    "pet-sitter": ("petsitter", "Pet-Sitter"),
+    "pet-sitter": ("pet-sitter", "Pet-Sitter"),
+    "petsitter": ("pet-sitter", "Pet-Sitter"),
     "caregiver": ("caregiver", "Caregiver"),
     "ripetizioni": ("ripetizioni", "Ripetizioni"),
     "aiuto-in-casa": ("aiuto-in-casa", "Aiuto in Casa"),
+
     "escursioni-sport": ("escursioni-sport", "Escursioni & Sport"),
     "biglietti-spettacoli": ("biglietti-spettacoli", "Biglietti Spettacoli"),
     "libri-scuola": ("libri-scuola", "Libri Scuola"),
     "caffe-parole": ("caffe-parole", "Caffè & Parole"),
+
+    "family-kids": ("family-kids", "Family & Kids"),
+    "eventi-socialita": ("eventi-socialita", "Eventi & Socialità"),
+    "spazi-sale": ("spazi-sale", "Spazi & Sale"),
 }
+
 # =========================================
 # MATCH: categorie (ordine = offro_1..offro_10 / cerco_1..cerco_10)
 # =========================================
@@ -414,16 +422,19 @@ def to_slug(val: str) -> str:
 
 
 CATEGORIE_PREFERENZE = [
-    "Operatori benessere",             # 1
-    "Aiuto in casa",                   # 2
-    "Ripetizioni",                     # 3
-    "Babysitter",                      # 4
-    "Pet-sitter",                      # 5
-    "Caregiver",                       # 6
-    "escursioni-sport",                # 7
-    "Biglietti spettacoli",            # 8
-    "Libri scuola",                    # 9
-    "Caffe & parole",                  # 10
+    "Operatori benessere",     # 1
+    "Aiuto in casa",           # 2
+    "Ripetizioni",             # 3
+    "Babysitter",              # 4
+    "Pet-sitter",              # 5
+    "Caregiver",               # 6
+    "Escursioni & Sport",      # 7
+    "Biglietti spettacoli",    # 8
+    "Libri scuola",            # 9
+    "Caffe & parole",          # 10
+    "Family & Kids",           # 11
+    "Eventi & Socialità",      # 12
+    "Spazi & Sale",            # 13
 ]
 
 # slug -> indice 1..10
@@ -9224,8 +9235,8 @@ def dashboard():
                orari, preferenze_contatto,
                visibile_pubblicamente, visibile_in_chat,
                media_recensioni, numero_recensioni, foto_profilo, copertina, foto_galleria,
-               offro_1, offro_2, offro_3, offro_4, offro_5, offro_6, offro_7, offro_8, offro_9, offro_10,
-               cerco_1, cerco_2, cerco_3, cerco_4, cerco_5, cerco_6, cerco_7, cerco_8, cerco_9, cerco_10,
+               offro_1, offro_2, offro_3, offro_4, offro_5, offro_6, offro_7, offro_8, offro_9, offro_10, offro_11, offro_12, offro_13,
+               cerco_1, cerco_2, cerco_3, cerco_4, cerco_5, cerco_6, cerco_7, cerco_8, cerco_9, cerco_10, cerco_11, cerco_12, cerco_13,
                esperienza_1, esperienza_2, esperienza_3,
                studio_1, studio_2, studio_3, certificazioni,
                descrizione
@@ -9242,7 +9253,7 @@ def dashboard():
 
     utente = dict(ut)
     # cast sicuro dei flag (possono essere None/0/1 o stringhe)
-    for i in range(1, 11):
+    for i in range(1, 14):
         utente[f"offro_{i}"] = int(utente.get(f"offro_{i}") or 0)
         utente[f"cerco_{i}"] = int(utente.get(f"cerco_{i}") or 0)
 
@@ -9347,8 +9358,8 @@ def utente_update_info():
         vals = request.form.getlist(name)
         return int(vals[-1]) if vals else 0
 
-    offro = [_cb(f"offro_{i}") for i in range(1, 11)]
-    cerco = [_cb(f"cerco_{i}") for i in range(1, 11)]
+    offro = [_cb(f"offro_{i}") for i in range(1, 14)]
+    cerco = [_cb(f"cerco_{i}") for i in range(1, 14)]
 
     privacy_debug("update_info attività", {
         "user_id": user_id,
@@ -9366,8 +9377,10 @@ def utente_update_info():
             frase = ?,
             offro_1 = ?, offro_2 = ?, offro_3 = ?, offro_4 = ?, offro_5 = ?,
             offro_6 = ?, offro_7 = ?, offro_8 = ?, offro_9 = ?, offro_10 = ?,
+            offro_11 = ?, offro_12 = ?, offro_13 = ?,
             cerco_1 = ?, cerco_2 = ?, cerco_3 = ?, cerco_4 = ?, cerco_5 = ?,
-            cerco_6 = ?, cerco_7 = ?, cerco_8 = ?, cerco_9 = ?, cerco_10 = ?
+            cerco_6 = ?, cerco_7 = ?, cerco_8 = ?, cerco_9 = ?, cerco_10 = ?,
+            cerco_11 = ?, cerco_12 = ?, cerco_13 = ?
         WHERE id = ?
     """
 
@@ -11667,6 +11680,12 @@ def cerca():
         "libri-scuola": "libri scuola",
         "caffe-parole": "caffe & parole",
         "caffe-e-parole": "caffe & parole",
+
+        # Nuove categorie
+        "family-kids": "family & kids",
+        "eventi-socialita": "eventi & socialita",
+        "eventi-socialità": "eventi & socialità",
+        "spazi-sale": "spazi & sale",
     }
 
     if cat_slug in alias_map:
@@ -13958,7 +13977,7 @@ def nuovo_annuncio():
                 if not file.mimetype.startswith("image/"):
                     flash("Puoi caricare solo immagini, non video.", "warning")
                     return redirect(url_for("nuovo_annuncio"))
-                
+
                 filename = f"{uuid.uuid4().hex}_{file.filename}"
                 file.save(os.path.join(upload_dir, filename))
                 media_paths.append(f"uploads/annunci/{filename}")
@@ -14199,8 +14218,8 @@ def profilo_pubblico(id):
                visibile_pubblicamente, visibile_in_chat,
                media_recensioni, numero_recensioni,
                foto_profilo, copertina, foto_galleria,
-               offro_1, offro_2, offro_3, offro_4, offro_5, offro_6, offro_7, offro_8,
-               cerco_1, cerco_2, cerco_3, cerco_4, cerco_5, cerco_6, cerco_7, cerco_8,
+               offro_1, offro_2, offro_3, offro_4, offro_5, offro_6, offro_7, offro_8, offro_9, offro_10, offro_11, offro_12, offro_13,
+               cerco_1, cerco_2, cerco_3, cerco_4, cerco_5, cerco_6, cerco_7, cerco_8, cerco_9, cerco_10, cerco_11, cerco_12, cerco_13,
                esperienza_1, esperienza_2, esperienza_3,
                studio_1, studio_2, studio_3,
                certificazioni, descrizione
@@ -14271,21 +14290,12 @@ def profilo_pubblico(id):
     # =========================================================
     # 🔹 OFFRO / CERCO
     # =========================================================
-    categorie = [
-        "Operatori benessere",
-        "Aiuto in casa",
-        "Ripetizioni",
-        "Pet-sitter",
-        "Caregiver",
-        "Gite / Compagni di allenamento",
-        "Biglietti spettacoli",
-        "Libri scuola"
-    ]
+    categorie = CATEGORIE_PREFERENZE
 
     offro_presenti = []
     cerco_presenti = []
 
-    for i in range(1, 9):
+    for i in range(1, len(categorie) + 1):
         try:
             utente[f"offro_{i}"] = int(utente.get(f"offro_{i}") or 0)
             utente[f"cerco_{i}"] = int(utente.get(f"cerco_{i}") or 0)

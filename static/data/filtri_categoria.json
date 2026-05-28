@@ -105,12 +105,52 @@
     "Università",
     "Altro"
   ],
+  
   "caffe-parole": [
     "Inglese",
     "Francese",
     "Spagnolo",
     "Tedesco",
     "Italiano per stranieri",
+    "Altro"
+  ],
+
+  "family-kids": [
+    "Ludoteca",
+    "Feste compleanno",
+    "Laboratori creativi",
+    "Campus estivi",
+    "Baby parking",
+    "Giochi educativi",
+    "Eventi bambini",
+    "Area gioco",
+    "Genitori & bambini",
+    "Altro"
+  ],
+
+  "eventi-socialita": [
+    "Aperitivi",
+    "Eventi culturali",
+    "Networking",
+    "Giochi da tavolo",
+    "Serate tema",
+    "Gruppi hobby",
+    "Incontri linguistici",
+    "Eventi musicali",
+    "Community locali",
+    "Altro"
+  ],
+
+  "spazi-sale": [
+    "Sala compleanni",
+    "Coworking",
+    "Sala riunioni",
+    "Sala corsi",
+    "Studio professionale",
+    "Sala eventi",
+    "Sala musica",
+    "Location feste",
+    "Affitto temporaneo",
     "Altro"
   ]
 }

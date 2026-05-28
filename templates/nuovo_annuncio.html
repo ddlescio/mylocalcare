@@ -212,8 +212,16 @@
               Aiuto in casa
             </option>
 
-            <option value="escursioni-sport" {% if current_categoria == 'escursioni-sport' %}selected{% endif %}>
-              Gite / Compagni di allenamento
+            <option value="family-kids" {% if current_categoria == 'family-kids' %}selected{% endif %}>
+              Family & Kids
+            </option>
+
+            <option value="eventi-socialita" {% if current_categoria == 'eventi-socialita' %}selected{% endif %}>
+              Eventi & Socialità
+            </option>
+
+            <option value="spazi-sale" {% if current_categoria == 'spazi-sale' %}selected{% endif %}>
+              Spazi & Sale
             </option>
 
             <option value="biglietti-spettacoli" {% if current_categoria == 'biglietti-spettacoli' %}selected{% endif %}>
@@ -222,6 +230,10 @@
 
             <option value="libri-scuola" {% if current_categoria == 'libri-scuola' %}selected{% endif %}>
               Libri scuola
+            </option>
+
+            <option value="escursioni-sport" {% if current_categoria == 'escursioni-sport' %}selected{% endif %}>
+              Gite / Compagni di allenamento
             </option>
 
             <option value="caffe-parole" {% if current_categoria == 'caffe-parole' %}selected{% endif %}>
@@ -451,7 +463,7 @@
           <h3 class="text-2xl font-bold text-slate-900">Immagini</h3>
 
           <p class="text-sm sm:text-base text-slate-600">Carica una o più foto per rendere l’annuncio più efficace.</p>
-          
+
         </div>
 
         <div class="space-y-2">

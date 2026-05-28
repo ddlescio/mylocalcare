@@ -73,6 +73,9 @@ def crea_tabella_utenti():
         offro_8 INTEGER DEFAULT 0,
         offro_9 INTEGER DEFAULT 0,
         offro_10 INTEGER DEFAULT 0,
+        offro_11 INTEGER DEFAULT 0,
+        offro_12 INTEGER DEFAULT 0,
+        offro_13 INTEGER DEFAULT 0,
         cerco_1 INTEGER DEFAULT 0,
         cerco_2 INTEGER DEFAULT 0,
         cerco_3 INTEGER DEFAULT 0,
@@ -83,6 +86,9 @@ def crea_tabella_utenti():
         cerco_8 INTEGER DEFAULT 0,
         cerco_9 INTEGER DEFAULT 0,
         cerco_10 INTEGER DEFAULT 0,
+        cerco_11 INTEGER DEFAULT 0,
+        cerco_12 INTEGER DEFAULT 0,
+        cerco_13 INTEGER DEFAULT 0,
 
         -- 📞 Contatti e presenza online
         telefono TEXT,
@@ -1148,9 +1154,15 @@ def aggiorna_colonne_mancanti():
         "preferenze_contatto": "TEXT",
         "offro_9": "INTEGER DEFAULT 0",
         "offro_10": "INTEGER DEFAULT 0",
+        "offro_11": "INTEGER DEFAULT 0",
+        "offro_12": "INTEGER DEFAULT 0",
+        "offro_13": "INTEGER DEFAULT 0",
         "cerco_9": "INTEGER DEFAULT 0",
         "cerco_10": "INTEGER DEFAULT 0",
-
+        "cerco_11": "INTEGER DEFAULT 0",
+        "cerco_12": "INTEGER DEFAULT 0",
+        "cerco_13": "INTEGER DEFAULT 0",
+        
         # Visibilità / stato account
         "visibile_pubblicamente": "INTEGER DEFAULT 1",
         "visibile_in_chat": "INTEGER DEFAULT 1",
