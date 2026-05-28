@@ -58,47 +58,54 @@
                 </p>
               </div>
 
-              {% if parti|length > 0 %}
+              {% if n['tipo'] == 'match' %}
                 <div class="notification-meta-row">
-
-                  {% if parti|length > 0 %}
-                    <span class="notification-pill notification-pill-category">
-                      {{ parti[0] }}
-                    </span>
-                  {% endif %}
-
-                  {% if parti|length > 1 %}
-                    {% if parti[1] == 'offro' %}
-                      <span class="notification-pill notification-pill-offro">
-                        offro
-                      </span>
-                    {% else %}
-                      <span class="notification-pill notification-pill-cerco">
-                        cerco
+                  {% for riga in righe[1:] %}
+                    {% if riga.strip() %}
+                      <span class="notification-pill notification-pill-category">
+                        {{ riga.strip() }}
                       </span>
                     {% endif %}
-                  {% endif %}
-
-                  {% if parti|length > 2 %}
-                    <span class="notification-meta-text">
-                      a {{ parti[2] }}
-                    </span>
-                  {% endif %}
-
-                  {% if parti|length > 3 %}
-                    <span class="notification-meta-text is-secondary">
-                      • {{ parti[3] }}
-                    </span>
-                  {% endif %}
+                  {% endfor %}
                 </div>
-              {% endif %}
+              {% else %}
+                {% if parti|length > 0 %}
+                  <div class="notification-meta-row">
 
-              {% if parti|length > 4 and parti[4] %}
-                <p class="notification-card-quote">
-                  “{{ parti[4] }}”
-                </p>
-              {% endif %}
+                    {% if parti|length > 0 %}
+                      <span class="notification-pill notification-pill-category">
+                        {{ parti[0] }}
+                      </span>
+                    {% endif %}
 
+                    {% if parti|length > 1 %}
+                      {% if parti[1] == 'offro' %}
+                        <span class="notification-pill notification-pill-offro">offro</span>
+                      {% else %}
+                        <span class="notification-pill notification-pill-cerco">cerco</span>
+                      {% endif %}
+                    {% endif %}
+
+                    {% if parti|length > 2 %}
+                      <span class="notification-meta-text">
+                        a {{ parti[2] }}
+                      </span>
+                    {% endif %}
+
+                    {% if parti|length > 3 %}
+                      <span class="notification-meta-text is-secondary">
+                        • {{ parti[3] }}
+                      </span>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                {% if parti|length > 4 and parti[4] %}
+                  <p class="notification-card-quote">
+                    “{{ parti[4] }}”
+                  </p>
+                {% endif %}
+              {% endif %}
               <div class="notification-card-footer">
                 <p class="notification-card-date">
                   {{ n['data'] | fmt_it_smart }}
