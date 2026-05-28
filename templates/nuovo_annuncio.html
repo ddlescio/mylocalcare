@@ -8,7 +8,7 @@
 
 {% block content %}
 
-<div class="max-w-4xl mx-auto mt-8 sm:mt-10 px-4 sm:px-0">
+<div class="max-w-5xl mx-auto mt-4 sm:mt-10 px-2 sm:px-0">
 
   <!-- 🔙 FRECCIA TORNA INDIETRO -->
 
@@ -70,7 +70,7 @@
           method="POST"
           enctype="multipart/form-data"
           action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalita == 'modifica' else url_for('nuovo_annuncio') }}"
-          class="space-y-8"
+          class="space-y-5 sm:space-y-8"
           data-no-global-loader
           novalidate>
 
