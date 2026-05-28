@@ -456,14 +456,14 @@
 
           <h3 class="text-2xl font-bold text-slate-900">Immagini</h3>
 
-          <p class="text-sm sm:text-base text-slate-600">
+          <p id="media-intro-generico" class="text-sm sm:text-base text-slate-600">
             Carica una o più foto per rendere l’annuncio più efficace.
           </p>
 
           <p id="foto-card-intro"
              class="hidden text-sm sm:text-base text-slate-600 leading-relaxed">
-            Per questa categoria puoi caricare fino a 4 foto e, se vuoi, sceglierne una da mostrare nella card della pagina
-            <strong>Cerca</strong>. Se non selezioni nessuna foto, resterà visibile la tua foto profilo.
+            Carica una o più foto per rendere l’annuncio più efficace: per questa categoria puoi anche sceglierne una da mostrare nella card della pagina
+            <strong>Cerca</strong>, al posto della foto profilo.
           </p>
         </div>
 
@@ -478,15 +478,14 @@
                  class="block w-full text-sm text-slate-700 border-2 border-amber-200 rounded-2xl cursor-pointer bg-white focus:outline-none p-3.5 shadow-sm">
 
           <p class="text-xs text-slate-500">
-            Puoi caricare fino a 4 foto. Puoi aggiungerle una alla volta e rimuoverle prima della pubblicazione.
+            Puoi caricare fino a 4 foto.
           </p>
 
           <input type="hidden" id="foto_card_index" name="foto_card_index" value="">
 
           <div id="foto-card-help"
                class="hidden rounded-2xl border border-amber-200 bg-white/80 p-4 text-sm text-slate-700 leading-relaxed">
-            Se vuoi usare una foto dell’annuncio nella card di ricerca, seleziona una delle immagini qui sotto.
-            Se non selezioni nulla, verrà usata la tua foto profilo.
+            Seleziona una foto solo se vuoi usarla nella card di ricerca. Altrimenti resta la foto profilo.
           </div>
 
           <div id="foto-card-preview-grid"
@@ -1745,10 +1744,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const categoriaSelect = document.getElementById("categoria");
   const mediaInput = document.getElementById("media");
   const fotoCardHelp = document.getElementById("foto-card-help");
+  const mediaIntroGenerico = document.getElementById("media-intro-generico");
+  const fotoCardIntro = document.getElementById("foto-card-intro");
   const fotoCardGrid = document.getElementById("foto-card-preview-grid");
   const fotoCardIndexInput = document.getElementById("foto_card_index");
 
-  if (!categoriaSelect || !mediaInput || !fotoCardHelp || !fotoCardGrid || !fotoCardIndexInput) return;
+  if (!categoriaSelect || !mediaInput || !fotoCardHelp || !fotoCardGrid || !fotoCardIndexInput || !mediaIntroGenerico || !fotoCardIntro) return;
 
   const MAX_FOTO_ANNUNCIO = 4;
   let selectedFiles = [];
@@ -1761,6 +1762,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function categoriaPermetteFotoCard() {
     return categorieConFotoCard.has((categoriaSelect.value || "").trim());
+  }
+
+  function aggiornaIntroMedia() {
+    const permetteFotoCard = categoriaPermetteFotoCard();
+
+    mediaIntroGenerico.classList.toggle("hidden", permetteFotoCard);
+    fotoCardIntro.classList.toggle("hidden", !permetteFotoCard);
   }
 
   function syncInputFiles() {
@@ -1781,6 +1789,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function renderFotoPreview() {
+    aggiornaIntroMedia();
+
     fotoCardGrid.innerHTML = "";
 
     if (!selectedFiles.length) {
@@ -1857,7 +1867,7 @@ document.addEventListener("DOMContentLoaded", function () {
           if (fotoCardIndexInput.value !== "" && String(index) === fotoCardIndexInput.value) {
             radio.checked = true;
             radio.dispatchEvent(new Event("change", { bubbles: true }));
-          }          
+          }
         }
 
         removeBtn.addEventListener("click", function () {
@@ -1874,7 +1884,7 @@ document.addEventListener("DOMContentLoaded", function () {
           const currentIndex = parseInt(fotoCardIndexInput.value || "0", 10);
 
           if (removeIndex === currentIndex || currentIndex >= selectedFiles.length) {
-            fotoCardIndexInput.value = "0";
+            fotoCardIndexInput.value = "";
           }
 
           renderFotoPreview();
