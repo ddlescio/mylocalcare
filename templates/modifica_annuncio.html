@@ -5,12 +5,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-wrapper max-w-4xl mx-auto px-4 sm:px-0 pt-16 sm:pt-20 pb-10">
+<div class="page-wrapper max-w-5xl mx-auto px-2 sm:px-0 pt-12 sm:pt-20 pb-10">
 
-  <div class="relative bg-white shadow-md rounded-3xl p-5 sm:p-8 border border-gray-100">
+  <div class="relative bg-white shadow-md rounded-3xl p-4 sm:p-8 border border-gray-100">
 
     <!-- HEADER PAGINA COMPATTO -->
-    <div class="mb-3 flex items-center justify-center gap-3 text-center">
+    <div class="mb-1 flex items-center justify-center gap-3 text-center">
 
       <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100">
 
@@ -45,7 +45,7 @@
           method="POST"
           enctype="multipart/form-data"
           action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalita == 'modifica' else url_for('nuovo_annuncio') }}"
-          class="space-y-8"
+          class="space-y-5 sm:space-y-8"
           novalidate>
 
       {% if modalita == "modifica" %}
