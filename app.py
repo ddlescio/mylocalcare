@@ -9144,8 +9144,18 @@ def modifica_annuncio(id):
         # =====================================================
         # 📸 MEDIA – gestione immagini
         # =====================================================
-        immagini_rimanenti = request.form.getlist("immagini_rimanenti")
+        media_attuale = [
+            img.strip()
+            for img in (annuncio["media"] or "").split(",")
+            if img.strip()
+        ]
+
         immagini_da_cancellare = request.form.getlist("cancellate")
+
+        immagini_rimanenti = [
+            img for img in media_attuale
+            if img not in immagini_da_cancellare
+        ]
 
         # 🗑️ Elimina immagini rimosse
         for foto in immagini_da_cancellare:
@@ -9157,7 +9167,7 @@ def modifica_annuncio(id):
                     print(f"⚠️ Impossibile eliminare {percorso_file}: {e}")
 
         # 📸 Upload nuove immagini
-        nuove_foto = request.files.getlist("foto") or request.files.getlist("media")
+        nuove_foto = request.files.getlist("media")
         upload_dir = os.path.join("static", "uploads", "annunci")
         os.makedirs(upload_dir, exist_ok=True)
 
@@ -9165,15 +9175,26 @@ def modifica_annuncio(id):
             if foto and foto.filename:
 
                 if not foto.mimetype.startswith("image/"):
-                    flash("Puoi caricare solo immagini, non video.", "warning")
+                    flash("Puoi caricare solo immagini.", "warning")
+                    return redirect(url_for("modifica_annuncio", id=id))
+
+                if len(immagini_rimanenti) >= 4:
+                    flash("Puoi avere al massimo 4 foto per annuncio.", "warning")
                     return redirect(url_for("modifica_annuncio", id=id))
 
                 nome_file = f"{uuid.uuid4().hex}_{foto.filename}"
                 percorso = os.path.join(upload_dir, nome_file)
                 foto.save(percorso)
+
                 immagini_rimanenti.append(f"uploads/annunci/{nome_file}")
 
         media_finale = ",".join(immagini_rimanenti)
+
+        # Foto card opzionale: se non scelta, resta NULL/vuota e in Cerca userai foto profilo
+        foto_card = request.form.get("foto_card_path", "").strip()
+
+        if foto_card and foto_card not in immagini_rimanenti:
+            foto_card = ""
 
         # =====================================================
         # 💾 UPDATE DB
@@ -9192,6 +9213,7 @@ def modifica_annuncio(id):
                 email = ?,
                 bio_utente = ?,
                 media = ?,
+                foto_card = ?,
                 filtri_categoria = ?,
                 stato = 'in_attesa'
             WHERE id = ?
@@ -9207,6 +9229,7 @@ def modifica_annuncio(id):
             email,
             bio,
             media_finale,
+            foto_card,
             ",".join(filtri),
             id
         ))

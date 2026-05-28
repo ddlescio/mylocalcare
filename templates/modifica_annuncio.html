@@ -309,10 +309,18 @@
 
           <h3 class="text-2xl font-bold text-slate-900">Immagini</h3>
 
-          <p class="text-sm sm:text-base text-slate-600">Carica una o più foto per rendere l’annuncio più efficace.</p>
+          <p id="media-intro-generico" class="text-sm sm:text-base text-slate-600">
+            Carica una o più foto per rendere l’annuncio più efficace.
+          </p>
+
+          <p id="foto-card-intro"
+             class="hidden text-sm sm:text-base text-slate-600 leading-relaxed">
+            Carica una o più foto per rendere l’annuncio più efficace: per questa categoria puoi anche sceglierne una da mostrare nella card della pagina
+            <strong>Cerca</strong>, al posto della foto profilo.
+          </p>
         </div>
 
-        <div class="space-y-2">
+        <div class="space-y-3">
           <label for="media" class="flex items-center gap-2 text-base font-bold text-slate-800">
             <span>Immagini</span>
             <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
@@ -320,25 +328,64 @@
 
           <input type="file" id="media" name="media" multiple accept="image/*"
                  class="block w-full text-sm text-slate-700 border-2 border-amber-200 rounded-2xl cursor-pointer bg-white focus:outline-none p-3.5 shadow-sm">
-          <p class="text-xs text-slate-500 mt-1">Puoi caricare più foto (max 10MB ciascuna)</p>
 
-          {% if modalita == 'modifica' and annuncio['media'] %}
-            <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <p class="text-xs text-slate-500">
+            Puoi avere fino a 4 foto per annuncio.
+          </p>
+
+          <input type="hidden" id="foto_card_path" name="foto_card_path" value="{{ annuncio['foto_card'] if annuncio['foto_card'] else '' }}">
+          <input type="hidden" id="foto_card_new_index" name="foto_card_new_index" value="">
+
+          <div id="foto-card-help"
+               class="hidden rounded-2xl border border-amber-200 bg-white/80 p-4 text-sm text-slate-700 leading-relaxed">
+            Seleziona una foto solo se vuoi usarla nella card di ricerca. Altrimenti resta la foto profilo.
+          </div>
+
+          <div id="foto-card-preview-grid"
+               class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+            {% if modalita == 'modifica' and annuncio['media'] %}
               {% for img in annuncio['media'].split(',') if img.strip() %}
-                <div class="relative group">
-                  <img src="{{ url_for('static', filename=img.strip()) }}"
-                       class="rounded-2xl w-full h-32 object-cover border border-gray-200 shadow-sm">
+                {% set img_path = img.strip() %}
 
-                  <label class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs cursor-pointer hidden group-hover:block">
-                    <input type="checkbox" name="cancellate" value="{{ img.strip() }}" class="hidden">
-                    ✕
+                <div class="foto-card-item existing-photo relative rounded-2xl overflow-hidden border-2 {% if annuncio['foto_card'] == img_path %}border-blue-500 ring-4 ring-blue-100{% else %}border-transparent{% endif %} bg-white shadow-sm"
+                     data-existing-path="{{ img_path }}">
+
+                  <img src="{{ url_for('static', filename=img_path) }}"
+                       class="w-full h-32 object-cover">
+
+                  <button type="button"
+                          class="remove-existing-photo absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-red-600 text-white text-sm font-black shadow hover:bg-red-700">
+                    ×
+                  </button>
+
+                  <label class="absolute inset-0 cursor-pointer">
+                    <input type="radio"
+                           name="foto_card_preview_choice"
+                           value="{{ img_path }}"
+                           class="foto-card-existing-radio absolute top-2 right-2 z-20 w-5 h-5 accent-blue-600"
+                           {% if annuncio['foto_card'] == img_path %}checked{% endif %}>
+
+                    <div class="absolute left-2 bottom-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-slate-700 shadow">
+                      Foto ricerca
+                    </div>
                   </label>
+
+                  <input type="checkbox"
+                         name="cancellate"
+                         value="{{ img_path }}"
+                         class="hidden cancellazione-existing-photo">
+
+                  <input type="hidden"
+                         name="immagini_rimanenti"
+                         value="{{ img_path }}"
+                         class="immagine-rimanente-input">
                 </div>
               {% endfor %}
-            </div>
-          {% endif %}
-        </div>
+            {% endif %}
 
+          </div>
+        </div>
       </div>
 
       <!-- PULSANTE -->
@@ -630,4 +677,245 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const categoriaSelect = document.getElementById("categoria");
+  const mediaInput = document.getElementById("media");
+  const fotoCardHelp = document.getElementById("foto-card-help");
+  const mediaIntroGenerico = document.getElementById("media-intro-generico");
+  const fotoCardIntro = document.getElementById("foto-card-intro");
+  const fotoCardGrid = document.getElementById("foto-card-preview-grid");
+  const fotoCardPathInput = document.getElementById("foto_card_path");
+  const fotoCardNewIndexInput = document.getElementById("foto_card_new_index");
+
+  if (!categoriaSelect || !mediaInput || !fotoCardHelp || !fotoCardGrid || !fotoCardPathInput || !fotoCardNewIndexInput || !mediaIntroGenerico || !fotoCardIntro) return;
+
+  const MAX_FOTO_ANNUNCIO = 4;
+  let selectedFiles = [];
+
+  const categorieConFotoCard = new Set([
+    "family-kids",
+    "eventi-socialita",
+    "spazi-sale"
+  ]);
+
+  function categoriaPermetteFotoCard() {
+    return categorieConFotoCard.has((categoriaSelect.value || "").trim());
+  }
+
+  function aggiornaIntroMedia() {
+    const permette = categoriaPermetteFotoCard();
+    const fotoVisibili = fotoCardGrid.querySelectorAll(".foto-card-item:not(.hidden)");
+
+    mediaIntroGenerico.classList.toggle("hidden", permette);
+    fotoCardIntro.classList.toggle("hidden", !permette);
+    fotoCardHelp.classList.toggle("hidden", !permette || fotoVisibili.length === 0);
+
+    if (!permette) {
+      fotoCardPathInput.value = "";
+      fotoCardNewIndexInput.value = "";
+      resetSelezioneCard();
+    }
+
+    aggiornaFotoEsistentiPerCategoria();
+  }
+  
+  function syncInputFiles() {
+    const dataTransfer = new DataTransfer();
+    selectedFiles.forEach(file => dataTransfer.items.add(file));
+    mediaInput.files = dataTransfer.files;
+  }
+
+  function aggiornaVisibilitaGrid() {
+    const fotoVisibili = fotoCardGrid.querySelectorAll(".foto-card-item:not(.hidden)");
+    fotoCardGrid.classList.toggle("hidden", fotoVisibili.length === 0);
+    aggiornaIntroMedia();
+  }
+
+  function aggiornaFotoEsistentiPerCategoria() {
+    const permette = categoriaPermetteFotoCard();
+
+    fotoCardGrid.querySelectorAll(".existing-photo").forEach(wrapper => {
+      const radio = wrapper.querySelector(".foto-card-existing-radio");
+      const label = wrapper.querySelector("label.absolute.inset-0");
+      const badge = wrapper.querySelector("label .absolute.left-2.bottom-2");
+
+      if (radio) {
+        radio.disabled = !permette;
+        radio.classList.toggle("hidden", !permette);
+      }
+
+      if (label) {
+        label.classList.toggle("pointer-events-none", !permette);
+      }
+
+      if (badge) {
+        badge.textContent = permette ? "Foto ricerca" : "Foto annuncio";
+      }
+    });
+  }
+
+  function resetSelezioneCard() {
+    fotoCardGrid.querySelectorAll(".foto-card-item").forEach(el => {
+      el.classList.remove("border-blue-500", "ring-4", "ring-blue-100");
+      el.classList.add("border-transparent");
+    });
+  }
+
+  function applicaSelezioneCard(wrapper) {
+    resetSelezioneCard();
+    wrapper.classList.remove("border-transparent");
+    wrapper.classList.add("border-blue-500", "ring-4", "ring-blue-100");
+  }
+
+  function renderNuoveFoto() {
+    fotoCardGrid.querySelectorAll(".new-photo").forEach(el => el.remove());
+
+    selectedFiles.forEach((file, index) => {
+      if (!file.type || !file.type.startsWith("image/")) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function (event) {
+        const permette = categoriaPermetteFotoCard();
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "foto-card-item new-photo relative rounded-2xl overflow-hidden border-2 border-transparent bg-white shadow-sm";
+        wrapper.dataset.newIndex = String(index);
+
+        wrapper.innerHTML = `
+          <img src="${event.target.result}" class="w-full h-32 object-cover">
+
+          <button type="button"
+                  data-remove-new-index="${index}"
+                  class="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-red-600 text-white text-sm font-black shadow hover:bg-red-700">
+            ×
+          </button>
+
+          ${
+            permette
+              ? `
+                <label class="absolute inset-0 cursor-pointer">
+                  <input type="radio"
+                         name="foto_card_preview_choice"
+                         value="new-${index}"
+                         class="absolute top-2 right-2 z-20 w-5 h-5 accent-blue-600">
+
+                  <div class="absolute left-2 bottom-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-slate-700 shadow">
+                    Foto ricerca
+                  </div>
+                </label>
+              `
+              : `
+                <div class="absolute left-2 bottom-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-slate-700 shadow">
+                  Foto annuncio
+                </div>
+              `
+          }
+        `;
+
+        const radio = wrapper.querySelector('input[type="radio"]');
+        const removeBtn = wrapper.querySelector("[data-remove-new-index]");
+
+        if (radio) {
+          radio.addEventListener("change", function () {
+            fotoCardPathInput.value = "";
+            fotoCardNewIndexInput.value = String(index);
+            applicaSelezioneCard(wrapper);
+          });
+        }
+
+        removeBtn.addEventListener("click", function () {
+          selectedFiles.splice(index, 1);
+          syncInputFiles();
+
+          if (fotoCardNewIndexInput.value === String(index)) {
+            fotoCardNewIndexInput.value = "";
+          }
+
+          renderNuoveFoto();
+        });
+
+        fotoCardGrid.appendChild(wrapper);
+        aggiornaVisibilitaGrid();
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    aggiornaVisibilitaGrid();
+  }
+
+  fotoCardGrid.querySelectorAll(".existing-photo").forEach(wrapper => {
+    const radio = wrapper.querySelector(".foto-card-existing-radio");
+    const removeBtn = wrapper.querySelector(".remove-existing-photo");
+    const checkboxDelete = wrapper.querySelector(".cancellazione-existing-photo");
+    const hiddenRimanente = wrapper.querySelector(".immagine-rimanente-input");
+    const path = wrapper.dataset.existingPath || "";
+
+    if (radio) {
+      radio.addEventListener("change", function () {
+        fotoCardPathInput.value = path;
+        fotoCardNewIndexInput.value = "";
+        applicaSelezioneCard(wrapper);
+      });
+    }
+
+    if (removeBtn) {
+      removeBtn.addEventListener("click", function () {
+        wrapper.classList.add("hidden");
+
+        if (checkboxDelete) checkboxDelete.checked = true;
+        if (hiddenRimanente) hiddenRimanente.remove();
+
+        if (fotoCardPathInput.value === path) {
+          fotoCardPathInput.value = "";
+        }
+
+        aggiornaVisibilitaGrid();
+      });
+    }
+  });
+
+  mediaInput.addEventListener("change", function () {
+    const nuoviFile = Array.from(mediaInput.files || []);
+    let scartate = 0;
+
+    nuoviFile.forEach(file => {
+      if (!file.type || !file.type.startsWith("image/")) return;
+
+      const fotoEsistentiVisibili = fotoCardGrid.querySelectorAll(".existing-photo:not(.hidden)").length;
+
+      if (fotoEsistentiVisibili + selectedFiles.length < MAX_FOTO_ANNUNCIO) {
+        selectedFiles.push(file);
+      } else {
+        scartate += 1;
+      }
+    });
+
+    if (scartate > 0) {
+      alert("Puoi avere al massimo 4 foto per annuncio.");
+    }
+
+    syncInputFiles();
+    renderNuoveFoto();
+  });
+
+  categoriaSelect.addEventListener("change", function () {
+    const permette = categoriaPermetteFotoCard();
+
+    if (!permette) {
+      fotoCardPathInput.value = "";
+      fotoCardNewIndexInput.value = "";
+      resetSelezioneCard();
+    }
+
+    renderNuoveFoto();
+    aggiornaVisibilitaGrid();
+  });
+
+  aggiornaVisibilitaGrid();
+});
+</script>
+
 {% endblock %}
