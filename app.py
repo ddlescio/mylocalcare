@@ -9353,10 +9353,26 @@ def utente_update_info():
     studio_3 = request.form.get("studio_3", "")
     certificazioni = request.form.get("certificazioni", "")
 
-    # 🔹 Checkbox attività — leggi l'ULTIMO valore (hidden "0" oppure checkbox "1")
+    # 🔹 Checkbox attività — se un campo non arriva nel POST, conserva il valore già salvato
+    c.execute(sql("""
+        SELECT
+            offro_1, offro_2, offro_3, offro_4, offro_5, offro_6, offro_7,
+            offro_8, offro_9, offro_10, offro_11, offro_12, offro_13,
+            cerco_1, cerco_2, cerco_3, cerco_4, cerco_5, cerco_6, cerco_7,
+            cerco_8, cerco_9, cerco_10, cerco_11, cerco_12, cerco_13
+        FROM utenti
+        WHERE id = ?
+    """), (user_id,))
+
+    valori_attuali = c.fetchone() or {}
+
     def _cb(name):
         vals = request.form.getlist(name)
-        return int(vals[-1]) if vals else 0
+
+        if vals:
+            return int(vals[-1])
+
+        return int(valori_attuali.get(name) or 0)
 
     offro = [_cb(f"offro_{i}") for i in range(1, 14)]
     cerco = [_cb(f"cerco_{i}") for i in range(1, 14)]
