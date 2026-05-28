@@ -179,7 +179,7 @@
           {% elif categoria == 'eventi-socialita' %}Eventi & Socialità
           {% elif categoria == 'spazi-sale' %}Spazi & Sale
           {% else %}{{ categoria|replace('-', ' ')|title }}
-          {% endif %}          
+          {% endif %}
         </h2>
       </div>
 
@@ -468,8 +468,12 @@
         </div>
       {% endif %}
 
-      {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
-
+      {% if a['categoria'] in ['family-kids', 'eventi-socialita', 'spazi-sale'] and a.get('foto_card') %}
+        {% set foto = a['foto_card'] %}
+      {% else %}
+        {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
+      {% endif %}
+      
       {% if a.get('affidabilita_top', 0) == 1 %}
         <div class="card-trust-clip-wrap">
           <div class="badge-affidabilita-top badge-affidabilita-top-clip" title="Basato su recensioni verificate">
