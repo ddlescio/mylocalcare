@@ -67,15 +67,11 @@
     {% set current_email = annuncio['email'] if modalita == 'modifica' else (request.form.get('email', '')) %}
 
     <form id="annuncio-form"
-
           method="POST"
-
           enctype="multipart/form-data"
-
           action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalita == 'modifica' else url_for('nuovo_annuncio') }}"
-
           class="space-y-8"
-
+          data-no-global-loader
           novalidate>
 
       {% if modalita == "modifica" %}
@@ -537,10 +533,9 @@
 
       <div class="pt-2">
 
-        <button type="button"
+        <button type="submit"
 
                 id="submit-annuncio-btn"
-
                 class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3.5 rounded-2xl font-bold shadow-md transition">
 
           {{ "💾 Salva modifiche" if modalita == "modifica" else "📢 Pubblica annuncio" }}
@@ -1634,7 +1629,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const submitBtn = document.getElementById("submit-annuncio-btn");
 
   if (submitBtn) {
-    submitBtn.addEventListener("click", function () {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+          
       const draftBeforeValidation = collectDraftData();
 
       if (isNuovo) {
