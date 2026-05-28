@@ -409,15 +409,21 @@ CATEGORY_MAP = {
 # MATCH: categorie (ordine = offro_1..offro_10 / cerco_1..cerco_10)
 # =========================================
 def to_slug(val: str) -> str:
-    """minuscolo, spazi -> '-', rimuove underscore, normalizza '&' in '-' """
+    """Normalizza stringhe categoria in slug coerenti senza accenti."""
     if not val:
         return ""
-    v = val.strip().lower()
-    v = v.replace("_", " ")
-    v = v.replace("&", " ")  # niente ampersand negli slug
-    v = "-".join(v.split())  # comprime multipli spazi in trattini
-    return v
 
+    v = str(val).strip().lower()
+
+    v = unicodedata.normalize("NFD", v)
+    v = "".join(ch for ch in v if unicodedata.category(ch) != "Mn")
+
+    v = v.replace("_", " ")
+    v = v.replace("&", " ")
+    v = re.sub(r"[^a-z0-9\s-]", " ", v)
+    v = "-".join(v.split())
+
+    return v
 
 
 
