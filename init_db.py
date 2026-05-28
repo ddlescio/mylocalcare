@@ -211,6 +211,7 @@ def crea_tabella_annunci():
         descrizione TEXT,
         bio_utente TEXT,
         media TEXT,
+        foto_card TEXT,
         prezzo TEXT,
         telefono TEXT,
         email TEXT,
@@ -1162,7 +1163,7 @@ def aggiorna_colonne_mancanti():
         "cerco_11": "INTEGER DEFAULT 0",
         "cerco_12": "INTEGER DEFAULT 0",
         "cerco_13": "INTEGER DEFAULT 0",
-        
+
         # Visibilità / stato account
         "visibile_pubblicamente": "INTEGER DEFAULT 1",
         "visibile_in_chat": "INTEGER DEFAULT 1",

@@ -12021,6 +12021,21 @@ def cerca():
     c.execute(sql(query_annunci), params)
     annunci = [dict(row) for row in c.fetchall()]
 
+    categorie_con_foto_card = {"family-kids", "eventi-socialita", "spazi-sale"}
+
+    def assegna_immagine_card(lista_annunci):
+        for ann in lista_annunci:
+            categoria_annuncio = ann.get("categoria")
+            foto_card = (ann.get("foto_card") or "").strip()
+            foto_profilo = (ann.get("foto_profilo") or "").strip()
+
+            if categoria_annuncio in categorie_con_foto_card and foto_card:
+                ann["immagine_card"] = foto_card
+            else:
+                ann["immagine_card"] = foto_profilo
+
+    assegna_immagine_card(annunci)
+    assegna_immagine_card(annunci_vetrina)
 
     return render_template(
         "cerca.html",
@@ -13952,6 +13967,13 @@ def nuovo_annuncio():
         email = request.form.get("email", "").strip()
         username_modificato = request.form.get("username", utente["username"])
 
+        categorie_con_foto_card = {
+            "family-kids",
+            "eventi-socialita",
+            "spazi-sale"
+        }
+
+        foto_card_index_raw = request.form.get("foto_card_index", "").strip()
         # =====================================================
         # 🛡️ VALIDAZIONI
         # =====================================================
@@ -14005,6 +14027,19 @@ def nuovo_annuncio():
                 file.save(os.path.join(upload_dir, filename))
                 media_paths.append(f"uploads/annunci/{filename}")
 
+        foto_card = None
+
+        if categoria in categorie_con_foto_card and media_paths and foto_card_index_raw != "":
+            try:
+                foto_card_index = int(foto_card_index_raw)
+
+                if 0 <= foto_card_index < len(media_paths):
+                    foto_card = media_paths[foto_card_index]
+
+            except ValueError:
+                foto_card = None
+
+
         # =====================================================
         # 💾 INSERT DB
         # =====================================================
@@ -14021,11 +14056,12 @@ def nuovo_annuncio():
                 provincia,
                 filtri_categoria,
                 media,
+                foto_card,
                 prezzo,
                 telefono,
                 email,
                 stato
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_attesa')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_attesa')
         """), (
             utente["id"],
             username_modificato,
@@ -14038,6 +14074,7 @@ def nuovo_annuncio():
             provincia,
             ",".join(filtri),
             ",".join(media_paths),
+            foto_card,
             prezzo,
             telefono,
             email
