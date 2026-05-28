@@ -9240,6 +9240,13 @@ def modifica_annuncio(id):
         # 🔁 Aggiorna contatori admin
         invalidate_admin_counters()
 
+        notifica_admin_evento(
+            titolo="Annuncio modificato in attesa",
+            messaggio=f"Annuncio modificato da revisionare: {titolo}",
+            link=url_for("admin_annunci", stato="in_attesa"),
+            push=True
+        )
+
         flash("✅ Annuncio aggiornato con successo (sarà revisionato).", "success")
         return redirect(url_for("dashboard"))
 
