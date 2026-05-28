@@ -460,6 +460,11 @@
             Carica una o più foto per rendere l’annuncio più efficace.
           </p>
 
+          <p id="foto-card-intro"
+             class="hidden text-sm sm:text-base text-slate-600 leading-relaxed">
+            Per questa categoria puoi caricare fino a 4 foto e, se vuoi, sceglierne una da mostrare nella card della pagina
+            <strong>Cerca</strong>. Se non selezioni nessuna foto, resterà visibile la tua foto profilo.
+          </p>
         </div>
 
         <div class="space-y-3">
@@ -480,9 +485,8 @@
 
           <div id="foto-card-help"
                class="hidden rounded-2xl border border-amber-200 bg-white/80 p-4 text-sm text-slate-700 leading-relaxed">
-            <strong>Foto principale nella ricerca:</strong>
-            per questa categoria puoi scegliere quale immagine mostrare nella card della pagina
-            <strong>Cerca</strong>. Se non scegli nulla, useremo automaticamente la prima foto caricata.
+            Se vuoi usare una foto dell’annuncio nella card di ricerca, seleziona una delle immagini qui sotto.
+            Se non selezioni nulla, verrà usata la tua foto profilo.
           </div>
 
           <div id="foto-card-preview-grid"
@@ -1791,8 +1795,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!permetteFotoCard) {
       fotoCardIndexInput.value = "";
-    } else if (!fotoCardIndexInput.value) {
-      fotoCardIndexInput.value = "0";
     }
 
     selectedFiles.forEach((file, index) => {
@@ -1852,10 +1854,10 @@ document.addEventListener("DOMContentLoaded", function () {
             wrapper.classList.add("border-blue-500", "ring-4", "ring-blue-100");
           });
 
-          if (String(index) === (fotoCardIndexInput.value || "0")) {
+          if (fotoCardIndexInput.value !== "" && String(index) === fotoCardIndexInput.value) {
             radio.checked = true;
             radio.dispatchEvent(new Event("change", { bubbles: true }));
-          }
+          }          
         }
 
         removeBtn.addEventListener("click", function () {
