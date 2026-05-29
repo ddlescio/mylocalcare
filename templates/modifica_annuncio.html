@@ -220,10 +220,23 @@
 
         <!-- Titolo -->
         <div class="space-y-2">
-          <label for="titolo" class="flex items-center gap-1.5 text-base font-bold text-slate-800">
-            <span>Titolo annuncio</span>
-            <span class="text-blue-600 font-extrabold">*</span>
-          </label>
+          <div class="flex flex-row items-center justify-between gap-3">
+
+            <label for="titolo" class="flex items-center gap-1.5 text-base font-bold text-slate-800">
+              <span>Titolo annuncio</span>
+              <span class="text-blue-600 font-extrabold">*</span>
+            </label>
+
+            <button
+              type="button"
+              id="open-ai-writing-helper"
+              class="shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white border border-indigo-500 text-xs sm:text-sm font-extrabold shadow-md shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 active:scale-95 transition"
+            >
+              <span>✨</span>
+              <span>Aiuto scrittura</span>
+            </button>
+
+          </div>
 
           <input type="text" id="titolo" name="titolo"
                  value="{{ current_titolo }}"
@@ -409,11 +422,920 @@
     {{ (annuncio['filtri_categoria'].split(',') if annuncio['filtri_categoria'] else []) | tojson }}
   </script>
 {% endif %}
+<!-- ✨ MODALE AIUTO SCRITTURA ANNUNCIO -->
+<div
+  id="ai-writing-modal"
+  class="fixed inset-0 z-[9999] hidden items-start justify-center bg-slate-900/60 backdrop-blur-sm px-4 pt-24 pb-6 overflow-hidden"
+  aria-hidden="true"
+>
+  <div class="w-full max-w-2xl max-h-[calc(100dvh-8rem)] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
+
+    <!-- HEADER -->
+    <div
+      id="ai-writing-modal-header"
+      class="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-blue-50"
+    >
+
+      <div>
+        <div
+          id="ai-writing-badge"
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-indigo-700 text-xs font-bold border border-indigo-100 mb-3"
+        >
+          <span>✨</span>
+          <span id="ai-writing-badge-text">Aiuto scrittura</span>
+        </div>
+
+        <h2
+          id="ai-writing-title"
+          class="text-xl sm:text-2xl font-extrabold text-slate-900"
+        >
+          Migliora il testo del tuo annuncio
+        </h2>
+
+        <p
+          id="ai-writing-subtitle"
+          class="mt-2 text-sm text-slate-600"
+        >
+          Puoi scrivere una bozza anche in un’altra lingua: poi ti aiutiamo a migliorarla e, se vuoi, a tradurla in italiano.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        id="close-ai-writing-modal"
+        class="shrink-0 w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-bold"
+        aria-label="Chiudi"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <!-- STEP AVVERTENZE -->
+    <div id="ai-writing-warning-step" class="p-5 sm:p-6 space-y-5 overflow-y-auto">
+
+      <!-- SCELTA LINGUA -->
+      <div class="space-y-2">
+        <label for="ai-writing-ui-language" class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+          <span>🌍</span>
+          <span id="ai-writing-language-label">Scegli la tua lingua</span>
+        </label>
+
+        <select
+          id="ai-writing-ui-language"
+          class="w-full border-2 border-indigo-200 rounded-2xl p-3.5 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-semibold"
+        >
+          <optgroup label="Lingue più usate in Italia">
+            <option value="it">🇮🇹 Italiano</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="pt">🇵🇹 Português</option>
+            <option value="ro">🇷🇴 Română</option>
+            <option value="uk">🇺🇦 Українська</option>
+            <option value="ru">🇷🇺 Русский</option>
+            <option value="tl">🇵🇭 Filipino / Tagalog</option>
+            <option value="ar">العربية</option>
+            <option value="sq">🇦🇱 Shqip</option>
+            <option value="pl">🇵🇱 Polski</option>
+            <option value="de">🇩🇪 Deutsch</option>
+          </optgroup>
+
+          <optgroup label="Europa dell’Est / Balcani / Caucaso">
+            <option value="mo">Moldovenească / Moldovan</option>
+            <option value="bg">🇧🇬 Български</option>
+            <option value="ka">🇬🇪 ქართული</option>
+            <option value="sr">🇷🇸 Српски</option>
+            <option value="hr">🇭🇷 Hrvatski</option>
+            <option value="bs">🇧🇦 Bosanski</option>
+            <option value="mk">🇲🇰 Македонски</option>
+            <option value="el">🇬🇷 Ελληνικά</option>
+          </optgroup>
+
+          <optgroup label="Asia">
+            <option value="zh">🇨🇳 中文</option>
+            <option value="hi">🇮🇳 हिन्दी</option>
+            <option value="bn">বাংলা</option>
+            <option value="ur">اردو</option>
+            <option value="si">🇱🇰 සිංහල / Sinhala</option>
+            <option value="ta">தமிழ் / Tamil</option>
+            <option value="ml">മലയാളം / Malayalam</option>
+            <option value="pa">ਪੰਜਾਬੀ / Punjabi</option>
+            <option value="ne">🇳🇵 नेपाली</option>
+            <option value="id">🇮🇩 Bahasa Indonesia</option>
+            <option value="vi">🇻🇳 Tiếng Việt</option>
+            <option value="th">🇹🇭 ไทย</option>
+            <option value="ja">🇯🇵 日本語</option>
+            <option value="ko">🇰🇷 한국어</option>
+          </optgroup>
+
+          <optgroup label="Africa">
+            <option value="sw">Kiswahili / Swahili</option>
+            <option value="am">🇪🇹 አማርኛ / Amharic</option>
+            <option value="ti">ትግርኛ / Tigrinya</option>
+            <option value="so">🇸🇴 Soomaali</option>
+            <option value="ha">Hausa</option>
+            <option value="yo">Yorùbá</option>
+            <option value="ig">Igbo</option>
+            <option value="wo">Wolof</option>
+            <option value="bm">Bamanankan / Bambara</option>
+            <option value="ln">Lingála</option>
+            <option value="ff">Fulfulde / Fula</option>
+          </optgroup>
+
+          <optgroup label="Altre lingue comuni">
+            <option value="nl">🇳🇱 Nederlands</option>
+            <option value="tr">🇹🇷 Türkçe</option>
+            <option value="fi">🇫🇮 Suomi</option>
+            <option value="sv">🇸🇪 Svenska</option>
+            <option value="da">🇩🇰 Dansk</option>
+            <option value="no">🇳🇴 Norsk</option>
+          </optgroup>
+        </select>
+
+        <p id="ai-writing-language-note" class="text-xs text-slate-500">
+          La guida continuerà nella lingua scelta.
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 leading-relaxed">
+        <p id="ai-writing-warning-title" class="font-bold mb-2">Prima di continuare</p>
+
+        <p id="ai-writing-warning-text-1">
+          Usa questo aiuto solo per migliorare o tradurre il testo del tuo annuncio.
+          Non inserire dati sensibili, documenti, informazioni mediche, informazioni economiche private
+          o dettagli personali non necessari.
+        </p>
+
+        <p id="ai-writing-warning-text-2" class="mt-2">
+          Il testo generato sarà solo una proposta: potrai leggerlo, modificarlo e decidere se usarlo.
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+        <button
+          type="button"
+          id="cancel-ai-writing-helper"
+          class="px-5 py-3 rounded-2xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+        >
+          Annulla
+        </button>
+
+        <button
+          type="button"
+          id="confirm-ai-writing-warning"
+          class="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm"
+        >
+          Ho capito, continua
+        </button>
+      </div>
+
+    </div>
+
+    <!-- STEP FORM AI -->
+    <div id="ai-writing-form-step" class="hidden p-5 sm:p-6 space-y-5 overflow-y-auto">
+
+      <div
+        id="ai-writing-language-help"
+        class="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600 leading-relaxed"
+      >
+        Scrivi cosa vuoi comunicare su di te e su quello che offri o cerchi. Puoi scrivere in modo semplice: penseremo noi a renderlo più chiaro.
+      </div>
+
+      <!-- AZIONE -->
+      <div class="space-y-2">
+        <label for="ai-writing-action" id="ai-writing-action-label" class="text-sm font-bold text-slate-800">
+          Cosa vuoi fare?
+        </label>
+
+        <select
+          id="ai-writing-action"
+          class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
+        >
+          <option value="translate_it" selected>Migliora ora e traduciamo in italiano alla fine</option>
+          <option value="improve">Migliora ora e lasciamo nella tua lingua</option>
+        </select>
+      </div>
+
+      <!-- DESCRIZIONE PRIMA DEL TITOLO -->
+      <div class="space-y-2">
+        <label for="ai-writing-description-input" id="ai-writing-description-label" class="text-sm font-bold text-slate-800">
+          Descrizione
+        </label>
+
+        <textarea
+          id="ai-writing-description-input"
+          rows="6"
+          maxlength="1500"
+          class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
+          placeholder="Scrivi qui il tuo testo, anche in modo semplice."
+        ></textarea>
+
+        <p id="ai-writing-limit-note" class="text-xs text-slate-500">
+          Massimo 1500 caratteri. Non inserire dati sensibili o informazioni private non necessarie.
+        </p>
+      </div>
+
+      <!-- TITOLO DOPO DESCRIZIONE -->
+      <div class="space-y-2">
+        <label for="ai-writing-title-input" id="ai-writing-title-label" class="text-sm font-bold text-slate-800">
+          Titolo o idea titolo
+        </label>
+
+        <input
+          type="text"
+          id="ai-writing-title-input"
+          maxlength="120"
+          class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
+          placeholder="Puoi scriverlo tu oppure verrà suggerito dopo Genera"
+        >
+      </div>
+
+      <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-2">
+
+        <button
+          type="button"
+          id="back-ai-writing-warning"
+          class="px-5 py-3 rounded-2xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+        >
+          Indietro
+        </button>
+
+        <button
+          type="button"
+          id="generate-ai-writing-preview"
+          class="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm"
+        >
+          Genera
+        </button>
+
+        <button
+          type="button"
+          id="use-ai-writing-result"
+          class="hidden px-5 py-3 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-sm"
+        >
+          Usa questo testo
+        </button>
+        <p
+          id="ai-writing-attempts-note"
+          class="hidden w-full text-center sm:text-right text-xs font-semibold text-slate-500"
+        ></p>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const openBtn = document.getElementById("open-ai-writing-helper");
+  const modal = document.getElementById("ai-writing-modal");
+
+  const closeBtn = document.getElementById("close-ai-writing-modal");
+  const cancelBtn = document.getElementById("cancel-ai-writing-helper");
+  const confirmBtn = document.getElementById("confirm-ai-writing-warning");
+  const backBtn = document.getElementById("back-ai-writing-warning");
+
+  const warningStep = document.getElementById("ai-writing-warning-step");
+  const formStep = document.getElementById("ai-writing-form-step");
+
+  const uiLanguageSelect = document.getElementById("ai-writing-ui-language");
+
+  const modalHeader = document.getElementById("ai-writing-modal-header");
+  const badge = document.getElementById("ai-writing-badge");
+  const badgeText = document.getElementById("ai-writing-badge-text");
+  const modalTitle = document.getElementById("ai-writing-title");
+  const modalSubtitle = document.getElementById("ai-writing-subtitle");
+
+  const languageLabel = document.getElementById("ai-writing-language-label");
+  const languageNote = document.getElementById("ai-writing-language-note");
+
+  const warningTitle = document.getElementById("ai-writing-warning-title");
+  const warningText1 = document.getElementById("ai-writing-warning-text-1");
+  const warningText2 = document.getElementById("ai-writing-warning-text-2");
+
+  const languageHelp = document.getElementById("ai-writing-language-help");
+
+  const actionSelect = document.getElementById("ai-writing-action");
+  const actionLabel = document.getElementById("ai-writing-action-label");
+
+  const aiTitleInput = document.getElementById("ai-writing-title-input");
+  const aiDescriptionInput = document.getElementById("ai-writing-description-input");
+
+  const aiTitleLabel = document.getElementById("ai-writing-title-label");
+  const aiDescriptionLabel = document.getElementById("ai-writing-description-label");
+  const limitNote = document.getElementById("ai-writing-limit-note");
+
+  const realTitleInput = document.getElementById("titolo");
+  const realDescriptionInput = document.getElementById("descrizione");
+
+  const generateBtn = document.getElementById("generate-ai-writing-preview");
+  const useBtn = document.getElementById("use-ai-writing-result");
+
+  const attemptsNote = document.getElementById("ai-writing-attempts-note");
+
+  const MAX_AI_ATTEMPTS = 3;
+  let aiAttemptsUsed = 0;
+  let pageScrollYBeforeModal = 0;
+
+  if (!openBtn || !modal) return;
+
+  let aiProposalGenerated = false;
+  let lastDraftBeforeProposal = {
+    title: "",
+    description: ""
+  };
+
+  let lastGeneratedSnapshot = {
+    title: "",
+    description: "",
+    action: "",
+    language: ""
+  };
+
+  let lastDetectedLanguage = "";
+  let lastGeneratedWasMixedText = false;
+
+  let lastUseIntent = {
+    action: "improve",
+    language: "it"
+  };
+
+  let texts = {
+    it: {
+      badge: "Aiuto scrittura",
+      title: "Migliora il testo del tuo annuncio",
+      subtitle: "Puoi scrivere un testo anche in un’altra lingua: poi ti aiutiamo a migliorarlo e, se vuoi, a tradurlo in italiano.",
+      languageLabel: "Scegli la tua lingua",
+      languageNote: "La guida continuerà nella lingua scelta.",
+      warningTitle: "Prima di continuare",
+      warning1: "Usa questo aiuto solo per migliorare o tradurre il testo del tuo annuncio. Non inserire dati sensibili, documenti, informazioni mediche, informazioni economiche private o dettagli personali non necessari.",
+      warning2: "Il testo generato sarà solo una proposta: potrai leggerlo, modificarlo e decidere se usarlo.",
+      cancel: "Annulla",
+      continue: "Ho capito, continua",
+      help: "Scrivi cosa vuoi comunicare su di te e su quello che offri o cerchi. Puoi scrivere in modo semplice: penseremo noi a renderlo più chiaro.",
+      actionLabel: "Cosa vuoi fare?",
+      improve: "Migliora ora e lasciamo nella tua lingua",
+      translate: "Migliora ora e traduciamo in italiano alla fine",
+      descriptionLabel: "Descrizione",
+      descriptionPlaceholder: "Scrivi qui il tuo testo, anche in modo semplice.",
+      titleLabel: "Titolo o idea titolo",
+      titlePlaceholder: "Puoi scriverlo tu oppure verrà suggerito dopo Genera",
+      limit: "Massimo 1500 caratteri. Non inserire dati sensibili o informazioni private non necessarie.",
+      back: "Indietro",
+      generate: "Genera",
+      regenerate: "Rigenera",
+      use: "Usa questo testo",
+      proposalBadge: "Proposta generata",
+      proposalTitle: "Controlla e modifica la proposta",
+      proposalSubtitle: "Puoi modificarla direttamente qui, rigenerarla oppure usarla nel tuo annuncio.",
+      emptyDescription: "Scrivi prima una descrizione.",
+      suggestedTitle: "Titolo suggerito dall’AI",
+      attemptsRemainingSingular: "Hai ancora 1 tentativo per questo annuncio.",
+      attemptsRemainingPlural: "Hai ancora {n} tentativi per questo annuncio.",
+      attemptsFinished: "Hai usato i 3 tentativi disponibili per questo annuncio.",
+      attemptsRemainingSingular: "Hai ancora 1 tentativo per questo annuncio.",
+      attemptsRemainingPlural: "Hai ancora {n} tentativi per questo annuncio.",
+      attemptsFinished: "Hai usato i 3 tentativi disponibili per questo annuncio.",
+      unchangedRegenerate: "Modifica prima il testo attuale, poi potrai rigenerare una nuova proposta per migliorarlo.",
+      finalTranslating: "Traduco in italiano...",
+      finalTranslationDone: "Il testo inserito nell’annuncio è esattamente quello che hai scelto, tradotto in italiano.",
+      finalTranslationError: "Non sono riuscito a tradurre il testo in italiano. Riprova."
+    }
+  };
+
+  const fallbackText = texts.it;
+
+  async function loadExternalAiWritingTexts() {
+    try {
+      const response = await fetch("{{ url_for('static', filename='data/ai_writing_texts.json') }}", {
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        console.warn("Impossibile caricare ai_writing_texts.json:", response.status);
+        return;
+      }
+
+      const externalTexts = await response.json();
+
+      if (!externalTexts || typeof externalTexts !== "object") {
+        console.warn("ai_writing_texts.json non valido");
+        return;
+      }
+
+      texts = {
+        ...texts,
+        ...externalTexts
+      };
+    } catch (error) {
+      console.warn("Errore caricamento ai_writing_texts.json:", error);
+    }
+  }
+
+  const aiWritingTextsPromise = loadExternalAiWritingTexts();
+
+  function getCurrentTexts() {
+    const lang = uiLanguageSelect ? uiLanguageSelect.value : "it";
+    return texts[lang] || fallbackText;
+  }
+
+  function lockPageScroll() {
+    pageScrollYBeforeModal = window.scrollY || document.documentElement.scrollTop || 0;
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${pageScrollYBeforeModal}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+  }
+
+  function unlockPageScroll() {
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+
+    window.scrollTo(0, pageScrollYBeforeModal || 0);
+  }
+
+  function updateAttemptsNote() {
+    if (!attemptsNote) return;
+
+    const t = getCurrentTexts();
+    const remaining = Math.max(MAX_AI_ATTEMPTS - aiAttemptsUsed, 0);
+
+    if (!aiProposalGenerated) {
+      attemptsNote.classList.add("hidden");
+      attemptsNote.textContent = "";
+      return;
+    }
+
+    attemptsNote.classList.remove("hidden");
+
+    if (remaining <= 0) {
+      attemptsNote.textContent = t.attemptsFinished;
+      attemptsNote.classList.remove("text-slate-500");
+      attemptsNote.classList.add("text-amber-700");
+      return;
+    }
+
+    attemptsNote.classList.remove("text-amber-700");
+    attemptsNote.classList.add("text-slate-500");
+
+    if (remaining === 1) {
+      attemptsNote.textContent = t.attemptsRemainingSingular;
+    } else {
+      attemptsNote.textContent = t.attemptsRemainingPlural.replace("{n}", remaining);
+    }
+  }
+
+  function applyLanguageTexts() {
+    const t = getCurrentTexts();
+
+    if (badgeText) badgeText.textContent = aiProposalGenerated ? t.proposalBadge : t.badge;
+    if (modalTitle) modalTitle.textContent = aiProposalGenerated ? t.proposalTitle : t.title;
+    if (modalSubtitle) modalSubtitle.textContent = aiProposalGenerated ? t.proposalSubtitle : t.subtitle;
+
+    if (languageLabel) languageLabel.textContent = t.languageLabel;
+    if (languageNote) languageNote.textContent = t.languageNote;
+
+    if (warningTitle) warningTitle.textContent = t.warningTitle;
+    if (warningText1) warningText1.textContent = t.warning1;
+    if (warningText2) warningText2.textContent = t.warning2;
+
+    if (cancelBtn) cancelBtn.textContent = t.cancel;
+    if (confirmBtn) confirmBtn.textContent = t.continue;
+
+    if (languageHelp) languageHelp.textContent = t.help;
+
+    if (actionLabel) actionLabel.textContent = t.actionLabel;
+
+    if (actionSelect) {
+      const improveOption = actionSelect.querySelector('option[value="improve"]');
+      const translateOption = actionSelect.querySelector('option[value="translate_it"]');
+
+      if (improveOption) improveOption.textContent = t.improve;
+      if (translateOption) translateOption.textContent = t.translate;
+    }
+
+    if (aiDescriptionLabel) aiDescriptionLabel.textContent = t.descriptionLabel;
+    if (aiDescriptionInput) aiDescriptionInput.placeholder = t.descriptionPlaceholder;
+
+    if (aiTitleLabel) aiTitleLabel.textContent = t.titleLabel;
+    if (aiTitleInput) aiTitleInput.placeholder = t.titlePlaceholder;
+
+    if (limitNote) limitNote.textContent = t.limit;
+
+    if (backBtn) backBtn.textContent = t.back;
+    if (generateBtn) generateBtn.textContent = aiProposalGenerated ? t.regenerate : t.generate;
+    if (useBtn) useBtn.textContent = t.use;
+
+    updateAttemptsNote();
+  }
+
+  function setProposalMode(active) {
+    aiProposalGenerated = active;
+
+    const t = getCurrentTexts();
+
+    if (modalHeader) {
+      modalHeader.classList.toggle("from-indigo-50", !active);
+      modalHeader.classList.toggle("to-blue-50", !active);
+      modalHeader.classList.toggle("from-emerald-50", active);
+      modalHeader.classList.toggle("to-teal-50", active);
+    }
+
+    if (badge) {
+      badge.classList.toggle("text-indigo-700", !active);
+      badge.classList.toggle("border-indigo-100", !active);
+      badge.classList.toggle("text-emerald-700", active);
+      badge.classList.toggle("border-emerald-100", active);
+    }
+
+    if (formStep) {
+      formStep.classList.toggle("bg-emerald-50", active);
+    }
+
+    if (useBtn) {
+      useBtn.classList.toggle("hidden", !active);
+    }
+
+    if (attemptsNote) {
+      attemptsNote.classList.toggle("hidden", !active);
+    }
+
+    if (generateBtn) {
+      generateBtn.textContent = active ? t.regenerate : t.generate;
+    }
+
+    applyLanguageTexts();
+  }
+
+  async function openModal() {
+    await aiWritingTextsPromise;
+
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    modal.setAttribute("aria-hidden", "false");
+
+    lockPageScroll();
+
+    modal.scrollTop = 0;
+
+    warningStep.classList.remove("hidden");
+    formStep.classList.add("hidden");
+
+    warningStep.scrollTop = 0;
+    formStep.scrollTop = 0;
+
+    setProposalMode(false);
+    updateAttemptsNote();
+
+    if (actionSelect) {
+      actionSelect.value = "translate_it";
+    }
+
+    if (realTitleInput && aiTitleInput) {
+      aiTitleInput.value = realTitleInput.value || "";
+    }
+
+    if (realDescriptionInput && aiDescriptionInput) {
+      aiDescriptionInput.value = realDescriptionInput.value || "";
+    }
+
+    lastDraftBeforeProposal = {
+      title: aiTitleInput ? aiTitleInput.value : "",
+      description: aiDescriptionInput ? aiDescriptionInput.value : ""
+    };
+
+    applyLanguageTexts();
+  }
+
+  function closeModal() {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    modal.setAttribute("aria-hidden", "true");
+
+    unlockPageScroll();
+  }
+
+  function showFormStep() {
+    warningStep.classList.add("hidden");
+    formStep.classList.remove("hidden");
+
+    formStep.scrollTop = 0;
+
+    setTimeout(() => {
+      if (aiDescriptionInput) {
+        aiDescriptionInput.focus();
+      }
+    }, 100);
+  }
+
+  function showWarningStep() {
+    if (aiProposalGenerated) {
+      if (aiTitleInput) {
+        aiTitleInput.value = lastDraftBeforeProposal.title || "";
+      }
+
+      if (aiDescriptionInput) {
+        aiDescriptionInput.value = lastDraftBeforeProposal.description || "";
+      }
+
+      setProposalMode(false);
+      updateAttemptsNote();
+      formStep.scrollTop = 0;
+      return;
+    }
+
+    formStep.classList.add("hidden");
+    warningStep.classList.remove("hidden");
+    warningStep.scrollTop = 0;
+  }
+
+  openBtn.addEventListener("click", openModal);
+
+  [closeBtn, cancelBtn].forEach((btn) => {
+    if (!btn) return;
+    btn.addEventListener("click", closeModal);
+  });
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener("click", showFormStep);
+  }
+
+  if (backBtn) {
+    backBtn.addEventListener("click", showWarningStep);
+  }
+
+  if (uiLanguageSelect) {
+    uiLanguageSelect.addEventListener("change", applyLanguageTexts);
+  }
+
+  modal.addEventListener("click", function (event) {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+      closeModal();
+    }
+  });
+
+  if (generateBtn) {
+    generateBtn.addEventListener("click", async function () {
+      const t = getCurrentTexts();
+
+      if (aiAttemptsUsed >= MAX_AI_ATTEMPTS) {
+        alert(t.attemptsFinished);
+        return;
+      }
+
+      const titolo = (aiTitleInput?.value || "").trim();
+      const descrizione = (aiDescriptionInput?.value || "").trim();
+      const selectedAction = actionSelect ? actionSelect.value : "translate_it";
+      const selectedLanguage = uiLanguageSelect ? uiLanguageSelect.value : "it";
+
+      /*
+        IMPORTANTE:
+        - "Genera" deve SOLO migliorare il testo nella lingua scelta.
+        - La traduzione in italiano avverrà eventualmente solo quando l'utente clicca "Usa questo testo".
+      */
+      const previewAction = "improve";
+
+      const finalUseAction =
+        selectedLanguage === "it" ? "improve" : selectedAction;
+
+      if (!descrizione) {
+        alert(t.emptyDescription);
+        aiDescriptionInput?.focus();
+        return;
+      }
+
+      if (aiProposalGenerated) {
+        const currentSnapshot = {
+          title: titolo,
+          description: descrizione,
+          action: previewAction,
+          language: selectedLanguage
+        };
+
+        const sameAsLastGenerated =
+          currentSnapshot.title === lastGeneratedSnapshot.title &&
+          currentSnapshot.description === lastGeneratedSnapshot.description &&
+          currentSnapshot.action === lastGeneratedSnapshot.action &&
+          currentSnapshot.language === lastGeneratedSnapshot.language;
+
+        if (sameAsLastGenerated) {
+          alert(t.unchangedRegenerate);
+          return;
+        }
+      }
+
+      lastDraftBeforeProposal = {
+        title: titolo,
+        description: descrizione
+      };
+
+      lastUseIntent = {
+        action: finalUseAction,
+        language: selectedLanguage
+      };
+
+      const originalButtonText = generateBtn.textContent;
+
+      generateBtn.disabled = true;
+      generateBtn.classList.add("opacity-60", "cursor-not-allowed");
+      generateBtn.textContent = "Genero...";
+
+      try {
+        const response = await fetch("{{ url_for('api_ai_aiuto_scrittura_annuncio') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": "{{ csrf_token() }}"
+          },
+          body: JSON.stringify({
+            titolo: titolo,
+            descrizione: descrizione,
+            lingua: selectedLanguage,
+            azione: previewAction
+          })
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result || !result.ok) {
+          alert(
+            result && result.error
+              ? result.error
+              : "Non sono riuscito a generare la proposta. Riprova."
+          );
+          return;
+        }
+
+        if (aiTitleInput) {
+          aiTitleInput.value = (result.titolo || titolo || "").trim();
+        }
+
+        if (aiDescriptionInput) {
+          aiDescriptionInput.value = (result.descrizione || descrizione || "").trim();
+        }
+
+        lastDetectedLanguage = (result.lingua_rilevata || selectedLanguage || "").trim().toLowerCase();
+        lastGeneratedWasMixedText = result.testo_misto === true;
+
+        aiAttemptsUsed += 1;
+
+        lastGeneratedSnapshot = {
+          title: (aiTitleInput?.value || "").trim(),
+          description: (aiDescriptionInput?.value || "").trim(),
+          action: previewAction,
+          language: selectedLanguage
+        };
+
+        setProposalMode(true);
+        updateAttemptsNote();
+
+        formStep.scrollTop = 0;
+
+      } catch (error) {
+        console.error("Errore chiamata AI:", error);
+        alert("Errore di connessione durante la generazione. Riprova tra poco.");
+
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.classList.remove("opacity-60", "cursor-not-allowed");
+
+        const currentTexts = getCurrentTexts();
+        generateBtn.textContent = aiProposalGenerated
+          ? currentTexts.regenerate
+          : originalButtonText;
+      }
+    });
+  }
+
+  if (useBtn) {
+    useBtn.addEventListener("click", async function () {
+      const t = getCurrentTexts();
+
+      const titolo = (aiTitleInput?.value || "").trim();
+      const descrizione = (aiDescriptionInput?.value || "").trim();
+
+      if (!descrizione) {
+        alert(t.emptyDescription || fallbackText.emptyDescription);
+        aiDescriptionInput?.focus();
+        return;
+      }
+
+      const selectedLanguage = uiLanguageSelect ? uiLanguageSelect.value : "it";
+
+      /*
+        Regola finale:
+        - se l'utente ha scelto "Migliora e traduciamo in italiano alla fine"
+        - e la lingua scelta NON è italiano
+        allora, quando clicca "Usa questo testo", traduciamo in italiano
+        e inseriamo nella scheda principale il testo italiano.
+      */
+      const shouldTranslateBeforeUse =
+        lastUseIntent.action === "translate_it" &&
+        selectedLanguage !== "it";
+
+      if (!shouldTranslateBeforeUse) {
+        if (realTitleInput && titolo) {
+          realTitleInput.value = titolo;
+        }
+
+        if (realDescriptionInput && descrizione) {
+          realDescriptionInput.value = descrizione;
+        }
+
+        closeModal();
+        return;
+      }
+
+      const originalUseText = useBtn.textContent;
+
+      useBtn.disabled = true;
+      useBtn.classList.add("opacity-60", "cursor-not-allowed");
+      useBtn.textContent = t.finalTranslating || fallbackText.finalTranslating || "Traduco in italiano...";
+
+      try {
+        const response = await fetch("{{ url_for('api_ai_aiuto_scrittura_annuncio') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": "{{ csrf_token() }}"
+          },
+          body: JSON.stringify({
+            titolo: titolo,
+            descrizione: descrizione,
+            lingua: selectedLanguage,
+            azione: "final_translate_it"
+          })
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result || !result.ok) {
+          alert(
+            result && result.error
+              ? result.error
+              : (t.finalTranslationError || fallbackText.finalTranslationError || "Non sono riuscito a tradurre il testo in italiano. Riprova.")
+          );
+          return;
+        }
+
+        if (realTitleInput) {
+          realTitleInput.value = (result.titolo || titolo).trim();
+        }
+
+        if (realDescriptionInput) {
+          realDescriptionInput.value = (result.descrizione || descrizione).trim();
+        }
+
+        alert(
+          t.finalTranslationDone ||
+          fallbackText.finalTranslationDone ||
+          "Il testo inserito nell’annuncio è esattamente quello che hai scelto, tradotto in italiano."
+        );
+
+        closeModal();
+
+      } catch (error) {
+        console.error("Errore traduzione finale AI:", error);
+
+        alert(
+          t.finalTranslationError ||
+          fallbackText.finalTranslationError ||
+          "Errore di connessione durante la traduzione finale. Riprova tra poco."
+        );
+
+      } finally {
+        useBtn.disabled = false;
+        useBtn.classList.remove("opacity-60", "cursor-not-allowed");
+        useBtn.textContent = originalUseText;
+      }
+    });
+  }
+
+  applyLanguageTexts();
+});
+</script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const categoria = document.getElementById("categoria");
