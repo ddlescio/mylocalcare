@@ -144,25 +144,32 @@
       ]
     },
     {
-      title: "Compila i campi principali",
-      action: "Inserisci tipo annuncio, categoria, zona, titolo e descrizione.",
-      text: "Più l’annuncio è chiaro, più sarà facile ricevere contatti adatti.",
-      image: "/static/img/onboarding/step-11-nuovo-annuncio-campi.png",
-      moves: [
-        {
-          caption: "Compila i campi",
-          captionPosition: { top: "12%", left: "50%" },
-          start: { top: "20%", left: "50%" },
-          end: { top: "55%", left: "50%" }
-        },
-        {
-          caption: "Fatti aiutare dall’AI",
-          captionPosition: { top: "12%", left: "50%" },
-          start: { top: "55%", left: "50%" },
-          end: { top: "48%", left: "75%" }
-        }
-      ]
-    },
+      {
+        title: "Compila i campi principali",
+        action: "Inserisci tipo annuncio, categoria, zona, titolo e descrizione.",
+        text: "Più l’annuncio è chiaro, più sarà facile ricevere contatti adatti.",
+        image: "/static/img/onboarding/step-11-nuovo-annuncio-campi.png",
+        moves: [
+          {
+            caption: "Compila i campi",
+            captionPosition: { top: "12%", left: "50%" },
+            start: { top: "20%", left: "50%" },
+            end: { top: "70%", left: "50%" }
+          },
+          {
+            caption: "Scrivi la descrizione",
+            captionPosition: { top: "12%", left: "50%" },
+            start: { top: "70%", left: "50%" },
+            end: { top: "74%", left: "50%" }
+          },
+          {
+            caption: "Fatti aiutare dall’AI",
+            captionPosition: { top: "12%", left: "50%" },
+            start: { top: "74%", left: "50%" },
+            end: { top: "48%", left: "75%" }
+          }
+        ]
+      },           
     {
       title: "Pubblica l’annuncio",
       action: "Quando hai finito, invia l’annuncio per la revisione.",
@@ -178,7 +185,7 @@
       ]
     }
   ];
-  
+
   let currentStep = 0;
 
   let animationTimers = [];
