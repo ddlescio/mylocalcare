@@ -83,12 +83,12 @@
           caption: "Usa i filtri",
           captionPosition: { top: "13%", left: "50%" },
           start: { top: "78%", left: "50%" },
-          end: { top: "14%", left: "18%" }
+          end: { top: "14%", left: "25%" }
         },
         {
           caption: "Apro l’annuncio",
           captionPosition: { top: "13%", left: "50%" },
-          start: { top: "14%", left: "18%" },
+          start: { top: "14%", left: "25%" },
           end: { top: "45%", left: "50%" }
         }
       ]
@@ -116,6 +116,64 @@
           captionPosition: { top: "13%", left: "50%" },
           start: { top: "37%", left: "65%" },
           end: { top: "43%", left: "50%" }
+        }
+      ]
+    },
+    {
+      title: "Crea un tuo annuncio",
+      action: "Dalla Home puoi tornare al tuo profilo.",
+      text: "Per pubblicare un annuncio, entra nel profilo e usa il pulsante Crea annuncio.",
+      image: "/static/img/onboarding/step-1-home.png",
+      cursorText: "Vado al profilo",
+      caption: { top: "14%", left: "38%" },
+      cursorStart: { top: "72%", left: "50%" },
+      cursorEnd: { top: "7%", left: "63%" }
+    },
+    {
+      title: "Apri la creazione annuncio",
+      action: "Tocca il pulsante Crea annuncio.",
+      text: "Da qui puoi pubblicare un annuncio per offrire un servizio o cercare aiuto.",
+      image: "/static/img/onboarding/step-3-carica-foto.png",
+      moves: [
+        {
+          caption: "Creo un annuncio",
+          captionPosition: { top: "12%", left: "50%" },
+          start: { top: "75%", left: "50%" },
+          end: { top: "58%", left: "50%" }
+        }
+      ]
+    },
+    {
+      title: "Compila i campi principali",
+      action: "Inserisci tipo annuncio, categoria, zona, titolo e descrizione.",
+      text: "Più l’annuncio è chiaro, più sarà facile ricevere contatti adatti.",
+      image: "/static/img/onboarding/step-11-nuovo-annuncio-campi.png",
+      moves: [
+        {
+          caption: "Compila i campi",
+          captionPosition: { top: "12%", left: "50%" },
+          start: { top: "20%", left: "50%" },
+          end: { top: "55%", left: "50%" }
+        },
+        {
+          caption: "Fatti aiutare dall’AI",
+          captionPosition: { top: "12%", left: "50%" },
+          start: { top: "55%", left: "50%" },
+          end: { top: "48%", left: "75%" }
+        }
+      ]
+    },
+    {
+      title: "Pubblica l’annuncio",
+      action: "Quando hai finito, invia l’annuncio per la revisione.",
+      text: "Dopo l’approvazione sarà visibile nella categoria scelta.",
+      image: "/static/img/onboarding/step-12-nuovo-annuncio-pubblica.png",
+      moves: [
+        {
+          caption: "Pubblica annuncio",
+          captionPosition: { top: "12%", left: "50%" },
+          start: { top: "25%", left: "50%" },
+          end: { top: "78%", left: "50%" }
         }
       ]
     }
