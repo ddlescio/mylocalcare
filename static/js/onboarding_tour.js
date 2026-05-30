@@ -28,10 +28,10 @@
       action: "Prima tocca Info, poi apri Informazioni di base.",
       text: "Questi dati servono per mostrarti annunci più coerenti con la tua zona e i tuoi interessi.",
       image: "/static/img/onboarding/step-4-info-base.png",
-      cursorText: "Info → Informazioni di base",
-      caption: { top: "10%", left: "50%" },
+      cursorText: "Apri Info",
+      caption: { top: "9%", left: "72%" },
       cursorStart: { top: "18%", left: "43%" },
-      cursorEnd: { top: "30%", left: "34%" }
+      cursorEnd: { top: "30%", left: "34%" }      
     },
     {
       title: "Aggiungi città e lingue",
@@ -61,7 +61,7 @@
       cursorText: "Torno alla Home",
       caption: { top: "14%", left: "58%" },
       cursorStart: { top: "76%", left: "50%" },
-      cursorEnd: { top: "7%", left: "23%" }      
+      cursorEnd: { top: "7%", left: "23%" }
     },
     {
       title: "Cerca una categoria",
