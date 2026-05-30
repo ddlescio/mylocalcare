@@ -153,19 +153,19 @@
           caption: "Compila i campi",
           captionPosition: { top: "12%", left: "50%" },
           start: { top: "20%", left: "50%" },
-          end: { top: "70%", left: "50%" }
+          end: { top: "49%", left: "50%" }
         },
         {
           caption: "Scrivi la descrizione",
           captionPosition: { top: "12%", left: "50%" },
-          start: { top: "70%", left: "50%" },
-          end: { top: "74%", left: "50%" }
+          start: { top: "49%", left: "50%" },
+          end: { top: "61%", left: "50%" }
         },
         {
           caption: "Fatti aiutare dall’AI",
           captionPosition: { top: "12%", left: "50%" },
-          start: { top: "74%", left: "50%" },
-          end: { top: "52%", left: "74%" }
+          start: { top: "61%", left: "50%" },
+          end: { top: "43%", left: "67%" }
         }
       ]
     },
@@ -203,7 +203,8 @@
 
     // Ogni movimento dura circa 3300 ms.
     // Aggiungiamo una pausa finale per far leggere il testo.
-    return (movesCount * 3300) + 2600;
+    return (movesCount * 2800) + 1800;
+
   }
 
   function scheduleAutoAdvance(step) {
@@ -459,7 +460,7 @@
       currentStep === TOUR_STEPS.length - 1 ? "Fine" : "Avanti";
 
       animateCursor(step);
-      scheduleAutoAdvance(step);      
+      scheduleAutoAdvance(step);
   }
 
   function openTour() {
