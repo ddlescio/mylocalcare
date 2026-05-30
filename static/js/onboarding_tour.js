@@ -165,7 +165,7 @@
           caption: "Fatti aiutare dall’AI",
           captionPosition: { top: "12%", left: "50%" },
           start: { top: "74%", left: "50%" },
-          end: { top: "48%", left: "75%" }
+          end: { top: "52%", left: "74%" }
         }
       ]
     },
@@ -184,10 +184,41 @@
       ]
     }
   ];
-  
+
   let currentStep = 0;
 
   let animationTimers = [];
+
+  let autoAdvanceTimer = null;
+
+  function clearAutoAdvanceTimer() {
+    if (autoAdvanceTimer) {
+      clearTimeout(autoAdvanceTimer);
+      autoAdvanceTimer = null;
+    }
+  }
+
+  function getAutoAdvanceDelay(step) {
+    const movesCount = step.moves ? step.moves.length : 1;
+
+    // Ogni movimento dura circa 3300 ms.
+    // Aggiungiamo una pausa finale per far leggere il testo.
+    return (movesCount * 3300) + 2600;
+  }
+
+  function scheduleAutoAdvance(step) {
+    clearAutoAdvanceTimer();
+
+    autoAdvanceTimer = setTimeout(() => {
+      if (currentStep >= TOUR_STEPS.length - 1) {
+        closeTour();
+        return;
+      }
+
+      currentStep += 1;
+      renderStep();
+    }, getAutoAdvanceDelay(step));
+  }
 
   function clearAnimationTimers() {
 
@@ -427,8 +458,8 @@
 
       currentStep === TOUR_STEPS.length - 1 ? "Fine" : "Avanti";
 
-    animateCursor(step);
-
+      animateCursor(step);
+      scheduleAutoAdvance(step);      
   }
 
   function openTour() {
@@ -452,6 +483,7 @@
   function closeTour() {
 
     clearAnimationTimers();
+    clearAutoAdvanceTimer();
 
     const modal = document.getElementById("onboarding-tour-modal");
 
