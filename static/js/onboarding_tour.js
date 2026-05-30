@@ -168,7 +168,7 @@
           end: { top: "61%", left: "74%" }
         }
       ]
-    },    
+    },
     {
       title: "Pubblica l’annuncio",
       action: "Quando hai finito, invia l’annuncio per la revisione.",
@@ -245,15 +245,15 @@
 
     modal.id = "onboarding-tour-modal";
 
-    modal.className = "fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-950/70 backdrop-blur-sm px-3 py-5";
+    modal.className = "fixed inset-0 z-[99999] hidden items-start justify-center bg-slate-950/70 backdrop-blur-sm px-3 pt-[calc(env(safe-area-inset-top)+5rem)] pb-4 overflow-y-auto";
 
     modal.innerHTML = `
 
-      <div class="w-full max-w-[540px] max-h-[94dvh] rounded-[2rem] bg-white shadow-2xl overflow-hidden border border-white/70 flex flex-col">
+      <div class="w-full max-w-[540px] max-h-[calc(100dvh-6rem)] rounded-[2rem] bg-white shadow-2xl overflow-hidden border border-white/70 flex flex-col">
 
         <div class="relative bg-slate-100">
 
-          <div class="relative h-[470px] sm:h-[520px] overflow-hidden bg-slate-100">
+          <div class="relative h-[330px] min-[390px]:h-[390px] sm:h-[520px] overflow-hidden bg-slate-100">
 
             <img id="onboarding-tour-image"
 
