@@ -153,22 +153,22 @@
           caption: "Compila i campi",
           captionPosition: { top: "12%", left: "50%" },
           start: { top: "20%", left: "50%" },
-          end: { top: "49%", left: "50%" }
+          end: { top: "64%", left: "50%" }
         },
         {
           caption: "Scrivi la descrizione",
           captionPosition: { top: "12%", left: "50%" },
-          start: { top: "49%", left: "50%" },
-          end: { top: "61%", left: "50%" }
+          start: { top: "64%", left: "50%" },
+          end: { top: "79%", left: "50%" }
         },
         {
           caption: "Fatti aiutare dall’AI",
           captionPosition: { top: "12%", left: "50%" },
-          start: { top: "61%", left: "50%" },
-          end: { top: "43%", left: "67%" }
+          start: { top: "79%", left: "50%" },
+          end: { top: "61%", left: "74%" }
         }
       ]
-    },
+    },    
     {
       title: "Pubblica l’annuncio",
       action: "Quando hai finito, invia l’annuncio per la revisione.",
