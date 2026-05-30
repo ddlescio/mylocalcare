@@ -4,42 +4,53 @@
   const TOUR_STEPS = [
     {
       title: "Benvenuto su MyLocalCare",
-      action: "Guarda le categorie principali e usa il pulsante Cerca per iniziare.",
-      text: "Da qui puoi cercare servizi locali, pubblicare annunci e gestire il tuo profilo.",
+      action: "Esempio: vuoi cercare una babysitter.",
+      text: "Guarda le categorie principali: puoi toccare direttamente la card della categoria che ti interessa.",
       image: "/static/img/onboarding/step-1-home.png",
-      hotspot: { top: "78%", left: "78%", label: "Cerca" }
+      cursorText: "Cerco una babysitter",
+      cursorStart: { top: "82%", left: "50%" },
+      cursorEnd: { top: "34%", left: "30%" }
     },
     {
       title: "Carica la foto profilo",
-      action: "Tocca la tua foto profilo o entra nel profilo per aggiungerla.",
-      text: "Una foto riconoscibile aumenta fiducia e credibilità.",
+      action: "Tocca la tua foto profilo per rendere l’account più riconoscibile.",
+      text: "Una foto chiara aumenta fiducia e credibilità.",
       image: "/static/img/onboarding/step-2-foto-profilo.png",
-      hotspot: { top: "8%", left: "73%", label: "Profilo" }
+      cursorText: "Aggiungo la foto",
+      cursorStart: { top: "76%", left: "50%" },
+      cursorEnd: { top: "8%", left: "73%" }
     },
     {
       title: "Cerca servizi o annunci",
-      action: "Usa filtri, categoria e zona per trovare ciò che ti serve.",
-      text: "Puoi cercare persone che offrono servizi oppure annunci di chi cerca aiuto.",
+      action: "Usa categoria, zona e filtri per trovare ciò che ti serve.",
+      text: "Puoi cercare chi offre servizi oppure annunci di chi cerca aiuto.",
       image: "/static/img/onboarding/step-3-cerca.png",
-      hotspot: { top: "78%", left: "70%", label: "Filtri" }
+      cursorText: "Uso i filtri",
+      cursorStart: { top: "82%", left: "50%" },
+      cursorEnd: { top: "30%", left: "50%" }
     },
     {
       title: "Pubblica un annuncio",
       action: "Scegli se Offri o Cerchi, poi compila categoria, zona e descrizione.",
       text: "L’annuncio sarà controllato prima della pubblicazione.",
       image: "/static/img/onboarding/step-4-annuncio.png",
-      hotspot: { top: "22%", left: "50%", label: "Annuncio" }
+      cursorText: "Creo l’annuncio",
+      cursorStart: { top: "80%", left: "50%" },
+      cursorEnd: { top: "24%", left: "50%" }
     },
     {
       title: "Gestisci il tuo profilo",
       action: "Aggiorna informazioni, foto, annunci e preferenze.",
-      text: "Un profilo completo rende più chiaro chi sei e cosa offri o cerchi.",
+      text: "Un profilo completo aiuta gli altri utenti a capire meglio chi sei.",
       image: "/static/img/onboarding/step-5-profilo.png",
-      hotspot: { top: "12%", left: "72%", label: "Profilo" }
+      cursorText: "Apro il profilo",
+      cursorStart: { top: "76%", left: "50%" },
+      cursorEnd: { top: "10%", left: "73%" }
     }
   ];
 
   let currentStep = 0;
+  let animationTimer = null;
 
   function createTourModal() {
     if (document.getElementById("onboarding-tour-modal")) return;
@@ -52,23 +63,29 @@
       <div class="w-full max-w-[520px] max-h-[92dvh] rounded-[2rem] bg-white shadow-2xl overflow-hidden border border-white/70 flex flex-col">
 
         <div class="relative bg-slate-100">
-          <div class="relative h-[390px] sm:h-[440px] overflow-hidden bg-slate-100">
+          <div class="relative h-[430px] sm:h-[470px] overflow-hidden bg-slate-100">
             <img id="onboarding-tour-image"
                  src=""
                  alt=""
-                 class="w-full h-full object-contain bg-slate-100 transition-all duration-300">
+                 class="w-full h-full object-contain bg-slate-100">
 
-            <div id="onboarding-tour-hotspot"
-                 class="absolute hidden -translate-x-1/2 -translate-y-1/2 z-20">
-              <div class="relative flex flex-col items-center">
-                <span class="absolute inline-flex h-14 w-14 rounded-full bg-blue-500 opacity-30 animate-ping"></span>
-                <span class="relative inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl ring-4 ring-white font-black">
-                  ↓
-                </span>
-                <span id="onboarding-tour-hotspot-label"
-                      class="mt-2 rounded-full bg-white px-3 py-1 text-xs font-extrabold text-blue-700 shadow-md border border-blue-100 whitespace-nowrap">
-                </span>
+            <div id="onboarding-tour-caption"
+                 class="absolute top-4 left-1/2 -translate-x-1/2 z-20 rounded-full bg-white/95 px-4 py-2 text-sm font-black text-blue-700 shadow-lg border border-blue-100 whitespace-nowrap">
+            </div>
+
+            <div id="onboarding-tour-cursor"
+                 class="absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ease-in-out">
+              <div class="relative">
+                <span class="absolute -inset-3 rounded-full bg-blue-500/20 animate-ping"></span>
+                <div class="relative w-12 h-12 rounded-full bg-white shadow-xl border border-blue-100 flex items-center justify-center text-2xl">
+                  👆
+                </div>
               </div>
+            </div>
+
+            <div id="onboarding-tour-click"
+                 class="absolute z-20 hidden -translate-x-1/2 -translate-y-1/2">
+              <span class="block w-16 h-16 rounded-full border-4 border-blue-500 animate-ping"></span>
             </div>
           </div>
 
@@ -115,36 +132,49 @@
     document.getElementById("onboarding-tour-next").addEventListener("click", nextStep);
   }
 
+  function animateCursor(step) {
+    clearTimeout(animationTimer);
+
+    const cursor = document.getElementById("onboarding-tour-cursor");
+    const click = document.getElementById("onboarding-tour-click");
+
+    cursor.style.top = step.cursorStart.top;
+    cursor.style.left = step.cursorStart.left;
+    click.classList.add("hidden");
+
+    animationTimer = setTimeout(() => {
+      cursor.style.top = step.cursorEnd.top;
+      cursor.style.left = step.cursorEnd.left;
+    }, 250);
+
+    animationTimer = setTimeout(() => {
+      click.style.top = step.cursorEnd.top;
+      click.style.left = step.cursorEnd.left;
+      click.classList.remove("hidden");
+    }, 1350);
+
+    animationTimer = setTimeout(() => {
+      click.classList.add("hidden");
+    }, 2300);
+  }
+
   function renderStep() {
     const step = TOUR_STEPS[currentStep];
 
-    const image = document.getElementById("onboarding-tour-image");
-    const title = document.getElementById("onboarding-tour-title");
-    const text = document.getElementById("onboarding-tour-text");
-    const action = document.getElementById("onboarding-tour-action");
-    const hotspot = document.getElementById("onboarding-tour-hotspot");
-    const hotspotLabel = document.getElementById("onboarding-tour-hotspot-label");
-
-    image.src = step.image;
-    title.textContent = step.title;
-    action.textContent = step.action;
-    text.textContent = step.text;
+    document.getElementById("onboarding-tour-image").src = step.image;
+    document.getElementById("onboarding-tour-title").textContent = step.title;
+    document.getElementById("onboarding-tour-action").textContent = step.action;
+    document.getElementById("onboarding-tour-text").textContent = step.text;
+    document.getElementById("onboarding-tour-caption").textContent = step.cursorText;
 
     document.getElementById("onboarding-tour-counter").textContent =
       `Passo ${currentStep + 1} di ${TOUR_STEPS.length}`;
 
-    if (step.hotspot) {
-      hotspot.style.top = step.hotspot.top;
-      hotspot.style.left = step.hotspot.left;
-      hotspotLabel.textContent = step.hotspot.label;
-      hotspot.classList.remove("hidden");
-    } else {
-      hotspot.classList.add("hidden");
-    }
-
     document.getElementById("onboarding-tour-prev").disabled = currentStep === 0;
     document.getElementById("onboarding-tour-next").textContent =
       currentStep === TOUR_STEPS.length - 1 ? "Fine" : "Avanti";
+
+    animateCursor(step);
   }
 
   function openTour() {
@@ -159,6 +189,8 @@
   }
 
   function closeTour() {
+    clearTimeout(animationTimer);
+
     const modal = document.getElementById("onboarding-tour-modal");
     if (!modal) return;
 
