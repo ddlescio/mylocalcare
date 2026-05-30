@@ -31,7 +31,7 @@
       cursorText: "Apri Info",
       caption: { top: "9%", left: "72%" },
       cursorStart: { top: "18%", left: "43%" },
-      cursorEnd: { top: "30%", left: "34%" }      
+      cursorEnd: { top: "30%", left: "34%" }
     },
     {
       title: "Aggiungi città e lingue",
@@ -72,9 +72,55 @@
       caption: { top: "10%", left: "50%" },
       cursorStart: { top: "78%", left: "50%" },
       cursorEnd: { top: "34%", left: "31%" }
+    },
+    {
+      title: "Usa i filtri e apri un annuncio",
+      action: "Puoi usare i filtri per una ricerca più mirata.",
+      text: "Filtra per zona, servizio o categoria, poi tocca una card per aprire il dettaglio dell’annuncio.",
+      image: "/static/img/onboarding/step-9-lista-babysitter.png",
+      moves: [
+        {
+          caption: "Usa i filtri",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "78%", left: "50%" },
+          end: { top: "14%", left: "18%" }
+        },
+        {
+          caption: "Apro l’annuncio",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "14%", left: "18%" },
+          end: { top: "45%", left: "50%" }
+        }
+      ]
+    },
+    {
+      title: "Controlla profilo, recensioni e contatta",
+      action: "Prima di scrivere puoi controllare profilo e recensioni.",
+      text: "Quando hai trovato una persona interessante, puoi aprire il profilo, guardare le recensioni e poi contattarla in chat.",
+      image: "/static/img/onboarding/step-10-annuncio-maria93.png",
+      moves: [
+        {
+          caption: "Controllo il profilo",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "78%", left: "50%" },
+          end: { top: "37%", left: "38%" }
+        },
+        {
+          caption: "Guardo le recensioni",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "37%", left: "38%" },
+          end: { top: "37%", left: "65%" }
+        },
+        {
+          caption: "Scrivo in chat",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "37%", left: "65%" },
+          end: { top: "43%", left: "50%" }
+        }
+      ]
     }
   ];
-
+  
   let currentStep = 0;
 
   let animationTimers = [];
@@ -230,35 +276,62 @@
 
     const cursor = document.getElementById("onboarding-tour-cursor");
     const click = document.getElementById("onboarding-tour-click");
+    const caption = document.getElementById("onboarding-tour-caption");
 
-    cursor.style.top = step.cursorStart.top;
-    cursor.style.left = step.cursorStart.left;
-    click.classList.add("hidden");
+    const moves = step.moves || [
+      {
+        caption: step.cursorText,
+        captionPosition: step.caption,
+        start: step.cursorStart,
+        end: step.cursorEnd
+      }
+    ];
 
-    setTimer(() => {
-      click.style.top = step.cursorStart.top;
-      click.style.left = step.cursorStart.left;
-      click.classList.remove("hidden");
-    }, 250);
+    if (!moves.length) return;
 
-    setTimer(() => {
-      click.classList.add("hidden");
-    }, 900);
+    let delay = 0;
 
-    setTimer(() => {
-      cursor.style.top = step.cursorEnd.top;
-      cursor.style.left = step.cursorEnd.left;
-    }, 1100);
+    moves.forEach((move, index) => {
+      setTimer(() => {
+        caption.textContent = move.caption || step.cursorText || "";
 
-    setTimer(() => {
-      click.style.top = step.cursorEnd.top;
-      click.style.left = step.cursorEnd.left;
-      click.classList.remove("hidden");
-    }, 2200);
+        if (move.captionPosition) {
+          caption.style.top = move.captionPosition.top;
+          caption.style.left = move.captionPosition.left;
+        }
 
-    setTimer(() => {
-      click.classList.add("hidden");
-    }, 3100);
+        cursor.style.top = move.start.top;
+        cursor.style.left = move.start.left;
+        click.classList.add("hidden");
+      }, delay);
+
+      setTimer(() => {
+        click.style.top = move.start.top;
+        click.style.left = move.start.left;
+        click.classList.remove("hidden");
+      }, delay + 250);
+
+      setTimer(() => {
+        click.classList.add("hidden");
+      }, delay + 850);
+
+      setTimer(() => {
+        cursor.style.top = move.end.top;
+        cursor.style.left = move.end.left;
+      }, delay + 1050);
+
+      setTimer(() => {
+        click.style.top = move.end.top;
+        click.style.left = move.end.left;
+        click.classList.remove("hidden");
+      }, delay + 2150);
+
+      setTimer(() => {
+        click.classList.add("hidden");
+      }, delay + 2950);
+
+      delay += 3300;
+    });
   }
 
   function renderStep() {
@@ -273,7 +346,6 @@
 
     document.getElementById("onboarding-tour-text").textContent = step.text;
 
-    document.getElementById("onboarding-tour-caption").textContent = step.cursorText;
     const caption = document.getElementById("onboarding-tour-caption");
 
     if (step.caption) {
