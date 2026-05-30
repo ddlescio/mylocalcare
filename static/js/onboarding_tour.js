@@ -3,153 +3,71 @@
   "use strict";
 
   const TOUR_STEPS = [
-
     {
-
       title: "Completa prima il tuo profilo",
-
       action: "Per iniziare, carica una foto profilo.",
-
-      text: "La foto profilo rende il tuo account più riconoscibile e aumenta la fiducia.",
-
+      text: "Tocca l’icona profilo nella barra in alto, poi carica una foto per rendere il tuo account più riconoscibile.",
       image: "/static/img/onboarding/step-1-home.png",
-
-      cursorText: "Carica una foto profilo",
-
+      cursorText: "Vado al profilo",
       cursorStart: { top: "72%", left: "50%" },
-
       cursorEnd: { top: "8%", left: "73%" }
-
     },
-
     {
-
-      title: "Apri il tuo profilo",
-
-      action: "Tocca l’icona profilo nella barra in alto.",
-
-      text: "Da qui puoi gestire foto, informazioni personali, annunci e preferenze.",
-
-      image: "/static/img/onboarding/step-2-profilo-top.png",
-
-      cursorText: "Apro il profilo",
-
-      cursorStart: { top: "75%", left: "50%" },
-
-      cursorEnd: { top: "8%", left: "73%" }
-
-    },
-
-    {
-
       title: "Carica la tua foto",
-
       action: "Tocca il cerchio della foto profilo.",
-
-      text: "Una foto chiara aiuta gli altri utenti a riconoscerti meglio.",
-
+      text: "Una foto chiara aumenta fiducia e credibilità.",
       image: "/static/img/onboarding/step-3-carica-foto.png",
-
-      cursorText: "Tocco la foto",
-
+      cursorText: "Carico la foto",
       cursorStart: { top: "75%", left: "50%" },
-
       cursorEnd: { top: "35%", left: "50%" }
-
     },
-
     {
-
       title: "Compila le informazioni di base",
-
       action: "Entra nella sezione Info e apri Informazioni di base.",
-
       text: "Questi dati servono per mostrarti annunci più coerenti con la tua zona e i tuoi interessi.",
-
       image: "/static/img/onboarding/step-4-info-base.png",
-
       cursorText: "Informazioni di base",
-
       cursorStart: { top: "75%", left: "50%" },
-
       cursorEnd: { top: "30%", left: "34%" }
-
     },
-
     {
-
       title: "Aggiungi città e lingue",
-
       action: "Inserisci la città e seleziona le lingue che conosci.",
-
       text: "Ad esempio puoi selezionare Italiano e Inglese.",
-
       image: "/static/img/onboarding/step-5-lingue.png",
-
       cursorText: "Italiano + Inglese",
-
       cursorStart: { top: "75%", left: "50%" },
-
       cursorEnd: { top: "57%", left: "58%" }
-
     },
-
     {
-
       title: "Indica cosa offri o cerchi",
-
       action: "Seleziona le categorie che ti interessano.",
-
       text: "Puoi scegliere se offri un servizio o se cerchi aiuto in quella categoria.",
-
       image: "/static/img/onboarding/step-6-offro-cerco.png",
-
       cursorText: "Scelgo Offro / Cerco",
-
       cursorStart: { top: "30%", left: "50%" },
-
       cursorEnd: { top: "48%", left: "78%" }
-
     },
-
     {
-
       title: "Torna alla Home",
-
       action: "Dalla barra in alto puoi tornare alla Home.",
-
       text: "Ora sei pronto per cercare persone e servizi vicino a te.",
-
       image: "/static/img/onboarding/step-7-torna-home.png",
-
       cursorText: "Torno alla Home",
-
       cursorStart: { top: "76%", left: "50%" },
-
       cursorEnd: { top: "8%", left: "20%" }
-
     },
-
     {
-
       title: "Cerca una categoria",
-
       action: "Esempio: vuoi cercare una babysitter.",
-
       text: "Tocca direttamente la card della categoria che ti interessa.",
-
       image: "/static/img/onboarding/step-8-home-cerca.png",
-
       cursorText: "Cerco una babysitter",
-
       cursorStart: { top: "78%", left: "50%" },
-
       cursorEnd: { top: "34%", left: "31%" }
-
     }
-
   ];
-
+  
   let currentStep = 0;
 
   let animationTimers = [];
