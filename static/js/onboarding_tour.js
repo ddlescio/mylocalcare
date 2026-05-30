@@ -9,8 +9,9 @@
       text: "Tocca l’icona profilo nella barra in alto, poi carica una foto per rendere il tuo account più riconoscibile.",
       image: "/static/img/onboarding/step-1-home.png",
       cursorText: "Vado al profilo",
+      caption: { top: "14%", left: "38%" },
       cursorStart: { top: "72%", left: "50%" },
-      cursorEnd: { top: "8%", left: "73%" }
+      cursorEnd: { top: "7%", left: "63%" }
     },
     {
       title: "Carica la tua foto",
@@ -18,16 +19,18 @@
       text: "Una foto chiara aumenta fiducia e credibilità.",
       image: "/static/img/onboarding/step-3-carica-foto.png",
       cursorText: "Carico la foto",
+      caption: { top: "12%", left: "50%" },
       cursorStart: { top: "75%", left: "50%" },
-      cursorEnd: { top: "35%", left: "50%" }
+      cursorEnd: { top: "38%", left: "50%" }
     },
     {
       title: "Compila le informazioni di base",
-      action: "Entra nella sezione Info e apri Informazioni di base.",
+      action: "Prima tocca Info, poi apri Informazioni di base.",
       text: "Questi dati servono per mostrarti annunci più coerenti con la tua zona e i tuoi interessi.",
       image: "/static/img/onboarding/step-4-info-base.png",
-      cursorText: "Informazioni di base",
-      cursorStart: { top: "75%", left: "50%" },
+      cursorText: "Info → Informazioni di base",
+      caption: { top: "10%", left: "50%" },
+      cursorStart: { top: "18%", left: "43%" },
       cursorEnd: { top: "30%", left: "34%" }
     },
     {
@@ -36,6 +39,7 @@
       text: "Ad esempio puoi selezionare Italiano e Inglese.",
       image: "/static/img/onboarding/step-5-lingue.png",
       cursorText: "Italiano + Inglese",
+      caption: { top: "10%", left: "50%" },
       cursorStart: { top: "75%", left: "50%" },
       cursorEnd: { top: "57%", left: "58%" }
     },
@@ -45,6 +49,7 @@
       text: "Puoi scegliere se offri un servizio o se cerchi aiuto in quella categoria.",
       image: "/static/img/onboarding/step-6-offro-cerco.png",
       cursorText: "Scelgo Offro / Cerco",
+      caption: { top: "10%", left: "50%" },
       cursorStart: { top: "30%", left: "50%" },
       cursorEnd: { top: "48%", left: "78%" }
     },
@@ -54,8 +59,9 @@
       text: "Ora sei pronto per cercare persone e servizi vicino a te.",
       image: "/static/img/onboarding/step-7-torna-home.png",
       cursorText: "Torno alla Home",
+      caption: { top: "14%", left: "58%" },
       cursorStart: { top: "76%", left: "50%" },
-      cursorEnd: { top: "8%", left: "20%" }
+      cursorEnd: { top: "7%", left: "23%" }      
     },
     {
       title: "Cerca una categoria",
@@ -63,11 +69,12 @@
       text: "Tocca direttamente la card della categoria che ti interessa.",
       image: "/static/img/onboarding/step-8-home-cerca.png",
       cursorText: "Cerco una babysitter",
+      caption: { top: "10%", left: "50%" },
       cursorStart: { top: "78%", left: "50%" },
       cursorEnd: { top: "34%", left: "31%" }
     }
   ];
-  
+
   let currentStep = 0;
 
   let animationTimers = [];
@@ -219,43 +226,39 @@
   }
 
   function animateCursor(step) {
-
     clearAnimationTimers();
 
     const cursor = document.getElementById("onboarding-tour-cursor");
-
     const click = document.getElementById("onboarding-tour-click");
 
     cursor.style.top = step.cursorStart.top;
-
     cursor.style.left = step.cursorStart.left;
-
     click.classList.add("hidden");
 
     setTimer(() => {
-
-      cursor.style.top = step.cursorEnd.top;
-
-      cursor.style.left = step.cursorEnd.left;
-
-    }, 300);
-
-    setTimer(() => {
-
-      click.style.top = step.cursorEnd.top;
-
-      click.style.left = step.cursorEnd.left;
-
+      click.style.top = step.cursorStart.top;
+      click.style.left = step.cursorStart.left;
       click.classList.remove("hidden");
-
-    }, 1400);
+    }, 250);
 
     setTimer(() => {
-
       click.classList.add("hidden");
+    }, 900);
 
-    }, 2300);
+    setTimer(() => {
+      cursor.style.top = step.cursorEnd.top;
+      cursor.style.left = step.cursorEnd.left;
+    }, 1100);
 
+    setTimer(() => {
+      click.style.top = step.cursorEnd.top;
+      click.style.left = step.cursorEnd.left;
+      click.classList.remove("hidden");
+    }, 2200);
+
+    setTimer(() => {
+      click.classList.add("hidden");
+    }, 3100);
   }
 
   function renderStep() {
@@ -271,6 +274,12 @@
     document.getElementById("onboarding-tour-text").textContent = step.text;
 
     document.getElementById("onboarding-tour-caption").textContent = step.cursorText;
+    const caption = document.getElementById("onboarding-tour-caption");
+
+    if (step.caption) {
+      caption.style.top = step.caption.top;
+      caption.style.left = step.caption.left;
+    }
 
     document.getElementById("onboarding-tour-counter").textContent =
 
