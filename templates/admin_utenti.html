@@ -463,6 +463,20 @@
       border-color: #dbe3ee;
   }
 
+  .user-modal-action.active-contatti {
+      background: #f97316;
+      color: white;
+      border-color: #ea580c;
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.22);
+  }
+
+  .user-modal-action.active-affidabilita {
+      background: #16a34a;
+      color: white;
+      border-color: #15803d;
+      box-shadow: 0 8px 20px rgba(22, 163, 74, 0.22);
+  }
+
   .user-modal-action.danger {
       background: #fee2e2;
       color: #991b1b;
@@ -1086,12 +1100,23 @@ function aggiornaBottoneModaleUtente(codiceServizio, isActive) {
 
   if (!btn) return;
 
-  btn.classList.remove("primary", "secondary", "danger");
+  btn.classList.remove(
+    "secondary",
+    "active-contatti",
+    "active-affidabilita"
+  );
 
-  if (isActive) {
-    btn.classList.add("primary");
-  } else {
+  if (!isActive) {
     btn.classList.add("secondary");
+    return;
+  }
+
+  if (codiceServizio === "contatti") {
+    btn.classList.add("active-contatti");
+  }
+
+  if (codiceServizio === "badge_affidabilita") {
+    btn.classList.add("active-affidabilita");
   }
 }
 
@@ -1140,7 +1165,7 @@ function toggleServizioProfilo(codiceServizio, utenteId, btn = null) {
       }
 
       aggiornaBottoneServizioProfilo(tableBtn, codiceServizio, isActive);
-    }    
+    }
   })
   .catch(() => {
     alert("Errore di rete");
@@ -1231,15 +1256,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (contatti) {
-      contatti.textContent = d.userContatti === "1" ? "📞 Contatti attivi" : "📞 Attiva contatti";
+      aggiornaBottoneModaleUtente("contatti", d.userContatti === "1");
       contatti.onclick = () => toggleContattiProfilo(Number(d.userId), contatti);
     }
 
     if (affidabilita) {
-      affidabilita.textContent = d.userAffidabilita === "1" ? "🛡️ Affidabilità attiva" : "🛡️ Attiva affidabilità";
+      aggiornaBottoneModaleUtente("badge_affidabilita", d.userAffidabilita === "1");
       affidabilita.onclick = () => toggleAffidabilitaProfilo(Number(d.userId), affidabilita);
     }
-
+    
     const actions = document.getElementById("modal-user-actions");
 
     if (actions) {
