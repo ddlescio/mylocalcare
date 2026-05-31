@@ -1068,18 +1068,30 @@ function aggiornaDatasetRigaUtente(utenteId, codiceServizio, isActive) {
 }
 
 function aggiornaBottoneModaleUtente(codiceServizio, isActive) {
+  let btn = null;
+
   if (codiceServizio === "contatti") {
-    const btn = document.getElementById("modal-user-contatti");
+    btn = document.getElementById("modal-user-contatti");
     if (btn) {
       btn.textContent = isActive ? "📞 Contatti attivi" : "📞 Attiva contatti";
     }
   }
 
   if (codiceServizio === "badge_affidabilita") {
-    const btn = document.getElementById("modal-user-affidabilita");
+    btn = document.getElementById("modal-user-affidabilita");
     if (btn) {
       btn.textContent = isActive ? "🛡️ Affidabilità attiva" : "🛡️ Attiva affidabilità";
     }
+  }
+
+  if (!btn) return;
+
+  btn.classList.remove("primary", "secondary", "danger");
+
+  if (isActive) {
+    btn.classList.add("primary");
+  } else {
+    btn.classList.add("secondary");
   }
 }
 
@@ -1112,6 +1124,23 @@ function toggleServizioProfilo(codiceServizio, utenteId, btn = null) {
     aggiornaBottoneServizioProfilo(btn, codiceServizio, isActive);
     aggiornaDatasetRigaUtente(utenteId, codiceServizio, isActive);
     aggiornaBottoneModaleUtente(codiceServizio, isActive);
+
+    /* aggiorna anche il bottone nella tabella, se il click arriva dal modale */
+    const row = document.querySelector(`.admin-user-row[data-user-id="${utenteId}"]`);
+
+    if (row) {
+      let tableBtn = null;
+
+      if (codiceServizio === "contatti") {
+        tableBtn = row.querySelector('button[onclick^="toggleContattiProfilo"]');
+      }
+
+      if (codiceServizio === "badge_affidabilita") {
+        tableBtn = row.querySelector('button[onclick^="toggleAffidabilitaProfilo"]');
+      }
+
+      aggiornaBottoneServizioProfilo(tableBtn, codiceServizio, isActive);
+    }    
   })
   .catch(() => {
     alert("Errore di rete");
