@@ -287,7 +287,7 @@
   </div>
 
   <!-- 📞 CONTATTI -->
-  {% if contatti_attivi and (annuncio['email'] or annuncio['telefono']) %}
+  {% if annuncio['contatti_visibili'] %}
   <section class="annuncio-info-card annuncio-direct-contacts-card mt-5">
 
     <div class="annuncio-info-card-header">

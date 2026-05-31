@@ -14207,8 +14207,8 @@ def visualizza_annuncio_pubblico(id):
             u.cognome,
             a.email AS email,
             a.telefono AS telefono,
-            u.email AS email_utente,
-            u.telefono AS telefono_utente,
+            NULL AS email_utente,
+            NULL AS telefono_utente,
             u.foto_profilo,
 
             {affidabilita_top_sql},
@@ -14259,6 +14259,13 @@ def visualizza_annuncio_pubblico(id):
         codice_servizio="contatti"
     )
 
+    annuncio["contatti_visibili"] = bool(
+        contatti_attivi and (
+            (annuncio.get("email") or "").strip()
+            or
+            (annuncio.get("telefono") or "").strip()
+        )
+    )
     # 🔁 Gestione intelligente del tasto “Torna”
     ref = request.referrer or ""
 
