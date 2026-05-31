@@ -38,8 +38,8 @@
       action: "Inserisci la città e seleziona le lingue che conosci.",
       text: "Ad esempio puoi selezionare Italiano e Inglese.",
       image: "/static/img/onboarding/step-5-lingue.png",
-      cursorText: "Italiano + Inglese",
-      caption: { top: "10%", left: "50%" },
+      cursorText: "Le lingue che parli",
+      caption: { top: "12%", left: "50%" },
       cursorStart: { top: "75%", left: "50%" },
       cursorEnd: { top: "57%", left: "58%" }
     },
@@ -61,7 +61,7 @@
       cursorText: "Torno alla Home",
       caption: { top: "14%", left: "58%" },
       cursorStart: { top: "76%", left: "50%" },
-      cursorEnd: { top: "7%", left: "23%" }
+      cursorEnd: { top: "7%", left: "28%" }
     },
     {
       title: "Cerca una categoria",
@@ -83,12 +83,12 @@
           caption: "Usa i filtri",
           captionPosition: { top: "13%", left: "50%" },
           start: { top: "78%", left: "50%" },
-          end: { top: "14%", left: "25%" }
+          end: { top: "14%", left: "31%" }
         },
         {
           caption: "Apro l’annuncio",
           captionPosition: { top: "13%", left: "50%" },
-          start: { top: "14%", left: "25%" },
+          start: { top: "14%", left: "31%" },
           end: { top: "45%", left: "50%" }
         }
       ]
@@ -165,7 +165,7 @@
           caption: "Fatti aiutare dall’AI",
           captionPosition: { top: "12%", left: "50%" },
           start: { top: "79%", left: "50%" },
-          end: { top: "61%", left: "74%" }
+          end: { top: "66%", left: "66%" }
         }
       ]
     },
