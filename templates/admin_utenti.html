@@ -622,18 +622,18 @@
 
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
-            <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Cognome</th>
-                <th>Email</th>
-                <th>Username</th>
-                <th>Città</th>
-                <th>Provincia</th>
-                <th>Registrato il</th>
-                <th>Stato</th>
-                <th class="text-center">Azioni</th>
-            </tr>
+          <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Stato</th>
+              <th class="text-center">Azioni</th>
+              <th>Nome</th>
+              <th>Cognome</th>
+              <th>Email</th>
+              <th>Città</th>
+              <th>Provincia</th>
+              <th>Registrato il</th>
+          </tr>
         </thead>
 
         <tbody class="divide-y divide-gray-100">
@@ -659,12 +659,10 @@
 
                 <td>{{ u.id }}</td>
 
-                <td>{{ u.nome }}</td>
-
-                <td>{{ u.cognome }}</td>
-
                 <td>
-                  <div>{{ u.email }}</div>
+                  <div class="font-semibold text-slate-800">
+                    {{ u.username }}
+                  </div>
 
                   <div class="mt-1 flex gap-1">
                     <a href="{{ url_for('chat_conversazione_view', other_id=u.id) }}"
@@ -677,20 +675,6 @@
                        ✉️
                     </a>
                   </div>
-                </td>
-
-                <td>{{ u.username }}</td>
-
-                <td>{{ u.citta or "-" }}</td>
-
-                <td>{{ u.provincia or "-" }}</td>
-
-                <td>
-                  {% if u.data_creazione %}
-                    {{ u.data_creazione|fmt_it }}
-                  {% else %}
-                    -
-                  {% endif %}
                 </td>
 
                 <td>
@@ -730,13 +714,14 @@
                       class="
                         px-3 py-1.5 rounded-full text-xs font-semibold border transition
                         {% if u.contatti_attivi %}
-                          bg-blue-600 text-white border-blue-600 hover:bg-blue-700
+                          bg-orange-500 text-white border-orange-600 hover:bg-orange-600
                         {% else %}
                           bg-white text-gray-500 border-gray-300 hover:bg-gray-100
                         {% endif %}
                       ">
                       📞 Contatti
                     </button>
+
                     <button
                       type="button"
                       onclick="toggleAffidabilitaProfilo({{ u.id }}, this)"
@@ -752,6 +737,24 @@
                     </button>
                   {% endif %}
 
+                </td>
+
+                <td>{{ u.nome }}</td>
+
+                <td>{{ u.cognome }}</td>
+
+                <td>{{ u.email }}</td>
+
+                <td>{{ u.citta or "-" }}</td>
+
+                <td>{{ u.provincia or "-" }}</td>
+
+                <td>
+                  {% if u.data_creazione %}
+                    {{ u.data_creazione|fmt_it }}
+                  {% else %}
+                    -
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}
@@ -1023,11 +1026,12 @@ function aggiornaBottoneServizioProfilo(btn, codiceServizio, isActive) {
 
   btn.classList.remove(
     "bg-blue-600", "bg-blue-700",
+    "bg-orange-500", "bg-orange-600",
     "bg-green-600", "bg-green-700",
     "bg-white",
     "text-white", "text-gray-500",
-    "border-blue-600", "border-green-600", "border-gray-300",
-    "hover:bg-blue-700", "hover:bg-green-700", "hover:bg-gray-100"
+    "border-blue-600", "border-orange-600", "border-green-600", "border-gray-300",
+    "hover:bg-blue-700", "hover:bg-orange-600", "hover:bg-green-700", "hover:bg-gray-100"
   );
 
   if (!isActive) {
@@ -1051,10 +1055,10 @@ function aggiornaBottoneServizioProfilo(btn, codiceServizio, isActive) {
 
   if (codiceServizio === "contatti") {
     btn.classList.add(
-      "bg-blue-600",
-      "border-blue-600",
-      "hover:bg-blue-700"
-    );
+      "bg-orange-500",
+      "border-orange-600",
+      "hover:bg-orange-600"
+    );    
     btn.textContent = "📞 Contatti";
   }
 
@@ -1264,7 +1268,7 @@ document.addEventListener("DOMContentLoaded", () => {
       aggiornaBottoneModaleUtente("badge_affidabilita", d.userAffidabilita === "1");
       affidabilita.onclick = () => toggleAffidabilitaProfilo(Number(d.userId), affidabilita);
     }
-    
+
     const actions = document.getElementById("modal-user-actions");
 
     if (actions) {
