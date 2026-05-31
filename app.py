@@ -14205,8 +14205,10 @@ def visualizza_annuncio_pubblico(id):
             u.username,
             u.nome,
             u.cognome,
-            u.email AS email,
-            u.telefono AS telefono,
+            a.email AS email,
+            a.telefono AS telefono,
+            u.email AS email_utente,
+            u.telefono AS telefono_utente,
             u.foto_profilo,
 
             {affidabilita_top_sql},

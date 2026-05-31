@@ -342,7 +342,7 @@
 
   </section>
 
-  {% elif annuncio['email'] or annuncio['telefono'] %}
+  {% else %}
   <section class="annuncio-info-card annuncio-direct-contacts-card annuncio-direct-contacts-locked mt-5">
 
     <div class="annuncio-info-card-header">
@@ -2014,7 +2014,7 @@
        display: block;
        transition: transform .26s ease, filter .26s ease;
      }
-     
+
   .annuncio-media-thumb img {
     width: 100%;
     height: 100%;
