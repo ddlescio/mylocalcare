@@ -5581,6 +5581,27 @@ def admin_pacchetti_piani_toggle(piano_id):
         url_for("admin_pacchetti_piani", pacchetto_id=piano["pacchetto_id"])
     )
 
+@app.route("/admin/filtri-categoria")
+@admin_required
+def admin_filtri_categoria():
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        SELECT id, categoria, filtro, ordine, attivo
+        FROM filtri_categoria
+        ORDER BY categoria ASC, ordine ASC, filtro ASC
+    """))
+
+    filtri = [dict(row) for row in c.fetchall()]
+    conn.close()
+
+    return render_template(
+        "admin_filtri_categoria.html",
+        filtri=filtri
+    )
+
+
 # ==========================================================
 # GESTIONE UTENTI
 # ==========================================================
@@ -9257,7 +9278,8 @@ def modifica_annuncio(id):
     return render_template(
         "modifica_annuncio.html",
         modalita="modifica",
-        annuncio=annuncio
+        annuncio=annuncio,
+        filtri_per_categoria=get_filtri_categoria_da_db()
     )
 
 # --- Dashboard: carica anche i nuovi campi (sostituisci la tua dashboard() attuale) ---
@@ -11700,6 +11722,34 @@ def set_macro_area():
 from flask import request, render_template, session
 import sqlite3, json, time
 
+def get_filtri_categoria_da_db():
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    cur.execute(sql("""
+        SELECT categoria, filtro
+        FROM filtri_categoria
+        WHERE attivo = 1
+        ORDER BY categoria ASC, ordine ASC, filtro ASC
+    """))
+
+    righe = cur.fetchall()
+    conn.close()
+
+    filtri = {}
+
+    for r in righe:
+        row = dict(r)
+        categoria = row["categoria"]
+        filtro = row["filtro"]
+
+        if categoria not in filtri:
+            filtri[categoria] = []
+
+        filtri[categoria].append(filtro)
+
+    return filtri
+
 @app.route("/cerca")
 def cerca():
     # 🔒 BLOCCO BETA — accesso solo utenti registrati
@@ -11804,7 +11854,7 @@ def cerca():
             break
 
     conn_filtri.close()
-    
+
     # =========================================================
     # DB
     # =========================================================
@@ -13960,9 +14010,8 @@ def nuovo_annuncio():
         flash("Il tuo account deve essere approvato per pubblicare annunci.", "warning")
         return redirect(url_for("dashboard"))
 
-    # ✅ Carica filtri categoria
-    with open("static/data/filtri_categoria.json", "r", encoding="utf-8") as f:
-        filtri_per_categoria = json.load(f)
+    # ✅ Carica filtri categoria da DB
+    filtri_per_categoria = get_filtri_categoria_da_db()
 
     # =========================================================
     # 📤 POST

@@ -1,0 +1,57 @@
+{% extends "layout_admin.html" %}
+
+{% block admin_title %}Filtri categoria{% endblock %}
+{% block admin_subtitle %}Gestione dei filtri mostrati in Cerca, Nuovo annuncio e Modifica annuncio.{% endblock %}
+
+{% block admin_content %}
+
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+  <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-3">
+    <div>
+      <h2 class="text-lg font-bold text-slate-900">Filtri attuali</h2>
+      <p class="text-sm text-slate-500">Per ora visualizzazione sola lettura.</p>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 border-b border-slate-200">
+        <tr>
+          <th class="text-left p-3">ID</th>
+          <th class="text-left p-3">Categoria</th>
+          <th class="text-left p-3">Filtro</th>
+          <th class="text-left p-3">Ordine</th>
+          <th class="text-left p-3">Stato</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-100">
+        {% for f in filtri %}
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 text-slate-500">{{ f.id }}</td>
+            <td class="p-3 font-semibold text-slate-800">{{ f.categoria }}</td>
+            <td class="p-3 text-slate-700">{{ f.filtro }}</td>
+            <td class="p-3 text-slate-600">{{ f.ordine }}</td>
+            <td class="p-3">
+              {% if f.attivo == 1 %}
+                <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Attivo</span>
+              {% else %}
+                <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">Disattivo</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="5" class="p-6 text-center text-slate-500">
+              Nessun filtro presente.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+{% endblock %}

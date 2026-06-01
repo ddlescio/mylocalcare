@@ -122,7 +122,18 @@
                 {% endif %}">
         <span>🔐</span>
         <span>Passkey admin</span>
-      </a>      
+      </a>
+
+      <a href="{{ url_for('admin_filtri_categoria') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/filtri-categoria') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>🏷️</span>
+        <span>Filtri categoria</span>
+      </a>
 
       <a href="{{ url_for('admin_servizi') }}"
          class="flex items-center gap-2 px-3 py-2 rounded-xl
@@ -133,7 +144,7 @@
                 {% endif %}">
         <span>💰</span>
         <span>Servizi</span>
-      </a>
+      </a>      
     </nav>
 
     {# Footer sidebar: esci #}
