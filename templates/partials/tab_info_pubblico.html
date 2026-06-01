@@ -96,36 +96,47 @@
           <p class="info-empty-block">L’utente non ha ancora inserito esperienze, formazione o certificazioni.</p>
         {% else %}
 
+        <div class="info-highlight-grid">
+
           {% if esperienze_presenti %}
-          <div class="info-block">
-            <div class="info-block-title">💼 Esperienze</div>
-            <ul class="info-list">
-              {% for exp in esperienze_presenti %}
-                <li>{{ exp }}</li>
-              {% endfor %}
-            </ul>
-          </div>
+            <div class="info-highlight-card">
+              <div class="info-highlight-icon">💼</div>
+              <div>
+                <div class="info-highlight-title">Esperienze</div>
+                <div class="info-chip-list">
+                  {% for exp in esperienze_presenti %}
+                    <span class="info-chip">{{ exp }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
           {% endif %}
 
           {% if formazioni_presenti %}
-          <div class="info-block">
-            <div class="info-block-title">🎓 Formazione</div>
-            <ul class="info-list">
-              {% for f in formazioni_presenti %}
-                <li>{{ f }}</li>
-              {% endfor %}
-            </ul>
-          </div>
+            <div class="info-highlight-card">
+              <div class="info-highlight-icon">🎓</div>
+              <div>
+                <div class="info-highlight-title">Formazione</div>
+                <div class="info-chip-list">
+                  {% for f in formazioni_presenti %}
+                    <span class="info-chip">{{ f }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
           {% endif %}
 
           {% if certificazioni %}
-          <div class="info-block">
-            <div class="info-block-title">📜 Certificazioni</div>
-            <div class="info-paragraph">{{ certificazioni }}</div>
-          </div>
+            <div class="info-highlight-card">
+              <div class="info-highlight-icon">📜</div>
+              <div>
+                <div class="info-highlight-title">Certificazioni</div>
+                <div class="info-paragraph">{{ certificazioni }}</div>
+              </div>
+            </div>
           {% endif %}
 
-        {% endif %}
+        </div>        
       </section>
 
 
@@ -654,6 +665,66 @@
   .info-block-title{ font-weight:700; color:#1f2937; font-size:.9rem; margin-bottom:.45rem; }
   .info-list{ margin:0; padding-left: 1.1rem; color:#374151; font-size:.92rem; }
   .info-paragraph{ color:#374151; font-size:.95rem; line-height:1.55; white-space: pre-wrap; }
+
+  .info-highlight-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .info-highlight-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.95rem;
+    border-radius: 1.05rem;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.82));
+    border: 1px solid rgba(226,232,240,0.95);
+    box-shadow:
+      0 8px 20px rgba(15,23,42,0.045),
+      inset 0 1px 0 rgba(255,255,255,0.95);
+  }
+
+  .info-highlight-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    font-size: 1rem;
+  }
+
+  .info-highlight-title {
+    font-size: 0.78rem;
+    font-weight: 850;
+    color: #1e40af;
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .info-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .info-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.42rem 0.65rem;
+    border-radius: 9999px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 0.86rem;
+    font-weight: 650;
+  }
 
   .info-empty-block{
     color:#6b7280; font-size:.92rem; font-style: italic;
