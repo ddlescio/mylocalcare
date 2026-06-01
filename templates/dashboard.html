@@ -6317,7 +6317,7 @@ function aggiornaStatoVisibilita() {
     ).forEach(el => {
       el.classList.remove("hidden");
     });
-  }  
+  }
 </script>
 <script>
   let stripe = null;
@@ -7183,6 +7183,8 @@ document.addEventListener("DOMContentLoaded", () => {
 {% if not pubblico %}
   <button
     type="button"
+    id="btn-guida-dashboard"
+    data-guida-btn
     onclick="window.MyLocalCareOnboardingTour?.open()"
     class="fixed bottom-5 right-5 z-[9998] inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700 active:scale-95 transition"
   >
