@@ -112,7 +112,7 @@
 <div class="filtri-admin-wrap">
 
   {% for categoria, filtri in filtri_per_categoria.items() %}
-    <details class="categoria-details">
+    <details class="categoria-details" {% if categoria == categoria_aperta %}open{% endif %}>
       <summary class="categoria-summary">
         <div class="categoria-summary-inner">
           <div>
@@ -127,10 +127,11 @@
 
         <form method="post"
               action="{{ url_for('admin_aggiungi_filtro_categoria') }}"
-              class="grid grid-cols-1 md:grid-cols-[1fr_120px_auto] gap-3 items-end bg-blue-50/60 border border-blue-100 rounded-2xl p-4">
+              class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end bg-blue-50/60 border border-blue-100 rounded-2xl p-4">
 
           <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
           <input type="hidden" name="categoria" value="{{ categoria }}">
+          <input type="hidden" name="ordine" value="{{ filtri|length + 1 }}">
 
           <div>
             <label class="block text-xs font-bold text-slate-500 mb-1">Nuovo filtro</label>
@@ -138,14 +139,6 @@
                    required
                    class="w-full rounded-xl border border-slate-200 px-3 py-2"
                    placeholder="Es. Nuovo filtro">
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-1">Ordine</label>
-            <input name="ordine"
-                   type="number"
-                   value="{{ filtri|length + 1 }}"
-                   class="w-full rounded-xl border border-slate-200 px-3 py-2">
           </div>
 
           <button class="rounded-xl bg-blue-600 text-white font-bold px-4 py-2 hover:bg-blue-700">
@@ -160,8 +153,8 @@
               <tr>
                 <th class="text-left p-3">ID</th>
                 <th class="text-left p-3">Filtro</th>
-                <th class="text-left p-3">Ordine</th>
                 <th class="text-left p-3">Stato</th>
+                <th class="text-center p-3">Ordine</th>
                 <th class="text-right p-3">Azioni</th>
               </tr>
             </thead>
@@ -176,18 +169,11 @@
                           method="post"
                           action="{{ url_for('admin_modifica_filtro_categoria', id=f.id) }}">
                       <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                      <input type="hidden" name="ordine" value="{{ f.ordine }}">
                       <input name="filtro"
                              value="{{ f.filtro }}"
                              class="w-full rounded-xl border border-slate-200 px-3 py-2">
                     </form>
-                  </td>
-
-                  <td class="p-3 w-28">
-                    <input form="modifica-filtro-{{ f.id }}"
-                           name="ordine"
-                           type="number"
-                           value="{{ f.ordine }}"
-                           class="w-full rounded-xl border border-slate-200 px-3 py-2">
                   </td>
 
                   <td class="p-3">
@@ -196,6 +182,26 @@
                     {% else %}
                       <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">Disattivo</span>
                     {% endif %}
+                  </td>
+
+                  <td class="p-3">
+                    <div class="flex justify-center gap-2">
+                      <form method="post"
+                            action="{{ url_for('admin_sposta_filtro_categoria', id=f.id, direzione='su') }}">
+                        <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                        <button class="rounded-lg bg-slate-100 text-slate-700 font-black px-3 py-2">
+                          ↑
+                        </button>
+                      </form>
+
+                      <form method="post"
+                            action="{{ url_for('admin_sposta_filtro_categoria', id=f.id, direzione='giu') }}">
+                        <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                        <button class="rounded-lg bg-slate-100 text-slate-700 font-black px-3 py-2">
+                          ↓
+                        </button>
+                      </form>
+                    </div>
                   </td>
 
                   <td class="p-3">
@@ -233,6 +239,7 @@
         <div class="filtri-mobile-list">
           {% for f in filtri %}
             <div class="filtro-mobile-card">
+
               <div class="flex items-center justify-between gap-3 mb-2">
                 <div class="text-xs font-bold text-slate-400">ID {{ f.id }}</div>
 
@@ -245,37 +252,42 @@
 
               <form id="modifica-filtro-mobile-{{ f.id }}"
                     method="post"
-                    action="{{ url_for('admin_modifica_filtro_categoria', id=f.id) }}"
-                    class="space-y-3">
+                    action="{{ url_for('admin_modifica_filtro_categoria', id=f.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                <input type="hidden" name="ordine" value="{{ f.ordine }}">
 
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1">Filtro</label>
-                  <input name="filtro"
-                         value="{{ f.filtro }}"
-                         class="w-full rounded-xl border border-slate-200 px-3 py-2">
-                </div>
-
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1">Ordine</label>
-                  <input name="ordine"
-                         type="number"
-                         value="{{ f.ordine }}"
-                         class="w-full rounded-xl border border-slate-200 px-3 py-2">
-                </div>
+                <input name="filtro"
+                       value="{{ f.filtro }}"
+                       class="w-full rounded-xl border border-slate-200 px-3 py-2">
               </form>
 
               <div class="filtro-mobile-actions">
+                <form method="post"
+                      action="{{ url_for('admin_sposta_filtro_categoria', id=f.id, direzione='su') }}">
+                  <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                  <button class="mobile-btn rounded-xl bg-slate-100 text-slate-700 font-black">
+                    ↑
+                  </button>
+                </form>
+
+                <form method="post"
+                      action="{{ url_for('admin_sposta_filtro_categoria', id=f.id, direzione='giu') }}">
+                  <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                  <button class="mobile-btn rounded-xl bg-slate-100 text-slate-700 font-black">
+                    ↓
+                  </button>
+                </form>
+
                 <button form="modifica-filtro-mobile-{{ f.id }}"
-                        class="mobile-btn rounded-xl bg-slate-900 text-white font-bold px-3 py-2">
-                  Salva modifiche
+                        class="mobile-btn rounded-xl bg-slate-900 text-white font-bold">
+                  Salva
                 </button>
 
                 <form method="post"
                       action="{{ url_for('admin_toggle_filtro_categoria', id=f.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
-                  <button class="mobile-btn rounded-xl bg-amber-100 text-amber-800 font-bold px-3 py-2">
-                    {% if f.attivo == 1 %}Disattiva{% else %}Attiva{% endif %}
+                  <button class="mobile-btn rounded-xl bg-amber-100 text-amber-800 font-bold">
+                    {% if f.attivo == 1 %}Off{% else %}On{% endif %}
                   </button>
                 </form>
 
@@ -283,7 +295,7 @@
                       action="{{ url_for('admin_elimina_filtro_categoria', id=f.id) }}"
                       onsubmit="return confirm('Eliminare definitivamente questo filtro?');">
                   <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
-                  <button class="mobile-btn rounded-xl bg-red-100 text-red-700 font-bold px-3 py-2">
+                  <button class="mobile-btn rounded-xl bg-red-100 text-red-700 font-bold">
                     Elimina
                   </button>
                 </form>
@@ -291,7 +303,6 @@
             </div>
           {% endfor %}
         </div>
-
       </div>
     </details>
   {% endfor %}

@@ -5581,6 +5581,24 @@ def admin_pacchetti_piani_toggle(piano_id):
         url_for("admin_pacchetti_piani", pacchetto_id=piano["pacchetto_id"])
     )
 
+def riordina_filtri_categoria(c, categoria):
+    c.execute(sql("""
+        SELECT id
+        FROM filtri_categoria
+        WHERE categoria = ?
+        ORDER BY ordine ASC, id ASC
+    """), (categoria,))
+
+    rows = c.fetchall()
+
+    for index, row in enumerate(rows, start=1):
+        row = dict(row)
+        c.execute(sql("""
+            UPDATE filtri_categoria
+            SET ordine = ?
+            WHERE id = ?
+        """), (index, row["id"]))
+
 @app.route("/admin/filtri-categoria")
 @admin_required
 def admin_filtri_categoria():
@@ -5605,9 +5623,9 @@ def admin_filtri_categoria():
 
     return render_template(
         "admin_filtri_categoria.html",
-        filtri_per_categoria=filtri_per_categoria
+        filtri_per_categoria=filtri_per_categoria,
+        categoria_aperta=request.args.get("open", "")
     )
-
 
 @app.route("/admin/filtri-categoria/aggiungi", methods=["POST"])
 @admin_required
@@ -5675,6 +5693,72 @@ def admin_modifica_filtro_categoria(id):
     flash("Filtro aggiornato.", "success")
     return redirect(url_for("admin_filtri_categoria"))
 
+@app.route("/admin/filtri-categoria/<int:id>/sposta/<direzione>", methods=["POST"])
+@admin_required
+def admin_sposta_filtro_categoria(id, direzione):
+    if direzione not in ("su", "giu"):
+        return redirect(url_for("admin_filtri_categoria"))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        SELECT id, categoria, ordine
+        FROM filtri_categoria
+        WHERE id = ?
+    """), (id,))
+
+    filtro = c.fetchone()
+
+    if not filtro:
+        conn.close()
+        return redirect(url_for("admin_filtri_categoria"))
+
+    filtro = dict(filtro)
+    categoria = filtro["categoria"]
+
+    riordina_filtri_categoria(c, categoria)
+
+    c.execute(sql("""
+        SELECT id, ordine
+        FROM filtri_categoria
+        WHERE id = ?
+    """), (id,))
+    filtro = dict(c.fetchone())
+
+    ordine_corrente = filtro["ordine"]
+    ordine_target = ordine_corrente - 1 if direzione == "su" else ordine_corrente + 1
+
+    c.execute(sql("""
+        SELECT id, ordine
+        FROM filtri_categoria
+        WHERE categoria = ?
+          AND ordine = ?
+    """), (categoria, ordine_target))
+
+    vicino = c.fetchone()
+
+    if vicino:
+        vicino = dict(vicino)
+
+        c.execute(sql("""
+            UPDATE filtri_categoria
+            SET ordine = ?
+            WHERE id = ?
+        """), (ordine_target, id))
+
+        c.execute(sql("""
+            UPDATE filtri_categoria
+            SET ordine = ?
+            WHERE id = ?
+        """), (ordine_corrente, vicino["id"]))
+
+    riordina_filtri_categoria(c, categoria)
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("admin_filtri_categoria", open=categoria))
 
 @app.route("/admin/filtri-categoria/<int:id>/toggle", methods=["POST"])
 @admin_required
