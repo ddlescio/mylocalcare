@@ -151,10 +151,16 @@
 
       </label>
 
-      <input type="password" name="password" id="password" required
+      <div class="relative">
+        <input type="password" name="password" id="password" required
+               class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
 
-             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
-
+        <button type="button"
+                onclick="togglePasswordVisibility('password', this)"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-semibold">
+          👁
+        </button>
+      </div>
     </div>
 
     <!-- Conferma Password -->
@@ -167,10 +173,16 @@
 
       </label>
 
-      <input type="password" name="conferma_password" id="conferma_password" required
+      <div class="relative">
+        <input type="password" name="conferma_password" id="conferma_password" required
+               class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
 
-             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
-
+        <button type="button"
+                onclick="togglePasswordVisibility('conferma_password', this)"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-semibold">
+          👁
+        </button>
+      </div>
     </div>
 
     <!-- Codice invito beta -->
@@ -244,6 +256,18 @@
     }
 
   });
+
+  function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+
+    if (input.type === 'password') {
+      input.type = 'text';
+      button.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      button.textContent = '👁';
+    }
+  }
 
 </script>
 
