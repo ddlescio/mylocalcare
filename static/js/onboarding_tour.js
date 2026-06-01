@@ -182,7 +182,54 @@
           end: { top: "78%", left: "50%" }
         }
       ]
+    },
+    {
+      title: "Visualizza il tuo annuncio",
+      action: "Dopo la pubblicazione lo trovi nel tuo profilo, nella sezione Annunci pubblicati.",
+      text: "Da qui puoi modificarlo, eliminarlo o aumentare la sua visibilità per ricevere più contatti.",
+      image: "/static/img/onboarding/step-13-profilo-annuncio-pubblicato.png",
+      moves: [
+        {
+          caption: "Il tuo annuncio pubblicato",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "72%", left: "50%" },
+          end: { top: "50%", left: "50%" }
+        },
+        {
+          caption: "Fatti notare più in fretta",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "50%", left: "50%" },
+          end: { top: "59%", left: "52%" }
+        }
+      ]
+    },
+    {
+      title: "Scegli come potenziare l’annuncio",
+      action: "Puoi aumentare la visibilità scegliendo un servizio o un pacchetto.",
+      text: "Urgente dà visibilità rapida, i pacchetti sono soluzioni complete, mentre i servizi singoli potenziano solo l’aspetto che ti interessa.",
+      image: "/static/img/onboarding/step-14-aumenta-visibilita.png",
+      moves: [
+        {
+          caption: "Urgente",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "78%", left: "50%" },
+          end: { top: "34%", left: "50%" }
+        },
+        {
+          caption: "Pacchetti consigliati",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "34%", left: "50%" },
+          end: { top: "50%", left: "50%" }
+        },
+        {
+          caption: "Servizi singoli",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "50%", left: "50%" },
+          end: { top: "66%", left: "50%" }
+        }
+      ]
     }
+
   ];
 
   let currentStep = 0;
