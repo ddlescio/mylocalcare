@@ -11604,11 +11604,13 @@ def password_dimenticata():
             )
             return redirect(url_for('login'))
 
-        # Genera token sicuro firmato
-        s = get_reset_serializer()
-        token = s.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+        # Genera token semplice stile conferma account
+        token = str(uuid.uuid4())
 
-        reset_url = build_external_url("reset_password", token=token)
+        reset_url = (
+            app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')
+            + f"/account/{token}"
+        )
 
         # Invalida eventuali token precedenti
         cur.execute(sql("""
@@ -11639,7 +11641,7 @@ def password_dimenticata():
                 "MyLocalCare"
             )
         )
-        
+
         if not email_inviata:
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
@@ -11670,33 +11672,23 @@ def password_dimenticata():
         except Exception:
             pass
 
+@app.route('/account/<token>', methods=['GET', 'POST'])
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
-    s = get_reset_serializer()
-
-    try:
-        email = s.loads(
-            token,
-            salt=app.config['SECURITY_PASSWORD_SALT'],
-            max_age=3600
-        )
-    except SignatureExpired:
-        flash("Il link per reimpostare la password è scaduto. Richiedine uno nuovo.", "error")
-        return redirect(url_for('password_dimenticata'))
-    except BadSignature:
-        flash("Link non valido o manomesso. Richiedi un nuovo link.", "error")
-        return redirect(url_for('password_dimenticata'))
-
-    # ✅ Verifica token non già usato
     conn = get_db_connection()
-
     cur = get_cursor(conn)
-    cur.execute(sql("SELECT * FROM password_reset_tokens WHERE token = ? AND usato = 0"), (token,))
+
+    cur.execute(sql(f"""
+        SELECT *
+        FROM password_reset_tokens
+        WHERE token = ?
+          AND usato = 0
+          AND scadenza >= {epoch_now_sql()}
+    """), (token,))
     token_row = cur.fetchone()
 
     if not token_row:
-
-        flash("Questo link è già stato utilizzato o invalidato.", "error")
+        flash("Questo link è scaduto, non valido o già utilizzato.", "error")
         return redirect(url_for('password_dimenticata'))
 
     if request.method == 'POST':
@@ -11718,9 +11710,9 @@ def reset_password(token):
             return redirect(url_for('reset_password', token=token))
 
         # ✅ Recupera utente
-        cur.execute(sql("SELECT * FROM utenti WHERE email = ?"), (email,))
+        cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (token_row['utente_id'],))
         utente = cur.fetchone()
-
+        
         if not utente:
 
             flash("Errore interno. Contatta il supporto.", "error")
