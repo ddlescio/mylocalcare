@@ -1295,7 +1295,7 @@ def invia_email_sospensione(email, nome):
                 "MyLocalCare"
             )
         )
-        
+
     except Exception as e:
         log_exception_safe(
             "❌ Errore invio email sospensione",
@@ -11629,20 +11629,17 @@ def password_dimenticata():
         # Invia email tramite MailAPI Aruba
         email_inviata = _invia_email(
             destinazione=email,
-            oggetto="Reimposta la password del tuo account MyLocalCare",
+            oggetto="Link account MyLocalCare",
             corpo=(
                 f"Ciao {utente['nome']},\n\n"
-                "hai richiesto di reimpostare la password del tuo account MyLocalCare.\n\n"
-                "Per scegliere una nuova password, apri questo link:\n"
+                "usa questo link per accedere alla procedura richiesta:\n\n"
                 f"{reset_url}\n\n"
-                "Il link è valido per 1 ora e può essere usato una sola volta.\n\n"
-                "Se non hai richiesto tu questa operazione, puoi ignorare questo messaggio: "
-                "la tua password attuale resterà invariata.\n\n"
-                "MyLocalCare\n"
-                "https://www.mylocalcare.it"
+                "Il link è valido per 1 ora.\n\n"
+                "Se non hai richiesto tu questa email, puoi ignorarla.\n\n"
+                "MyLocalCare"
             )
         )
-
+        
         if not email_inviata:
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
