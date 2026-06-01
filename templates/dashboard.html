@@ -6311,7 +6311,13 @@ function aggiornaStatoVisibilita() {
 <script>
   function chiudiConferma() {
     document.getElementById("modale-conferma").classList.add("hidden");
-  }
+
+    document.querySelectorAll(
+      "#btn-guida-dashboard, .btn-guida-dashboard, .floating-guide-btn, .floating-help-btn, [data-guida-btn]"
+    ).forEach(el => {
+      el.classList.remove("hidden");
+    });
+  }  
 </script>
 <script>
   let stripe = null;
@@ -6433,6 +6439,12 @@ function aggiornaStatoVisibilita() {
 
       document.getElementById("stripe-box")?.classList.remove("hidden");
       btn?.classList.add("hidden");
+
+      document.querySelectorAll(
+        "#btn-guida-dashboard, .btn-guida-dashboard, .floating-guide-btn, .floating-help-btn, [data-guida-btn]"
+      ).forEach(el => {
+        el.classList.add("hidden");
+      });
 
       console.log("🧪 [dashboard] END OK");
 
