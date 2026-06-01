@@ -5660,7 +5660,7 @@ def admin_aggiungi_filtro_categoria():
     finally:
         conn.close()
 
-    return redirect(url_for("admin_filtri_categoria"))
+    return redirect(url_for("admin_filtri_categoria", open=categoria))
 
 
 @app.route("/admin/filtri-categoria/<int:id>/modifica", methods=["POST"])
@@ -5682,16 +5682,32 @@ def admin_modifica_filtro_categoria(id):
     c = get_cursor(conn)
 
     c.execute(sql("""
+        SELECT categoria
+        FROM filtri_categoria
+        WHERE id = ?
+    """), (id,))
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        flash("Filtro non trovato.", "error")
+        return redirect(url_for("admin_filtri_categoria"))
+
+    categoria = dict(row)["categoria"]
+
+    c.execute(sql("""
         UPDATE filtri_categoria
         SET filtro = ?, ordine = ?
         WHERE id = ?
     """), (filtro, ordine, id))
 
+    riordina_filtri_categoria(c, categoria)
+
     conn.commit()
     conn.close()
 
     flash("Filtro aggiornato.", "success")
-    return redirect(url_for("admin_filtri_categoria"))
+    return redirect(url_for("admin_filtri_categoria", open=categoria))
 
 @app.route("/admin/filtri-categoria/<int:id>/sposta/<direzione>", methods=["POST"])
 @admin_required
@@ -5767,6 +5783,20 @@ def admin_toggle_filtro_categoria(id):
     c = get_cursor(conn)
 
     c.execute(sql("""
+        SELECT categoria
+        FROM filtri_categoria
+        WHERE id = ?
+    """), (id,))
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        flash("Filtro non trovato.", "error")
+        return redirect(url_for("admin_filtri_categoria"))
+
+    categoria = dict(row)["categoria"]
+
+    c.execute(sql("""
         UPDATE filtri_categoria
         SET attivo = CASE WHEN attivo = 1 THEN 0 ELSE 1 END
         WHERE id = ?
@@ -5776,7 +5806,7 @@ def admin_toggle_filtro_categoria(id):
     conn.close()
 
     flash("Stato filtro aggiornato.", "success")
-    return redirect(url_for("admin_filtri_categoria"))
+    return redirect(url_for("admin_filtri_categoria", open=categoria))
 
 
 @app.route("/admin/filtri-categoria/<int:id>/elimina", methods=["POST"])
@@ -5786,16 +5816,32 @@ def admin_elimina_filtro_categoria(id):
     c = get_cursor(conn)
 
     c.execute(sql("""
+        SELECT categoria
+        FROM filtri_categoria
+        WHERE id = ?
+    """), (id,))
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        flash("Filtro non trovato.", "error")
+        return redirect(url_for("admin_filtri_categoria"))
+
+    categoria = dict(row)["categoria"]
+
+    c.execute(sql("""
         DELETE FROM filtri_categoria
         WHERE id = ?
     """), (id,))
+
+    riordina_filtri_categoria(c, categoria)
 
     conn.commit()
     conn.close()
 
     flash("Filtro eliminato.", "success")
-    return redirect(url_for("admin_filtri_categoria"))
-
+    return redirect(url_for("admin_filtri_categoria", open=categoria))
+    
 # ==========================================================
 # GESTIONE UTENTI
 # ==========================================================
