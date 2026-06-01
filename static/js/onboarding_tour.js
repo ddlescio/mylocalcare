@@ -184,29 +184,37 @@
       ]
     },
     {
-      title: "Trova il tuo annuncio pubblicato",
+      title: "Visualizza i tuoi annunci pubblicati",
       action: "Nel tuo profilo apri la scheda Annunci.",
-      text: "Qui trovi gli annunci che hai pubblicato e puoi gestirli facilmente.",
-      image: "/static/img/onboarding/step-13-profilo-annuncio-pubblicato.png",
+      text: "Qui trovi tutti gli annunci che hai pubblicato e puoi gestirli facilmente.",
+      image: "/static/img/onboarding/step-3-carica-foto.png",
       moves: [
         {
-          caption: "Apri Annunci",
+          caption: "Annunci pubblicati",
           captionPosition: { top: "13%", left: "50%" },
-          start: { top: "78%", left: "50%" },
-          end: { top: "23%", left: "17%" }
-        },
-        {
-          caption: "Aumenta visibilità",
-          captionPosition: { top: "13%", left: "50%" },
-          start: { top: "23%", left: "17%" },
-          end: { top: "59%", left: "52%" }
+          start: { top: "75%", left: "50%" },
+          end: { top: "30%", left: "28%" }
         }
       ]
     },
     {
       title: "Fatti notare più in fretta",
+      action: "Dal tuo annuncio puoi aumentare la visibilità.",
+      text: "Usa il pulsante Aumenta visibilità per dare più risalto al tuo annuncio e ricevere più contatti.",
+      image: "/static/img/onboarding/step-13-profilo-annuncio-pubblicato.png",
+      moves: [
+        {
+          caption: "Aumenta visibilità",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "78%", left: "50%" },
+          end: { top: "59%", left: "52%" }
+        }
+      ]
+    },
+    {
+      title: "Scegli il tuo boost",
       action: "Scegli come potenziare il tuo annuncio.",
-      text: "Puoi usare Urgente per spingere subito l’annuncio, scegliere un pacchetto completo oppure attivare un singolo servizio.",
+      text: "Puoi usare Urgente, scegliere un pacchetto completo oppure attivare un singolo servizio.",
       image: "/static/img/onboarding/step-14-aumenta-visibilita.png",
       moves: [
         {
@@ -216,7 +224,7 @@
           end: { top: "34%", left: "50%" }
         },
         {
-          caption: "Pacchetti consigliati",
+          caption: "Pacchetti",
           captionPosition: { top: "13%", left: "50%" },
           start: { top: "34%", left: "50%" },
           end: { top: "50%", left: "50%" }
