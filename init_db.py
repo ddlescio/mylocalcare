@@ -228,6 +228,32 @@ def crea_tabella_annunci():
     conn.close()
     print("✅ Tabella 'annunci' pronta.")
 
+def crea_tabella_filtri_categoria():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql(f"""
+    CREATE TABLE IF NOT EXISTS filtri_categoria (
+        id {pk_col()},
+        categoria TEXT NOT NULL,
+        filtro TEXT NOT NULL,
+        ordine INTEGER DEFAULT 0,
+        attivo INTEGER DEFAULT 1,
+        created_at {dt_col(True)},
+
+        UNIQUE(categoria, filtro)
+    );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_filtri_categoria_categoria
+        ON filtri_categoria(categoria, attivo, ordine);
+    """))
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'filtri_categoria' pronta.")
+
 def crea_indici_annunci():
     conn = get_conn()
     c = conn.cursor()
@@ -274,7 +300,7 @@ def crea_indici_annunci():
 
     conn.commit()
     conn.close()
-    print("✅ Indici ricerca annunci, servizi e recensioni creati.")    
+    print("✅ Indici ricerca annunci, servizi e recensioni creati.")
 
 def crea_tabella_match_utenti():
     conn = get_conn()
@@ -1381,8 +1407,8 @@ def inizializza_database():
     crea_tabella_utenti()
     crea_tabella_operatori()
     crea_tabella_annunci()
+    crea_tabella_filtri_categoria()
     crea_indici_annunci()
-
     crea_tabella_match_utenti()
     crea_tabella_messaggi_chat()
     crea_tabella_recensioni()
