@@ -5,13 +5,104 @@
 
 {% block admin_content %}
 
-<div class="space-y-5">
+<style>
+  .filtri-admin-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .categoria-details {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  }
+
+  .categoria-summary {
+    cursor: pointer;
+    padding: 1rem 1.25rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 900;
+    color: #0f172a;
+    list-style: none;
+  }
+
+  .categoria-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .categoria-summary-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .categoria-arrow {
+    transition: transform 0.2s ease;
+    color: #64748b;
+  }
+
+  details[open] .categoria-arrow {
+    transform: rotate(180deg);
+  }
+
+  .filtri-table-desktop {
+    display: block;
+  }
+
+  .filtri-mobile-list {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .filtri-table-desktop {
+      display: none;
+    }
+
+    .filtri-mobile-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .filtro-mobile-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      padding: 0.9rem;
+      background: #ffffff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .filtro-mobile-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .mobile-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+
+<div class="filtri-admin-wrap">
 
   {% for categoria, filtri in filtri_per_categoria.items() %}
-    <details class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" open>
-      <summary class="cursor-pointer px-5 py-4 bg-slate-50 border-b border-slate-200 font-black text-slate-900">
-        {{ categoria }}
-        <span class="text-sm font-semibold text-slate-500">({{ filtri|length }} filtri)</span>
+    <details class="categoria-details">
+      <summary class="categoria-summary">
+        <div class="categoria-summary-inner">
+          <div>
+            {{ categoria }}
+            <span class="text-sm font-semibold text-slate-500">({{ filtri|length }} filtri)</span>
+          </div>
+          <span class="categoria-arrow">⌄</span>
+        </div>
       </summary>
 
       <div class="p-4 space-y-4">
@@ -44,7 +135,8 @@
           </button>
         </form>
 
-        <div class="overflow-x-auto">
+        <!-- DESKTOP / TABLET -->
+        <div class="filtri-table-desktop overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-slate-50 border-b border-slate-200">
               <tr>
@@ -90,7 +182,6 @@
 
                   <td class="p-3">
                     <div class="flex justify-end gap-2">
-
                       <button form="modifica-filtro-{{ f.id }}"
                               class="rounded-xl bg-slate-900 text-white font-bold px-3 py-2">
                         Salva
@@ -112,13 +203,75 @@
                           Elimina
                         </button>
                       </form>
-
                     </div>
                   </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
+        </div>
+
+        <!-- MOBILE -->
+        <div class="filtri-mobile-list">
+          {% for f in filtri %}
+            <div class="filtro-mobile-card">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <div class="text-xs font-bold text-slate-400">ID {{ f.id }}</div>
+
+                {% if f.attivo == 1 %}
+                  <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Attivo</span>
+                {% else %}
+                  <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">Disattivo</span>
+                {% endif %}
+              </div>
+
+              <form id="modifica-filtro-mobile-{{ f.id }}"
+                    method="post"
+                    action="{{ url_for('admin_modifica_filtro_categoria', id=f.id) }}"
+                    class="space-y-3">
+                <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1">Filtro</label>
+                  <input name="filtro"
+                         value="{{ f.filtro }}"
+                         class="w-full rounded-xl border border-slate-200 px-3 py-2">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1">Ordine</label>
+                  <input name="ordine"
+                         type="number"
+                         value="{{ f.ordine }}"
+                         class="w-full rounded-xl border border-slate-200 px-3 py-2">
+                </div>
+              </form>
+
+              <div class="filtro-mobile-actions">
+                <button form="modifica-filtro-mobile-{{ f.id }}"
+                        class="mobile-btn rounded-xl bg-slate-900 text-white font-bold px-3 py-2">
+                  Salva modifiche
+                </button>
+
+                <form method="post"
+                      action="{{ url_for('admin_toggle_filtro_categoria', id=f.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                  <button class="mobile-btn rounded-xl bg-amber-100 text-amber-800 font-bold px-3 py-2">
+                    {% if f.attivo == 1 %}Disattiva{% else %}Attiva{% endif %}
+                  </button>
+                </form>
+
+                <form method="post"
+                      action="{{ url_for('admin_elimina_filtro_categoria', id=f.id) }}"
+                      onsubmit="return confirm('Eliminare definitivamente questo filtro?');">
+                  <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                  <button class="mobile-btn rounded-xl bg-red-100 text-red-700 font-bold px-3 py-2">
+                    Elimina
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
         </div>
 
       </div>
