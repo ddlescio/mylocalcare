@@ -5593,14 +5593,124 @@ def admin_filtri_categoria():
         ORDER BY categoria ASC, ordine ASC, filtro ASC
     """))
 
-    filtri = [dict(row) for row in c.fetchall()]
+    rows = [dict(row) for row in c.fetchall()]
     conn.close()
+
+    filtri_per_categoria = {}
+    for row in rows:
+        categoria = row["categoria"]
+        if categoria not in filtri_per_categoria:
+            filtri_per_categoria[categoria] = []
+        filtri_per_categoria[categoria].append(row)
 
     return render_template(
         "admin_filtri_categoria.html",
-        filtri=filtri
+        filtri_per_categoria=filtri_per_categoria
     )
 
+
+@app.route("/admin/filtri-categoria/aggiungi", methods=["POST"])
+@admin_required
+def admin_aggiungi_filtro_categoria():
+    categoria = request.form.get("categoria", "").strip()
+    filtro = request.form.get("filtro", "").strip()
+    ordine = request.form.get("ordine", "0").strip()
+
+    if not categoria or not filtro:
+        flash("Categoria e filtro sono obbligatori.", "error")
+        return redirect(url_for("admin_filtri_categoria"))
+
+    try:
+        ordine = int(ordine)
+    except ValueError:
+        ordine = 0
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            INSERT INTO filtri_categoria (categoria, filtro, ordine, attivo)
+            VALUES (?, ?, ?, 1)
+        """), (categoria, filtro, ordine))
+        conn.commit()
+        flash("Filtro aggiunto correttamente.", "success")
+    except Exception as e:
+        conn.rollback()
+        flash("Errore: filtro già presente o non valido.", "error")
+        print("Errore aggiunta filtro categoria:", e)
+    finally:
+        conn.close()
+
+    return redirect(url_for("admin_filtri_categoria"))
+
+
+@app.route("/admin/filtri-categoria/<int:id>/modifica", methods=["POST"])
+@admin_required
+def admin_modifica_filtro_categoria(id):
+    filtro = request.form.get("filtro", "").strip()
+    ordine = request.form.get("ordine", "0").strip()
+
+    if not filtro:
+        flash("Il nome del filtro non può essere vuoto.", "error")
+        return redirect(url_for("admin_filtri_categoria"))
+
+    try:
+        ordine = int(ordine)
+    except ValueError:
+        ordine = 0
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        UPDATE filtri_categoria
+        SET filtro = ?, ordine = ?
+        WHERE id = ?
+    """), (filtro, ordine, id))
+
+    conn.commit()
+    conn.close()
+
+    flash("Filtro aggiornato.", "success")
+    return redirect(url_for("admin_filtri_categoria"))
+
+
+@app.route("/admin/filtri-categoria/<int:id>/toggle", methods=["POST"])
+@admin_required
+def admin_toggle_filtro_categoria(id):
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        UPDATE filtri_categoria
+        SET attivo = CASE WHEN attivo = 1 THEN 0 ELSE 1 END
+        WHERE id = ?
+    """), (id,))
+
+    conn.commit()
+    conn.close()
+
+    flash("Stato filtro aggiornato.", "success")
+    return redirect(url_for("admin_filtri_categoria"))
+
+
+@app.route("/admin/filtri-categoria/<int:id>/elimina", methods=["POST"])
+@admin_required
+def admin_elimina_filtro_categoria(id):
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        DELETE FROM filtri_categoria
+        WHERE id = ?
+    """), (id,))
+
+    conn.commit()
+    conn.close()
+
+    flash("Filtro eliminato.", "success")
+    return redirect(url_for("admin_filtri_categoria"))
 
 # ==========================================================
 # GESTIONE UTENTI

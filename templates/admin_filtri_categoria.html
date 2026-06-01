@@ -1,56 +1,129 @@
 {% extends "layout_admin.html" %}
 
 {% block admin_title %}Filtri categoria{% endblock %}
-{% block admin_subtitle %}Gestione dei filtri mostrati in Cerca, Nuovo annuncio e Modifica annuncio.{% endblock %}
+{% block admin_subtitle %}Aggiungi, modifica, disattiva o elimina i filtri usati negli annunci.{% endblock %}
 
 {% block admin_content %}
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+<div class="space-y-5">
 
-  <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-3">
-    <div>
-      <h2 class="text-lg font-bold text-slate-900">Filtri attuali</h2>
-      <p class="text-sm text-slate-500">Per ora visualizzazione sola lettura.</p>
-    </div>
-  </div>
+  {% for categoria, filtri in filtri_per_categoria.items() %}
+    <details class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" open>
+      <summary class="cursor-pointer px-5 py-4 bg-slate-50 border-b border-slate-200 font-black text-slate-900">
+        {{ categoria }}
+        <span class="text-sm font-semibold text-slate-500">({{ filtri|length }} filtri)</span>
+      </summary>
 
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead class="bg-slate-50 border-b border-slate-200">
-        <tr>
-          <th class="text-left p-3">ID</th>
-          <th class="text-left p-3">Categoria</th>
-          <th class="text-left p-3">Filtro</th>
-          <th class="text-left p-3">Ordine</th>
-          <th class="text-left p-3">Stato</th>
-        </tr>
-      </thead>
+      <div class="p-4 space-y-4">
 
-      <tbody class="divide-y divide-slate-100">
-        {% for f in filtri %}
-          <tr class="hover:bg-slate-50">
-            <td class="p-3 text-slate-500">{{ f.id }}</td>
-            <td class="p-3 font-semibold text-slate-800">{{ f.categoria }}</td>
-            <td class="p-3 text-slate-700">{{ f.filtro }}</td>
-            <td class="p-3 text-slate-600">{{ f.ordine }}</td>
-            <td class="p-3">
-              {% if f.attivo == 1 %}
-                <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Attivo</span>
-              {% else %}
-                <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">Disattivo</span>
-              {% endif %}
-            </td>
-          </tr>
-        {% else %}
-          <tr>
-            <td colspan="5" class="p-6 text-center text-slate-500">
-              Nessun filtro presente.
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+        <form method="post"
+              action="{{ url_for('admin_aggiungi_filtro_categoria') }}"
+              class="grid grid-cols-1 md:grid-cols-[1fr_120px_auto] gap-3 items-end bg-blue-50/60 border border-blue-100 rounded-2xl p-4">
+
+          <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+          <input type="hidden" name="categoria" value="{{ categoria }}">
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">Nuovo filtro</label>
+            <input name="filtro"
+                   required
+                   class="w-full rounded-xl border border-slate-200 px-3 py-2"
+                   placeholder="Es. Nuovo filtro">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">Ordine</label>
+            <input name="ordine"
+                   type="number"
+                   value="{{ filtri|length + 1 }}"
+                   class="w-full rounded-xl border border-slate-200 px-3 py-2">
+          </div>
+
+          <button class="rounded-xl bg-blue-600 text-white font-bold px-4 py-2 hover:bg-blue-700">
+            + Aggiungi
+          </button>
+        </form>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left p-3">ID</th>
+                <th class="text-left p-3">Filtro</th>
+                <th class="text-left p-3">Ordine</th>
+                <th class="text-left p-3">Stato</th>
+                <th class="text-right p-3">Azioni</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+              {% for f in filtri %}
+                <tr>
+                  <td class="p-3 text-slate-500">{{ f.id }}</td>
+
+                  <td class="p-3">
+                    <form id="modifica-filtro-{{ f.id }}"
+                          method="post"
+                          action="{{ url_for('admin_modifica_filtro_categoria', id=f.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                      <input name="filtro"
+                             value="{{ f.filtro }}"
+                             class="w-full rounded-xl border border-slate-200 px-3 py-2">
+                    </form>
+                  </td>
+
+                  <td class="p-3 w-28">
+                    <input form="modifica-filtro-{{ f.id }}"
+                           name="ordine"
+                           type="number"
+                           value="{{ f.ordine }}"
+                           class="w-full rounded-xl border border-slate-200 px-3 py-2">
+                  </td>
+
+                  <td class="p-3">
+                    {% if f.attivo == 1 %}
+                      <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Attivo</span>
+                    {% else %}
+                      <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">Disattivo</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="p-3">
+                    <div class="flex justify-end gap-2">
+
+                      <button form="modifica-filtro-{{ f.id }}"
+                              class="rounded-xl bg-slate-900 text-white font-bold px-3 py-2">
+                        Salva
+                      </button>
+
+                      <form method="post"
+                            action="{{ url_for('admin_toggle_filtro_categoria', id=f.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                        <button class="rounded-xl bg-amber-100 text-amber-800 font-bold px-3 py-2">
+                          {% if f.attivo == 1 %}Disattiva{% else %}Attiva{% endif %}
+                        </button>
+                      </form>
+
+                      <form method="post"
+                            action="{{ url_for('admin_elimina_filtro_categoria', id=f.id) }}"
+                            onsubmit="return confirm('Eliminare definitivamente questo filtro?');">
+                        <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                        <button class="rounded-xl bg-red-100 text-red-700 font-bold px-3 py-2">
+                          Elimina
+                        </button>
+                      </form>
+
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </details>
+  {% endfor %}
 
 </div>
 
