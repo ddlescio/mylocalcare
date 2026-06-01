@@ -11860,6 +11860,11 @@ def get_filtri_categoria_da_db():
 
     return filtri
 
+@app.route("/api/filtri-categoria")
+@login_required
+def api_filtri_categoria():
+    return jsonify(get_filtri_categoria_da_db())
+
 @app.route("/cerca")
 def cerca():
     # 🔒 BLOCCO BETA — accesso solo utenti registrati
