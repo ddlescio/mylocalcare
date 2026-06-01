@@ -11353,26 +11353,49 @@ def privacy():
 def conferma_email(token):
     conn = get_db_connection()
     c = get_cursor(conn)
-    c.execute(sql("SELECT * FROM utenti WHERE token_verifica = ?"), (token,))
-    utente = c.fetchone()
 
-    if utente:
-        c.execute(sql("UPDATE utenti SET attivo = 1, token_verifica = NULL WHERE id = ?"), (utente['id'],))
-        conn.commit()
+    try:
+        # 1) Prima prova: conferma registrazione
+        c.execute(sql("SELECT * FROM utenti WHERE token_verifica = ?"), (token,))
+        utente = c.fetchone()
 
-        # 🔔 Aggiunta: prima notifica all'utente
-        crea_notifica(
-            utente['id'],
-            "📸 Completa il tuo profilo caricando una foto per essere visibile.",
-            link=url_for('upload_foto')
-        )
-        flash("Email confermata! Ora puoi accedere.")
-    else:
+        if utente:
+            c.execute(sql("UPDATE utenti SET attivo = 1, token_verifica = NULL WHERE id = ?"), (utente['id'],))
+            conn.commit()
+
+            crea_notifica(
+                utente['id'],
+                "📸 Completa il tuo profilo caricando una foto per essere visibile.",
+                link=url_for('upload_foto')
+            )
+
+            flash("Email confermata! Ora puoi accedere.")
+            return redirect(url_for('login'))
+
+        # 2) Seconda prova: recupero password
+        c.execute(sql("""
+            SELECT token
+            FROM password_reset_tokens
+            WHERE token = ?
+              AND usato = 0
+        """), (token,))
+        reset_token = c.fetchone()
+
+        if reset_token:
+            return redirect(url_for('reset_password', token=token))
+
         flash("Token non valido o già usato.")
+        return redirect(url_for('login'))
 
-
-    return redirect(url_for('login'))
-
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
 # ==========================================================
 # 🔐 LOGIN UTENTE + DECIFRATURA CHIAVI PERSONALI
 # (VERSIONE PROFILING — NON MODIFICA LOGICA)
@@ -11609,7 +11632,7 @@ def password_dimenticata():
 
         reset_url = (
             app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')
-            + f"/account/{token}"
+            + f"/conferma/{token}"
         )
 
         # Invalida eventuali token precedenti
@@ -11640,7 +11663,7 @@ def password_dimenticata():
                 "MyLocalCare"
             )
         )
-                
+
         if not email_inviata:
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
