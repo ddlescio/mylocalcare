@@ -1287,18 +1287,15 @@ def invia_email_sospensione(email, nome):
     try:
         return _invia_email(
             destinazione=email,
-            oggetto="Il tuo account MyLocalCare è stato sospeso",
+            oggetto="Account MyLocalCare sospeso",
             corpo=(
                 f"Ciao {nome},\n\n"
                 "il tuo account MyLocalCare è stato sospeso.\n\n"
-                "Se ritieni che si tratti di un errore o vuoi richiedere la riattivazione, "
-                "accedi al tuo account o contatta l'assistenza.\n\n"
+                "Se ritieni che si tratti di un errore, contatta l'assistenza.\n\n"
                 "MyLocalCare"
-            ),
-            html_template="email/sospensione_account.html",
-            nome=nome
+            )
         )
-
+        
     except Exception as e:
         log_exception_safe(
             "❌ Errore invio email sospensione",
@@ -11329,7 +11326,7 @@ def register():
                 "MyLocalCare"
             )
         )
-        
+
         if email_inviata:
             flash("Registrazione completata! Controlla la tua email per confermare l'account.", "success")
         else:
