@@ -13,7 +13,7 @@
      onclick="event.stopPropagation();"
      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow-sm hover:bg-emerald-700 transition">
     📥 Scarica Excel
-  </a>  
+  </a>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -69,12 +69,24 @@
       <tbody class="divide-y divide-slate-100">
         {% for row in stats.daily %}
 
-          {% set mese_corrente = row.data[3:10] %}
+          {% set mese_corrente = row.mese if row.mese is defined else row.data[3:10] %}
+          {% set totale_mese = stats.monthly_totals.get(mese_corrente) if stats.monthly_totals is defined else None %}
 
-          {% if loop.first or mese_corrente != stats.daily[loop.index0 - 1].data[3:10] %}
+          {% if loop.first or mese_corrente != (stats.daily[loop.index0 - 1].mese if stats.daily[loop.index0 - 1].mese is defined else stats.daily[loop.index0 - 1].data[3:10]) %}
             <tr class="bg-slate-100">
               <td colspan="5" class="px-5 py-3 font-bold text-slate-700 uppercase tracking-wide">
-                Mese {{ mese_corrente }}
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                  <span>Mese {{ mese_corrente }}</span>
+
+                  {% if totale_mese %}
+                    <span class="text-sm normal-case tracking-normal text-emerald-700">
+                      Totale: {{ totale_mese.costo }}
+                      · {{ totale_mese.richieste }} richieste
+                      · Input: {{ totale_mese.input_tokens }}
+                      · Output: {{ totale_mese.output_tokens }}
+                    </span>
+                  {% endif %}
+                </div>
               </td>
             </tr>
           {% endif %}
@@ -100,6 +112,7 @@
               {{ row.output_tokens }}
             </td>
           </tr>
+
         {% else %}
           <tr>
             <td colspan="5" class="px-5 py-8 text-center text-slate-400">

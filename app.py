@@ -2455,7 +2455,7 @@ def get_openai_month_stats():
         ) + timedelta(days=1)
 
         end_time = int(end_day.timestamp())
-        
+
         headers = {
             "Authorization": f"Bearer {api_key}"
         }
@@ -2741,6 +2741,30 @@ def carica_openai_usage_storico():
         })
 
     return daily
+
+def calcola_totali_mensili_openai(daily):
+    totali = {}
+
+    for row in daily:
+        mese = row.get("mese") or row["data"][3:10]
+
+        if mese not in totali:
+            totali[mese] = {
+                "costo_raw": Decimal("0"),
+                "richieste": 0,
+                "input_tokens": 0,
+                "output_tokens": 0
+            }
+
+        totali[mese]["costo_raw"] += Decimal(str(row.get("costo_raw") or "0"))
+        totali[mese]["richieste"] += int(row.get("richieste") or 0)
+        totali[mese]["input_tokens"] += int(row.get("input_tokens") or 0)
+        totali[mese]["output_tokens"] += int(row.get("output_tokens") or 0)
+
+    for mese, dati in totali.items():
+        dati["costo"] = format_openai_euro(dati["costo_raw"])
+
+    return totali
 
 @app.route("/admin/sblocca", methods=["GET"])
 @admin_required
@@ -4061,7 +4085,8 @@ def admin_openai_usage():
     if stats.get("ok"):
         salva_openai_usage_giornaliero(stats)
         stats["daily"] = carica_openai_usage_storico()
-
+        stats["monthly_totals"] = calcola_totali_mensili_openai(stats["daily"])
+        
     return render_template(
         "admin_openai_usage.html",
         stats=stats
