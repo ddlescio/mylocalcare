@@ -11631,17 +11631,16 @@ def password_dimenticata():
         # Invia email tramite MailAPI Aruba
         email_inviata = _invia_email(
             destinazione=email,
-            oggetto="Link account MyLocalCare",
+            oggetto="Conferma account MyLocalCare",
             corpo=(
                 f"Ciao {utente['nome']},\n\n"
-                "usa questo link per accedere alla procedura richiesta:\n\n"
+                "per confermare il tuo account MyLocalCare apri questo link:\n\n"
                 f"{reset_url}\n\n"
-                "Il link è valido per 1 ora.\n\n"
-                "Se non hai richiesto tu questa email, puoi ignorarla.\n\n"
+                "Se non hai richiesto tu questa registrazione, ignora questa email.\n\n"
                 "MyLocalCare"
             )
         )
-
+                
         if not email_inviata:
             flash("Errore nell'invio dell'email. Riprova più tardi.", "error")
             return redirect(url_for('password_dimenticata'))
@@ -11712,7 +11711,7 @@ def reset_password(token):
         # ✅ Recupera utente
         cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (token_row['utente_id'],))
         utente = cur.fetchone()
-        
+
         if not utente:
 
             flash("Errore interno. Contatta il supporto.", "error")
