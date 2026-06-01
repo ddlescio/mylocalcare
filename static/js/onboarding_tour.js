@@ -184,52 +184,51 @@
       ]
     },
     {
-      {
-        title: "Trova il tuo annuncio pubblicato",
-        action: "Nel tuo profilo apri la scheda Annunci.",
-        text: "Qui trovi gli annunci che hai pubblicato e puoi gestirli facilmente.",
-        image: "/static/img/onboarding/step-13-profilo-annuncio-pubblicato.png",
-        moves: [
-          {
-            caption: "Apri Annunci",
-            captionPosition: { top: "13%", left: "50%" },
-            start: { top: "78%", left: "50%" },
-            end: { top: "23%", left: "17%" }
-          },
-          {
-            caption: "Aumenta visibilità",
-            captionPosition: { top: "13%", left: "50%" },
-            start: { top: "23%", left: "17%" },
-            end: { top: "59%", left: "52%" }
-          }
-        ]
-      },
-      {
-        title: "Fatti notare più in fretta",
-        action: "Scegli come potenziare il tuo annuncio.",
-        text: "Puoi usare Urgente per spingere subito l’annuncio, scegliere un pacchetto completo oppure attivare un singolo servizio.",
-        image: "/static/img/onboarding/step-14-aumenta-visibilita.png",
-        moves: [
-          {
-            caption: "Urgente",
-            captionPosition: { top: "13%", left: "50%" },
-            start: { top: "78%", left: "50%" },
-            end: { top: "34%", left: "50%" }
-          },
-          {
-            caption: "Pacchetti consigliati",
-            captionPosition: { top: "13%", left: "50%" },
-            start: { top: "34%", left: "50%" },
-            end: { top: "50%", left: "50%" }
-          },
-          {
-            caption: "Servizi singoli",
-            captionPosition: { top: "13%", left: "50%" },
-            start: { top: "50%", left: "50%" },
-            end: { top: "66%", left: "50%" }
-          }
-        ]
-      }
+      title: "Trova il tuo annuncio pubblicato",
+      action: "Nel tuo profilo apri la scheda Annunci.",
+      text: "Qui trovi gli annunci che hai pubblicato e puoi gestirli facilmente.",
+      image: "/static/img/onboarding/step-13-profilo-annuncio-pubblicato.png",
+      moves: [
+        {
+          caption: "Apri Annunci",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "78%", left: "50%" },
+          end: { top: "23%", left: "17%" }
+        },
+        {
+          caption: "Aumenta visibilità",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "23%", left: "17%" },
+          end: { top: "59%", left: "52%" }
+        }
+      ]
+    },
+    {
+      title: "Fatti notare più in fretta",
+      action: "Scegli come potenziare il tuo annuncio.",
+      text: "Puoi usare Urgente per spingere subito l’annuncio, scegliere un pacchetto completo oppure attivare un singolo servizio.",
+      image: "/static/img/onboarding/step-14-aumenta-visibilita.png",
+      moves: [
+        {
+          caption: "Urgente",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "78%", left: "50%" },
+          end: { top: "34%", left: "50%" }
+        },
+        {
+          caption: "Pacchetti consigliati",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "34%", left: "50%" },
+          end: { top: "50%", left: "50%" }
+        },
+        {
+          caption: "Servizi singoli",
+          captionPosition: { top: "13%", left: "50%" },
+          start: { top: "50%", left: "50%" },
+          end: { top: "66%", left: "50%" }
+        }
+      ]
+    }
   ];
 
   let currentStep = 0;
