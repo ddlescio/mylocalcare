@@ -76,11 +76,27 @@
       background: #ffffff;
     }
 
-    .filtro-mobile-card form {
+    .filtro-mobile-main-row {
       display: grid;
-      grid-template-columns: 1fr 64px;
+      grid-template-columns: 1fr auto;
       gap: 0.5rem;
-      align-items: end;
+      align-items: center;
+    }
+
+    .filtro-mobile-move {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .filtro-mobile-move form {
+      display: block;
+    }
+
+    .filtro-mobile-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.4rem;
+      margin-top: 0.55rem;
     }
 
     .filtro-mobile-card label {
@@ -90,13 +106,6 @@
     .filtro-mobile-card input {
       min-height: 38px;
       font-size: 0.9rem;
-    }
-
-    .filtro-mobile-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 0.4rem;
-      margin-top: 0.55rem;
     }
 
     .mobile-btn {
@@ -250,34 +259,38 @@
                 {% endif %}
               </div>
 
-              <form id="modifica-filtro-mobile-{{ f.id }}"
-                    method="post"
-                    action="{{ url_for('admin_modifica_filtro_categoria', id=f.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
-                <input type="hidden" name="ordine" value="{{ f.ordine }}">
+              <div class="filtro-mobile-main-row">
+                <form id="modifica-filtro-mobile-{{ f.id }}"
+                      method="post"
+                      action="{{ url_for('admin_modifica_filtro_categoria', id=f.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                  <input type="hidden" name="ordine" value="{{ f.ordine }}">
 
-                <input name="filtro"
-                       value="{{ f.filtro }}"
-                       class="w-full rounded-xl border border-slate-200 px-3 py-2">
-              </form>
+                  <input name="filtro"
+                         value="{{ f.filtro }}"
+                         class="w-full rounded-xl border border-slate-200 px-3 py-2">
+                </form>
+
+                <div class="filtro-mobile-move">
+                  <form method="post"
+                        action="{{ url_for('admin_sposta_filtro_categoria', id=f.id, direzione='su') }}">
+                    <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                    <button class="rounded-xl bg-slate-100 text-slate-700 font-black px-3 py-2">
+                      ↑
+                    </button>
+                  </form>
+
+                  <form method="post"
+                        action="{{ url_for('admin_sposta_filtro_categoria', id=f.id, direzione='giu') }}">
+                    <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
+                    <button class="rounded-xl bg-slate-100 text-slate-700 font-black px-3 py-2">
+                      ↓
+                    </button>
+                  </form>
+                </div>
+              </div>
 
               <div class="filtro-mobile-actions">
-                <form method="post"
-                      action="{{ url_for('admin_sposta_filtro_categoria', id=f.id, direzione='su') }}">
-                  <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
-                  <button class="mobile-btn rounded-xl bg-slate-100 text-slate-700 font-black">
-                    ↑
-                  </button>
-                </form>
-
-                <form method="post"
-                      action="{{ url_for('admin_sposta_filtro_categoria', id=f.id, direzione='giu') }}">
-                  <input type="hidden" name="csrf_token" value="{{ session['csrf_token'] }}">
-                  <button class="mobile-btn rounded-xl bg-slate-100 text-slate-700 font-black">
-                    ↓
-                  </button>
-                </form>
-
                 <button form="modifica-filtro-mobile-{{ f.id }}"
                         class="mobile-btn rounded-xl bg-slate-900 text-white font-bold">
                   Salva
@@ -300,9 +313,10 @@
                   </button>
                 </form>
               </div>
+
             </div>
           {% endfor %}
-        </div>
+        </div>        
       </div>
     </details>
   {% endfor %}
