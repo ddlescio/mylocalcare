@@ -193,7 +193,7 @@
           caption: "Annunci pubblicati",
           captionPosition: { top: "13%", left: "50%" },
           start: { top: "75%", left: "50%" },
-          end: { top: "54%", left: "18%" }
+          end: { top: "64%", left: "34%" }
         }
       ]
     },
