@@ -352,7 +352,7 @@
                 'Eventi & Socialità',
                 'Spazi & Sale'
               ] %}
-              
+
               {% set offro = [] %}
               {% set cerco = [] %}
 
@@ -7167,4 +7167,16 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
+
+{% if not pubblico %}
+  <button
+    type="button"
+    onclick="window.MyLocalCareOnboardingTour?.open()"
+    class="fixed bottom-5 right-5 z-[9998] inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700 active:scale-95 transition"
+  >
+    <span>❔</span>
+    <span>Guida</span>
+  </button>
+{% endif %}
+
 {% endblock %}
