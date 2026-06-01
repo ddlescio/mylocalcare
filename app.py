@@ -5841,7 +5841,7 @@ def admin_elimina_filtro_categoria(id):
 
     flash("Filtro eliminato.", "success")
     return redirect(url_for("admin_filtri_categoria", open=categoria))
-    
+
 # ==========================================================
 # GESTIONE UTENTI
 # ==========================================================
@@ -8026,16 +8026,14 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
             "To": str(destinazione).strip(),
             "Subject": str(oggetto).strip(),
             "TextBody": text_finale,
-            "HtmlBody": html_finale or "",
             "MessageStream": message_stream,
             "ReplyTo": from_address,
-
-            # Riduce elementi traccianti nelle email transazionali.
-            # Utile soprattutto con Outlook/Hotmail, che può penalizzare email nuove
-            # con link tracciati o contenuto troppo "marketing".
             "TrackOpens": False,
             "TrackLinks": "None"
         }
+
+        if html_finale:
+            payload["HtmlBody"] = html_finale
 
         response = requests.post(
             "https://api.postmarkapp.com/email",
@@ -11322,20 +11320,16 @@ def register():
 
         email_inviata = _invia_email(
             destinazione=email,
-            oggetto="Conferma il tuo account MyLocalCare",
+            oggetto="Conferma account MyLocalCare",
             corpo=(
                 f"Ciao {nome},\n\n"
-                "abbiamo ricevuto una richiesta di registrazione su MyLocalCare con questo indirizzo email.\n\n"
-                "Per confermare l’account e completare l’attivazione, apri questo link:\n"
+                "per confermare il tuo account MyLocalCare apri questo link:\n\n"
                 f"{link}\n\n"
-                "Se non hai richiesto tu questa registrazione, puoi ignorare questa email.\n\n"
+                "Se non hai richiesto tu questa registrazione, ignora questa email.\n\n"
                 "MyLocalCare"
-            ),
-            html_template="email/conferma_account.html",
-            nome=nome,
-            link=link
+            )
         )
-
+        
         if email_inviata:
             flash("Registrazione completata! Controlla la tua email per confermare l'account.", "success")
         else:
