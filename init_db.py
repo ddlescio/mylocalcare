@@ -232,15 +232,49 @@ def crea_indici_annunci():
     conn = get_conn()
     c = conn.cursor()
 
+    # 🔒 Un solo annuncio attivo/in attesa per utente e categoria
     c.execute(sql("""
         CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_ad_per_category
         ON annunci(utente_id, categoria)
         WHERE stato IN ('in_attesa', 'approvato');
     """))
 
+    # 🔎 Ricerca base /cerca:
+    # provincia + categoria + tipo_annuncio + ordinamento per data
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_annunci_cerca_base
+        ON annunci (provincia, categoria, tipo_annuncio, data_pubblicazione DESC)
+        WHERE stato = 'approvato';
+    """))
+
+    # 🔎 Ricerca /cerca con filtro città/comune/zona esatto
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_annunci_cerca_zona
+        ON annunci (provincia, zona, categoria, tipo_annuncio, data_pubblicazione DESC)
+        WHERE stato = 'approvato';
+    """))
+
+    # ⚡ Servizi attivi collegati all'utente: contatti, affidabilità
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_attivazioni_utente_stato_servizio
+        ON attivazioni_servizi (utente_id, stato, servizio_id);
+    """))
+
+    # ⚡ Servizi attivi collegati all'annuncio: vetrina, urgente, boost, evidenza
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_attivazioni_annuncio_servizio_stato_date
+        ON attivazioni_servizi (annuncio_id, servizio_id, stato, data_inizio, data_fine);
+    """))
+
+    # ⭐ Calcolo media e numero recensioni approvate
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_recensioni_destinatario_stato
+        ON recensioni (id_destinatario, stato);
+    """))
+
     conn.commit()
     conn.close()
-    print("✅ Indice unico annunci per categoria creato.")
+    print("✅ Indici ricerca annunci, servizi e recensioni creati.")    
 
 def crea_tabella_match_utenti():
     conn = get_conn()

@@ -11906,8 +11906,8 @@ def cerca():
         params_vetrina.append(tipo_annuncio)
 
     if zona:
-        query_vetrina += " AND a.zona LIKE ?"
-        params_vetrina.append(f"%{zona}%")
+        query_vetrina += " AND a.zona = ?"
+        params_vetrina.append(zona)
 
     for f_att in filtri_attivi:
         query_vetrina += " AND a.filtri_categoria LIKE ?"
@@ -12021,9 +12021,9 @@ def cerca():
         params.append(tipo_annuncio)
 
     if zona:
-        query_annunci += " AND a.zona LIKE ?"
-        params.append(f"%{zona}%")
-
+        query_annunci += " AND a.zona = ?"
+        params.append(zona)
+    
     for f_att in filtri_attivi:
         query_annunci += " AND a.filtri_categoria LIKE ?"
         params.append(f"%{f_att}%")
