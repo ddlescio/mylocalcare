@@ -5725,11 +5725,21 @@ document.addEventListener("DOMContentLoaded", () => {
 let ANNUNCIO_ID_CORRENTE = null;
 </script>
 <script>
+  function toggleGuidaDashboard(nascondi) {
+    document.querySelectorAll(
+      "#btn-guida-dashboard, [data-guida-btn]"
+    ).forEach(el => {
+      el.classList.toggle("hidden", nascondi);
+    });
+  }
+
   function apriVisibilita(id) {
     ANNUNCIO_ID_CORRENTE = id;
 
+    toggleGuidaDashboard(true);
+
     document.getElementById("modale-visibilita").classList.remove("hidden");
-    document.body.classList.add("overflow-hidden", "modal-open"); // 🔒 BLOCCA SCROLL
+    document.body.classList.add("overflow-hidden", "modal-open");
 
     // reset contatori
     serviziCaricati = 0;
@@ -5782,7 +5792,9 @@ let ANNUNCIO_ID_CORRENTE = null;
     }
 
     modale?.classList.add("hidden");
-    document.body.classList.remove("overflow-hidden", "modal-open");
+    document.body.classList.remove("overflow-hidden", "modal-open
+
+    toggleGuidaDashboard(false);
   }
 </script>
 <script>
