@@ -193,7 +193,7 @@
           caption: "Annunci pubblicati",
           captionPosition: { top: "13%", left: "50%" },
           start: { top: "75%", left: "50%" },
-          end: { top: "30%", left: "28%" }
+          end: { top: "54%", left: "18%" }
         }
       ]
     },
@@ -207,7 +207,7 @@
           caption: "Aumenta visibilità",
           captionPosition: { top: "13%", left: "50%" },
           start: { top: "78%", left: "50%" },
-          end: { top: "59%", left: "52%" }
+          end: { top: "73%", left: "52%" }
         }
       ]
     },
