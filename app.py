@@ -11779,17 +11779,32 @@ def cerca():
     provincia_query = provincia_filtro or provincia_attiva or "__INVALID__"
 
     # =========================================================
-    # FILTRI CATEGORIA
+    # FILTRI CATEGORIA — letti da DB
     # =========================================================
-    with open("static/data/filtri_categoria.json", "r", encoding="utf-8") as f:
-        filtri_per_categoria = json.load(f)
-
     filtri_possibili = []
+
+    conn_filtri = get_db_connection()
+    cur_filtri = get_cursor(conn_filtri)
+
     for key in json_key_aliases:
-        if key in filtri_per_categoria:
-            filtri_possibili = filtri_per_categoria[key]
+        cur_filtri.execute(sql("""
+            SELECT filtro
+            FROM filtri_categoria
+            WHERE categoria = ?
+              AND attivo = 1
+            ORDER BY ordine ASC, filtro ASC
+        """), (key,))
+
+        righe_filtri = cur_filtri.fetchall()
+
+        if righe_filtri:
+            filtri_possibili = [
+                dict(r)["filtro"] for r in righe_filtri
+            ]
             break
 
+    conn_filtri.close()
+    
     # =========================================================
     # DB
     # =========================================================
@@ -12023,7 +12038,7 @@ def cerca():
     if zona:
         query_annunci += " AND a.zona = ?"
         params.append(zona)
-    
+
     for f_att in filtri_attivi:
         query_annunci += " AND a.filtri_categoria LIKE ?"
         params.append(f"%{f_att}%")
