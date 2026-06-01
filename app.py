@@ -2443,8 +2443,19 @@ def get_openai_month_stats():
         )
 
         start_time = int(start_month.timestamp())
-        end_time = int(now.timestamp())
 
+        # OpenAI richiede un end_time successivo al bucket di partenza.
+        # Usiamo l'inizio del giorno UTC successivo come limite esclusivo,
+        # così il range è valido anche il primo giorno del mese.
+        end_day = datetime(
+            now.year,
+            now.month,
+            now.day,
+            tzinfo=timezone.utc
+        ) + timedelta(days=1)
+
+        end_time = int(end_day.timestamp())
+        
         headers = {
             "Authorization": f"Bearer {api_key}"
         }
