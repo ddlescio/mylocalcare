@@ -13588,31 +13588,39 @@ def gestisci_pagamento_confermato(payment_intent):
 
             if tipo == "servizio":
                 cur.execute(sql("""
-                    SELECT durata_giorni, prezzo_cent
-                    FROM servizi_piani
-                    WHERE id = ?
+                    SELECT
+                        sp.durata_giorni,
+                        sp.prezzo_cent,
+                        s.nome AS nome_servizio
+                    FROM servizi_piani sp
+                    JOIN servizi s ON s.id = sp.servizio_id
+                    WHERE sp.id = ?
                 """), (int(piano_id) if piano_id is not None else int(ref_id),))
+
                 piano_mail = cur.fetchone()
 
                 if piano_mail:
                     importo_cent = int(piano_mail["prezzo_cent"] or 0)
                     durata_giorni = piano_mail["durata_giorni"]
-
-                tipo_label = "Servizio di aumento visibilità"
+                    tipo_label = piano_mail["nome_servizio"] or "Servizio di aumento visibilità"
 
             elif tipo == "pacchetto":
                 cur.execute(sql("""
-                    SELECT durata_giorni, prezzo_cent
-                    FROM pacchetti_piani
-                    WHERE id = ?
+                    SELECT
+                        pp.durata_giorni,
+                        pp.prezzo_cent,
+                        p.nome AS nome_pacchetto
+                    FROM pacchetti_piani pp
+                    JOIN pacchetti p ON p.id = pp.pacchetto_id
+                    WHERE pp.id = ?
                 """), (int(piano_id),))
+
                 piano_mail = cur.fetchone()
 
                 if piano_mail:
                     importo_cent = int(piano_mail["prezzo_cent"] or 0)
                     durata_giorni = piano_mail["durata_giorni"]
-
-                tipo_label = "Pacchetto aumento visibilità"
+                    tipo_label = piano_mail["nome_pacchetto"] or "Pacchetto aumento visibilità"                
 
             if utente_mail and utente_mail["email"]:
                 nome_destinatario = (
@@ -13664,7 +13672,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 },
                 production=True
             )
-            
+
     except Exception as e:
         conn.rollback()
         security_log(
