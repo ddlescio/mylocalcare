@@ -8600,6 +8600,7 @@ def admin_annunci():
             u.nome,
             u.cognome,
             u.email,
+            u.username,
 
             /* BOOST LISTA */
             CASE WHEN EXISTS (
@@ -8757,9 +8758,9 @@ def admin_annunci():
     # =========================
     if utente:
         like = f"%{utente}%"
-        query += " AND (LOWER(u.nome) LIKE ? OR LOWER(u.cognome) LIKE ?)"
-        params.extend([like, like])
-
+        query += " AND LOWER(u.username) LIKE ?"
+        params.append(like)
+    
     if categoria:
         query += " AND a.categoria = ?"
         params.append(categoria)

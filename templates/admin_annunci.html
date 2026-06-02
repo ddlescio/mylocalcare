@@ -903,7 +903,7 @@
               <input type="text"
                      name="utente"
                      value="{{ request.args.get('utente','') }}"
-                     placeholder="Nome o cognome">
+                     placeholder="Username">
             </div>
 
             <div class="filter-field">
@@ -980,23 +980,30 @@
 
     <div class="table-wrapper">
         <table class="w-full text-sm min-w-max">
-            <thead>
-                <tr class="text-left">
-                    <th class="p-2">Titolo</th>
-                    <th class="p-2">Utente</th>
-                    <th class="p-2">Categoria</th>
-                    <th class="p-2 text-center">Tipo</th>
-                    <th class="p-2">Pubblicato il</th>
-                    <th class="p-2">Zona</th>
-                    <th class="p-2">Provincia</th>
-                    <th class="p-2 text-center">Stato</th>
-                    <th class="p-2 text-center">Azioni</th>
-                    <th class="p-2 text-center">Servizi</th>
-                    <th class="p-2 text-center">Servizi multipli</th>
-                </tr>
-            </thead>
+          <thead>
+              <tr class="text-left">
+                  <th class="p-2">Utente</th>
+                  <th class="p-2 text-center">Stato</th>
+                  <th class="p-2 text-center">Azioni</th>
+                  <th class="p-2">Categoria</th>
+                  <th class="p-2 text-center">Tipo</th>
+                  <th class="p-2">Titolo</th>
+                  <th class="p-2">Pubblicato il</th>
+                  <th class="p-2">Zona</th>
+                  <th class="p-2">Provincia</th>
+                  <th class="p-2 text-center">Servizi</th>
+                  <th class="p-2 text-center">Servizi multipli</th>
+              </tr>
+          </thead>
             <tbody>
                 {% for a in annunci %}
+
+                {% set titolo_words = (a.titolo or '').split() %}
+                {% set titolo_breve = titolo_words[:7] | join(' ') %}
+                {% if titolo_words|length > 7 %}
+                  {% set titolo_breve = titolo_breve ~ '...' %}
+                {% endif %}
+
                 <tr class="border-b annuncio-row"
                     data-annuncio-id="{{ a.id }}"
                     data-annuncio-titolo="{{ a.titolo or '-' }}"
@@ -1011,7 +1018,7 @@
                     data-annuncio-has-urgente="{{ 1 if a.has_urgente else 0 }}"
                     data-annuncio-has-pacchetto-visibilita="{{ 1 if a.has_pacchetto_visibilita else 0 }}"
                     data-annuncio-has-pacchetto-premium="{{ 1 if a.has_visibilita_premium else 0 }}"
-                    data-annuncio-utente="{{ (a.nome or '') ~ ' ' ~ (a.cognome or '') }}"
+                    data-annuncio-utente="{{ a.username }}"
                     data-annuncio-categoria="{{ a.categoria or '-' }}"
                     data-annuncio-tipo="{{ a.tipo_annuncio or '-' }}"
                     data-annuncio-zona="{{ a.zona or '-' }}"
@@ -1024,10 +1031,9 @@
                     data-annuncio-toggle-url="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
                     data-annuncio-approva-url="{% if a.stato == 'in_attesa' %}{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}{% else %}#{% endif %}"
                     data-annuncio-rifiuta-url="{% if a.stato == 'in_attesa' %}{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}{% else %}#{% endif %}">
-                    <td class="p-2">{{ a.titolo }}</td>
                     <td class="p-2">
 
-                        {{ a.nome }} {{ a.cognome }}
+                        <strong>{{ a.username }}</strong>
 
                         <div class="mt-1 flex gap-1">
                             <a href="{{ url_for('chat_conversazione_view', other_id=a.utente_id) }}"
@@ -1042,28 +1048,6 @@
                         </div>
 
                     </td>
-                    <td class="p-2">{{ a.categoria }}</td>
-                    <td class="p-2 text-center">
-                    {% if a.tipo_annuncio == 'offro' %}
-                      <span class="badge bg-blue-100 text-blue-700">Offro</span>
-                    {% elif a.tipo_annuncio == 'cerco' %}
-                      <span class="badge bg-purple-100 text-purple-700">Cerco</span>
-                    {% else %}
-                      <span class="badge bg-gray-100 text-gray-500">—</span>
-                    {% endif %}
-                  </td>
-
-                    <td class="p-2 text-xs text-gray-600">
-                      {% if a.data_pubblicazione %}
-                        {{ a.data_pubblicazione|fmt_it }}
-                      {% else %}
-                        —
-                      {% endif %}
-                    </td>
-
-                    <td class="p-2">{{ a.zona }}</td>
-                    <td class="p-2 font-semibold text-gray-600">{{ a.provincia }}</td>
-
                     <td class="p-2 text-center">
                         <span class="badge
                             {% if a.stato == 'approvato' %} bg-green-100 text-green-700
@@ -1073,7 +1057,6 @@
                             {{ a.stato }}
                         </span>
                     </td>
-
                     <td class="p-2 text-center">
                       <a href="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}" class="text-blue-600 hover:underline">Apri</a>
                       |
@@ -1088,6 +1071,30 @@
                         {% endif %}
                       {% endif %}
                     </td>
+                    <td class="p-2">{{ a.categoria }}</td>
+                    <td class="p-2 text-center">
+                    {% if a.tipo_annuncio == 'offro' %}
+                      <span class="badge bg-blue-100 text-blue-700">Offro</span>
+                    {% elif a.tipo_annuncio == 'cerco' %}
+                      <span class="badge bg-purple-100 text-purple-700">Cerco</span>
+                    {% else %}
+                      <span class="badge bg-gray-100 text-gray-500">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="p-2" title="{{ a.titolo }}">
+                      {{ titolo_breve }}
+                  </td>
+
+                    <td class="p-2 text-xs text-gray-600">
+                      {% if a.data_pubblicazione %}
+                        {{ a.data_pubblicazione|fmt_it }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+
+                    <td class="p-2">{{ a.zona }}</td>
+                    <td class="p-2 font-semibold text-gray-600">{{ a.provincia }}</td>
 
                     <td class="p-2 text-center">
                       <div class="flex flex-col items-center gap-1">
@@ -1183,6 +1190,7 @@
                 </tr>
                 {% endfor %}
             </tbody>
+
         </table>
     </div>
 
