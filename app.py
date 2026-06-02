@@ -4086,7 +4086,7 @@ def admin_openai_usage():
         salva_openai_usage_giornaliero(stats)
         stats["daily"] = carica_openai_usage_storico()
         stats["monthly_totals"] = calcola_totali_mensili_openai(stats["daily"])
-        
+
     return render_template(
         "admin_openai_usage.html",
         stats=stats
@@ -13548,6 +13548,7 @@ def gestisci_pagamento_confermato(payment_intent):
             raise Exception("Tipo acquisto non valido")
 
         conn.commit()
+
         security_log(
             "✅ [STRIPE] webhook completato — servizi attivati",
             {
@@ -13557,6 +13558,113 @@ def gestisci_pagamento_confermato(payment_intent):
             production=True
         )
 
+        # 📧 Email conferma pagamento aumento visibilità
+        # Va inviata SOLO dopo il commit, così non rischiamo di confermare via mail
+        # un pagamento non ancora registrato correttamente.
+        try:
+            cur.execute(sql("""
+                SELECT email, nome, username
+                FROM utenti
+                WHERE id = ?
+            """), (utente_id,))
+            utente_mail = cur.fetchone()
+
+            titolo_annuncio = None
+
+            if annuncio_id:
+                cur.execute(sql("""
+                    SELECT titolo
+                    FROM annunci
+                    WHERE id = ?
+                """), (annuncio_id,))
+                annuncio_mail = cur.fetchone()
+
+                if annuncio_mail:
+                    titolo_annuncio = annuncio_mail["titolo"]
+
+            importo_cent = 0
+            durata_giorni = None
+            tipo_label = "Aumento visibilità annuncio"
+
+            if tipo == "servizio":
+                cur.execute(sql("""
+                    SELECT durata_giorni, prezzo_cent
+                    FROM servizi_piani
+                    WHERE id = ?
+                """), (int(piano_id) if piano_id is not None else int(ref_id),))
+                piano_mail = cur.fetchone()
+
+                if piano_mail:
+                    importo_cent = int(piano_mail["prezzo_cent"] or 0)
+                    durata_giorni = piano_mail["durata_giorni"]
+
+                tipo_label = "Servizio di aumento visibilità"
+
+            elif tipo == "pacchetto":
+                cur.execute(sql("""
+                    SELECT durata_giorni, prezzo_cent
+                    FROM pacchetti_piani
+                    WHERE id = ?
+                """), (int(piano_id),))
+                piano_mail = cur.fetchone()
+
+                if piano_mail:
+                    importo_cent = int(piano_mail["prezzo_cent"] or 0)
+                    durata_giorni = piano_mail["durata_giorni"]
+
+                tipo_label = "Pacchetto aumento visibilità"
+
+            if utente_mail and utente_mail["email"]:
+                nome_destinatario = (
+                    utente_mail["nome"]
+                    or utente_mail["username"]
+                    or "utente"
+                )
+
+                importo_testo = f"{importo_cent / 100:.2f} €".replace(".", ",")
+
+                durata_testo = (
+                    f"{durata_giorni} giorni"
+                    if durata_giorni
+                    else "durata prevista dal servizio acquistato"
+                )
+
+                corpo_email = (
+                    f"Ciao {nome_destinatario},\n\n"
+                    "ti confermiamo che il pagamento è stato ricevuto correttamente.\n\n"
+                    f"Servizio acquistato: {tipo_label}\n"
+                    f"Importo: {importo_testo}\n"
+                    f"Durata: {durata_testo}\n"
+                )
+
+                if titolo_annuncio:
+                    corpo_email += f"Annuncio: {titolo_annuncio}\n"
+
+                corpo_email += (
+                    "\nIl servizio è stato attivato sul tuo account MyLocalCare.\n\n"
+                    "Grazie,\n"
+                    "MyLocalCare"
+                )
+
+                _invia_email(
+                    destinazione=utente_mail["email"],
+                    oggetto="Conferma pagamento MyLocalCare",
+                    corpo=corpo_email
+                )
+
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ [STRIPE] pagamento confermato ma errore invio email conferma",
+                e,
+                {
+                    "acquisto_id": acquisto_id,
+                    "utente_id": utente_id,
+                    "annuncio_id": annuncio_id,
+                    "payment_intent": riferimento_esterno
+                },
+                production=True
+            )
+            
     except Exception as e:
         conn.rollback()
         security_log(
