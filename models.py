@@ -696,7 +696,7 @@ def elimina_utente(id):
     ))
 
     conn.commit()
-    
+
 # ------------------ NOTIFICHE ------------------ #
 def count_notifiche_non_lette(utente_id):
     conn = get_db_connection()
@@ -979,12 +979,14 @@ def get_tutte_recensioni_con_risposte():
 
             -- 🔹 AUTORE RECENSIONE
             a.id AS autore_id,
+            a.username AS autore_username,
             a.nome AS autore_nome,
             a.cognome AS autore_cognome,
             a.email AS autore_email,
 
-            -- 🔹 DESTINATARIO RECENSIONe
+            -- 🔹 DESTINATARIO RECENSIONE
             d.id AS dest_id,
+            d.username AS dest_username,
             d.nome AS dest_nome,
             d.cognome AS dest_cognome,
             d.email AS dest_email,
@@ -995,8 +997,10 @@ def get_tutte_recensioni_con_risposte():
             rr.stato AS risposta_stato,
 
             -- 🔹 AUTORE della risposta
+            ra.username AS risposta_autore_username,
             ra.nome AS risposta_autore_nome,
             ra.cognome AS risposta_autore_cognome
+
         FROM recensioni r
         JOIN utenti a ON r.id_autore = a.id
         JOIN utenti d ON r.id_destinatario = d.id
@@ -1008,7 +1012,7 @@ def get_tutte_recensioni_con_risposte():
     result = [dict(r) for r in c.fetchall()]
 
     return result
-
+    
 def elimina_recensione(id_recensione, id_autore=None, is_admin=False):
     """Elimina una recensione (solo autore o admin)."""
     conn = get_db_connection()

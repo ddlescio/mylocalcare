@@ -6194,13 +6194,13 @@ def admin_recensioni():
         ok = True
 
         if autore:
-            nome_autore = f"{(r.get('autore_nome') or '').lower()} {(r.get('autore_cognome') or '').lower()}"
-            ok = ok and (autore in nome_autore)
+            username_autore = (r.get("autore_username") or "").lower()
+            ok = ok and (autore in username_autore)
 
         if destinatario:
-            nome_dest = f"{(r.get('dest_nome') or '').lower()} {(r.get('dest_cognome') or '').lower()}"
-            ok = ok and (destinatario in nome_dest)
-
+            username_dest = (r.get("dest_username") or "").lower()
+            ok = ok and (destinatario in username_dest)
+    
         if voto:
             try:
                 ok = ok and str(int(voto)) == str(r.get("voto"))
@@ -8760,7 +8760,7 @@ def admin_annunci():
         like = f"%{utente}%"
         query += " AND LOWER(u.username) LIKE ?"
         params.append(like)
-    
+
     if categoria:
         query += " AND a.categoria = ?"
         params.append(categoria)

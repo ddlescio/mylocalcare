@@ -908,7 +908,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
           <input type="text"
                  name="autore"
                  value="{{ request.args.get('autore','') }}"
-                 placeholder="Nome o cognome">
+                 placeholder="Username">
         </div>
 
         <div class="filter-field">
@@ -916,7 +916,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
           <input type="text"
                  name="destinatario"
                  value="{{ request.args.get('destinatario','') }}"
-                 placeholder="Nome o cognome">
+                 placeholder="Username">
         </div>
 
         <div class="filter-field">
@@ -970,8 +970,8 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
         <tr class="review-row"
             data-review-id="{{ r.get('recensione_id') or '' }}"
-            data-review-autore="{{ (r.get('autore_nome') or '') ~ ' ' ~ (r.get('autore_cognome') or '') }}"
-            data-review-destinatario="{{ (r.get('dest_nome') or '') ~ ' ' ~ (r.get('dest_cognome') or '') }}"
+            data-review-autore="{{ r.get('autore_username') or '-' }}"
+            data-review-destinatario="{{ r.get('dest_username') or '-' }}"
             data-review-voto="{{ r.get('voto') or '-' }}"
             data-review-data="{% if r.get('data_recensione') %}{{ r.get('data_recensione')|fmt_it }}{% else %}-{% endif %}"
             data-review-testo="{{ testo|e }}"
@@ -990,7 +990,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
           <!-- AUTORE -->
           <td class="text-gray-800 font-medium">
-            {{ r.get('autore_nome') }} {{ r.get('autore_cognome') }}
+            <strong>{{ r.get('autore_username') or '-' }}</strong>
 
             <div class="mt-2 flex gap-1">
               {% if r.get('autore_id') %}
@@ -1007,7 +1007,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
           <!-- DESTINATARIO -->
           <td class="text-gray-800">
-            {{ r.get('dest_nome') }} {{ r.get('dest_cognome') }}
+            <strong>{{ r.get('dest_username') or '-' }}</strong>
 
             <div class="mt-2 flex gap-1">
               {% if r.get('dest_id') %}
@@ -1043,7 +1043,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
             </div>
 
             <button type="button"
-                    onclick="openDettaglio('recensione', `{{ testo|escape }}`, '{{ r.get('autore_nome') }} {{ r.get('autore_cognome') }}', '{{ r.get('data_recensione') }}')"
+                    onclick="openDettaglio('recensione', `{{ testo|escape }}`, '{{ r.get('autore_username') or "-" }}', '{{ r.get('data_recensione') }}')"
                     class="mt-1 text-blue-600 text-[11px] hover:underline">
               Leggi tutto
             </button>
@@ -1069,7 +1069,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
               <button
                 type="button"
-                onclick="openDettaglio('risposta', `{{ risposta|escape }}`, '{{ r.get('risposta_autore_nome') }} {{ r.get('risposta_autore_cognome') }}', '')"
+                onclick="openDettaglio('risposta', `{{ risposta|escape }}`, '{{ r.get('risposta_autore_username') or "-" }}', '')"
                 class="mt-1 text-blue-600 text-[11px] hover:underline">
                 Apri dettaglio
               </button>
@@ -1357,7 +1357,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     aggiornaBottoneModaleRecensione(row);
     aggiornaBottoneModaleRisposta(row);
-    
+
     backdrop.classList.add("is-open");
     backdrop.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
