@@ -5795,7 +5795,7 @@ let ANNUNCIO_ID_CORRENTE = null;
     document.body.classList.remove("overflow-hidden", "modal-open");
 
     toggleGuidaDashboard(false);
-  }  
+  }
 </script>
 <script>
 let selezioneCorrente = null;
@@ -6374,7 +6374,7 @@ function aggiornaStatoVisibilita() {
 
     await loadStripeJs();
 
-    stripe = window.Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+    stripe = window.Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
     return stripe;
   }
   </script>
@@ -6667,7 +6667,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (window.Stripe) {
-      return window.Stripe("pk_test_51Sv2CTJXrSmz71kqPzW4kj9PSauy9OeMmqCtN3q85WUnb9BG5iYoap0yeZHnLzAUYgwi6vIxgHsyj4pmhvHxDLZe00fyayoOve");
+      return window.Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
     }
 
     return null;

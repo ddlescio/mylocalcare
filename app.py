@@ -863,6 +863,12 @@ offline_watchdogs = {}
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
+@app.context_processor
+def inject_stripe_publishable_key():
+    return {
+        "STRIPE_PUBLISHABLE_KEY": os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+    }
+
 # ==========================================================
 # VAPID PUSH CONFIG
 # ==========================================================
@@ -13620,7 +13626,7 @@ def gestisci_pagamento_confermato(payment_intent):
                 if piano_mail:
                     importo_cent = int(piano_mail["prezzo_cent"] or 0)
                     durata_giorni = piano_mail["durata_giorni"]
-                    tipo_label = piano_mail["nome_pacchetto"] or "Pacchetto aumento visibilità"                
+                    tipo_label = piano_mail["nome_pacchetto"] or "Pacchetto aumento visibilità"
 
             if utente_mail and utente_mail["email"]:
                 nome_destinatario = (
