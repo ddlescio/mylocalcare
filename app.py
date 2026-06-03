@@ -8234,6 +8234,77 @@ def _normalizza_lista(value):
 # ==========================================================
 import sqlite3
 
+def invia_email_urgente_match(user_id, annuncio_id, categoria, tipo_annuncio, luogo, username, titolo):
+    """
+    Invia email per annuncio urgente compatibile.
+    Parte solo se l'utente ha email_notifiche = 1.
+    """
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT email, nome, username, email_notifiche
+            FROM utenti
+            WHERE id = ?
+              AND attivo = 1
+              AND sospeso = 0
+              AND COALESCE(disattivato_admin, 0) = 0
+              AND email_notifiche = 1
+            LIMIT 1
+        """), (int(user_id),))
+
+        user = cur.fetchone()
+
+        if not user:
+            return False
+
+        nome = user["nome"] or user["username"] or "utente"
+
+        url = f"{app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')}/annuncio/{annuncio_id}"
+
+        corpo = (
+            f"Ciao {nome},\n\n"
+            "c'è un annuncio urgente compatibile con le tue preferenze:\n\n"
+            f"Categoria: {categoria}\n"
+            f"Tipo: {tipo_annuncio}\n"
+            f"Zona: {luogo}\n"
+            f"Pubblicato da: @{username}\n"
+            f"Titolo: {titolo}\n\n"
+            "Puoi visualizzarlo qui:\n"
+            f"{url}\n\n"
+            "MyLocalCare"
+        )
+
+        return _invia_email(
+            destinazione=user["email"],
+            oggetto="Annuncio urgente compatibile su MyLocalCare",
+            corpo=corpo
+        )
+
+    except Exception as e:
+        log_exception_safe(
+            "⚠️ Errore invio email annuncio urgente",
+            e,
+            {
+                "user_id": user_id,
+                "annuncio_id": annuncio_id
+            },
+            production=True
+        )
+        return False
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin", conn=None):
     """
     Invia notifiche per un annuncio urgente.
@@ -8416,6 +8487,28 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin", conn
                     production=True
                 )
 
+            try:
+                invia_email_urgente_match(
+                    user_id=uid,
+                    annuncio_id=annuncio_id,
+                    categoria=categoria,
+                    tipo_annuncio=tipo_annuncio,
+                    luogo=luogo,
+                    username=username,
+                    titolo=titolo
+                )
+            except Exception as e:
+                log_exception_safe(
+                    "⚠️ Errore email annuncio urgente",
+                    e,
+                    {
+                        "user_id": uid,
+                        "annuncio_id": annuncio_id,
+                        "attivazione_id": attivazione_id
+                    },
+                    production=True
+                )
+                
     except Exception as e:
         conn.rollback()
         print(f"❌ Errore in notifica_urgente: {repr(e)}", flush=True)
