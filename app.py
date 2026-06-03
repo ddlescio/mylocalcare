@@ -495,11 +495,6 @@ def get_utenti_profilo_incompleto():
             conn.close()
         except Exception:
             pass
-print(
-    "DEBUG utenti profilo incompleto:",
-    len(get_utenti_profilo_incompleto())
-)
-
 
 def norm_place(s: str) -> str:
     """Normalizza città/zona per confronto robusto."""
