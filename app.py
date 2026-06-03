@@ -495,6 +495,121 @@ def get_utenti_profilo_incompleto():
         except Exception:
             pass
 
+def invia_reminder_profili_incompleti(dry_run=False):
+    """
+    Invia un reminder agli utenti attivi che non hanno ancora compilato
+    nessuna preferenza Offro/Cerco.
+
+    Per ora invia SOLO notifica interna.
+    Evita doppioni se esiste già un reminder negli ultimi 7 giorni.
+    """
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        utenti = get_utenti_profilo_incompleto()
+
+        creati = 0
+        saltati = 0
+
+        for u in utenti:
+            user_id = int(u["id"])
+
+            if is_postgres():
+                cur.execute(sql("""
+                    SELECT id
+                    FROM notifiche
+                    WHERE id_utente = ?
+                      AND tipo = 'profilo_incompleto'
+                      AND data >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+                    LIMIT 1
+                """), (user_id,))
+            else:
+                cur.execute(sql("""
+                    SELECT id
+                    FROM notifiche
+                    WHERE id_utente = ?
+                      AND tipo = 'profilo_incompleto'
+                      AND data >= datetime('now','-7 days')
+                    LIMIT 1
+                """), (user_id,))
+
+            gia_inviata = cur.fetchone()
+
+            if gia_inviata:
+                saltati += 1
+                continue
+
+            titolo = "Completa il tuo profilo"
+            messaggio = (
+                "Seleziona cosa offri o cosa cerchi per ricevere annunci compatibili "
+                "e suggerimenti personalizzati."
+            )
+            link = "/utente/dashboard"
+
+            if not dry_run:
+                cur.execute(sql("""
+                    INSERT INTO notifiche (
+                        id_utente,
+                        titolo,
+                        messaggio,
+                        link,
+                        tipo,
+                        letta
+                    )
+                    VALUES (?, ?, ?, ?, ?, 0)
+                """), (
+                    user_id,
+                    titolo,
+                    messaggio,
+                    link,
+                    "profilo_incompleto"
+                ))
+
+                emit_update_notifications(user_id)
+
+            creati += 1
+
+        if not dry_run:
+            conn.commit()
+
+        return {
+            "ok": True,
+            "utenti_incompleti": len(utenti),
+            "notifiche_create": creati,
+            "saltati_per_recenti": saltati,
+            "dry_run": dry_run
+        }
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        log_exception_safe(
+            "❌ Errore reminder profili incompleti",
+            e,
+            production=True
+        )
+
+        return {
+            "ok": False,
+            "error": str(e)
+        }
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 def norm_place(s: str) -> str:
     """Normalizza città/zona per confronto robusto."""
     if not s:
@@ -6373,26 +6488,12 @@ def admin_recensioni():
 
 from datetime import datetime, timedelta
 
-@app.route("/admin/debug/profili-incompleti")
+@app.route("/admin/debug/reminder-profili-incompleti")
 @login_required
 @admin_required
-def admin_debug_profili_incompleti():
-    utenti = get_utenti_profilo_incompleto()
-
-    return jsonify({
-        "ok": True,
-        "totale": len(utenti),
-        "utenti": [
-            {
-                "id": u["id"],
-                "email": u["email"],
-                "username": u["username"],
-                "nome": u["nome"],
-                "email_notifiche": u["email_notifiche"]
-            }
-            for u in utenti[:50]
-        ]
-    })
+def admin_debug_reminder_profili_incompleti():
+    risultato = invia_reminder_profili_incompleti(dry_run=True)
+    return jsonify(risultato)
 
 @app.route("/admin/acquisti")
 @login_required
