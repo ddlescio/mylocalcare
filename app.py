@@ -474,7 +474,7 @@ def get_utenti_profilo_incompleto():
                 email,
                 nome,
                 username,
-                email_notifiche,
+                email_notifiche
             FROM utenti
             WHERE attivo = 1
               AND sospeso = 0
