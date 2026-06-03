@@ -1558,13 +1558,17 @@ document.addEventListener("click", async (e) => {
   e.preventDefault();
   e.stopPropagation();
 
+  const codiceServizio = btn.dataset.servizio;
+  const utenteId = btn.dataset.utente;
+  const annuncioId = btn.dataset.annuncio || "";
+
   const payload = {
-    codice_servizio: btn.dataset.servizio,
-    utente_id: parseInt(btn.dataset.utente, 10)
+    codice_servizio: codiceServizio,
+    utente_id: parseInt(utenteId, 10)
   };
 
-  if (btn.dataset.annuncio) {
-    payload.annuncio_id = parseInt(btn.dataset.annuncio, 10);
+  if (annuncioId) {
+    payload.annuncio_id = parseInt(annuncioId, 10);
   }
 
   btn.disabled = true;
@@ -1589,35 +1593,50 @@ document.addEventListener("click", async (e) => {
 
     const isActive = data.azione === "attivato";
 
-    btn.classList.toggle("is-active", isActive);
+    const selectorParts = [
+      `.toggle-servizio[data-servizio="${CSS.escape(codiceServizio)}"]`,
+      `[data-utente="${CSS.escape(String(utenteId))}"]`
+    ];
 
-    btn.classList.remove(
-      "bg-gray-200", "text-gray-700",
-      "bg-purple-600", "bg-blue-600", "bg-amber-500",
-      "bg-green-600", "bg-red-600", "text-white"
-    );
-
-    if (!isActive) {
-      btn.classList.add("bg-gray-200", "text-gray-700");
+    if (annuncioId) {
+      selectorParts.push(`[data-annuncio="${CSS.escape(String(annuncioId))}"]`);
     } else {
-      btn.classList.add("text-white");
-
-      if (payload.codice_servizio === "vetrina_annuncio") {
-        btn.classList.add("bg-purple-600");
-      } else if (payload.codice_servizio === "boost_lista") {
-        btn.classList.add("bg-blue-600");
-      } else if (payload.codice_servizio === "badge_evidenza") {
-        btn.classList.add("bg-amber-500");
-      } else if (payload.codice_servizio === "badge_affidabilita") {
-        btn.classList.add("bg-green-600");
-      } else if (payload.codice_servizio === "contatti") {
-        btn.classList.add("bg-blue-600");
-      } else if (payload.codice_servizio === "annuncio_urgente") {
-        btn.classList.add("bg-red-600");
-      } else {
-        btn.classList.add("bg-blue-600");
-      }
+      selectorParts.push(`:not([data-annuncio])`);
     }
+
+    const matchingButtons = document.querySelectorAll(selectorParts.join(""));
+
+    matchingButtons.forEach(b => {
+      b.classList.toggle("is-active", isActive);
+
+      b.classList.remove(
+        "bg-gray-200", "text-gray-700",
+        "bg-purple-600", "bg-blue-600", "bg-amber-500",
+        "bg-green-600", "bg-red-600", "text-white"
+      );
+
+      if (!isActive) {
+        b.classList.add("bg-gray-200", "text-gray-700");
+      } else {
+        b.classList.add("text-white");
+
+        if (codiceServizio === "vetrina_annuncio") {
+          b.classList.add("bg-purple-600");
+        } else if (codiceServizio === "boost_lista") {
+          b.classList.add("bg-blue-600");
+        } else if (codiceServizio === "badge_evidenza") {
+          b.classList.add("bg-amber-500");
+        } else if (codiceServizio === "badge_affidabilita") {
+          b.classList.add("bg-green-600");
+        } else if (codiceServizio === "contatti") {
+          b.classList.add("bg-blue-600");
+        } else if (codiceServizio === "annuncio_urgente") {
+          b.classList.add("bg-red-600");
+        } else {
+          b.classList.add("bg-blue-600");
+        }
+      }
+    });
 
   } catch (err) {
     alert("Errore di rete");
