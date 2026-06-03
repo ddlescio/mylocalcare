@@ -8415,7 +8415,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin", conn
                     },
                     production=True
                 )
-                
+
     except Exception as e:
         conn.rollback()
         print(f"❌ Errore in notifica_urgente: {repr(e)}", flush=True)
@@ -13969,8 +13969,28 @@ def modifica_profilo():
 def impostazioni():
     if not session.get("utente_id"):
         return redirect(url_for("login"))
-    return render_template("impostazioni.html")
 
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    utente = cur.execute(
+        sql("""
+            SELECT email_notifiche
+            FROM utenti
+            WHERE id = ?
+        """),
+        (session["utente_id"],)
+    ).fetchone()
+
+    email_notifiche = 1
+
+    if utente:
+        email_notifiche = int(utente["email_notifiche"] or 0)
+
+    return render_template(
+        "impostazioni.html",
+        email_notifiche=email_notifiche
+    )
 
 @app.route("/impostazioni/modifica-username", methods=["GET", "POST"])
 @login_required
@@ -14402,6 +14422,38 @@ def email_notifiche():
         return redirect(url_for("impostazioni"))
     return render_template("forms/email_notifiche.html")
 
+@app.route("/impostazioni/notifiche-email/toggle", methods=["POST"])
+@login_required
+def toggle_email_notifiche():
+    verify_csrf()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    row = cur.execute(sql("""
+        SELECT email_notifiche
+        FROM utenti
+        WHERE id = ?
+    """), (session["utente_id"],)).fetchone()
+
+    if not row:
+        return jsonify({"ok": False, "error": "Utente non trovato"}), 404
+
+    attuale = int(row["email_notifiche"] or 0)
+    nuovo = 0 if attuale == 1 else 1
+
+    cur.execute(sql("""
+        UPDATE utenti
+        SET email_notifiche = ?
+        WHERE id = ?
+    """), (nuovo, session["utente_id"]))
+
+    conn.commit()
+
+    return jsonify({
+        "ok": True,
+        "email_notifiche": nuovo
+    })
 
 # ---------------------------
 # IMPOSTAZIONI → FOTO PROFILO

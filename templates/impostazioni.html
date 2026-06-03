@@ -98,16 +98,27 @@
     </div>
 
     <div class="settings-list">
-      <a href="{{ url_for('email_notifiche') }}" class="settings-row">
-        <div class="settings-row-left">
+      <div class="settings-row settings-row-static">
+        <div class="settings-row-left min-w-0">
           <span class="settings-row-icon">📧</span>
-          <div>
+          <div class="min-w-0">
             <div class="settings-row-title">Notifiche via email</div>
-            <div class="settings-row-desc">Gestisci gli avvisi ricevuti tramite email.</div>
+            <div id="emailSettingsStatus" class="settings-row-desc">
+              {% if email_notifiche %}
+                Notifiche email attive.
+              {% else %}
+                Notifiche email disattivate.
+              {% endif %}
+            </div>
           </div>
         </div>
-        <span class="settings-chevron">›</span>
-      </a>
+
+        <button type="button"
+                id="emailSettingsBtn"
+                class="settings-push-btn {% if email_notifiche %}settings-push-btn-danger{% else %}settings-push-btn-active{% endif %}">
+          {% if email_notifiche %}Disattiva{% else %}Attiva{% endif %}
+        </button>
+      </div>
 
       <!-- 🔔 NOTIFICHE PUSH -->
       <div class="settings-row settings-row-static">
@@ -743,7 +754,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           },
           body: JSON.stringify({ endpoint })
         });
-        
+
         const currentUserId = {{ session.get('utente_id')|tojson }};
         if (currentUserId) {
           localStorage.removeItem(`lc_push_synced_user_${currentUserId}`);
@@ -795,6 +806,53 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   await refreshPushState();
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("emailSettingsBtn");
+  const status = document.getElementById("emailSettingsStatus");
+
+  if (!btn || !status) return;
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.textContent = "Attendo...";
+
+    try {
+      const res = await fetch("{{ url_for('toggle_email_notifiche') }}", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": "{{ csrf_token() }}"
+        },
+        body: JSON.stringify({})
+      });
+
+      const data = await res.json();
+
+      if (!data.ok) {
+        alert(data.error || "Errore aggiornamento notifiche email");
+        return;
+      }
+
+      if (data.email_notifiche === 1) {
+        status.textContent = "Notifiche email attive.";
+        btn.textContent = "Disattiva";
+        btn.className = "settings-push-btn settings-push-btn-danger";
+      } else {
+        status.textContent = "Notifiche email disattivate.";
+        btn.textContent = "Attiva";
+        btn.className = "settings-push-btn settings-push-btn-active";
+      }
+
+    } catch (err) {
+      alert("Errore di rete");
+    } finally {
+      btn.disabled = false;
+    }
+  });
 });
 </script>
 
