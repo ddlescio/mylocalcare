@@ -8392,12 +8392,30 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin", conn
         print(f"✅ Notifica urgente inviata a {len(notificati)} utenti.", flush=True)
 
         # ---------------------------------------------------------
-        # 6️⃣ EMISSIONE SOCKET REALTIME
+        # 6️⃣ EMISSIONE SOCKET REALTIME + PUSH
         # ---------------------------------------------------------
         for uid in notificati:
-            count = conta_non_lette(uid)
             emit_update_notifications(uid)
 
+            try:
+                invia_push(
+                    uid,
+                    "Annuncio urgente in zona",
+                    f"{categoria} - {tipo_annuncio} - {luogo}",
+                    url=f"/annuncio/{annuncio_id}"
+                )
+            except Exception as e:
+                log_exception_safe(
+                    "⚠️ Errore push annuncio urgente",
+                    e,
+                    {
+                        "user_id": uid,
+                        "annuncio_id": annuncio_id,
+                        "attivazione_id": attivazione_id
+                    },
+                    production=True
+                )
+                
     except Exception as e:
         conn.rollback()
         print(f"❌ Errore in notifica_urgente: {repr(e)}", flush=True)
