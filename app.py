@@ -475,7 +475,6 @@ def get_utenti_profilo_incompleto():
                 nome,
                 username,
                 email_notifiche,
-                created_at
             FROM utenti
             WHERE attivo = 1
               AND sospeso = 0
@@ -6389,8 +6388,7 @@ def admin_debug_profili_incompleti():
                 "email": u["email"],
                 "username": u["username"],
                 "nome": u["nome"],
-                "email_notifiche": u["email_notifiche"],
-                "created_at": str(u["created_at"])
+                "email_notifiche": u["email_notifiche"]
             }
             for u in utenti[:50]
         ]
