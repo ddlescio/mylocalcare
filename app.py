@@ -500,7 +500,11 @@ def invia_reminder_profili_incompleti(dry_run=False):
     Invia un reminder agli utenti attivi che non hanno ancora compilato
     nessuna preferenza Offro/Cerco.
 
-    Per ora invia SOLO notifica interna.
+    Canali:
+    - notifica interna sempre
+    - push se disponibile
+    - email solo se email_notifiche = 1
+
     Evita doppioni se esiste già un reminder negli ultimi 7 giorni.
     """
 
@@ -512,6 +516,8 @@ def invia_reminder_profili_incompleti(dry_run=False):
 
         creati = 0
         saltati = 0
+        push_inviate = 0
+        email_inviate = 0
 
         for u in utenti:
             user_id = int(u["id"])
@@ -569,6 +575,43 @@ def invia_reminder_profili_incompleti(dry_run=False):
 
                 emit_update_notifications(user_id)
 
+                try:
+                    invia_push(
+                        user_id,
+                        titolo,
+                        messaggio,
+                        url=link
+                    )
+                    push_inviate += 1
+                except Exception as e:
+                    log_exception_safe(
+                        "⚠️ Errore push reminder profilo incompleto",
+                        e,
+                        {"user_id": user_id},
+                        production=True
+                    )
+
+                if int(u["email_notifiche"] or 0) == 1 and u["email"]:
+                    nome = u["nome"] or u["username"] or "utente"
+                    base_url = app.config.get("APP_BASE_URL", "https://www.mylocalcare.it").rstrip("/")
+
+                    ok_email = _invia_email(
+                        destinazione=u["email"],
+                        oggetto="Completa il tuo profilo MyLocalCare",
+                        corpo=(
+                            f"Ciao {nome},\n\n"
+                            "Hai creato il tuo account su MyLocalCare, ma non hai ancora indicato "
+                            "cosa offri o cosa cerchi.\n\n"
+                            "Completa il profilo per ricevere annunci compatibili, suggerimenti "
+                            "personalizzati e notifiche più pertinenti.\n\n"
+                            f"{base_url}{link}\n\n"
+                            "MyLocalCare"
+                        )
+                    )
+
+                    if ok_email:
+                        email_inviate += 1
+
             creati += 1
 
         if not dry_run:
@@ -579,6 +622,8 @@ def invia_reminder_profili_incompleti(dry_run=False):
             "utenti_incompleti": len(utenti),
             "notifiche_create": creati,
             "saltati_per_recenti": saltati,
+            "push_inviate": push_inviate,
+            "email_inviate": email_inviate,
             "dry_run": dry_run
         }
 
@@ -609,7 +654,7 @@ def invia_reminder_profili_incompleti(dry_run=False):
             conn.close()
         except Exception:
             pass
-
+            
 def norm_place(s: str) -> str:
     """Normalizza città/zona per confronto robusto."""
     if not s:
