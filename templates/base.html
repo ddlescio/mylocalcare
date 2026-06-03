@@ -214,25 +214,13 @@ button, input[type="submit"] {
     cursor: -webkit-grab;
   }
 
-</style>
-<!-- ✅ Evita salto layout all’avvio -->
-<style>
-  body {
-    opacity: 0;
-    transition: opacity 0.25s ease-in-out;
-  }
-  body.loaded {
-    opacity: 1;
-  }
-</style>
+  <!-- ✅ Evita pagina bianca prolungata all’avvio PWA -->
+  <style>
+    body {
+      opacity: 1;
+    }
+  </style>
 
-
-<script>
-  // Mostra il contenuto solo quando Tailwind & immagini sono pronti
-  window.addEventListener("load", () => {
-    document.body.classList.add("loaded");
-  });
-</script>
 <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 <meta name="theme-color" content="#1f2937">
 
@@ -3578,6 +3566,22 @@ body.lc-navigation-pending button {
   const OVERLAY_DELAY_MS = 650;
   const SLOW_CONNECTION_MS = 2600;
   const NAVIGATION_PAUSE_MS = 90;
+
+  const INITIAL_LOAD_LOADER_MS = 1200;
+
+  window.setTimeout(() => {
+    if (document.readyState !== "complete" && !manualNavigationStarted) {
+      showGlobalLoader("Caricamento in corso...");
+    }
+  }, INITIAL_LOAD_LOADER_MS);
+
+  window.addEventListener("load", () => {
+    hideGlobalLoader();
+  });
+
+  window.addEventListener("pageshow", () => {
+    hideGlobalLoader();
+  });
 
   function getLoader() {
     return document.getElementById("lcGlobalLoader");
