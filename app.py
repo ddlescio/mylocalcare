@@ -6200,7 +6200,7 @@ def admin_recensioni():
         if destinatario:
             username_dest = (r.get("dest_username") or "").lower()
             ok = ok and (destinatario in username_dest)
-    
+
         if voto:
             try:
                 ok = ok and str(int(voto)) == str(r.get("voto"))
@@ -6306,7 +6306,7 @@ def admin_acquisti():
           ON a.tipo = 'pacchetto'
          AND pp.id = a.prezzo_id
 
-        WHERE a.stato IN ('creato', 'pending', 'paid')
+        WHERE a.stato = 'paid'
         ORDER BY a.created_at DESC
         LIMIT 1000
     """)).fetchall()
@@ -6465,7 +6465,7 @@ def admin_acquisti_export():
           ON a.tipo = 'pacchetto'
          AND pp.id = a.prezzo_id
 
-        WHERE a.stato IN ('creato', 'pending', 'paid')
+        WHERE a.stato = 'paid'
         ORDER BY a.created_at DESC
         LIMIT 5000
     """)).fetchall()
