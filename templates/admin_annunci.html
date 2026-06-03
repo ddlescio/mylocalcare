@@ -1647,6 +1647,53 @@ document.addEventListener("click", async (e) => {
 });
 </script>
 <script>
+const PACCHETTI_CLIENT = {
+  pacchetto_visibilita: [
+    "boost_lista",
+    "badge_evidenza"
+  ],
+  visibilita_premium: [
+    "vetrina_annuncio",
+    "boost_lista",
+    "badge_evidenza",
+    "annuncio_urgente",
+    "contatti"
+  ]
+};
+
+function aggiornaBottoneServizioVisual(btn, codiceServizio, isActive) {
+  btn.classList.toggle("is-active", isActive);
+
+  btn.classList.remove(
+    "bg-gray-200", "text-gray-700",
+    "bg-purple-600", "bg-blue-600", "bg-amber-500",
+    "bg-green-600", "bg-red-600", "text-white"
+  );
+
+  if (!isActive) {
+    btn.classList.add("bg-gray-200", "text-gray-700");
+    return;
+  }
+
+  btn.classList.add("text-white");
+
+  if (codiceServizio === "vetrina_annuncio") {
+    btn.classList.add("bg-purple-600");
+  } else if (codiceServizio === "boost_lista") {
+    btn.classList.add("bg-blue-600");
+  } else if (codiceServizio === "badge_evidenza") {
+    btn.classList.add("bg-amber-500");
+  } else if (codiceServizio === "badge_affidabilita") {
+    btn.classList.add("bg-green-600");
+  } else if (codiceServizio === "contatti") {
+    btn.classList.add("bg-blue-600");
+  } else if (codiceServizio === "annuncio_urgente") {
+    btn.classList.add("bg-red-600");
+  } else {
+    btn.classList.add("bg-blue-600");
+  }
+}
+
 document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".toggle-pacchetto");
   if (!btn) return;
@@ -1654,10 +1701,14 @@ document.addEventListener("click", async (e) => {
   e.preventDefault();
   e.stopPropagation();
 
+  const codicePacchetto = btn.dataset.pacchetto;
+  const utenteId = btn.dataset.utente;
+  const annuncioId = btn.dataset.annuncio || "";
+
   const payload = {
-    codice_pacchetto: btn.dataset.pacchetto,
-    utente_id: parseInt(btn.dataset.utente, 10),
-    annuncio_id: parseInt(btn.dataset.annuncio, 10)
+    codice_pacchetto: codicePacchetto,
+    utente_id: parseInt(utenteId, 10),
+    annuncio_id: parseInt(annuncioId, 10)
   };
 
   btn.disabled = true;
@@ -1682,26 +1733,44 @@ document.addEventListener("click", async (e) => {
 
     const isActive = data.azione === "attivato";
 
-    btn.classList.toggle("is-active", isActive);
+    document
+      .querySelectorAll(`.toggle-pacchetto[data-pacchetto="${CSS.escape(codicePacchetto)}"][data-utente="${CSS.escape(String(utenteId))}"][data-annuncio="${CSS.escape(String(annuncioId))}"]`)
+      .forEach(b => {
+        b.classList.toggle("is-active", isActive);
 
-    btn.classList.remove(
-      "bg-gray-200", "text-gray-700",
-      "bg-blue-700", "bg-amber-600", "text-white"
-    );
+        b.classList.remove(
+          "bg-gray-200", "text-gray-700",
+          "bg-blue-700", "bg-amber-600", "text-white"
+        );
 
-    if (!isActive) {
-      btn.classList.add("bg-gray-200", "text-gray-700");
-    } else {
-      btn.classList.add("text-white");
+        if (!isActive) {
+          b.classList.add("bg-gray-200", "text-gray-700");
+        } else {
+          b.classList.add("text-white");
 
-      if (payload.codice_pacchetto === "pacchetto_visibilita") {
-        btn.classList.add("bg-blue-700");
-      } else if (payload.codice_pacchetto === "visibilita_premium") {
-        btn.classList.add("bg-amber-600");
-      } else {
-        btn.classList.add("bg-blue-700");
-      }
-    }
+          if (codicePacchetto === "pacchetto_visibilita") {
+            b.classList.add("bg-blue-700");
+          } else if (codicePacchetto === "visibilita_premium") {
+            b.classList.add("bg-amber-600");
+          } else {
+            b.classList.add("bg-blue-700");
+          }
+        }
+      });
+
+    const serviziPacchetto = PACCHETTI_CLIENT[codicePacchetto] || [];
+
+    serviziPacchetto.forEach(codiceServizio => {
+      const isProfilo = ["contatti", "badge_affidabilita"].includes(codiceServizio);
+
+      const selector = isProfilo
+        ? `.toggle-servizio[data-servizio="${CSS.escape(codiceServizio)}"][data-utente="${CSS.escape(String(utenteId))}"]:not([data-annuncio])`
+        : `.toggle-servizio[data-servizio="${CSS.escape(codiceServizio)}"][data-utente="${CSS.escape(String(utenteId))}"][data-annuncio="${CSS.escape(String(annuncioId))}"]`;
+
+      document.querySelectorAll(selector).forEach(serviceBtn => {
+        aggiornaBottoneServizioVisual(serviceBtn, codiceServizio, isActive);
+      });
+    });
 
   } catch (err) {
     alert("Errore di rete");
