@@ -444,8 +444,61 @@ CATEGORIE_PREFERENZE = [
     "Spazi & Sale",            # 13
 ]
 
-# slug -> indice 1..10
+# slug -> indice 1..13
 CATEGORIA_TO_INDEX = {to_slug(x): i+1 for i, x in enumerate(CATEGORIE_PREFERENZE)}
+
+# Colonne preferenze utente usate per Offro/Cerco
+PREFERENCE_COLUMNS = [
+    f"{tipo}_{i}"
+    for tipo in ("offro", "cerco")
+    for i in range(1, len(CATEGORIE_PREFERENZE) + 1)
+]
+
+def get_utenti_profilo_incompleto():
+    """
+    Restituisce gli utenti attivi che non hanno selezionato
+    nessuna preferenza Offro/Cerco.
+    """
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        somma_colonne = " + ".join(
+            [f"COALESCE({col},0)" for col in PREFERENCE_COLUMNS]
+        )
+
+        cur.execute(sql(f"""
+            SELECT
+                id,
+                email,
+                nome,
+                username,
+                email_notifiche,
+                created_at
+            FROM utenti
+            WHERE attivo = 1
+              AND sospeso = 0
+              AND COALESCE(disattivato_admin,0) = 0
+              AND ({somma_colonne}) = 0
+        """))
+
+        return cur.fetchall()
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+print(
+    "DEBUG utenti profilo incompleto:",
+    len(get_utenti_profilo_incompleto())
+)
 
 
 def norm_place(s: str) -> str:
@@ -8508,7 +8561,7 @@ def notifica_urgente(annuncio_id, attivazione_id=None, eseguito_da="admin", conn
                     },
                     production=True
                 )
-                
+
     except Exception as e:
         conn.rollback()
         print(f"❌ Errore in notifica_urgente: {repr(e)}", flush=True)
