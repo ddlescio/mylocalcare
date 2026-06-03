@@ -4937,7 +4937,6 @@ def admin_toggle_servizio():
                     conn.commit()
                 else:
                     conn.rollback()
-                )
 
             # 🔔 NOTIFICA URGENTE — SOLO SE HA SENSO
             if ok and codice_servizio == "annuncio_urgente" and annuncio_id:
@@ -5509,7 +5508,7 @@ def admin_toggle_pacchetto():
                 attivati.append(att_id)
 
         conn.commit()
-        
+
         return jsonify({
             "ok": True,
             "azione": "attivato",
