@@ -342,13 +342,18 @@ def attiva_servizio(
         else:
             annuncio_id = None
 
-        durata_finale = durata_giorni if durata_giorni is not None else s["durata_default_giorni"]
+        # Durata:
+        # - Stripe / utente: usa la durata del piano o la durata default del servizio
+        # - Admin: attivazione manuale permanente, quindi data_fine NULL = ∞
+        if attivato_da == "admin":
+            durata_finale = None
+        else:
+            durata_finale = durata_giorni if durata_giorni is not None else s["durata_default_giorni"]
 
         if durata_finale is not None:
             durata_finale = int(durata_finale)
             if durata_finale <= 0:
                 return False, "Durata non valida.", None
-
         # -------------------------------
         # 2️⃣ ATTIVAZIONI ATTIVE CORRENTI
         # -------------------------------

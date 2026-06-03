@@ -4697,6 +4697,38 @@ def admin_servizi_elimina(servizio_id):
     flash("Servizio disattivato correttamente.", "success")
     return redirect(url_for("admin_servizi"))
 
+def crea_acquisto_admin(conn, utente_id, tipo, ref_id, annuncio_id=None, prezzo_id=None):
+    cur = get_cursor(conn)
+
+    acquisto_id = insert_and_get_id(
+        cur,
+        f"""
+        INSERT INTO acquisti (
+            utente_id,
+            tipo,
+            ref_id,
+            prezzo_id,
+            annuncio_id,
+            importo_cent,
+            metodo,
+            stato,
+            riferimento_esterno,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, 0, 'admin', 'paid', ?, {now_sql()})
+        """,
+        (
+            int(utente_id),
+            tipo,
+            int(ref_id),
+            int(prezzo_id) if prezzo_id else None,
+            int(annuncio_id) if annuncio_id else None,
+            f"admin-{uuid.uuid4().hex[:12]}"
+        )
+    )
+
+    return acquisto_id
+
 @app.route("/admin/toggle-servizio", methods=["POST"])
 @admin_required
 def admin_toggle_servizio():
@@ -4821,10 +4853,20 @@ def admin_toggle_servizio():
                 try:
                     cur = get_cursor(conn)
 
+                    acquisto_admin_id = crea_acquisto_admin(
+                        conn=conn,
+                        utente_id=int(utente_id),
+                        tipo="servizio",
+                        ref_id=int(servizio["id"]),
+                        annuncio_id=None,
+                        prezzo_id=None
+                    )
+
                     att_id = insert_and_get_id(
                         cur,
                         f"""
                         INSERT INTO attivazioni_servizi (
+                            acquisto_id,
                             servizio_id,
                             utente_id,
                             annuncio_id,
@@ -4833,9 +4875,10 @@ def admin_toggle_servizio():
                             data_fine,
                             attivato_da
                         )
-                        VALUES (?, ?, NULL, 'attivo', {now_sql()}, NULL, ?)
+                        VALUES (?, ?, ?, NULL, 'attivo', {now_sql()}, NULL, ?)
                         """,
                         (
+                            acquisto_admin_id,
                             int(servizio["id"]),
                             int(utente_id),
                             "admin"
@@ -4871,12 +4914,29 @@ def admin_toggle_servizio():
                     }), 500
 
             else:
+                acquisto_admin_id = crea_acquisto_admin(
+                    conn=conn,
+                    utente_id=int(utente_id),
+                    tipo="servizio",
+                    ref_id=int(servizio["id"]),
+                    annuncio_id=int(annuncio_id) if ambito == "annuncio" else None,
+                    prezzo_id=None
+                )
+
                 ok, msg, att_id = attiva_servizio(
+                    conn=conn,
                     utente_id=int(utente_id),
                     codice_servizio=codice_servizio,
                     annuncio_id=int(annuncio_id) if ambito == "annuncio" else None,
+                    acquisto_id=acquisto_admin_id,
                     attivato_da="admin",
                     note="Attivazione manuale admin"
+                )
+
+                if ok:
+                    conn.commit()
+                else:
+                    conn.rollback()
                 )
 
             # 🔔 NOTIFICA URGENTE — SOLO SE HA SENSO
@@ -5413,13 +5473,34 @@ def admin_toggle_pacchetto():
         # =========================
         # 3️⃣ SE NON ATTIVO → ATTIVA TUTTI I SERVIZI
         # =========================
+        pacchetto_db = conn.execute(sql("""
+            SELECT id
+            FROM pacchetti
+            WHERE codice = ?
+            LIMIT 1
+        """), (codice_pacchetto,)).fetchone()
+
+        if not pacchetto_db:
+            return jsonify({"ok": False, "error": "Pacchetto non trovato nel database"}), 400
+
+        acquisto_admin_id = crea_acquisto_admin(
+            conn=conn,
+            utente_id=int(utente_id),
+            tipo="pacchetto",
+            ref_id=int(pacchetto_db["id"]),
+            annuncio_id=int(annuncio_id) if annuncio_id else None,
+            prezzo_id=None
+        )
+
         attivati = []
 
         for codice_servizio in servizi_pacchetto:
             ok, msg, att_id = attiva_servizio(
+                conn=conn,
                 utente_id=int(utente_id),
                 codice_servizio=codice_servizio,
                 annuncio_id=int(annuncio_id) if annuncio_id else None,
+                acquisto_id=acquisto_admin_id,
                 attivato_da="admin",
                 note=f"Attivazione tramite pacchetto {codice_pacchetto}"
             )
@@ -5427,7 +5508,8 @@ def admin_toggle_pacchetto():
             if ok:
                 attivati.append(att_id)
 
-
+        conn.commit()
+        
         return jsonify({
             "ok": True,
             "azione": "attivato",
