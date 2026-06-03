@@ -516,7 +516,7 @@ def invia_reminder_profili_incompleti(dry_run=False):
         for u in utenti:
             user_id = int(u["id"])
 
-            if app.config.get("IS_POSTGRES"):                            
+            if app.config.get("IS_POSTGRES"):
                 cur.execute(sql("""
                     SELECT id
                     FROM notifiche
@@ -6492,7 +6492,7 @@ from datetime import datetime, timedelta
 @login_required
 @admin_required
 def admin_debug_reminder_profili_incompleti():
-    risultato = invia_reminder_profili_incompleti(dry_run=True)
+    risultato = invia_reminder_profili_incompleti(dry_run=False)
     return jsonify(risultato)
 
 @app.route("/admin/acquisti")
