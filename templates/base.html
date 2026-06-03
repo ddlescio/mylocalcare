@@ -2,6 +2,55 @@
 <html lang="it">
 <head>
 
+  <style>
+    #pwaBootLoader {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      font-family: system-ui, sans-serif;
+    }
+
+    #pwaBootLoaderBox {
+      text-align: center;
+      color: #1e293b;
+      font-weight: 700;
+    }
+
+    #pwaBootLoaderBox img {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      margin: 0 auto 14px;
+    }
+
+    #pwaBootLoaderText {
+      font-size: 0.95rem;
+    }
+  </style>
+
+  <div id="pwaBootLoader">
+    <div id="pwaBootLoaderBox">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="MyLocalCare">
+      <div id="pwaBootLoaderText">Caricamento MyLocalCare...</div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener("load", function () {
+      const el = document.getElementById("pwaBootLoader");
+      if (el) el.remove();
+    });
+
+    setTimeout(function () {
+      const text = document.getElementById("pwaBootLoaderText");
+      if (text) text.textContent = "Connessione lenta, attendi ancora qualche istante...";
+    }, 2500);
+  </script>
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -3769,6 +3818,13 @@ body.lc-navigation-pending button {
   }
 
   document.addEventListener("click", function (event) {
+    if (manualNavigationStarted) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
+
     if (isModifiedClick(event)) return;
     if (shouldIgnoreClickTarget(event.target)) return;
 
@@ -3776,17 +3832,27 @@ body.lc-navigation-pending button {
 
     if (!isInternalNavigationLink(link)) return;
 
+    const destinationUrl = link.href;
+
     /*
-      Non intercettiamo più la navigazione.
-      Lasciamo il browser navigare normalmente, così evitiamo il saltino iniziale.
-      Se la pagina tarda davvero a caricarsi, dopo il delay compare il loader grande.
+      Punto chiave:
+      su iPhone/Safari non aspettiamo un timer mentre la navigazione è già partita.
+      Blocchiamo il click, mostriamo subito il loader, poi navighiamo noi.
     */
-    clearGlobalLoaderTimers();
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    manualNavigationStarted = true;
+    showMiniLoader();
 
     overlayTimer = window.setTimeout(() => {
       showGlobalLoader("Stiamo aprendo la pagina.");
     }, OVERLAY_DELAY_MS);
-  }, true);  
+
+    navigateAfterPaint(destinationUrl);
+  }, true);
+
 
   document.addEventListener("submit", function (event) {
     const form = event.target;
