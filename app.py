@@ -516,7 +516,7 @@ def invia_reminder_profili_incompleti(dry_run=False):
         for u in utenti:
             user_id = int(u["id"])
 
-            if is_postgres():
+            if app.config.get("IS_POSTGRES"):                            
                 cur.execute(sql("""
                     SELECT id
                     FROM notifiche
