@@ -3769,13 +3769,6 @@ body.lc-navigation-pending button {
   }
 
   document.addEventListener("click", function (event) {
-    if (manualNavigationStarted) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      return;
-    }
-
     if (isModifiedClick(event)) return;
     if (shouldIgnoreClickTarget(event.target)) return;
 
@@ -3783,26 +3776,17 @@ body.lc-navigation-pending button {
 
     if (!isInternalNavigationLink(link)) return;
 
-    const destinationUrl = link.href;
-
     /*
-      Punto chiave:
-      su iPhone/Safari non aspettiamo un timer mentre la navigazione è già partita.
-      Blocchiamo il click, mostriamo subito il loader, poi navighiamo noi.
+      Non intercettiamo più la navigazione.
+      Lasciamo il browser navigare normalmente, così evitiamo il saltino iniziale.
+      Se la pagina tarda davvero a caricarsi, dopo il delay compare il loader grande.
     */
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    manualNavigationStarted = true;
-    showMiniLoader();
+    clearGlobalLoaderTimers();
 
     overlayTimer = window.setTimeout(() => {
       showGlobalLoader("Stiamo aprendo la pagina.");
     }, OVERLAY_DELAY_MS);
-
-    navigateAfterPaint(destinationUrl);
-  }, true);
+  }, true);  
 
   document.addEventListener("submit", function (event) {
     const form = event.target;
