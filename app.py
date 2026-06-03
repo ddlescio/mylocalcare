@@ -6374,6 +6374,28 @@ def admin_recensioni():
 
 from datetime import datetime, timedelta
 
+@app.route("/admin/debug/profili-incompleti")
+@login_required
+@admin_required
+def admin_debug_profili_incompleti():
+    utenti = get_utenti_profilo_incompleto()
+
+    return jsonify({
+        "ok": True,
+        "totale": len(utenti),
+        "utenti": [
+            {
+                "id": u["id"],
+                "email": u["email"],
+                "username": u["username"],
+                "nome": u["nome"],
+                "email_notifiche": u["email_notifiche"],
+                "created_at": str(u["created_at"])
+            }
+            for u in utenti[:50]
+        ]
+    })
+
 @app.route("/admin/acquisti")
 @login_required
 @admin_required
