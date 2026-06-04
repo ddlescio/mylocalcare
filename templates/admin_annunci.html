@@ -1058,16 +1058,39 @@
                         </span>
                     </td>
                     <td class="p-2 text-center">
-                      <a href="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}" class="text-blue-600 hover:underline">Apri</a>
+                      <a href="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}"
+                         class="text-blue-600 hover:underline">
+                        Apri
+                      </a>
+
                       |
+
                       {% if a.stato == 'in_attesa' %}
-                        <a href="{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}" class="text-green-600 hover:underline">Approva</a> |
-                        <a href="{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}" class="text-red-600 hover:underline">Rifiuta</a>
+                        <a href="{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}"
+                           class="text-green-600 hover:underline js-annuncio-azione"
+                           data-azione-annuncio="approva">
+                          Approva
+                        </a>
+
+                        |
+
+                        <a href="{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}"
+                           class="text-red-600 hover:underline js-annuncio-azione"
+                           data-azione-annuncio="rifiuta">
+                          Rifiuta
+                        </a>
+
                       {% else %}
                         {% if a.stato == 'approvato' %}
-                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}" class="text-yellow-600 hover:underline">Disattiva</a>
+                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
+                             class="text-yellow-600 hover:underline">
+                            Disattiva
+                          </a>
                         {% else %}
-                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}" class="text-green-600 hover:underline">Attiva</a>
+                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
+                             class="text-green-600 hover:underline">
+                            Attiva
+                          </a>
                         {% endif %}
                       {% endif %}
                     </td>
@@ -2226,7 +2249,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("🏁 Revisioni annunci finite: chiudo modale.");
     closeAnnuncioModal();
   }
-  
+
   async function eseguiAzioneAnnuncioDaModale(btn) {
     if (azioneAnnuncioInCorso) return;
 
@@ -2234,7 +2257,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!row) return;
 
     const url = btn.getAttribute("href");
-    const azione = btn.dataset.azioneAnnuncio;
+    const azione = btn.dataset.azioneAnnuncio || btn.getAttribute("data-azione-annuncio");
 
     if (!url || url === "#") return;
 
@@ -2315,12 +2338,26 @@ document.addEventListener("DOMContentLoaded", () => {
     - chat/email
   */
   document.addEventListener("click", (e) => {
-    const actionBtn = e.target.closest("#modal-annuncio-approva, #modal-annuncio-rifiuta");
+    const actionBtn = e.target.closest(
+      "#modal-annuncio-approva, #modal-annuncio-rifiuta, .js-annuncio-azione"
+    );
 
     if (!actionBtn) return;
 
     e.preventDefault();
     e.stopPropagation();
+
+    const rowDaTabella = actionBtn.closest(".annuncio-row");
+
+    if (rowDaTabella) {
+      window.__currentAnnuncioModalRow = rowDaTabella;
+    }
+
+    console.log("🟢 Click azione annuncio intercettato dal JS:", {
+      id: window.__currentAnnuncioModalRow?.dataset?.annuncioId || null,
+      azione: actionBtn.dataset.azioneAnnuncio || null,
+      href: actionBtn.getAttribute("href")
+    });
 
     eseguiAzioneAnnuncioDaModale(actionBtn);
   });
