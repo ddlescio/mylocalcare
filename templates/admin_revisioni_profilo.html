@@ -48,12 +48,7 @@
 
         <tbody class="divide-y divide-slate-100">
           {% for r in revisioni %}
-            {% set nome_utente = (r.get('nome') or '') ~ ' ' ~ (r.get('cognome') or '') %}
-            {% set nome_utente = nome_utente.strip() %}
-            {% if not nome_utente %}
-              {% set nome_utente = r.get('username') or r.get('email') or ('Utente #' ~ r.get('utente_id')|string) %}
-            {% endif %}
-
+            {% set nome_utente = r.get('username') or r.get('email') or ('Utente #' ~ r.get('utente_id')|string) %}
             {% set stato = r.get('stato') or '' %}
             {% set campo_label = 'La tua frase' if r.get('campo') == 'frase' else 'Descrizione' %}
             {% set testo_riga = r.get('testo_proposto') or '' %}
@@ -89,19 +84,19 @@
 
               <td class="px-4 py-4 align-top">
                 {% if stato == 'in_attesa' %}
-                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                  <span class="revision-status-badge inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
                     In attesa
                   </span>
                 {% elif stato == 'approvata' %}
-                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                  <span class="revision-status-badge inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                     Approvata
                   </span>
                 {% elif stato == 'rifiutata' %}
-                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                  <span class="revision-status-badge inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
                     Rifiutata
                   </span>
                 {% else %}
-                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                  <span class="revision-status-badge inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
                     {{ stato }}
                   </span>
                 {% endif %}
@@ -128,12 +123,7 @@
     <!-- Mobile cards -->
     <div class="md:hidden divide-y divide-slate-100">
       {% for r in revisioni %}
-        {% set nome_utente = (r.get('nome') or '') ~ ' ' ~ (r.get('cognome') or '') %}
-        {% set nome_utente = nome_utente.strip() %}
-        {% if not nome_utente %}
-          {% set nome_utente = r.get('username') or r.get('email') or ('Utente #' ~ r.get('utente_id')|string) %}
-        {% endif %}
-
+        {% set nome_utente = r.get('username') or r.get('email') or ('Utente #' ~ r.get('utente_id')|string) %}
         {% set stato = r.get('stato') or '' %}
         {% set campo_label = 'La tua frase' if r.get('campo') == 'frase' else 'Descrizione' %}
 
@@ -159,15 +149,15 @@
             </div>
 
             {% if stato == 'in_attesa' %}
-              <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+              <span class="revision-status-badge shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
                 In attesa
               </span>
             {% elif stato == 'approvata' %}
-              <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+              <span class="revision-status-badge shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                 Approvata
               </span>
             {% elif stato == 'rifiutata' %}
-              <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+              <span class="revision-status-badge shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
                 Rifiutata
               </span>
             {% endif %}
@@ -274,6 +264,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const testoPropostoEl = document.getElementById("modal-testo-proposto");
   const testoPubblicoEl = document.getElementById("modal-testo-pubblico");
 
+  if (!modal || !closeBtn || !approvaBtn || !rifiutaBtn) {
+    console.warn("Modale revisioni profilo non inizializzata: elementi mancanti.");
+    return;
+  }
+
   let righe = Array.from(document.querySelectorAll(".revision-row"));
   let currentRow = null;
 
@@ -304,6 +299,9 @@ document.addEventListener("DOMContentLoaded", () => {
     approvaBtn.classList.remove("hidden");
     rifiutaBtn.classList.remove("hidden");
 
+    approvaBtn.disabled = false;
+    rifiutaBtn.disabled = false;
+
     if (stato === "in_attesa") {
       approvaBtn.textContent = "Approva";
       rifiutaBtn.textContent = "Rifiuta";
@@ -317,6 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function apriModale(row) {
+    if (!row) return;
+
     currentRow = row;
 
     const ds = row.dataset;
@@ -354,27 +354,33 @@ document.addEventListener("DOMContentLoaded", () => {
     return pending[0] || null;
   }
 
-  function aggiornaRigaDopoAzione(row, nuovoStato) {
-    row.dataset.stato = nuovoStato;
+  function aggiornaBadgeRiga(row, nuovoStato) {
+    const badges = row.querySelectorAll(".revision-status-badge");
 
-    row.classList.add("opacity-70");
+    badges.forEach(badge => {
+      badge.className = "revision-status-badge inline-flex px-2.5 py-1 rounded-full text-xs font-semibold";
 
-    const badgeTexts = row.querySelectorAll("span");
-    badgeTexts.forEach(span => {
-      const testo = span.textContent.trim().toLowerCase();
+      if (badge.classList.contains("shrink-0")) {
+        badge.classList.add("shrink-0");
+      }
 
-      if (["in attesa", "approvata", "rifiutata"].includes(testo)) {
-        span.className = "inline-flex px-2.5 py-1 rounded-full text-xs font-semibold";
-
-        if (nuovoStato === "approvata") {
-          span.classList.add("bg-green-100", "text-green-700");
-          span.textContent = "Approvata";
-        } else if (nuovoStato === "rifiutata") {
-          span.classList.add("bg-rose-100", "text-rose-700");
-          span.textContent = "Rifiutata";
-        }
+      if (nuovoStato === "approvata") {
+        badge.classList.add("bg-green-100", "text-green-700");
+        badge.textContent = "Approvata";
+      } else if (nuovoStato === "rifiutata") {
+        badge.classList.add("bg-rose-100", "text-rose-700");
+        badge.textContent = "Rifiutata";
+      } else {
+        badge.classList.add("bg-amber-100", "text-amber-700");
+        badge.textContent = "In attesa";
       }
     });
+  }
+
+  function aggiornaRigaDopoAzione(row, nuovoStato) {
+    row.dataset.stato = nuovoStato;
+    row.classList.add("opacity-70");
+    aggiornaBadgeRiga(row, nuovoStato);
   }
 
   async function inviaAzione(azione) {
@@ -405,9 +411,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const nuovoStato = data.nuovo_stato || (azione === "approva" ? "approvata" : "rifiutata");
 
-      aggiornaRigaDopoAzione(currentRow, nuovoStato);
+      const rigaAppenaGestita = currentRow;
+      aggiornaRigaDopoAzione(rigaAppenaGestita, nuovoStato);
 
-      const next = prossimaInAttesaDopo(currentRow);
+      const next = prossimaInAttesaDopo(rigaAppenaGestita);
 
       if (next) {
         apriModale(next);
@@ -424,19 +431,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  document.querySelectorAll(".revision-row").forEach(row => {
-    row.addEventListener("click", (e) => {
-      if (e.target.closest("button, a, form")) return;
-      apriModale(row);
-    });
-  });
+  /*
+    Apertura modale robusta:
+    - funziona su righe desktop <tr>
+    - funziona su card mobile <button>
+    - funziona cliccando il bottone "Apri"
+  */
+  document.addEventListener("click", (e) => {
+    const openBtn = e.target.closest(".open-revision-modal");
 
-  document.querySelectorAll(".open-revision-modal").forEach(btn => {
-    btn.addEventListener("click", (e) => {
+    if (openBtn) {
+      e.preventDefault();
       e.stopPropagation();
-      const row = btn.closest(".revision-row");
-      if (row) apriModale(row);
-    });
+
+      const row = openBtn.closest(".revision-row");
+
+      if (row) {
+        apriModale(row);
+      }
+
+      return;
+    }
+
+    const row = e.target.closest(".revision-row");
+
+    if (!row) return;
+
+    if (e.target.closest("a, form")) return;
+
+    e.preventDefault();
+    apriModale(row);
   });
 
   closeBtn.addEventListener("click", chiudiModale);
