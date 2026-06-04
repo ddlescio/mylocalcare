@@ -10080,6 +10080,24 @@ def utente_update_info():
     lingue = request.form.get("lingue", "")
     frase = request.form.get("frase", "")
     descrizione = request.form.get("descrizione", "")
+
+    # 🚫 Blocco contatti dentro "La tua frase"
+    # Stessa logica applicata alla descrizione: qui non devono comparire email o numeri di telefono.
+    email_pattern = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+    telefono_pattern = r"(?:(?:\+|00)\d{1,3}[\s.-]?)?(?:\d[\s.-]?){8,}"
+
+    if re.search(email_pattern, frase or "") or re.search(telefono_pattern, frase or ""):
+        messaggio = "Non puoi inserire email o numeri di telefono nel campo “La tua frase”. Usa la sezione Contatti."
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({
+                "ok": False,
+                "error": messaggio
+            }), 400
+
+        flash(messaggio, "error")
+        return redirect(url_for("dashboard"))
+
     telefono = request.form.get("telefono", "")
     indirizzo_studio = request.form.get("indirizzo_studio", "")
     sito_web = request.form.get("sito_web", "")

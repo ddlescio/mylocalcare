@@ -3672,27 +3672,70 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (fraseTextarea && fraseHidden) {
+
+    function fraseContieneContatti(testo) {
+      const valore = testo || "";
+
+      const emailRegex = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+      const telefonoRegex = /(?:(?:\+|00)\d{1,3}[\s.-]?)?(?:\d[\s.-]?){8,}/;
+
+      return emailRegex.test(valore) || telefonoRegex.test(valore);
+    }
+
+    function mostraErroreFraseContatti() {
+      setStatus(
+        "error",
+        "Non puoi inserire email o numeri di telefono nella frase. Usa la sezione Contatti."
+      );
+    }
+
     const syncFrase = () => {
-      fraseHidden.value = fraseTextarea.value;
-      aggiornaFraseIntroDaValore(fraseTextarea.value);
+      const valoreFrase = fraseTextarea.value || "";
+
+      if (fraseContieneContatti(valoreFrase)) {
+        mostraErroreFraseContatti();
+
+        // Non aggiorniamo hidden, quindi il valore vietato non parte con autosave
+        // e non viene riportato nell'intro.
+        return false;
+      }
+
+      fraseHidden.value = valoreFrase;
+      aggiornaFraseIntroDaValore(valoreFrase);
+      return true;
     };
 
     fraseTextarea.addEventListener("input", () => {
-      syncFrase();
+      const fraseOk = syncFrase();
+
+      if (!fraseOk) {
+        return;
+      }
+
       pianificaAutosave(900);
     });
 
     fraseTextarea.addEventListener("blur", () => {
-      syncFrase();
+      const fraseOk = syncFrase();
+
+      if (!fraseOk) {
+        return;
+      }
+
       pianificaAutosave(250);
     });
 
     fraseTextarea.addEventListener("change", () => {
-      syncFrase();
+      const fraseOk = syncFrase();
+
+      if (!fraseOk) {
+        return;
+      }
+
       pianificaAutosave(250);
     });
   }
-
+  
   const hiddenAutosaveFields = form.querySelectorAll(
     "input[type='hidden'][data-autosave='1']"
   );
