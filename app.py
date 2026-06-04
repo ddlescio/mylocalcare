@@ -4545,43 +4545,112 @@ def admin_revisioni_profilo():
     c = get_cursor(conn)
 
     try:
-        c.execute(sql("""
-            SELECT
-                rp.id AS revisione_id,
-                rp.utente_id,
-                rp.campo,
-                rp.testo_precedente,
-                rp.testo_proposto,
-                rp.stato,
-                rp.data_modifica,
-                rp.data_decisione,
-                rp.deciso_da,
+        if app.config.get("IS_POSTGRES"):
+            query = """
+                WITH ultime_revisioni AS (
+                    SELECT
+                        rp.*,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY rp.utente_id, rp.campo
+                            ORDER BY rp.data_modifica DESC, rp.id DESC
+                        ) AS rn
+                    FROM revisioni_profilo rp
+                )
+                SELECT
+                    rp.id AS revisione_id,
+                    rp.utente_id,
+                    rp.campo,
+                    rp.testo_precedente,
+                    rp.testo_proposto,
+                    rp.stato,
+                    rp.data_modifica,
+                    rp.data_decisione,
+                    rp.deciso_da,
 
-                u.username,
-                u.email,
-                u.nome,
-                u.cognome,
+                    TO_CHAR(rp.data_modifica AT TIME ZONE 'Europe/Rome', 'DD-MM-YYYY HH24:MI') AS data_modifica_fmt,
+                    TO_CHAR(rp.data_decisione AT TIME ZONE 'Europe/Rome', 'DD-MM-YYYY HH24:MI') AS data_decisione_fmt,
 
-                CASE
-                    WHEN rp.campo = 'frase' THEN u.frase
-                    WHEN rp.campo = 'descrizione' THEN u.descrizione
-                    ELSE ''
-                END AS testo_pubblico_attuale
+                    u.username,
+                    u.email,
+                    u.nome,
+                    u.cognome,
 
-            FROM revisioni_profilo rp
-            JOIN utenti u ON u.id = rp.utente_id
+                    CASE
+                        WHEN rp.campo = 'frase' THEN u.frase
+                        WHEN rp.campo = 'descrizione' THEN u.descrizione
+                        ELSE ''
+                    END AS testo_pubblico_attuale
 
-            ORDER BY
-                CASE
-                    WHEN rp.stato = 'in_attesa' THEN 0
-                    WHEN rp.stato = 'approvata' THEN 1
-                    WHEN rp.stato = 'rifiutata' THEN 2
-                    ELSE 3
-                END,
-                rp.data_modifica DESC
-            LIMIT 300
-        """))
+                FROM ultime_revisioni rp
+                JOIN utenti u ON u.id = rp.utente_id
 
+                WHERE rp.rn = 1
+
+                ORDER BY
+                    CASE
+                        WHEN rp.stato = 'in_attesa' THEN 0
+                        WHEN rp.stato = 'approvata' THEN 1
+                        WHEN rp.stato = 'rifiutata' THEN 2
+                        ELSE 3
+                    END,
+                    rp.data_modifica DESC,
+                    rp.id DESC
+                LIMIT 300
+            """
+        else:
+            query = """
+                WITH ultime_revisioni AS (
+                    SELECT
+                        rp.*,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY rp.utente_id, rp.campo
+                            ORDER BY rp.data_modifica DESC, rp.id DESC
+                        ) AS rn
+                    FROM revisioni_profilo rp
+                )
+                SELECT
+                    rp.id AS revisione_id,
+                    rp.utente_id,
+                    rp.campo,
+                    rp.testo_precedente,
+                    rp.testo_proposto,
+                    rp.stato,
+                    rp.data_modifica,
+                    rp.data_decisione,
+                    rp.deciso_da,
+
+                    STRFTIME('%d-%m-%Y %H:%M', rp.data_modifica) AS data_modifica_fmt,
+                    STRFTIME('%d-%m-%Y %H:%M', rp.data_decisione) AS data_decisione_fmt,
+
+                    u.username,
+                    u.email,
+                    u.nome,
+                    u.cognome,
+
+                    CASE
+                        WHEN rp.campo = 'frase' THEN u.frase
+                        WHEN rp.campo = 'descrizione' THEN u.descrizione
+                        ELSE ''
+                    END AS testo_pubblico_attuale
+
+                FROM ultime_revisioni rp
+                JOIN utenti u ON u.id = rp.utente_id
+
+                WHERE rp.rn = 1
+
+                ORDER BY
+                    CASE
+                        WHEN rp.stato = 'in_attesa' THEN 0
+                        WHEN rp.stato = 'approvata' THEN 1
+                        WHEN rp.stato = 'rifiutata' THEN 2
+                        ELSE 3
+                    END,
+                    rp.data_modifica DESC,
+                    rp.id DESC
+                LIMIT 300
+            """
+
+        c.execute(sql(query))
         revisioni = [dict(r) for r in c.fetchall()]
 
     finally:
@@ -4594,7 +4663,7 @@ def admin_revisioni_profilo():
         "admin_revisioni_profilo.html",
         revisioni=revisioni
     )
-
+    
 @app.route("/admin/revisioni-profilo/<int:revision_id>/azione", methods=["POST"])
 @admin_required
 def admin_revisioni_profilo_azione(revision_id):

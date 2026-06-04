@@ -61,8 +61,8 @@
                 data-campo="{{ r.get('campo') }}"
                 data-campo-label="{{ campo_label }}"
                 data-stato="{{ stato }}"
-                data-data-modifica="{{ r.get('data_modifica') or '' }}"
-                data-data-decisione="{{ r.get('data_decisione') or '' }}"
+                data-data-modifica="{{ r.get('data_modifica_fmt') or '' }}"
+                data-data-decisione="{{ r.get('data_decisione_fmt') or '' }}"
                 data-testo-precedente="{{ (r.get('testo_precedente') or '')|e }}"
                 data-testo-proposto="{{ (r.get('testo_proposto') or '')|e }}"
                 data-testo-pubblico="{{ (r.get('testo_pubblico_attuale') or '')|e }}">
@@ -79,7 +79,7 @@
               </td>
 
               <td class="px-4 py-4 align-top text-slate-600">
-                {{ r.get('data_modifica') or '—' }}
+                {{ r.get('data_modifica_fmt') or '—' }}
               </td>
 
               <td class="px-4 py-4 align-top">
@@ -136,8 +136,8 @@
                 data-campo="{{ r.get('campo') }}"
                 data-campo-label="{{ campo_label }}"
                 data-stato="{{ stato }}"
-                data-data-modifica="{{ r.get('data_modifica') or '' }}"
-                data-data-decisione="{{ r.get('data_decisione') or '' }}"
+                data-data-modifica="{{ r.get('data_modifica_fmt') or '' }}"
+                data-data-decisione="{{ r.get('data_decisione_fmt') or '' }}"
                 data-testo-precedente="{{ (r.get('testo_precedente') or '')|e }}"
                 data-testo-proposto="{{ (r.get('testo_proposto') or '')|e }}"
                 data-testo-pubblico="{{ (r.get('testo_pubblico_attuale') or '')|e }}">
@@ -168,7 +168,7 @@
           </div>
 
           <div class="mt-3 text-xs text-slate-400">
-            {{ r.get('data_modifica') or '—' }}
+            {{ r.get('data_modifica_fmt') or '—' }}
           </div>
         </button>
       {% endfor %}
@@ -343,24 +343,64 @@ document.addEventListener("DOMContentLoaded", () => {
     currentRow = null;
   }
 
+  function isVisibile(el) {
+    if (!el) return false;
+
+    const style = window.getComputedStyle(el);
+
+    return (
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      el.offsetParent !== null
+    );
+  }
+
   function prossimaInAttesaDopo(rowCorrente) {
+    const revisionIdCorrente = rowCorrente?.dataset?.revisionId || "";
+
     righe = Array.from(document.querySelectorAll(".revision-row"));
 
-    const pending = righe.filter(r =>
-      r.dataset.stato === "in_attesa" &&
-      r.dataset.revisionId !== rowCorrente.dataset.revisionId
-    );
+    /*
+      Desktop e mobile hanno due righe con lo stesso revisionId.
+      Qui teniamo una sola riga per revisione, preferendo quella visibile.
+    */
+    const perId = new Map();
 
-    return pending[0] || null;
+    righe.forEach(r => {
+      const id = r.dataset.revisionId;
+      if (!id) return;
+
+      if (id === revisionIdCorrente) return;
+      if (r.dataset.stato !== "in_attesa") return;
+
+      const giaPresente = perId.get(id);
+
+      if (!giaPresente) {
+        perId.set(id, r);
+        return;
+      }
+
+      if (!isVisibile(giaPresente) && isVisibile(r)) {
+        perId.set(id, r);
+      }
+    });
+
+    const pendingUniche = Array.from(perId.values());
+
+    const pendingVisibili = pendingUniche.filter(isVisibile);
+
+    return pendingVisibili[0] || pendingUniche[0] || null;
   }
 
   function aggiornaBadgeRiga(row, nuovoStato) {
     const badges = row.querySelectorAll(".revision-status-badge");
 
     badges.forEach(badge => {
+      const eraMobile = badge.classList.contains("shrink-0");
+
       badge.className = "revision-status-badge inline-flex px-2.5 py-1 rounded-full text-xs font-semibold";
 
-      if (badge.classList.contains("shrink-0")) {
+      if (eraMobile) {
         badge.classList.add("shrink-0");
       }
 
@@ -376,11 +416,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-
+  
   function aggiornaRigaDopoAzione(row, nuovoStato) {
-    row.dataset.stato = nuovoStato;
-    row.classList.add("opacity-70");
-    aggiornaBadgeRiga(row, nuovoStato);
+    const revisionId = row?.dataset?.revisionId;
+    if (!revisionId) return;
+
+    /*
+      Aggiorna sia la riga desktop sia la card mobile
+      della stessa revisione.
+    */
+    const copieStessaRevisione = document.querySelectorAll(
+      `.revision-row[data-revision-id="${revisionId}"]`
+    );
+
+    copieStessaRevisione.forEach(r => {
+      r.dataset.stato = nuovoStato;
+      r.classList.add("opacity-70");
+      aggiornaBadgeRiga(r, nuovoStato);
+    });
   }
 
   async function inviaAzione(azione) {
