@@ -10319,31 +10319,83 @@ def utente_update_descrizione():
     })
 
     user_id = session.get("utente_id")
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     if not user_id:
+        if is_ajax:
+            return jsonify({
+                "ok": False,
+                "message": "Sessione non valida. Effettua di nuovo il login."
+            }), 401
+
         flash("Sessione non valida.", "error")
         return redirect(url_for("login"))
 
     descrizione = request.form.get("descrizione", "").strip()
 
+    email_regex = r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}"
+    telefono_regex = r"(?:(?:\+|00)?39[\s.\-]?)?(?:3\d{2}|0\d{1,4})[\s.\-]?\d{2,4}[\s.\-]?\d{2,4}[\s.\-]?\d{0,4}"
+
+    if re.search(email_regex, descrizione):
+        messaggio = "Non inserire email nella descrizione. Usa la sezione Contatti."
+
+        if is_ajax:
+            return jsonify({
+                "ok": False,
+                "message": messaggio
+            }), 400
+
+        flash(messaggio, "error")
+        return redirect(url_for("dashboard") + "#tab-info")
+
+    if re.search(telefono_regex, descrizione):
+        messaggio = "Non inserire numeri di telefono nella descrizione. Usa la sezione Contatti."
+
+        if is_ajax:
+            return jsonify({
+                "ok": False,
+                "message": messaggio
+            }), 400
+
+        flash(messaggio, "error")
+        return redirect(url_for("dashboard") + "#tab-info")
+
     conn = get_db_connection()
     c = get_cursor(conn)
 
     try:
-        c.execute(sql("UPDATE utenti SET descrizione = ? WHERE id = ?"), (descrizione, user_id))
+        c.execute(
+            sql("UPDATE utenti SET descrizione = ? WHERE id = ?"),
+            (descrizione, user_id)
+        )
         conn.commit()
+
+        if is_ajax:
+            return jsonify({
+                "ok": True,
+                "message": "Modifiche salvate"
+            })
+
         flash("✅ Descrizione aggiornata con successo.", "success")
+
     except Exception as e:
         conn.rollback()
+
+        if is_ajax:
+            return jsonify({
+                "ok": False,
+                "message": "Errore durante il salvataggio della descrizione."
+            }), 500
+
         flash(f"❌ Errore durante il salvataggio della descrizione: {e}", "error")
+
     finally:
         try:
             conn.close()
-        except:
+        except Exception:
             pass
 
-
-    return redirect(url_for("dashboard") + "#tab-descrizione")
-
+    return redirect(url_for("dashboard") + "#tab-info")
 
 # --- Aggiorna GALLERIA (tab) ---
 @app.route('/utente/update_galleria', methods=['POST'])

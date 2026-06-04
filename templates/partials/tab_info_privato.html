@@ -3474,7 +3474,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "Eventi & Socialità",
       "Spazi & Sale"
     ];
-    
+
     const cittaRow = document.getElementById("intro-citta-row");
     const cittaValue = document.getElementById("intro-citta-value");
 
@@ -4061,12 +4061,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      let data = {};
+
+      try {
+        data = await res.json();
+      } catch (e) {
+        data = {};
       }
 
-      setStatus("success", "Modifiche salvate");
-      clearStatusLater();
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || "Contenuto non consentito nella descrizione.";
+        setStatus("error", msg);
+        return;
+      }
+
+      setStatus("success", data.message || "Modifiche salvate");
+      clearStatusLater();      
 
     } catch (err) {
       console.error("Errore autosave description:", err);
