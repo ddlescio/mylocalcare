@@ -1852,27 +1852,93 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  function normalizzaStatoAnnuncio(value) {
+    return String(value || "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "_");
+  }
+
+  function getStatoAnnuncioDaRiga(row) {
+    if (!row) return "";
+
+    const statoDataset = normalizzaStatoAnnuncio(row.dataset.annuncioStato);
+
+    if (statoDataset) {
+      return statoDataset;
+    }
+
+    const statoCell = row.children[1];
+    const statoTesto = statoCell ? normalizzaStatoAnnuncio(statoCell.textContent) : "";
+
+    return statoTesto;
+  }
+
   function annuncioInAttesa(row) {
-    return row && row.dataset.annuncioStato === "in_attesa";
+    return getStatoAnnuncioDaRiga(row) === "in_attesa";
   }
 
   function trovaProssimoAnnuncioInAttesa(rowCorrente) {
     const rows = Array.from(document.querySelectorAll(".annuncio-row"));
 
-    if (!rows.length) return null;
+    const currentId = rowCorrente?.dataset?.annuncioId || "";
+
+    console.log("🔎 Cerco prossimo annuncio in attesa. Corrente:", currentId);
+
+    const pendingRows = rows.filter(row => {
+      if (!row) return false;
+
+      const rowId = row.dataset.annuncioId || "";
+      const stato = getStatoAnnuncioDaRiga(row);
+
+      console.log("Riga annuncio:", {
+        id: rowId,
+        stato: stato
+      });
+
+      if (!rowId) return false;
+      if (rowId === currentId) return false;
+
+      return stato === "in_attesa";
+    });
+
+    if (!pendingRows.length) {
+      console.log("✅ Nessun altro annuncio in attesa trovato.");
+      return null;
+    }
 
     const indiceCorrente = rows.indexOf(rowCorrente);
 
-    const ordinate =
-      indiceCorrente >= 0
-        ? rows.slice(indiceCorrente + 1).concat(rows.slice(0, indiceCorrente))
-        : rows;
+    if (indiceCorrente < 0) {
+      console.log("➡️ Prossimo annuncio scelto:", pendingRows[0].dataset.annuncioId);
+      return pendingRows[0];
+    }
 
-    return ordinate.find(row => {
-      if (!row) return false;
-      if (row === rowCorrente) return false;
-      return row.dataset.annuncioStato === "in_attesa";
-    }) || null;
+    const dopoCorrente = rows.slice(indiceCorrente + 1);
+    const primaCorrente = rows.slice(0, indiceCorrente);
+
+    const prossimoDopo = dopoCorrente.find(row => {
+      const rowId = row.dataset.annuncioId || "";
+      return rowId !== currentId && getStatoAnnuncioDaRiga(row) === "in_attesa";
+    });
+
+    if (prossimoDopo) {
+      console.log("➡️ Prossimo annuncio dopo corrente:", prossimoDopo.dataset.annuncioId);
+      return prossimoDopo;
+    }
+
+    const prossimoPrima = primaCorrente.find(row => {
+      const rowId = row.dataset.annuncioId || "";
+      return rowId !== currentId && getStatoAnnuncioDaRiga(row) === "in_attesa";
+    });
+
+    if (prossimoPrima) {
+      console.log("➡️ Prossimo annuncio ripartendo dall'inizio:", prossimoPrima.dataset.annuncioId);
+      return prossimoPrima;
+    }
+
+    console.log("✅ Nessun altro annuncio in attesa dopo controllo completo.");
+    return null;
   }
 
   function aggiornaBadgeStatoAnnuncio(row, nuovoStato) {
@@ -2148,13 +2214,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function vaiAlProssimoAnnuncioInAttesa(prossimo) {
     if (prossimo) {
-      openAnnuncioModal(prossimo, true);
+      console.log("🚀 Apro prossimo annuncio:", prossimo.dataset.annuncioId);
+
+      setTimeout(() => {
+        openAnnuncioModal(prossimo, true);
+      }, 120);
+
       return;
     }
 
+    console.log("🏁 Revisioni annunci finite: chiudo modale.");
     closeAnnuncioModal();
   }
-
+  
   async function eseguiAzioneAnnuncioDaModale(btn) {
     if (azioneAnnuncioInCorso) return;
 
@@ -2171,6 +2243,8 @@ document.addEventListener("DOMContentLoaded", () => {
       Questo evita che la riga appena gestita interferisca con la ricerca.
     */
     const prossimo = trovaProssimoAnnuncioInAttesa(row);
+
+    console.log("📌 Prossimo calcolato prima dell’azione:", prossimo ? prossimo.dataset.annuncioId : null);
 
     azioneAnnuncioInCorso = true;
 
