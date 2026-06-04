@@ -4663,7 +4663,7 @@ def admin_revisioni_profilo():
         "admin_revisioni_profilo.html",
         revisioni=revisioni
     )
-    
+
 @app.route("/admin/revisioni-profilo/<int:revision_id>/azione", methods=["POST"])
 @admin_required
 def admin_revisioni_profilo_azione(revision_id):
@@ -4813,13 +4813,71 @@ def admin_revisioni_profilo_azione(revision_id):
         except Exception as e:
             print("⚠️ Errore invalidate_admin_counters revisione profilo:", e)
 
+        # 🔔 Se l'admin rifiuta una revisione, avvisa l'utente
+        # con notifica interna + aggiornamento realtime + push.
+        if azione == "rifiuta":
+            try:
+                if campo == "frase":
+                    titolo_push = "Frase profilo non approvata ❌"
+                    messaggio_utente = (
+                        "La modifica alla tua frase del profilo non è stata approvata. "
+                        "Puoi modificarla dalla tua dashboard e inviarla di nuovo in revisione."
+                    )
+                else:
+                    titolo_push = "Descrizione profilo non approvata ❌"
+                    messaggio_utente = (
+                        "La modifica alla tua descrizione del profilo non è stata approvata. "
+                        "Puoi modificarla dalla tua dashboard e inviarla di nuovo in revisione."
+                    )
+
+                link_notifica = url_for("dashboard") + "?tab=info"
+
+                crea_notifica(
+                    utente_id,
+                    messaggio_utente,
+                    link=link_notifica
+                )
+
+                emit_update_notifications(utente_id)
+
+                try:
+                    invia_push(
+                        utente_id,
+                        titolo_push,
+                        messaggio_utente,
+                        url=link_notifica
+                    )
+                except Exception as e:
+                    log_exception_safe(
+                        "⚠️ Errore push rifiuto revisione profilo",
+                        e,
+                        {
+                            "user_id": utente_id,
+                            "campo": campo,
+                            "revision_id": revision_id
+                        },
+                        production=True
+                    )
+
+            except Exception as e:
+                log_exception_safe(
+                    "⚠️ Errore notifica utente rifiuto revisione profilo",
+                    e,
+                    {
+                        "user_id": utente_id,
+                        "campo": campo,
+                        "revision_id": revision_id
+                    },
+                    production=True
+                )
+
         return jsonify({
             "ok": True,
             "message": messaggio,
             "revisione_id": revision_id,
             "nuovo_stato": "approvata" if azione == "approva" else "rifiutata"
         })
-
+        
     except Exception as e:
         conn.rollback()
 
