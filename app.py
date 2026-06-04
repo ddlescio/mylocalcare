@@ -4404,6 +4404,18 @@ def cron_openai_usage_monthly_save():
         "error": stats.get("error")
     }), 500
 
+@app.route("/cron/reminder-profili-incompleti")
+def cron_reminder_profili_incompleti():
+    secret = request.args.get("secret")
+
+    if not secret or secret != os.getenv("REMINDER_PROFILI_CRON_SECRET"):
+        abort(403)
+
+    risultato = invia_reminder_profili_incompleti(dry_run=False)
+
+    status_code = 200 if risultato.get("ok") else 500
+    return jsonify(risultato), status_code
+
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA
 # ==========================================================
