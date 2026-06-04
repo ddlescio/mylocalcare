@@ -4007,7 +4007,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let autosaveTimer = null;
   let autosaveInCorso = false;
-  let queuedAutosave = false;
+  let ultimoValoreInviato = "";
+
+  function getDescrizioneValue() {
+    return form.querySelector('[name="descrizione"]')?.value?.trim() || "";
+  }
 
   function setStatus(type, text) {
     if (!statusBox) return;
@@ -4042,10 +4046,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function eseguiAutosave() {
-    if (autosaveInCorso) {
-      queuedAutosave = true;
-      return;
-    }
+    const valoreAttuale = getDescrizioneValue();
+
+    if (autosaveInCorso) return;
+    if (valoreAttuale === ultimoValoreInviato) return;
 
     autosaveInCorso = true;
     setStatus("saving", "Salvataggio...");
@@ -4070,38 +4074,31 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (!res.ok || data.ok === false) {
-        const msg = data.message || "Contenuto non consentito nella descrizione.";
-        setStatus("error", msg);
+        setStatus("error", data.message || "Contenuto non consentito nella descrizione.");
         return;
       }
 
+      ultimoValoreInviato = valoreAttuale;
       setStatus("success", data.message || "Modifiche salvate");
-      clearStatusLater();      
+      clearStatusLater();
 
     } catch (err) {
       console.error("Errore autosave description:", err);
       setStatus("error", "Errore di salvataggio");
     } finally {
       autosaveInCorso = false;
-
-      if (queuedAutosave) {
-        queuedAutosave = false;
-        eseguiAutosave();
-      }
     }
   }
 
-  function pianificaAutosave(delay = 700) {
+  function pianificaAutosave(delay = 900) {
     clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(() => {
-      eseguiAutosave();
-    }, delay);
+    autosaveTimer = setTimeout(eseguiAutosave, delay);
   }
 
   form.querySelectorAll("[data-autosave='1']").forEach(el => {
     el.addEventListener("input", () => pianificaAutosave(900));
-    el.addEventListener("blur", () => pianificaAutosave(250));
-    el.addEventListener("change", () => pianificaAutosave(250));
+    el.addEventListener("blur", () => pianificaAutosave(400));
+    el.addEventListener("change", () => pianificaAutosave(400));
   });
 });
 </script>
