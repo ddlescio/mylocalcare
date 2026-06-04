@@ -4646,15 +4646,23 @@ def admin_revisioni_profilo_approva(user_id, campo):
     return redirect(url_for("admin_revisioni_profilo"))
 
 
-@app.route("/admin/revisioni-profilo/<int:user_id>/<campo>/rifiuta", methods=["POST"])
+@app.route("/admin/revisioni-profilo/<int:user_id>/<campo>/rifiuta", methods=["GET", "POST"])
 @admin_required
 def admin_revisioni_profilo_rifiuta(user_id, campo):
+    if request.method == "GET":
+        flash("Per rifiutare una revisione usa il pulsante dalla pagina revisioni.", "error")
+        return redirect(url_for("admin_revisioni_profilo"))
+
     if campo not in ["frase", "descrizione"]:
         flash("Campo revisione non valido.", "error")
         return redirect(url_for("admin_revisioni_profilo"))
 
     conn = get_db_connection()
     c = get_cursor(conn)
+
+    titolo_push = ""
+    messaggio_notifica = ""
+    link_notifica = url_for("dashboard") + "?tab=info"
 
     try:
         if campo == "frase":
@@ -4666,6 +4674,12 @@ def admin_revisioni_profilo_rifiuta(user_id, campo):
                 WHERE id = ?
                   AND frase_stato = 'in_revisione'
             """), (user_id,))
+
+            titolo_push = "Frase profilo non approvata ❌"
+            messaggio_notifica = (
+                "La modifica alla tua frase del profilo non è stata approvata. "
+                "Puoi modificarla dalla tua dashboard e inviarla di nuovo in revisione."
+            )
 
             flash("❌ Frase rifiutata. Il testo pubblico precedente resta invariato.", "success")
 
@@ -4679,20 +4693,71 @@ def admin_revisioni_profilo_rifiuta(user_id, campo):
                   AND descrizione_stato = 'in_revisione'
             """), (user_id,))
 
+            titolo_push = "Descrizione profilo non approvata ❌"
+            messaggio_notifica = (
+                "La modifica alla tua descrizione del profilo non è stata approvata. "
+                "Puoi modificarla dalla tua dashboard e inviarla di nuovo in revisione."
+            )
+
             flash("❌ Descrizione rifiutata. Il testo pubblico precedente resta invariato.", "success")
 
         conn.commit()
-        invalidate_admin_counters()
-        
+
+        # 🔁 Aggiorna contatori dashboard admin
+        try:
+            invalidate_admin_counters()
+        except Exception as e:
+            print("⚠️ Errore invalidate_admin_counters revisione profilo:", e)
+
     except Exception as e:
         conn.rollback()
         flash(f"Errore durante il rifiuto: {e}", "error")
+        return redirect(url_for("admin_revisioni_profilo"))
 
     finally:
         try:
             conn.close()
         except Exception:
             pass
+
+    # 🔔 Notifica interna + push DOPO il commit
+    try:
+        crea_notifica(
+            user_id,
+            messaggio_notifica,
+            link=link_notifica
+        )
+
+        emit_update_notifications(user_id)
+
+        try:
+            invia_push(
+                user_id,
+                titolo_push,
+                messaggio_notifica,
+                url=link_notifica
+            )
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Errore push rifiuto revisione profilo",
+                e,
+                {
+                    "user_id": user_id,
+                    "campo": campo
+                },
+                production=True
+            )
+
+    except Exception as e:
+        log_exception_safe(
+            "⚠️ Errore notifica interna rifiuto revisione profilo",
+            e,
+            {
+                "user_id": user_id,
+                "campo": campo
+            },
+            production=True
+        )
 
     return redirect(url_for("admin_revisioni_profilo"))
 
@@ -10306,15 +10371,44 @@ def utente_update_info():
     preferenze_contatto = request.form.get("preferenze_contatto", "")
     # ✅ Non aggiornare mai "email" da questo form (non viene inviato)
     # ✅ email_pubblica: se nel form non c'è, la lasciamo invariata
-    c.execute(sql("SELECT email, email_pubblica FROM utenti WHERE id = ?"), (user_id,))
+    c.execute(sql("""
+        SELECT
+            email,
+            email_pubblica,
+            frase,
+            frase_pending,
+            frase_stato
+        FROM utenti
+        WHERE id = ?
+    """), (user_id,))
+
     row = c.fetchone()
-    email_db = list(row.values())[0] if row else ""
-    email_pubblica_db = list(row.values())[1] if row else ""
+
+    email_db = row["email"] if row and "email" in row.keys() else ""
+    email_pubblica_db = row["email_pubblica"] if row and "email_pubblica" in row.keys() else ""
+
+    frase_db = row["frase"] if row and "frase" in row.keys() else ""
+    frase_pending_db = row["frase_pending"] if row and "frase_pending" in row.keys() else ""
+    frase_stato_db = row["frase_stato"] if row and "frase_stato" in row.keys() else ""
 
     email = email_db  # resta quella vera dell’account
 
     email_pubblica_form = request.form.get("email_pubblica", "").strip()
     email_pubblica = email_pubblica_form if email_pubblica_form != "" else (email_pubblica_db or "")
+
+    # 🔎 Capisce se la frase è davvero cambiata.
+    # Serve per evitare notifiche admin/push a ogni autosave di città, lingue, offro/cerco.
+    frase_attualmente_in_modifica = (
+        frase_pending_db
+        if frase_stato_db == "in_revisione" and frase_pending_db
+        else frase_db
+    ) or ""
+
+    frase_cambiata = (frase or "").strip() != (frase_attualmente_in_modifica or "").strip()
+
+    # Notifica admin solo quando nasce una nuova revisione.
+    # Se era già in revisione, l'autosave aggiorna il pending ma non manda nuove push.
+    nuova_revisione_frase = frase_cambiata and frase_stato_db != "in_revisione"
 
     esperienza_1 = request.form.get("esperienza_1", "")
     esperienza_2 = request.form.get("esperienza_2", "")
@@ -10356,37 +10450,83 @@ def utente_update_info():
 
     # 🔹 Query esplicita e completa
     # 🔹 Query SOLO per TAB "Info di base"
-    query_update = """
-        UPDATE utenti SET
-            citta = ?,
-            provincia = ?,
-            lingue = ?,
+    if frase_cambiata:
+        query_update = """
+            UPDATE utenti SET
+                citta = ?,
+                provincia = ?,
+                lingue = ?,
 
-            -- La frase modificata NON diventa subito pubblica:
-            -- resta in revisione admin.
-            frase_pending = ?,
-            frase_stato = 'in_revisione',
-            frase_inviata_revisione_il = CURRENT_TIMESTAMP,
+                -- La frase modificata NON diventa subito pubblica:
+                -- resta in revisione admin.
+                frase_pending = ?,
+                frase_stato = 'in_revisione',
+                frase_inviata_revisione_il = CURRENT_TIMESTAMP,
 
-            offro_1 = ?, offro_2 = ?, offro_3 = ?, offro_4 = ?, offro_5 = ?,
-            offro_6 = ?, offro_7 = ?, offro_8 = ?, offro_9 = ?, offro_10 = ?,
-            offro_11 = ?, offro_12 = ?, offro_13 = ?,
-            cerco_1 = ?, cerco_2 = ?, cerco_3 = ?, cerco_4 = ?, cerco_5 = ?,
-            cerco_6 = ?, cerco_7 = ?, cerco_8 = ?, cerco_9 = ?, cerco_10 = ?,
-            cerco_11 = ?, cerco_12 = ?, cerco_13 = ?
-        WHERE id = ?
-    """
+                offro_1 = ?, offro_2 = ?, offro_3 = ?, offro_4 = ?, offro_5 = ?,
+                offro_6 = ?, offro_7 = ?, offro_8 = ?, offro_9 = ?, offro_10 = ?,
+                offro_11 = ?, offro_12 = ?, offro_13 = ?,
+                cerco_1 = ?, cerco_2 = ?, cerco_3 = ?, cerco_4 = ?, cerco_5 = ?,
+                cerco_6 = ?, cerco_7 = ?, cerco_8 = ?, cerco_9 = ?, cerco_10 = ?,
+                cerco_11 = ?, cerco_12 = ?, cerco_13 = ?
+            WHERE id = ?
+        """
 
-    valori = (
-        citta, provincia, lingue,
-        frase,
-        *offro, *cerco,
-        user_id
-    )
+        valori = (
+            citta, provincia, lingue,
+            frase,
+            *offro, *cerco,
+            user_id
+        )
+
+    else:
+        query_update = """
+            UPDATE utenti SET
+                citta = ?,
+                provincia = ?,
+                lingue = ?,
+
+                offro_1 = ?, offro_2 = ?, offro_3 = ?, offro_4 = ?, offro_5 = ?,
+                offro_6 = ?, offro_7 = ?, offro_8 = ?, offro_9 = ?, offro_10 = ?,
+                offro_11 = ?, offro_12 = ?, offro_13 = ?,
+                cerco_1 = ?, cerco_2 = ?, cerco_3 = ?, cerco_4 = ?, cerco_5 = ?,
+                cerco_6 = ?, cerco_7 = ?, cerco_8 = ?, cerco_9 = ?, cerco_10 = ?,
+                cerco_11 = ?, cerco_12 = ?, cerco_13 = ?
+            WHERE id = ?
+        """
+
+        valori = (
+            citta, provincia, lingue,
+            *offro, *cerco,
+            user_id
+        )
 
     try:
         c.execute(sql(query_update), valori)
         conn.commit()
+
+        # 🔁 Aggiorna sempre il contatore admin se è coinvolto il sistema revisioni.
+        # La push admin parte solo quando nasce una nuova revisione.
+        try:
+            if frase_cambiata:
+                invalidate_admin_counters()
+
+            if nuova_revisione_frase:
+                notifica_admin_evento(
+                    "Nuova revisione profilo 🕵️",
+                    "Un utente ha modificato la frase del profilo. La modifica è in attesa di approvazione.",
+                    link=url_for("admin_revisioni_profilo"),
+                    push=True
+                )
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Errore notifica admin revisione frase",
+                e,
+                {
+                    "user_id": user_id
+                },
+                production=True
+            )
 
         # 🔁 ALLINEA LA MACRO-AREA COME IN LANDING
         if citta:
@@ -10588,6 +10728,45 @@ def utente_update_descrizione():
     c = get_cursor(conn)
 
     try:
+        # 🔎 Stato precedente descrizione, per evitare notifiche push admin duplicate con autosave.
+        c.execute(sql("""
+            SELECT
+                descrizione,
+                descrizione_pending,
+                descrizione_stato
+            FROM utenti
+            WHERE id = ?
+        """), (user_id,))
+
+        row_descrizione = c.fetchone()
+
+        descrizione_db = row_descrizione["descrizione"] if row_descrizione and "descrizione" in row_descrizione.keys() else ""
+        descrizione_pending_db = row_descrizione["descrizione_pending"] if row_descrizione and "descrizione_pending" in row_descrizione.keys() else ""
+        descrizione_stato_db = row_descrizione["descrizione_stato"] if row_descrizione and "descrizione_stato" in row_descrizione.keys() else ""
+
+        descrizione_attualmente_in_modifica = (
+            descrizione_pending_db
+            if descrizione_stato_db == "in_revisione" and descrizione_pending_db
+            else descrizione_db
+        ) or ""
+
+        descrizione_cambiata = (descrizione or "").strip() != (descrizione_attualmente_in_modifica or "").strip()
+
+        nuova_revisione_descrizione = (
+            descrizione_cambiata
+            and descrizione_stato_db != "in_revisione"
+        )
+
+        if not descrizione_cambiata:
+            if is_ajax:
+                return jsonify({
+                    "ok": True,
+                    "message": "Nessuna modifica da salvare."
+                })
+
+            flash("Nessuna modifica da salvare.", "info")
+            return redirect(url_for("dashboard") + "#tab-info")
+
         c.execute(
             sql("""
                 UPDATE utenti SET
@@ -10600,12 +10779,34 @@ def utente_update_descrizione():
         )
         conn.commit()
 
+        # 🔁 Aggiorna dashboard admin in tempo reale.
+        # La push admin parte solo quando nasce una nuova revisione.
+        try:
+            invalidate_admin_counters()
+
+            if nuova_revisione_descrizione:
+                notifica_admin_evento(
+                    "Nuova revisione profilo 🕵️",
+                    "Un utente ha modificato la descrizione del profilo. La modifica è in attesa di approvazione.",
+                    link=url_for("admin_revisioni_profilo"),
+                    push=True
+                )
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Errore notifica admin revisione descrizione",
+                e,
+                {
+                    "user_id": user_id
+                },
+                production=True
+            )
+
         if is_ajax:
             return jsonify({
                 "ok": True,
                 "message": "Descrizione salvata. Sarà pubblica dopo approvazione."
             })
-
+            
         flash("✅ Descrizione salvata e inviata in revisione.", "success")
 
     except Exception as e:
