@@ -1811,6 +1811,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!backdrop || !closeBtn) return;
 
+  /*
+    IMPORTANTE:
+    nel CSS esiste:
+    @media (min-width: 1280px) {
+      .annuncio-modal-backdrop { display: none !important; }
+    }
+
+    Questo impediva alla modale di riaprirsi automaticamente su desktop.
+    Qui aggiungiamo una regola più specifica, senza toccare il sistema servizi.
+  */
+  if (!document.getElementById("annuncio-modal-force-style")) {
+    const style = document.createElement("style");
+    style.id = "annuncio-modal-force-style";
+    style.textContent = `
+      .annuncio-modal-backdrop.is-open {
+        display: flex !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   let azioneAnnuncioInCorso = false;
 
   const setText = (id, value) => {
@@ -1847,7 +1868,11 @@ document.addEventListener("DOMContentLoaded", () => {
         ? rows.slice(indiceCorrente + 1).concat(rows.slice(0, indiceCorrente))
         : rows;
 
-    return ordinate.find(annuncioInAttesa) || null;
+    return ordinate.find(row => {
+      if (!row) return false;
+      if (row === rowCorrente) return false;
+      return row.dataset.annuncioStato === "in_attesa";
+    }) || null;
   }
 
   function aggiornaBadgeStatoAnnuncio(row, nuovoStato) {
@@ -1912,9 +1937,41 @@ document.addEventListener("DOMContentLoaded", () => {
     aggiornaAzioniTabellaAnnuncio(row, nuovoStato);
   }
 
+  function aggiornaBottoniAzioneModale(row) {
+    const approvaBtn = document.getElementById("modal-annuncio-approva");
+    const rifiutaBtn = document.getElementById("modal-annuncio-rifiuta");
+    const toggleBtn = document.getElementById("modal-annuncio-toggle");
+
+    if (!row) return;
+
+    const d = row.dataset;
+
+    setHref("modal-annuncio-approva", d.annuncioApprovaUrl);
+    setHref("modal-annuncio-rifiuta", d.annuncioRifiutaUrl);
+    setHref("modal-annuncio-toggle", d.annuncioToggleUrl);
+
+    if (approvaBtn) {
+      approvaBtn.dataset.azioneAnnuncio = "approva";
+    }
+
+    if (rifiutaBtn) {
+      rifiutaBtn.dataset.azioneAnnuncio = "rifiuta";
+    }
+
+    if (toggleBtn) {
+      if (d.annuncioStato === "approvato") {
+        toggleBtn.textContent = "Disattiva";
+      } else if (d.annuncioStato === "disattivato" || d.annuncioStato === "rifiutato") {
+        toggleBtn.textContent = "Attiva";
+      } else {
+        toggleBtn.textContent = "Attiva/Disattiva";
+      }
+    }
+  }
+
   const openAnnuncioModal = (row, forzaApertura = false) => {
-      if (!forzaApertura && window.innerWidth >= 1280) return;
-      if (!row) return;
+    if (!forzaApertura && window.innerWidth >= 1280) return;
+    if (!row) return;
 
     window.__currentAnnuncioModalRow = row;
 
@@ -1985,19 +2042,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (cleanSrc.startsWith("http://") || cleanSrc.startsWith("https://")) {
             img.src = cleanSrc;
-
           } else if (cleanSrc.startsWith("/static/uploads/")) {
             img.src = cleanSrc;
-
           } else if (cleanSrc.startsWith("static/uploads/")) {
             img.src = "/" + cleanSrc;
-
           } else if (cleanSrc.startsWith("/uploads/")) {
             img.src = "/static" + cleanSrc;
-
           } else if (cleanSrc.startsWith("uploads/")) {
             img.src = "/static/" + cleanSrc;
-
           } else {
             img.src = "/static/uploads/" + cleanSrc.replace(/^\/+/, "");
           }
@@ -2022,31 +2074,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setHref("modal-annuncio-chat", d.annuncioChatUrl);
     setHref("modal-annuncio-mail", d.annuncioMailUrl);
 
-    setHref("modal-annuncio-approva", d.annuncioApprovaUrl);
-    setHref("modal-annuncio-rifiuta", d.annuncioRifiutaUrl);
-    setHref("modal-annuncio-toggle", d.annuncioToggleUrl);
-
-    const approvaBtn = document.getElementById("modal-annuncio-approva");
-    const rifiutaBtn = document.getElementById("modal-annuncio-rifiuta");
-
-    if (approvaBtn) {
-      approvaBtn.dataset.azioneAnnuncio = "approva";
-    }
-
-    if (rifiutaBtn) {
-      rifiutaBtn.dataset.azioneAnnuncio = "rifiuta";
-    }
-
-    const toggleBtn = document.getElementById("modal-annuncio-toggle");
-    if (toggleBtn) {
-      if (d.annuncioStato === "approvato") {
-        toggleBtn.textContent = "Disattiva";
-      } else if (d.annuncioStato === "disattivato" || d.annuncioStato === "rifiutato") {
-        toggleBtn.textContent = "Attiva";
-      } else {
-        toggleBtn.textContent = "Attiva/Disattiva";
-      }
-    }
+    aggiornaBottoniAzioneModale(row);
 
     const setServiceButton = (id, isActive, extraData = {}) => {
       const btn = document.getElementById(id);
@@ -2118,17 +2146,15 @@ document.addEventListener("DOMContentLoaded", () => {
     window.__currentAnnuncioModalRow = null;
   };
 
-  function vaiAlProssimoAnnuncioInAttesa(rowCorrente) {
-      const prossimo = trovaProssimoAnnuncioInAttesa(rowCorrente);
-
-      if (prossimo) {
-        openAnnuncioModal(prossimo, true);
-        return;
-      }
-
-      closeAnnuncioModal();
+  function vaiAlProssimoAnnuncioInAttesa(prossimo) {
+    if (prossimo) {
+      openAnnuncioModal(prossimo, true);
+      return;
     }
-    
+
+    closeAnnuncioModal();
+  }
+
   async function eseguiAzioneAnnuncioDaModale(btn) {
     if (azioneAnnuncioInCorso) return;
 
@@ -2139,6 +2165,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const azione = btn.dataset.azioneAnnuncio;
 
     if (!url || url === "#") return;
+
+    /*
+      Calcoliamo il prossimo PRIMA di cambiare stato alla riga corrente.
+      Questo evita che la riga appena gestita interferisca con la ricerca.
+    */
+    const prossimo = trovaProssimoAnnuncioInAttesa(row);
 
     azioneAnnuncioInCorso = true;
 
@@ -2172,7 +2204,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const nuovoStato = azione === "approva" ? "approvato" : "rifiutato";
 
       aggiornaRigaAnnuncioDopoAzione(row, nuovoStato);
-      vaiAlProssimoAnnuncioInAttesa(row);
+      vaiAlProssimoAnnuncioInAttesa(prossimo);
 
     } catch (err) {
       console.error("Errore azione annuncio:", err);
@@ -2230,5 +2262,4 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
-
 {% endblock %}
