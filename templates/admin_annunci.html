@@ -1056,44 +1056,45 @@
                             {% endif %}">
                             {{ a.stato }}
                         </span>
-                    </td>
-                    <td class="p-2 text-center">
-                      <a href="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}"
-                         class="text-blue-600 hover:underline">
-                        Apri
-                      </a>
-
-                      |
-
-                      {% if a.stato == 'in_attesa' %}
-                        <a href="{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}"
-                           class="text-green-600 hover:underline js-annuncio-azione"
-                           data-azione-annuncio="approva">
-                          Approva
-                        </a>
-
-                        |
-
-                        <a href="{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}"
-                           class="text-red-600 hover:underline js-annuncio-azione"
-                           data-azione-annuncio="rifiuta">
-                          Rifiuta
-                        </a>
-
-                      {% else %}
-                        {% if a.stato == 'approvato' %}
-                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
-                             class="text-yellow-600 hover:underline">
-                            Disattiva
+                        <td class="p-2 text-center">
+                          <a href="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}"
+                             class="text-blue-600 hover:underline">
+                            Apri
                           </a>
-                        {% else %}
-                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
-                             class="text-green-600 hover:underline">
-                            Attiva
-                          </a>
-                        {% endif %}
-                      {% endif %}
-                    </td>
+
+                          |
+
+                          {% if a.stato == 'in_attesa' %}
+                            <button type="button"
+                                    class="text-green-600 hover:underline js-annuncio-azione"
+                                    data-azione-annuncio="approva"
+                                    data-url="{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}">
+                              Approva
+                            </button>
+
+                            |
+
+                            <button type="button"
+                                    class="text-red-600 hover:underline js-annuncio-azione"
+                                    data-azione-annuncio="rifiuta"
+                                    data-url="{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}">
+                              Rifiuta
+                            </button>
+
+                          {% else %}
+                            {% if a.stato == 'approvato' %}
+                              <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
+                                 class="text-yellow-600 hover:underline">
+                                Disattiva
+                              </a>
+                            {% else %}
+                              <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
+                                 class="text-green-600 hover:underline">
+                                Attiva
+                              </a>
+                            {% endif %}
+                          {% endif %}
+                        </td>
                     <td class="p-2">{{ a.categoria }}</td>
                     <td class="p-2 text-center">
                     {% if a.tipo_annuncio == 'offro' %}
@@ -2256,7 +2257,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const row = window.__currentAnnuncioModalRow;
     if (!row) return;
 
-    const url = btn.getAttribute("href");
+    const url = btn.dataset.url || btn.getAttribute("href");
     const azione = btn.dataset.azioneAnnuncio || btn.getAttribute("data-azione-annuncio");
 
     if (!url || url === "#") return;
@@ -2346,6 +2347,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation();
 
     const rowDaTabella = actionBtn.closest(".annuncio-row");
 
@@ -2355,13 +2357,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     console.log("🟢 Click azione annuncio intercettato dal JS:", {
       id: window.__currentAnnuncioModalRow?.dataset?.annuncioId || null,
-      azione: actionBtn.dataset.azioneAnnuncio || null,
-      href: actionBtn.getAttribute("href")
+      azione: actionBtn.dataset.azioneAnnuncio || actionBtn.getAttribute("data-azione-annuncio") || null,
+      url: actionBtn.dataset.url || actionBtn.getAttribute("href") || null
     });
 
     eseguiAzioneAnnuncioDaModale(actionBtn);
-  });
-
+  }, true);
+  
   closeBtn.addEventListener("click", closeAnnuncioModal);
 
   backdrop.addEventListener("click", (e) => {
