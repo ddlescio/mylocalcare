@@ -1369,6 +1369,61 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.overflow = "";
   };
 
+  function rigaHaElementiInAttesa(row) {
+    if (!row) return false;
+
+    const recensioneInAttesa = row.dataset.reviewStato === "in_attesa";
+
+    const rispostaInAttesa =
+      row.dataset.replyId &&
+      row.dataset.reviewRispostaStato === "in_attesa";
+
+    return recensioneInAttesa || rispostaInAttesa;
+  }
+
+  function trovaProssimaRigaInAttesa(rowCorrente) {
+    const rows = Array.from(document.querySelectorAll(".review-row"));
+
+    if (!rows.length) return null;
+
+    const indiceCorrente = rows.indexOf(rowCorrente);
+
+    const ordinate =
+      indiceCorrente >= 0
+        ? rows.slice(indiceCorrente + 1).concat(rows.slice(0, indiceCorrente))
+        : rows;
+
+    return ordinate.find(rigaHaElementiInAttesa) || null;
+  }
+
+  function vaiAllaProssimaRevisioneInAttesa(rowCorrente) {
+    /*
+      Se nella stessa riga resta ancora qualcosa in attesa
+      es. recensione approvata ma risposta ancora in attesa,
+      resta sulla stessa riga e aggiorna la modale.
+    */
+    if (rigaHaElementiInAttesa(rowCorrente)) {
+      openReviewModal(rowCorrente);
+      return;
+    }
+
+    const prossima = trovaProssimaRigaInAttesa(rowCorrente);
+
+    if (prossima) {
+      openReviewModal(prossima);
+      return;
+    }
+
+    closeReviewModal();
+  }
+
+  /*
+    Espongo queste funzioni perché il click AJAX delle azioni
+    è gestito in un altro blocco script più sotto.
+  */
+  window.reviewModalVaiAllaProssimaInAttesa = vaiAllaProssimaRevisioneInAttesa;
+  window.reviewModalChiudi = closeReviewModal;
+
   document.querySelectorAll(".review-row").forEach(row => {
     row.addEventListener("click", (e) => {
       if (e.target.closest("a, button, input, select")) return;
@@ -1441,6 +1496,22 @@ document.addEventListener("click", async (e) => {
     if (action === "rifiuta-risposta") {
       aggiornaStatoRispostaInPagina(row, "rifiutato");
     }
+
+    /*
+      Se l'azione è stata fatta dalla modale mobile/tablet,
+      passa automaticamente alla prossima recensione/risposta in attesa.
+      Se non ce ne sono più, chiude la modale.
+    */
+    const modalAperta = document
+      .getElementById("review-row-modal-backdrop")
+      ?.classList.contains("is-open");
+
+    if (
+      modalAperta &&
+      typeof window.reviewModalVaiAllaProssimaInAttesa === "function"
+    ) {
+      window.reviewModalVaiAllaProssimaInAttesa(row);
+    }    
 
   } catch (err) {
     alert("Errore di rete.");

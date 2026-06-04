@@ -1811,6 +1811,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!backdrop || !closeBtn) return;
 
+  let azioneAnnuncioInCorso = false;
+
   const setText = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.textContent = value && value !== "None" ? value : "-";
@@ -1829,8 +1831,92 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  function annuncioInAttesa(row) {
+    return row && row.dataset.annuncioStato === "in_attesa";
+  }
+
+  function trovaProssimoAnnuncioInAttesa(rowCorrente) {
+    const rows = Array.from(document.querySelectorAll(".annuncio-row"));
+
+    if (!rows.length) return null;
+
+    const indiceCorrente = rows.indexOf(rowCorrente);
+
+    const ordinate =
+      indiceCorrente >= 0
+        ? rows.slice(indiceCorrente + 1).concat(rows.slice(0, indiceCorrente))
+        : rows;
+
+    return ordinate.find(annuncioInAttesa) || null;
+  }
+
+  function aggiornaBadgeStatoAnnuncio(row, nuovoStato) {
+    if (!row) return;
+
+    const statoCell = row.children[1];
+    if (!statoCell) return;
+
+    let classi = "badge ";
+
+    if (nuovoStato === "approvato") {
+      classi += "bg-green-100 text-green-700";
+    } else if (nuovoStato === "rifiutato") {
+      classi += "bg-red-100 text-red-700";
+    } else if (nuovoStato === "disattivato") {
+      classi += "bg-yellow-100 text-yellow-700";
+    } else {
+      classi += "bg-yellow-100 text-yellow-700";
+    }
+
+    statoCell.innerHTML = `
+      <span class="${classi}">
+        ${nuovoStato}
+      </span>
+    `;
+  }
+
+  function aggiornaAzioniTabellaAnnuncio(row, nuovoStato) {
+    if (!row) return;
+
+    const azioniCell = row.children[2];
+    if (!azioniCell) return;
+
+    const apriUrl = row.dataset.annuncioApriUrl || "#";
+    const toggleUrl = row.dataset.annuncioToggleUrl || "#";
+
+    if (nuovoStato === "approvato") {
+      azioniCell.innerHTML = `
+        <a href="${apriUrl}" class="text-blue-600 hover:underline">Apri</a>
+        |
+        <a href="${toggleUrl}" class="text-yellow-600 hover:underline">Disattiva</a>
+      `;
+    } else {
+      azioniCell.innerHTML = `
+        <a href="${apriUrl}" class="text-blue-600 hover:underline">Apri</a>
+        |
+        <a href="${toggleUrl}" class="text-green-600 hover:underline">Attiva</a>
+      `;
+    }
+  }
+
+  function aggiornaRigaAnnuncioDopoAzione(row, nuovoStato) {
+    if (!row) return;
+
+    row.dataset.annuncioStato = nuovoStato;
+    row.dataset.annuncioApprovaUrl = "#";
+    row.dataset.annuncioRifiutaUrl = "#";
+
+    row.classList.add("opacity-70");
+
+    aggiornaBadgeStatoAnnuncio(row, nuovoStato);
+    aggiornaAzioniTabellaAnnuncio(row, nuovoStato);
+  }
+
   const openAnnuncioModal = (row) => {
     if (window.innerWidth >= 1080) return;
+    if (!row) return;
+
+    window.__currentAnnuncioModalRow = row;
 
     const d = row.dataset;
 
@@ -1889,56 +1975,47 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .filter(Boolean);
 
-        if (!media.length) {
-          mediaBox.innerHTML = `<div class="annuncio-modal-empty-media">Nessuna foto presente</div>`;
-        } else {
-          media.forEach(src => {
-            const img = document.createElement("img");
+      if (!media.length) {
+        mediaBox.innerHTML = `<div class="annuncio-modal-empty-media">Nessuna foto presente</div>`;
+      } else {
+        media.forEach(src => {
+          const img = document.createElement("img");
 
-            let cleanSrc = String(src || "").trim();
+          let cleanSrc = String(src || "").trim();
 
-            /*
-              Normalizzazione robusta:
-              - se è già URL assoluto, lo lasciamo com'è
-              - se parte già da /static/uploads/, lo lasciamo com'è
-              - se parte da static/uploads/, aggiungiamo solo /
-              - se parte da /uploads/ o uploads/, lo trasformiamo in /static/uploads/
-              - se è solo un nome file/cartella, lo agganciamo a /static/uploads/
-            */
+          if (cleanSrc.startsWith("http://") || cleanSrc.startsWith("https://")) {
+            img.src = cleanSrc;
 
-            if (cleanSrc.startsWith("http://") || cleanSrc.startsWith("https://")) {
-              img.src = cleanSrc;
+          } else if (cleanSrc.startsWith("/static/uploads/")) {
+            img.src = cleanSrc;
 
-            } else if (cleanSrc.startsWith("/static/uploads/")) {
-              img.src = cleanSrc;
+          } else if (cleanSrc.startsWith("static/uploads/")) {
+            img.src = "/" + cleanSrc;
 
-            } else if (cleanSrc.startsWith("static/uploads/")) {
-              img.src = "/" + cleanSrc;
+          } else if (cleanSrc.startsWith("/uploads/")) {
+            img.src = "/static" + cleanSrc;
 
-            } else if (cleanSrc.startsWith("/uploads/")) {
-              img.src = "/static" + cleanSrc;
+          } else if (cleanSrc.startsWith("uploads/")) {
+            img.src = "/static/" + cleanSrc;
 
-            } else if (cleanSrc.startsWith("uploads/")) {
-              img.src = "/static/" + cleanSrc;
+          } else {
+            img.src = "/static/uploads/" + cleanSrc.replace(/^\/+/, "");
+          }
 
-            } else {
-              img.src = "/static/uploads/" + cleanSrc.replace(/^\/+/, "");
-            }
+          img.alt = "Foto annuncio";
+          img.className = "annuncio-modal-media-img";
 
-            img.alt = "Foto annuncio";
-            img.className = "annuncio-modal-media-img";
+          img.onerror = () => {
+            console.warn("Foto annuncio non caricata:", {
+              originale: src,
+              finale: img.src
+            });
+            img.style.display = "none";
+          };
 
-            img.onerror = () => {
-              console.warn("Foto annuncio non caricata:", {
-                originale: src,
-                finale: img.src
-              });
-              img.style.display = "none";
-            };
-
-            mediaBox.appendChild(img);
-          });
-        }
+          mediaBox.appendChild(img);
+        });
+      }
     }
 
     setHref("modal-annuncio-apri", d.annuncioApriUrl);
@@ -1948,6 +2025,17 @@ document.addEventListener("DOMContentLoaded", () => {
     setHref("modal-annuncio-approva", d.annuncioApprovaUrl);
     setHref("modal-annuncio-rifiuta", d.annuncioRifiutaUrl);
     setHref("modal-annuncio-toggle", d.annuncioToggleUrl);
+
+    const approvaBtn = document.getElementById("modal-annuncio-approva");
+    const rifiutaBtn = document.getElementById("modal-annuncio-rifiuta");
+
+    if (approvaBtn) {
+      approvaBtn.dataset.azioneAnnuncio = "approva";
+    }
+
+    if (rifiutaBtn) {
+      rifiutaBtn.dataset.azioneAnnuncio = "rifiuta";
+    }
 
     const toggleBtn = document.getElementById("modal-annuncio-toggle");
     if (toggleBtn) {
@@ -2027,13 +2115,108 @@ document.addEventListener("DOMContentLoaded", () => {
     backdrop.classList.remove("is-open");
     backdrop.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
+    window.__currentAnnuncioModalRow = null;
   };
+
+  function vaiAlProssimoAnnuncioInAttesa(rowCorrente) {
+    const prossimo = trovaProssimoAnnuncioInAttesa(rowCorrente);
+
+    if (prossimo) {
+      openAnnuncioModal(prossimo);
+      return;
+    }
+
+    closeAnnuncioModal();
+  }
+
+  async function eseguiAzioneAnnuncioDaModale(btn) {
+    if (azioneAnnuncioInCorso) return;
+
+    const row = window.__currentAnnuncioModalRow;
+    if (!row) return;
+
+    const url = btn.getAttribute("href");
+    const azione = btn.dataset.azioneAnnuncio;
+
+    if (!url || url === "#") return;
+
+    azioneAnnuncioInCorso = true;
+
+    const approvaBtn = document.getElementById("modal-annuncio-approva");
+    const rifiutaBtn = document.getElementById("modal-annuncio-rifiuta");
+
+    if (approvaBtn) {
+      approvaBtn.style.pointerEvents = "none";
+      approvaBtn.style.opacity = "0.6";
+    }
+
+    if (rifiutaBtn) {
+      rifiutaBtn.style.pointerEvents = "none";
+      rifiutaBtn.style.opacity = "0.6";
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        redirect: "follow"
+      });
+
+      if (!res.ok) {
+        alert("Errore durante l’aggiornamento dell’annuncio.");
+        return;
+      }
+
+      const nuovoStato = azione === "approva" ? "approvato" : "rifiutato";
+
+      aggiornaRigaAnnuncioDopoAzione(row, nuovoStato);
+      vaiAlProssimoAnnuncioInAttesa(row);
+
+    } catch (err) {
+      console.error("Errore azione annuncio:", err);
+      alert("Errore di rete.");
+    } finally {
+      azioneAnnuncioInCorso = false;
+
+      if (approvaBtn) {
+        approvaBtn.style.pointerEvents = "";
+        approvaBtn.style.opacity = "";
+      }
+
+      if (rifiutaBtn) {
+        rifiutaBtn.style.pointerEvents = "";
+        rifiutaBtn.style.opacity = "";
+      }
+    }
+  }
 
   document.querySelectorAll(".annuncio-row").forEach(row => {
     row.addEventListener("click", (e) => {
       if (e.target.closest("a, button, input, select")) return;
       openAnnuncioModal(row);
     });
+  });
+
+  /*
+    Intercettiamo SOLO Approva/Rifiuta della modale.
+    Non tocchiamo:
+    - toggle-servizio
+    - toggle-pacchetto
+    - attiva/disattiva
+    - apri annuncio
+    - chat/email
+  */
+  document.addEventListener("click", (e) => {
+    const actionBtn = e.target.closest("#modal-annuncio-approva, #modal-annuncio-rifiuta");
+
+    if (!actionBtn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    eseguiAzioneAnnuncioDaModale(actionBtn);
   });
 
   closeBtn.addEventListener("click", closeAnnuncioModal);
