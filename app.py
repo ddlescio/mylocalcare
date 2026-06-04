@@ -4070,6 +4070,24 @@ def admin_counters():
 
         pending_recensioni_totali = pending_recensioni + pending_risposte
 
+        step = "revisioni_profilo"
+        pending_revisioni_profilo = get_count(cur, """
+            SELECT COUNT(*) AS valore
+            FROM utenti
+            WHERE
+                (
+                    frase_stato = 'in_revisione'
+                    AND frase_pending IS NOT NULL
+                    AND TRIM(frase_pending) <> ''
+                )
+                OR
+                (
+                    descrizione_stato = 'in_revisione'
+                    AND descrizione_pending IS NOT NULL
+                    AND TRIM(descrizione_pending) <> ''
+                )
+        """, step=step)
+
         step = "utenti"
 
         try:
@@ -4223,8 +4241,9 @@ def admin_counters():
             "annunci": pending_annunci,
             "recensioni": pending_recensioni_totali,
             "risposte": pending_risposte,
+            "revisioni_profilo": pending_revisioni_profilo,
             "messaggi": messaggi_non_letti,
-            "totale": pending_annunci + pending_recensioni_totali,
+            "totale": pending_annunci + pending_recensioni_totali + pending_revisioni_profilo,
             "video_minuti": video_minuti,
 
             "openai_costo": format_openai_euro(openai_costo),
@@ -4264,6 +4283,7 @@ def admin_counters():
             "annunci": 0,
             "recensioni": 0,
             "risposte": 0,
+            "revisioni_profilo": 0,
             "messaggi": 0,
             "totale": 0,
             "video_minuti": 0,
@@ -4514,6 +4534,167 @@ def admin_dashboard():
         categoria=categoria,
         zona=zona
     )
+
+# ==========================================================
+# 🕵️ ADMIN — REVISIONE TESTI PROFILO
+# ==========================================================
+@app.route("/admin/revisioni-profilo")
+@admin_required
+def admin_revisioni_profilo():
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            SELECT
+                id,
+                username,
+                email,
+                nome,
+                cognome,
+
+                frase,
+                frase_pending,
+                frase_stato,
+                frase_inviata_revisione_il,
+
+                descrizione,
+                descrizione_pending,
+                descrizione_stato,
+                descrizione_inviata_revisione_il
+            FROM utenti
+            WHERE
+                (
+                    frase_stato = 'in_revisione'
+                    AND frase_pending IS NOT NULL
+                    AND TRIM(frase_pending) <> ''
+                )
+                OR
+                (
+                    descrizione_stato = 'in_revisione'
+                    AND descrizione_pending IS NOT NULL
+                    AND TRIM(descrizione_pending) <> ''
+                )
+            ORDER BY
+                COALESCE(descrizione_inviata_revisione_il, frase_inviata_revisione_il) DESC
+        """))
+
+        utenti_revisioni = [dict(r) for r in c.fetchall()]
+
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return render_template(
+        "admin_revisioni_profilo.html",
+        utenti_revisioni=utenti_revisioni
+    )
+
+
+@app.route("/admin/revisioni-profilo/<int:user_id>/<campo>/approva", methods=["POST"])
+@admin_required
+def admin_revisioni_profilo_approva(user_id, campo):
+    if campo not in ["frase", "descrizione"]:
+        flash("Campo revisione non valido.", "error")
+        return redirect(url_for("admin_revisioni_profilo"))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        if campo == "frase":
+            c.execute(sql("""
+                UPDATE utenti SET
+                    frase = frase_pending,
+                    frase_pending = NULL,
+                    frase_stato = 'approvata',
+                    frase_inviata_revisione_il = NULL
+                WHERE id = ?
+                  AND frase_stato = 'in_revisione'
+            """), (user_id,))
+
+            flash("✅ Frase approvata e resa pubblica.", "success")
+
+        else:
+            c.execute(sql("""
+                UPDATE utenti SET
+                    descrizione = descrizione_pending,
+                    descrizione_pending = NULL,
+                    descrizione_stato = 'approvata',
+                    descrizione_inviata_revisione_il = NULL
+                WHERE id = ?
+                  AND descrizione_stato = 'in_revisione'
+            """), (user_id,))
+
+            flash("✅ Descrizione approvata e resa pubblica.", "success")
+
+        conn.commit()
+        invalidate_admin_counters()
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"Errore durante l'approvazione: {e}", "error")
+
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return redirect(url_for("admin_revisioni_profilo"))
+
+
+@app.route("/admin/revisioni-profilo/<int:user_id>/<campo>/rifiuta", methods=["POST"])
+@admin_required
+def admin_revisioni_profilo_rifiuta(user_id, campo):
+    if campo not in ["frase", "descrizione"]:
+        flash("Campo revisione non valido.", "error")
+        return redirect(url_for("admin_revisioni_profilo"))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        if campo == "frase":
+            c.execute(sql("""
+                UPDATE utenti SET
+                    frase_pending = NULL,
+                    frase_stato = 'rifiutata',
+                    frase_inviata_revisione_il = NULL
+                WHERE id = ?
+                  AND frase_stato = 'in_revisione'
+            """), (user_id,))
+
+            flash("❌ Frase rifiutata. Il testo pubblico precedente resta invariato.", "success")
+
+        else:
+            c.execute(sql("""
+                UPDATE utenti SET
+                    descrizione_pending = NULL,
+                    descrizione_stato = 'rifiutata',
+                    descrizione_inviata_revisione_il = NULL
+                WHERE id = ?
+                  AND descrizione_stato = 'in_revisione'
+            """), (user_id,))
+
+            flash("❌ Descrizione rifiutata. Il testo pubblico precedente resta invariato.", "success")
+
+        conn.commit()
+        invalidate_admin_counters()
+        
+    except Exception as e:
+        conn.rollback()
+        flash(f"Errore durante il rifiuto: {e}", "error")
+
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return redirect(url_for("admin_revisioni_profilo"))
 
 from flask import render_template, request, redirect, url_for, flash
 import sqlite3
@@ -10096,7 +10277,7 @@ def utente_update_info():
             }), 400
 
         flash(messaggio, "error")
-        return redirect(url_for("dashboard"))    
+        return redirect(url_for("dashboard"))
 
     # 🚫 Blocco contatti dentro "La tua frase"
     # Stessa logica applicata alla descrizione: qui non devono comparire email o numeri di telefono.
@@ -10180,7 +10361,13 @@ def utente_update_info():
             citta = ?,
             provincia = ?,
             lingue = ?,
-            frase = ?,
+
+            -- La frase modificata NON diventa subito pubblica:
+            -- resta in revisione admin.
+            frase_pending = ?,
+            frase_stato = 'in_revisione',
+            frase_inviata_revisione_il = CURRENT_TIMESTAMP,
+
             offro_1 = ?, offro_2 = ?, offro_3 = ?, offro_4 = ?, offro_5 = ?,
             offro_6 = ?, offro_7 = ?, offro_8 = ?, offro_9 = ?, offro_10 = ?,
             offro_11 = ?, offro_12 = ?, offro_13 = ?,
@@ -10191,7 +10378,8 @@ def utente_update_info():
     """
 
     valori = (
-        citta, provincia, lingue, frase,
+        citta, provincia, lingue,
+        frase,
         *offro, *cerco,
         user_id
     )
@@ -10237,7 +10425,8 @@ def utente_update_info():
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({
-            "ok": True
+            "ok": True,
+            "message": "Modifiche salvate. La frase sarà pubblica dopo approvazione."
         })
 
     flash("✅ Modifiche salvate con successo.", "success")
@@ -10400,7 +10589,13 @@ def utente_update_descrizione():
 
     try:
         c.execute(
-            sql("UPDATE utenti SET descrizione = ? WHERE id = ?"),
+            sql("""
+                UPDATE utenti SET
+                    descrizione_pending = ?,
+                    descrizione_stato = 'in_revisione',
+                    descrizione_inviata_revisione_il = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """),
             (descrizione, user_id)
         )
         conn.commit()
@@ -10408,10 +10603,10 @@ def utente_update_descrizione():
         if is_ajax:
             return jsonify({
                 "ok": True,
-                "message": "Modifiche salvate"
+                "message": "Descrizione salvata. Sarà pubblica dopo approvazione."
             })
 
-        flash("✅ Descrizione aggiornata con successo.", "success")
+        flash("✅ Descrizione salvata e inviata in revisione.", "success")
 
     except Exception as e:
         conn.rollback()

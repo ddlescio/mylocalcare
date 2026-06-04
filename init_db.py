@@ -60,7 +60,14 @@ def crea_tabella_utenti():
         provincia TEXT,
         regione TEXT,
         lingue TEXT,
+
+        -- ✅ Testi profilo approvati / pubblici
         frase TEXT,
+
+        -- 🕵️ Revisione admin testi profilo
+        frase_pending TEXT,
+        frase_stato TEXT DEFAULT 'approvata',
+        frase_inviata_revisione_il {dt_col()},
 
         -- 🔹 Attività (Cerco / Offro)
         offro_1 INTEGER DEFAULT 0,
@@ -110,8 +117,13 @@ def crea_tabella_utenti():
         studio_3 TEXT,
         certificazioni TEXT,
 
-        -- 📝 Descrizione profilo
+        -- 📝 Descrizione profilo approvata / pubblica
         descrizione TEXT,
+
+        -- 🕵️ Revisione admin descrizione profilo
+        descrizione_pending TEXT,
+        descrizione_stato TEXT DEFAULT 'approvata',
+        descrizione_inviata_revisione_il {dt_col()},
 
         -- 🌐 Visibilità e impostazioni
         visibile_pubblicamente INTEGER DEFAULT 1,
@@ -1196,10 +1208,20 @@ def aggiorna_colonne_mancanti():
 
         # 🆕 Gestione account
         "ruolo": "TEXT DEFAULT 'user'",
+
         # Info base / testo profilo
         "frase": "TEXT",
         "lingue": "TEXT",
         "descrizione": "TEXT",
+
+        # 🕵️ Revisione admin testi profilo
+        "frase_pending": "TEXT",
+        "frase_stato": "TEXT DEFAULT 'approvata'",
+        "frase_inviata_revisione_il": "TEXT",
+
+        "descrizione_pending": "TEXT",
+        "descrizione_stato": "TEXT DEFAULT 'approvata'",
+        "descrizione_inviata_revisione_il": "TEXT",
         "esperienza_1": "TEXT",
         "esperienza_2": "TEXT",
         "esperienza_3": "TEXT",
@@ -1398,6 +1420,85 @@ def aggiorna_colonne_mancanti():
     conn.commit()
     conn.close()
 
+def aggiorna_colonne_revisione_profilo_postgres():
+    """
+    Aggiunge le colonne per la revisione admin di frase e descrizione
+    anche su PostgreSQL/Render.
+
+    Non sovrascrive dati esistenti.
+    """
+    if not IS_POSTGRES:
+        return
+
+    conn = get_conn()
+    c = conn.cursor()
+
+    try:
+        c.execute("""
+            ALTER TABLE utenti
+            ADD COLUMN IF NOT EXISTS frase_pending TEXT;
+        """)
+
+        c.execute("""
+            ALTER TABLE utenti
+            ADD COLUMN IF NOT EXISTS frase_stato TEXT DEFAULT 'approvata';
+        """)
+
+        c.execute("""
+            ALTER TABLE utenti
+            ADD COLUMN IF NOT EXISTS frase_inviata_revisione_il TIMESTAMPTZ;
+        """)
+
+        c.execute("""
+            ALTER TABLE utenti
+            ADD COLUMN IF NOT EXISTS descrizione_pending TEXT;
+        """)
+
+        c.execute("""
+            ALTER TABLE utenti
+            ADD COLUMN IF NOT EXISTS descrizione_stato TEXT DEFAULT 'approvata';
+        """)
+
+        c.execute("""
+            ALTER TABLE utenti
+            ADD COLUMN IF NOT EXISTS descrizione_inviata_revisione_il TIMESTAMPTZ;
+        """)
+
+        c.execute("""
+            UPDATE utenti
+            SET frase_stato = 'approvata'
+            WHERE frase_stato IS NULL;
+        """)
+
+        c.execute("""
+            UPDATE utenti
+            SET descrizione_stato = 'approvata'
+            WHERE descrizione_stato IS NULL;
+        """)
+
+        conn.commit()
+        print("✅ Colonne revisione profilo aggiornate su PostgreSQL.")
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        print("❌ Errore aggiornamento colonne revisione profilo PostgreSQL:", e)
+        raise
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 # ---------------------------------------------------------
 # 🚀 INIZIALIZZAZIONE COMPLETA
 # ---------------------------------------------------------
@@ -1405,7 +1506,9 @@ def inizializza_database():
     print("🔧 Creazione e aggiornamento database LocalCare...")
 
     crea_tabella_utenti()
-    crea_tabella_operatori()
+    aggiorna_colonne_revisione_profilo_postgres()
+
+    crea_tabella_operatori()    
     crea_tabella_annunci()
     crea_tabella_filtri_categoria()
     crea_indici_annunci()

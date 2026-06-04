@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% set body_class = "offset-navbar" %}
+
+{% block content %}
+
+<div class="max-w-6xl mx-auto px-4 pt-24 pb-12">
+
+  <div class="mb-6">
+    <a href="{{ url_for('admin_dashboard') }}"
+       class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700">
+      ← Torna alla dashboard admin
+    </a>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">
+      🕵️ Revisioni profilo
+    </h1>
+    <p class="text-sm text-gray-500">
+      Qui trovi le modifiche a “La tua frase” e “Descrizione personale” in attesa di approvazione.
+      Finché non vengono approvate, restano visibili solo nella dashboard personale dell’utente.
+    </p>
+  </div>
+
+  {% if not utenti_revisioni %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+      <p class="text-gray-500">
+        Nessuna revisione profilo in attesa.
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="space-y-6">
+
+    {% for u in utenti_revisioni %}
+
+      {% set nome_utente = (u.get('nome') or '') ~ ' ' ~ (u.get('cognome') or '') %}
+      {% set nome_utente = nome_utente.strip() %}
+      {% if not nome_utente %}
+        {% set nome_utente = u.get('username') or u.get('email') or ('Utente #' ~ u.get('id')|string) %}
+      {% endif %}
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+          <div>
+            <h2 class="text-lg font-bold text-gray-800">
+              {{ nome_utente }}
+            </h2>
+            <p class="text-xs text-gray-500">
+              ID utente: {{ u.get('id') }}
+              {% if u.get('email') %}
+                · {{ u.get('email') }}
+              {% endif %}
+            </p>
+          </div>
+        </div>
+
+        {% if u.get('frase_stato') == 'in_revisione' and u.get('frase_pending') %}
+          <div class="border border-amber-200 bg-amber-50 rounded-2xl p-4 mb-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <h3 class="font-bold text-amber-800">
+                La tua frase
+              </h3>
+              <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">
+                In revisione
+              </span>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p class="text-xs font-semibold text-gray-500 mb-1">Testo attualmente pubblico</p>
+                <div class="bg-white border border-gray-200 rounded-xl p-3 text-sm text-gray-700 whitespace-pre-line min-h-[70px]">
+                  {{ u.get('frase') or '—' }}
+                </div>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold text-gray-500 mb-1">Nuovo testo proposto</p>
+                <div class="bg-white border border-amber-200 rounded-xl p-3 text-sm text-gray-800 whitespace-pre-line min-h-[70px]">
+                  {{ u.get('frase_pending') }}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 justify-end">
+              <form method="post"
+                    action="{{ url_for('admin_revisioni_profilo_rifiuta', user_id=u.get('id'), campo='frase') }}">
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
+                  Rifiuta
+                </button>
+              </form>
+
+              <form method="post"
+                    action="{{ url_for('admin_revisioni_profilo_approva', user_id=u.get('id'), campo='frase') }}">
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700">
+                  Approva
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if u.get('descrizione_stato') == 'in_revisione' and u.get('descrizione_pending') %}
+          <div class="border border-amber-200 bg-amber-50 rounded-2xl p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <h3 class="font-bold text-amber-800">
+                Descrizione personale
+              </h3>
+              <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">
+                In revisione
+              </span>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p class="text-xs font-semibold text-gray-500 mb-1">Testo attualmente pubblico</p>
+                <div class="bg-white border border-gray-200 rounded-xl p-3 text-sm text-gray-700 whitespace-pre-line min-h-[140px]">
+                  {{ u.get('descrizione') or '—' }}
+                </div>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold text-gray-500 mb-1">Nuovo testo proposto</p>
+                <div class="bg-white border border-amber-200 rounded-xl p-3 text-sm text-gray-800 whitespace-pre-line min-h-[140px]">
+                  {{ u.get('descrizione_pending') }}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 justify-end">
+              <form method="post"
+                    action="{{ url_for('admin_revisioni_profilo_rifiuta', user_id=u.get('id'), campo='descrizione') }}">
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
+                  Rifiuta
+                </button>
+              </form>
+
+              <form method="post"
+                    action="{{ url_for('admin_revisioni_profilo_approva', user_id=u.get('id'), campo='descrizione') }}">
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700">
+                  Approva
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+
+      </div>
+
+    {% endfor %}
+
+  </div>
+
+</div>
+
+{% endblock %}

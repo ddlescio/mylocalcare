@@ -293,11 +293,17 @@
                 </p>
               </div>
 
+              {% if pubblico %}
+                {% set frase_corrente = utente.get('frase') or '' %}
+              {% else %}
+                {% set frase_corrente = utente.get('frase_pending') or utente.get('frase') or '' %}
+              {% endif %}
+
               <input
                 type="hidden"
                 name="frase"
                 id="frase_hidden"
-                value="{{ utente.get('frase') or '' }}"
+                value="{{ frase_corrente }}"
                 data-autosave="1"
                 {% if pubblico %}disabled{% endif %}
               >
@@ -311,13 +317,20 @@
                   maxlength="120"
                   rows="3"
                   placeholder="{% if not pubblico %}Es. “Mi piace aiutare con il sorriso” oppure “It's only rock and roll but I like it”{% endif %}"
-                  {% if pubblico %}disabled{% endif %}>{{ utente.get('frase') or '' }}</textarea>
+                  {% if pubblico %}disabled{% endif %}>{{ frase_corrente }}</textarea>
 
                 {% if not pubblico %}
                 <p class="ov-help">
                   Puoi scrivere una frase che ti racconta, una citazione o qualcosa che ti rappresenta.
                 </p>
                 {% endif %}
+
+                {% if not pubblico and utente.get('frase_stato') == 'in_revisione' and utente.get('frase_pending') %}
+                <p class="ov-help text-amber-600 font-semibold">
+                  ⏳ Questa frase è salvata nella tua dashboard, ma sarà visibile pubblicamente solo dopo approvazione.
+                </p>
+                {% endif %}
+
               </div>
             </div>
 
@@ -797,6 +810,8 @@
                   <p class="ds-card-sub">Puoi raccontare il tuo percorso, il tuo approccio e cosa ti distingue.</p>
                 </div>
 
+                {% set descrizione_corrente = utente.get('descrizione_pending') or utente.get('descrizione') or '' %}
+
                 <div class="ds-field">
                   <label class="ds-label">Parla di te</label>
                   <textarea
@@ -805,8 +820,14 @@
                     rows="5"
                     data-min-rows="5"
                     data-autosave="1"
-                    placeholder="Es. Mi piace aiutare le persone con serietà, empatia e attenzione. Ho maturato esperienza sul campo e cerco sempre di offrire un servizio affidabile e umano.">{{ utente.get('descrizione') or '' }}</textarea>
-                </div>
+                    placeholder="Es. Mi piace aiutare le persone con serietà, empatia e attenzione. Ho maturato esperienza sul campo e cerco sempre di offrire un servizio affidabile e umano.">{{ descrizione_corrente }}</textarea>
+
+                  {% if utente.get('descrizione_stato') == 'in_revisione' and utente.get('descrizione_pending') %}
+                  <p class="ov-help text-amber-600 font-semibold">
+                    ⏳ Questa descrizione è salvata nella tua dashboard, ma sarà visibile pubblicamente solo dopo approvazione.
+                  </p>
+                  {% endif %}
+                </div>                
               </div>
 
               <div id="autosave-description-status"
