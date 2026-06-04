@@ -163,7 +163,7 @@
                         {% if lingue_salvate %}
                           {{ lingue_salvate | join(', ') }}
                         {% else %}
-                          Ciao? Hi? Hola?
+                          Ciao? Hola? Hi?
                         {% endif %}
                       </span>
 
@@ -3354,7 +3354,7 @@ document.addEventListener("DOMContentLoaded", () => {
     hiddenInput.value = selected.join(", ");
     toggleText.textContent = selected.length
       ? selected.join(", ")
-      : "Ciao? Hi? Hola?";
+      : "Ciao? Hola? Hi?";
 
     if (triggerSave) {
       hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3673,33 +3673,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (fraseTextarea && fraseHidden) {
 
+    /*
+      Ultimo valore valido realmente consentito.
+      Serve per evitare che telefono/email vengano salvati anche solo parzialmente.
+    */
+    let ultimaFraseValida = fraseHidden.value || "";
+
     function fraseContieneContatti(testo) {
       const valore = testo || "";
 
-      const emailRegex = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
-      const telefonoRegex = /(?:(?:\+|00)\d{1,3}[\s.-]?)?(?:\d[\s.-]?){8,}/;
+      /*
+        Per "La tua frase" blocchiamo in modo preventivo:
+        - qualsiasi numero
+        - qualsiasi chiocciola
+        - email complete o parziali evidenti
 
-      return emailRegex.test(valore) || telefonoRegex.test(valore);
+        Così l'autosave non può salvare nemmeno parti di telefono/email.
+      */
+      const contieneNumero = /\d/.test(valore);
+      const contieneChiocciola = /@/.test(valore);
+      const emailCompleta = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(valore);
+
+      return contieneNumero || contieneChiocciola || emailCompleta;
     }
 
     function mostraErroreFraseContatti() {
       setStatus(
         "error",
-        "Non puoi inserire email o numeri di telefono nella frase. Usa la sezione Contatti."
+        "Nella frase non puoi inserire email o numeri. Usa la sezione Contatti."
       );
+    }
+
+    function bloccaFraseNonConsentita() {
+      /*
+        Fondamentale:
+        cancella qualsiasi autosave già pianificato prima che parta.
+      */
+      clearTimeout(autosaveTimer);
+      queuedAutosave = false;
+
+      /*
+        Riporta hidden e intro all'ultimo valore valido.
+        Così non rimane in giro nessuna parte di numero/mail.
+      */
+      fraseHidden.value = ultimaFraseValida;
+      aggiornaFraseIntroDaValore(ultimaFraseValida);
+
+      mostraErroreFraseContatti();
     }
 
     const syncFrase = () => {
       const valoreFrase = fraseTextarea.value || "";
 
       if (fraseContieneContatti(valoreFrase)) {
-        mostraErroreFraseContatti();
-
-        // Non aggiorniamo hidden, quindi il valore vietato non parte con autosave
-        // e non viene riportato nell'intro.
+        bloccaFraseNonConsentita();
         return false;
       }
 
+      ultimaFraseValida = valoreFrase;
       fraseHidden.value = valoreFrase;
       aggiornaFraseIntroDaValore(valoreFrase);
       return true;
@@ -3735,7 +3766,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pianificaAutosave(250);
     });
   }
-  
+
   const hiddenAutosaveFields = form.querySelectorAll(
     "input[type='hidden'][data-autosave='1']"
   );
@@ -4048,12 +4079,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!form) return;
 
+  const descrizioneTextarea = form.querySelector('[name="descrizione"]');
+  if (!descrizioneTextarea) return;
+
   let autosaveTimer = null;
   let autosaveInCorso = false;
-  let ultimoValoreInviato = "";
+
+  /*
+    Ultimo valore valido realmente consentito.
+    Serve per evitare che email/numeri vengano salvati anche solo parzialmente.
+  */
+  let ultimoValoreValido = descrizioneTextarea.value || "";
+  let ultimoValoreInviato = descrizioneTextarea.value.trim() || "";
 
   function getDescrizioneValue() {
-    return form.querySelector('[name="descrizione"]')?.value?.trim() || "";
+    return descrizioneTextarea.value.trim() || "";
+  }
+
+  function descrizioneContieneContatti(testo) {
+    const valore = testo || "";
+
+    /*
+      Blocco preventivo:
+      - qualsiasi numero
+      - qualsiasi chiocciola
+      - email complete o parziali evidenti
+
+      Così l'autosave non può salvare nemmeno parti di telefono/email.
+    */
+    const contieneNumero = /\d/.test(valore);
+    const contieneChiocciola = /@/.test(valore);
+    const emailCompleta = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(valore);
+
+    return contieneNumero || contieneChiocciola || emailCompleta;
   }
 
   function setStatus(type, text) {
@@ -4088,7 +4146,42 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 1800);
   }
 
+  function bloccaDescrizioneNonConsentita() {
+    /*
+      Fondamentale:
+      cancella qualsiasi autosave già pianificato prima che parta.
+    */
+    clearTimeout(autosaveTimer);
+
+    /*
+      Riporta il textarea all'ultimo valore valido.
+      Così non resta nel campo nessuna parte di numero/mail.
+    */
+    descrizioneTextarea.value = ultimoValoreValido;
+
+    setStatus(
+      "error",
+      "Nella descrizione non puoi inserire email o numeri. Usa la sezione Contatti."
+    );
+  }
+
+  function validaDescrizionePrimaDelSalvataggio() {
+    const valoreAttuale = descrizioneTextarea.value || "";
+
+    if (descrizioneContieneContatti(valoreAttuale)) {
+      bloccaDescrizioneNonConsentita();
+      return false;
+    }
+
+    ultimoValoreValido = valoreAttuale;
+    return true;
+  }
+
   async function eseguiAutosave() {
+    if (!validaDescrizionePrimaDelSalvataggio()) {
+      return;
+    }
+
     const valoreAttuale = getDescrizioneValue();
 
     if (autosaveInCorso) return;
@@ -4117,11 +4210,20 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (!res.ok || data.ok === false) {
+        /*
+          Se il backend respinge, ripristiniamo comunque l'ultimo valore valido.
+          In questo modo il campo non resta con contenuto vietato.
+        */
+        clearTimeout(autosaveTimer);
+        descrizioneTextarea.value = ultimoValoreValido;
+
         setStatus("error", data.message || "Contenuto non consentito nella descrizione.");
         return;
       }
 
       ultimoValoreInviato = valoreAttuale;
+      ultimoValoreValido = descrizioneTextarea.value || "";
+
       setStatus("success", data.message || "Modifiche salvate");
       clearStatusLater();
 
@@ -4138,10 +4240,28 @@ document.addEventListener("DOMContentLoaded", () => {
     autosaveTimer = setTimeout(eseguiAutosave, delay);
   }
 
-  form.querySelectorAll("[data-autosave='1']").forEach(el => {
-    el.addEventListener("input", () => pianificaAutosave(900));
-    el.addEventListener("blur", () => pianificaAutosave(400));
-    el.addEventListener("change", () => pianificaAutosave(400));
+  descrizioneTextarea.addEventListener("input", () => {
+    if (!validaDescrizionePrimaDelSalvataggio()) {
+      return;
+    }
+
+    pianificaAutosave(900);
+  });
+
+  descrizioneTextarea.addEventListener("blur", () => {
+    if (!validaDescrizionePrimaDelSalvataggio()) {
+      return;
+    }
+
+    pianificaAutosave(400);
+  });
+
+  descrizioneTextarea.addEventListener("change", () => {
+    if (!validaDescrizionePrimaDelSalvataggio()) {
+      return;
+    }
+
+    pianificaAutosave(400);
   });
 });
 </script>
