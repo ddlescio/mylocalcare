@@ -1912,9 +1912,9 @@ document.addEventListener("DOMContentLoaded", () => {
     aggiornaAzioniTabellaAnnuncio(row, nuovoStato);
   }
 
-  const openAnnuncioModal = (row) => {
-    if (window.innerWidth >= 1080) return;
-    if (!row) return;
+  const openAnnuncioModal = (row, forzaApertura = false) => {
+      if (!forzaApertura && window.innerWidth >= 1280) return;
+      if (!row) return;
 
     window.__currentAnnuncioModalRow = row;
 
@@ -2119,16 +2119,16 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   function vaiAlProssimoAnnuncioInAttesa(rowCorrente) {
-    const prossimo = trovaProssimoAnnuncioInAttesa(rowCorrente);
+      const prossimo = trovaProssimoAnnuncioInAttesa(rowCorrente);
 
-    if (prossimo) {
-      openAnnuncioModal(prossimo);
-      return;
+      if (prossimo) {
+        openAnnuncioModal(prossimo, true);
+        return;
+      }
+
+      closeAnnuncioModal();
     }
-
-    closeAnnuncioModal();
-  }
-
+    
   async function eseguiAzioneAnnuncioDaModale(btn) {
     if (azioneAnnuncioInCorso) return;
 
