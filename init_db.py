@@ -1420,6 +1420,70 @@ def aggiorna_colonne_mancanti():
     conn.commit()
     conn.close()
 
+# ---------------------------------------------------------
+# 🕵️ TABELLA REVISIONI PROFILO
+# Storico modifiche frase/descrizione con approvazione admin
+# ---------------------------------------------------------
+def crea_tabella_revisioni_profilo():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql(f"""
+    CREATE TABLE IF NOT EXISTS revisioni_profilo (
+        id {pk_col()},
+
+        utente_id INTEGER NOT NULL,
+
+        campo TEXT NOT NULL CHECK (campo IN ('frase', 'descrizione')),
+
+        testo_precedente TEXT,
+        testo_proposto TEXT NOT NULL,
+
+        stato TEXT NOT NULL DEFAULT 'in_attesa'
+            CHECK (stato IN ('in_attesa', 'approvata', 'rifiutata')),
+
+        data_modifica {dt_col(True)},
+        data_decisione {dt_col()},
+
+        deciso_da INTEGER,
+
+        FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE,
+        FOREIGN KEY (deciso_da) REFERENCES utenti(id) ON DELETE SET NULL
+    );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_revisioni_profilo_stato
+        ON revisioni_profilo(stato);
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_revisioni_profilo_utente
+        ON revisioni_profilo(utente_id);
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_revisioni_profilo_data
+        ON revisioni_profilo(data_modifica DESC);
+    """))
+
+    if IS_POSTGRES:
+        c.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_revisioni_profilo_unica_attesa
+            ON revisioni_profilo(utente_id, campo)
+            WHERE stato = 'in_attesa';
+        """)
+    else:
+        c.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_revisioni_profilo_unica_attesa
+            ON revisioni_profilo(utente_id, campo)
+            WHERE stato = 'in_attesa';
+        """)
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'revisioni_profilo' pronta.")
+
 def aggiorna_colonne_revisione_profilo_postgres():
     """
     Aggiunge le colonne per la revisione admin di frase e descrizione
@@ -1507,8 +1571,9 @@ def inizializza_database():
 
     crea_tabella_utenti()
     aggiorna_colonne_revisione_profilo_postgres()
+    crea_tabella_revisioni_profilo()
 
-    crea_tabella_operatori()    
+    crea_tabella_operatori()      
     crea_tabella_annunci()
     crea_tabella_filtri_categoria()
     crea_indici_annunci()

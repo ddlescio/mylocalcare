@@ -4547,39 +4547,42 @@ def admin_revisioni_profilo():
     try:
         c.execute(sql("""
             SELECT
-                id,
-                username,
-                email,
-                nome,
-                cognome,
+                rp.id AS revisione_id,
+                rp.utente_id,
+                rp.campo,
+                rp.testo_precedente,
+                rp.testo_proposto,
+                rp.stato,
+                rp.data_modifica,
+                rp.data_decisione,
+                rp.deciso_da,
 
-                frase,
-                frase_pending,
-                frase_stato,
-                frase_inviata_revisione_il,
+                u.username,
+                u.email,
+                u.nome,
+                u.cognome,
 
-                descrizione,
-                descrizione_pending,
-                descrizione_stato,
-                descrizione_inviata_revisione_il
-            FROM utenti
-            WHERE
-                (
-                    frase_stato = 'in_revisione'
-                    AND frase_pending IS NOT NULL
-                    AND TRIM(frase_pending) <> ''
-                )
-                OR
-                (
-                    descrizione_stato = 'in_revisione'
-                    AND descrizione_pending IS NOT NULL
-                    AND TRIM(descrizione_pending) <> ''
-                )
+                CASE
+                    WHEN rp.campo = 'frase' THEN u.frase
+                    WHEN rp.campo = 'descrizione' THEN u.descrizione
+                    ELSE ''
+                END AS testo_pubblico_attuale
+
+            FROM revisioni_profilo rp
+            JOIN utenti u ON u.id = rp.utente_id
+
             ORDER BY
-                COALESCE(descrizione_inviata_revisione_il, frase_inviata_revisione_il) DESC
+                CASE
+                    WHEN rp.stato = 'in_attesa' THEN 0
+                    WHEN rp.stato = 'approvata' THEN 1
+                    WHEN rp.stato = 'rifiutata' THEN 2
+                    ELSE 3
+                END,
+                rp.data_modifica DESC
+            LIMIT 300
         """))
 
-        utenti_revisioni = [dict(r) for r in c.fetchall()]
+        revisioni = [dict(r) for r in c.fetchall()]
 
     finally:
         try:
@@ -4589,9 +4592,188 @@ def admin_revisioni_profilo():
 
     return render_template(
         "admin_revisioni_profilo.html",
-        utenti_revisioni=utenti_revisioni
+        revisioni=revisioni
     )
 
+@app.route("/admin/revisioni-profilo/<int:revision_id>/azione", methods=["POST"])
+@admin_required
+def admin_revisioni_profilo_azione(revision_id):
+    data = request.get_json(silent=True) or {}
+    azione = (data.get("azione") or "").strip()
+
+    if azione not in ["approva", "rifiuta"]:
+        return jsonify({
+            "ok": False,
+            "message": "Azione non valida."
+        }), 400
+
+    admin_id = session.get("utente_id")
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            SELECT
+                rp.id,
+                rp.utente_id,
+                rp.campo,
+                rp.testo_precedente,
+                rp.testo_proposto,
+                rp.stato,
+                u.frase,
+                u.descrizione
+            FROM revisioni_profilo rp
+            JOIN utenti u ON u.id = rp.utente_id
+            WHERE rp.id = ?
+            LIMIT 1
+        """), (revision_id,))
+
+        revisione = c.fetchone()
+
+        if not revisione:
+            return jsonify({
+                "ok": False,
+                "message": "Revisione non trovata."
+            }), 404
+
+        campo = revisione["campo"]
+        utente_id = revisione["utente_id"]
+        stato_attuale = revisione["stato"]
+        testo_precedente = revisione["testo_precedente"] or ""
+        testo_proposto = revisione["testo_proposto"] or ""
+
+        if campo not in ["frase", "descrizione"]:
+            return jsonify({
+                "ok": False,
+                "message": "Campo revisione non valido."
+            }), 400
+
+        # =====================================================
+        # APPROVA
+        # =====================================================
+        if azione == "approva":
+            if campo == "frase":
+                c.execute(sql("""
+                    UPDATE utenti SET
+                        frase = ?,
+                        frase_pending = NULL,
+                        frase_stato = 'approvata',
+                        frase_inviata_revisione_il = NULL
+                    WHERE id = ?
+                """), (testo_proposto, utente_id))
+
+            else:
+                c.execute(sql("""
+                    UPDATE utenti SET
+                        descrizione = ?,
+                        descrizione_pending = NULL,
+                        descrizione_stato = 'approvata',
+                        descrizione_inviata_revisione_il = NULL
+                    WHERE id = ?
+                """), (testo_proposto, utente_id))
+
+            c.execute(sql("""
+                UPDATE revisioni_profilo SET
+                    stato = 'approvata',
+                    data_decisione = CURRENT_TIMESTAMP,
+                    deciso_da = ?
+                WHERE id = ?
+            """), (admin_id, revision_id))
+
+            messaggio = "Revisione approvata e pubblicata."
+
+        # =====================================================
+        # RIFIUTA
+        # =====================================================
+        else:
+            if campo == "frase":
+                # Se la revisione era già approvata e poi cambi idea,
+                # riportiamo pubblico il testo precedente.
+                if stato_attuale == "approvata":
+                    c.execute(sql("""
+                        UPDATE utenti SET
+                            frase = ?,
+                            frase_pending = NULL,
+                            frase_stato = 'rifiutata',
+                            frase_inviata_revisione_il = NULL
+                        WHERE id = ?
+                    """), (testo_precedente, utente_id))
+                else:
+                    c.execute(sql("""
+                        UPDATE utenti SET
+                            frase_pending = NULL,
+                            frase_stato = 'rifiutata',
+                            frase_inviata_revisione_il = NULL
+                        WHERE id = ?
+                    """), (utente_id,))
+
+            else:
+                if stato_attuale == "approvata":
+                    c.execute(sql("""
+                        UPDATE utenti SET
+                            descrizione = ?,
+                            descrizione_pending = NULL,
+                            descrizione_stato = 'rifiutata',
+                            descrizione_inviata_revisione_il = NULL
+                        WHERE id = ?
+                    """), (testo_precedente, utente_id))
+                else:
+                    c.execute(sql("""
+                        UPDATE utenti SET
+                            descrizione_pending = NULL,
+                            descrizione_stato = 'rifiutata',
+                            descrizione_inviata_revisione_il = NULL
+                        WHERE id = ?
+                    """), (utente_id,))
+
+            c.execute(sql("""
+                UPDATE revisioni_profilo SET
+                    stato = 'rifiutata',
+                    data_decisione = CURRENT_TIMESTAMP,
+                    deciso_da = ?
+                WHERE id = ?
+            """), (admin_id, revision_id))
+
+            messaggio = "Revisione rifiutata."
+
+        conn.commit()
+
+        try:
+            invalidate_admin_counters()
+        except Exception as e:
+            print("⚠️ Errore invalidate_admin_counters revisione profilo:", e)
+
+        return jsonify({
+            "ok": True,
+            "message": messaggio,
+            "revisione_id": revision_id,
+            "nuovo_stato": "approvata" if azione == "approva" else "rifiutata"
+        })
+
+    except Exception as e:
+        conn.rollback()
+
+        log_exception_safe(
+            "❌ Errore azione revisione profilo",
+            e,
+            {
+                "revision_id": revision_id,
+                "azione": azione
+            },
+            production=True
+        )
+
+        return jsonify({
+            "ok": False,
+            "message": "Errore durante l'aggiornamento della revisione."
+        }), 500
+
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 @app.route("/admin/revisioni-profilo/<int:user_id>/<campo>/approva", methods=["POST"])
 @admin_required
@@ -10307,6 +10489,63 @@ def dashboard():
         page="profilo"
     )
 
+def salva_revisione_profilo(cur, user_id, campo, testo_precedente, testo_proposto):
+    """
+    Crea o aggiorna una revisione profilo in attesa.
+
+    Serve per mantenere storico admin di:
+    - frase
+    - descrizione
+
+    Se esiste già una revisione in_attesa per stesso utente/campo,
+    aggiorna il testo proposto senza creare duplicati da autosave.
+    """
+
+    testo_precedente = testo_precedente or ""
+    testo_proposto = testo_proposto or ""
+
+    cur.execute(sql("""
+        SELECT id
+        FROM revisioni_profilo
+        WHERE utente_id = ?
+          AND campo = ?
+          AND stato = 'in_attesa'
+        LIMIT 1
+    """), (user_id, campo))
+
+    revisione_esistente = cur.fetchone()
+
+    if revisione_esistente:
+        revisione_id = revisione_esistente["id"]
+
+        cur.execute(sql("""
+            UPDATE revisioni_profilo SET
+                testo_proposto = ?,
+                data_modifica = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """), (testo_proposto, revisione_id))
+
+        return revisione_id, False
+
+    cur.execute(sql("""
+        INSERT INTO revisioni_profilo (
+            utente_id,
+            campo,
+            testo_precedente,
+            testo_proposto,
+            stato,
+            data_modifica
+        )
+        VALUES (?, ?, ?, ?, 'in_attesa', CURRENT_TIMESTAMP)
+    """), (
+        user_id,
+        campo,
+        testo_precedente,
+        testo_proposto
+    ))
+
+    return None, True
+
 # --- Aggiorna INFO (tab) ---
 @app.route("/utente/update_info", methods=["POST"])
 @login_required
@@ -10503,6 +10742,18 @@ def utente_update_info():
 
     try:
         c.execute(sql(query_update), valori)
+
+        # 🕵️ Storico revisione profilo: frase
+        # Se la frase è cambiata, crea/aggiorna una riga in revisioni_profilo.
+        if frase_cambiata:
+            salva_revisione_profilo(
+                c,
+                user_id=user_id,
+                campo="frase",
+                testo_precedente=frase_db,
+                testo_proposto=frase
+            )
+
         conn.commit()
 
         # 🔁 Aggiorna sempre il contatore admin se è coinvolto il sistema revisioni.
@@ -10777,6 +11028,17 @@ def utente_update_descrizione():
             """),
             (descrizione, user_id)
         )
+
+        # 🕵️ Storico revisione profilo: descrizione
+        # Se la descrizione è cambiata, crea/aggiorna una riga in revisioni_profilo.
+        salva_revisione_profilo(
+            c,
+            user_id=user_id,
+            campo="descrizione",
+            testo_precedente=descrizione_db,
+            testo_proposto=descrizione
+        )
+
         conn.commit()
 
         # 🔁 Aggiorna dashboard admin in tempo reale.
@@ -10806,7 +11068,7 @@ def utente_update_descrizione():
                 "ok": True,
                 "message": "Descrizione salvata. Sarà pubblica dopo approvazione."
             })
-            
+
         flash("✅ Descrizione salvata e inviata in revisione.", "success")
 
     except Exception as e:

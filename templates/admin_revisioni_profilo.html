@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<div class="max-w-6xl mx-auto px-4 pt-24 pb-12">
+<div class="max-w-7xl mx-auto px-4 pt-24 pb-12">
 
   <div class="mb-6">
     <a href="{{ url_for('admin_dashboard') }}"
@@ -17,145 +17,445 @@
       🕵️ Revisioni profilo
     </h1>
     <p class="text-sm text-gray-500">
-      Qui trovi le modifiche a “La tua frase” e “Descrizione personale” in attesa di approvazione.
-      Finché non vengono approvate, restano visibili solo nella dashboard personale dell’utente.
+      Gestisci le modifiche a “La tua frase” e “Descrizione personale”.
+      Puoi rivedere anche revisioni già approvate o rifiutate e cambiare decisione.
     </p>
   </div>
 
-  {% if not utenti_revisioni %}
+  {% if not revisioni %}
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
       <p class="text-gray-500">
-        Nessuna revisione profilo in attesa.
+        Nessuna revisione profilo presente.
       </p>
     </div>
-  {% endif %}
+  {% else %}
 
-  <div class="space-y-6">
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
-    {% for u in utenti_revisioni %}
+    <!-- Desktop table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold text-slate-600">Username</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-600">Campo</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-600">Data modifica</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-600">Stato</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-600">Testo pubblicato / rifiutato</th>
+            <th class="px-4 py-3 text-right font-semibold text-slate-600">Azione</th>
+          </tr>
+        </thead>
 
-      {% set nome_utente = (u.get('nome') or '') ~ ' ' ~ (u.get('cognome') or '') %}
-      {% set nome_utente = nome_utente.strip() %}
-      {% if not nome_utente %}
-        {% set nome_utente = u.get('username') or u.get('email') or ('Utente #' ~ u.get('id')|string) %}
-      {% endif %}
+        <tbody class="divide-y divide-slate-100">
+          {% for r in revisioni %}
+            {% set nome_utente = (r.get('nome') or '') ~ ' ' ~ (r.get('cognome') or '') %}
+            {% set nome_utente = nome_utente.strip() %}
+            {% if not nome_utente %}
+              {% set nome_utente = r.get('username') or r.get('email') or ('Utente #' ~ r.get('utente_id')|string) %}
+            {% endif %}
 
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            {% set stato = r.get('stato') or '' %}
+            {% set campo_label = 'La tua frase' if r.get('campo') == 'frase' else 'Descrizione' %}
+            {% set testo_riga = r.get('testo_proposto') or '' %}
 
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
-          <div>
-            <h2 class="text-lg font-bold text-gray-800">
-              {{ nome_utente }}
-            </h2>
-            <p class="text-xs text-gray-500">
-              ID utente: {{ u.get('id') }}
-              {% if u.get('email') %}
-                · {{ u.get('email') }}
-              {% endif %}
-            </p>
+            <tr class="revision-row hover:bg-slate-50 cursor-pointer"
+                data-revision-id="{{ r.get('revisione_id') }}"
+                data-user="{{ nome_utente|e }}"
+                data-email="{{ (r.get('email') or '')|e }}"
+                data-utente-id="{{ r.get('utente_id') }}"
+                data-campo="{{ r.get('campo') }}"
+                data-campo-label="{{ campo_label }}"
+                data-stato="{{ stato }}"
+                data-data-modifica="{{ r.get('data_modifica') or '' }}"
+                data-data-decisione="{{ r.get('data_decisione') or '' }}"
+                data-testo-precedente="{{ (r.get('testo_precedente') or '')|e }}"
+                data-testo-proposto="{{ (r.get('testo_proposto') or '')|e }}"
+                data-testo-pubblico="{{ (r.get('testo_pubblico_attuale') or '')|e }}">
+
+              <td class="px-4 py-4 align-top">
+                <div class="font-semibold text-slate-800">{{ nome_utente }}</div>
+                <div class="text-xs text-slate-400">ID {{ r.get('utente_id') }}</div>
+              </td>
+
+              <td class="px-4 py-4 align-top">
+                <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                  {{ campo_label }}
+                </span>
+              </td>
+
+              <td class="px-4 py-4 align-top text-slate-600">
+                {{ r.get('data_modifica') or '—' }}
+              </td>
+
+              <td class="px-4 py-4 align-top">
+                {% if stato == 'in_attesa' %}
+                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                    In attesa
+                  </span>
+                {% elif stato == 'approvata' %}
+                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                    Approvata
+                  </span>
+                {% elif stato == 'rifiutata' %}
+                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                    Rifiutata
+                  </span>
+                {% else %}
+                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                    {{ stato }}
+                  </span>
+                {% endif %}
+              </td>
+
+              <td class="px-4 py-4 align-top">
+                <div class="max-w-md line-clamp-2 text-slate-700">
+                  {{ testo_riga or '—' }}
+                </div>
+              </td>
+
+              <td class="px-4 py-4 align-top text-right">
+                <button type="button"
+                        class="open-revision-modal px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200">
+                  Apri
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="md:hidden divide-y divide-slate-100">
+      {% for r in revisioni %}
+        {% set nome_utente = (r.get('nome') or '') ~ ' ' ~ (r.get('cognome') or '') %}
+        {% set nome_utente = nome_utente.strip() %}
+        {% if not nome_utente %}
+          {% set nome_utente = r.get('username') or r.get('email') or ('Utente #' ~ r.get('utente_id')|string) %}
+        {% endif %}
+
+        {% set stato = r.get('stato') or '' %}
+        {% set campo_label = 'La tua frase' if r.get('campo') == 'frase' else 'Descrizione' %}
+
+        <button type="button"
+                class="revision-row block w-full text-left p-4 hover:bg-slate-50"
+                data-revision-id="{{ r.get('revisione_id') }}"
+                data-user="{{ nome_utente|e }}"
+                data-email="{{ (r.get('email') or '')|e }}"
+                data-utente-id="{{ r.get('utente_id') }}"
+                data-campo="{{ r.get('campo') }}"
+                data-campo-label="{{ campo_label }}"
+                data-stato="{{ stato }}"
+                data-data-modifica="{{ r.get('data_modifica') or '' }}"
+                data-data-decisione="{{ r.get('data_decisione') or '' }}"
+                data-testo-precedente="{{ (r.get('testo_precedente') or '')|e }}"
+                data-testo-proposto="{{ (r.get('testo_proposto') or '')|e }}"
+                data-testo-pubblico="{{ (r.get('testo_pubblico_attuale') or '')|e }}">
+
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-bold text-slate-800">{{ nome_utente }}</div>
+              <div class="text-xs text-slate-500 mt-1">{{ campo_label }}</div>
+            </div>
+
+            {% if stato == 'in_attesa' %}
+              <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                In attesa
+              </span>
+            {% elif stato == 'approvata' %}
+              <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                Approvata
+              </span>
+            {% elif stato == 'rifiutata' %}
+              <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                Rifiutata
+              </span>
+            {% endif %}
           </div>
+
+          <div class="mt-3 text-sm text-slate-700 line-clamp-3">
+            {{ r.get('testo_proposto') or '—' }}
+          </div>
+
+          <div class="mt-3 text-xs text-slate-400">
+            {{ r.get('data_modifica') or '—' }}
+          </div>
+        </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+<!-- MODALE REVISIONE -->
+<div id="revision-modal"
+     class="fixed inset-0 z-[9999] hidden bg-slate-900/50 backdrop-blur-sm">
+
+  <div class="min-h-full flex items-end sm:items-center justify-center p-0 sm:p-4">
+
+    <div class="bg-white w-full sm:max-w-3xl sm:rounded-3xl rounded-t-3xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col">
+
+      <div class="p-5 border-b border-slate-100 flex items-start justify-between gap-4">
+        <div>
+          <h2 id="modal-title" class="text-lg font-bold text-slate-800">
+            Revisione profilo
+          </h2>
+          <p id="modal-subtitle" class="text-xs text-slate-500 mt-1"></p>
         </div>
 
-        {% if u.get('frase_stato') == 'in_revisione' and u.get('frase_pending') %}
-          <div class="border border-amber-200 bg-amber-50 rounded-2xl p-4 mb-4">
-            <div class="flex items-center justify-between gap-3 mb-3">
-              <h3 class="font-bold text-amber-800">
-                La tua frase
-              </h3>
-              <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">
-                In revisione
-              </span>
-            </div>
+        <button type="button"
+                id="modal-close"
+                class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+          ✕
+        </button>
+      </div>
 
-            <div class="grid md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <p class="text-xs font-semibold text-gray-500 mb-1">Testo attualmente pubblico</p>
-                <div class="bg-white border border-gray-200 rounded-xl p-3 text-sm text-gray-700 whitespace-pre-line min-h-[70px]">
-                  {{ u.get('frase') or '—' }}
-                </div>
-              </div>
+      <div class="p-5 overflow-y-auto space-y-4">
 
-              <div>
-                <p class="text-xs font-semibold text-gray-500 mb-1">Nuovo testo proposto</p>
-                <div class="bg-white border border-amber-200 rounded-xl p-3 text-sm text-gray-800 whitespace-pre-line min-h-[70px]">
-                  {{ u.get('frase_pending') }}
-                </div>
-              </div>
-            </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span id="modal-campo"
+                class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700"></span>
 
-            <div class="flex flex-wrap gap-2 justify-end">
-              <form method="post"
-                    action="{{ url_for('admin_revisioni_profilo_rifiuta', user_id=u.get('id'), campo='frase') }}">
-                <button type="submit"
-                        class="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
-                  Rifiuta
-                </button>
-              </form>
+          <span id="modal-stato"
+                class="px-2.5 py-1 rounded-full text-xs font-semibold"></span>
+        </div>
 
-              <form method="post"
-                    action="{{ url_for('admin_revisioni_profilo_approva', user_id=u.get('id'), campo='frase') }}">
-                <button type="submit"
-                        class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700">
-                  Approva
-                </button>
-              </form>
-            </div>
-          </div>
-        {% endif %}
+        <div>
+          <p class="text-xs font-semibold text-slate-500 mb-1">Testo precedente</p>
+          <div id="modal-testo-precedente"
+               class="min-h-[70px] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-line"></div>
+        </div>
 
-        {% if u.get('descrizione_stato') == 'in_revisione' and u.get('descrizione_pending') %}
-          <div class="border border-amber-200 bg-amber-50 rounded-2xl p-4">
-            <div class="flex items-center justify-between gap-3 mb-3">
-              <h3 class="font-bold text-amber-800">
-                Descrizione personale
-              </h3>
-              <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">
-                In revisione
-              </span>
-            </div>
+        <div>
+          <p class="text-xs font-semibold text-slate-500 mb-1">Testo proposto</p>
+          <div id="modal-testo-proposto"
+               class="min-h-[90px] rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-slate-800 whitespace-pre-line"></div>
+        </div>
 
-            <div class="grid md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <p class="text-xs font-semibold text-gray-500 mb-1">Testo attualmente pubblico</p>
-                <div class="bg-white border border-gray-200 rounded-xl p-3 text-sm text-gray-700 whitespace-pre-line min-h-[140px]">
-                  {{ u.get('descrizione') or '—' }}
-                </div>
-              </div>
-
-              <div>
-                <p class="text-xs font-semibold text-gray-500 mb-1">Nuovo testo proposto</p>
-                <div class="bg-white border border-amber-200 rounded-xl p-3 text-sm text-gray-800 whitespace-pre-line min-h-[140px]">
-                  {{ u.get('descrizione_pending') }}
-                </div>
-              </div>
-            </div>
-
-            <div class="flex flex-wrap gap-2 justify-end">
-              <form method="post"
-                    action="{{ url_for('admin_revisioni_profilo_rifiuta', user_id=u.get('id'), campo='descrizione') }}">
-                <button type="submit"
-                        class="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
-                  Rifiuta
-                </button>
-              </form>
-
-              <form method="post"
-                    action="{{ url_for('admin_revisioni_profilo_approva', user_id=u.get('id'), campo='descrizione') }}">
-                <button type="submit"
-                        class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700">
-                  Approva
-                </button>
-              </form>
-            </div>
-          </div>
-        {% endif %}
+        <div>
+          <p class="text-xs font-semibold text-slate-500 mb-1">Testo attualmente pubblico</p>
+          <div id="modal-testo-pubblico"
+               class="min-h-[70px] rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700 whitespace-pre-line"></div>
+        </div>
 
       </div>
 
-    {% endfor %}
+      <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:justify-end gap-2">
+        <button type="button"
+                id="modal-rifiuta"
+                class="w-full sm:w-auto px-4 py-3 rounded-2xl bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200">
+          Rifiuta
+        </button>
 
+        <button type="button"
+                id="modal-approva"
+                class="w-full sm:w-auto px-4 py-3 rounded-2xl bg-green-600 text-white text-sm font-bold hover:bg-green-700">
+          Approva
+        </button>
+      </div>
+
+    </div>
   </div>
-
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("revision-modal");
+  const closeBtn = document.getElementById("modal-close");
+  const approvaBtn = document.getElementById("modal-approva");
+  const rifiutaBtn = document.getElementById("modal-rifiuta");
+
+  const title = document.getElementById("modal-title");
+  const subtitle = document.getElementById("modal-subtitle");
+  const campoEl = document.getElementById("modal-campo");
+  const statoEl = document.getElementById("modal-stato");
+  const testoPrecedenteEl = document.getElementById("modal-testo-precedente");
+  const testoPropostoEl = document.getElementById("modal-testo-proposto");
+  const testoPubblicoEl = document.getElementById("modal-testo-pubblico");
+
+  let righe = Array.from(document.querySelectorAll(".revision-row"));
+  let currentRow = null;
+
+  function statoLabel(stato) {
+    if (stato === "in_attesa") return "In attesa";
+    if (stato === "approvata") return "Approvata";
+    if (stato === "rifiutata") return "Rifiutata";
+    return stato || "—";
+  }
+
+  function setStatoBadge(stato) {
+    statoEl.className = "px-2.5 py-1 rounded-full text-xs font-semibold";
+
+    if (stato === "in_attesa") {
+      statoEl.classList.add("bg-amber-100", "text-amber-700");
+    } else if (stato === "approvata") {
+      statoEl.classList.add("bg-green-100", "text-green-700");
+    } else if (stato === "rifiutata") {
+      statoEl.classList.add("bg-rose-100", "text-rose-700");
+    } else {
+      statoEl.classList.add("bg-slate-100", "text-slate-600");
+    }
+
+    statoEl.textContent = statoLabel(stato);
+  }
+
+  function aggiornaBottoni(stato) {
+    approvaBtn.classList.remove("hidden");
+    rifiutaBtn.classList.remove("hidden");
+
+    if (stato === "in_attesa") {
+      approvaBtn.textContent = "Approva";
+      rifiutaBtn.textContent = "Rifiuta";
+    } else if (stato === "approvata") {
+      approvaBtn.classList.add("hidden");
+      rifiutaBtn.textContent = "Rifiuta approvazione";
+    } else if (stato === "rifiutata") {
+      rifiutaBtn.classList.add("hidden");
+      approvaBtn.textContent = "Approva ora";
+    }
+  }
+
+  function apriModale(row) {
+    currentRow = row;
+
+    const ds = row.dataset;
+
+    title.textContent = ds.user || "Revisione profilo";
+    subtitle.textContent = `ID utente ${ds.utenteId || "—"} · ${ds.email || ""} · ${ds.dataModifica || ""}`;
+
+    campoEl.textContent = ds.campoLabel || ds.campo || "Campo";
+    setStatoBadge(ds.stato);
+
+    testoPrecedenteEl.textContent = ds.testoPrecedente || "—";
+    testoPropostoEl.textContent = ds.testoProposto || "—";
+    testoPubblicoEl.textContent = ds.testoPubblico || "—";
+
+    aggiornaBottoni(ds.stato);
+
+    modal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function chiudiModale() {
+    modal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+    currentRow = null;
+  }
+
+  function prossimaInAttesaDopo(rowCorrente) {
+    righe = Array.from(document.querySelectorAll(".revision-row"));
+
+    const pending = righe.filter(r =>
+      r.dataset.stato === "in_attesa" &&
+      r.dataset.revisionId !== rowCorrente.dataset.revisionId
+    );
+
+    return pending[0] || null;
+  }
+
+  function aggiornaRigaDopoAzione(row, nuovoStato) {
+    row.dataset.stato = nuovoStato;
+
+    row.classList.add("opacity-70");
+
+    const badgeTexts = row.querySelectorAll("span");
+    badgeTexts.forEach(span => {
+      const testo = span.textContent.trim().toLowerCase();
+
+      if (["in attesa", "approvata", "rifiutata"].includes(testo)) {
+        span.className = "inline-flex px-2.5 py-1 rounded-full text-xs font-semibold";
+
+        if (nuovoStato === "approvata") {
+          span.classList.add("bg-green-100", "text-green-700");
+          span.textContent = "Approvata";
+        } else if (nuovoStato === "rifiutata") {
+          span.classList.add("bg-rose-100", "text-rose-700");
+          span.textContent = "Rifiutata";
+        }
+      }
+    });
+  }
+
+  async function inviaAzione(azione) {
+    if (!currentRow) return;
+
+    const revisionId = currentRow.dataset.revisionId;
+
+    approvaBtn.disabled = true;
+    rifiutaBtn.disabled = true;
+
+    try {
+      const res = await fetch(`/admin/revisioni-profilo/${revisionId}/azione`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({ azione })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.ok === false) {
+        alert(data.message || "Errore durante l'azione.");
+        return;
+      }
+
+      const nuovoStato = data.nuovo_stato || (azione === "approva" ? "approvata" : "rifiutata");
+
+      aggiornaRigaDopoAzione(currentRow, nuovoStato);
+
+      const next = prossimaInAttesaDopo(currentRow);
+
+      if (next) {
+        apriModale(next);
+      } else {
+        chiudiModale();
+      }
+
+    } catch (err) {
+      console.error("Errore revisione profilo:", err);
+      alert("Errore di connessione.");
+    } finally {
+      approvaBtn.disabled = false;
+      rifiutaBtn.disabled = false;
+    }
+  }
+
+  document.querySelectorAll(".revision-row").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("button, a, form")) return;
+      apriModale(row);
+    });
+  });
+
+  document.querySelectorAll(".open-revision-modal").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const row = btn.closest(".revision-row");
+      if (row) apriModale(row);
+    });
+  });
+
+  closeBtn.addEventListener("click", chiudiModale);
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      chiudiModale();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+      chiudiModale();
+    }
+  });
+
+  approvaBtn.addEventListener("click", () => inviaAzione("approva"));
+  rifiutaBtn.addEventListener("click", () => inviaAzione("rifiuta"));
+});
+</script>
 
 {% endblock %}
