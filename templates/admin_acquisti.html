@@ -1,6 +1,6 @@
 {% extends "layout_admin.html" %}
 {% set body_class = "offset-navbar" %}
-{% set admin_container_class = "max-w-[96vw] 2xl:max-w-[1800px]" %}
+{% set admin_container_class = "admin-acquisti-wide max-w-none w-full" %}
 
 {% block admin_content %}
 <div class="w-full">
@@ -634,16 +634,45 @@
 {% endfor %}
 
 <style>
+  .admin-acquisti-wide {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  @media (min-width: 1024px) {
+    .admin-acquisti-wide {
+      width: calc(100vw - 16px) !important;
+      max-width: none !important;
+      margin-left: calc(50% - 50vw + 8px) !important;
+      margin-right: calc(50% - 50vw + 8px) !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .admin-acquisti-wide {
+      width: calc(100vw - 12px) !important;
+      margin-left: calc(50% - 50vw + 6px) !important;
+      margin-right: calc(50% - 50vw + 6px) !important;
+    }
+  }
+
+
   .acquisti-admin-card {
-    padding: 12px;
+    padding: 10px;
   }
 
   @media (min-width: 1024px) {
     .acquisti-admin-card {
-      padding-left: 8px;
-      padding-right: 8px;
-      padding-top: 14px;
-      padding-bottom: 14px;
+      padding-left: 6px;
+      padding-right: 6px;
+      padding-top: 12px;
+      padding-bottom: 12px;
     }
 
     .acquisti-table-wrapper {
@@ -660,8 +689,8 @@
 
   @media (min-width: 1280px) {
     .acquisti-admin-card {
-      padding-left: 6px;
-      padding-right: 6px;
+      padding-left: 4px;
+      padding-right: 4px;
     }
 
     #acquisti-table thead th,
@@ -1561,7 +1590,7 @@ document.addEventListener("DOMContentLoaded", () => {
       filterCard.classList.toggle("is-collapsed");
     });
   }
-  
+
   let currentSortKey = "data";
   let currentSortDirection = "desc";
 
