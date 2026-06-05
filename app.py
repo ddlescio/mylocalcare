@@ -4877,7 +4877,7 @@ def admin_revisioni_profilo_azione(revision_id):
             "revisione_id": revision_id,
             "nuovo_stato": "approvata" if azione == "approva" else "rifiutata"
         })
-        
+
     except Exception as e:
         conn.rollback()
 
@@ -7137,6 +7137,7 @@ def admin_acquisti():
 
             an.categoria       AS annuncio_categoria,
             an.provincia       AS annuncio_provincia,
+            an.titolo          AS annuncio_titolo,
 
             sp.servizio_id     AS servizio_id_base,
             s.nome             AS servizio_nome,
@@ -7226,11 +7227,13 @@ def admin_acquisti():
         # filtro testuale
         testo_ricerca = " ".join([
             str(a.get("email") or ""),
+            str(a.get("username") or ""),
             str(a.get("tipo") or ""),
             str(a.get("pacchetto_nome") or ""),
             str(a.get("servizio_nome") or ""),
             str(a.get("metodo") or ""),
             str(a.get("annuncio_id") or ""),
+            str(a.get("annuncio_titolo") or ""),
             str(a.get("annuncio_categoria") or ""),
             str(a.get("annuncio_provincia") or "")
         ]).lower()
@@ -7296,6 +7299,7 @@ def admin_acquisti_export():
 
             an.categoria       AS annuncio_categoria,
             an.provincia       AS annuncio_provincia,
+            an.titolo          AS annuncio_titolo,
 
             sp.servizio_id     AS servizio_id_base,
             s.nome             AS servizio_nome,
@@ -7375,11 +7379,13 @@ def admin_acquisti_export():
 
         testo_ricerca = " ".join([
             str(a.get("email") or ""),
+            str(a.get("username") or ""),
             str(a.get("tipo") or ""),
             str(a.get("pacchetto_nome") or ""),
             str(a.get("servizio_nome") or ""),
             str(a.get("metodo") or ""),
             str(a.get("annuncio_id") or ""),
+            str(a.get("annuncio_titolo") or ""),
             str(a.get("annuncio_categoria") or ""),
             str(a.get("annuncio_provincia") or "")
         ]).lower()

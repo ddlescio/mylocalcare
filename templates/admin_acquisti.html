@@ -194,64 +194,70 @@
           <tr>
             <th class="p-3 text-left">
               <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="data">
-                Data <span class="sort-icon text-slate-400">↕</span>
+                Data attivazione <span class="sort-icon text-slate-400">↕</span>
               </button>
             </th>
-            <th class="p-3 text-left">
-              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="utente">
-                Utente <span class="sort-icon text-slate-400">↕</span>
-              </button>
-            </th>
-            <th class="p-3 text-left">
-              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="tipo">
-                Tipo <span class="sort-icon text-slate-400">↕</span>
-              </button>
-            </th>
-            <th class="p-3 text-left">
-              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="oggetto">
-                Oggetto <span class="sort-icon text-slate-400">↕</span>
-              </button>
-            </th>
+
             <th class="p-3 text-center">
-              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="annuncio">
-                Annuncio <span class="sort-icon text-slate-400">↕</span>
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="scadenza">
+                Data scadenza <span class="sort-icon text-slate-400">↕</span>
               </button>
             </th>
-            <th class="p-3 text-left">
-              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="categoria">
-                Categoria <span class="sort-icon text-slate-400">↕</span>
-              </button>
-            </th>
-            <th class="p-3 text-left">
-              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="provincia">
-                Provincia <span class="sort-icon text-slate-400">↕</span>
-              </button>
-            </th>
-            <th class="p-3 text-center">
-              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="importo">
-                Importo <span class="sort-icon text-slate-400">↕</span>
-              </button>
-            </th>
+
             <th class="p-3 text-center">
               <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="durata">
                 Durata <span class="sort-icon text-slate-400">↕</span>
               </button>
             </th>
-            <th class="p-3 text-center">
-              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="scadenza">
-                Scadenza <span class="sort-icon text-slate-400">↕</span>
-              </button>
-            </th>
+
             <th class="p-3 text-center">
               <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="stato">
                 Stato <span class="sort-icon text-slate-400">↕</span>
               </button>
             </th>
+
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="utente">
+                Utente <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+
+            <th class="p-3 text-center">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="importo">
+                Importo <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="oggetto">
+                Oggetto <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="categoria">
+                Categoria <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="annuncio">
+                Annuncio <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+
+            <th class="p-3 text-left">
+              <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="provincia">
+                Provincia <span class="sort-icon text-slate-400">↕</span>
+              </button>
+            </th>
+
             <th class="p-3 text-center">
               <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="metodo">
                 Metodo <span class="sort-icon text-slate-400">↕</span>
               </button>
             </th>
+
             <th class="p-3 text-center">
               <button type="button" class="sort-btn inline-flex items-center gap-1 font-semibold" data-sort-key="dettaglio">
                 Dettaglio <span class="sort-icon text-slate-400">↕</span>
@@ -280,142 +286,126 @@
             data-dettaglio="{{ a.numero_attivazioni or 0 }}"
           >
 
-            <td class="p-3 text-slate-700">
-              {{ a.created_at | dt_roma_admin }}
-            </td>
+          <td class="p-3 text-slate-700">
+            {{ a.created_at | dt_roma_admin }}
+          </td>
 
-            <td class="p-3">
-              <div class="font-semibold">{{ a.email }}</div>
-              <div class="text-xs text-slate-500">ID {{ a.utente_id }}</div>
-              <div class="text-xs text-slate-500">@{{ a.username or '—' }}</div>
-            </td>
+          <td class="p-3 text-center text-slate-700">
+            {% if a.tipo == 'pacchetto' %}
+              <span class="text-slate-400 text-xs font-medium">Dettaglio nel tipo</span>
+            {% elif a.data_fine %}
+              {{ a.data_fine | dt_roma_admin }}
+            {% else %}
+              ∞
+            {% endif %}
+          </td>
 
-            <td class="p-3">
-              {% if a.tipo == 'pacchetto' %}
-                <button type="button"
-                        class="toggle-pacchetto inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-left text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition"
-                        data-toggle-detail="acq-{{ a.acquisto_id }}"
-                        aria-expanded="false">
-                  <span class="text-xs font-semibold">Pacchetto</span>
+          <td class="p-3 text-center text-slate-700">
+            {% if a.durata_iniziale_giorni %}
+              {{ a.durata_iniziale_giorni }} g
+            {% else %}
+              —
+            {% endif %}
+          </td>
 
-                  <svg class="detail-chevron h-4 w-4 transition-transform duration-200"
-                       viewBox="0 0 20 20"
-                       fill="currentColor"
-                       aria-hidden="true">
-                    <path fill-rule="evenodd"
-                          d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06z"
-                          clip-rule="evenodd" />
-                  </svg>
-                </button>
-              {% else %}
-                <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                  Servizio
-                </span>
-              {% endif %}
-            </td>
+          <td class="p-3 text-center">
+            {% if a.stato_visuale == 'attivo' %}
+              <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                Attivo
+              </span>
+            {% elif a.stato_visuale == 'rinnovato' %}
+              <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                Rinnovato
+              </span>
+            {% elif a.stato_visuale == 'revocato' %}
+              <span class="px-2 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">
+                Revocato
+              </span>
+            {% elif a.stato_visuale == 'in_attesa' %}
+              <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                In attesa
+              </span>
+            {% else %}
+              <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
+                Scaduto
+              </span>
+            {% endif %}
+          </td>
 
-            <td class="p-3">
-              {{ a.pacchetto_nome or a.servizio_nome }}
-            </td>
+          <td class="p-3">
+            <div class="font-semibold">@{{ a.username or '—' }}</div>
+            <div class="text-xs text-slate-500">ID {{ a.utente_id }}</div>
+            <div class="text-xs text-slate-500">{{ a.email }}</div>
+          </td>
 
-            <td class="p-3 text-center">
-              {% if a.annuncio_id %}
+          <td class="p-3 text-center font-semibold">
+            {{ '%.2f'|format(a.importo_cent / 100) }} €
+          </td>
+
+          <td class="p-3">
+            {{ a.pacchetto_nome or a.servizio_nome }}
+          </td>
+
+          <td class="p-3">
+            <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+              {{ a.categoria_visuale }}
+            </span>
+          </td>
+
+          <td class="p-3">
+            {% if a.annuncio_id %}
+              <div class="font-semibold whitespace-nowrap">
                 #{{ a.annuncio_id }}
-              {% else %}
-                —
-              {% endif %}
-            </td>
+              </div>
 
-            <td class="p-3">
-              <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                {{ a.categoria_visuale }}
+              {% if a.annuncio_titolo %}
+                <div class="desktop-annuncio-title">
+                  {{ a.annuncio_titolo }}
+                </div>
+              {% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <td class="p-3">
+            <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+              {{ a.provincia_visuale }}
+            </span>
+          </td>
+
+          <td class="p-3 text-center">
+            {{ a.metodo }}
+          </td>
+
+          <td class="p-3 text-center text-xs text-slate-600">
+            {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
+              <span class="inline-flex flex-col items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 leading-tight">
+                <span class="font-semibold text-indigo-800">📦 Pacchetto</span>
+                <span class="text-[11px] text-indigo-700">{{ a.numero_attivazioni }} servizi</span>
               </span>
-            </td>
-
-            <td class="p-3">
-              <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                {{ a.provincia_visuale }}
+            {% elif a.stato_visuale == 'rinnovato' %}
+              <span class="inline-flex flex-col items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 leading-tight">
+                <span class="font-semibold text-amber-800">🔁 Rinnovo</span>
+                <span class="text-[11px] text-amber-700">{{ a.numero_attivazioni }} att.</span>
               </span>
-            </td>
-
-            <td class="p-3 text-center font-semibold">
-              {{ '%.2f'|format(a.importo_cent / 100) }} €
-            </td>
-
-            <td class="p-3 text-center text-slate-700">
-              {% if a.durata_iniziale_giorni %}
-                {{ a.durata_iniziale_giorni }} g
-              {% else %}
-                —
-              {% endif %}
-            </td>
-
-            <td class="p-3 text-center text-slate-700">
-              {% if a.tipo == 'pacchetto' %}
-                <span class="text-slate-400 text-xs font-medium">Dettaglio nel tipo</span>
-              {% elif a.data_fine %}
-                {{ a.data_fine | dt_roma_admin }}
-              {% else %}
-                ∞
-              {% endif %}
-            </td>
-
-            <td class="p-3 text-center">
-              {% if a.stato_visuale == 'attivo' %}
-                <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                  Attivo
-                </span>
-              {% elif a.stato_visuale == 'rinnovato' %}
-                <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
-                  Rinnovato
-                </span>
-              {% elif a.stato_visuale == 'revocato' %}
-                <span class="px-2 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">
-                  Revocato
-                </span>
-              {% elif a.stato_visuale == 'in_attesa' %}
-                <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
-                  In attesa
-                </span>
-              {% else %}
-                <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold">
-                  Scaduto
-                </span>
-              {% endif %}
-            </td>
-
-            <td class="p-3 text-center">
-              {{ a.metodo }}
-            </td>
-
-            <td class="p-3 text-center text-xs text-slate-600">
-              {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
-                <span class="inline-flex flex-col items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 leading-tight">
-                  <span class="font-semibold text-indigo-800">📦 Pacchetto</span>
-                  <span class="text-[11px] text-indigo-700">{{ a.numero_attivazioni }} servizi</span>
-                </span>
-              {% elif a.stato_visuale == 'rinnovato' %}
-                <span class="inline-flex flex-col items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 leading-tight">
-                  <span class="font-semibold text-amber-800">🔁 Rinnovo</span>
-                  <span class="text-[11px] text-amber-700">{{ a.numero_attivazioni }} att.</span>
-                </span>
-              {% elif a.numero_attivazioni > 1 %}
-                <span class="inline-flex flex-col items-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 leading-tight">
-                  <span class="font-semibold text-blue-800">🆕 Multiplo</span>
-                  <span class="text-[11px] text-blue-700">{{ a.numero_attivazioni }} att.</span>
-                </span>
-              {% else %}
-                <span class="inline-flex flex-col items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 leading-tight">
-                  <span class="font-semibold text-slate-800">🆕 Nuovo</span>
-                  <span class="text-[11px] text-slate-500">{{ a.numero_attivazioni }} att.</span>
-                </span>
-              {% endif %}
-            </td>
+            {% elif a.numero_attivazioni > 1 %}
+              <span class="inline-flex flex-col items-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 leading-tight">
+                <span class="font-semibold text-blue-800">🆕 Multiplo</span>
+                <span class="text-[11px] text-blue-700">{{ a.numero_attivazioni }} att.</span>
+              </span>
+            {% else %}
+              <span class="inline-flex flex-col items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 leading-tight">
+                <span class="font-semibold text-slate-800">🆕 Nuovo</span>
+                <span class="text-[11px] text-slate-500">{{ a.numero_attivazioni }} att.</span>
+              </span>
+            {% endif %}
+          </td>
           </tr>
 
           {% if a.tipo == 'pacchetto' and a.ha_sottodettaglio %}
           <tr class="hidden acquisto-detail-row" data-parent-id="acq-{{ a.acquisto_id }}">
-            <td colspan="13" class="px-4 py-4">
+            <td colspan="12" class="px-4 py-4">
               <div class="detail-panel detail-panel-compact rounded-2xl p-4">
                 <div class="flex items-center justify-between mb-3">
                   <div class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
@@ -1475,6 +1465,17 @@
     .detail-service-row-compact > div:nth-child(3) {
       text-align: left !important;
     }
+  }
+
+  .desktop-annuncio-title {
+    max-width: 190px;
+    margin-top: 3px;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .toggle-pacchetto[aria-expanded="true"] .detail-chevron {
