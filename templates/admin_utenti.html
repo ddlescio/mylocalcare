@@ -289,6 +289,81 @@
     padding: 12px;
     white-space: nowrap;
 }
+
+/* ====== AZIONI UTENTE ALLINEATE ====== */
+.admin-user-actions-cell {
+    vertical-align: middle;
+    text-align: center;
+}
+
+.admin-user-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 38px;
+    white-space: nowrap;
+}
+
+.admin-user-details-btn {
+    position: relative;
+    min-width: 86px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    white-space: nowrap;
+}
+
+/* Stato normale */
+.admin-user-details-btn:not(.has-details) {
+    background: #ffffff;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+/* Stato premium quando ci sono dettagli */
+.admin-user-details-btn.has-details {
+    background:
+        linear-gradient(180deg, rgba(239, 246, 255, 1), rgba(219, 234, 254, 0.96));
+    color: #1d4ed8;
+    border-color: rgba(96, 165, 250, 0.9);
+    box-shadow:
+        0 8px 20px rgba(37, 99, 235, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.admin-user-details-btn.has-details::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+    margin-right: 6px;
+}
+
+.admin-user-details-count {
+    display: none;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9999px;
+    background: #2563eb;
+    color: white;
+    font-size: 0.68rem;
+    font-weight: 900;
+    line-height: 18px;
+    text-align: center;
+    margin-left: 6px;
+}
+
+.admin-user-details-btn.has-details .admin-user-details-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 </style>
 <style>
   /* ====== MODALE UTENTE MOBILE/TABLET ====== */
@@ -896,7 +971,7 @@
                     {% endif %}
                 </td>
 
-                <td class="text-center flex items-center justify-center gap-3">
+                <td class="admin-user-actions-cell">
 
                   {% if u.eliminato == 1 %}
                     <span class="text-xs text-slate-400 italic">
@@ -904,51 +979,57 @@
                     </span>
                   {% else %}
 
-                  <button
-                    type="button"
-                    class="admin-user-details-toggle px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition"
-                    data-open-user-details="{{ u.id }}">
-                    Dettagli
-                  </button>
+                    <div class="admin-user-actions">
 
-                    <a href="{{ url_for('toggle_utente_admin', id=u.id) }}"
-                       class="text-blue-600 hover:underline">
-                      {{ 'Disattiva' if u.attivo else 'Attiva' }}
-                    </a>
+                      <button
+                        type="button"
+                        class="admin-user-details-toggle admin-user-details-btn px-3 py-1.5 rounded-full text-xs font-semibold border transition"
+                        data-open-user-details="{{ u.id }}">
+                        <span>Dettagli</span>
+                        <span class="admin-user-details-count">0</span>
+                      </button>
 
-                    <a href="{{ url_for('elimina_utente_route', id=u.id) }}"
-                       onclick="return confirm('Eliminare questo utente?');"
-                       class="text-red-600 hover:underline">
-                      Elimina
-                    </a>
+                      <a href="{{ url_for('toggle_utente_admin', id=u.id) }}"
+                         class="text-blue-600 hover:underline">
+                        {{ 'Disattiva' if u.attivo else 'Attiva' }}
+                      </a>
 
-                    <button
-                      type="button"
-                      onclick="toggleContattiProfilo({{ u.id }}, this)"
-                      class="
-                        px-3 py-1.5 rounded-full text-xs font-semibold border transition
-                        {% if u.contatti_attivi %}
-                          bg-orange-500 text-white border-orange-600 hover:bg-orange-600
-                        {% else %}
-                          bg-white text-gray-500 border-gray-300 hover:bg-gray-100
-                        {% endif %}
-                      ">
-                      📞 Contatti
-                    </button>
+                      <a href="{{ url_for('elimina_utente_route', id=u.id) }}"
+                         onclick="return confirm('Eliminare questo utente?');"
+                         class="text-red-600 hover:underline">
+                        Elimina
+                      </a>
 
-                    <button
-                      type="button"
-                      onclick="toggleAffidabilitaProfilo({{ u.id }}, this)"
-                      class="
-                        px-3 py-1.5 rounded-full text-xs font-semibold border transition
-                        {% if u.affidabilita_attiva %}
-                          bg-green-600 text-white border-green-600 hover:bg-green-700
-                        {% else %}
-                          bg-white text-gray-500 border-gray-300 hover:bg-gray-100
-                        {% endif %}
-                      ">
-                      🛡️ Affidabilità
-                    </button>
+                      <button
+                        type="button"
+                        onclick="toggleContattiProfilo({{ u.id }}, this)"
+                        class="
+                          px-3 py-1.5 rounded-full text-xs font-semibold border transition
+                          {% if u.contatti_attivi %}
+                            bg-orange-500 text-white border-orange-600 hover:bg-orange-600
+                          {% else %}
+                            bg-white text-gray-500 border-gray-300 hover:bg-gray-100
+                          {% endif %}
+                        ">
+                        📞 Contatti
+                      </button>
+
+                      <button
+                        type="button"
+                        onclick="toggleAffidabilitaProfilo({{ u.id }}, this)"
+                        class="
+                          px-3 py-1.5 rounded-full text-xs font-semibold border transition
+                          {% if u.affidabilita_attiva %}
+                            bg-green-600 text-white border-green-600 hover:bg-green-700
+                          {% else %}
+                            bg-white text-gray-500 border-gray-300 hover:bg-gray-100
+                          {% endif %}
+                        ">
+                        🛡️ Affidabilità
+                      </button>
+
+                    </div>
+
                   {% endif %}
 
                 </td>
@@ -1579,6 +1660,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  function inizializzaIndicatoriDettagliUtente() {
+    document.querySelectorAll(".admin-user-row").forEach(row => {
+      const dettagliBtn = row.querySelector(".admin-user-details-toggle");
+      if (!dettagliBtn) return;
+
+      const annunci = safeJsonParse(row.dataset.adminAnnunci);
+      const chat = safeJsonParse(row.dataset.adminChat);
+      const recensioniScritte = safeJsonParse(row.dataset.adminRecensioniScritte);
+      const recensioniRicevute = safeJsonParse(row.dataset.adminRecensioniRicevute);
+
+      const totaleDettagli =
+        annunci.length +
+        chat.length +
+        recensioniScritte.length +
+        recensioniRicevute.length;
+
+      const countEl = dettagliBtn.querySelector(".admin-user-details-count");
+
+      if (totaleDettagli > 0) {
+        dettagliBtn.classList.add("has-details");
+
+        if (countEl) {
+          countEl.textContent = totaleDettagli > 99 ? "99+" : String(totaleDettagli);
+        }
+      } else {
+        dettagliBtn.classList.remove("has-details");
+
+        if (countEl) {
+          countEl.textContent = "0";
+        }
+      }
+    });
+  }
+
   const escapeHtml = (value) => {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -1656,6 +1771,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (detailsBody) detailsBody.classList.add("hidden");
     if (detailsChevron) detailsChevron.textContent = "▾";
   };
+
+  inizializzaIndicatoriDettagliUtente();
 
   const openModal = (row) => {
     if (!row) return;
