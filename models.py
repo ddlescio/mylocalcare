@@ -648,15 +648,23 @@ def elimina_utente(id):
     """
     Eliminazione sicura lato admin.
 
-    Non cancelliamo fisicamente la riga da utenti perché l'utente può essere
-    collegato ad annunci, recensioni, messaggi, notifiche, acquisti, servizi, ecc.
+    L'utente non viene cancellato fisicamente dalla tabella utenti:
+    viene anonimizzato e marcato come eliminato, così non rompiamo eventuali
+    riferimenti storici o vincoli del database.
 
-    Quando l'admin elimina un utente:
-    - gli annunci dell'utente vengono rimossi;
-    - l'account viene disattivato;
-    - email e username vengono liberati;
-    - il profilo viene reso invisibile;
-    - i dati principali vengono anonimizzati.
+    Vengono però rimossi i dati operativi collegati:
+    - annunci
+    - match collegati agli annunci o all'utente
+    - recensioni lasciate/ricevute
+    - risposte alle recensioni coinvolte
+    - messaggi chat
+    - chiusure chat
+    - notifiche
+    - token reset password
+    - push subscription
+    - revisioni profilo
+    - video call log
+    - servizi attivi collegati all'utente o ai suoi annunci
     """
 
     conn = get_db_connection()
@@ -667,36 +675,174 @@ def elimina_utente(id):
     email_eliminata = f"deleted_user_{id}@deleted.local"
     username_eliminato = f"UTENTE_ELIMINATO_{id}"
 
-    # 1) Prima eliminiamo gli annunci dell'utente.
-    # Questo fa sparire i suoi annunci dal sito.
-    cur.execute(sql("""
-        DELETE FROM annunci
-        WHERE utente_id = ?
-    """), (id,))
+    try:
+        # =====================================================
+        # 1) Elimina i match collegati agli annunci dell'utente
+        #    o direttamente all'utente.
+        #    Questo risolve l'errore:
+        #    match_utenti_annuncio_id_fkey
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM match_utenti
+            WHERE annuncio_id IN (
+                SELECT id
+                FROM annunci
+                WHERE utente_id = ?
+            )
+            OR utente_cerca_id = ?
+            OR utente_offre_id = ?
+        """), (id, id, id))
 
-    # 2) Poi anonimimizziamo/disattiviamo l'utente senza cancellarlo fisicamente.
-    cur.execute(sql("""
-        UPDATE utenti
-        SET
-            nome = ?,
-            cognome = ?,
-            email = ?,
-            username = ?,
-            password = '',
-            attivo = 0,
-            token_verifica = NULL,
-            visibile_pubblicamente = 0
-        WHERE id = ?
-    """), (
-        "Utente",
-        "eliminato",
-        email_eliminata,
-        username_eliminato,
-        id
-    ))
+        # =====================================================
+        # 2) Elimina servizi attivi collegati all'utente
+        #    o ai suoi annunci.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM attivazioni_servizi
+            WHERE utente_id = ?
+            OR annuncio_id IN (
+                SELECT id
+                FROM annunci
+                WHERE utente_id = ?
+            )
+        """), (id, id))
 
-    conn.commit()
+        # =====================================================
+        # 3) Scollega eventuali acquisti dagli annunci eliminati.
+        #    Non cancelliamo gli acquisti perché possono servire
+        #    come storico amministrativo/contabile.
+        # =====================================================
+        cur.execute(sql("""
+            UPDATE acquisti
+            SET annuncio_id = NULL
+            WHERE annuncio_id IN (
+                SELECT id
+                FROM annunci
+                WHERE utente_id = ?
+            )
+        """), (id,))
 
+        # =====================================================
+        # 4) Elimina risposte a recensioni coinvolte.
+        #    Va fatto prima di eliminare le recensioni.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM risposte_recensioni
+            WHERE id_autore = ?
+            OR id_recensione IN (
+                SELECT id
+                FROM recensioni
+                WHERE id_autore = ?
+                   OR id_destinatario = ?
+            )
+        """), (id, id, id))
+
+        # =====================================================
+        # 5) Elimina recensioni lasciate o ricevute dall'utente.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM recensioni
+            WHERE id_autore = ?
+               OR id_destinatario = ?
+        """), (id, id))
+
+        # =====================================================
+        # 6) Elimina messaggi chat dell'utente.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM messaggi_chat
+            WHERE mittente_id = ?
+               OR destinatario_id = ?
+        """), (id, id))
+
+        # =====================================================
+        # 7) Elimina storico chiusure chat.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM chat_chiusure
+            WHERE admin_id = ?
+               OR user_id = ?
+        """), (id, id))
+
+        # =====================================================
+        # 8) Elimina notifiche interne dell'utente.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM notifiche
+            WHERE id_utente = ?
+        """), (id,))
+
+        # =====================================================
+        # 9) Elimina token reset password.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM password_reset_tokens
+            WHERE utente_id = ?
+        """), (id,))
+
+        # =====================================================
+        # 10) Elimina push subscription.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM push_subscriptions
+            WHERE utente_id = ?
+        """), (id,))
+
+        # =====================================================
+        # 11) Elimina revisioni profilo.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM revisioni_profilo
+            WHERE utente_id = ?
+        """), (id,))
+
+        # =====================================================
+        # 12) Elimina log videochiamate collegate all'utente.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM video_call_log
+            WHERE utente_1 = ?
+               OR utente_2 = ?
+        """), (id, id))
+
+        # =====================================================
+        # 13) Ora si possono eliminare gli annunci.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM annunci
+            WHERE utente_id = ?
+        """), (id,))
+
+        # =====================================================
+        # 14) Infine anonimizza e disattiva l'utente.
+        # =====================================================
+        cur.execute(sql("""
+            UPDATE utenti
+            SET
+                nome = ?,
+                cognome = ?,
+                email = ?,
+                username = ?,
+                password = '',
+                attivo = 0,
+                sospeso = 0,
+                eliminato = 1,
+                token_verifica = NULL,
+                visibile_pubblicamente = 0
+            WHERE id = ?
+        """), (
+            "Utente",
+            "eliminato",
+            email_eliminata,
+            username_eliminato,
+            id
+        ))
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
 # ------------------ NOTIFICHE ------------------ #
 def count_notifiche_non_lette(utente_id):
     conn = get_db_connection()
@@ -1012,7 +1158,7 @@ def get_tutte_recensioni_con_risposte():
     result = [dict(r) for r in c.fetchall()]
 
     return result
-    
+
 def elimina_recensione(id_recensione, id_autore=None, is_admin=False):
     """Elimina una recensione (solo autore o admin)."""
     conn = get_db_connection()
