@@ -302,6 +302,9 @@
       background: rgba(15, 23, 42, 0.42);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+
+      overscroll-behavior: contain;
+      touch-action: none;
   }
 
   .user-modal-backdrop.is-open {
@@ -319,6 +322,10 @@
       box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.24);
       padding: 18px;
       animation: userModalUp 0.2s ease-out;
+
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
   }
 
   @keyframes userModalUp {
@@ -1638,17 +1645,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     popolaDettagliModale(row);
 
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+    document.body.dataset.modalScrollY = String(scrollY);
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+
     backdrop.classList.add("is-open");
     backdrop.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
   };
 
   const closeModal = () => {
+    const scrollY = Number(document.body.dataset.modalScrollY || 0);
+
     backdrop.classList.remove("is-open");
     backdrop.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = "";
-  };
 
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+
+    delete document.body.dataset.modalScrollY;
+
+    window.scrollTo(0, scrollY);
+  };
+  
   document.querySelectorAll(".admin-user-row").forEach(row => {
     row.addEventListener("click", (e) => {
       if (e.target.closest("a, button, input, select")) return;
