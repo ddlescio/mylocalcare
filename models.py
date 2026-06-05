@@ -694,7 +694,28 @@ def elimina_utente(id):
         """), (id, id, id))
 
         # =====================================================
-        # 2) Elimina servizi attivi collegati all'utente
+        # 2) Elimina prima lo storico dei servizi collegato
+        #    alle attivazioni dell'utente o dei suoi annunci.
+        #    Va fatto prima di cancellare attivazioni_servizi,
+        #    altrimenti Postgres blocca per FK:
+        #    storico_servizi_attivazione_id_fkey.
+        # =====================================================
+        cur.execute(sql("""
+            DELETE FROM storico_servizi
+            WHERE attivazione_id IN (
+                SELECT id
+                FROM attivazioni_servizi
+                WHERE utente_id = ?
+                OR annuncio_id IN (
+                    SELECT id
+                    FROM annunci
+                    WHERE utente_id = ?
+                )
+            )
+        """), (id, id))
+
+        # =====================================================
+        # 3) Elimina servizi attivi collegati all'utente
         #    o ai suoi annunci.
         # =====================================================
         cur.execute(sql("""
@@ -706,7 +727,6 @@ def elimina_utente(id):
                 WHERE utente_id = ?
             )
         """), (id, id))
-
         # =====================================================
         # 3) Scollega eventuali acquisti dagli annunci eliminati.
         #    Non cancelliamo gli acquisti perché possono servire
