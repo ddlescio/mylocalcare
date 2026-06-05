@@ -1243,7 +1243,11 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
         Azione recensione
       </a>
 
-      <a id="modal-reply-action" href="#" class="review-modal-action secondary">
+      <a id="modal-review-rifiuta-action" href="#" class="review-modal-action red js-review-action">
+        Rifiuta recensione
+      </a>
+
+      <a id="modal-reply-action" href="#" class="review-modal-action secondary js-review-action">
         Azione risposta
       </a>
 
@@ -1441,7 +1445,7 @@ document.addEventListener("DOMContentLoaded", () => {
       openReviewModal(prossima, true);
       return;
     }
-    
+
     closeReviewModal();
   };
 
@@ -1541,7 +1545,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /*
-    /*
       Se l'azione è stata fatta dalla modale mobile/tablet,
       passa automaticamente alla prossima recensione/risposta in attesa.
       Usiamo la prossima calcolata PRIMA dell’azione, per evitare che
@@ -1587,27 +1590,50 @@ function badgeStatoRisposta(stato) {
 }
 
 function aggiornaBottoneModaleRecensione(row) {
-  const btn = document.getElementById("modal-review-action");
-  if (!btn || !row) return;
+  const approveBtn = document.getElementById("modal-review-action");
+  const rejectBtn = document.getElementById("modal-review-rifiuta-action");
+
+  if (!approveBtn || !rejectBtn || !row) return;
 
   const stato = row.dataset.reviewStato;
   const approveUrl = row.dataset.reviewApprovaUrl;
   const rejectUrl = row.dataset.reviewRifiutaUrl;
 
-  btn.className = "review-modal-action js-review-action";
-  btn.style.pointerEvents = "";
+  approveBtn.className = "review-modal-action js-review-action green";
+  rejectBtn.className = "review-modal-action js-review-action red";
+
+  approveBtn.style.pointerEvents = "";
+  rejectBtn.style.pointerEvents = "";
+
+  approveBtn.href = approveUrl || "#";
+  rejectBtn.href = rejectUrl || "#";
+
+  approveBtn.dataset.action = "approva-recensione";
+  rejectBtn.dataset.action = "rifiuta-recensione";
+
+  approveBtn.textContent = "Approva recensione";
+  rejectBtn.textContent = "Rifiuta recensione";
+
+  if (stato === "in_attesa") {
+    approveBtn.style.display = "inline-flex";
+    rejectBtn.style.display = "inline-flex";
+    return;
+  }
 
   if (stato === "approvato") {
-    btn.textContent = "Rifiuta recensione";
-    btn.href = rejectUrl || "#";
-    btn.classList.add("red");
-    btn.dataset.action = "rifiuta-recensione";
-  } else {
-    btn.textContent = "Approva recensione";
-    btn.href = approveUrl || "#";
-    btn.classList.add("green");
-    btn.dataset.action = "approva-recensione";
+    approveBtn.style.display = "none";
+    rejectBtn.style.display = "inline-flex";
+    return;
   }
+
+  if (stato === "rifiutato") {
+    approveBtn.style.display = "inline-flex";
+    rejectBtn.style.display = "none";
+    return;
+  }
+
+  approveBtn.style.display = "inline-flex";
+  rejectBtn.style.display = "none";
 }
 
 function aggiornaBottoneModaleRisposta(row) {
