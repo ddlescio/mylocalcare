@@ -1331,8 +1331,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const openReviewModal = (row) => {
-    if (window.innerWidth >= 1080) return;
+  const openReviewModal = (row, forzaApertura = false) => {
+    if (!forzaApertura && window.innerWidth >= 1280) return;
+    if (!row) return;
 
     window.__currentReviewModalRow = row;
 
@@ -1421,7 +1422,29 @@ document.addEventListener("DOMContentLoaded", () => {
     Espongo queste funzioni perché il click AJAX delle azioni
     è gestito in un altro blocco script più sotto.
   */
-  window.reviewModalVaiAllaProssimaInAttesa = vaiAllaProssimaRevisioneInAttesa;
+  window.reviewModalTrovaProssimaInAttesa = trovaProssimaRigaInAttesa;
+
+  window.reviewModalVaiAllaProssimaInAttesa = function(rowCorrente, prossimaGiaCalcolata = null) {
+    /*
+      Se nella stessa riga resta ancora qualcosa in attesa
+      es. recensione approvata ma risposta ancora in attesa,
+      resta sulla stessa riga e aggiorna la modale.
+    */
+    if (rigaHaElementiInAttesa(rowCorrente)) {
+      openReviewModal(rowCorrente, true);
+      return;
+    }
+
+    const prossima = prossimaGiaCalcolata || trovaProssimaRigaInAttesa(rowCorrente);
+
+    if (prossima) {
+      openReviewModal(prossima, true);
+      return;
+    }
+    
+    closeReviewModal();
+  };
+
   window.reviewModalChiudi = closeReviewModal;
 
   document.querySelectorAll(".review-row").forEach(row => {
@@ -1443,29 +1466,49 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <script>
-document.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".js-review-action");
-  if (!btn) return;
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".js-review-action");
+    if (!btn) return;
 
-  e.preventDefault();
-  e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
 
-  let row = btn.closest(".review-row");
+    let row = btn.closest(".review-row");
 
-  // Se il click arriva dalla modale, il bottone non è dentro la riga.
-  if (!row && window.__currentReviewModalRow) {
-    row = window.__currentReviewModalRow;
-  }
+    // Se il click arriva dalla modale, il bottone non è dentro la riga.
+    if (!row && window.__currentReviewModalRow) {
+      row = window.__currentReviewModalRow;
+    }
 
-  if (!row) return;
+    if (!row) return;
 
-  const url = btn.getAttribute("href");
-  const action = btn.dataset.action;
+    const url = btn.getAttribute("href");
+    const action = btn.dataset.action;
 
-  if (!url || url === "#") return;
+    if (!url || url === "#") return;
 
-  btn.style.opacity = "0.65";
-  btn.style.pointerEvents = "none";
+    /*
+      Come negli annunci:
+      calcoliamo la prossima riga PRIMA di cambiare stato alla riga corrente.
+    */
+    const modalAperta = document
+      .getElementById("review-row-modal-backdrop")
+      ?.classList.contains("is-open");
+
+    const prossimaPrimaDellAzione =
+      modalAperta && typeof window.reviewModalTrovaProssimaInAttesa === "function"
+        ? window.reviewModalTrovaProssimaInAttesa(row)
+        : null;
+
+    console.log("📌 Prossima review calcolata prima dell’azione:", {
+      corrente: row.dataset.reviewId || null,
+      prossima: prossimaPrimaDellAzione ? prossimaPrimaDellAzione.dataset.reviewId : null,
+      action
+    });
+
+    btn.style.opacity = "0.65";
+    btn.style.pointerEvents = "none";
 
   try {
     const res = await fetch(url, {
@@ -1498,20 +1541,18 @@ document.addEventListener("click", async (e) => {
     }
 
     /*
+    /*
       Se l'azione è stata fatta dalla modale mobile/tablet,
       passa automaticamente alla prossima recensione/risposta in attesa.
-      Se non ce ne sono più, chiude la modale.
+      Usiamo la prossima calcolata PRIMA dell’azione, per evitare che
+      la riga appena aggiornata falsi la ricerca.
     */
-    const modalAperta = document
-      .getElementById("review-row-modal-backdrop")
-      ?.classList.contains("is-open");
-
     if (
       modalAperta &&
       typeof window.reviewModalVaiAllaProssimaInAttesa === "function"
     ) {
-      window.reviewModalVaiAllaProssimaInAttesa(row);
-    }    
+      window.reviewModalVaiAllaProssimaInAttesa(row, prossimaPrimaDellAzione);
+    }
 
   } catch (err) {
     alert("Errore di rete.");
@@ -1519,7 +1560,7 @@ document.addEventListener("click", async (e) => {
     btn.style.opacity = "";
     btn.style.pointerEvents = "";
   }
-});
+}, true);
 
 function badgeStatoRecensione(stato) {
   if (stato === "approvato") {
