@@ -131,6 +131,14 @@
           <div class="min-w-0">
             <div class="acquisto-mobile-date">
               {{ a.created_at | dt_roma_admin }}
+              <span class="acquisto-mobile-date-separator">-</span>
+              {% if a.tipo == 'pacchetto' %}
+                Vedi servizi
+              {% elif a.data_fine %}
+                {{ a.data_fine | dt_roma_admin }}
+              {% else %}
+                ∞
+              {% endif %}
             </div>
 
             <div class="acquisto-mobile-title">
@@ -558,11 +566,6 @@
         </div>
 
         <div class="acquisto-modal-item">
-          <span>Oggetto</span>
-          <strong>{{ a.pacchetto_nome or a.servizio_nome or '—' }}</strong>
-        </div>
-
-        <div class="acquisto-modal-item">
           <span>Annuncio</span>
           <strong>
             {% if a.annuncio_id %}
@@ -571,6 +574,11 @@
               —
             {% endif %}
           </strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Oggetto</span>
+          <strong>{{ a.pacchetto_nome or a.servizio_nome or '—' }}</strong>
         </div>
 
         <div class="acquisto-modal-item">
@@ -584,13 +592,13 @@
         </div>
 
         <div class="acquisto-modal-item">
-          <span>Metodo</span>
-          <strong>{{ a.metodo or '—' }}</strong>
+          <span>Attivazioni</span>
+          <strong>{{ a.numero_attivazioni or 0 }}</strong>
         </div>
 
         <div class="acquisto-modal-item">
-          <span>Attivazioni</span>
-          <strong>{{ a.numero_attivazioni or 0 }}</strong>
+          <span>Metodo</span>
+          <strong>{{ a.metodo or '—' }}</strong>
         </div>
 
       </div>
@@ -956,6 +964,12 @@
     margin-bottom: 5px;
   }
 
+  .acquisto-mobile-date-separator {
+    display: inline-block;
+    margin: 0 4px;
+    color: #94a3b8;
+  }
+
   .acquisto-mobile-title {
     font-size: 1rem;
     font-weight: 900;
@@ -1313,15 +1327,50 @@
     }
 
     .acquisto-modal-summary {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
     }
 
     .acquisto-modal-dates {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
     }
 
     .acquisto-modal-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .acquisto-modal-summary > div,
+    .acquisto-modal-item {
+      border-radius: 14px;
+      padding: 10px 8px;
+    }
+
+    .acquisto-modal-summary span,
+    .acquisto-modal-item span {
+      font-size: 0.58rem;
+      letter-spacing: 0.035em;
+      margin-bottom: 4px;
+    }
+
+    .acquisto-modal-summary strong,
+    .acquisto-modal-item strong {
+      font-size: 0.78rem;
+      line-height: 1.18;
+    }
+
+    .acquisto-modal-item small {
+      font-size: 0.64rem;
+      line-height: 1.25;
+    }
+
+    .acquisto-modal-summary {
+      margin-bottom: 10px;
+    }
+
+    .acquisto-modal-dates {
+      margin-bottom: 10px;
     }
     
     .acquisto-modal-service-row {
