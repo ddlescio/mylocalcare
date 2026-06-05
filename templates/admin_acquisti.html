@@ -567,9 +567,14 @@
 
         <div class="acquisto-modal-item">
           <span>Annuncio</span>
-          <strong>
+          <strong class="acquisto-modal-annuncio-line">
             {% if a.annuncio_id %}
               #{{ a.annuncio_id }}
+              {% if a.annuncio_titolo %}
+                <span class="acquisto-modal-annuncio-title">
+                  - {{ a.annuncio_titolo }}
+                </span>
+              {% endif %}
             {% else %}
               —
             {% endif %}
@@ -1207,6 +1212,18 @@
     word-break: break-word;
   }
 
+  .acquisto-modal-annuncio-line {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .acquisto-modal-annuncio-title {
+    font-weight: 850;
+  }
+
   .acquisto-modal-item small {
     display: block;
     margin-top: 4px;
@@ -1372,7 +1389,7 @@
     .acquisto-modal-dates {
       margin-bottom: 10px;
     }
-    
+
     .acquisto-modal-service-row {
       align-items: flex-start;
       flex-direction: column;
