@@ -558,6 +558,8 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     padding: 0;
+    overscroll-behavior: contain;
+    touch-action: none;
 }
 
 .annuncio-modal-backdrop.is-open {
@@ -570,6 +572,8 @@
     max-height: min(88vh, 760px);
     overflow-y: auto;
     overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     background: rgba(255, 255, 255, 0.97);
     border: 1px solid rgba(226, 232, 240, 0.95);
     border-radius: 28px 28px 0 0;
@@ -2080,7 +2084,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   }
-  
+
   const openAnnuncioModal = (row, forzaApertura = false) => {
     if (!forzaApertura && window.innerWidth >= 1280) return;
     if (!row) return;
@@ -2246,15 +2250,39 @@ document.addEventListener("DOMContentLoaded", () => {
       utenteId: modalUtenteId
     });
 
+    if (!backdrop.classList.contains("is-open")) {
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+      document.body.dataset.annuncioModalScrollY = String(scrollY);
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+      document.body.style.overflow = "hidden";
+    }
+
     backdrop.classList.add("is-open");
-    backdrop.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+    backdrop.setAttribute("aria-hidden", "false");       
   };
 
   const closeAnnuncioModal = () => {
+    const scrollY = Number(document.body.dataset.annuncioModalScrollY || 0);
+
     backdrop.classList.remove("is-open");
     backdrop.setAttribute("aria-hidden", "true");
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
     document.body.style.overflow = "";
+
+    delete document.body.dataset.annuncioModalScrollY;
+
+    window.scrollTo(0, scrollY);
+
     window.__currentAnnuncioModalRow = null;
   };
 
@@ -2389,7 +2417,11 @@ document.addEventListener("DOMContentLoaded", () => {
   closeBtn.addEventListener("click", closeAnnuncioModal);
 
   backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) closeAnnuncioModal();
+    const panel = e.target.closest(".annuncio-modal-card");
+
+    if (!panel) {
+      closeAnnuncioModal();
+    }
   });
 
   document.addEventListener("keydown", (e) => {

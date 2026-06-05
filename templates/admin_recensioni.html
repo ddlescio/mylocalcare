@@ -630,6 +630,8 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
     background: rgba(15, 23, 42, 0.42);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    overscroll-behavior: contain;
+    touch-action: none;
 }
 
 .review-modal-backdrop.is-open {
@@ -641,11 +643,15 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
     max-width: 720px;
     max-height: 88vh;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     background: rgba(255, 255, 255, 0.97);
     border: 1px solid rgba(226, 232, 240, 0.95);
     border-radius: 28px 28px 0 0;
     box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.24);
     padding: 18px;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
     animation: reviewModalUp 0.2s ease-out;
 }
 
@@ -1363,15 +1369,40 @@ document.addEventListener("DOMContentLoaded", () => {
     aggiornaBottoneModaleRecensione(row);
     aggiornaBottoneModaleRisposta(row);
 
+    if (!backdrop.classList.contains("is-open")) {
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+      document.body.dataset.reviewModalScrollY = String(scrollY);
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+      document.body.style.overflow = "hidden";
+    }
+
     backdrop.classList.add("is-open");
     backdrop.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
   };
 
   const closeReviewModal = () => {
+    const scrollY = Number(document.body.dataset.reviewModalScrollY || 0);
+
     backdrop.classList.remove("is-open");
     backdrop.setAttribute("aria-hidden", "true");
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
     document.body.style.overflow = "";
+
+    delete document.body.dataset.reviewModalScrollY;
+
+    window.scrollTo(0, scrollY);
+
+    window.__currentReviewModalRow = null;
   };
 
   function rigaHaElementiInAttesa(row) {
@@ -1461,9 +1492,13 @@ document.addEventListener("DOMContentLoaded", () => {
   closeBtn.addEventListener("click", closeReviewModal);
 
   backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) closeReviewModal();
-  });
+    const panel = e.target.closest(".review-modal-card");
 
+    if (!panel) {
+      closeReviewModal();
+    }
+  });
+  
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeReviewModal();
   });
