@@ -21,9 +21,58 @@
         Nessuna revisione profilo presente.
       </p>
     </div>
-  {% else %}
+    {% else %}
 
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <!-- FILTRO USERNAME -->
+    <div class="revision-filter-card mb-5">
+
+      <button
+        type="button"
+        id="toggleRevisionUsernameFilter"
+        class="revision-filter-toggle"
+      >
+        <span class="revision-filter-toggle-left">
+          <span class="revision-filter-icon">🔎</span>
+          <span>
+            <span class="revision-filter-title">Filtro username</span>
+            <span class="revision-filter-subtitle">
+              Cerca rapidamente una revisione per username o email.
+            </span>
+          </span>
+        </span>
+
+        <span id="revisionFilterChevron" class="revision-filter-chevron">▾</span>
+      </button>
+
+      <div id="revisionUsernameFilterBody" class="revision-filter-body hidden">
+        <div class="revision-filter-row">
+          <div class="revision-filter-field">
+            <label for="revisionUsernameSearch">Username</label>
+            <input
+              id="revisionUsernameSearch"
+              type="text"
+              placeholder="Scrivi username o email..."
+              autocomplete="off"
+            >
+          </div>
+
+          <button
+            type="button"
+            id="resetRevisionUsernameFilter"
+            class="revision-filter-reset"
+          >
+            Reset
+          </button>
+        </div>
+
+        <div id="revisionUsernameFilterCount" class="revision-filter-count">
+          Mostrate tutte le revisioni.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
     <!-- Desktop table -->
     <div class="hidden md:block overflow-x-auto">
@@ -242,6 +291,171 @@
   </div>
 </div>
 
+<style>
+  .revision-filter-card {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at top left, rgba(219, 234, 254, 0.7), transparent 34%),
+      linear-gradient(180deg, #ffffff, #f8fafc);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+  }
+
+  .revision-filter-toggle {
+    width: 100%;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px;
+    text-align: left;
+    transition: background 0.18s ease;
+  }
+
+  .revision-filter-toggle:hover {
+    background: rgba(248, 250, 252, 0.85);
+  }
+
+  .revision-filter-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .revision-filter-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #ffffff, #eff6ff);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.10);
+    flex-shrink: 0;
+  }
+
+  .revision-filter-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.12;
+  }
+
+  .revision-filter-subtitle {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    line-height: 1.25;
+  }
+
+  .revision-filter-chevron {
+    color: #64748b;
+    font-size: 1.15rem;
+    transition: transform 0.18s ease;
+    flex-shrink: 0;
+  }
+
+  .revision-filter-card.is-open .revision-filter-chevron {
+    transform: rotate(180deg);
+  }
+
+  .revision-filter-body {
+    border-top: 1px solid #e2e8f0;
+    padding: 16px 18px 18px;
+    background: rgba(255, 255, 255, 0.74);
+  }
+
+  .revision-filter-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .revision-filter-field label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #64748b;
+  }
+
+  .revision-filter-field input {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 16px;
+    border: 1px solid #dbe3ef;
+    background: #ffffff;
+    padding: 0 14px;
+    font-size: 0.92rem;
+    font-weight: 650;
+    color: #334155;
+    outline: none;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  .revision-filter-field input:focus {
+    border-color: #60a5fa;
+    box-shadow:
+      0 0 0 4px rgba(96, 165, 250, 0.18),
+      0 8px 20px rgba(15, 23, 42, 0.06);
+  }
+
+  .revision-filter-reset {
+    min-height: 48px;
+    border-radius: 16px;
+    padding: 0 18px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 900;
+  }
+
+  .revision-filter-reset:hover {
+    background: #e2e8f0;
+  }
+
+  .revision-filter-count {
+    margin-top: 10px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  @media (max-width: 640px) {
+    .revision-filter-toggle {
+      min-height: 66px;
+      padding: 14px 15px;
+    }
+
+    .revision-filter-subtitle {
+      display: none;
+    }
+
+    .revision-filter-body {
+      padding: 15px;
+    }
+
+    .revision-filter-row {
+      grid-template-columns: 1fr;
+    }
+
+    .revision-filter-reset {
+      width: 100%;
+    }
+  }
+</style>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const modal = document.getElementById("revision-modal");
@@ -264,6 +478,101 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let righe = Array.from(document.querySelectorAll(".revision-row"));
   let currentRow = null;
+
+  const usernameFilterCard = document.querySelector(".revision-filter-card");
+  const toggleUsernameFilter = document.getElementById("toggleRevisionUsernameFilter");
+  const usernameFilterBody = document.getElementById("revisionUsernameFilterBody");
+  const usernameSearchInput = document.getElementById("revisionUsernameSearch");
+  const resetUsernameFilter = document.getElementById("resetRevisionUsernameFilter");
+  const usernameFilterCount = document.getElementById("revisionUsernameFilterCount");
+
+  function revisioniUnicheVisibili() {
+    const ids = new Set();
+
+    document.querySelectorAll(".revision-row").forEach(row => {
+      if (row.classList.contains("hidden")) return;
+
+      const id = row.dataset.revisionId;
+      if (id) ids.add(id);
+    });
+
+    return ids.size;
+  }
+
+  function totaleRevisioniUniche() {
+    const ids = new Set();
+
+    document.querySelectorAll(".revision-row").forEach(row => {
+      const id = row.dataset.revisionId;
+      if (id) ids.add(id);
+    });
+
+    return ids.size;
+  }
+
+  function aggiornaTestoConteggioFiltro(query) {
+    if (!usernameFilterCount) return;
+
+    const visibili = revisioniUnicheVisibili();
+    const totale = totaleRevisioniUniche();
+
+    if (!query) {
+      usernameFilterCount.textContent = "Mostrate tutte le revisioni.";
+      return;
+    }
+
+    usernameFilterCount.textContent = `${visibili} revisioni trovate su ${totale}.`;
+  }
+
+  function filtraRevisioniPerUsername() {
+    const query = (usernameSearchInput?.value || "").trim().toLowerCase();
+
+    document.querySelectorAll(".revision-row").forEach(row => {
+      const username = (row.dataset.user || "").toLowerCase();
+      const email = (row.dataset.email || "").toLowerCase();
+      const utenteId = (row.dataset.utenteId || "").toLowerCase();
+
+      const match =
+        !query ||
+        username.includes(query) ||
+        email.includes(query) ||
+        utenteId.includes(query);
+
+      row.classList.toggle("hidden", !match);
+    });
+
+    aggiornaTestoConteggioFiltro(query);
+  }
+
+  if (toggleUsernameFilter && usernameFilterBody) {
+    toggleUsernameFilter.addEventListener("click", () => {
+      const isClosed = usernameFilterBody.classList.contains("hidden");
+
+      usernameFilterBody.classList.toggle("hidden", !isClosed);
+      usernameFilterCard?.classList.toggle("is-open", isClosed);
+
+      if (isClosed) {
+        setTimeout(() => {
+          usernameSearchInput?.focus();
+        }, 80);
+      }
+    });
+  }
+
+  if (usernameSearchInput) {
+    usernameSearchInput.addEventListener("input", filtraRevisioniPerUsername);
+  }
+
+  if (resetUsernameFilter) {
+    resetUsernameFilter.addEventListener("click", () => {
+      if (usernameSearchInput) {
+        usernameSearchInput.value = "";
+      }
+
+      filtraRevisioniPerUsername();
+      usernameSearchInput?.focus();
+    });
+  }
 
   function statoLabel(stato) {
     if (stato === "in_attesa") return "In attesa";
