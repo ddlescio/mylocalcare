@@ -119,6 +119,22 @@
       </form>
     </div>
 
+    <!-- ORDINAMENTO CARD MOBILE / TABLET -->
+    <div class="acquisti-mobile-sort">
+      <label for="mobileSortAcquisti">Ordina per</label>
+
+      <select id="mobileSortAcquisti">
+        <option value="data_desc">Data attivazione ↓</option>
+        <option value="data_asc">Data attivazione ↑</option>
+        <option value="scadenza_desc">Data scadenza ↓</option>
+        <option value="scadenza_asc">Data scadenza ↑</option>
+        <option value="importo_desc">Cifra ↓</option>
+        <option value="importo_asc">Cifra ↑</option>
+        <option value="oggetto_asc">Oggetto A-Z</option>
+        <option value="oggetto_desc">Oggetto Z-A</option>
+      </select>
+    </div>
+
     <!-- LISTA RESPONSIVE MOBILE / TABLET -->
     <div id="acquisti-mobile-list" class="acquisti-mobile-list">
       {% for a in acquisti %}
@@ -126,6 +142,10 @@
         type="button"
         class="acquisto-mobile-card"
         data-open-acquisto-modal="acq-{{ a.acquisto_id }}"
+        data-mobile-data="{{ a.created_at or '' }}"
+        data-mobile-scadenza="{{ a.data_fine or '' }}"
+        data-mobile-importo="{{ a.importo_cent or 0 }}"
+        data-mobile-oggetto="{{ (a.pacchetto_nome or a.servizio_nome or '')|lower }}"
       >
         <div class="acquisto-mobile-top">
           <div class="min-w-0">
@@ -986,8 +1006,71 @@
     }
   }
 
-  .acquisti-mobile-list {
+  .acquisti-mobile-sort {
     display: none;
+  }
+
+  @media (max-width: 1180px) {
+    .acquisti-mobile-sort {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border-radius: 18px;
+      padding: 12px 14px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+    }
+
+    .acquisti-mobile-sort label {
+      font-size: 0.78rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    .acquisti-mobile-sort select {
+      min-height: 42px;
+      min-width: 210px;
+      border-radius: 14px;
+      border: 1px solid #dbe3ef;
+      background-color: #ffffff;
+      padding: 0 38px 0 12px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #334155;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, #64748b 50%),
+        linear-gradient(135deg, #64748b 50%, transparent 50%);
+      background-position:
+        calc(100% - 18px) 18px,
+        calc(100% - 13px) 18px;
+      background-size:
+        5px 5px,
+        5px 5px;
+      background-repeat: no-repeat;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .acquisti-mobile-sort {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .acquisti-mobile-sort select {
+      width: 100%;
+      min-width: 0;
+      min-height: 46px;
+    }
   }
 
   .acquisto-mobile-card {
@@ -1590,6 +1673,76 @@ document.addEventListener("DOMContentLoaded", () => {
       filterCard.classList.toggle("is-collapsed");
     });
   }
+
+  const mobileList = document.getElementById("acquisti-mobile-list");
+  const mobileSortSelect = document.getElementById("mobileSortAcquisti");
+
+  function parseMobileDate(value, emptyValue = 0) {
+    if (!value) return emptyValue;
+
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? emptyValue : parsed;
+  }
+
+  function sortMobileCards(sortValue) {
+    if (!mobileList) return;
+
+    const cards = Array.from(mobileList.querySelectorAll(".acquisto-mobile-card"));
+
+    cards.sort((a, b) => {
+      if (sortValue === "data_asc") {
+        return parseMobileDate(a.dataset.mobileData, 0) - parseMobileDate(b.dataset.mobileData, 0);
+      }
+
+      if (sortValue === "data_desc") {
+        return parseMobileDate(b.dataset.mobileData, 0) - parseMobileDate(a.dataset.mobileData, 0);
+      }
+
+      if (sortValue === "scadenza_asc") {
+        return parseMobileDate(a.dataset.mobileScadenza, Number.MAX_SAFE_INTEGER) - parseMobileDate(b.dataset.mobileScadenza, Number.MAX_SAFE_INTEGER);
+      }
+
+      if (sortValue === "scadenza_desc") {
+        return parseMobileDate(b.dataset.mobileScadenza, 0) - parseMobileDate(a.dataset.mobileScadenza, 0);
+      }
+
+      if (sortValue === "importo_asc") {
+        return Number(a.dataset.mobileImporto || 0) - Number(b.dataset.mobileImporto || 0);
+      }
+
+      if (sortValue === "importo_desc") {
+        return Number(b.dataset.mobileImporto || 0) - Number(a.dataset.mobileImporto || 0);
+      }
+
+      if (sortValue === "oggetto_asc") {
+        return (a.dataset.mobileOggetto || "").localeCompare(
+          b.dataset.mobileOggetto || "",
+          "it"
+        );
+      }
+
+      if (sortValue === "oggetto_desc") {
+        return (b.dataset.mobileOggetto || "").localeCompare(
+          a.dataset.mobileOggetto || "",
+          "it"
+        );
+      }
+
+      return 0;
+    });
+
+    cards.forEach(card => {
+      mobileList.appendChild(card);
+    });
+  }
+
+  if (mobileSortSelect) {
+    mobileSortSelect.addEventListener("change", () => {
+      sortMobileCards(mobileSortSelect.value);
+    });
+
+    sortMobileCards(mobileSortSelect.value);
+  }  
 
   let currentSortKey = "data";
   let currentSortDirection = "desc";
