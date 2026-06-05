@@ -1322,13 +1322,21 @@
             ✉️ Email
           </a>
 
-          <a id="modal-annuncio-approva" href="#" class="annuncio-modal-action green">
+          <button type="button"
+                  id="modal-annuncio-approva"
+                  class="annuncio-modal-action green"
+                  data-azione-annuncio="approva"
+                  data-url="">
             Approva
-          </a>
+          </button>
 
-          <a id="modal-annuncio-rifiuta" href="#" class="annuncio-modal-action red">
+          <button type="button"
+                  id="modal-annuncio-rifiuta"
+                  class="annuncio-modal-action red"
+                  data-azione-annuncio="rifiuta"
+                  data-url="">
             Rifiuta
-          </a>
+          </button>
 
           <a id="modal-annuncio-toggle" href="#" class="annuncio-modal-action yellow">
             Attiva/Disattiva
@@ -2040,17 +2048,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const d = row.dataset;
 
-    setHref("modal-annuncio-approva", d.annuncioApprovaUrl);
-    setHref("modal-annuncio-rifiuta", d.annuncioRifiutaUrl);
-    setHref("modal-annuncio-toggle", d.annuncioToggleUrl);
-
     if (approvaBtn) {
       approvaBtn.dataset.azioneAnnuncio = "approva";
+      approvaBtn.dataset.url = d.annuncioApprovaUrl || "";
+
+      approvaBtn.style.display =
+        d.annuncioApprovaUrl && d.annuncioApprovaUrl !== "#"
+          ? "inline-flex"
+          : "none";
     }
 
     if (rifiutaBtn) {
       rifiutaBtn.dataset.azioneAnnuncio = "rifiuta";
+      rifiutaBtn.dataset.url = d.annuncioRifiutaUrl || "";
+
+      rifiutaBtn.style.display =
+        d.annuncioRifiutaUrl && d.annuncioRifiutaUrl !== "#"
+          ? "inline-flex"
+          : "none";
     }
+
+    setHref("modal-annuncio-toggle", d.annuncioToggleUrl);
 
     if (toggleBtn) {
       if (d.annuncioStato === "approvato") {
@@ -2062,7 +2080,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   }
-
+  
   const openAnnuncioModal = (row, forzaApertura = false) => {
     if (!forzaApertura && window.innerWidth >= 1280) return;
     if (!row) return;
