@@ -6967,8 +6967,161 @@ def admin_utenti():
     query += " ORDER BY u.id DESC"
 
     c.execute(sql(query), params)
-    utenti = c.fetchall()
+
+    # Converto in dict per poter aggiungere i dettagli admin
+    utenti = [dict(u) for u in c.fetchall()]
     totale_filtrati = len(utenti)
+
+    def _safe_json_value(value):
+        """
+        Converte valori non serializzabili direttamente in JSON,
+        ad esempio datetime/date provenienti dal DB.
+        """
+        if value is None:
+            return None
+
+        if hasattr(value, "isoformat"):
+            try:
+                return value.isoformat()
+            except Exception:
+                return str(value)
+
+        return value
+
+    def _rows_to_json(rows):
+        """
+        Converte una lista di righe DB in JSON sicuro da inserire nel template.
+        """
+        data = []
+
+        for row in rows:
+            d = dict(row)
+            data.append({
+                key: _safe_json_value(value)
+                for key, value in d.items()
+            })
+
+        return json.dumps(data, ensure_ascii=False)
+
+    for u in utenti:
+        utente_id = u["id"]
+
+        # =====================================================
+        # ANNUNCI ATTIVI / PUBBLICATI DELL'UTENTE
+        # Nel progetto gli annunci pubblici risultano con stato='approvato'
+        # =====================================================
+        c.execute(sql("""
+            SELECT
+                id,
+                titolo,
+                categoria,
+                tipo_annuncio,
+                provincia,
+                zona,
+                stato,
+                data_pubblicazione
+            FROM annunci
+            WHERE utente_id = ?
+              AND stato = 'approvato'
+            ORDER BY data_pubblicazione DESC
+            LIMIT 10
+        """), (utente_id,))
+
+        annunci_attivi = c.fetchall()
+
+        # =====================================================
+        # CHAT APERTE CON QUELL'UTENTE
+        # Una chat viene considerata "aperta" se esiste almeno un messaggio
+        # tra l'utente e un altro utente.
+        # =====================================================
+        c.execute(sql("""
+            SELECT
+                altro.id AS altro_utente_id,
+                altro.username AS altro_username,
+                altro.email AS altro_email,
+                COUNT(m.id) AS numero_messaggi,
+                SUM(
+                    CASE
+                        WHEN m.destinatario_id = ?
+                         AND COALESCE(m.letto, 0) = 0
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS messaggi_non_letti,
+                MAX(m.id) AS ultimo_messaggio_id
+            FROM messaggi_chat m
+            JOIN utenti altro
+              ON altro.id = CASE
+                  WHEN m.mittente_id = ? THEN m.destinatario_id
+                  ELSE m.mittente_id
+              END
+            WHERE m.mittente_id = ?
+               OR m.destinatario_id = ?
+            GROUP BY altro.id, altro.username, altro.email
+            ORDER BY MAX(m.id) DESC
+            LIMIT 10
+        """), (utente_id, utente_id, utente_id, utente_id))
+
+        chat_aperte = c.fetchall()
+
+        # =====================================================
+        # RECENSIONI SCRITTE DALL'UTENTE
+        # =====================================================
+        c.execute(sql("""
+            SELECT
+                r.id,
+                r.voto,
+                r.testo,
+                r.stato,
+                r.data,
+                destinatario.id AS altro_utente_id,
+                destinatario.username AS altro_username,
+                destinatario.email AS altro_email
+            FROM recensioni r
+            LEFT JOIN utenti destinatario
+              ON destinatario.id = r.id_destinatario
+            WHERE r.id_autore = ?
+            ORDER BY r.data DESC
+            LIMIT 10
+        """), (utente_id,))
+
+        recensioni_scritte = c.fetchall()
+
+        # =====================================================
+        # RECENSIONI RICEVUTE DALL'UTENTE
+        # =====================================================
+        c.execute(sql("""
+            SELECT
+                r.id,
+                r.voto,
+                r.testo,
+                r.stato,
+                r.data,
+                autore.id AS altro_utente_id,
+                autore.username AS altro_username,
+                autore.email AS altro_email
+            FROM recensioni r
+            LEFT JOIN utenti autore
+              ON autore.id = r.id_autore
+            WHERE r.id_destinatario = ?
+            ORDER BY r.data DESC
+            LIMIT 10
+        """), (utente_id,))
+
+        recensioni_ricevute = c.fetchall()
+
+        # =====================================================
+        # DATI PRONTI PER IL TEMPLATE
+        # =====================================================
+        u["admin_annunci_attivi_count"] = len(annunci_attivi)
+        u["admin_chat_aperte_count"] = len(chat_aperte)
+        u["admin_recensioni_scritte_count"] = len(recensioni_scritte)
+        u["admin_recensioni_ricevute_count"] = len(recensioni_ricevute)
+
+        u["admin_annunci_attivi_json"] = _rows_to_json(annunci_attivi)
+        u["admin_chat_aperte_json"] = _rows_to_json(chat_aperte)
+        u["admin_recensioni_scritte_json"] = _rows_to_json(recensioni_scritte)
+        u["admin_recensioni_ricevute_json"] = _rows_to_json(recensioni_ricevute)
 
     return render_template(
         "admin_utenti.html",
@@ -6982,7 +7135,7 @@ def admin_utenti():
         totale_filtrati=totale_filtrati,
         has_filters=has_filters
     )
-
+    
 @app.route("/admin/utenti/toggle/<int:id>")
 @admin_required
 def toggle_utente_admin(id):

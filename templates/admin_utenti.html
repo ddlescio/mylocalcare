@@ -401,13 +401,35 @@
 
   .user-modal-grid {
       display: grid;
-      grid-template-columns: repeat(1, minmax(0, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
   }
 
   @media (min-width: 640px) {
       .user-modal-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+      }
+  }
+
+  @media (max-width: 420px) {
+      .user-modal-grid {
+          gap: 7px;
+      }
+
+      .user-modal-info {
+          padding: 10px 8px;
+          border-radius: 15px;
+      }
+
+      .user-modal-info-label {
+          font-size: 0.62rem;
+          line-height: 1.1;
+      }
+
+      .user-modal-info-value {
+          font-size: 0.8rem;
+          line-height: 1.18;
       }
   }
 
@@ -510,6 +532,160 @@
             background: #eff6ff;
         }
     }
+
+    /* ====== DETTAGLI UTENTE DESKTOP + MODALE ====== */
+    .admin-user-detail-row.hidden {
+        display: none;
+    }
+
+    .admin-user-detail-panel {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 4px;
+    }
+
+    .admin-user-detail-section {
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        background: #ffffff;
+        padding: 13px;
+        min-height: 90px;
+    }
+
+    .admin-user-detail-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 8px;
+    }
+
+    .admin-user-detail-title span {
+        min-width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        background: #eff6ff;
+        color: #2563eb;
+        font-size: 0.72rem;
+        font-weight: 900;
+    }
+
+    .admin-user-detail-empty {
+        font-size: 0.78rem;
+        color: #64748b;
+        line-height: 1.35;
+    }
+
+    .user-modal-details {
+        margin-top: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        overflow: hidden;
+        background: #ffffff;
+    }
+
+    .user-modal-details-toggle {
+        width: 100%;
+        min-height: 48px;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 0.9rem;
+        font-weight: 850;
+    }
+
+    .user-modal-details-body {
+        padding: 12px;
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .user-modal-details-body.hidden {
+        display: none;
+    }
+
+    .user-modal-detail-block {
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: #f8fafc;
+        padding: 11px;
+    }
+
+    .user-modal-detail-title {
+        font-size: 0.78rem;
+        font-weight: 900;
+        color: #334155;
+        margin-bottom: 8px;
+    }
+
+    .user-modal-detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .user-modal-detail-item {
+        border-radius: 13px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        padding: 9px 10px;
+        font-size: 0.78rem;
+        color: #475569;
+        line-height: 1.3;
+    }
+
+    .user-modal-detail-item strong {
+        display: block;
+        color: #0f172a;
+        font-size: 0.82rem;
+        margin-bottom: 2px;
+    }
+
+    .user-modal-detail-empty {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        font-style: italic;
+    }
+
+    @media (max-width: 1023px) {
+        .admin-user-detail-row {
+            display: none !important;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .user-modal-details-body {
+            padding: 9px;
+            gap: 8px;
+        }
+
+        .user-modal-detail-block {
+            padding: 9px;
+            border-radius: 14px;
+        }
+
+        .user-modal-detail-item {
+            padding: 8px;
+            font-size: 0.72rem;
+        }
+
+        .user-modal-detail-item strong {
+            font-size: 0.76rem;
+        }
+    }
+
 </style>
 
 <div class="admin-users-wide">
@@ -655,7 +831,11 @@
                 data-user-toggle-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('toggle_utente_admin', id=u.id) }}{% endif %}"
                 data-user-delete-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('elimina_utente_route', id=u.id) }}{% endif %}"
                 data-user-contatti="{{ 1 if u.contatti_attivi else 0 }}"
-                data-user-affidabilita="{{ 1 if u.affidabilita_attiva else 0 }}">
+                data-user-affidabilita="{{ 1 if u.affidabilita_attiva else 0 }}"
+                data-admin-annunci='{{ u.admin_annunci_attivi_json|default("[]")|e }}'
+                data-admin-chat='{{ u.admin_chat_aperte_json|default("[]")|e }}'
+                data-admin-recensioni-scritte='{{ u.admin_recensioni_scritte_json|default("[]")|e }}'
+                data-admin-recensioni-ricevute='{{ u.admin_recensioni_ricevute_json|default("[]")|e }}'>
 
                 <td>{{ u.id }}</td>
 
@@ -682,7 +862,7 @@
                        title="Apri profilo pubblico">
                        👤
                     </a>
-                  </div>                  
+                  </div>
                 </td>
 
                 <td>
@@ -704,6 +884,13 @@
                       Account eliminato
                     </span>
                   {% else %}
+
+                  <button
+                    type="button"
+                    class="admin-user-details-toggle px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition"
+                    data-details-for="{{ u.id }}">
+                    Dettagli
+                  </button>
 
                     <a href="{{ url_for('toggle_utente_admin', id=u.id) }}"
                        class="text-blue-600 hover:underline">
@@ -763,6 +950,77 @@
                   {% else %}
                     -
                   {% endif %}
+                </td>
+              </tr>
+
+              <tr class="admin-user-detail-row hidden" data-detail-row-for="{{ u.id }}">
+                <td colspan="10" class="bg-slate-50 px-4 py-4">
+
+                  <div class="admin-user-detail-panel">
+
+                    <div class="admin-user-detail-section">
+                      <div class="admin-user-detail-title">
+                        📣 Annunci attivi
+                        <span>{{ u.admin_annunci_attivi_count or 0 }}</span>
+                      </div>
+
+                      {% if u.admin_annunci_attivi_count %}
+                        <div class="admin-user-detail-list">
+                          {% for item in u.admin_annunci_attivi_json|default('[]')|safe|from_json if false %}
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <div class="admin-user-detail-empty">Nessun annuncio attivo.</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="admin-user-detail-section">
+                      <div class="admin-user-detail-title">
+                        💬 Chat aperte
+                        <span>{{ u.admin_chat_aperte_count or 0 }}</span>
+                      </div>
+
+                      {% if u.admin_chat_aperte_count %}
+                        <div class="admin-user-detail-empty">
+                          Dettaglio disponibile nella modale utente.
+                        </div>
+                      {% else %}
+                        <div class="admin-user-detail-empty">Nessuna chat aperta.</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="admin-user-detail-section">
+                      <div class="admin-user-detail-title">
+                        ⭐ Recensioni scritte
+                        <span>{{ u.admin_recensioni_scritte_count or 0 }}</span>
+                      </div>
+
+                      {% if u.admin_recensioni_scritte_count %}
+                        <div class="admin-user-detail-empty">
+                          Dettaglio disponibile nella modale utente.
+                        </div>
+                      {% else %}
+                        <div class="admin-user-detail-empty">Nessuna recensione scritta.</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="admin-user-detail-section">
+                      <div class="admin-user-detail-title">
+                        🌟 Recensioni ricevute
+                        <span>{{ u.admin_recensioni_ricevute_count or 0 }}</span>
+                      </div>
+
+                      {% if u.admin_recensioni_ricevute_count %}
+                        <div class="admin-user-detail-empty">
+                          Dettaglio disponibile nella modale utente.
+                        </div>
+                      {% else %}
+                        <div class="admin-user-detail-empty">Nessuna recensione ricevuta.</div>
+                      {% endif %}
+                    </div>
+
+                  </div>
+
                 </td>
               </tr>
             {% endfor %}
@@ -869,6 +1127,40 @@
         🛡️ Affidabilità
       </button>
 
+    </div>
+
+    <div class="user-modal-details">
+
+      <button type="button"
+              id="modal-user-details-toggle"
+              class="user-modal-details-toggle">
+        <span>Dettagli utente</span>
+        <span id="modal-user-details-chevron">▾</span>
+      </button>
+
+      <div id="modal-user-details-body" class="user-modal-details-body hidden">
+
+        <div class="user-modal-detail-block">
+          <div class="user-modal-detail-title">📣 Annunci attivi</div>
+          <div id="modal-user-annunci" class="user-modal-detail-list"></div>
+        </div>
+
+        <div class="user-modal-detail-block">
+          <div class="user-modal-detail-title">💬 Chat aperte</div>
+          <div id="modal-user-chat-aperte" class="user-modal-detail-list"></div>
+        </div>
+
+        <div class="user-modal-detail-block">
+          <div class="user-modal-detail-title">⭐ Recensioni scritte</div>
+          <div id="modal-user-recensioni-scritte" class="user-modal-detail-list"></div>
+        </div>
+
+        <div class="user-modal-detail-block">
+          <div class="user-modal-detail-title">🌟 Recensioni ricevute</div>
+          <div id="modal-user-recensioni-ricevute" class="user-modal-detail-list"></div>
+        </div>
+
+      </div>
     </div>
 
   </div>
@@ -1210,6 +1502,91 @@ document.addEventListener("DOMContentLoaded", () => {
     if (el) el.textContent = value || "-";
   };
 
+  const safeJsonParse = (value) => {
+    if (!value) return [];
+
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.warn("JSON dettagli utente non valido:", e);
+      return [];
+    }
+  };
+
+  const escapeHtml = (value) => {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  };
+
+  const renderList = (targetId, items, type) => {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    if (!items.length) {
+      target.innerHTML = `<div class="user-modal-detail-empty">Nessun dato presente.</div>`;
+      return;
+    }
+
+    target.innerHTML = items.map(item => {
+      if (type === "annunci") {
+        return `
+          <div class="user-modal-detail-item">
+            <strong>${escapeHtml(item.titolo || "Annuncio senza titolo")}</strong>
+            <span>${escapeHtml(item.categoria || "—")} · ${escapeHtml(item.provincia || "—")} · ${escapeHtml(item.stato || "—")}</span>
+          </div>
+        `;
+      }
+
+      if (type === "chat") {
+        return `
+          <div class="user-modal-detail-item">
+            <strong>@${escapeHtml(item.altro_username || item.altro_email || "Utente")}</strong>
+            <span>${escapeHtml(item.numero_messaggi || 0)} messaggi · ${escapeHtml(item.messaggi_non_letti || 0)} non letti</span>
+          </div>
+        `;
+      }
+
+      if (type === "recensioni") {
+        const altro = item.altro_username || item.altro_email || "Utente";
+        const testo = item.testo || "Recensione senza testo";
+
+        return `
+          <div class="user-modal-detail-item">
+            <strong>${escapeHtml(item.voto || "—")} ⭐ · @${escapeHtml(altro)}</strong>
+            <span>${escapeHtml(testo)}</span>
+          </div>
+        `;
+      }
+
+      return "";
+    }).join("");
+  };
+
+  const popolaDettagliModale = (row) => {
+    if (!row) return;
+
+    const annunci = safeJsonParse(row.dataset.adminAnnunci);
+    const chat = safeJsonParse(row.dataset.adminChat);
+    const recensioniScritte = safeJsonParse(row.dataset.adminRecensioniScritte);
+    const recensioniRicevute = safeJsonParse(row.dataset.adminRecensioniRicevute);
+
+    renderList("modal-user-annunci", annunci, "annunci");
+    renderList("modal-user-chat-aperte", chat, "chat");
+    renderList("modal-user-recensioni-scritte", recensioniScritte, "recensioni");
+    renderList("modal-user-recensioni-ricevute", recensioniRicevute, "recensioni");
+
+    const detailsBody = document.getElementById("modal-user-details-body");
+    const detailsChevron = document.getElementById("modal-user-details-chevron");
+
+    if (detailsBody) detailsBody.classList.add("hidden");
+    if (detailsChevron) detailsChevron.textContent = "▾";
+  };
+
   const openModal = (row) => {
     if (window.innerWidth >= 1080) return;
 
@@ -1295,6 +1672,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    popolaDettagliModale(row);
+
     backdrop.classList.add("is-open");
     backdrop.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
@@ -1323,6 +1702,36 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape") closeModal();
   });
 });
+
+const modalDetailsToggle = document.getElementById("modal-user-details-toggle");
+const modalDetailsBody = document.getElementById("modal-user-details-body");
+const modalDetailsChevron = document.getElementById("modal-user-details-chevron");
+
+if (modalDetailsToggle && modalDetailsBody) {
+  modalDetailsToggle.addEventListener("click", () => {
+    const isHidden = modalDetailsBody.classList.toggle("hidden");
+
+    if (modalDetailsChevron) {
+      modalDetailsChevron.textContent = isHidden ? "▾" : "▴";
+    }
+  });
+}
+
+document.querySelectorAll(".admin-user-details-toggle").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const userId = btn.dataset.detailsFor;
+    const detailRow = document.querySelector(`.admin-user-detail-row[data-detail-row-for="${userId}"]`);
+
+    if (!detailRow) return;
+
+    detailRow.classList.toggle("hidden");
+    btn.textContent = detailRow.classList.contains("hidden") ? "Dettagli" : "Chiudi";
+  });
+});
+
 </script>
 
 
