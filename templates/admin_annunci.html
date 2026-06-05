@@ -1049,52 +1049,56 @@
 
                     </td>
                     <td class="p-2 text-center">
-                        <span class="badge
-                            {% if a.stato == 'approvato' %} bg-green-100 text-green-700
-                            {% elif a.stato == 'rifiutato' %} bg-red-100 text-red-700
-                            {% else %} bg-yellow-100 text-yellow-700
-                            {% endif %}">
-                            {{ a.stato }}
-                        </span>
-                        <td class="p-2 text-center">
-                          <a href="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}"
-                             class="text-blue-600 hover:underline">
-                            Apri
+                      <span class="badge
+                          {% if a.stato == 'approvato' %} bg-green-100 text-green-700
+                          {% elif a.stato == 'rifiutato' %} bg-red-100 text-red-700
+                          {% elif a.stato == 'disattivato' %} bg-yellow-100 text-yellow-700
+                          {% else %} bg-yellow-100 text-yellow-700
+                          {% endif %}">
+                          {{ a.stato }}
+                      </span>
+                    </td>
+
+                    <td class="p-2 text-center">
+                      <a href="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}"
+                         class="text-blue-600 hover:underline">
+                        Apri
+                      </a>
+
+                      |
+
+                      {% if a.stato == 'in_attesa' %}
+                        <button type="button"
+                                class="text-green-600 hover:underline js-annuncio-azione"
+                                data-azione-annuncio="approva"
+                                data-url="{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}">
+                          Approva
+                        </button>
+
+                        |
+
+                        <button type="button"
+                                class="text-red-600 hover:underline js-annuncio-azione"
+                                data-azione-annuncio="rifiuta"
+                                data-url="{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}">
+                          Rifiuta
+                        </button>
+
+                      {% else %}
+                        {% if a.stato == 'approvato' %}
+                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
+                             class="text-yellow-600 hover:underline">
+                            Disattiva
                           </a>
+                        {% else %}
+                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
+                             class="text-green-600 hover:underline">
+                            Attiva
+                          </a>
+                        {% endif %}
+                      {% endif %}
+                    </td>
 
-                          |
-
-                          {% if a.stato == 'in_attesa' %}
-                            <button type="button"
-                                    class="text-green-600 hover:underline js-annuncio-azione"
-                                    data-azione-annuncio="approva"
-                                    data-url="{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}">
-                              Approva
-                            </button>
-
-                            |
-
-                            <button type="button"
-                                    class="text-red-600 hover:underline js-annuncio-azione"
-                                    data-azione-annuncio="rifiuta"
-                                    data-url="{{ url_for('rifiuta_annuncio', id=a.id, next=request.full_path) }}">
-                              Rifiuta
-                            </button>
-
-                          {% else %}
-                            {% if a.stato == 'approvato' %}
-                              <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
-                                 class="text-yellow-600 hover:underline">
-                                Disattiva
-                              </a>
-                            {% else %}
-                              <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
-                                 class="text-green-600 hover:underline">
-                                Attiva
-                              </a>
-                            {% endif %}
-                          {% endif %}
-                        </td>
                     <td class="p-2">{{ a.categoria }}</td>
                     <td class="p-2 text-center">
                     {% if a.tipo_annuncio == 'offro' %}
@@ -2363,7 +2367,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     eseguiAzioneAnnuncioDaModale(actionBtn);
   }, true);
-  
+
   closeBtn.addEventListener("click", closeAnnuncioModal);
 
   backdrop.addEventListener("click", (e) => {
