@@ -1458,6 +1458,105 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!backdrop || !closeBtn) return;
 
+  let userModalScrollY = 0;
+  let userTouchStartY = 0;
+
+  function lockUserPageScroll() {
+    if (document.body.classList.contains("user-modal-page-locked")) {
+      return;
+    }
+
+    userModalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+    document.body.classList.add("user-modal-page-locked");
+    document.body.dataset.userModalScrollY = String(userModalScrollY);
+
+    document.documentElement.style.overflow = "hidden";
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${userModalScrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+  }
+
+  function unlockUserPageScroll() {
+    const savedScrollY = Number(
+      document.body.dataset.userModalScrollY || userModalScrollY || 0
+    );
+
+    document.body.classList.remove("user-modal-page-locked");
+
+    document.documentElement.style.overflow = "";
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+
+    delete document.body.dataset.userModalScrollY;
+
+    window.scrollTo(0, savedScrollY);
+  }
+
+  function bloccaScrollChainingUserModal() {
+    const scrollBox = backdrop.querySelector(".user-modal-card");
+
+    if (!scrollBox) return;
+
+    backdrop.addEventListener("wheel", (e) => {
+      if (!backdrop.classList.contains("is-open")) return;
+
+      const insideScrollable = e.target.closest(".user-modal-card");
+
+      if (!insideScrollable) {
+        e.preventDefault();
+        return;
+      }
+
+      const atTop = scrollBox.scrollTop <= 0;
+      const atBottom =
+        scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 1;
+
+      if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    backdrop.addEventListener("touchstart", (e) => {
+      if (!backdrop.classList.contains("is-open")) return;
+
+      userTouchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    backdrop.addEventListener("touchmove", (e) => {
+      if (!backdrop.classList.contains("is-open")) return;
+
+      const insideScrollable = e.target.closest(".user-modal-card");
+
+      if (!insideScrollable) {
+        e.preventDefault();
+        return;
+      }
+
+      const currentY = e.touches[0].clientY;
+      const deltaY = userTouchStartY - currentY;
+
+      const atTop = scrollBox.scrollTop <= 0;
+      const atBottom =
+        scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 1;
+
+      if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  }
+
+  bloccaScrollChainingUserModal();
+
   const setText = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.textContent = value || "-";
@@ -1645,38 +1744,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     popolaDettagliModale(row);
 
-    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    lockUserPageScroll();
 
-    document.body.dataset.modalScrollY = String(scrollY);
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = "0";
-    document.body.style.right = "0";
-    document.body.style.width = "100%";
-    document.body.style.overflow = "hidden";
+    const scrollBox = backdrop.querySelector(".user-modal-card");
+    if (scrollBox) {
+      scrollBox.scrollTop = 0;
+    }
 
     backdrop.classList.add("is-open");
     backdrop.setAttribute("aria-hidden", "false");
   };
 
   const closeModal = () => {
-    const scrollY = Number(document.body.dataset.modalScrollY || 0);
-
     backdrop.classList.remove("is-open");
     backdrop.setAttribute("aria-hidden", "true");
 
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.width = "";
-    document.body.style.overflow = "";
-
-    delete document.body.dataset.modalScrollY;
-
-    window.scrollTo(0, scrollY);
+    unlockUserPageScroll();
   };
-  
+
   document.querySelectorAll(".admin-user-row").forEach(row => {
     row.addEventListener("click", (e) => {
       if (e.target.closest("a, button, input, select")) return;
@@ -1716,11 +1801,18 @@ document.addEventListener("DOMContentLoaded", () => {
   closeBtn.addEventListener("click", closeModal);
 
   backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) closeModal();
+    const panel = e.target.closest(".user-modal-card");
+
+    if (!panel) {
+      closeModal();
+    }
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeModal();
+    if (e.key !== "Escape") return;
+    if (!backdrop.classList.contains("is-open")) return;
+
+    closeModal();
   });
 });
 </script>
