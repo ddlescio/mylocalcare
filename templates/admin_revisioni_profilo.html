@@ -498,6 +498,103 @@ document.addEventListener("DOMContentLoaded", () => {
   let righe = Array.from(document.querySelectorAll(".revision-row"));
   let currentRow = null;
 
+  let revisionModalScrollY = 0;
+  let revisionTouchStartY = 0;
+
+  function lockRevisionPageScroll() {
+    if (document.body.classList.contains("revision-modal-page-locked")) {
+      return;
+    }
+
+    revisionModalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+    document.body.classList.add("revision-modal-page-locked");
+    document.body.dataset.revisionModalScrollY = String(revisionModalScrollY);
+
+    document.documentElement.style.overflow = "hidden";
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${revisionModalScrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+  }
+
+  function unlockRevisionPageScroll() {
+    const savedScrollY = Number(document.body.dataset.revisionModalScrollY || revisionModalScrollY || 0);
+
+    document.body.classList.remove("revision-modal-page-locked");
+
+    document.documentElement.style.overflow = "";
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+
+    delete document.body.dataset.revisionModalScrollY;
+
+    window.scrollTo(0, savedScrollY);
+  }
+
+  function bloccaScrollChainingRevisionModal() {
+    const scrollBox = modal.querySelector(".revision-modal-scroll");
+
+    if (!scrollBox) return;
+
+    modal.addEventListener("wheel", (e) => {
+      if (modal.classList.contains("hidden")) return;
+
+      const insideScrollable = e.target.closest(".revision-modal-scroll");
+
+      if (!insideScrollable) {
+        e.preventDefault();
+        return;
+      }
+
+      const atTop = scrollBox.scrollTop <= 0;
+      const atBottom =
+        scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 1;
+
+      if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    modal.addEventListener("touchstart", (e) => {
+      if (modal.classList.contains("hidden")) return;
+
+      revisionTouchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    modal.addEventListener("touchmove", (e) => {
+      if (modal.classList.contains("hidden")) return;
+
+      const insideScrollable = e.target.closest(".revision-modal-scroll");
+
+      if (!insideScrollable) {
+        e.preventDefault();
+        return;
+      }
+
+      const currentY = e.touches[0].clientY;
+      const deltaY = revisionTouchStartY - currentY;
+
+      const atTop = scrollBox.scrollTop <= 0;
+      const atBottom =
+        scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 1;
+
+      if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  }
+
+  bloccaScrollChainingRevisionModal();
+
   const usernameFilterCard = document.querySelector(".revision-filter-card");
   const toggleUsernameFilter = document.getElementById("toggleRevisionUsernameFilter");
   const usernameFilterBody = document.getElementById("revisionUsernameFilterBody");
@@ -654,34 +751,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     aggiornaBottoni(ds.stato);
 
-    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    lockRevisionPageScroll();
 
-    document.body.dataset.revisionModalScrollY = String(scrollY);
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = "0";
-    document.body.style.right = "0";
-    document.body.style.width = "100%";
-    document.body.style.overflow = "hidden";
+    const scrollBox = modal.querySelector(".revision-modal-scroll");
+    if (scrollBox) {
+      scrollBox.scrollTop = 0;
+    }
 
     modal.classList.remove("hidden");
   }
 
   function chiudiModale() {
-    const scrollY = Number(document.body.dataset.revisionModalScrollY || 0);
-
     modal.classList.add("hidden");
 
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.width = "";
-    document.body.style.overflow = "";
-
-    delete document.body.dataset.revisionModalScrollY;
-
-    window.scrollTo(0, scrollY);
+    unlockRevisionPageScroll();
 
     currentRow = null;
   }
@@ -869,7 +952,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chiudiModale();
     }
   });
-  
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !modal.classList.contains("hidden")) {
       chiudiModale();
