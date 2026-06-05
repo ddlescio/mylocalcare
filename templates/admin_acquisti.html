@@ -22,7 +22,7 @@
                             q=request.args.get('q', ''),
                             tipo=request.args.get('tipo', ''),
                             stato=request.args.get('stato', ''),
-                            metodo=request.args.get('metodo', '')) }}"
+                            metodo=request.args.get('metodo', 'stripe')) }}"
            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-sm font-semibold shadow-sm transition">
           ⬇️ Excel
         </a>
@@ -99,7 +99,7 @@
             <label for="metodo">Metodo</label>
             <select id="metodo" name="metodo">
               <option value="">Tutti</option>
-              <option value="stripe" {% if request.args.get('metodo') == 'stripe' %}selected{% endif %}>Stripe</option>
+              <option value="stripe" {% if request.args.get('metodo', 'stripe') == 'stripe' %}selected{% endif %}>Stripe</option>
               <option value="admin" {% if request.args.get('metodo') == 'admin' %}selected{% endif %}>Admin</option>
             </select>
           </div>
@@ -138,7 +138,7 @@
             </div>
 
             <div class="acquisto-mobile-user">
-              {{ a.email }}
+              @{{ a.username or '—' }}
             </div>
           </div>
 
@@ -518,17 +518,43 @@
         </div>
       </div>
 
-      <div class="acquisto-modal-grid">
-
+      <div class="acquisto-modal-dates">
         <div class="acquisto-modal-item">
           <span>Data acquisto</span>
           <strong>{{ a.created_at | dt_roma_admin }}</strong>
         </div>
 
         <div class="acquisto-modal-item">
+          <span>Data scadenza</span>
+          <strong>
+            {% if a.tipo == 'pacchetto' %}
+              Vedi servizi inclusi
+            {% elif a.data_fine %}
+              {{ a.data_fine | dt_roma_admin }}
+            {% else %}
+              ∞
+            {% endif %}
+          </strong>
+        </div>
+
+        <div class="acquisto-modal-item">
+          <span>Durata</span>
+          <strong>
+            {% if a.durata_iniziale_giorni %}
+              {{ a.durata_iniziale_giorni }} giorni
+            {% else %}
+              Permanente / non indicata
+            {% endif %}
+          </strong>
+        </div>
+      </div>
+
+      <div class="acquisto-modal-grid">
+
+        <div class="acquisto-modal-item">
           <span>Utente</span>
-          <strong>{{ a.email }}</strong>
-          <small>ID {{ a.utente_id }} — @{{ a.username or '—' }}</small>
+          <strong>@{{ a.username or '—' }}</strong>
+          <small>ID {{ a.utente_id }} — {{ a.email }}</small>
         </div>
 
         <div class="acquisto-modal-item">
@@ -555,30 +581,6 @@
         <div class="acquisto-modal-item">
           <span>Provincia annuncio</span>
           <strong>{{ a.provincia_visuale }}</strong>
-        </div>
-
-        <div class="acquisto-modal-item">
-          <span>Durata iniziale</span>
-          <strong>
-            {% if a.durata_iniziale_giorni %}
-              {{ a.durata_iniziale_giorni }} giorni
-            {% else %}
-              Permanente / non indicata
-            {% endif %}
-          </strong>
-        </div>
-
-        <div class="acquisto-modal-item">
-          <span>Scadenza</span>
-          <strong>
-            {% if a.tipo == 'pacchetto' %}
-              Vedi servizi inclusi
-            {% elif a.data_fine %}
-              {{ a.data_fine | dt_roma_admin }}
-            {% else %}
-              ∞
-            {% endif %}
-          </strong>
         </div>
 
         <div class="acquisto-modal-item">
@@ -913,7 +915,7 @@
       padding: 0 12px;
     }
   }
-  
+
   .acquisti-mobile-list {
     display: none;
   }
@@ -1163,6 +1165,13 @@
     color: #0f172a;
   }
 
+  .acquisto-modal-dates {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
   .acquisto-modal-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1307,10 +1316,14 @@
       grid-template-columns: 1fr;
     }
 
-    .acquisto-modal-grid {
+    .acquisto-modal-dates {
       grid-template-columns: 1fr;
     }
 
+    .acquisto-modal-grid {
+      grid-template-columns: 1fr;
+    }
+    
     .acquisto-modal-service-row {
       align-items: flex-start;
       flex-direction: column;
@@ -1410,6 +1423,13 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  const currentParams = new URLSearchParams(window.location.search);
+
+  if (!currentParams.toString()) {
+    currentParams.set("metodo", "stripe");
+    window.location.href = `${window.location.pathname}?${currentParams.toString()}`;
+    return;
+  }
   const tbody = document.getElementById("acquisti-tbody");
   const sortButtons = document.querySelectorAll(".sort-btn");
   const filterCard = document.querySelector(".admin-filter-card");
