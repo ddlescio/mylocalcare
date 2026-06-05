@@ -290,29 +290,60 @@
     white-space: nowrap;
 }
 
-/* ====== AZIONI UTENTE ALLINEATE ====== */
-.admin-user-actions-cell {
-    vertical-align: middle;
+/* ====== STATO + AZIONI UTENTE ALLINEATE ====== */
+
+/* La colonna Stato non deve cambiare peso visivo tra "Attivo" e "Non attivo" */
+.admin-user-status-cell {
+    width: 132px;
+    min-width: 132px;
+    max-width: 132px;
     text-align: center;
+    vertical-align: middle;
 }
 
-.admin-user-actions {
+/* Badge stato tutti larghi uguali */
+.admin-user-status-cell .badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    width: 104px;
+    min-width: 104px;
+    height: 30px;
+    white-space: nowrap;
+}
+
+/* La colonna Azioni parte sempre dallo stesso punto */
+.admin-user-actions-cell {
+    width: 520px;
+    min-width: 520px;
+    max-width: 520px;
+    vertical-align: middle;
+    text-align: left;
+}
+
+/* Gruppo azioni allineato a sinistra, non centrato in base al contenuto */
+.admin-user-actions {
+    display: grid;
+    grid-template-columns: 120px 74px 72px 150px 170px;
+    align-items: center;
+    column-gap: 10px;
     min-height: 38px;
     white-space: nowrap;
 }
 
+/* Tasto dettagli: larghezza fissa SEMPRE uguale */
 .admin-user-details-btn {
     position: relative;
-    min-width: 86px;
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    height: 38px;
+    padding: 0 34px 0 28px !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0;
     white-space: nowrap;
+    box-sizing: border-box;
 }
 
 /* Stato normale */
@@ -322,7 +353,7 @@
     border-color: #cbd5e1;
 }
 
-/* Stato premium quando ci sono dettagli */
+/* Stato premium: cambia colore, NON dimensione */
 .admin-user-details-btn.has-details {
     background:
         linear-gradient(180deg, rgba(239, 246, 255, 1), rgba(219, 234, 254, 0.96));
@@ -333,17 +364,22 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
+/* Pallino premium assoluto: non allarga il bottone */
 .admin-user-details-btn.has-details::before {
     content: "";
+    position: absolute;
+    left: 14px;
     width: 7px;
     height: 7px;
     border-radius: 9999px;
     background: #2563eb;
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
-    margin-right: 6px;
 }
 
+/* Contatore assoluto: non allarga il bottone */
 .admin-user-details-count {
+    position: absolute;
+    right: 10px;
     display: none;
     min-width: 18px;
     height: 18px;
@@ -355,7 +391,7 @@
     font-weight: 900;
     line-height: 18px;
     text-align: center;
-    margin-left: 6px;
+    box-sizing: border-box;
 }
 
 .admin-user-details-btn.has-details .admin-user-details-count {
@@ -895,7 +931,7 @@
           <tr>
               <th>ID</th>
               <th>Username</th>
-              <th>Stato</th>
+              <th class="admin-user-status-cell">Stato</th>
               <th class="text-center">Azioni</th>
               <th>Nome</th>
               <th>Cognome</th>
@@ -959,7 +995,7 @@
                   </div>
                 </td>
 
-                <td>
+                <td class="admin-user-status-cell">
                     {% if u.eliminato == 1 %}
                         <span class="badge badge-red">Eliminato</span>
                     {% elif u.sospeso == 1 %}
