@@ -10,7 +10,7 @@
 </p>
 
 <!-- 🔹 GRID CARDS CLICCABILI (stile iOS) -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="grid grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
 
   <!-- 🟦 Utenti -->
   <a href="{{ url_for('admin_utenti') }}"
@@ -31,8 +31,9 @@
 
   <!-- 🟧 Annunci -->
   <a href="{{ url_for('admin_annunci') }}"
-     class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
-            flex flex-col items-center justify-center text-center min-h-[150px] sm:min-h-[190px] lg:min-h-[220px]
+     id="card-annunci-alert"
+     class="admin-alert-card group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex flex-col items-center justify-center text-center min-h-[120px] sm:min-h-[190px] lg:min-h-[220px]
             transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
 
     <div class="p-3 rounded-xl bg-amber-100 text-amber-700 text-xl
@@ -48,8 +49,9 @@
 
   <!-- 🟥 Recensioni -->
   <a href="{{ url_for('admin_recensioni') }}"
-     class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
-            flex flex-col items-center justify-center text-center min-h-[150px] sm:min-h-[190px] lg:min-h-[220px]
+     id="card-recensioni-alert"
+     class="admin-alert-card group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex flex-col items-center justify-center text-center min-h-[120px] sm:min-h-[190px] lg:min-h-[220px]
             transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
 
     <div class="p-3 rounded-xl bg-rose-100 text-rose-700 text-xl
@@ -65,8 +67,9 @@
 
   <!-- 🕵️ Revisioni profilo -->
   <a href="{{ url_for('admin_revisioni_profilo') }}"
-     class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
-            flex flex-col items-center justify-center text-center min-h-[150px] sm:min-h-[190px] lg:min-h-[220px]
+     id="card-revisioni-profilo-alert"
+     class="admin-alert-card group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex flex-col items-center justify-center text-center min-h-[120px] sm:min-h-[190px] lg:min-h-[220px]
             transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
 
     <div class="p-3 rounded-xl bg-orange-100 text-orange-700 text-xl
@@ -150,6 +153,69 @@
 
 </div>
 
+<style>
+  @keyframes adminCardPulse {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+
+    50% {
+      transform: translateY(-3px) scale(1.015);
+      box-shadow: 0 14px 28px rgba(239, 68, 68, 0.18);
+    }
+  }
+
+  .admin-alert-card.is-alert {
+    border-color: rgba(239, 68, 68, 0.65) !important;
+    background:
+      radial-gradient(circle at top right, rgba(254, 226, 226, 0.85), transparent 38%),
+      #ffffff;
+    animation: adminCardPulse 1.8s ease-in-out infinite;
+  }
+
+  .admin-alert-card.is-alert::after {
+    content: "";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    background: #ef4444;
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.16);
+  }
+
+  .admin-alert-card {
+    position: relative;
+  }
+
+  @media (max-width: 640px) {
+    .admin-alert-card,
+    .grid > a {
+      padding: 12px !important;
+      border-radius: 18px;
+    }
+
+    .grid > a > div:first-child {
+      margin-bottom: 8px !important;
+      padding: 8px !important;
+      font-size: 1rem !important;
+      border-radius: 12px;
+    }
+
+    .grid > a p.text-sm {
+      font-size: 0.68rem;
+      line-height: 1.1;
+    }
+
+    .grid > a p.text-2xl {
+      font-size: 1.15rem;
+      margin-top: 6px;
+    }
+  }
+</style>
+
 <!-- 🔹 JS per caricare counters -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -157,6 +223,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const el = document.getElementById(id);
     if (!el) return;
     el.textContent = value ?? "0";
+  }
+
+  function setAlertCard(cardId, value) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+
+    const numberValue = Number(value || 0);
+
+    if (numberValue > 0) {
+      card.classList.add("is-alert");
+    } else {
+      card.classList.remove("is-alert");
+    }
   }
 
   function aggiornaDashboardCounters() {
@@ -176,7 +255,11 @@ document.addEventListener("DOMContentLoaded", () => {
         setText("dash-recensioni", data.recensioni);
         setText("dash-revisioni-profilo", data.revisioni_profilo);
         setText("dash-video-minuti", data.video_minuti);
-        setText("dash-openai-costo", data.openai_costo || "—");               
+        setText("dash-openai-costo", data.openai_costo || "—");
+
+        setAlertCard("card-annunci-alert", data.annunci);
+        setAlertCard("card-recensioni-alert", data.recensioni);
+        setAlertCard("card-revisioni-profilo-alert", data.revisioni_profilo);
       })
       .catch(() => {});
   }
