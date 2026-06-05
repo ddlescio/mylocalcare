@@ -292,41 +292,43 @@
 
 /* ====== STATO + AZIONI UTENTE ALLINEATE ====== */
 
-/* La colonna Stato non deve cambiare peso visivo tra "Attivo" e "Non attivo" */
+/* Colonna Stato più compatta ma stabile */
 .admin-user-status-cell {
-    width: 132px;
-    min-width: 132px;
-    max-width: 132px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
     text-align: center;
     vertical-align: middle;
 }
 
-/* Badge stato tutti larghi uguali */
+/* Badge stato compatti e tutti uguali */
 .admin-user-status-cell .badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 104px;
-    min-width: 104px;
-    height: 30px;
+    width: 78px;
+    min-width: 78px;
+    height: 28px;
+    padding: 0 8px;
     white-space: nowrap;
+    box-sizing: border-box;
 }
 
-/* La colonna Azioni parte sempre dallo stesso punto */
+/* Colonna Azioni: deve contenere esattamente tutto il gruppo senza invadere Nome */
 .admin-user-actions-cell {
-    width: 520px;
-    min-width: 520px;
-    max-width: 520px;
+    width: 590px;
+    min-width: 590px;
+    max-width: 590px;
     vertical-align: middle;
     text-align: left;
 }
 
-/* Gruppo azioni allineato a sinistra, non centrato in base al contenuto */
+/* Gruppo azioni: colonne fisse, più compatte, nessuna sovrapposizione */
 .admin-user-actions {
     display: grid;
-    grid-template-columns: 120px 74px 72px 150px 170px;
+    grid-template-columns: 112px 74px 68px 138px 154px;
     align-items: center;
-    column-gap: 10px;
+    column-gap: 8px;
     min-height: 38px;
     white-space: nowrap;
 }
@@ -334,11 +336,11 @@
 /* Tasto dettagli: larghezza fissa SEMPRE uguale */
 .admin-user-details-btn {
     position: relative;
-    width: 120px;
-    min-width: 120px;
-    max-width: 120px;
-    height: 38px;
-    padding: 0 34px 0 28px !important;
+    width: 112px;
+    min-width: 112px;
+    max-width: 112px;
+    height: 36px;
+    padding: 0 28px 0 24px !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -360,7 +362,7 @@
     color: #1d4ed8;
     border-color: rgba(96, 165, 250, 0.9);
     box-shadow:
-        0 8px 20px rgba(37, 99, 235, 0.16),
+        0 8px 20px rgba(37, 99, 235, 0.14),
         inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
@@ -368,7 +370,7 @@
 .admin-user-details-btn.has-details::before {
     content: "";
     position: absolute;
-    left: 14px;
+    left: 12px;
     width: 7px;
     height: 7px;
     border-radius: 9999px;
@@ -379,7 +381,7 @@
 /* Contatore assoluto: non allarga il bottone */
 .admin-user-details-count {
     position: absolute;
-    right: 10px;
+    right: 8px;
     display: none;
     min-width: 18px;
     height: 18px;
@@ -398,6 +400,22 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Evita che Contatti/Affidabilità escano dalla propria colonna */
+.admin-user-actions button,
+.admin-user-actions a {
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* Compatta leggermente i due bottoni lunghi */
+.admin-user-actions button[onclick^="toggleContattiProfilo"],
+.admin-user-actions button[onclick^="toggleAffidabilitaProfilo"] {
+    width: 100%;
+    justify-content: center;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
 }
 
 </style>
