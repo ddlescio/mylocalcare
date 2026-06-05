@@ -91,6 +91,33 @@
         </span>
       </a>
 
+      <a href="{{ url_for('admin_revisioni_profilo') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/revisioni-profilo') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>🕵️</span>
+        <span>Revisioni profilo</span>
+
+        <span id="badge-revisioni-profilo"
+              class="ml-auto inline-flex items-center justify-center rounded-full min-w-[1.5rem]
+                     h-6 text-xs font-semibold bg-orange-100 text-orange-700 hidden">
+        </span>
+      </a>
+
+      <a href="{{ url_for('admin_acquisti') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/acquisti') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>🧾</span>
+        <span>Acquisti</span>
+      </a>
+
       <a href="{{ url_for('admin_statistiche') }}"
          class="flex items-center gap-2 px-3 py-2 rounded-xl
                 {% if current.startswith('/admin/statistiche') %}
@@ -144,7 +171,7 @@
                 {% endif %}">
         <span>💰</span>
         <span>Servizi</span>
-      </a>      
+      </a>
     </nav>
 
     {# Footer sidebar: esci #}
@@ -223,6 +250,14 @@ document.addEventListener('DOMContentLoaded', function () {
         bRec.textContent = data.recensioni;
         bRec.classList.remove('hidden');
       }
+
+      // Revisioni profilo
+      const bRev = document.getElementById('badge-revisioni-profilo');
+      if (bRev && data.revisioni_profilo && data.revisioni_profilo > 0) {
+        bRev.textContent = data.revisioni_profilo;
+        bRev.classList.remove('hidden');
+      }
+
     })
     .catch(() => {});
 });
@@ -245,6 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // ---- Sidebar ----
                 const bAnn = document.getElementById("badge-annunci");
                 const bRec = document.getElementById("badge-recensioni");
+                const bRev = document.getElementById("badge-revisioni-profilo");
 
                 if (bAnn) {
                     if (data.annunci > 0) {
@@ -261,6 +297,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         bRec.classList.remove("hidden");
                     } else {
                         bRec.classList.add("hidden");
+                    }
+                }
+
+                if (bRev) {
+                    if (data.revisioni_profilo > 0) {
+                        bRev.textContent = data.revisioni_profilo;
+                        bRev.classList.remove("hidden");
+                    } else {
+                        bRev.classList.add("hidden");
                     }
                 }
 
