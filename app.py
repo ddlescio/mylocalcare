@@ -15593,13 +15593,29 @@ def elimina_account_step2():
             """), (user_id,))
 
             # =====================================================
-            # 6) Rimuove annunci dell'utente
+            # 6) Rimuove match collegati all'utente o ai suoi annunci
+            #
+            # Necessario perché match_utenti.annuncio_id ha una FK verso annunci.id.
+            # Se cancelliamo prima gli annunci, Postgres blocca l'eliminazione.
+            # =====================================================
+            cur.execute(sql("""
+                DELETE FROM match_utenti
+                WHERE annuncio_id IN (
+                    SELECT id
+                    FROM annunci
+                    WHERE utente_id = ?
+                )
+                   OR utente_cerca_id = ?
+                   OR utente_offre_id = ?
+            """), (user_id, user_id, user_id))
+
+            # =====================================================
+            # 7) Rimuove annunci dell'utente
             # =====================================================
             cur.execute(sql("""
                 DELETE FROM annunci
                 WHERE utente_id = ?
             """), (user_id,))
-
             # =====================================================
             # 7) Gestione recensioni
             #
