@@ -1378,39 +1378,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!backdrop || !closeBtn) return;
 
-  // BLOCCO SCROLL CHAINING MOBILE / iOS
-  let reviewModalTouchStartY = 0;
+  // BLOCCO SCROLL CHAINING MOBILE / iOS - VERSIONE ROBUSTA
+  let reviewModalLastTouchY = 0;
 
   backdrop.addEventListener("touchstart", (e) => {
-    reviewModalTouchStartY = e.touches[0].clientY;
+    if (!backdrop.classList.contains("is-open")) return;
+    reviewModalLastTouchY = e.touches[0].clientY;
   }, { passive: true });
 
   backdrop.addEventListener("touchmove", (e) => {
+    if (!backdrop.classList.contains("is-open")) return;
+
     const card = e.target.closest(".review-modal-card");
 
-    // Se il gesto è fuori dalla card, non deve scrollare la pagina sotto
+    // Se il gesto parte fuori dalla card, non deve mai muovere la pagina sotto
     if (!card) {
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
       return;
     }
 
     const currentY = e.touches[0].clientY;
-    const deltaY = currentY - reviewModalTouchStartY;
+    const deltaY = currentY - reviewModalLastTouchY;
+    reviewModalLastTouchY = currentY;
 
     const scrollTop = card.scrollTop;
     const scrollHeight = card.scrollHeight;
     const clientHeight = card.clientHeight;
 
+    const canScroll = scrollHeight > clientHeight + 1;
     const isAtTop = scrollTop <= 0;
     const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
 
-    /*
-      Se sei in cima e trascini verso il basso,
-      oppure sei in fondo e trascini verso l'alto,
-      blocchiamo il gesto per evitare che passi alla pagina sotto.
-    */
-    if ((isAtTop && deltaY > 0) || (isAtBottom && deltaY < 0)) {
-      e.preventDefault();
+    // Se la card non ha abbastanza contenuto da scrollare, blocca tutto
+    if (!canScroll) {
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
+
+    // In cima: blocca trascinamento verso il basso
+    if (isAtTop && deltaY > 0) {
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
+
+    // In fondo: blocca trascinamento verso l'alto
+    if (isAtBottom && deltaY < 0) {
+      if (e.cancelable) e.preventDefault();
+      return;
     }
   }, { passive: false });
 
@@ -1466,12 +1480,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
 
       document.body.dataset.reviewModalScrollY = String(scrollY);
+
+      document.documentElement.style.overflow = "hidden";
+      document.documentElement.style.height = "100%";
+      document.documentElement.style.touchAction = "none";
+
       document.body.style.position = "fixed";
       document.body.style.top = `-${scrollY}px`;
       document.body.style.left = "0";
       document.body.style.right = "0";
       document.body.style.width = "100%";
       document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
     }
 
     backdrop.classList.add("is-open");
@@ -1484,13 +1504,18 @@ document.addEventListener("DOMContentLoaded", () => {
     backdrop.classList.remove("is-open");
     backdrop.setAttribute("aria-hidden", "true");
 
+    document.documentElement.style.overflow = "";
+    document.documentElement.style.height = "";
+    document.documentElement.style.touchAction = "";
+
     document.body.style.position = "";
     document.body.style.top = "";
     document.body.style.left = "";
     document.body.style.right = "";
     document.body.style.width = "";
     document.body.style.overflow = "";
-
+    document.body.style.touchAction = "";
+    
     delete document.body.dataset.reviewModalScrollY;
 
     window.scrollTo(0, scrollY);
