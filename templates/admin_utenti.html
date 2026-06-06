@@ -879,7 +879,7 @@
             font-size: 0.76rem;
         }
     }
-    
+
 </style>
 
 <div class="admin-users-wide">
@@ -2031,9 +2031,29 @@ document.addEventListener("DOMContentLoaded", () => {
       if (modalDetailsChevron) {
         modalDetailsChevron.textContent = isHidden ? "▾" : "▴";
       }
+
+      /*
+        Quando apro "Dettagli utente", faccio scorrere la card interna
+        della modale fino alla sezione dettagli, così le intestazioni
+        delle tendine risultano subito visibili.
+      */
+      if (!isHidden) {
+        const scrollBox = backdrop.querySelector(".user-modal-card");
+
+        if (scrollBox) {
+          setTimeout(() => {
+            const targetTop = modalDetailsToggle.offsetTop - 12;
+
+            scrollBox.scrollTo({
+              top: targetTop,
+              behavior: "smooth"
+            });
+          }, 80);
+        }
+      }
     });
   }
-
+  
   closeBtn.addEventListener("click", closeModal);
 
   backdrop.addEventListener("click", (e) => {
