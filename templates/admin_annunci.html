@@ -660,17 +660,53 @@
     grid-column: span 3;
 }
 
-/* Mobile: tutto torna una voce sotto l'altra */
+/* Mobile: mantiene la stessa struttura a righe, ma più compatta */
 @media (max-width: 639px) {
     .annuncio-modal-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 7px;
     }
 
-    .annuncio-modal-info.modal-full,
-    .annuncio-modal-info.modal-third,
-    .annuncio-modal-info.modal-half,
-    .annuncio-modal-info.modal-half-location {
+    /* Titolo / Descrizione / Foto: riga intera */
+    .annuncio-modal-info.modal-full {
         grid-column: 1 / -1;
+    }
+
+    /* Utente - Categoria - Tipo: stessa riga */
+    .annuncio-modal-info.modal-third {
+        grid-column: span 2;
+    }
+
+    /* Stato - Pubblicato: stessa riga */
+    .annuncio-modal-info.modal-half {
+        grid-column: span 3;
+    }
+
+    /* Comune - Provincia: stessa riga */
+    .annuncio-modal-info.modal-half-location {
+        grid-column: span 3;
+    }
+
+    .annuncio-modal-info {
+        padding: 8px 7px;
+        border-radius: 14px;
+    }
+
+    .annuncio-modal-label {
+        font-size: 0.58rem;
+        margin-bottom: 3px;
+        letter-spacing: 0.02em;
+    }
+
+    .annuncio-modal-value {
+        font-size: 0.74rem;
+        line-height: 1.15;
+        word-break: break-word;
+    }
+
+    .annuncio-modal-description {
+        font-size: 0.82rem;
+        line-height: 1.35;
     }
 }
 
@@ -1345,7 +1381,7 @@
           </div>
 
         </div>
-        
+
         <div class="annuncio-modal-actions">
 
           <a id="modal-annuncio-apri" href="#" class="annuncio-modal-action primary">

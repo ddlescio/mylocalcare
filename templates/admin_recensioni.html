@@ -708,13 +708,65 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
 .review-modal-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 10px;
 }
 
-@media (min-width: 640px) {
+/* Autore - Destinatario */
+.review-modal-info.review-half {
+    grid-column: span 3;
+}
+
+/* Voto - Pubblicata il - Stato recensione */
+.review-modal-info.review-third {
+    grid-column: span 2;
+}
+
+/* Testi e blocchi a riga intera */
+.review-modal-info.review-full {
+    grid-column: 1 / -1;
+}
+
+/* Mobile: mantiene la stessa struttura a righe, ma più compatta */
+@media (max-width: 639px) {
     .review-modal-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 7px;
+    }
+
+    .review-modal-info.review-half {
+        grid-column: span 3;
+    }
+
+    .review-modal-info.review-third {
+        grid-column: span 2;
+    }
+
+    .review-modal-info.review-full {
+        grid-column: 1 / -1;
+    }
+
+    .review-modal-info {
+        padding: 8px 7px;
+        border-radius: 14px;
+    }
+
+    .review-modal-label {
+        font-size: 0.58rem;
+        margin-bottom: 3px;
+        letter-spacing: 0.02em;
+    }
+
+    .review-modal-value {
+        font-size: 0.74rem;
+        line-height: 1.15;
+        word-break: break-word;
+    }
+
+    #modal-review-testo,
+    #modal-review-risposta {
+        font-size: 0.82rem;
+        line-height: 1.35;
     }
 }
 
@@ -1185,48 +1237,53 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
 
     <div class="review-modal-grid">
 
-      <div class="review-modal-info">
+      <!-- Riga 1: Autore / Destinatario -->
+      <div class="review-modal-info review-half">
         <div class="review-modal-label">Autore</div>
         <div id="modal-review-autore" class="review-modal-value">-</div>
       </div>
 
-      <div class="review-modal-info">
+      <div class="review-modal-info review-half">
         <div class="review-modal-label">Destinatario</div>
         <div id="modal-review-destinatario" class="review-modal-value">-</div>
       </div>
 
-      <div class="review-modal-info">
+      <!-- Riga 2: Voto / Pubblicata il / Stato recensione -->
+      <div class="review-modal-info review-third">
         <div class="review-modal-label">Voto</div>
         <div id="modal-review-voto" class="review-modal-value">-</div>
       </div>
 
-      <div class="review-modal-info">
+      <div class="review-modal-info review-third">
         <div class="review-modal-label">Pubblicata il</div>
         <div id="modal-review-data" class="review-modal-value">-</div>
       </div>
 
-      <div class="review-modal-info full">
+      <div class="review-modal-info review-third">
         <div class="review-modal-label">Stato recensione</div>
         <div id="modal-review-stato" class="review-modal-value">-</div>
       </div>
 
-      <div class="review-modal-info full">
+      <!-- Riga 3: Testo recensione -->
+      <div class="review-modal-info review-full">
         <div class="review-modal-label">Testo recensione</div>
         <div id="modal-review-testo" class="review-modal-value">-</div>
       </div>
 
-      <div class="review-modal-info full">
+      <!-- Riga 4: Stato risposta -->
+      <div class="review-modal-info review-full">
         <div class="review-modal-label">Stato risposta</div>
         <div id="modal-review-risposta-stato" class="review-modal-value">-</div>
       </div>
 
-      <div class="review-modal-info full">
+      <!-- Riga 5: Testo risposta -->
+      <div class="review-modal-info review-full">
         <div class="review-modal-label">Testo risposta</div>
         <div id="modal-review-risposta" class="review-modal-value">-</div>
       </div>
 
     </div>
-
+    
     <div id="review-modal-actions" class="review-modal-actions">
 
       <a id="modal-review-autore-chat" href="#" class="review-modal-action primary">
@@ -1498,7 +1555,7 @@ document.addEventListener("DOMContentLoaded", () => {
       closeReviewModal();
     }
   });
-  
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeReviewModal();
   });
