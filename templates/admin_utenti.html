@@ -749,22 +749,51 @@
     .user-modal-detail-block {
         border: 1px solid #e2e8f0;
         border-radius: 16px;
-        background: #f8fafc;
-        padding: 11px;
+        background: #ffffff;
+        overflow: hidden;
     }
 
+    /* Intestazione cliccabile della tendina */
     .user-modal-detail-title {
+        width: 100%;
+        min-height: 46px;
+        padding: 0 11px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 8px;
+        background: #f8fafc;
+        color: #334155;
         font-size: 0.78rem;
         font-weight: 900;
-        color: #334155;
-        margin-bottom: 8px;
+        cursor: pointer;
+        list-style: none;
     }
 
-    .user-modal-detail-title em {
+    /* Rimuove il triangolino standard del browser */
+    .user-modal-detail-title::-webkit-details-marker {
+        display: none;
+    }
+
+    .user-modal-detail-title::after {
+        content: "▾";
+        font-size: 0.8rem;
+        color: #64748b;
+        transition: transform 0.16s ease;
+    }
+
+    .user-modal-detail-block[open] .user-modal-detail-title::after {
+        transform: rotate(180deg);
+    }
+
+    .user-modal-detail-title-left {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+    }
+
+    .user-modal-detail-title-count {
         min-width: 24px;
         height: 24px;
         display: inline-flex;
@@ -782,6 +811,12 @@
         display: flex;
         flex-direction: column;
         gap: 7px;
+    }
+
+    .user-modal-detail-content {
+        padding: 10px;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
     }
 
     .user-modal-detail-item {
@@ -1224,37 +1259,49 @@
 
       <div id="modal-user-details-body" class="user-modal-details-body hidden">
 
-        <div class="user-modal-detail-block">
-          <div class="user-modal-detail-title">
-            <span>📣 Annunci attivi</span>
-            <em id="modal-count-annunci">0</em>
-          </div>
-          <div id="modal-user-annunci" class="user-modal-detail-list"></div>
-        </div>
+        <details class="user-modal-detail-block">
+          <summary class="user-modal-detail-title">
+            <span class="user-modal-detail-title-left">📣 Annunci attivi</span>
+            <span id="modal-count-annunci" class="user-modal-detail-title-count">0</span>
+          </summary>
 
-        <div class="user-modal-detail-block">
-          <div class="user-modal-detail-title">
-            <span>💬 Chat aperte</span>
-            <em id="modal-count-chat">0</em>
+          <div class="user-modal-detail-content">
+            <div id="modal-user-annunci" class="user-modal-detail-list"></div>
           </div>
-          <div id="modal-user-chat-aperte" class="user-modal-detail-list"></div>
-        </div>
+        </details>
 
-        <div class="user-modal-detail-block">
-          <div class="user-modal-detail-title">
-            <span>⭐ Recensioni scritte</span>
-            <em id="modal-count-recensioni-scritte">0</em>
-          </div>
-          <div id="modal-user-recensioni-scritte" class="user-modal-detail-list"></div>
-        </div>
+        <details class="user-modal-detail-block">
+          <summary class="user-modal-detail-title">
+            <span class="user-modal-detail-title-left">💬 Chat aperte</span>
+            <span id="modal-count-chat" class="user-modal-detail-title-count">0</span>
+          </summary>
 
-        <div class="user-modal-detail-block">
-          <div class="user-modal-detail-title">
-            <span>🌟 Recensioni ricevute</span>
-            <em id="modal-count-recensioni-ricevute">0</em>
+          <div class="user-modal-detail-content">
+            <div id="modal-user-chat-aperte" class="user-modal-detail-list"></div>
           </div>
-          <div id="modal-user-recensioni-ricevute" class="user-modal-detail-list"></div>
-        </div>
+        </details>
+
+        <details class="user-modal-detail-block">
+          <summary class="user-modal-detail-title">
+            <span class="user-modal-detail-title-left">⭐ Recensioni scritte</span>
+            <span id="modal-count-recensioni-scritte" class="user-modal-detail-title-count">0</span>
+          </summary>
+
+          <div class="user-modal-detail-content">
+            <div id="modal-user-recensioni-scritte" class="user-modal-detail-list"></div>
+          </div>
+        </details>
+
+        <details class="user-modal-detail-block">
+          <summary class="user-modal-detail-title">
+            <span class="user-modal-detail-title-left">🌟 Recensioni ricevute</span>
+            <span id="modal-count-recensioni-ricevute" class="user-modal-detail-title-count">0</span>
+          </summary>
+
+          <div class="user-modal-detail-content">
+            <div id="modal-user-recensioni-ricevute" class="user-modal-detail-list"></div>
+          </div>
+        </details>
 
       </div>
     </div>
@@ -1822,7 +1869,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const detailsBody = document.getElementById("modal-user-details-body");
     const detailsChevron = document.getElementById("modal-user-details-chevron");
 
-    if (detailsBody) detailsBody.classList.add("hidden");
+    if (detailsBody) {
+      detailsBody.classList.add("hidden");
+
+      detailsBody.querySelectorAll(".user-modal-detail-block[open]").forEach(detail => {
+        detail.removeAttribute("open");
+      });
+    }
+
     if (detailsChevron) detailsChevron.textContent = "▾";
   };
 
