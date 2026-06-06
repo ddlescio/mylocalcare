@@ -15557,6 +15557,24 @@ def elimina_account_step2():
             # - servizi legati agli annunci dell'utente
             # - servizi legati direttamente al profilo utente
             # =====================================================
+            # 5PRE) Rimuove lo storico collegato alle attivazioni servizi dell'utente
+            #
+            # Necessario perché storico_servizi.attivazione_id ha una FK verso
+            # attivazioni_servizi.id. Se cancelliamo prima attivazioni_servizi,
+            # Postgres blocca l'eliminazione.
+            cur.execute(sql("""
+                DELETE FROM storico_servizi
+                WHERE attivazione_id IN (
+                    SELECT id
+                    FROM attivazioni_servizi
+                    WHERE annuncio_id IN (
+                        SELECT id
+                        FROM annunci
+                        WHERE utente_id = ?
+                    )
+                       OR utente_id = ?
+                )
+            """), (user_id, user_id))
 
             # 5A) Attivazioni collegate agli annunci dell'utente
             cur.execute(sql("""
