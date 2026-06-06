@@ -12787,11 +12787,8 @@ def register():
             salt_b64, dek_enc_b64, dek_nonce_b64,
             None, None,
             x25519_pub_b64, x25519_priv_enc_b64, x25519_priv_nonce_b64,
-            "iubenda_2026_v1"
+            "mylocalcare_privacy_termini_2026_v1"
         ))
-
-        conn.commit()
-
 
         conn.commit()
 
@@ -12840,6 +12837,10 @@ def termini():
 @app.route("/privacy")
 def privacy():
     return render_template("privacy.html")
+
+@app.route("/cookie-policy")
+def cookie_policy():
+    return render_template("cookie_policy.html")
 
 @app.route('/conferma/<token>')
 def conferma_email(token):
