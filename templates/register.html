@@ -203,7 +203,7 @@
 
     </div>
 
-    <!-- Termini e privacy -->
+    <!-- Termini, privacy e cookie -->
 
     <div class="flex items-start space-x-2">
 
@@ -213,14 +213,32 @@
 
         <span class="text-red-600">*</span>
 
-        Dichiaro di aver letto e accettato i
+        Dichiaro di aver letto l’
 
-        <a href="/termini" class="text-blue-600 underline hover:text-blue-800">Termini d’uso</a>
+        <a href="{{ url_for('privacy') }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="text-blue-600 underline hover:text-blue-800">
+          Informativa sulla Privacy
+        </a>,
 
-        e l’
+        la
 
-        <a href="/privacy" class="text-blue-600 underline hover:text-blue-800">Informativa sulla Privacy</a>.
+        <a href="{{ url_for('cookie_policy') }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="text-blue-600 underline hover:text-blue-800">
+          Cookie Policy
+        </a>
 
+        e di accettare i
+
+        <a href="{{ url_for('termini') }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="text-blue-600 underline hover:text-blue-800">
+          Termini e Condizioni
+        </a>.
       </label>
 
     </div>
