@@ -130,6 +130,7 @@ def crea_tabella_utenti():
         visibile_in_chat INTEGER DEFAULT 1,
         sospeso INTEGER DEFAULT 0,
         disattivato_admin INTEGER DEFAULT 0,
+        eliminato INTEGER DEFAULT 0,
         email_notifiche INTEGER DEFAULT 1,
 
         -- ⭐ Riepilogo recensioni
@@ -1251,8 +1252,9 @@ def aggiorna_colonne_mancanti():
         "visibile_in_chat": "INTEGER DEFAULT 1",
         "sospeso": "INTEGER DEFAULT 0",
         "disattivato_admin": "INTEGER DEFAULT 0",
+        "eliminato": "INTEGER DEFAULT 0",
         "email_notifiche": "INTEGER DEFAULT 1",
-
+        
         # Recensioni e tracking
         "media_recensioni": "REAL DEFAULT 0",
         "numero_recensioni": "INTEGER DEFAULT 0",
@@ -1505,6 +1507,17 @@ def aggiorna_colonne_revisione_profilo_postgres():
 
         c.execute("""
             ALTER TABLE utenti
+            ADD COLUMN IF NOT EXISTS eliminato INTEGER DEFAULT 0;
+        """)
+
+        c.execute("""
+            UPDATE utenti
+            SET eliminato = 0
+            WHERE eliminato IS NULL;
+        """)
+
+        c.execute("""
+            ALTER TABLE utenti
             ADD COLUMN IF NOT EXISTS frase_stato TEXT DEFAULT 'approvata';
         """)
 
@@ -1573,7 +1586,7 @@ def inizializza_database():
     aggiorna_colonne_revisione_profilo_postgres()
     crea_tabella_revisioni_profilo()
 
-    crea_tabella_operatori()      
+    crea_tabella_operatori()
     crea_tabella_annunci()
     crea_tabella_filtri_categoria()
     crea_indici_annunci()

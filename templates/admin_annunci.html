@@ -636,13 +636,41 @@
 
 .annuncio-modal-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 10px;
 }
 
-@media (min-width: 640px) {
+/* Titolo: una riga intera */
+.annuncio-modal-info.modal-full {
+    grid-column: 1 / -1;
+}
+
+/* Utente - Categoria - Tipo sulla stessa riga */
+.annuncio-modal-info.modal-third {
+    grid-column: span 2;
+}
+
+/* Stato - Pubblicato sulla stessa riga */
+.annuncio-modal-info.modal-half {
+    grid-column: span 3;
+}
+
+/* Comune - Provincia sulla stessa riga */
+.annuncio-modal-info.modal-half-location {
+    grid-column: span 3;
+}
+
+/* Mobile: tutto torna una voce sotto l'altra */
+@media (max-width: 639px) {
     .annuncio-modal-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
+    }
+
+    .annuncio-modal-info.modal-full,
+    .annuncio-modal-info.modal-third,
+    .annuncio-modal-info.modal-half,
+    .annuncio-modal-info.modal-half-location {
+        grid-column: 1 / -1;
     }
 }
 
@@ -1258,52 +1286,58 @@
 
         <div class="annuncio-modal-grid">
 
-          <div class="annuncio-modal-info full">
+          <!-- Riga 1: Titolo -->
+          <div class="annuncio-modal-info modal-full">
             <div class="annuncio-modal-label">Titolo</div>
             <div id="modal-annuncio-titolo" class="annuncio-modal-value">-</div>
           </div>
 
-          <div class="annuncio-modal-info">
+          <!-- Riga 2: Utente / Categoria / Tipo -->
+          <div class="annuncio-modal-info modal-third">
             <div class="annuncio-modal-label">Utente</div>
             <div id="modal-annuncio-utente" class="annuncio-modal-value">-</div>
           </div>
 
-          <div class="annuncio-modal-info">
+          <div class="annuncio-modal-info modal-third">
             <div class="annuncio-modal-label">Categoria</div>
             <div id="modal-annuncio-categoria" class="annuncio-modal-value">-</div>
           </div>
 
-          <div class="annuncio-modal-info">
+          <div class="annuncio-modal-info modal-third">
             <div class="annuncio-modal-label">Tipo</div>
             <div id="modal-annuncio-tipo" class="annuncio-modal-value">-</div>
           </div>
 
-          <div class="annuncio-modal-info">
+          <!-- Riga 3: Stato / Pubblicato il -->
+          <div class="annuncio-modal-info modal-half">
             <div class="annuncio-modal-label">Stato</div>
             <div id="modal-annuncio-stato" class="annuncio-modal-value">-</div>
           </div>
 
-          <div class="annuncio-modal-info">
+          <div class="annuncio-modal-info modal-half">
             <div class="annuncio-modal-label">Pubblicato il</div>
             <div id="modal-annuncio-data" class="annuncio-modal-value">-</div>
           </div>
 
-          <div class="annuncio-modal-info">
+          <!-- Riga 4: Comune / Provincia -->
+          <div class="annuncio-modal-info modal-half-location">
             <div class="annuncio-modal-label">Comune</div>
             <div id="modal-annuncio-zona" class="annuncio-modal-value">-</div>
           </div>
 
-          <div class="annuncio-modal-info">
+          <div class="annuncio-modal-info modal-half-location">
             <div class="annuncio-modal-label">Provincia</div>
             <div id="modal-annuncio-provincia" class="annuncio-modal-value">-</div>
           </div>
 
-          <div class="annuncio-modal-info full">
+          <!-- Riga 5: Descrizione -->
+          <div class="annuncio-modal-info modal-full">
             <div class="annuncio-modal-label">Descrizione</div>
             <div id="modal-annuncio-descrizione" class="annuncio-modal-value annuncio-modal-description">-</div>
           </div>
 
-          <div class="annuncio-modal-info full">
+          <!-- Riga 6: Foto -->
+          <div class="annuncio-modal-info modal-full">
             <div class="annuncio-modal-label">Foto</div>
             <div id="modal-annuncio-media" class="annuncio-modal-media-grid">
               <div class="annuncio-modal-empty-media">Nessuna foto presente</div>
@@ -1311,7 +1345,7 @@
           </div>
 
         </div>
-
+        
         <div class="annuncio-modal-actions">
 
           <a id="modal-annuncio-apri" href="#" class="annuncio-modal-action primary">
@@ -2263,7 +2297,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     backdrop.classList.add("is-open");
-    backdrop.setAttribute("aria-hidden", "false");       
+    backdrop.setAttribute("aria-hidden", "false");
   };
 
   const closeAnnuncioModal = () => {
