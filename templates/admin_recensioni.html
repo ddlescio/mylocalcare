@@ -1283,7 +1283,7 @@ Gestisci recensioni lasciate dagli utenti e le relative risposte.
       </div>
 
     </div>
-    
+
     <div id="review-modal-actions" class="review-modal-actions">
 
       <a id="modal-review-autore-chat" href="#" class="review-modal-action primary">
@@ -1377,6 +1377,42 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeBtn = document.getElementById("review-modal-close");
 
   if (!backdrop || !closeBtn) return;
+
+  // BLOCCO SCROLL CHAINING MOBILE / iOS
+  let reviewModalTouchStartY = 0;
+
+  backdrop.addEventListener("touchstart", (e) => {
+    reviewModalTouchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  backdrop.addEventListener("touchmove", (e) => {
+    const card = e.target.closest(".review-modal-card");
+
+    // Se il gesto è fuori dalla card, non deve scrollare la pagina sotto
+    if (!card) {
+      e.preventDefault();
+      return;
+    }
+
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - reviewModalTouchStartY;
+
+    const scrollTop = card.scrollTop;
+    const scrollHeight = card.scrollHeight;
+    const clientHeight = card.clientHeight;
+
+    const isAtTop = scrollTop <= 0;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+    /*
+      Se sei in cima e trascini verso il basso,
+      oppure sei in fondo e trascini verso l'alto,
+      blocchiamo il gesto per evitare che passi alla pagina sotto.
+    */
+    if ((isAtTop && deltaY > 0) || (isAtBottom && deltaY < 0)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
 
   const setText = (id, value) => {
     const el = document.getElementById(id);
