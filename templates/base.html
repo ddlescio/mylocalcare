@@ -427,7 +427,7 @@ button, input[type="submit"] {
 
               {% endif %}
 
-            </div>            
+            </div>
           {% endif %}
         </div>
 
@@ -461,10 +461,10 @@ button, input[type="submit"] {
 
     <!-- ✅ Menu mobile premium -->
     <div id="nav-menu"
-         class="hidden absolute right-3 top-[4.15rem]
+         class="hidden fixed right-3 top-[4.75rem]
                 w-[min(18.5rem,calc(100vw-1.5rem))]
-                transition-all duration-300 ease-out opacity-0 translate-y-2
-                rounded-[1.65rem] overflow-visible z-40">
+                transition-opacity duration-200 ease-out opacity-0 translate-y-2
+                rounded-[1.65rem] overflow-visible z-[10020]">
 
       <div class="relative nav-menu-glass-panel">
 
@@ -2045,15 +2045,31 @@ body[data-chat="true"] #mobile-search-container {
 
 /* Menu mobile premium agganciato all'hamburger */
 #nav-menu {
+  position: fixed !important;
+  top: 4.75rem !important;
+  right: 0.75rem !important;
+  left: auto !important;
+  bottom: auto !important;
+
   background: transparent !important;
   border-top: 0 !important;
   box-shadow: none !important;
 
-  max-height: calc(100dvh - 5.1rem - env(safe-area-inset-bottom, 0px)) !important;
+  width: min(18.5rem, calc(100vw - 1.5rem)) !important;
+  max-height: calc(100dvh - 5.5rem - env(safe-area-inset-bottom, 0px)) !important;
+
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)) !important;
 
+  transform-origin: top right !important;
+  will-change: opacity, transform !important;
+
+  z-index: 10020 !important;
   scrollbar-width: none;
 }
 
