@@ -390,26 +390,44 @@ button, input[type="submit"] {
               {% endif %}
             </a>
 
-            <!-- 👤 Profilo -->
+            <!-- 👤 Profilo / Dashboard admin -->
             <div class="user-info relative flex items-center gap-2">
 
-              <!-- 🔵 Bottone unico avatar + username -->
-              <a href="{{ url_for('dashboard') }}"
-                 class="flex items-center gap-2 avatar-hover focus:outline-none select-none">
+              {% if session.get('is_admin') or session.get('ruolo') == 'admin' or (g.utente and (g.utente.get('is_admin') or g.utente.get('ruolo') == 'admin' or g.utente.get('username') == 'ADMIN')) %}
 
-                {% if g.utente and g.utente['foto_profilo'] %}
-                  <img src="{{ url_for('static', filename=g.utente['foto_profilo']) }}"
-                       class="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover border hover:ring-2 hover:ring-blue-400 transition flex-shrink-0">
-                {% else %}
-                  <span class="text-2xl md:text-[28px] leading-none flex-shrink-0">👤</span>
-                {% endif %}
+                <!-- 🛠️ Bottone Dashboard Admin al posto dell'avatar profilo -->
+                <a href="{{ url_for('admin_dashboard') }}"
+                   class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full
+                          bg-blue-600 text-white text-xs md:text-sm font-bold
+                          shadow-sm hover:bg-blue-700 transition whitespace-nowrap"
+                   title="Dashboard admin"
+                   aria-label="Apri dashboard admin">
+                  <span>🛠️</span>
+                  <span class="hidden sm:inline">Admin</span>
+                </a>
 
-                <span class="hidden sm:inline text-gray-700 font-medium text-sm md:text-base truncate max-w-[90px] username-link flex-shrink">
-                  {{ g.utente['username'] or g.utente['nome'] }}
-                </span>
+              {% else %}
 
-              </a>
-            </div>
+                <!-- 🔵 Bottone unico avatar + username -->
+                <a href="{{ url_for('dashboard') }}"
+                   class="flex items-center gap-2 avatar-hover focus:outline-none select-none">
+
+                  {% if g.utente and g.utente['foto_profilo'] %}
+                    <img src="{{ url_for('static', filename=g.utente['foto_profilo']) }}"
+                         class="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover border hover:ring-2 hover:ring-blue-400 transition flex-shrink-0">
+                  {% else %}
+                    <span class="text-2xl md:text-[28px] leading-none flex-shrink-0">👤</span>
+                  {% endif %}
+
+                  <span class="hidden sm:inline text-gray-700 font-medium text-sm md:text-base truncate max-w-[90px] username-link flex-shrink">
+                    {{ g.utente['username'] or g.utente['nome'] }}
+                  </span>
+
+                </a>
+
+              {% endif %}
+
+            </div>            
           {% endif %}
         </div>
 
