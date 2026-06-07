@@ -7388,7 +7388,7 @@ def admin_acquisti():
                 a["oggetto_visuale"] = f"Attivazione admin ({len(dettagli_servizi)} servizi)"
         else:
             a["oggetto_visuale"] = "Attivazione admin"
-    
+
         stati = {d["stato"] for d in dettagli_servizi}
 
         if "attivo" in stati:
@@ -10957,13 +10957,25 @@ def utente_update_info():
 
     # 🔎 Capisce se la frase è davvero cambiata.
     # Serve per evitare notifiche admin/push a ogni autosave di città, lingue, offro/cerco.
+    frase_pulita = (frase or "").strip()
+    frase_vuota = frase_pulita == ""
+
     frase_attualmente_in_modifica = (
         frase_pending_db
         if frase_stato_db == "in_revisione" and frase_pending_db
         else frase_db
     ) or ""
 
-    frase_cambiata = (frase or "").strip() != (frase_attualmente_in_modifica or "").strip()
+    frase_cambiata = frase_pulita != (frase_attualmente_in_modifica or "").strip()
+
+    # Notifica admin solo quando nasce una nuova revisione con testo NON vuoto.
+    # Se l'utente cancella completamente la frase, la rimuoviamo direttamente
+    # senza mandarla in approvazione admin.
+    nuova_revisione_frase = (
+        frase_cambiata
+        and not frase_vuota
+        and frase_stato_db != "in_revisione"
+    )
 
     # Notifica admin solo quando nasce una nuova revisione.
     # Se era già in revisione, l'autosave aggiorna il pending ma non manda nuove push.
@@ -11009,7 +11021,36 @@ def utente_update_info():
 
     # 🔹 Query esplicita e completa
     # 🔹 Query SOLO per TAB "Info di base"
-    if frase_cambiata:
+    if frase_cambiata and frase_vuota:
+        query_update = """
+            UPDATE utenti SET
+                citta = ?,
+                provincia = ?,
+                lingue = ?,
+
+                -- Se l'utente svuota completamente la frase,
+                -- la cancelliamo direttamente senza revisione admin.
+                frase = '',
+                frase_pending = NULL,
+                frase_stato = NULL,
+                frase_inviata_revisione_il = NULL,
+
+                offro_1 = ?, offro_2 = ?, offro_3 = ?, offro_4 = ?, offro_5 = ?,
+                offro_6 = ?, offro_7 = ?, offro_8 = ?, offro_9 = ?, offro_10 = ?,
+                offro_11 = ?, offro_12 = ?, offro_13 = ?,
+                cerco_1 = ?, cerco_2 = ?, cerco_3 = ?, cerco_4 = ?, cerco_5 = ?,
+                cerco_6 = ?, cerco_7 = ?, cerco_8 = ?, cerco_9 = ?, cerco_10 = ?,
+                cerco_11 = ?, cerco_12 = ?, cerco_13 = ?
+            WHERE id = ?
+        """
+
+        valori = (
+            citta, provincia, lingue,
+            *offro, *cerco,
+            user_id
+        )
+
+    elif frase_cambiata:
         query_update = """
             UPDATE utenti SET
                 citta = ?,
@@ -11033,7 +11074,7 @@ def utente_update_info():
 
         valori = (
             citta, provincia, lingue,
-            frase,
+            frase_pulita,
             *offro, *cerco,
             user_id
         )
@@ -11064,14 +11105,15 @@ def utente_update_info():
         c.execute(sql(query_update), valori)
 
         # 🕵️ Storico revisione profilo: frase
-        # Se la frase è cambiata, crea/aggiorna una riga in revisioni_profilo.
-        if frase_cambiata:
+        # Solo le frasi compilate/modificate vanno in revisione.
+        # Se l'utente cancella completamente la frase, NON creiamo revisione.
+        if frase_cambiata and not frase_vuota:
             salva_revisione_profilo(
                 c,
                 user_id=user_id,
                 campo="frase",
                 testo_precedente=frase_db,
-                testo_proposto=frase
+                testo_proposto=frase_pulita
             )
 
         conn.commit()
@@ -11321,10 +11363,14 @@ def utente_update_descrizione():
             else descrizione_db
         ) or ""
 
-        descrizione_cambiata = (descrizione or "").strip() != (descrizione_attualmente_in_modifica or "").strip()
+        descrizione_pulita = (descrizione or "").strip()
+        descrizione_vuota = descrizione_pulita == ""
+
+        descrizione_cambiata = descrizione_pulita != (descrizione_attualmente_in_modifica or "").strip()
 
         nuova_revisione_descrizione = (
             descrizione_cambiata
+            and not descrizione_vuota
             and descrizione_stato_db != "in_revisione"
         )
 
@@ -11338,26 +11384,42 @@ def utente_update_descrizione():
             flash("Nessuna modifica da salvare.", "info")
             return redirect(url_for("dashboard") + "#tab-info")
 
-        c.execute(
-            sql("""
-                UPDATE utenti SET
-                    descrizione_pending = ?,
-                    descrizione_stato = 'in_revisione',
-                    descrizione_inviata_revisione_il = CURRENT_TIMESTAMP
-                WHERE id = ?
-            """),
-            (descrizione, user_id)
-        )
+        if descrizione_vuota:
+            # Se l'utente svuota completamente la descrizione,
+            # la cancelliamo direttamente senza revisione admin.
+            c.execute(
+                sql("""
+                    UPDATE utenti SET
+                        descrizione = '',
+                        descrizione_pending = NULL,
+                        descrizione_stato = NULL,
+                        descrizione_inviata_revisione_il = NULL
+                    WHERE id = ?
+                """),
+                (user_id,)
+            )
 
-        # 🕵️ Storico revisione profilo: descrizione
-        # Se la descrizione è cambiata, crea/aggiorna una riga in revisioni_profilo.
-        salva_revisione_profilo(
-            c,
-            user_id=user_id,
-            campo="descrizione",
-            testo_precedente=descrizione_db,
-            testo_proposto=descrizione
-        )
+        else:
+            c.execute(
+                sql("""
+                    UPDATE utenti SET
+                        descrizione_pending = ?,
+                        descrizione_stato = 'in_revisione',
+                        descrizione_inviata_revisione_il = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """),
+                (descrizione_pulita, user_id)
+            )
+
+            # 🕵️ Storico revisione profilo: descrizione
+            # Solo le descrizioni compilate/modificate vanno in revisione.
+            salva_revisione_profilo(
+                c,
+                user_id=user_id,
+                campo="descrizione",
+                testo_precedente=descrizione_db,
+                testo_proposto=descrizione_pulita
+            )
 
         conn.commit()
 
