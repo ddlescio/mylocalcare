@@ -11559,7 +11559,7 @@ def utente_update_galleria():
     else:
         flash("ℹ️ Nessuna modifica effettuata.", "info")
 
-    return redirect(url_for("dashboard") + "#tab-foto")
+    return redirect(url_for("dashboard") + "#foto")
 
 @app.route('/annuncio/<int:id>/elimina', methods=["POST"])
 @login_required
