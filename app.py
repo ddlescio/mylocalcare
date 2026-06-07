@@ -12842,6 +12842,10 @@ def privacy():
 def cookie_policy():
     return render_template("cookie_policy.html")
 
+@app.route("/contatti")
+def contatti():
+    return render_template("contatti.html")
+
 @app.route('/conferma/<token>')
 def conferma_email(token):
     conn = get_db_connection()
