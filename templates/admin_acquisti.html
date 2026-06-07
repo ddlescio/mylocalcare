@@ -1219,6 +1219,9 @@
     position: fixed;
     inset: 0;
     z-index: 9999;
+
+    overscroll-behavior: contain;
+    touch-action: none;
   }
 
   .acquisto-modal-backdrop {
@@ -1226,6 +1229,10 @@
     inset: 0;
     background: rgba(15, 23, 42, 0.46);
     backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+
+    overscroll-behavior: contain;
+    touch-action: none;
   }
 
   .acquisto-modal-panel {
@@ -1243,6 +1250,9 @@
     box-shadow:
       0 30px 80px rgba(15, 23, 42, 0.28),
       0 2px 10px rgba(15, 23, 42, 0.12);
+
+    overscroll-behavior: contain;
+    touch-action: pan-y;
   }
 
   .acquisto-modal-header {
@@ -1289,6 +1299,10 @@
   .acquisto-modal-body {
     padding: 20px 22px 24px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+
+    overscroll-behavior: contain;
+    touch-action: pan-y;
   }
 
   .acquisto-modal-summary {
@@ -1640,6 +1654,60 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
+  let acquistoTouchStartY = 0;
+
+  document.querySelectorAll(".acquisto-modal").forEach(modal => {
+    modal.addEventListener("wheel", (e) => {
+      if (modal.classList.contains("hidden")) return;
+
+      const scrollBox = e.target.closest(".acquisto-modal-body");
+
+      if (!scrollBox) {
+        e.preventDefault();
+        return;
+      }
+
+      const atTop = scrollBox.scrollTop <= 0;
+      const atBottom =
+        scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 1;
+
+      if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    modal.addEventListener("touchstart", (e) => {
+      if (modal.classList.contains("hidden")) return;
+      if (!e.touches || !e.touches.length) return;
+
+      acquistoTouchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    modal.addEventListener("touchmove", (e) => {
+      if (modal.classList.contains("hidden")) return;
+      if (!e.touches || !e.touches.length) return;
+
+      const scrollBox = e.target.closest(".acquisto-modal-body");
+
+      if (!scrollBox) {
+        e.preventDefault();
+        return;
+      }
+
+      const currentY = e.touches[0].clientY;
+      const deltaY = acquistoTouchStartY - currentY;
+
+      const atTop = scrollBox.scrollTop <= 0;
+      const atBottom =
+        scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 1;
+
+      if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  });
+    
   const currentParams = new URLSearchParams(window.location.search);
 
   if (!currentParams.toString()) {
@@ -1742,7 +1810,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     sortMobileCards(mobileSortSelect.value);
-  }  
+  }
 
   let currentSortKey = "data";
   let currentSortDirection = "desc";
@@ -1856,13 +1924,62 @@ document.addEventListener("DOMContentLoaded", () => {
     detailRow.classList.toggle("hidden", isOpen);
   });
 
+  let acquistoModalScrollY = 0;
+
+  function lockAcquistoPageScroll() {
+    if (document.body.classList.contains("acquisto-modal-open")) {
+      return;
+    }
+
+    acquistoModalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+    document.body.classList.add("acquisto-modal-open");
+    document.body.dataset.acquistoModalScrollY = String(acquistoModalScrollY);
+
+    document.documentElement.style.overflow = "hidden";
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${acquistoModalScrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+  }
+
+  function unlockAcquistoPageScroll() {
+    const savedScrollY = Number(
+      document.body.dataset.acquistoModalScrollY || acquistoModalScrollY || 0
+    );
+
+    document.body.classList.remove("acquisto-modal-open");
+
+    document.documentElement.style.overflow = "";
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+
+    delete document.body.dataset.acquistoModalScrollY;
+
+    window.scrollTo(0, savedScrollY);
+  }
+
   function openAcquistoModal(groupId) {
     const modal = document.getElementById(`acquisto-modal-${groupId}`);
     if (!modal) return;
 
+    lockAcquistoPageScroll();
+
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("acquisto-modal-open");
+
+    const modalBody = modal.querySelector(".acquisto-modal-body");
+    if (modalBody) {
+      modalBody.scrollTop = 0;
+    }
   }
 
   function closeAcquistoModal(modal) {
@@ -1870,7 +1987,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     modal.classList.add("hidden");
     modal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("acquisto-modal-open");
+
+    const stillOpen = document.querySelector(".acquisto-modal:not(.hidden)");
+    if (!stillOpen) {
+      unlockAcquistoPageScroll();
+    }
   }
 
   document.querySelectorAll("[data-open-acquisto-modal]").forEach(btn => {
