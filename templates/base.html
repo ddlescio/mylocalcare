@@ -395,16 +395,14 @@ button, input[type="submit"] {
 
               {% if session.get('is_admin') or session.get('ruolo') == 'admin' or (g.utente and (g.utente.get('is_admin') or g.utente.get('ruolo') == 'admin' or g.utente.get('username') == 'ADMIN')) %}
 
-                <!-- 🛠️ Bottone Dashboard Admin al posto dell'avatar profilo -->
-                <a href="{{ url_for('admin_dashboard') }}"
-                   class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full
-                          bg-blue-600 text-white text-xs md:text-sm font-bold
-                          shadow-sm hover:bg-blue-700 transition whitespace-nowrap"
-                   title="Dashboard admin"
-                   aria-label="Apri dashboard admin">
-                  <span>🛠️</span>
-                  <span class="hidden sm:inline">Admin</span>
-                </a>
+              <!-- 🛠️ Bottone Dashboard Admin al posto dell'avatar profilo -->
+              <a href="{{ url_for('admin_dashboard') }}"
+                 class="admin-navbar-btn"
+                 title="Dashboard admin"
+                 aria-label="Apri dashboard admin">
+                <span class="admin-navbar-btn-icon">🛠️</span>
+                <span class="admin-navbar-btn-text">Admin</span>
+              </a>
 
               {% else %}
 
@@ -2009,6 +2007,141 @@ body[data-chat="true"] #mobile-search-container {
 
   #main-navbar .flex.items-center.gap-4 {
     gap: 0.56rem !important;
+  }
+}
+
+/* =========================================================
+   BOTTONE ADMIN NAVBAR — coerente con navbar glass
+========================================================= */
+
+#main-navbar .admin-navbar-btn {
+  position: relative;
+  min-width: 2.52rem;
+  height: 2.52rem;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+
+  padding: 0 0.86rem;
+  border-radius: 9999px;
+
+  background:
+    radial-gradient(circle at 46% 15%,
+      rgba(255,255,255,1) 0%,
+      rgba(239,246,255,0.96) 24%,
+      rgba(219,234,254,0.86) 55%,
+      rgba(191,219,254,0.78) 100%
+    );
+
+  border: 1px solid rgba(147,197,253,0.92);
+
+  color: #1d4ed8 !important;
+  text-decoration: none !important;
+
+  box-shadow:
+    inset 0 2px 2px rgba(255,255,255,1),
+    inset -4px -8px 13px rgba(37,99,235,0.12),
+    inset 3px 4px 9px rgba(255,255,255,0.78),
+    0 10px 13px rgba(37,99,235,0.16),
+    0 2px 4px rgba(15,23,42,0.08);
+
+  transform: translateY(0);
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease,
+    border-color .16s ease,
+    filter .16s ease;
+}
+
+/* Ombra morbida sotto il bottone */
+#main-navbar .admin-navbar-btn::before {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: -0.38rem;
+  height: 0.58rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(37,99,235,0.22) 0%,
+    rgba(15,23,42,0.10) 45%,
+    transparent 76%
+  );
+  filter: blur(2px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Riflesso superiore */
+#main-navbar .admin-navbar-btn::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 13%;
+  height: 34%;
+  border-radius: 9999px;
+  background:
+    radial-gradient(ellipse at 50% 0%,
+      rgba(255,255,255,0.98) 0%,
+      rgba(255,255,255,0.74) 42%,
+      rgba(255,255,255,0.20) 72%,
+      rgba(255,255,255,0) 100%
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+#main-navbar .admin-navbar-btn-icon,
+#main-navbar .admin-navbar-btn-text {
+  position: relative;
+  z-index: 2;
+}
+
+#main-navbar .admin-navbar-btn-icon {
+  font-size: 1.08rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(37,99,235,0.16));
+}
+
+#main-navbar .admin-navbar-btn-text {
+  font-size: 0.78rem;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+#main-navbar .admin-navbar-btn:hover {
+  transform: translateY(-1px) scale(1.045);
+  border-color: rgba(96,165,250,1);
+  filter: saturate(1.06) brightness(1.015);
+
+  box-shadow:
+    inset 0 2px 2px rgba(255,255,255,1),
+    inset -4px -8px 13px rgba(37,99,235,0.18),
+    inset 3px 4px 9px rgba(255,255,255,0.82),
+    0 13px 16px rgba(37,99,235,0.20),
+    0 2px 4px rgba(15,23,42,0.08);
+}
+
+@media (max-width: 640px) {
+  #main-navbar .admin-navbar-btn {
+    width: 2.26rem;
+    min-width: 2.26rem;
+    height: 2.26rem;
+    padding: 0;
+  }
+
+  #main-navbar .admin-navbar-btn-text {
+    display: none;
+  }
+
+  #main-navbar .admin-navbar-btn-icon {
+    font-size: 1rem;
   }
 }
 
