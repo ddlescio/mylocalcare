@@ -145,7 +145,7 @@
         data-mobile-data="{{ a.created_at or '' }}"
         data-mobile-scadenza="{{ a.data_fine or '' }}"
         data-mobile-importo="{{ a.importo_cent or 0 }}"
-        data-mobile-oggetto="{{ (a.pacchetto_nome or a.servizio_nome or '')|lower }}"
+        data-mobile-oggetto="{{ (a.oggetto_visuale or '')|lower }}"
       >
         <div class="acquisto-mobile-top">
           <div class="min-w-0">
@@ -162,7 +162,7 @@
             </div>
 
             <div class="acquisto-mobile-title">
-              {{ a.pacchetto_nome or a.servizio_nome or '—' }}
+              {{ a.oggetto_visuale or '—' }}
             </div>
 
             <div class="acquisto-mobile-user">
@@ -294,7 +294,7 @@
             data-data="{{ a.created_at or '' }}"
             data-utente="{{ (a.email or '')|lower }}"
             data-tipo="{{ (a.tipo or '')|lower }}"
-            data-oggetto="{{ (a.pacchetto_nome or a.servizio_nome or '')|lower }}"
+            data-oggetto="{{ (a.oggetto_visuale or '')|lower }}"
             data-annuncio="{{ a.annuncio_id or 0 }}"
             data-categoria="{{ (a.categoria_visuale or '')|lower }}"
             data-provincia="{{ (a.provincia_visuale or '')|lower }}"
@@ -363,7 +363,7 @@
           </td>
 
           <td class="p-3">
-            {{ a.pacchetto_nome or a.servizio_nome }}
+            {{ a.oggetto_visuale or '—' }}
           </td>
 
           <td class="p-3">
@@ -503,7 +503,7 @@
         </div>
 
         <h2 class="acquisto-modal-title">
-          {{ a.pacchetto_nome or a.servizio_nome or 'Dettaglio acquisto' }}
+          {{ a.oggetto_visuale or 'Dettaglio acquisto' }}
         </h2>
       </div>
 
@@ -593,7 +593,7 @@
 
         <div class="acquisto-modal-item">
           <span>Oggetto</span>
-          <strong>{{ a.pacchetto_nome or a.servizio_nome or '—' }}</strong>
+          <strong>{{ a.oggetto_visuale or '—' }}</strong>
         </div>
 
         <div class="acquisto-modal-item">
@@ -1707,7 +1707,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }, { passive: false });
   });
-    
+
   const currentParams = new URLSearchParams(window.location.search);
 
   if (!currentParams.toString()) {

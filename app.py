@@ -7355,6 +7355,40 @@ def admin_acquisti():
         a["dettagli_servizi"] = dettagli_servizi
         a["numero_attivazioni"] = len(dettagli_servizi)
 
+        # =====================================================
+        # Oggetto visuale acquisto
+        #
+        # Per gli acquisti Stripe normali spesso arriva da:
+        # - pacchetto_nome
+        # - servizio_nome
+        #
+        # Per le attivazioni admin può invece mancare perché non sempre
+        # passano da servizi_piani / pacchetti_piani.
+        # In quel caso ricostruiamo l'oggetto dai servizi realmente attivati.
+        # =====================================================
+        if a.get("pacchetto_nome"):
+            a["oggetto_visuale"] = a["pacchetto_nome"]
+
+        elif a.get("servizio_nome"):
+            a["oggetto_visuale"] = a["servizio_nome"]
+
+        elif len(dettagli_servizi) == 1:
+            a["oggetto_visuale"] = dettagli_servizi[0].get("servizio_nome") or "Servizio attivato"
+
+        elif len(dettagli_servizi) > 1:
+            nomi_servizi = [
+                d.get("servizio_nome")
+                for d in dettagli_servizi
+                if d.get("servizio_nome")
+            ]
+
+            if nomi_servizi:
+                a["oggetto_visuale"] = " + ".join(nomi_servizi)
+            else:
+                a["oggetto_visuale"] = f"Attivazione admin ({len(dettagli_servizi)} servizi)"
+        else:
+            a["oggetto_visuale"] = "Attivazione admin"
+    
         stati = {d["stato"] for d in dettagli_servizi}
 
         if "attivo" in stati:
