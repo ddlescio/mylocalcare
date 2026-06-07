@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% if request.endpoint not in ['chat_conversazione', 'dashboard', 'notifiche'] %}<!DOCTYPE html>
 <html lang="it">
 <head>
 
@@ -1039,7 +1039,7 @@ document.addEventListener("DOMContentLoaded", () => {
 </style>
 {% if not g.path.startswith('/cerca') %}
 <!-- 🔍 Pulsante fluttuante + mini barra ricerca -->
-{% if request.endpoint != 'chat_conversazione' and request.endpoint != 'dashboard' %}
+{% if request.endpoint not in ['chat_conversazione', 'dashboard', 'notifiche'] %}
 <div id="mobile-search-container" class="fixed bottom-2.5 right-4 z-50 md:hidden">
   <a id="mobile-search-btn"
      href="{{ url_for('ricerca_utenti') }}"
