@@ -3451,7 +3451,8 @@ window.addEventListener("beforeunload", () => {
 
     if (
       document.body.classList.contains("modal-open") ||
-      document.body.classList.contains("user-modal-page-locked")
+      document.body.classList.contains("user-modal-page-locked") ||
+      document.body.classList.contains("acquisto-modal-open")
     ) {
       return true;
     }
@@ -3460,7 +3461,8 @@ window.addEventListener("beforeunload", () => {
       document.body.dataset.modalScrollY ||
       document.body.dataset.userModalScrollY ||
       document.body.dataset.annuncioModalScrollY ||
-      document.body.dataset.revisionModalScrollY
+      document.body.dataset.revisionModalScrollY ||
+      document.body.dataset.acquistoModalScrollY
     ) {
       return true;
     }
@@ -3477,7 +3479,8 @@ window.addEventListener("beforeunload", () => {
       "#user-modal-backdrop.is-open",
       "#annuncio-row-modal-backdrop.is-open",
       "#review-row-modal-backdrop.is-open",
-      "#revision-modal:not(.hidden)"
+      "#revision-modal:not(.hidden)",
+      ".acquisto-modal:not(.hidden)"
     ].join(", ");
 
     if (document.querySelector(openModalSelector)) {
@@ -3491,7 +3494,7 @@ window.addEventListener("beforeunload", () => {
 
     return false;
   }
-
+  
   function isInteractiveElement(target) {
     return !!target.closest("input, textarea, select, button, a, label, details, summary");
   }
