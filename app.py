@@ -10977,10 +10977,6 @@ def utente_update_info():
         and frase_stato_db != "in_revisione"
     )
 
-    # Notifica admin solo quando nasce una nuova revisione.
-    # Se era già in revisione, l'autosave aggiorna il pending ma non manda nuove push.
-    nuova_revisione_frase = frase_cambiata and frase_stato_db != "in_revisione"
-
     esperienza_1 = request.form.get("esperienza_1", "")
     esperienza_2 = request.form.get("esperienza_2", "")
     esperienza_3 = request.form.get("esperienza_3", "")
