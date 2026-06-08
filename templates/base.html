@@ -862,30 +862,65 @@ button, input[type="submit"] {
     }
 
     /* Freccia emoji chiara verso i tre puntini reali di Safari */
+    /* 👇 Dito guida: parte dai tre puntini della slide e scende verso i tre puntini reali Safari */
     .ios-dots-arrow-emoji {
       position: fixed;
-      right: 4.2rem;
-      bottom: 4.15rem;
-      z-index: 100000;
-      font-size: 2.7rem;
+
+      /*
+        Posizione finale: sopra i tre puntini reali di Safari in basso a destra.
+      */
+      right: 1.05rem;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 3.85rem);
+
+      z-index: 1000002;
+      font-size: 3.15rem;
       line-height: 1;
       pointer-events: none;
+
       filter:
-        drop-shadow(0 8px 14px rgba(15, 23, 42, 0.28))
-        drop-shadow(0 0 10px rgba(37, 99, 235, 0.20));
-      animation: iosEmojiArrowBounce 1.35s ease-in-out infinite;
+        drop-shadow(0 10px 16px rgba(15, 23, 42, 0.30))
+        drop-shadow(0 0 12px rgba(37, 99, 235, 0.18));
+
+      animation: iosFingerFromSlideToRealDots 3.2s ease-in-out infinite;
     }
 
-    @keyframes iosEmojiArrowBounce {
-      0%, 100% {
-        transform: translateY(0) scale(1);
+    @keyframes iosFingerFromSlideToRealDots {
+      0% {
+        opacity: 0;
+        transform: translate(-42px, -360px) scale(0.92);
       }
 
-      50% {
-        transform: translateY(12px) scale(1.08);
+      12% {
+        opacity: 1;
+        transform: translate(-42px, -360px) scale(1);
+      }
+
+      42% {
+        opacity: 1;
+        transform: translate(-18px, -120px) scale(1.04);
+      }
+
+      62% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1.08);
+      }
+
+      74% {
+        opacity: 1;
+        transform: translate(0, 10px) scale(0.96);
+      }
+
+      84% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1.04);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-42px, -360px) scale(0.92);
       }
     }
-
+    
     @keyframes iosPulseDot {
       0%, 100% {
         transform: scale(1);
