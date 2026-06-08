@@ -11767,7 +11767,7 @@ def utente_update_galleria():
                         "✅ Modifica annullata: la galleria è tornata uguale a quella pubblica.",
                         "success"
                     )
-                    return redirect(url_for("dashboard") + "#tab-foto")
+                    return redirect(url_for("dashboard") + "#foto")
 
                 # Resta una proposta diversa dalla pubblica:
                 # aggiorniamo la revisione esistente senza nuova notifica.
@@ -11781,7 +11781,7 @@ def utente_update_galleria():
                 conn.commit()
 
                 flash("✅ Foto rimossa dalla galleria in revisione.", "success")
-                return redirect(url_for("dashboard") + "#tab-foto")
+                return redirect(url_for("dashboard") + "#foto")
 
             # Caso B: non c'è revisione pending.
             # L'utente elimina una foto già pubblica:
@@ -11794,7 +11794,7 @@ def utente_update_galleria():
             conn.commit()
 
             flash("✅ Foto rimossa correttamente dalla galleria.", "success")
-            return redirect(url_for("dashboard") + "#tab-foto")
+            return redirect(url_for("dashboard") + "#foto")
 
         # =====================================================
         # 6) CASO CARICAMENTO NUOVE FOTO
@@ -11831,13 +11831,13 @@ def utente_update_galleria():
         # =====================================================
         if valore_precedente == valore_proposto and not revisione_pending:
             flash("ℹ️ Nessuna modifica effettuata.", "info")
-            return redirect(url_for("dashboard") + "#tab-foto")
+            return redirect(url_for("dashboard") + "#foto")
 
         # Se non ci sono nuovi file e non ci sono rimozioni,
         # non serve creare o aggiornare revisioni.
         if not file_da_salvare and not to_remove:
             flash("ℹ️ Nessuna nuova foto caricata.", "info")
-            return redirect(url_for("dashboard") + "#tab-foto")
+            return redirect(url_for("dashboard") + "#foto")
 
         # =====================================================
         # 8) Salva revisione SOLO se sono state caricate nuove foto
@@ -11899,7 +11899,7 @@ def utente_update_galleria():
                 "info"
             )
 
-        return redirect(url_for("dashboard") + "#tab-foto")
+        return redirect(url_for("dashboard") + "#foto")
 
     except Exception as e:
         conn.rollback()
@@ -11914,14 +11914,14 @@ def utente_update_galleria():
         )
 
         flash("Errore durante l'aggiornamento della galleria.", "error")
-        return redirect(url_for("dashboard") + "#tab-foto")
+        return redirect(url_for("dashboard") + "#foto")
 
     finally:
         try:
             conn.close()
         except Exception:
             pass
-            
+
 @app.route('/annuncio/<int:id>/elimina', methods=["POST"])
 @login_required
 def elimina_annuncio(id):
