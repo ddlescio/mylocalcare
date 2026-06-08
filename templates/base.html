@@ -861,13 +861,13 @@ button, input[type="submit"] {
       overflow: visible;
     }
 
-    /* Freccia emoji chiara verso i tre puntini reali di Safari */
     /* 👇 Dito guida: parte dai tre puntini della slide e scende verso i tre puntini reali Safari */
     .ios-dots-arrow-emoji {
       position: fixed;
 
       /*
-        Posizione finale: sopra i tre puntini reali di Safari in basso a destra.
+        Posizione finale: vicino ai tre puntini reali di Safari, in basso a destra.
+        Le coordinate di partenza vengono calcolate via JS.
       */
       right: 1.05rem;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 3.85rem);
@@ -877,50 +877,64 @@ button, input[type="submit"] {
       line-height: 1;
       pointer-events: none;
 
+      --ios-finger-start-x: 0px;
+      --ios-finger-start-y: 0px;
+
       filter:
         drop-shadow(0 10px 16px rgba(15, 23, 42, 0.30))
         drop-shadow(0 0 12px rgba(37, 99, 235, 0.18));
 
-      animation: iosFingerFromSlideToRealDots 3.2s ease-in-out infinite;
+      animation: iosFingerFromSlideToRealDots 3.4s ease-in-out infinite;
     }
 
     @keyframes iosFingerFromSlideToRealDots {
       0% {
         opacity: 0;
-        transform: translate(-42px, -360px) scale(0.92);
+        transform:
+          translate(var(--ios-finger-start-x), var(--ios-finger-start-y))
+          scale(0.92);
       }
 
       12% {
         opacity: 1;
-        transform: translate(-42px, -360px) scale(1);
+        transform:
+          translate(var(--ios-finger-start-x), var(--ios-finger-start-y))
+          scale(1);
       }
 
-      42% {
+      48% {
         opacity: 1;
-        transform: translate(-18px, -120px) scale(1.04);
+        transform:
+          translate(
+            calc(var(--ios-finger-start-x) * 0.35),
+            calc(var(--ios-finger-start-y) * 0.35)
+          )
+          scale(1.04);
       }
 
-      62% {
+      68% {
         opacity: 1;
         transform: translate(0, 0) scale(1.08);
       }
 
-      74% {
+      78% {
         opacity: 1;
         transform: translate(0, 10px) scale(0.96);
       }
 
-      84% {
+      88% {
         opacity: 1;
         transform: translate(0, 0) scale(1.04);
       }
 
       100% {
         opacity: 0;
-        transform: translate(-42px, -360px) scale(0.92);
+        transform:
+          translate(var(--ios-finger-start-x), var(--ios-finger-start-y))
+          scale(0.92);
       }
     }
-    
+
     @keyframes iosPulseDot {
       0%, 100% {
         transform: scale(1);
@@ -1095,6 +1109,52 @@ button, input[type="submit"] {
       }
     }
     </style>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const iosBanner = document.getElementById("iosInstallBanner");
+      const demoDots = document.getElementById("iosDemoDots");
+      const finger = document.querySelector(".ios-dots-arrow-emoji");
+
+      if (!iosBanner || !demoDots || !finger) return;
+
+      function aggiornaPercorsoDitoIos() {
+        if (iosBanner.classList.contains("hidden")) return;
+
+        const dotsRect = demoDots.getBoundingClientRect();
+        const fingerRect = finger.getBoundingClientRect();
+
+        /*
+          Punto di partenza: centro dei tre puntini della slide.
+          Punto finale: posizione reale della manina fixed, cioè zona tre puntini Safari.
+        */
+        const startX = dotsRect.left + dotsRect.width / 2;
+        const startY = dotsRect.top + dotsRect.height / 2;
+
+        const endX = fingerRect.left + fingerRect.width / 2;
+        const endY = fingerRect.top + fingerRect.height / 2;
+
+        finger.style.setProperty("--ios-finger-start-x", `${startX - endX}px`);
+        finger.style.setProperty("--ios-finger-start-y", `${startY - endY}px`);
+      }
+
+      aggiornaPercorsoDitoIos();
+
+      window.addEventListener("resize", aggiornaPercorsoDitoIos);
+      window.addEventListener("orientationchange", () => {
+        setTimeout(aggiornaPercorsoDitoIos, 350);
+      });
+
+      const observer = new MutationObserver(() => {
+        setTimeout(aggiornaPercorsoDitoIos, 80);
+      });
+
+      observer.observe(iosBanner, {
+        attributes: true,
+        attributeFilter: ["class"]
+      });
+    });
+    </script>
 
     {% with flashes = get_flashed_messages(with_categories=true) %}
       {% if flashes %}
