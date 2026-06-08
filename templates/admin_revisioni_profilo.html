@@ -336,6 +336,22 @@
   </div>
 </div>
 
+<!-- MODALE ANTEPRIMA IMMAGINE REVISIONE -->
+<div id="revision-image-lightbox"
+     class="fixed inset-0 z-[10000] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+
+  <button type="button"
+          id="revision-image-lightbox-close"
+          class="absolute top-5 right-5 w-11 h-11 rounded-full bg-white/20 hover:bg-white/30 text-white text-2xl font-bold flex items-center justify-center z-[10001]">
+    ✕
+  </button>
+
+  <img id="revision-image-lightbox-img"
+       src=""
+       alt="Anteprima immagine"
+       class="max-w-[96vw] max-h-[92vh] object-contain rounded-2xl shadow-2xl bg-white">
+</div>
+
 <style>
   #revision-modal {
     overscroll-behavior: contain;
@@ -511,6 +527,13 @@
     object-fit: cover;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
+    cursor: zoom-in;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .revision-inline-preview img:hover {
+    transform: scale(1.04);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
   }
 
   .revision-inline-preview[data-preview-kind="copertina"] img {
@@ -533,6 +556,13 @@
     border: 1px solid #e2e8f0;
     background: #f8fafc;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    cursor: zoom-in;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .revision-image-grid img:hover {
+    transform: scale(1.03);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
   }
 
   .revision-image-grid.revision-image-grid-cover img {
@@ -545,6 +575,18 @@
     color: #94a3b8;
     font-size: 0.88rem;
     font-weight: 650;
+  }
+
+  #revision-image-lightbox.hidden {
+    display: none !important;
+  }
+
+  #revision-image-lightbox:not(.hidden) {
+    display: flex !important;
+  }
+
+  #revision-image-lightbox-img {
+    cursor: zoom-out;
   }
 
   @media (max-width: 640px) {
@@ -588,6 +630,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const labelPrecedenteEl = document.getElementById("modal-label-precedente");
   const labelPropostoEl = document.getElementById("modal-label-proposto");
   const labelPubblicoEl = document.getElementById("modal-label-pubblico");
+  const imageLightbox = document.getElementById("revision-image-lightbox");
+  const imageLightboxImg = document.getElementById("revision-image-lightbox-img");
+  const imageLightboxClose = document.getElementById("revision-image-lightbox-close");
 
   if (!modal || !closeBtn || !approvaBtn || !rifiutaBtn) {
     console.warn("Modale revisioni profilo non inizializzata: elementi mancanti.");
@@ -901,7 +946,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="revision-image-grid${classeCover}">
         ${immagini.map(path => {
           const src = normalizzaPathStatic(path);
-          return `<img src="${src}" alt="Anteprima revisione">`;
+          return `<img src="${src}" alt="Anteprima revisione" data-full-image="${src}">`;
         }).join("")}
       </div>
     `;
@@ -923,13 +968,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
       box.innerHTML = visibili.map(path => {
         const src = normalizzaPathStatic(path);
-        return `<img src="${src}" alt="Anteprima revisione">`;
+        return `<img src="${src}" alt="Anteprima revisione" data-full-image="${src}">`;
       }).join("");
     });
   }
 
   renderInlinePreviews();
 
+  function apriLightboxImmagine(src) {
+    if (!imageLightbox || !imageLightboxImg || !src) return;
+
+    imageLightboxImg.src = src;
+    imageLightbox.classList.remove("hidden");
+    document.documentElement.style.overflow = "hidden";
+  }
+
+  function chiudiLightboxImmagine() {
+    if (!imageLightbox || !imageLightboxImg) return;
+
+    imageLightbox.classList.add("hidden");
+    imageLightboxImg.removeAttribute("src");
+
+    if (modal.classList.contains("hidden")) {
+      document.documentElement.style.overflow = "";
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const img = e.target.closest("[data-full-image]");
+    if (!img) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    apriLightboxImmagine(img.dataset.fullImage || img.src);
+  });
+
+  imageLightboxClose?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    chiudiLightboxImmagine();
+  });
+
+  imageLightbox?.addEventListener("click", (e) => {
+    if (e.target === imageLightbox || e.target === imageLightboxImg) {
+      chiudiLightboxImmagine();
+    }
+  });
 
   function apriModale(row) {
     if (!row) return;
@@ -1170,11 +1255,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+    if (e.key !== "Escape") return;
+
+    if (imageLightbox && !imageLightbox.classList.contains("hidden")) {
+      chiudiLightboxImmagine();
+      return;
+    }
+
+    if (!modal.classList.contains("hidden")) {
       chiudiModale();
     }
   });
-
+  
   approvaBtn.addEventListener("click", () => inviaAzione("approva"));
   rifiutaBtn.addEventListener("click", () => inviaAzione("rifiuta"));
 });
