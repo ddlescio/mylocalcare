@@ -629,6 +629,8 @@ button, input[type="submit"] {
     <div id="iosInstallBanner"
          class="only-browser hidden fixed inset-0 z-[99999] bg-slate-900/35 backdrop-blur-sm px-4 flex items-end justify-center">
 
+      <span id="iosRealDotsFinger" class="ios-real-dots-finger" aria-hidden="true">👇</span>
+
       <div class="ios-install-card w-full max-w-sm bg-white rounded-[2rem] shadow-2xl border border-blue-100 mb-5 overflow-hidden">
 
         <div class="px-5 pt-5 pb-4 text-center">
@@ -669,7 +671,6 @@ button, input[type="submit"] {
 
               <span id="iosDemoDots" class="ios-dots ios-step-dot">
                 •••
-                <span class="ios-dots-arrow-emoji" aria-hidden="true">👇</span>
               </span>
             </div>
           </div>
@@ -861,19 +862,19 @@ button, input[type="submit"] {
       overflow: visible;
     }
 
-    /* 👇 Dito guida: parte dai tre puntini della slide e scende verso i tre puntini reali Safari */
-    .ios-dots-arrow-emoji {
+    /* 👇 Dito guida esterno: parte dai puntini della slide e scende verso i puntini reali Safari */
+    .ios-real-dots-finger {
       position: fixed;
 
       /*
-        Posizione finale: vicino ai tre puntini reali di Safari, in basso a destra.
-        Le coordinate di partenza vengono calcolate via JS.
+        Punto finale: in basso a destra, sopra i veri tre puntini di Safari.
+        Se serve, poi regoliamo solo right/bottom.
       */
-      right: 1.05rem;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 3.85rem);
+      right: 1.25rem;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 2.15rem);
 
       z-index: 1000002;
-      font-size: 3.15rem;
+      font-size: 3.2rem;
       line-height: 1;
       pointer-events: none;
 
@@ -881,13 +882,17 @@ button, input[type="submit"] {
       --ios-finger-start-y: 0px;
 
       filter:
-        drop-shadow(0 10px 16px rgba(15, 23, 42, 0.30))
+        drop-shadow(0 10px 16px rgba(15, 23, 42, 0.32))
         drop-shadow(0 0 12px rgba(37, 99, 235, 0.18));
 
-      animation: iosFingerFromSlideToRealDots 3.4s ease-in-out infinite;
+      animation: iosFingerFromSlideToBottomDots 3.4s ease-in-out infinite;
     }
 
-    @keyframes iosFingerFromSlideToRealDots {
+    #iosInstallBanner.hidden .ios-real-dots-finger {
+      display: none !important;
+    }
+
+    @keyframes iosFingerFromSlideToBottomDots {
       0% {
         opacity: 0;
         transform:
@@ -902,7 +907,7 @@ button, input[type="submit"] {
           scale(1);
       }
 
-      48% {
+      52% {
         opacity: 1;
         transform:
           translate(
@@ -912,17 +917,17 @@ button, input[type="submit"] {
           scale(1.04);
       }
 
-      68% {
+      72% {
         opacity: 1;
         transform: translate(0, 0) scale(1.08);
       }
 
-      78% {
+      82% {
         opacity: 1;
-        transform: translate(0, 10px) scale(0.96);
+        transform: translate(0, 11px) scale(0.96);
       }
 
-      88% {
+      92% {
         opacity: 1;
         transform: translate(0, 0) scale(1.04);
       }
@@ -1114,20 +1119,27 @@ button, input[type="submit"] {
     document.addEventListener("DOMContentLoaded", () => {
       const iosBanner = document.getElementById("iosInstallBanner");
       const demoDots = document.getElementById("iosDemoDots");
-      const finger = document.querySelector(".ios-dots-arrow-emoji");
+      const finger = document.getElementById("iosRealDotsFinger");
 
       if (!iosBanner || !demoDots || !finger) return;
 
       function aggiornaPercorsoDitoIos() {
         if (iosBanner.classList.contains("hidden")) return;
 
+        /*
+          Reset temporaneo dell’animazione:
+          così leggiamo la posizione finale reale della manina,
+          non la posizione mentre è trasformata dall’animazione.
+        */
+        const oldAnimation = finger.style.animation;
+        const oldTransform = finger.style.transform;
+
+        finger.style.animation = "none";
+        finger.style.transform = "none";
+
         const dotsRect = demoDots.getBoundingClientRect();
         const fingerRect = finger.getBoundingClientRect();
 
-        /*
-          Punto di partenza: centro dei tre puntini della slide.
-          Punto finale: posizione reale della manina fixed, cioè zona tre puntini Safari.
-        */
         const startX = dotsRect.left + dotsRect.width / 2;
         const startY = dotsRect.top + dotsRect.height / 2;
 
@@ -1136,17 +1148,21 @@ button, input[type="submit"] {
 
         finger.style.setProperty("--ios-finger-start-x", `${startX - endX}px`);
         finger.style.setProperty("--ios-finger-start-y", `${startY - endY}px`);
+
+        finger.style.animation = oldAnimation;
+        finger.style.transform = oldTransform;
       }
 
       aggiornaPercorsoDitoIos();
 
       window.addEventListener("resize", aggiornaPercorsoDitoIos);
+
       window.addEventListener("orientationchange", () => {
         setTimeout(aggiornaPercorsoDitoIos, 350);
       });
 
       const observer = new MutationObserver(() => {
-        setTimeout(aggiornaPercorsoDitoIos, 80);
+        setTimeout(aggiornaPercorsoDitoIos, 120);
       });
 
       observer.observe(iosBanner, {
