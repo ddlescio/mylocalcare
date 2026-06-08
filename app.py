@@ -12098,20 +12098,21 @@ def upload_foto():
 @login_required
 def upload_copertina():
     if 'file' not in request.files:
-        flash("Nessun file selezionato.")
-        return redirect(request.referrer or url_for('dashboard'))
+        flash("Nessun file selezionato.", "error")
+        return redirect(url_for("dashboard") + "#tab-foto")
 
     file = request.files['file']
+
     if file.filename == '':
-        flash("Seleziona un file valido.")
-        return redirect(request.referrer or url_for('dashboard'))
+        flash("Seleziona un file valido.", "error")
+        return redirect(url_for("dashboard") + "#tab-foto")
 
     allowed_extensions = {'png', 'jpg', 'jpeg', 'webp'}
     estensione = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else None
 
     if estensione not in allowed_extensions:
-        flash("Formato non valido. Usa JPG, PNG o WEBP.")
-        return redirect(request.referrer or url_for('dashboard'))
+        flash("Formato non valido. Usa JPG, PNG o WEBP.", "error")
+        return redirect(url_for("dashboard") + "#tab-foto")
 
     user_id = g.utente['id']
     conn = None
@@ -12121,39 +12122,89 @@ def upload_copertina():
         conn = get_db_connection()
         cur = get_cursor(conn)
 
-        upload_dir = os.path.join(app.static_folder, "uploads", "profili", "copertine")
+        # =====================================================
+        # 1) Recupera copertina PUBBLICA attualmente approvata
+        # =====================================================
+        cur.execute(sql("""
+            SELECT copertina
+            FROM utenti
+            WHERE id = ?
+        """), (user_id,))
+
+        row = cur.fetchone()
+        copertina_pubblica = row["copertina"] if row and row["copertina"] else ""
+
+        # =====================================================
+        # 2) Salva la nuova copertina come file tecnico pending
+        #    NON sovrascrive la copertina pubblica approvata.
+        # =====================================================
+        upload_dir = os.path.join(
+            app.static_folder,
+            "uploads",
+            "profili",
+            "revisioni"
+        )
         os.makedirs(upload_dir, exist_ok=True)
 
-        # elimina eventuali vecchie copertine dello stesso utente, qualunque estensione abbiano
-        possibili_vecchie = [
-            os.path.join(upload_dir, f"copertina_{user_id}.jpg"),
-            os.path.join(upload_dir, f"copertina_{user_id}.jpeg"),
-            os.path.join(upload_dir, f"copertina_{user_id}.png"),
-            os.path.join(upload_dir, f"copertina_{user_id}.webp"),
-        ]
-
-        for vecchio_file in possibili_vecchie:
-            if os.path.exists(vecchio_file):
-                try:
-                    os.remove(vecchio_file)
-                except Exception as e:
-                    print(f"⚠️ Errore eliminando vecchia copertina {vecchio_file}: {e}", flush=True)
-
-        # nome fisso SEMPRE .jpg per evitare mismatch tra DB e file reale
-        filename = f"copertina_{user_id}.jpg"
+        filename = f"utente_{user_id}_copertina_pending_{uuid.uuid4().hex}.{estensione}"
         file_path = os.path.join(upload_dir, filename)
+
         file.save(file_path)
 
-        percorso_db = f"uploads/profili/copertine/{filename}"
+        percorso_pending_db = f"uploads/profili/revisioni/{filename}"
 
-        cur.execute(
-            sql("UPDATE utenti SET copertina = ? WHERE id = ?"),
-            (percorso_db, user_id)
+        # =====================================================
+        # 3) Se la proposta è uguale alla pubblica, non creare revisione
+        # =====================================================
+        if (copertina_pubblica or "") == (percorso_pending_db or ""):
+            flash("ℹ️ Nessuna modifica effettuata.", "info")
+            return redirect(url_for("dashboard") + "#tab-foto")
+
+        # =====================================================
+        # 4) Salva revisione copertina
+        #    La copertina pubblica NON cambia finché admin non approva.
+        # =====================================================
+        revisione_id, nuova_revisione = salva_revisione_immagine_profilo(
+            cur,
+            user_id=user_id,
+            campo="copertina",
+            valore_precedente=copertina_pubblica,
+            valore_proposto=percorso_pending_db
         )
+
         conn.commit()
 
-        flash("Copertina aggiornata con successo 📸", "success")
-        return redirect(request.referrer or url_for('dashboard'))
+        # =====================================================
+        # 5) Notifica admin solo quando nasce una nuova revisione
+        # =====================================================
+        try:
+            invalidate_admin_counters()
+
+            if nuova_revisione:
+                notifica_admin_evento(
+                    titolo="Nuova revisione profilo 🕵️",
+                    messaggio=CAMPI_REVISIONE_IMMAGINI["copertina"]["messaggio_admin"],
+                    link=url_for("admin_revisioni_profilo"),
+                    push=True
+                )
+
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Errore notifica admin revisione copertina",
+                e,
+                {
+                    "user_id": user_id,
+                    "revision_id": revisione_id
+                },
+                production=True
+            )
+
+        flash(
+            "✅ Copertina caricata e inviata in revisione. "
+            "Sarà pubblica dopo approvazione.",
+            "success"
+        )
+        return redirect(url_for("dashboard") + "#tab-foto")
 
     except Exception as e:
         if conn:
@@ -12162,6 +12213,31 @@ def upload_copertina():
             except Exception:
                 pass
 
+        log_exception_safe(
+            "❌ Errore upload copertina con revisione",
+            e,
+            {
+                "user_id": user_id
+            },
+            production=True
+        )
+
+        flash("Errore durante il caricamento della copertina.", "error")
+        return redirect(url_for("dashboard") + "#tab-foto")
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
+            
         print(f"❌ Errore upload_copertina user={user_id}: {e}", flush=True)
         traceback.print_exc()
         flash("Errore durante il salvataggio della copertina.", "error")
