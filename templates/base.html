@@ -592,10 +592,12 @@ button, input[type="submit"] {
         </div>
       </div>
     </div>
-    </div>
-    </nav>
-    <div id="installBanner"
-         class="only-browser hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] bg-white shadow-xl border border-gray-200 rounded-2xl px-5 py-4 w-[92%] max-w-sm">
+  </div>
+  </nav>
+
+  {% if session.get('utente_id') %}
+  <div id="installBanner"
+       class="only-browser hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] bg-white shadow-xl border border-gray-200 rounded-2xl px-5 py-4 w-[92%] max-w-sm">
 
       <div class="text-sm">
         <div class="font-semibold text-gray-800">Installa MyLocalCare</div>
@@ -1171,7 +1173,8 @@ button, input[type="submit"] {
       });
     });
     </script>
-
+    {% endif %}
+    
     {% with flashes = get_flashed_messages(with_categories=true) %}
       {% if flashes %}
       <div id="flash-root" class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] w-[min(92vw,900px)] space-y-2 px-4">
