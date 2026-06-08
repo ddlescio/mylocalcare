@@ -724,7 +724,9 @@ button, input[type="submit"] {
       </div>
 
       <!-- 👆 Manina guida: indica i tre puntini reali in basso a destra su iPhone -->
-      <span class="ios-hand-pointer" aria-hidden="true">👆</span>
+      <span class="ios-hand-pointer" aria-hidden="true">
+        <span class="ios-hand-finger"></span>
+      </span>
 
     </div>
 
@@ -843,26 +845,70 @@ button, input[type="submit"] {
       animation: iosPulseDot 1.8s ease-in-out infinite;
     }
 
-    /* 👆 Manina animata che indica i tre puntini reali di Safari in basso a destra */
+    /* 👇 Manina CSS: dito verso il basso, indica i tre puntini reali di Safari */
     .ios-hand-pointer {
       position: fixed;
 
-      /*
-        Posizione finale: in basso a destra dello schermo.
-        Visivamente punta verso l'area dei tre puntini reali di Safari su iPhone.
-      */
-      right: 0.95rem;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 1.15rem);
+      right: 1.05rem;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 1.05rem);
 
       z-index: 1000002;
-      font-size: 2rem;
-      line-height: 1;
+
+      width: 34px;
+      height: 46px;
 
       pointer-events: none;
-      transform-origin: 50% 80%;
+      transform-origin: 50% 85%;
 
       animation: iosHandTapRealDotsArea 3.4s ease-in-out infinite;
       filter: drop-shadow(0 6px 9px rgba(15, 23, 42, 0.28));
+    }
+
+    .ios-hand-finger {
+      position: absolute;
+      left: 50%;
+      top: 0;
+
+      width: 12px;
+      height: 34px;
+
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: #f8c9a4;
+      border: 2px solid #9f5f35;
+    }
+
+    /* punta del dito più evidente */
+    .ios-hand-finger::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -8px;
+
+      width: 18px;
+      height: 18px;
+
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: #f8c9a4;
+      border: 2px solid #9f5f35;
+    }
+
+    /* polso / base della mano */
+    .ios-hand-finger::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 23px;
+
+      width: 26px;
+      height: 18px;
+
+      transform: translateX(-50%);
+      border-radius: 12px 12px 14px 14px;
+      background: #f8c9a4;
+      border: 2px solid #9f5f35;
+      z-index: -1;
     }
 
     #iosDemoDots {
@@ -870,6 +916,42 @@ button, input[type="submit"] {
       z-index: 2;
     }
 
+    @keyframes iosHandTapRealDotsArea {
+      0% {
+        opacity: 0;
+        transform: translate(-145px, -310px) scale(0.92) rotate(8deg);
+      }
+
+      12% {
+        opacity: 1;
+      }
+
+      42% {
+        opacity: 1;
+        transform: translate(-18px, -36px) scale(1) rotate(4deg);
+      }
+
+      52% {
+        opacity: 1;
+        transform: translate(0, 0) scale(0.88) rotate(4deg);
+      }
+
+      62% {
+        opacity: 1;
+        transform: translate(-18px, -36px) scale(1) rotate(4deg);
+      }
+
+      78% {
+        opacity: 1;
+        transform: translate(-18px, -36px) scale(1) rotate(4deg);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-145px, -310px) scale(0.92) rotate(8deg);
+      }
+    }
+    
     @keyframes iosHandTapRealDotsArea {
       0% {
         opacity: 0;
