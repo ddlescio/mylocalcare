@@ -4073,19 +4073,8 @@ def admin_counters():
         step = "revisioni_profilo"
         pending_revisioni_profilo = get_count(cur, """
             SELECT COUNT(*) AS valore
-            FROM utenti
-            WHERE
-                (
-                    frase_stato = 'in_revisione'
-                    AND frase_pending IS NOT NULL
-                    AND TRIM(frase_pending) <> ''
-                )
-                OR
-                (
-                    descrizione_stato = 'in_revisione'
-                    AND descrizione_pending IS NOT NULL
-                    AND TRIM(descrizione_pending) <> ''
-                )
+            FROM revisioni_profilo
+            WHERE stato = 'in_attesa'
         """, step=step)
 
         step = "utenti"
@@ -10755,6 +10744,12 @@ def dashboard():
         return redirect(url_for("home"))
 
     utente = dict(ut)
+
+    # 🖼️ Se ci sono immagini in revisione, nella dashboard privata
+    # l'utente vede la versione proposta, non ancora pubblica.
+    c_pending = get_cursor(conn)
+    utente = applica_revisioni_immagini_pending_a_utente(c_pending, utente)
+
     # cast sicuro dei flag (possono essere None/0/1 o stringhe)
     for i in range(1, 14):
         utente[f"offro_{i}"] = int(utente.get(f"offro_{i}") or 0)
@@ -10865,6 +10860,105 @@ def salva_revisione_profilo(cur, user_id, campo, testo_precedente, testo_propost
     ))
 
     return None, True
+
+# ==========================================================
+# 🖼️ REVISIONI PROFILO — IMMAGINI
+# ==========================================================
+
+CAMPI_REVISIONE_IMMAGINI = {
+    "foto_profilo": {
+        "label": "Foto profilo",
+        "link_tab": "#foto",
+        "messaggio_admin": "Un utente ha modificato la foto profilo. La modifica è in attesa di approvazione."
+    },
+    "copertina": {
+        "label": "Copertina profilo",
+        "link_tab": "#foto",
+        "messaggio_admin": "Un utente ha modificato la copertina del profilo. La modifica è in attesa di approvazione."
+    },
+    "foto_galleria": {
+        "label": "Galleria personale",
+        "link_tab": "#foto",
+        "messaggio_admin": "Un utente ha aggiornato la galleria personale. Le foto sono in attesa di approvazione."
+    }
+}
+
+
+def get_revisione_profilo_pending(cur, user_id, campo):
+    """
+    Restituisce l'ultima revisione profilo in attesa per uno specifico campo.
+    Vale sia per testi sia per immagini.
+    """
+    cur.execute(sql("""
+        SELECT
+            id,
+            testo_precedente,
+            testo_proposto,
+            data_modifica
+        FROM revisioni_profilo
+        WHERE utente_id = ?
+          AND campo = ?
+          AND stato = 'in_attesa'
+        ORDER BY data_modifica DESC, id DESC
+        LIMIT 1
+    """), (user_id, campo))
+
+    return cur.fetchone()
+
+
+def salva_revisione_immagine_profilo(cur, user_id, campo, valore_precedente, valore_proposto):
+    """
+    Salva una modifica immagine profilo come revisione admin.
+
+    Campi gestiti:
+    - foto_profilo
+    - copertina
+    - foto_galleria
+
+    Non pubblica subito la modifica: salva solo la proposta in revisioni_profilo.
+    """
+
+    if campo not in CAMPI_REVISIONE_IMMAGINI:
+        raise ValueError(f"Campo immagine non valido per revisione: {campo}")
+
+    valore_precedente = valore_precedente or ""
+    valore_proposto = valore_proposto or ""
+
+    revisione_id, nuova_revisione = salva_revisione_profilo(
+        cur,
+        user_id=user_id,
+        campo=campo,
+        testo_precedente=valore_precedente,
+        testo_proposto=valore_proposto
+    )
+
+    return revisione_id, nuova_revisione
+
+
+def applica_revisioni_immagini_pending_a_utente(cur, utente):
+    """
+    Serve nella dashboard privata.
+
+    Se l'utente ha immagini in revisione, gliele mostra nel suo profilo privato,
+    ma NON modifica i campi pubblici approvati.
+    """
+
+    if not utente or not utente.get("id"):
+        return utente
+
+    user_id = utente["id"]
+
+    for campo in CAMPI_REVISIONE_IMMAGINI.keys():
+        revisione = get_revisione_profilo_pending(cur, user_id, campo)
+
+        if revisione and revisione["testo_proposto"]:
+            utente[campo] = revisione["testo_proposto"]
+            utente[f"{campo}_in_revisione"] = True
+        else:
+            utente[f"{campo}_in_revisione"] = False
+
+    return utente
+
 
 # --- Aggiorna INFO (tab) ---
 @app.route("/utente/update_info", methods=["POST"])
@@ -11644,39 +11738,65 @@ def upload_foto():
             conn = get_db_connection()
             cur = get_cursor(conn)
 
-            upload_dir = os.path.join(app.static_folder, "uploads", "profili")
+            # Recupera la foto profilo attualmente approvata/pubblica
+            cur.execute(sql("""
+                SELECT foto_profilo
+                FROM utenti
+                WHERE id = ?
+            """), (user_id,))
+
+            row = cur.fetchone()
+            foto_attuale = row["foto_profilo"] if row and row["foto_profilo"] else ""
+
+            upload_dir = os.path.join(app.static_folder, "uploads", "profili", "revisioni")
             os.makedirs(upload_dir, exist_ok=True)
 
-            # elimina eventuali vecchie foto profilo dello stesso utente, qualunque estensione abbiano
-            possibili_vecchie = [
-                os.path.join(upload_dir, f"utente_{user_id}.jpg"),
-                os.path.join(upload_dir, f"utente_{user_id}.jpeg"),
-                os.path.join(upload_dir, f"utente_{user_id}.png"),
-                os.path.join(upload_dir, f"utente_{user_id}.gif"),
-                os.path.join(upload_dir, f"utente_{user_id}.webp"),
-            ]
+            estensione = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "png"
 
-            for vecchio_file in possibili_vecchie:
-                if os.path.exists(vecchio_file):
-                    try:
-                        os.remove(vecchio_file)
-                    except Exception as e:
-                        print(f"⚠️ Errore eliminando vecchia foto profilo {vecchio_file}: {e}", flush=True)
-
-            # nome fisso coerente con ciò che la dashboard sta già chiedendo nei log
-            filename = f"utente_{user_id}.png"
+            # Nome NON fisso: serve per evitare cache browser e per non sovrascrivere
+            # la foto profilo pubblica ancora approvata.
+            filename = f"utente_{user_id}_foto_profilo_pending_{uuid.uuid4().hex}.{estensione}"
             file_path = os.path.join(upload_dir, filename)
             file.save(file_path)
 
-            percorso_db = f"uploads/profili/{filename}"
+            percorso_pending = f"uploads/profili/revisioni/{filename}"
 
-            cur.execute(
-                sql("UPDATE utenti SET foto_profilo = ? WHERE id = ?"),
-                (percorso_db, user_id)
+            revisione_id, nuova_revisione = salva_revisione_immagine_profilo(
+                cur,
+                user_id=user_id,
+                campo="foto_profilo",
+                valore_precedente=foto_attuale,
+                valore_proposto=percorso_pending
             )
+
             conn.commit()
 
-            flash("Foto profilo aggiornata con successo.")
+            try:
+                invalidate_admin_counters()
+
+                if nuova_revisione:
+                    notifica_admin_evento(
+                        titolo="Nuova revisione profilo 🖼️",
+                        messaggio="Un utente ha modificato la foto profilo. La modifica è in attesa di approvazione.",
+                        link=url_for("admin_revisioni_profilo"),
+                        push=True
+                    )
+            except Exception as e:
+                log_exception_safe(
+                    "⚠️ Errore notifica admin revisione foto profilo",
+                    e,
+                    {
+                        "user_id": user_id,
+                        "campo": "foto_profilo",
+                        "revisione_id": revisione_id
+                    },
+                    production=True
+                )
+
+            flash(
+                "Foto profilo caricata. Sarà visibile pubblicamente dopo approvazione.",
+                "success"
+            )
             return redirect(url_for('dashboard'))
 
         except Exception as e:
@@ -11688,7 +11808,7 @@ def upload_foto():
 
             print(f"❌ Errore upload_foto user={user_id}: {e}", flush=True)
             traceback.print_exc()
-            flash("Errore durante il salvataggio della foto profilo.")
+            flash("Errore durante il salvataggio della foto profilo.", "error")
             return redirect(request.url)
 
         finally:
@@ -11705,7 +11825,7 @@ def upload_foto():
                 pass
 
     return render_template('upload_foto.html', utente=g.utente)
-
+    
 # --- Upload copertina profilo ---
 @app.route('/utente/copertina', methods=['POST'])
 @login_required
