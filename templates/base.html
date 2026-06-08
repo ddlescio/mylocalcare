@@ -687,7 +687,10 @@ button, input[type="submit"] {
             <div class="ios-install-step ios-step-2">
               <span class="ios-step-number">2</span>
               <div>
-                <strong>Premi “Condividi”</strong>
+                <strong>
+                  Premi “Condividi”
+                  <span class="ios-share-icon" aria-hidden="true">⇧</span>
+                </strong>
                 <small>nel menu che si apre</small>
               </div>
             </div>
@@ -901,6 +904,43 @@ button, input[type="submit"] {
       color: #0f172a;
       font-size: 0.88rem;
       line-height: 1.15;
+    }
+
+    .ios-share-icon {
+      position: relative;
+      display: inline-flex;
+      width: 18px;
+      height: 18px;
+      margin-left: 4px;
+      vertical-align: -3px;
+      align-items: center;
+      justify-content: center;
+      color: #2563eb;
+      font-size: 0;
+    }
+
+    .ios-share-icon::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      bottom: 2px;
+      height: 9px;
+      border: 2px solid #2563eb;
+      border-top: none;
+      border-radius: 3px;
+    }
+
+    .ios-share-icon::after {
+      content: "↑";
+      position: absolute;
+      top: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      line-height: 1;
+      font-weight: 900;
+      color: #2563eb;
     }
 
     .ios-install-step small {
