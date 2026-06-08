@@ -11687,9 +11687,7 @@ def utente_update_galleria():
         )
 
         # =====================================================
-        # 2) Se esiste già una revisione pending, lavora su quella
-        #    Così l'utente può aggiungere/rimuovere più volte
-        #    senza perdere le modifiche già in attesa.
+        # 2) Recupera eventuale revisione pending
         # =====================================================
         revisione_pending = get_revisione_profilo_pending(
             c,
@@ -11703,9 +11701,7 @@ def utente_update_galleria():
             correnti = list(galleria_pubblica)
 
         # =====================================================
-        # 3) Rimuovi foto selezionate dalla PROPOSTA privata
-        #    Non eliminiamo i file fisici ora, perché se admin rifiuta
-        #    la galleria pubblica deve restare intatta.
+        # 3) Rimozioni richieste
         # =====================================================
         to_remove = request.form.getlist("remove")
         to_remove = [p.strip() for p in to_remove if p and str(p).strip()]
@@ -11713,85 +11709,68 @@ def utente_update_galleria():
         if to_remove:
             correnti = [p for p in correnti if p not in to_remove]
 
-        # =====================================================
-        # 4) Calcola slot disponibili dopo le rimozioni
-        # =====================================================
         correnti = [p.strip() for p in correnti if p and str(p).strip()]
         correnti = list(dict.fromkeys(correnti))
 
-        slot_disponibili = max(0, MAX_FOTO_GALLERIA - len(correnti))
-
         # =====================================================
-        # 5) Salva nuove immagini come file tecnici
-        #    Non diventano pubbliche finché admin non approva.
+        # 4) File caricati
         # =====================================================
         uploaded_files = request.files.getlist("foto_galleria")
 
-        upload_dir = os.path.join(
-            app.static_folder,
-            "uploads",
-            "profili",
-            "galleria"
-        )
-        os.makedirs(upload_dir, exist_ok=True)
+        file_validi = []
 
-    file_validi = []
-    for file in uploaded_files:
-        if not file or not file.filename:
-            continue
+        for file in uploaded_files:
+            if not file or not file.filename:
+                continue
 
-        estensione = (
-            file.filename.rsplit(".", 1)[-1].lower()
-            if "." in file.filename
-            else ""
-        )
+            estensione = (
+                file.filename.rsplit(".", 1)[-1].lower()
+                if "." in file.filename
+                else ""
+            )
 
-        if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
-            continue
+            if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
+                continue
 
-        file_validi.append((file, estensione))
+            file_validi.append((file, estensione))
 
-    # =====================================================
-    # CASO SOLO ELIMINAZIONE FOTO
-    # Se l'utente elimina foto senza caricarne di nuove,
-    # NON serve approvazione admin e NON mandiamo notifica.
-    #
-    # - Se esiste una revisione pending, aggiorniamo solo quella.
-    # - Se non esiste revisione pending, aggiorniamo direttamente
-    #   la galleria pubblica approvata.
-    # =====================================================
-    if to_remove and not file_validi:
-        valore_precedente = json.dumps(galleria_pubblica)
-        valore_proposto = json.dumps(correnti)
+        # =====================================================
+        # 5) CASO SOLO ELIMINAZIONE
+        # Se l'utente elimina una foto senza caricarne di nuove:
+        # - NON mandiamo notifica admin
+        # - NON creiamo nuova revisione
+        # - NON richiediamo approvazione
+        # =====================================================
+        if to_remove and not file_validi:
+            valore_precedente = json.dumps(galleria_pubblica)
+            valore_proposto = json.dumps(correnti)
 
-        # Caso A: esiste già una revisione in attesa.
-        # L'utente sta modificando la proposta privata, non la galleria pubblica.
-        if revisione_pending:
-            if valore_proposto == valore_precedente:
-                # La proposta torna uguale alla galleria pubblica:
-                # non c'è più nulla da approvare.
-                c.execute(sql("""
-                    DELETE FROM revisioni_profilo
-                    WHERE id = ?
-                """), (revisione_pending["id"],))
+            # Caso A: esiste già una revisione in attesa.
+            # L'utente sta modificando la proposta privata.
+            if revisione_pending:
+                if valore_proposto == valore_precedente:
+                    # La proposta torna identica alla galleria pubblica:
+                    # eliminiamo la revisione pending.
+                    c.execute(sql("""
+                        DELETE FROM revisioni_profilo
+                        WHERE id = ?
+                    """), (revisione_pending["id"],))
 
-                conn.commit()
+                    conn.commit()
 
-                try:
-                    invalidate_admin_counters()
-                except Exception:
-                    pass
+                    try:
+                        invalidate_admin_counters()
+                    except Exception:
+                        pass
 
-                flash(
-                    "✅ Modifica annullata: la galleria è tornata uguale a quella pubblica.",
-                    "success"
-                )
+                    flash(
+                        "✅ Modifica annullata: la galleria è tornata uguale a quella pubblica.",
+                        "success"
+                    )
+                    return redirect(url_for("dashboard") + "#tab-foto")
 
-                return redirect(url_for("dashboard") + "#tab-foto")
-
-            else:
                 # Resta una proposta diversa dalla pubblica:
-                # aggiorniamo la revisione esistente, senza nuova notifica.
+                # aggiorniamo la revisione esistente senza nuova notifica.
                 c.execute(sql("""
                     UPDATE revisioni_profilo
                     SET testo_proposto = ?,
@@ -11801,28 +11780,39 @@ def utente_update_galleria():
 
                 conn.commit()
 
-                flash(
-                    "✅ Foto rimossa dalla galleria in revisione.",
-                    "success"
-                )
-
+                flash("✅ Foto rimossa dalla galleria in revisione.", "success")
                 return redirect(url_for("dashboard") + "#tab-foto")
 
-        # Caso B: non c'è revisione pending.
-        # L'utente elimina una foto già pubblica: aggiorniamo direttamente.
-        c.execute(
-            sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"),
-            (valore_proposto, user_id)
+            # Caso B: non c'è revisione pending.
+            # L'utente elimina una foto già pubblica:
+            # la rimozione viene applicata subito senza revisione.
+            c.execute(
+                sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"),
+                (valore_proposto, user_id)
+            )
+
+            conn.commit()
+
+            flash("✅ Foto rimossa correttamente dalla galleria.", "success")
+            return redirect(url_for("dashboard") + "#tab-foto")
+
+        # =====================================================
+        # 6) CASO CARICAMENTO NUOVE FOTO
+        # Qui serve revisione admin.
+        # =====================================================
+        slot_disponibili = max(0, MAX_FOTO_GALLERIA - len(correnti))
+
+        upload_dir = os.path.join(
+            app.static_folder,
+            "uploads",
+            "profili",
+            "galleria"
         )
+        os.makedirs(upload_dir, exist_ok=True)
 
-        conn.commit()
+        file_da_salvare = file_validi[:slot_disponibili]
+        file_scartati = len(file_validi) - len(file_da_salvare)
 
-        flash("✅ Foto rimossa correttamente dalla galleria.", "success")
-        return redirect(url_for("dashboard") + "#tab-foto")
-
-    file_da_salvare = file_validi[:slot_disponibili]
-    file_scartati = len(file_validi) - len(file_da_salvare)
-    
         for file, estensione in file_da_salvare:
             nome_file = f"u{user_id}_{uuid.uuid4().hex}.{estensione}"
             percorso = os.path.join(upload_dir, nome_file)
@@ -11831,21 +11821,26 @@ def utente_update_galleria():
 
             correnti.append(f"uploads/profili/galleria/{nome_file}")
 
-        # Sicurezza finale
         correnti = correnti[:MAX_FOTO_GALLERIA]
 
         valore_precedente = json.dumps(galleria_pubblica)
         valore_proposto = json.dumps(correnti)
 
         # =====================================================
-        # 6) Se non cambia nulla, non creare revisione
+        # 7) Se non cambia nulla, non creare revisione
         # =====================================================
         if valore_precedente == valore_proposto and not revisione_pending:
             flash("ℹ️ Nessuna modifica effettuata.", "info")
             return redirect(url_for("dashboard") + "#tab-foto")
 
+        # Se non ci sono nuovi file e non ci sono rimozioni,
+        # non serve creare o aggiornare revisioni.
+        if not file_da_salvare and not to_remove:
+            flash("ℹ️ Nessuna nuova foto caricata.", "info")
+            return redirect(url_for("dashboard") + "#tab-foto")
+
         # =====================================================
-        # 7) Salva revisione, NON pubblicare subito
+        # 8) Salva revisione SOLO se sono state caricate nuove foto
         # =====================================================
         revisione_id, nuova_revisione = salva_revisione_immagine_profilo(
             c,
@@ -11858,12 +11853,13 @@ def utente_update_galleria():
         conn.commit()
 
         # =====================================================
-        # 8) Notifica admin solo quando nasce una nuova revisione
+        # 9) Notifica admin solo quando nasce una nuova revisione
+        #    e solo per caricamento foto, non per eliminazione.
         # =====================================================
         try:
             invalidate_admin_counters()
 
-            if nuova_revisione:
+            if nuova_revisione and file_da_salvare:
                 notifica_admin_evento(
                     titolo="Nuova revisione profilo 🕵️",
                     messaggio=CAMPI_REVISIONE_IMMAGINI["foto_galleria"]["messaggio_admin"],
@@ -11883,7 +11879,7 @@ def utente_update_galleria():
             )
 
         # =====================================================
-        # 9) Messaggi utente
+        # 10) Messaggi utente
         # =====================================================
         if file_scartati > 0:
             flash(
@@ -11892,20 +11888,14 @@ def utente_update_galleria():
                 "La galleria aggiornata è stata inviata in revisione.",
                 "warning"
             )
-        elif to_remove and not file_da_salvare:
-            flash(
-                "✅ Modifica galleria inviata in revisione. "
-                "Le foto pubbliche cambieranno dopo approvazione.",
-                "success"
-            )
-        elif file_da_salvare or to_remove:
+        elif file_da_salvare:
             flash(
                 "✅ Galleria aggiornata e inviata in revisione 📸",
                 "success"
             )
         else:
             flash(
-                "ℹ️ Nessuna nuova foto caricata, ma la galleria resta in revisione.",
+                "ℹ️ Nessuna nuova foto caricata.",
                 "info"
             )
 
@@ -11931,7 +11921,7 @@ def utente_update_galleria():
             conn.close()
         except Exception:
             pass
-
+            
 @app.route('/annuncio/<int:id>/elimina', methods=["POST"])
 @login_required
 def elimina_annuncio(id):
