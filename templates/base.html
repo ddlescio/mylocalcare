@@ -651,18 +651,26 @@ button, input[type="submit"] {
         <div class="ios-install-demo mx-5 rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4">
 
           <div class="ios-mini-browser">
-            <div class="ios-mini-topbar">
-              <span class="ios-mini-url">mylocalcare.it</span>
-
-              <span class="ios-dots ios-step-dot">
-                •••
-              </span>
-            </div>
 
             <div class="ios-demo-screen">
               <div class="ios-demo-logo">MyLocalCare</div>
               <div class="ios-demo-card"></div>
               <div class="ios-demo-card small"></div>
+            </div>
+
+            <div class="ios-mini-bottombar">
+
+              <span class="ios-mini-back">‹</span>
+
+              <span class="ios-mini-url-wrap">
+                <span class="ios-mini-url">mylocalcare.it</span>
+                <span class="ios-mini-refresh">↻</span>
+              </span>
+
+              <span class="ios-dots ios-step-dot">
+                •••
+              </span>
+
             </div>
           </div>
 
@@ -747,31 +755,66 @@ button, input[type="submit"] {
         inset 0 1px 0 rgba(255,255,255,0.95);
     }
 
-    .ios-mini-topbar {
-      height: 42px;
+    .ios-mini-bottombar {
+      height: 44px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      padding: 0 10px;
-      background: rgba(248, 250, 252, 0.96);
-      border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+      padding: 0 9px;
+      background: rgba(248, 250, 252, 0.98);
+      border-top: 1px solid rgba(226, 232, 240, 0.95);
     }
 
-    .ios-mini-url {
+    .ios-mini-back {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      line-height: 1;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .ios-mini-url-wrap {
       flex: 1;
-      height: 26px;
+      min-width: 0;
+      height: 28px;
       border-radius: 999px;
       background: #ffffff;
       border: 1px solid #e2e8f0;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #334155;
-      font-size: 0.78rem;
-      font-weight: 800;
+      gap: 7px;
+      padding: 0 9px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
     }
 
+    .ios-mini-url {
+      min-width: 0;
+      color: #334155;
+      font-size: 0.76rem;
+      font-weight: 850;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ios-mini-refresh {
+      color: #64748b;
+      font-size: 0.95rem;
+      line-height: 1;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+    
     .ios-dots {
       width: 38px;
       height: 26px;
