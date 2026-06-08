@@ -2553,12 +2553,21 @@ def admin_required(view_func):
             session.clear()
             return redirect(url_for("login"))
 
-        # ❌ Se fingerprint diverso → blocco totale
-        if session_fp != db_fp or current_fp != db_fp:
+        # ❌ Se il fingerprint salvato in sessione non coincide con quello nel DB → blocco.
+        #
+        # Non confrontiamo più il request.headers["User-Agent"] della singola richiesta,
+        # perché su Safari/iPhone può variare tra navigazione pagina, fetch e WebAuthn.
+        #
+        # La protezione admin resta comunque attiva perché devono coincidere:
+        # - admin_session_token in sessione e DB
+        # - admin_security_version in sessione e DB
+        # - admin_browser_fingerprint salvato in sessione e DB
+        # - admin_session_expiry valida
+        if session_fp != db_fp:
             flash("Accesso amministratore bloccato: dispositivo non riconosciuto.", "error")
             session.clear()
             return redirect(url_for("login"))
-
+            
         # deve essere ancora valido (non scaduto)
         expiry_dt = None
         try:
@@ -11825,7 +11834,7 @@ def upload_foto():
                 pass
 
     return render_template('upload_foto.html', utente=g.utente)
-    
+
 # --- Upload copertina profilo ---
 @app.route('/utente/copertina', methods=['POST'])
 @login_required
