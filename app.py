@@ -2444,15 +2444,19 @@ def admin_stepup_is_valid():
     """
     Verifica se l'admin ha già fatto uno sblocco recente.
     Questo NON sostituisce admin_session_token: è un secondo livello.
+
+    Nota:
+    non confrontiamo il User-Agent della richiesta corrente, perché su Safari/iPhone
+    può variare tra fetch WebAuthn e navigazione pagina.
+    La verifica del dispositivo resta affidata ad admin_required(), che controlla:
+    - admin_session_token
+    - admin_security_version
+    - admin_browser_fingerprint salvato in sessione e DB
+    - scadenza admin_session_expiry
     """
     raw_until = session.get("admin_stepup_until")
-    fp_sessione = session.get("admin_stepup_fingerprint")
-    fp_corrente = request.headers.get("User-Agent", "unknown")
 
-    if not raw_until or not fp_sessione:
-        return False
-
-    if fp_sessione != fp_corrente:
+    if not raw_until:
         return False
 
     try:
@@ -2463,7 +2467,7 @@ def admin_stepup_is_valid():
         return False
 
     return until > datetime.now(timezone.utc)
-
+    
 
 def mark_admin_stepup_verified():
     """
@@ -2567,7 +2571,7 @@ def admin_required(view_func):
             flash("Accesso amministratore bloccato: dispositivo non riconosciuto.", "error")
             session.clear()
             return redirect(url_for("login"))
-            
+
         # deve essere ancora valido (non scaduto)
         expiry_dt = None
         try:
