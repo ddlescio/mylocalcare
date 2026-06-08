@@ -12238,24 +12238,6 @@ def upload_copertina():
         except Exception:
             pass
             
-        print(f"❌ Errore upload_copertina user={user_id}: {e}", flush=True)
-        traceback.print_exc()
-        flash("Errore durante il salvataggio della copertina.", "error")
-        return redirect(request.referrer or url_for('dashboard'))
-
-    finally:
-        try:
-            if cur:
-                cur.close()
-        except Exception:
-            pass
-
-        try:
-            if conn:
-                conn.close()
-        except Exception:
-            pass
-
 @app.route('/rimuovi_copertina', methods=['POST'])
 @login_required
 def rimuovi_copertina():
