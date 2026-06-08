@@ -2467,7 +2467,7 @@ def admin_stepup_is_valid():
         return False
 
     return until > datetime.now(timezone.utc)
-    
+
 
 def mark_admin_stepup_verified():
     """
@@ -4680,6 +4680,10 @@ def admin_revisioni_profilo_azione(revision_id):
 
     admin_id = session.get("utente_id")
 
+    campi_testo = {"frase", "descrizione"}
+    campi_immagine = {"foto_profilo", "copertina", "foto_galleria"}
+    campi_validi = campi_testo | campi_immagine
+
     conn = get_db_connection()
     c = get_cursor(conn)
 
@@ -4692,8 +4696,13 @@ def admin_revisioni_profilo_azione(revision_id):
                 rp.testo_precedente,
                 rp.testo_proposto,
                 rp.stato,
+
                 u.frase,
-                u.descrizione
+                u.descrizione,
+                u.foto_profilo,
+                u.copertina,
+                u.foto_galleria
+
             FROM revisioni_profilo rp
             JOIN utenti u ON u.id = rp.utente_id
             WHERE rp.id = ?
@@ -4714,7 +4723,7 @@ def admin_revisioni_profilo_azione(revision_id):
         testo_precedente = revisione["testo_precedente"] or ""
         testo_proposto = revisione["testo_proposto"] or ""
 
-        if campo not in ["frase", "descrizione"]:
+        if campo not in campi_validi:
             return jsonify({
                 "ok": False,
                 "message": "Campo revisione non valido."
@@ -4724,6 +4733,7 @@ def admin_revisioni_profilo_azione(revision_id):
         # APPROVA
         # =====================================================
         if azione == "approva":
+
             if campo == "frase":
                 c.execute(sql("""
                     UPDATE utenti SET
@@ -4734,13 +4744,34 @@ def admin_revisioni_profilo_azione(revision_id):
                     WHERE id = ?
                 """), (testo_proposto, utente_id))
 
-            else:
+            elif campo == "descrizione":
                 c.execute(sql("""
                     UPDATE utenti SET
                         descrizione = ?,
                         descrizione_pending = NULL,
                         descrizione_stato = 'approvata',
                         descrizione_inviata_revisione_il = NULL
+                    WHERE id = ?
+                """), (testo_proposto, utente_id))
+
+            elif campo == "foto_profilo":
+                c.execute(sql("""
+                    UPDATE utenti SET
+                        foto_profilo = ?
+                    WHERE id = ?
+                """), (testo_proposto, utente_id))
+
+            elif campo == "copertina":
+                c.execute(sql("""
+                    UPDATE utenti SET
+                        copertina = ?
+                    WHERE id = ?
+                """), (testo_proposto, utente_id))
+
+            elif campo == "foto_galleria":
+                c.execute(sql("""
+                    UPDATE utenti SET
+                        foto_galleria = ?
                     WHERE id = ?
                 """), (testo_proposto, utente_id))
 
@@ -4758,9 +4789,8 @@ def admin_revisioni_profilo_azione(revision_id):
         # RIFIUTA
         # =====================================================
         else:
+
             if campo == "frase":
-                # Se la revisione era già approvata e poi cambi idea,
-                # riportiamo pubblico il testo precedente.
                 if stato_attuale == "approvata":
                     c.execute(sql("""
                         UPDATE utenti SET
@@ -4779,7 +4809,7 @@ def admin_revisioni_profilo_azione(revision_id):
                         WHERE id = ?
                     """), (utente_id,))
 
-            else:
+            elif campo == "descrizione":
                 if stato_attuale == "approvata":
                     c.execute(sql("""
                         UPDATE utenti SET
@@ -4798,6 +4828,30 @@ def admin_revisioni_profilo_azione(revision_id):
                         WHERE id = ?
                     """), (utente_id,))
 
+            elif campo == "foto_profilo":
+                if stato_attuale == "approvata":
+                    c.execute(sql("""
+                        UPDATE utenti SET
+                            foto_profilo = ?
+                        WHERE id = ?
+                    """), (testo_precedente, utente_id))
+
+            elif campo == "copertina":
+                if stato_attuale == "approvata":
+                    c.execute(sql("""
+                        UPDATE utenti SET
+                            copertina = ?
+                        WHERE id = ?
+                    """), (testo_precedente, utente_id))
+
+            elif campo == "foto_galleria":
+                if stato_attuale == "approvata":
+                    c.execute(sql("""
+                        UPDATE utenti SET
+                            foto_galleria = ?
+                        WHERE id = ?
+                    """), (testo_precedente, utente_id))
+
             c.execute(sql("""
                 UPDATE revisioni_profilo SET
                     stato = 'rifiutata',
@@ -4815,8 +4869,7 @@ def admin_revisioni_profilo_azione(revision_id):
         except Exception as e:
             print("⚠️ Errore invalidate_admin_counters revisione profilo:", e)
 
-        # 🔔 Se l'admin rifiuta una revisione, avvisa l'utente
-        # con notifica interna + aggiornamento realtime + push.
+        # 🔔 Notifica utente solo in caso di rifiuto
         if azione == "rifiuta":
             try:
                 if campo == "frase":
@@ -4825,14 +4878,23 @@ def admin_revisioni_profilo_azione(revision_id):
                         "La modifica alla tua frase del profilo non è stata approvata. "
                         "Puoi modificarla dalla tua dashboard e inviarla di nuovo in revisione."
                     )
-                else:
+                    link_notifica = url_for("dashboard") + "?tab=info"
+
+                elif campo == "descrizione":
                     titolo_push = "Descrizione profilo non approvata ❌"
                     messaggio_utente = (
                         "La modifica alla tua descrizione del profilo non è stata approvata. "
                         "Puoi modificarla dalla tua dashboard e inviarla di nuovo in revisione."
                     )
+                    link_notifica = url_for("dashboard") + "?tab=info"
 
-                link_notifica = url_for("dashboard") + "?tab=info"
+                else:
+                    titolo_push = "Immagine profilo non approvata ❌"
+                    messaggio_utente = (
+                        "Una modifica alle immagini del tuo profilo non è stata approvata. "
+                        "Puoi modificarla dalla tua dashboard e inviarla di nuovo in revisione."
+                    )
+                    link_notifica = url_for("dashboard") + "#foto"
 
                 crea_notifica(
                     utente_id,
