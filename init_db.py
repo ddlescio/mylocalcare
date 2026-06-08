@@ -1254,7 +1254,7 @@ def aggiorna_colonne_mancanti():
         "disattivato_admin": "INTEGER DEFAULT 0",
         "eliminato": "INTEGER DEFAULT 0",
         "email_notifiche": "INTEGER DEFAULT 1",
-        
+
         # Recensioni e tracking
         "media_recensioni": "REAL DEFAULT 0",
         "numero_recensioni": "INTEGER DEFAULT 0",
@@ -1436,7 +1436,13 @@ def crea_tabella_revisioni_profilo():
 
         utente_id INTEGER NOT NULL,
 
-        campo TEXT NOT NULL CHECK (campo IN ('frase', 'descrizione')),
+        campo TEXT NOT NULL CHECK (campo IN (
+            'frase',
+            'descrizione',
+            'foto_profilo',
+            'copertina',
+            'foto_galleria'
+        )),
 
         testo_precedente TEXT,
         testo_proposto TEXT NOT NULL,
@@ -1454,6 +1460,27 @@ def crea_tabella_revisioni_profilo():
     );
     """))
 
+    # ✅ PostgreSQL / Render:
+    # se la tabella esiste già, CREATE TABLE IF NOT EXISTS non aggiorna
+    # il vincolo CHECK esistente. Quindi riallineiamo il constraint.
+    if IS_POSTGRES:
+        c.execute("""
+            ALTER TABLE revisioni_profilo
+            DROP CONSTRAINT IF EXISTS revisioni_profilo_campo_check;
+        """)
+
+        c.execute("""
+            ALTER TABLE revisioni_profilo
+            ADD CONSTRAINT revisioni_profilo_campo_check
+            CHECK (campo IN (
+                'frase',
+                'descrizione',
+                'foto_profilo',
+                'copertina',
+                'foto_galleria'
+            ));
+        """)
+    
     c.execute(sql("""
         CREATE INDEX IF NOT EXISTS idx_revisioni_profilo_stato
         ON revisioni_profilo(stato);
