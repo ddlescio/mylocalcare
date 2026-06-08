@@ -11735,26 +11735,94 @@ def utente_update_galleria():
         )
         os.makedirs(upload_dir, exist_ok=True)
 
-        file_validi = []
+    file_validi = []
+    for file in uploaded_files:
+        if not file or not file.filename:
+            continue
 
-        for file in uploaded_files:
-            if not file or not file.filename:
-                continue
+        estensione = (
+            file.filename.rsplit(".", 1)[-1].lower()
+            if "." in file.filename
+            else ""
+        )
 
-            estensione = (
-                file.filename.rsplit(".", 1)[-1].lower()
-                if "." in file.filename
-                else ""
-            )
+        if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
+            continue
 
-            if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
-                continue
+        file_validi.append((file, estensione))
 
-            file_validi.append((file, estensione))
+    # =====================================================
+    # CASO SOLO ELIMINAZIONE FOTO
+    # Se l'utente elimina foto senza caricarne di nuove,
+    # NON serve approvazione admin e NON mandiamo notifica.
+    #
+    # - Se esiste una revisione pending, aggiorniamo solo quella.
+    # - Se non esiste revisione pending, aggiorniamo direttamente
+    #   la galleria pubblica approvata.
+    # =====================================================
+    if to_remove and not file_validi:
+        valore_precedente = json.dumps(galleria_pubblica)
+        valore_proposto = json.dumps(correnti)
 
-        file_da_salvare = file_validi[:slot_disponibili]
-        file_scartati = len(file_validi) - len(file_da_salvare)
+        # Caso A: esiste già una revisione in attesa.
+        # L'utente sta modificando la proposta privata, non la galleria pubblica.
+        if revisione_pending:
+            if valore_proposto == valore_precedente:
+                # La proposta torna uguale alla galleria pubblica:
+                # non c'è più nulla da approvare.
+                c.execute(sql("""
+                    DELETE FROM revisioni_profilo
+                    WHERE id = ?
+                """), (revisione_pending["id"],))
 
+                conn.commit()
+
+                try:
+                    invalidate_admin_counters()
+                except Exception:
+                    pass
+
+                flash(
+                    "✅ Modifica annullata: la galleria è tornata uguale a quella pubblica.",
+                    "success"
+                )
+
+                return redirect(url_for("dashboard") + "#tab-foto")
+
+            else:
+                # Resta una proposta diversa dalla pubblica:
+                # aggiorniamo la revisione esistente, senza nuova notifica.
+                c.execute(sql("""
+                    UPDATE revisioni_profilo
+                    SET testo_proposto = ?,
+                        data_modifica = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """), (valore_proposto, revisione_pending["id"]))
+
+                conn.commit()
+
+                flash(
+                    "✅ Foto rimossa dalla galleria in revisione.",
+                    "success"
+                )
+
+                return redirect(url_for("dashboard") + "#tab-foto")
+
+        # Caso B: non c'è revisione pending.
+        # L'utente elimina una foto già pubblica: aggiorniamo direttamente.
+        c.execute(
+            sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"),
+            (valore_proposto, user_id)
+        )
+
+        conn.commit()
+
+        flash("✅ Foto rimossa correttamente dalla galleria.", "success")
+        return redirect(url_for("dashboard") + "#tab-foto")
+
+    file_da_salvare = file_validi[:slot_disponibili]
+    file_scartati = len(file_validi) - len(file_da_salvare)
+    
         for file, estensione in file_da_salvare:
             nome_file = f"u{user_id}_{uuid.uuid4().hex}.{estensione}"
             percorso = os.path.join(upload_dir, nome_file)
@@ -11863,7 +11931,7 @@ def utente_update_galleria():
             conn.close()
         except Exception:
             pass
-            
+
 @app.route('/annuncio/<int:id>/elimina', methods=["POST"])
 @login_required
 def elimina_annuncio(id):
