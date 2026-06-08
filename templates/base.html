@@ -753,8 +753,9 @@ button, input[type="submit"] {
     }
 
     .ios-mini-browser {
+      position: relative;
       border-radius: 1.35rem;
-      overflow: hidden;
+      overflow: visible;
       border: 1px solid rgba(203, 213, 225, 0.9);
       background: #ffffff;
       box-shadow:
@@ -762,6 +763,20 @@ button, input[type="submit"] {
         inset 0 1px 0 rgba(255,255,255,0.95);
     }
 
+    /* Mantiene arrotondata e pulita solo la parte alta della mini pagina */
+    .ios-demo-screen {
+      overflow: hidden;
+      border-top-left-radius: 1.35rem;
+      border-top-right-radius: 1.35rem;
+    }
+
+    /* Permette alla freccia di uscire dalla barra in basso */
+    .ios-mini-bottombar {
+      position: relative;
+      overflow: visible;
+      z-index: 10;
+    }
+    
     .ios-mini-bottombar {
       height: 44px;
       display: flex;
