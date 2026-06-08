@@ -669,8 +669,11 @@ button, input[type="submit"] {
 
               <span id="iosDemoDots" class="ios-dots ios-step-dot">
                 •••
+                <span class="ios-dots-arrow" aria-hidden="true">
+                  <span class="ios-dots-arrow-line"></span>
+                  <span class="ios-dots-arrow-head"></span>
+                </span>
               </span>
-
             </div>
           </div>
 
@@ -722,9 +725,6 @@ button, input[type="submit"] {
         </div>
 
       </div>
-
-      <!-- ↘️ Freccia guida: dai tre puntini della slide verso i tre puntini reali in basso a destra -->
-      <span class="ios-dots-arrow" aria-hidden="true"></span>
 
     </div>
 
@@ -845,88 +845,129 @@ button, input[type="submit"] {
 
     #iosDemoDots {
       position: relative;
-      z-index: 2;
+      z-index: 5;
+      overflow: visible;
     }
 
-    /* ↘️ Freccia animata: parte dai tre puntini della slide e scende verso i tre puntini reali Safari */
+    /* Freccia premium agganciata ai tre puntini della mini-slide */
     .ios-dots-arrow {
-      position: fixed;
-      right: 1.05rem;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 1.05rem);
-      z-index: 1000002;
-      width: 120px;
-      height: 120px;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 150px;
+      height: 185px;
       pointer-events: none;
+      transform: translate(-24px, 6px);
+      z-index: 20;
       opacity: 0;
-      animation: iosArrowToRealDots 3.4s ease-in-out infinite;
+      animation: iosPremiumArrowTravel 4.8s ease-in-out infinite;
     }
 
-    /* linea della freccia */
-    .ios-dots-arrow::before {
+    /* Linea curva luminosa */
+    .ios-dots-arrow-line {
+      position: absolute;
+      left: 8px;
+      top: 0;
+      width: 132px;
+      height: 160px;
+      border-right: 4px solid rgba(37, 99, 235, 0.95);
+      border-bottom: 4px solid rgba(37, 99, 235, 0.95);
+      border-radius: 0 0 46px 0;
+      filter: drop-shadow(0 8px 14px rgba(37, 99, 235, 0.25));
+    }
+
+    /* alone morbido */
+    .ios-dots-arrow-line::before {
       content: "";
       position: absolute;
-      right: 8px;
-      bottom: 8px;
-      width: 110px;
-      height: 4px;
+      inset: -8px -8px -8px auto;
+      width: 26px;
       border-radius: 999px;
-      background: linear-gradient(90deg, rgba(37, 99, 235, 0), #2563eb);
-      transform-origin: right center;
-      transform: rotate(-48deg);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+      background: linear-gradient(
+        180deg,
+        rgba(96, 165, 250, 0.0),
+        rgba(96, 165, 250, 0.18),
+        rgba(37, 99, 235, 0.22)
+      );
+      filter: blur(8px);
     }
 
-    /* punta della freccia */
-    .ios-dots-arrow::after {
-      content: "";
+    /* Punta elegante verso il basso-destra */
+    .ios-dots-arrow-head {
       position: absolute;
       right: 2px;
-      bottom: 2px;
-      width: 18px;
-      height: 18px;
+      bottom: 12px;
+      width: 22px;
+      height: 22px;
       border-right: 4px solid #2563eb;
       border-bottom: 4px solid #2563eb;
+      border-radius: 3px;
       transform: rotate(0deg);
-      filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.25));
+      filter: drop-shadow(0 8px 12px rgba(37, 99, 235, 0.28));
     }
 
-    @keyframes iosArrowToRealDots {
+    /* Pallino luminoso finale sul punto da toccare */
+    .ios-dots-arrow-head::after {
+      content: "";
+      position: absolute;
+      right: -11px;
+      bottom: -11px;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.22);
+      box-shadow:
+        0 0 0 7px rgba(37, 99, 235, 0.12),
+        0 0 22px rgba(37, 99, 235, 0.35);
+      animation: iosArrowTargetPulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes iosPremiumArrowTravel {
       0% {
         opacity: 0;
-        transform: translate(-135px, -285px) scale(0.92);
+        transform: translate(-24px, 6px) scale(0.92);
       }
 
-      12% {
+      10% {
         opacity: 1;
+        transform: translate(-24px, 6px) scale(1);
       }
 
-      38% {
+      54% {
         opacity: 1;
-        transform: translate(-45px, -95px) scale(1);
+        transform: translate(-24px, 6px) scale(1);
       }
 
-      52% {
+      72% {
         opacity: 1;
-        transform: translate(0, 0) scale(1.04);
+        transform: translate(-24px, 16px) scale(1.02);
       }
 
-      64% {
+      86% {
         opacity: 1;
-        transform: translate(0, 0) scale(1);
-      }
-
-      82% {
-        opacity: 1;
-        transform: translate(0, 0) scale(1);
+        transform: translate(-24px, 6px) scale(1);
       }
 
       100% {
         opacity: 0;
-        transform: translate(-135px, -285px) scale(0.92);
+        transform: translate(-24px, 6px) scale(0.92);
       }
     }
 
-    @keyframes iosPulseDot {      
+    @keyframes iosArrowTargetPulse {
+      0%, 100% {
+        transform: scale(0.85);
+        opacity: 0.65;
+      }
+
+      50% {
+        transform: scale(1.18);
+        opacity: 1;
+      }
+    }
+
+
+    @keyframes iosPulseDot {
       0%, 100% {
         transform: scale(1);
         box-shadow: 0 4px 10px rgba(37, 99, 235, 0.12);
