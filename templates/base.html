@@ -873,7 +873,7 @@ button, input[type="submit"] {
         Se serve, poi regoliamo solo right/bottom.
       */
       right: 1.25rem;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 2.15rem);
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 1.55rem);
 
       z-index: 1000002;
       font-size: 3.2rem;
@@ -1174,7 +1174,7 @@ button, input[type="submit"] {
     });
     </script>
     {% endif %}
-    
+
     {% with flashes = get_flashed_messages(with_categories=true) %}
       {% if flashes %}
       <div id="flash-root" class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] w-[min(92vw,900px)] space-y-2 px-4">
