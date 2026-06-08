@@ -7324,6 +7324,114 @@ def admin_debug_reminder_profili_incompleti():
     risultato = invia_reminder_profili_incompleti(dry_run=True)
     return jsonify(risultato)
 
+@app.route("/admin/backup-db")
+@login_required
+@admin_required
+def admin_backup_db():
+    """
+    Scarica un backup completo del database PostgreSQL Render.
+    Produce un file .dump ripristinabile con pg_restore.
+    Solo admin.
+    """
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        flash("Backup disponibile solo su PostgreSQL/Render: DATABASE_URL non configurato.", "error")
+        return redirect(url_for("admin_strumenti"))
+
+    import subprocess
+    import tempfile
+    import datetime
+    from flask import send_file, after_this_request
+
+    backup_filename = f"localcare_backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.dump"
+
+    try:
+        temp_dir = tempfile.gettempdir()
+        backup_path = os.path.join(temp_dir, backup_filename)
+
+        comando = [
+            "pg_dump",
+            "--format=custom",
+            "--no-owner",
+            "--no-privileges",
+            "--file", backup_path,
+            database_url
+        ]
+
+        risultato = subprocess.run(
+            comando,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if risultato.returncode != 0:
+            log_exception_safe(
+                "❌ Errore pg_dump backup DB",
+                Exception(risultato.stderr),
+                {
+                    "returncode": risultato.returncode,
+                    "stderr": risultato.stderr[:1000]
+                },
+                production=True
+            )
+
+            flash("Errore durante la creazione del backup database.", "error")
+            return redirect(url_for("admin_strumenti"))
+
+        @after_this_request
+        def cleanup_backup_file(response):
+            try:
+                if os.path.exists(backup_path):
+                    os.remove(backup_path)
+            except Exception as cleanup_error:
+                log_exception_safe(
+                    "⚠️ Errore cancellazione file temporaneo backup DB",
+                    cleanup_error,
+                    {
+                        "backup_path": backup_path
+                    },
+                    production=True
+                )
+
+            return response
+
+        return send_file(
+            backup_path,
+            as_attachment=True,
+            download_name=backup_filename,
+            mimetype="application/octet-stream"
+        )
+
+    except subprocess.TimeoutExpired as e:
+        log_exception_safe(
+            "❌ Timeout pg_dump backup DB",
+            e,
+            {},
+            production=True
+        )
+
+        flash("Backup troppo lento: il comando ha superato il tempo massimo.", "error")
+        return redirect(url_for("admin_strumenti"))
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore download backup DB",
+            e,
+            {},
+            production=True
+        )
+
+        flash("Errore durante il download del backup database.", "error")
+        return redirect(url_for("admin_strumenti"))
+
+@app.route("/admin/strumenti")
+@login_required
+@admin_required
+def admin_strumenti():
+    return render_template("admin_strumenti.html", tab="strumenti")
+
 @app.route("/admin/acquisti")
 @login_required
 @admin_required
@@ -12237,7 +12345,7 @@ def upload_copertina():
                 conn.close()
         except Exception:
             pass
-            
+
 @app.route('/rimuovi_copertina', methods=['POST'])
 @login_required
 def rimuovi_copertina():

@@ -1,0 +1,76 @@
+{% extends "layout_admin.html" %}
+{% set admin_container_class = "max-w-5xl" %}
+
+{% block admin_content %}
+
+<div class="pb-12">
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">
+      🛠️ Strumenti admin
+    </h1>
+
+    <p class="text-sm text-gray-500">
+      Funzioni tecniche riservate all’amministratore. Usa questi strumenti prima di modifiche importanti o interventi delicati sul sito.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+    <!-- BACKUP DATABASE -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center text-2xl shrink-0">
+          💾
+        </div>
+
+        <div class="min-w-0">
+          <h2 class="text-lg font-bold text-slate-800">
+            Backup database
+          </h2>
+
+          <p class="text-sm text-slate-500 mt-1 leading-relaxed">
+            Scarica una copia completa del database PostgreSQL di Render.
+            Usala prima di modifiche importanti, così puoi ripristinare i dati in caso di problemi.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 leading-relaxed">
+        <strong>Attenzione:</strong> il file contiene dati reali del sito.
+        Conservalo in un posto sicuro e non condividerlo.
+      </div>
+
+      <div class="mt-5">
+        <a href="{{ url_for('admin_backup_db') }}"
+           class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition shadow-sm">
+          ⬇️ Scarica backup DB
+        </a>
+      </div>
+    </div>
+
+    <!-- SPAZIO FUTURI STRUMENTI -->
+    <div class="bg-white rounded-2xl shadow-sm border border-dashed border-gray-200 p-6">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-500 flex items-center justify-center text-2xl shrink-0">
+          ➕
+        </div>
+
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">
+            Altri strumenti
+          </h2>
+
+          <p class="text-sm text-slate-500 mt-1 leading-relaxed">
+            Qui potremo aggiungere in seguito altre funzioni admin, per esempio controlli database,
+            esportazioni, pulizie tecniche o procedure di manutenzione.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}
