@@ -11648,88 +11648,222 @@ def utente_update_galleria():
     })
 
     MAX_FOTO_GALLERIA = 4
+    user_id = g.utente["id"]
 
     conn = get_db_connection()
     c = get_cursor(conn)
 
-    # --- Recupera galleria esistente ---
-    c.execute(sql("SELECT foto_galleria FROM utenti WHERE id = ?"), (g.utente['id'],))
-    row = c.fetchone()
+    def normalizza_lista_foto(valore):
+        if not valore:
+            return []
 
-    correnti = []
-    if row and row['foto_galleria']:
         try:
-            correnti = json.loads(row['foto_galleria'])
+            if isinstance(valore, list):
+                lista = valore
+            elif str(valore).strip().startswith("["):
+                lista = json.loads(valore)
+            else:
+                lista = str(valore).split(",")
         except Exception:
-            correnti = [p for p in row['foto_galleria'].split(',') if p.strip()]
+            lista = str(valore).split(",")
 
-    # normalizza eventuali vuoti / duplicati
-    correnti = [p.strip() for p in correnti if p and str(p).strip()]
-    correnti = list(dict.fromkeys(correnti))
+        lista = [str(p).strip() for p in lista if p and str(p).strip()]
+        return list(dict.fromkeys(lista))
 
-    # --- Rimuovi selezionate ---
-    to_remove = request.form.getlist("remove")
-    to_remove = [p.strip() for p in to_remove if p and str(p).strip()]
-    correnti = [p for p in correnti if p not in to_remove]
+    try:
+        # =====================================================
+        # 1) Recupera galleria PUBBLICA approvata
+        # =====================================================
+        c.execute(sql("""
+            SELECT foto_galleria
+            FROM utenti
+            WHERE id = ?
+        """), (user_id,))
 
-    # --- Calcola slot disponibili DOPO le rimozioni ---
-    slot_disponibili = max(0, MAX_FOTO_GALLERIA - len(correnti))
+        row = c.fetchone()
 
-    # --- Aggiungi nuove immagini SOLO entro il limite ---
-    uploaded_files = request.files.getlist("foto_galleria")
-
-    # Salviamo la galleria nello stesso spazio servito da /static/uploads/...
-    # perché nel template le immagini vengono lette con url_for('static', filename=...)
-    upload_dir = os.path.join(app.static_folder, "uploads", "profili", "galleria")
-    os.makedirs(upload_dir, exist_ok=True)
-
-    file_validi = []
-    for file in uploaded_files:
-        if not file or not file.filename:
-            continue
-
-        estensione = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
-        if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
-            continue
-
-        file_validi.append((file, estensione))
-
-    # se stanno provando a caricare più del consentito, tieni solo i primi disponibili
-    file_da_salvare = file_validi[:slot_disponibili]
-    file_scartati = len(file_validi) - len(file_da_salvare)
-
-    for file, estensione in file_da_salvare:
-        nome_file = f"u{g.utente['id']}_{uuid.uuid4().hex}.{estensione}"
-        percorso = os.path.join(upload_dir, nome_file)
-        file.save(percorso)
-        correnti.append(f"uploads/profili/galleria/{nome_file}")
-
-    # sicurezza finale assoluta lato server
-    correnti = correnti[:MAX_FOTO_GALLERIA]
-
-    # --- Salva nel DB ---
-    c.execute(
-        sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"),
-        (json.dumps(correnti), g.utente['id'])
-    )
-    conn.commit()
-
-    # --- Messaggi utente ---
-    if file_scartati > 0:
-        flash(
-            f"⚠️ Hai raggiunto il limite massimo di {MAX_FOTO_GALLERIA} foto. "
-            f"Alcuni file non sono stati caricati.",
-            "warning"
+        galleria_pubblica = normalizza_lista_foto(
+            row["foto_galleria"] if row and row["foto_galleria"] else ""
         )
-    elif to_remove and not file_da_salvare:
-        flash("✅ Foto rimosse correttamente.", "success")
-    elif file_da_salvare or to_remove:
-        flash("✅ Galleria aggiornata correttamente 📸", "success")
-    else:
-        flash("ℹ️ Nessuna modifica effettuata.", "info")
 
-    return redirect(url_for("dashboard") + "#foto")
+        # =====================================================
+        # 2) Se esiste già una revisione pending, lavora su quella
+        #    Così l'utente può aggiungere/rimuovere più volte
+        #    senza perdere le modifiche già in attesa.
+        # =====================================================
+        revisione_pending = get_revisione_profilo_pending(
+            c,
+            user_id,
+            "foto_galleria"
+        )
 
+        if revisione_pending and revisione_pending["testo_proposto"]:
+            correnti = normalizza_lista_foto(revisione_pending["testo_proposto"])
+        else:
+            correnti = list(galleria_pubblica)
+
+        # =====================================================
+        # 3) Rimuovi foto selezionate dalla PROPOSTA privata
+        #    Non eliminiamo i file fisici ora, perché se admin rifiuta
+        #    la galleria pubblica deve restare intatta.
+        # =====================================================
+        to_remove = request.form.getlist("remove")
+        to_remove = [p.strip() for p in to_remove if p and str(p).strip()]
+
+        if to_remove:
+            correnti = [p for p in correnti if p not in to_remove]
+
+        # =====================================================
+        # 4) Calcola slot disponibili dopo le rimozioni
+        # =====================================================
+        correnti = [p.strip() for p in correnti if p and str(p).strip()]
+        correnti = list(dict.fromkeys(correnti))
+
+        slot_disponibili = max(0, MAX_FOTO_GALLERIA - len(correnti))
+
+        # =====================================================
+        # 5) Salva nuove immagini come file tecnici
+        #    Non diventano pubbliche finché admin non approva.
+        # =====================================================
+        uploaded_files = request.files.getlist("foto_galleria")
+
+        upload_dir = os.path.join(
+            app.static_folder,
+            "uploads",
+            "profili",
+            "galleria"
+        )
+        os.makedirs(upload_dir, exist_ok=True)
+
+        file_validi = []
+
+        for file in uploaded_files:
+            if not file or not file.filename:
+                continue
+
+            estensione = (
+                file.filename.rsplit(".", 1)[-1].lower()
+                if "." in file.filename
+                else ""
+            )
+
+            if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
+                continue
+
+            file_validi.append((file, estensione))
+
+        file_da_salvare = file_validi[:slot_disponibili]
+        file_scartati = len(file_validi) - len(file_da_salvare)
+
+        for file, estensione in file_da_salvare:
+            nome_file = f"u{user_id}_{uuid.uuid4().hex}.{estensione}"
+            percorso = os.path.join(upload_dir, nome_file)
+
+            file.save(percorso)
+
+            correnti.append(f"uploads/profili/galleria/{nome_file}")
+
+        # Sicurezza finale
+        correnti = correnti[:MAX_FOTO_GALLERIA]
+
+        valore_precedente = json.dumps(galleria_pubblica)
+        valore_proposto = json.dumps(correnti)
+
+        # =====================================================
+        # 6) Se non cambia nulla, non creare revisione
+        # =====================================================
+        if valore_precedente == valore_proposto and not revisione_pending:
+            flash("ℹ️ Nessuna modifica effettuata.", "info")
+            return redirect(url_for("dashboard") + "#tab-foto")
+
+        # =====================================================
+        # 7) Salva revisione, NON pubblicare subito
+        # =====================================================
+        revisione_id, nuova_revisione = salva_revisione_immagine_profilo(
+            c,
+            user_id=user_id,
+            campo="foto_galleria",
+            valore_precedente=valore_precedente,
+            valore_proposto=valore_proposto
+        )
+
+        conn.commit()
+
+        # =====================================================
+        # 8) Notifica admin solo quando nasce una nuova revisione
+        # =====================================================
+        try:
+            invalidate_admin_counters()
+
+            if nuova_revisione:
+                notifica_admin_evento(
+                    titolo="Nuova revisione profilo 🕵️",
+                    messaggio=CAMPI_REVISIONE_IMMAGINI["foto_galleria"]["messaggio_admin"],
+                    link=url_for("admin_revisioni_profilo"),
+                    push=True
+                )
+
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Errore notifica admin revisione galleria",
+                e,
+                {
+                    "user_id": user_id,
+                    "revision_id": revisione_id
+                },
+                production=True
+            )
+
+        # =====================================================
+        # 9) Messaggi utente
+        # =====================================================
+        if file_scartati > 0:
+            flash(
+                f"⚠️ Hai raggiunto il limite massimo di {MAX_FOTO_GALLERIA} foto. "
+                "Alcuni file non sono stati caricati. "
+                "La galleria aggiornata è stata inviata in revisione.",
+                "warning"
+            )
+        elif to_remove and not file_da_salvare:
+            flash(
+                "✅ Modifica galleria inviata in revisione. "
+                "Le foto pubbliche cambieranno dopo approvazione.",
+                "success"
+            )
+        elif file_da_salvare or to_remove:
+            flash(
+                "✅ Galleria aggiornata e inviata in revisione 📸",
+                "success"
+            )
+        else:
+            flash(
+                "ℹ️ Nessuna nuova foto caricata, ma la galleria resta in revisione.",
+                "info"
+            )
+
+        return redirect(url_for("dashboard") + "#tab-foto")
+
+    except Exception as e:
+        conn.rollback()
+
+        log_exception_safe(
+            "❌ Errore update_galleria con revisione",
+            e,
+            {
+                "user_id": user_id
+            },
+            production=True
+        )
+
+        flash("Errore durante l'aggiornamento della galleria.", "error")
+        return redirect(url_for("dashboard") + "#tab-foto")
+
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+            
 @app.route('/annuncio/<int:id>/elimina', methods=["POST"])
 @login_required
 def elimina_annuncio(id):
