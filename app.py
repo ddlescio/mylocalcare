@@ -13745,7 +13745,7 @@ def password_dimenticata():
     if request.method == 'GET':
         return render_template('password_dimenticata.html')
 
-    # POST: invio richiesta recupero accesso
+    # POST: invio richiesta recupero password
     verify_csrf()
 
     email = request.form.get('email', '').strip().lower()
@@ -13769,12 +13769,12 @@ def password_dimenticata():
             )
             return redirect(url_for('login'))
 
-        # Genera token semplice stile conferma account
+        # Genera token recupero password
         token = str(uuid.uuid4())
 
         reset_url = (
             app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')
-            + f"/conferma/{token}"
+            + url_for('reset_password', token=token)
         )
 
         # Invalida eventuali token precedenti
@@ -13785,7 +13785,7 @@ def password_dimenticata():
               AND usato = 0
         """), (utente['id'],))
 
-        # Salva nuovo token
+        # Salva nuovo token valido 1 ora
         cur.execute(sql(f"""
             INSERT INTO password_reset_tokens (utente_id, token, scadenza, usato)
             VALUES (?, ?, {epoch_now_sql()} + 3600, 0)
@@ -13793,15 +13793,18 @@ def password_dimenticata():
 
         conn.commit()
 
-        # Invia email tramite MailAPI Aruba
+        nome = utente['nome'] if 'nome' in utente.keys() and utente['nome'] else utente['username']
+
         email_inviata = _invia_email(
             destinazione=email,
-            oggetto="Conferma account MyLocalCare",
+            oggetto="Reimposta la password MyLocalCare",
             corpo=(
-                f"Ciao {utente['nome']},\n\n"
-                "per confermare il tuo account MyLocalCare apri questo link:\n\n"
+                f"Ciao {nome},\n\n"
+                "abbiamo ricevuto una richiesta per reimpostare la password del tuo account MyLocalCare.\n\n"
+                "Per scegliere una nuova password apri questo link:\n\n"
                 f"{reset_url}\n\n"
-                "Se non hai richiesto tu questa registrazione, ignora questa email.\n\n"
+                "Il link è valido per 1 ora.\n\n"
+                "Se non hai richiesto tu questa modifica, puoi ignorare questa email: la tua password resterà invariata.\n\n"
                 "MyLocalCare"
             )
         )
@@ -13822,7 +13825,7 @@ def password_dimenticata():
         except Exception:
             pass
 
-        print("Errore recupero accesso:", repr(e), flush=True)
+        print("Errore recupero password:", repr(e), flush=True)
         flash("Si è verificato un errore. Riprova più tardi.", "error")
         return redirect(url_for('password_dimenticata'))
 
@@ -13884,7 +13887,7 @@ def reset_password(token):
 
         # ✅ Aggiorna SOLO la password (le chiavi restano invariate)
         pwd_hash = generate_password_hash(password)
-        cur.execute(sql("UPDATE utenti SET password = ? WHERE email = ?"), (pwd_hash, email))
+        cur.execute(sql("UPDATE utenti SET password = ? WHERE id = ?"), (pwd_hash, utente['id']))
 
         # ✅ Marca token come usato
         cur.execute(sql("UPDATE password_reset_tokens SET usato = 1 WHERE token = ?"), (token,))
