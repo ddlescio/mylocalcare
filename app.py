@@ -785,6 +785,14 @@ def inject_csrf_token():
     }
 
 
+class CSRFValidationError(Exception):
+    """
+    Errore CSRF controllato.
+    Serve per evitare la pagina grezza Forbidden quando il token è scaduto/non valido.
+    """
+    pass
+
+
 def verify_csrf():
     """
     Verifica CSRF compatibile con:
@@ -800,7 +808,44 @@ def verify_csrf():
     )
 
     if not token or token != session.get("csrf_token"):
-        abort(403)
+        raise CSRFValidationError("Token CSRF mancante, scaduto o non valido.")
+
+@app.errorhandler(CSRFValidationError)
+def handle_csrf_validation_error(e):
+    """
+    Gestisce CSRF scaduto/non valido senza mostrare Forbidden grezzo.
+    Tipico caso: pagina login rimasta aperta, logout, Safari/iPhone/PWA o pagina in cache.
+    """
+
+    # Richieste AJAX/API: restituisci JSON comprensibile
+    if (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or request.accept_mimetypes.best == "application/json"
+        or request.path.startswith("/api/")
+    ):
+        return jsonify({
+            "ok": False,
+            "error": "Sessione scaduta. Ricarica la pagina e riprova.",
+            "message": "Sessione scaduta. Ricarica la pagina e riprova."
+        }), 403
+
+    flash("La pagina era scaduta. Ricarica e riprova ad accedere.", "warning")
+
+    # Casi principali
+    if request.path.startswith("/login"):
+        return redirect(url_for("login"))
+
+    if request.path.startswith("/password_dimenticata"):
+        return redirect(url_for("password_dimenticata"))
+
+    if request.path.startswith("/reset_password"):
+        return redirect(url_for("password_dimenticata"))
+
+    # Se arriva da admin o da area privata, meglio riportare al login
+    if request.path.startswith("/admin") or request.path.startswith("/utente"):
+        return redirect(url_for("login"))
+
+    return redirect(request.referrer or url_for("login"))
 
 def privacy_debug(message, extra=None):
     """
