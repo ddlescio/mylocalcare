@@ -595,6 +595,8 @@ def invia_reminder_profili_incompleti(dry_run=False):
                     nome = u["nome"] or u["username"] or "utente"
                     base_url = app.config.get("APP_BASE_URL", "https://www.mylocalcare.it").rstrip("/")
 
+                    profilo_url = f"{base_url}{link}"
+
                     ok_email = _invia_email(
                         destinazione=u["email"],
                         oggetto="Completa il tuo profilo MyLocalCare",
@@ -603,10 +605,10 @@ def invia_reminder_profili_incompleti(dry_run=False):
                             "Hai creato il tuo account su MyLocalCare, ma non hai ancora indicato "
                             "cosa offri o cosa cerchi.\n\n"
                             "Completa il profilo per ricevere annunci compatibili, suggerimenti "
-                            "personalizzati e notifiche più pertinenti.\n\n"
-                            f"{base_url}{link}\n\n"
-                            "MyLocalCare"
-                        )
+                            "personalizzati e notifiche più pertinenti."
+                        ),
+                        action_url=profilo_url,
+                        action_label="Completa profilo"
                     )
 
                     if ok_email:
@@ -8270,12 +8272,25 @@ def admin_invia_notifica():
                     )
 
         if invia_email:
+            action_url = None
+            action_label = None
+
+            if link:
+                if str(link).startswith("http://") or str(link).startswith("https://"):
+                    action_url = str(link)
+                else:
+                    action_url = f"{app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')}{link}"
+
+                action_label = "Apri MyLocalCare"
+
             _invia_email(
                 destinazione=user["email"],
                 oggetto=titolo,
-                corpo=f"{messaggio}\n\n{link or ''}"
+                corpo=messaggio,
+                action_url=action_url,
+                action_label=action_label
             )
-
+    
         inviati += 1
 
     flash(f"Notifica inviata a {inviati} utenti.", "success")
@@ -8875,15 +8890,15 @@ def invia_email_daily_match(user_id, categorie_count):
             f"Ciao {nome},\n\n"
             "abbiamo trovato nuovi annunci compatibili con le tue preferenze:\n\n"
             + "\n".join(righe)
-            + "\n\nPuoi consultarli su MyLocalCare:\n"
-            + home_url
-            + "\n\nMyLocalCare"
+            + "\n\nPuoi consultarli accedendo a MyLocalCare."
         )
 
         return _invia_email(
             destinazione=user["email"],
             oggetto="Nuovi annunci compatibili su MyLocalCare",
-            corpo=corpo
+            corpo=corpo,
+            action_url=home_url,
+            action_label="Vedi annunci compatibili"
         )
 
     except Exception as e:
@@ -9229,8 +9244,196 @@ def processa_match_nuovi_annunci(channel=None):
         except Exception:
             pass
 
+# ==========================================================
+# EMAIL TRANSAZIONALI — LAYOUT, FOOTER, COMPLIANCE
+# ==========================================================
 
-def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=None, **kwargs):
+EMAIL_LEGAL_NAME = os.getenv(
+    "EMAIL_LEGAL_NAME",
+    "MyLocalCare - Davide Lescio"
+)
+
+EMAIL_PHYSICAL_ADDRESS = os.getenv(
+    "EMAIL_PHYSICAL_ADDRESS",
+    "Via Pasubio, Abbiategrasso (MI), Italia"
+)
+
+
+def _email_privacy_url():
+    """
+    URL assoluto privacy policy.
+    Usiamo build_external_url così funziona anche fuori da request context.
+    """
+    try:
+        return build_external_url("privacy")
+    except Exception:
+        base = (app.config.get("APP_BASE_URL") or "https://www.mylocalcare.it").rstrip("/")
+        return f"{base}/privacy"
+
+
+def _email_footer_text():
+    """
+    Footer testuale per TextBody.
+    Evitiamo URL lunghi visibili nel testo, ma identifichiamo chiaramente il mittente.
+    """
+    return (
+        "\n\n---\n"
+        "MyLocalCare\n"
+        f"{EMAIL_LEGAL_NAME}\n"
+        f"{EMAIL_PHYSICAL_ADDRESS}\n"
+        "Informativa privacy disponibile sul sito MyLocalCare."
+    )
+
+
+def _email_footer_html():
+    """
+    Footer HTML identificativo per tutte le email transazionali.
+    """
+    from html import escape as html_escape
+
+    privacy_url = _email_privacy_url()
+
+    return f"""
+      <div style="margin-top:28px;padding-top:18px;border-top:1px solid #e5e7eb;
+                  font-size:12px;line-height:1.5;color:#64748b;">
+        <div style="font-weight:700;color:#334155;margin-bottom:4px;">MyLocalCare</div>
+        <div>{html_escape(EMAIL_LEGAL_NAME)}</div>
+        <div>{html_escape(EMAIL_PHYSICAL_ADDRESS)}</div>
+        <div style="margin-top:8px;">
+          <a href="{privacy_url}" style="color:#2563eb;text-decoration:underline;">
+            Informativa privacy
+          </a>
+        </div>
+      </div>
+    """
+
+
+def _testo_email_in_html(corpo):
+    """
+    Converte testo semplice in paragrafi HTML puliti.
+    Non trasforma automaticamente URL completi in testo visibile.
+    """
+    from html import escape as html_escape
+
+    righe = [r.strip() for r in (corpo or "").splitlines()]
+    blocchi = []
+    buffer = []
+
+    for riga in righe:
+        if not riga:
+            if buffer:
+                blocchi.append(" ".join(buffer))
+                buffer = []
+            continue
+
+        buffer.append(riga)
+
+    if buffer:
+        blocchi.append(" ".join(buffer))
+
+    if not blocchi:
+        return ""
+
+    return "\n".join(
+        f"""
+        <p style="margin:0 0 14px 0;font-size:15px;line-height:1.55;color:#334155;">
+          {html_escape(blocco)}
+        </p>
+        """
+        for blocco in blocchi
+    )
+
+
+def _costruisci_html_email(oggetto, corpo=None, action_url=None, action_label=None):
+    """
+    Crea un HTML email semplice e pulito:
+    - niente URL completo visibile;
+    - eventuale CTA come pulsante;
+    - footer identificativo obbligatorio.
+    """
+    from html import escape as html_escape
+
+    titolo = html_escape(str(oggetto or "Comunicazione MyLocalCare").strip())
+    corpo_html = _testo_email_in_html(corpo)
+
+    bottone_html = ""
+    if action_url and action_label:
+        bottone_html = f"""
+          <div style="margin:24px 0;">
+            <a href="{action_url}"
+               style="display:inline-block;background:#2563eb;color:#ffffff;
+                      text-decoration:none;font-weight:700;font-size:15px;
+                      padding:12px 18px;border-radius:14px;">
+              {html_escape(action_label)}
+            </a>
+          </div>
+        """
+
+    footer_html = _email_footer_html()
+
+    return f"""
+    <!doctype html>
+    <html>
+      <body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
+        <div style="max-width:560px;margin:0 auto;padding:24px;">
+          <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:22px;
+                      padding:24px;box-shadow:0 8px 24px rgba(15,23,42,0.06);">
+            <h1 style="margin:0 0 16px 0;font-size:22px;line-height:1.25;color:#0f172a;">
+              {titolo}
+            </h1>
+
+            {corpo_html}
+
+            {bottone_html}
+
+            {footer_html}
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+
+
+def _aggiungi_footer_text_se_manca(testo):
+    testo = (testo or "").strip()
+
+    if not testo:
+        return ""
+
+    if EMAIL_LEGAL_NAME in testo:
+        return testo
+
+    return testo + _email_footer_text()
+
+
+def _aggiungi_footer_html_se_manca(html_finale):
+    html_finale = (html_finale or "").strip()
+
+    if not html_finale:
+        return ""
+
+    if EMAIL_LEGAL_NAME in html_finale:
+        return html_finale
+
+    footer = _email_footer_html()
+
+    if "</body>" in html_finale:
+        return html_finale.replace("</body>", f"{footer}</body>")
+
+    return html_finale + footer
+
+
+def _invia_email(
+    destinazione,
+    oggetto,
+    corpo=None,
+    html_template=None,
+    html=None,
+    action_url=None,
+    action_label=None,
+    **kwargs
+):
+
     """
     Funzione centralizzata invio email MyLocalCare tramite Postmark.
 
@@ -9305,6 +9508,15 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
         elif html:
             html_finale = html
 
+        # ✅ Se non è stato passato HTML, genera un HTML pulito dal testo
+        else:
+            html_finale = _costruisci_html_email(
+                oggetto=oggetto,
+                corpo=corpo,
+                action_url=action_url,
+                action_label=action_label
+            )
+
         # ✅ Testo fallback
         text_finale = (corpo or "").strip()
 
@@ -9313,6 +9525,12 @@ def _invia_email(destinazione, oggetto, corpo=None, html_template=None, html=Non
                 "Hai ricevuto una comunicazione da MyLocalCare.\n\n"
                 "Apri questa email in formato HTML per visualizzarla correttamente."
             )
+
+        # ✅ Footer identificativo su TextBody e HtmlBody
+        text_finale = _aggiungi_footer_text_se_manca(text_finale)
+
+        if html_finale:
+            html_finale = _aggiungi_footer_html_se_manca(html_finale)
 
         if not text_finale and not html_finale:
             security_log(
@@ -9462,15 +9680,15 @@ def invia_email_urgente_match(user_id, annuncio_id, categoria, tipo_annuncio, lu
             f"Zona: {luogo}\n"
             f"Pubblicato da: @{username}\n"
             f"Titolo: {titolo}\n\n"
-            "Puoi visualizzarlo qui:\n"
-            f"{url}\n\n"
-            "MyLocalCare"
+            "Puoi visualizzarlo accedendo a MyLocalCare."
         )
 
         return _invia_email(
             destinazione=user["email"],
             oggetto="Annuncio urgente compatibile su MyLocalCare",
-            corpo=corpo
+            corpo=corpo,
+            action_url=url,
+            action_label="Vedi annuncio"
         )
 
     except Exception as e:
@@ -13499,11 +13717,11 @@ def register():
             oggetto="Conferma account MyLocalCare",
             corpo=(
                 f"Ciao {nome},\n\n"
-                "per confermare il tuo account MyLocalCare apri questo link:\n\n"
-                f"{link}\n\n"
-                "Se non hai richiesto tu questa registrazione, ignora questa email.\n\n"
-                "MyLocalCare"
-            )
+                "per completare la registrazione su MyLocalCare, conferma il tuo account usando il pulsante presente in questa email.\n\n"
+                "Se non hai richiesto tu questa registrazione, puoi ignorare questa email."
+            ),
+            action_url=link,
+            action_label="Conferma account"
         )
 
         if email_inviata:
@@ -13846,12 +14064,12 @@ def password_dimenticata():
             corpo=(
                 f"Ciao {nome},\n\n"
                 "abbiamo ricevuto una richiesta per reimpostare la password del tuo account MyLocalCare.\n\n"
-                "Per scegliere una nuova password apri questo link:\n\n"
-                f"{reset_url}\n\n"
+                "Per scegliere una nuova password, usa il pulsante presente in questa email.\n\n"
                 "Il link è valido per 1 ora.\n\n"
-                "Se non hai richiesto tu questa modifica, puoi ignorare questa email: la tua password resterà invariata.\n\n"
-                "MyLocalCare"
-            )
+                "Se non hai richiesto tu questa modifica, puoi ignorare questa email: la tua password resterà invariata."
+            ),
+            action_url=reset_url,
+            action_label="Reimposta password"
         )
 
         if not email_inviata:
