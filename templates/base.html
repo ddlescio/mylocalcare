@@ -3976,7 +3976,12 @@ window.addEventListener("beforeunload", () => {
   transition:
     opacity 0.18s ease,
     transform 0.18s ease;
-}
+
+    /* ✅ Home: il refresh scende sotto la navbar fissa */
+    body[data-page="home"] #lcPullRefresh,
+    body.home #lcPullRefresh {
+      top: calc(env(safe-area-inset-top, 0px) + 4.85rem);
+    }
 
 #lcPullRefresh.lc-visible {
   opacity: 1;
@@ -4045,6 +4050,7 @@ window.addEventListener("beforeunload", () => {
   window.__lcPullRefreshInitialized = true;
 
   const MIN_PULL_DISTANCE = 82;
+  const MIN_PULL_DISTANCE_HOME = 64;
   const MAX_VISUAL_PULL = 118;
 
   let startY = 0;
@@ -4059,6 +4065,19 @@ window.addEventListener("beforeunload", () => {
 
   function isAtTop() {
     return window.scrollY <= 0 || document.documentElement.scrollTop <= 0;
+  }
+
+  function isHomePage() {
+    return (
+      document.body.dataset.page === "home" ||
+      document.body.classList.contains("home") ||
+      window.location.pathname === "/" ||
+      window.location.pathname === "/home"
+    );
+  }
+
+  function getMinPullDistance() {
+    return isHomePage() ? MIN_PULL_DISTANCE_HOME : MIN_PULL_DISTANCE;
   }
 
   function hasOpenModal() {
@@ -4163,7 +4182,7 @@ window.addEventListener("beforeunload", () => {
     if (!el) return;
 
     const visualDistance = Math.min(distance * 0.45, MAX_VISUAL_PULL);
-    ready = distance >= MIN_PULL_DISTANCE;
+    ready = distance >= getMinPullDistance();
 
     el.classList.add("lc-visible");
     el.classList.toggle("lc-ready", ready);
