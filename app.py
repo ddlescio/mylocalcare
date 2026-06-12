@@ -8290,7 +8290,7 @@ def admin_invia_notifica():
                 action_url=action_url,
                 action_label=action_label
             )
-    
+
         inviati += 1
 
     flash(f"Notifica inviata a {inviati} utenti.", "success")
@@ -17701,20 +17701,116 @@ def chiudi_chat(other_id):
     flash("Chat chiusa correttamente.", "success")
     return redirect(url_for("utente_messaggi"))
 
+def invia_push_videochiamata(caller_id, destinatario_id, room_name, room_url):
+    """
+    Invia una Web Push per una videochiamata in arrivo.
+
+    Questa funzione deve essere chiamata direttamente dalla route /video/start,
+    non dentro il background task Socket.IO, perché la push deve partire anche
+    se il destinatario non ha il sito aperto.
+    """
+    conn = None
+    cur = None
+
+    try:
+        caller_name = "Un utente"
+
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+
+        cur.execute(sql("""
+            SELECT nome, cognome, username
+            FROM utenti
+            WHERE id = ?
+        """), (caller_id,))
+
+        caller = cur.fetchone()
+
+        if caller:
+            caller_name = (
+                caller["username"]
+                or f"{caller['nome'] or ''} {caller['cognome'] or ''}".strip()
+                or "Un utente"
+            )
+
+        call_url = (
+            f"/chat/{caller_id}"
+            f"?incoming=1"
+            f"&room={room_name}"
+            f"&url={room_url}"
+        )
+
+        security_log(
+            "📞 [video_call_push] START invio push chiamata",
+            {
+                "caller_id": caller_id,
+                "destinatario_id": destinatario_id,
+                "room_name": room_name,
+                "call_url": call_url
+            },
+            production=True
+        )
+
+        invia_push(
+            destinatario_id,
+            "📞 Chiamata in arrivo",
+            f"{caller_name} ti sta chiamando su MyLocalCare.",
+            url=call_url
+        )
+
+        security_log(
+            "📞 [video_call_push] END invio push chiamata",
+            {
+                "caller_id": caller_id,
+                "destinatario_id": destinatario_id,
+                "room_name": room_name
+            },
+            production=True
+        )
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ [video_call_push] errore invio push chiamata",
+            e,
+            {
+                "caller_id": caller_id,
+                "destinatario_id": destinatario_id,
+                "room_name": room_name
+            },
+            production=True
+        )
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
+
 def emit_incoming_call_later(caller_id, destinatario_id, room_name, room_url, delay=0.6):
     """
-    Invia la chiamata con un piccolo ritardo per dare tempo
-    alla socket del destinatario di riconnettersi/entrare nella room user_X.
+    Invia la chiamata via Socket.IO con un piccolo ritardo.
+
+    Questo serve solo agli utenti già online/connessi.
+    La Web Push viene inviata direttamente da /video/start.
     """
     socketio.sleep(delay)
 
+    payload_socket = {
+        "from": caller_id,
+        "room_name": room_name,
+        "room_url": room_url
+    }
+
     socketio.emit(
         "video_call_incoming",
-        {
-            "from": caller_id,
-            "room_name": room_name,
-            "room_url": room_url
-        },
+        payload_socket,
         room=f"user_{destinatario_id}"
     )
 
@@ -17725,6 +17821,16 @@ def emit_incoming_call_later(caller_id, destinatario_id, room_name, room_url, de
             "busy": True
         },
         room=f"user_{destinatario_id}"
+    )
+
+    security_log(
+        "📞 [video_call_socket] evento socket chiamata emesso",
+        {
+            "caller_id": caller_id,
+            "destinatario_id": destinatario_id,
+            "room_name": room_name
+        },
+        production=True
     )
 
 # ==========================================================
@@ -17990,6 +18096,14 @@ def video_start():
         room_name,
         room_url,
         0.6
+    )
+
+    # 🔔 PUSH CHIAMATA — deve partire anche se il destinatario non è online sul sito
+    invia_push_videochiamata(
+        caller_id=g.utente["id"],
+        destinatario_id=altro_id,
+        room_name=room_name,
+        room_url=room_url
     )
 
     return jsonify({
