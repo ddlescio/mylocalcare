@@ -20,6 +20,7 @@
       <div class="flex items-center gap-2">
         <a href="{{ url_for('admin_acquisti_export',
                             q=request.args.get('q', ''),
+                            annuncio=request.args.get('annuncio', ''),
                             tipo=request.args.get('tipo', ''),
                             stato=request.args.get('stato', ''),
                             metodo=request.args.get('metodo', 'stripe')) }}"
@@ -71,6 +72,17 @@
               type="text"
               value="{{ request.args.get('q', '') }}"
               placeholder="Email, oggetto, annuncio, categoria, provincia, metodo..."
+            >
+          </div>
+
+          <div class="admin-filter-field">
+            <label for="annuncio">Codice annuncio</label>
+            <input
+              id="annuncio"
+              name="annuncio"
+              type="text"
+              value="{{ request.args.get('annuncio', '') }}"
+              placeholder="#43 oppure 43"
             >
           </div>
 
@@ -813,7 +825,7 @@
 
   .admin-filter-grid {
     display: grid;
-    grid-template-columns: minmax(320px, 1.7fr) repeat(3, minmax(160px, 0.75fr));
+    grid-template-columns: minmax(320px, 1.7fr) repeat(4, minmax(150px, 0.75fr));
     gap: 14px;
     align-items: end;
   }
@@ -1725,6 +1737,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const hasRealUserFilters = Boolean(
       (paramsForFilters.get("q") || "").trim() ||
+      (paramsForFilters.get("annuncio") || "").trim() ||
       (paramsForFilters.get("tipo") || "").trim() ||
       (paramsForFilters.get("stato") || "").trim() ||
       (
@@ -1732,7 +1745,7 @@ document.addEventListener("DOMContentLoaded", () => {
         (paramsForFilters.get("metodo") || "").trim() !== "stripe"
       )
     );
-
+    
     if (!hasRealUserFilters && window.innerWidth < 900) {
       filterCard.classList.add("is-collapsed");
     }

@@ -7487,6 +7487,7 @@ def admin_acquisti():
 
     # filtri lato server
     q = (request.args.get("q") or "").strip().lower()
+    filtro_annuncio = (request.args.get("annuncio") or "").strip().replace("#", "")
     filtro_tipo = (request.args.get("tipo") or "").strip().lower()
     filtro_stato = (request.args.get("stato") or "").strip().lower()
     filtro_metodo = (request.args.get("metodo") or "").strip().lower()
@@ -7647,6 +7648,13 @@ def admin_acquisti():
         if q and q not in testo_ricerca:
             continue
 
+        if filtro_annuncio:
+            if not filtro_annuncio.isdigit():
+                continue
+
+            if str(a.get("annuncio_id") or "") != filtro_annuncio:
+                continue
+
         if filtro_tipo and a["tipo"] != filtro_tipo:
             continue
 
@@ -7672,6 +7680,7 @@ def admin_acquisti_export():
     conn = get_db_connection()
 
     q = (request.args.get("q") or "").strip().lower()
+    filtro_annuncio = (request.args.get("annuncio") or "").strip().replace("#", "")
     filtro_tipo = (request.args.get("tipo") or "").strip().lower()
     filtro_stato = (request.args.get("stato") or "").strip().lower()
     filtro_metodo = (request.args.get("metodo") or "").strip().lower()
@@ -7798,6 +7807,14 @@ def admin_acquisti_export():
 
         if q and q not in testo_ricerca:
             continue
+
+        if filtro_annuncio:
+            if not filtro_annuncio.isdigit():
+                continue
+
+            if str(a.get("annuncio_id") or "") != filtro_annuncio:
+                continue
+
         if filtro_tipo and a["tipo"] != filtro_tipo:
             continue
         if filtro_stato and stato_visuale != filtro_stato:
