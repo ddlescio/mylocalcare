@@ -16277,7 +16277,7 @@ def modifica_profilo():
                 return redirect(url_for('modifica_profilo'))
 
             hashed_pw = generate_password_hash(nuova_password)
-            
+
             c.execute(
                 "UPDATE utenti SET nome = ?, cognome = ?, citta = ?, username = ?, password = ? WHERE id = ?",
                 (nome, cognome, citta, username, hashed_pw, g.utente['id'])
@@ -16399,10 +16399,11 @@ def modifica_password():
             flash("Le nuove password non coincidono.", "error")
             return redirect(url_for('modifica_password'))
 
-        if len(nuova_pw) < 8:
-            flash("La password deve avere almeno 8 caratteri.", "error")
+        password_ok, password_msg = valida_password_minima(nuova_pw)
+        if not password_ok:
+            flash(password_msg, "error")
             return redirect(url_for("modifica_password"))
-
+    
         conn = get_db_connection()
 
         cur = get_cursor(conn)
