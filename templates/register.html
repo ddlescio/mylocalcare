@@ -171,7 +171,7 @@
       <p class="text-xs text-gray-500 mt-1">
         Minimo 8 caratteri, almeno una lettera e un numero.
       </p>
-      
+
     </div>
 
     <!-- Conferma Password -->
@@ -293,15 +293,19 @@
   function togglePasswordVisibility(inputId, button) {
     const input = document.getElementById(inputId);
 
+    if (!input) return;
+
     if (input.type === 'password') {
       input.type = 'text';
       button.textContent = '🙈';
+      button.setAttribute('aria-label', 'Nascondi password');
     } else {
       input.type = 'password';
       button.textContent = '👁';
+      button.setAttribute('aria-label', 'Mostra password');
     }
   }
-
+  
 </script>
 
 {% endblock %}
