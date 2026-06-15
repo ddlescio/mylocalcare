@@ -13613,6 +13613,55 @@ def get_comune_info(comune_input):
 
     return None
 
+# ==========================================================
+# 🔐 VALIDAZIONE PASSWORD — requisiti minimi non invasivi
+# ==========================================================
+
+PASSWORD_BANALI = {
+    "12345678",
+    "123456789",
+    "1234567890",
+    "password",
+    "password1",
+    "qwerty123",
+    "qwertyuiop",
+    "admin123",
+    "localcare",
+    "mylocalcare",
+    "00000000",
+    "11111111",
+    "abcdefgh",
+    "abc12345",
+}
+
+
+def valida_password_minima(password):
+    """
+    Requisiti minimi:
+    - almeno 8 caratteri
+    - almeno una lettera
+    - almeno un numero
+    - blocco password troppo comuni/banali
+
+    Non obblighiamo simboli o maiuscole per non rendere la registrazione fastidiosa.
+    """
+    password = password or ""
+    password_norm = password.strip().lower()
+
+    if len(password) < 8:
+        return False, "La password deve avere almeno 8 caratteri."
+
+    if password_norm in PASSWORD_BANALI:
+        return False, "Questa password è troppo semplice. Scegline una più sicura."
+
+    if not any(c.isalpha() for c in password):
+        return False, "La password deve contenere almeno una lettera."
+
+    if not any(c.isdigit() for c in password):
+        return False, "La password deve contenere almeno un numero."
+
+    return True, ""
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -13635,6 +13684,11 @@ def register():
 
         if password != conferma_password:
             flash("Le password non coincidono.")
+            return redirect(url_for('register'))
+
+        password_ok, password_msg = valida_password_minima(password)
+        if not password_ok:
+            flash(password_msg)
             return redirect(url_for('register'))
 
         # 🔒 Codice beta obbligatorio
@@ -14152,8 +14206,9 @@ def reset_password(token):
             flash("Le password non coincidono.", "error")
             return redirect(url_for('reset_password', token=token))
 
-        if len(password) < 8:
-            flash("La password deve avere almeno 8 caratteri.", "error")
+        password_ok, password_msg = valida_password_minima(password)
+        if not password_ok:
+            flash(password_msg, "error")
             return redirect(url_for('reset_password', token=token))
 
         # ✅ Recupera utente
@@ -16215,7 +16270,14 @@ def modifica_profilo():
                 flash("Le password non coincidono.")
 
                 return redirect(url_for('modifica_profilo'))
+
+            password_ok, password_msg = valida_password_minima(nuova_password)
+            if not password_ok:
+                flash(password_msg)
+                return redirect(url_for('modifica_profilo'))
+
             hashed_pw = generate_password_hash(nuova_password)
+            
             c.execute(
                 "UPDATE utenti SET nome = ?, cognome = ?, citta = ?, username = ?, password = ? WHERE id = ?",
                 (nome, cognome, citta, username, hashed_pw, g.utente['id'])
