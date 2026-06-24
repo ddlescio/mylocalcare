@@ -13796,17 +13796,29 @@ def register():
         )
 
         if email_inviata:
-            flash("Registrazione completata! Controlla la tua email per confermare l'account.", "success")
+            session["registrazione_email_conferma"] = email
+            session["registrazione_email_inviata"] = True
         else:
-            flash(
-                "Registrazione completata, ma non siamo riusciti a inviare l'email di conferma. "
-                "Contatta l'assistenza o riprova più tardi.",
-                "warning"
-            )
+            session["registrazione_email_conferma"] = email
+            session["registrazione_email_inviata"] = False
 
-        return redirect(url_for('login'))
+        return redirect(url_for("registrazione_inviata"))
 
-    return render_template('register.html')
+            return render_template('register.html')
+
+@app.route("/registrazione-inviata")
+def registrazione_inviata():
+    email = session.get("registrazione_email_conferma")
+    email_inviata = session.get("registrazione_email_inviata", True)
+
+    if not email:
+        return redirect(url_for("login"))
+
+    return render_template(
+        "registrazione_inviata.html",
+        email=email,
+        email_inviata=email_inviata
+    )
 
 @app.route("/termini")
 def termini():
@@ -16403,7 +16415,7 @@ def modifica_password():
         if not password_ok:
             flash(password_msg, "error")
             return redirect(url_for("modifica_password"))
-    
+
         conn = get_db_connection()
 
         cur = get_cursor(conn)
