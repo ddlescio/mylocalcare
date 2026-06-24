@@ -13804,7 +13804,7 @@ def register():
 
         return redirect(url_for("registrazione_inviata"))
 
-            return render_template('register.html')
+    return render_template('register.html')
 
 @app.route("/registrazione-inviata")
 def registrazione_inviata():
@@ -13819,6 +13819,116 @@ def registrazione_inviata():
         email=email,
         email_inviata=email_inviata
     )
+
+@app.route("/reinvia-conferma", methods=["POST"])
+def reinvia_conferma():
+    verify_csrf()
+
+    email = session.get("registrazione_email_conferma")
+
+    if not email:
+        flash("Sessione scaduta. Inserisci nuovamente la tua email o effettua una nuova registrazione.", "error")
+        return redirect(url_for("login"))
+
+    now_ts = int(time.time())
+
+    reinvii = session.get("reinvio_conferma_count", 0)
+    ultimo_reinvio = session.get("reinvio_conferma_last_ts", 0)
+
+    # ✅ Anti-abuso: almeno 60 secondi tra un reinvio e l'altro
+    if ultimo_reinvio and now_ts - int(ultimo_reinvio) < 60:
+        secondi_restanti = 60 - (now_ts - int(ultimo_reinvio))
+        flash(f"Attendi ancora circa {secondi_restanti} secondi prima di richiedere un nuovo invio.", "warning")
+        return redirect(url_for("registrazione_inviata"))
+
+    # ✅ Anti-abuso: massimo 3 reinvii per sessione
+    if int(reinvii) >= 3:
+        flash("Hai già richiesto più reinvii. Se non ricevi la mail, controlla Spam/Posta indesiderata o contatta l'assistenza.", "warning")
+        return redirect(url_for("registrazione_inviata"))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            SELECT id, nome, email, attivo
+            FROM utenti
+            WHERE email = ?
+            LIMIT 1
+        """), (email,))
+
+        utente = c.fetchone()
+
+        if not utente:
+            flash("Non abbiamo trovato un account associato a questa email.", "error")
+            return redirect(url_for("register"))
+
+        if utente["attivo"]:
+            flash("Il tuo account risulta già confermato. Puoi effettuare il login.", "success")
+            return redirect(url_for("login"))
+
+        nuovo_token = str(uuid.uuid4())
+
+        c.execute(sql("""
+            UPDATE utenti
+            SET token_verifica = ?
+            WHERE id = ?
+        """), (nuovo_token, utente["id"]))
+
+        conn.commit()
+
+        link = build_external_url("conferma_email", token=nuovo_token)
+
+        email_inviata = _invia_email(
+            destinazione=utente["email"],
+            oggetto="Conferma account MyLocalCare",
+            corpo=(
+                f"Ciao {utente['nome']},\n\n"
+                "per completare la registrazione su MyLocalCare, conferma il tuo account usando il pulsante presente in questa email.\n\n"
+                "Se non hai richiesto tu questa registrazione, puoi ignorare questa email."
+            ),
+            action_url=link,
+            action_label="Conferma account"
+        )
+
+        if email_inviata:
+            session["registrazione_email_inviata"] = True
+            session["reinvio_conferma_count"] = int(reinvii) + 1
+            session["reinvio_conferma_last_ts"] = now_ts
+
+            flash("Abbiamo inviato nuovamente la mail di conferma. Controlla anche Spam/Posta indesiderata.", "success")
+        else:
+            session["registrazione_email_inviata"] = False
+            flash("Non siamo riusciti a inviare la mail di conferma. Riprova tra poco o contatta l'assistenza.", "error")
+
+        return redirect(url_for("registrazione_inviata"))
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        log_exception_safe(
+            "Errore reinvio email conferma account",
+            e,
+            {"email": email},
+            production=True
+        )
+
+        flash("Si è verificato un errore durante il reinvio della mail. Riprova più tardi.", "error")
+        return redirect(url_for("registrazione_inviata"))
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 @app.route("/termini")
 def termini():
