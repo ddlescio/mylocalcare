@@ -13431,10 +13431,21 @@ def mie_recensioni_ricevute():
             if id_recensione and testo:
                 try:
                     aggiungi_o_modifica_risposta(id_recensione, user_id, testo)
-                    flash("✅ Risposta inviata! Sarà visibile dopo approvazione.", "success")
+
                     invalidate_admin_counters()
+
+                    notifica_admin_evento(
+                        titolo="Nuova risposta a recensione in attesa",
+                        messaggio="Un utente ha risposto a una recensione. La risposta è in attesa di approvazione.",
+                        link=url_for("admin_recensioni", stato="in_attesa"),
+                        push=True
+                    )
+
+                    flash("✅ Risposta inviata! Sarà visibile dopo approvazione.", "success")
+
                 except Exception as e:
                     flash(f"❌ Errore durante il salvataggio della risposta: {e}", "danger")
+
             else:
                 flash("Testo della risposta mancante o ID non valido.", "warning")
 
@@ -13444,10 +13455,21 @@ def mie_recensioni_ricevute():
             if id_risposta and testo:
                 try:
                     aggiungi_o_modifica_risposta(id_risposta=id_risposta, testo=testo)
-                    flash("✏️ Risposta modificata con successo (in attesa di approvazione).", "info")
+
                     invalidate_admin_counters()
+
+                    notifica_admin_evento(
+                        titolo="Risposta a recensione modificata",
+                        messaggio="Un utente ha modificato una risposta a una recensione. La risposta è in attesa di approvazione.",
+                        link=url_for("admin_recensioni", stato="in_attesa"),
+                        push=True
+                    )
+
+                    flash("✏️ Risposta modificata con successo (in attesa di approvazione).", "info")
+
                 except Exception as e:
                     flash(f"Errore durante la modifica: {e}", "danger")
+                    
             else:
                 flash("Testo della risposta mancante o ID non valido.", "warning")
 
