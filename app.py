@@ -13469,7 +13469,7 @@ def mie_recensioni_ricevute():
 
                 except Exception as e:
                     flash(f"Errore durante la modifica: {e}", "danger")
-                    
+
             else:
                 flash("Testo della risposta mancante o ID non valido.", "warning")
 
@@ -13697,7 +13697,6 @@ def register():
         password = request.form['password']
         conferma_password = request.form['conferma_password']
         accetto = request.form.get('accetto')
-        codice_invito = request.form.get('codice_invito', '').strip()
 
         # ✅ Validazioni base
         if not accetto:
@@ -13713,12 +13712,6 @@ def register():
             flash(password_msg)
             return redirect(url_for('register'))
 
-        # 🔒 Codice beta obbligatorio
-        CODICE_BETA = "LOCALCARE2026"   # ← puoi cambiarlo quando vuoi
-
-        if codice_invito != CODICE_BETA:
-            flash("Codice invito non valido.")
-            return redirect(url_for('register'))
 
         # 🔎 Provincia dal JSON
         info = get_comune_info(citta)
@@ -14623,14 +14616,6 @@ def api_filtri_categoria():
 
 @app.route("/cerca")
 def cerca():
-    # 🔒 BLOCCO BETA — accesso solo utenti registrati
-    if not session.get("utente_id"):
-        flash(
-            "MyLocalCare è attualmente in fase BetaTest privata. "
-            "Registrati per ottenere l’accesso anticipato.",
-            "warning"
-        )
-        return redirect(url_for("home"))
 
     raw_cat = request.args.get("categoria", "").strip()
     cat_slug = to_slug(raw_cat)
