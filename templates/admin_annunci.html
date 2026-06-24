@@ -757,6 +757,87 @@
     border-radius: 16px;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
+    cursor: zoom-in;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.annuncio-modal-media-img:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+    opacity: 0.96;
+}
+
+/* --- LIGHTBOX FOTO ANNUNCIO --- */
+.annuncio-image-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(15, 23, 42, 0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.annuncio-image-lightbox.is-open {
+    display: flex;
+}
+
+.annuncio-image-lightbox-inner {
+    position: relative;
+    width: min(94vw, 920px);
+    max-height: 88vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.annuncio-image-lightbox-img {
+    max-width: 100%;
+    max-height: 88vh;
+    object-fit: contain;
+    border-radius: 22px;
+    background: #0f172a;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.annuncio-image-lightbox-close {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 42px;
+    height: 42px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.96);
+    color: #0f172a;
+    font-size: 1.35rem;
+    line-height: 1;
+    font-weight: 800;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+}
+
+@media (max-width: 640px) {
+    .annuncio-image-lightbox {
+        padding: 12px;
+    }
+
+    .annuncio-image-lightbox-inner {
+        width: 96vw;
+        max-height: 84vh;
+    }
+
+    .annuncio-image-lightbox-img {
+        max-height: 84vh;
+        border-radius: 18px;
+    }
+
+    .annuncio-image-lightbox-close {
+        top: -10px;
+        right: -6px;
+    }
 }
 
 .annuncio-modal-empty-media {
@@ -1492,6 +1573,24 @@
       </div>
     </div>
 
+    <!-- LIGHTBOX FOTO ANNUNCIO -->
+    <div id="annuncio-image-lightbox"
+         class="annuncio-image-lightbox"
+         aria-hidden="true">
+      <div class="annuncio-image-lightbox-inner">
+        <button type="button"
+                id="annuncio-image-lightbox-close"
+                class="annuncio-image-lightbox-close"
+                aria-label="Chiudi immagine">
+          ×
+        </button>
+
+        <img id="annuncio-image-lightbox-img"
+             class="annuncio-image-lightbox-img"
+             src=""
+             alt="Foto annuncio ingrandita">
+      </div>
+    </div>
 
 <script>
   window.CSRF_TOKEN = "{{ session['csrf_token'] }}";
@@ -1915,12 +2014,47 @@ document.addEventListener("click", async (e) => {
   });
 </script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const backdrop = document.getElementById("annuncio-row-modal-backdrop");
-  const closeBtn = document.getElementById("annuncio-modal-close");
+  document.addEventListener("DOMContentLoaded", () => {
+    const backdrop = document.getElementById("annuncio-row-modal-backdrop");
+    const closeBtn = document.getElementById("annuncio-modal-close");
 
-  if (!backdrop || !closeBtn) return;
+    const imageLightbox = document.getElementById("annuncio-image-lightbox");
+    const imageLightboxImg = document.getElementById("annuncio-image-lightbox-img");
+    const imageLightboxClose = document.getElementById("annuncio-image-lightbox-close");
 
+    if (!backdrop || !closeBtn) return;
+
+    function openImageLightbox(src) {
+      if (!imageLightbox || !imageLightboxImg || !src) return;
+
+      imageLightboxImg.src = src;
+      imageLightbox.classList.add("is-open");
+      imageLightbox.setAttribute("aria-hidden", "false");
+    }
+
+    function closeImageLightbox() {
+      if (!imageLightbox || !imageLightboxImg) return;
+
+      imageLightbox.classList.remove("is-open");
+      imageLightbox.setAttribute("aria-hidden", "true");
+      imageLightboxImg.src = "";
+    }
+
+    if (imageLightboxClose) {
+      imageLightboxClose.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeImageLightbox();
+      });
+    }
+
+    if (imageLightbox) {
+      imageLightbox.addEventListener("click", (e) => {
+        if (e.target === imageLightbox) {
+          closeImageLightbox();
+        }
+      });
+    }
   /*
     IMPORTANTE:
     nel CSS esiste:
@@ -2242,8 +2376,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
           img.alt = "Foto annuncio";
           img.className = "annuncio-modal-media-img";
+          img.title = "Clicca per ingrandire";
+          img.tabIndex = 0;
+
+          img.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openImageLightbox(img.src);
+          });
+
+          img.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              openImageLightbox(img.src);
+            }
+          });
 
           img.onerror = () => {
+
             console.warn("Foto annuncio non caricata:", {
               originale: src,
               finale: img.src
@@ -2495,8 +2646,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeAnnuncioModal();
-  });
+    if (e.key !== "Escape") return;
+
+    if (imageLightbox && imageLightbox.classList.contains("is-open")) {
+      closeImageLightbox();
+      return;
+    }
+
+    closeAnnuncioModal();
+  });  
 });
 </script>
 {% endblock %}
