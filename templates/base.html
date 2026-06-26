@@ -32,24 +32,6 @@
     }
   </style>
 
-  <div id="pwaBootLoader">
-    <div id="pwaBootLoaderBox">
-      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="MyLocalCare">
-      <div id="pwaBootLoaderText">Caricamento MyLocalCare...</div>
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener("load", function () {
-      const el = document.getElementById("pwaBootLoader");
-      if (el) el.remove();
-    });
-
-    setTimeout(function () {
-      const text = document.getElementById("pwaBootLoaderText");
-      if (text) text.textContent = "Connessione lenta, attendi ancora qualche istante...";
-    }, 2500);
-  </script>
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,7 +47,7 @@
 
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=6">
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-precomposed.png?v=6">
-  
+
   <script>
   var _iub = _iub || [];
   _iub.csConfiguration = {
@@ -286,7 +268,25 @@ button, input[type="submit"] {
 
 <body data-page="{{ page or '' }}" class="{{ body_class or '' }} {% if pubblico %}pubblico{% endif %}">
 
+  <div id="pwaBootLoader">
+    <div id="pwaBootLoaderBox">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="MyLocalCare">
+      <div id="pwaBootLoaderText">Caricamento MyLocalCare...</div>
+    </div>
+  </div>
 
+  <script>
+    window.addEventListener("load", function () {
+      const el = document.getElementById("pwaBootLoader");
+      if (el) el.remove();
+    });
+
+    setTimeout(function () {
+      const text = document.getElementById("pwaBootLoaderText");
+      if (text) text.textContent = "Connessione lenta, attendi ancora qualche istante...";
+    }, 2500);
+  </script>
+  
   {% if session.get('ruolo') == 'admin' %}
   <script src="{{ url_for('static', filename='js/admin_counters.js') }}"></script>
   {% endif %}
