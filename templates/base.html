@@ -55,7 +55,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- ✅ PWA / iOS standalone -->
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}?v=5">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}?v=6">
   <meta name="theme-color" content="#1f2937">
 
   <meta name="mobile-web-app-capable" content="yes">
@@ -63,9 +63,9 @@
   <meta name="apple-mobile-web-app-title" content="MyLocalCare">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=5">
-  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-precomposed.png?v=5">
-
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=6">
+  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-precomposed.png?v=6">
+  
   <script>
   var _iub = _iub || [];
   _iub.csConfiguration = {
@@ -75,6 +75,7 @@
   </script>
 
   <title>MyLocalCare</title>
+  <base target="_self">
   {% block head_extra %}{% endblock %}
 
   {% if session.get('utente_id') %}
@@ -1329,6 +1330,76 @@ button, input[type="submit"] {
 {% endif %}
 
   {% block scripts %}{% endblock %}
+
+  <script>
+  /* =========================================================
+     ✅ PWA iOS — mantieni navigazione interna dentro la PWA
+     Evita uscita verso Safari per cambio www/non-www o target esterni.
+  ========================================================= */
+  (function () {
+    function isInternalLocalCareHost(hostname) {
+      return hostname === "mylocalcare.it" || hostname === "www.mylocalcare.it";
+    }
+
+    function normalizeInternalUrl(rawHref) {
+      try {
+        const url = new URL(rawHref, window.location.href);
+
+        if (!isInternalLocalCareHost(url.hostname)) {
+          return null;
+        }
+
+        /*
+          Forza lo stesso origin attuale della PWA.
+          Se la PWA è aperta su mylocalcare.it, resta su mylocalcare.it.
+          Se è aperta su www.mylocalcare.it, resta su www.mylocalcare.it.
+        */
+        return window.location.origin + url.pathname + url.search + url.hash;
+
+      } catch (e) {
+        return null;
+      }
+    }
+
+    document.addEventListener("click", function (event) {
+      const link = event.target.closest("a");
+      if (!link) return;
+
+      const href = link.getAttribute("href");
+      if (!href) return;
+
+      if (
+        href.startsWith("#") ||
+        href.startsWith("javascript:") ||
+        href.startsWith("mailto:") ||
+        href.startsWith("tel:")
+      ) {
+        return;
+      }
+
+      const normalizedUrl = normalizeInternalUrl(href);
+      if (!normalizedUrl) return;
+
+      const currentUrl = new URL(window.location.href);
+      const destinationUrl = new URL(normalizedUrl);
+
+      /*
+        Se il link punta a mylocalcare.it/www.mylocalcare.it ma con host diverso,
+        intercettiamo e navighiamo nello stesso origin della PWA.
+      */
+      if (
+        destinationUrl.origin !== currentUrl.origin ||
+        link.target === "_blank"
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        link.removeAttribute("target");
+        window.location.href = normalizedUrl;
+      }
+    }, true);
+  })();
+  </script>
 
   <!-- ✅ Script per toggle mobile -->
   <script>
