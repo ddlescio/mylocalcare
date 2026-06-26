@@ -121,7 +121,7 @@ self.addEventListener('push', function(event) {
     title: "MyLocalCare",
     body: "Nuova notifica",
     url: "/utente/dashboard",
-    unread_count: 1
+    pwa_badge_count: 1
   };
 
   if (event.data) {
@@ -132,9 +132,12 @@ self.addEventListener('push', function(event) {
     }
   }
 
-  const unreadCountRaw = parseInt(data.unread_count, 10);
-  const unreadCount = Number.isFinite(unreadCountRaw) ? unreadCountRaw : 1;
-  
+  const badgeCountRaw = parseInt(
+    data.pwa_badge_count !== undefined ? data.pwa_badge_count : data.unread_count,
+    10
+  );
+  const badgeCount = Number.isFinite(badgeCountRaw) ? badgeCountRaw : 1;
+
   const showNotificationPromise = self.registration.showNotification(data.title || "MyLocalCare", {
     body: data.body || "Nuova notifica",
     icon: "/static/icons/icon-192.png",
@@ -148,11 +151,11 @@ self.addEventListener('push', function(event) {
 
   try {
     if ("setAppBadge" in self.registration) {
-      if (unreadCount > 0) {
-        badgePromise = self.registration.setAppBadge(unreadCount);
+      if (badgeCount > 0) {
+        badgePromise = self.registration.setAppBadge(badgeCount);
       } else if ("clearAppBadge" in self.registration) {
         badgePromise = self.registration.clearAppBadge();
-      }
+      }      
     }
   } catch (e) {
     badgePromise = Promise.resolve();

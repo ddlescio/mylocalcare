@@ -247,7 +247,7 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
 
   async function lcRefreshPWABadgeFromServer() {
     try {
-      const res = await fetch("/notifiche/unread_count", {
+      const res = await fetch("/pwa/badge_count", {
         method: "GET",
         credentials: "same-origin",
         headers: {
@@ -368,12 +368,8 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
     window.dispatchEvent(new Event("socket_ready"));
   });
 
-  socket.on("notifiche_unread_count", (data) => {
-    try {
-      lcSetPWABadge(data && data.count ? data.count : 0);
-    } catch (e) {
-      console.warn("⚠️ Errore notifiche_unread_count badge:", e);
-    }
+  socket.on("notifiche_unread_count", () => {
+    lcRefreshPWABadgeFromServer();
   });
 
   socket.on("nuova_notifica", () => {
@@ -384,6 +380,23 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
     lcRefreshPWABadgeFromServer();
   });
 
+  /*
+    Eventi chat:
+    il badge interno messaggi resta gestito dai suoi script.
+    Qui aggiorniamo solo il badge icona PWA con totale notifiche + messaggi.
+  */
+  socket.on("update_unread_count", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  socket.on("new_message", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  socket.on("messages_read", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+  
   socket.on("disconnect", (reason) => {
     console.log("🔌 socket disconnected:", reason);
   });
