@@ -13404,6 +13404,23 @@ def push_unsubscribe():
 def service_worker():
     return app.send_static_file("service-worker.js")
 
+
+@app.route("/apple-touch-icon.png")
+@app.route("/apple-touch-icon-precomposed.png")
+def apple_touch_icon():
+    response = send_from_directory(
+        os.path.join(app.root_path, "static", "icons"),
+        "apple-touch-icon.png",
+        mimetype="image/png"
+    )
+
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    return response
+
+
 # ==========================================================
 # NOTIFICHE - ROTTE (AGGIUNTA)
 # ==========================================================
