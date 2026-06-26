@@ -54,6 +54,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- ✅ PWA / iOS standalone -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}?v=5">
+  <meta name="theme-color" content="#1f2937">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MyLocalCare">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=5">
+  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-precomposed.png?v=5">
+
   <script>
   var _iub = _iub || [];
   _iub.csConfiguration = {
@@ -263,24 +275,14 @@ button, input[type="submit"] {
     cursor: -webkit-grab;
   }
 
-  <!-- ✅ Evita pagina bianca prolungata all’avvio PWA -->
-  <style>
-    body {
-      opacity: 1;
-    }
-  </style>
+  /* ✅ Evita pagina bianca prolungata all’avvio PWA */
+  body {
+    opacity: 1;
+  }
+</style>
 
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-  <meta name="theme-color" content="#1f2937">
-
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="MyLocalCare">
-
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=4">
-  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-precomposed.png?v=4">
-  
 </head>
+
 <body data-page="{{ page or '' }}" class="{{ body_class or '' }} {% if pubblico %}pubblico{% endif %}">
 
 
