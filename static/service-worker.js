@@ -118,30 +118,51 @@ self.addEventListener('push', function(event) {
   console.log("🔥 PUSH RICEVUTO");
 
   let data = {
-    title: "LocalCare",
+    title: "MyLocalCare",
     body: "Nuova notifica",
-    url: "/utente/dashboard"
+    url: "/utente/dashboard",
+    unread_count: 1
   };
 
   if (event.data) {
     try {
-      // Prova JSON
       data = event.data.json();
     } catch (e) {
-      // Se non è JSON, usa testo semplice
       data.body = event.data.text();
     }
   }
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/static/icons/icon-192.png",
-      badge: "/static/icons/icon-192.png",
-      data: {
-        url: data.url
+  const unreadCountRaw = parseInt(data.unread_count, 10);
+  const unreadCount = Number.isFinite(unreadCountRaw) ? unreadCountRaw : 1;
+  
+  const showNotificationPromise = self.registration.showNotification(data.title || "MyLocalCare", {
+    body: data.body || "Nuova notifica",
+    icon: "/static/icons/icon-192.png",
+    badge: "/static/icons/icon-192.png",
+    data: {
+      url: data.url || "/notifiche"
+    }
+  });
+
+  let badgePromise = Promise.resolve();
+
+  try {
+    if ("setAppBadge" in self.registration) {
+      if (unreadCount > 0) {
+        badgePromise = self.registration.setAppBadge(unreadCount);
+      } else if ("clearAppBadge" in self.registration) {
+        badgePromise = self.registration.clearAppBadge();
       }
-    })
+    }
+  } catch (e) {
+    badgePromise = Promise.resolve();
+  }
+
+  event.waitUntil(
+    Promise.all([
+      showNotificationPromise,
+      badgePromise
+    ])
   );
 });
 

@@ -222,6 +222,70 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
   window.__current_socket_id = null;
 
   // ===============================
+  // BADGE ICONA PWA
+  // ===============================
+  async function lcSetPWABadge(count) {
+    try {
+      const numero = parseInt(count || 0, 10);
+
+      if (!("setAppBadge" in navigator) || !("clearAppBadge" in navigator)) {
+        return;
+      }
+
+      if (numero > 0) {
+        await navigator.setAppBadge(numero);
+      } else {
+        await navigator.clearAppBadge();
+      }
+
+      console.log("🔢 Badge PWA aggiornato:", numero);
+
+    } catch (e) {
+      console.warn("⚠️ Badge PWA non aggiornabile:", e);
+    }
+  }
+
+  async function lcRefreshPWABadgeFromServer() {
+    try {
+      const res = await fetch("/notifiche/unread_count", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json"
+        }
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      await lcSetPWABadge(data.count || 0);
+
+    } catch (e) {
+      console.warn("⚠️ Errore refresh badge PWA:", e);
+    }
+  }
+
+  window.lcSetPWABadge = lcSetPWABadge;
+  window.lcRefreshPWABadgeFromServer = lcRefreshPWABadgeFromServer;
+
+  // Aggiorna badge quando la pagina/PWA viene caricata
+  lcRefreshPWABadgeFromServer();
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      lcRefreshPWABadgeFromServer();
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  window.addEventListener("pageshow", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  // ===============================
   // HEARTBEAT
   // ===============================
   function emitHeartbeat() {
@@ -299,7 +363,25 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
     window.__current_socket_id = socket.id;
 
     emitHeartbeat();
+    lcRefreshPWABadgeFromServer();
+
     window.dispatchEvent(new Event("socket_ready"));
+  });
+
+  socket.on("notifiche_unread_count", (data) => {
+    try {
+      lcSetPWABadge(data && data.count ? data.count : 0);
+    } catch (e) {
+      console.warn("⚠️ Errore notifiche_unread_count badge:", e);
+    }
+  });
+
+  socket.on("nuova_notifica", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  socket.on("notifica_letta", () => {
+    lcRefreshPWABadgeFromServer();
   });
 
   socket.on("disconnect", (reason) => {

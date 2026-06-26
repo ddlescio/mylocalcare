@@ -12870,6 +12870,28 @@ def invia_push(user_id, title, body, url=None):
             }
         )
 
+        # 🔢 Conteggio notifiche non lette da passare alla PWA
+        try:
+            cur.execute("""
+                SELECT COUNT(*) AS count
+                FROM notifiche
+                WHERE id_utente = %s
+                  AND letta = 0
+            """, (user_id,))
+
+            unread_row = cur.fetchone()
+            unread_count = int(unread_row["count"] or 0) if unread_row else 0
+
+        except Exception as e:
+            security_log(
+                "⚠️ [invia_push] impossibile calcolare unread_count",
+                {
+                    "user_id": user_id,
+                    "error": str(e)
+                }
+            )
+            unread_count = 1
+
         for sub in subs:
             endpoint = sub["endpoint"]
 
@@ -12887,8 +12909,10 @@ def invia_push(user_id, title, body, url=None):
                     data=json.dumps({
                         "title": title,
                         "body": body,
-                        "url": push_url
+                        "url": push_url,
+                        "unread_count": unread_count
                     }),
+
                     vapid_private_key=VAPID_PRIVATE_KEY,
                     vapid_claims={
                         "sub": VAPID_CLAIM_EMAIL
