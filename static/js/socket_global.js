@@ -265,24 +265,78 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
     }
   }
 
+  // ===============================
+  // BADGE CAMPANELLA NAVBAR
+  // ===============================
+  function lcSetNavbarNotificationBadge(count) {
+    try {
+      const badge = document.getElementById("notifBadge");
+      if (!badge) return;
+
+      const numero = parseInt(count || 0, 10);
+
+      badge.dataset.unread = String(numero);
+
+      if (numero > 0) {
+        badge.textContent = String(numero);
+        badge.style.display = "";
+      } else {
+        badge.textContent = "";
+        badge.style.display = "none";
+      }
+
+      console.log("🔔 Badge campanella aggiornato:", numero);
+
+    } catch (e) {
+      console.warn("⚠️ Badge campanella non aggiornabile:", e);
+    }
+  }
+
+  async function lcRefreshNavbarNotificationBadgeFromServer() {
+    try {
+      const res = await fetch("/notifiche/unread_count", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json"
+        }
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      lcSetNavbarNotificationBadge(data.count || 0);
+
+    } catch (e) {
+      console.warn("⚠️ Errore refresh badge campanella:", e);
+    }
+  }
+
+
   window.lcSetPWABadge = lcSetPWABadge;
   window.lcRefreshPWABadgeFromServer = lcRefreshPWABadgeFromServer;
+  window.lcSetNavbarNotificationBadge = lcSetNavbarNotificationBadge;
+  window.lcRefreshNavbarNotificationBadgeFromServer = lcRefreshNavbarNotificationBadgeFromServer;
 
   // Aggiorna badge quando la pagina/PWA viene caricata
   lcRefreshPWABadgeFromServer();
+  lcRefreshNavbarNotificationBadgeFromServer();
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       lcRefreshPWABadgeFromServer();
+      lcRefreshNavbarNotificationBadgeFromServer();
     }
   });
 
   window.addEventListener("focus", () => {
     lcRefreshPWABadgeFromServer();
+    lcRefreshNavbarNotificationBadgeFromServer();
   });
 
   window.addEventListener("pageshow", () => {
     lcRefreshPWABadgeFromServer();
+    lcRefreshNavbarNotificationBadgeFromServer();
   });
 
   // ===============================
@@ -364,22 +418,25 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
 
     emitHeartbeat();
     lcRefreshPWABadgeFromServer();
+    lcRefreshNavbarNotificationBadgeFromServer();
 
     window.dispatchEvent(new Event("socket_ready"));
-  });
 
-  socket.on("notifiche_unread_count", () => {
-    lcRefreshPWABadgeFromServer();
-  });
+    socket.on("notifiche_unread_count", () => {
+      lcRefreshPWABadgeFromServer();
+      lcRefreshNavbarNotificationBadgeFromServer();
+    });
 
-  socket.on("nuova_notifica", () => {
-    lcRefreshPWABadgeFromServer();
-  });
+    socket.on("nuova_notifica", () => {
+      lcRefreshPWABadgeFromServer();
+      lcRefreshNavbarNotificationBadgeFromServer();
+    });
 
-  socket.on("notifica_letta", () => {
-    lcRefreshPWABadgeFromServer();
-  });
-
+    socket.on("notifica_letta", () => {
+      lcRefreshPWABadgeFromServer();
+      lcRefreshNavbarNotificationBadgeFromServer();
+    });
+    
   /*
     Eventi chat:
     il badge interno messaggi resta gestito dai suoi script.
@@ -396,7 +453,7 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
   socket.on("messages_read", () => {
     lcRefreshPWABadgeFromServer();
   });
-  
+
   socket.on("disconnect", (reason) => {
     console.log("🔌 socket disconnected:", reason);
   });
