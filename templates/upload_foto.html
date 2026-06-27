@@ -17,6 +17,37 @@
     Puoi scattare una foto con la fotocamera del dispositivo o selezionarne una già salvata.
   </p>
 
+  <div class="mb-6 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-sky-50 p-4 text-left shadow-sm">
+    <div class="flex items-start gap-3">
+      <div class="shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">
+        👤
+      </div>
+
+      <div>
+        <h3 class="text-sm font-extrabold text-slate-900 mb-1">
+          Foto profilo chiara e riconoscibile
+        </h3>
+
+        <p class="text-sm text-slate-600 leading-relaxed">
+          La foto deve inquadrare bene il tuo viso, essere nitida e mostrare chiaramente chi sei.
+          Foto senza volto, troppo lontane, sfocate, scure o non riconoscibili potranno essere rifiutate.
+        </p>
+
+        <div class="mt-3 grid grid-cols-1 gap-2 text-xs">
+          <div class="flex items-center gap-2 text-green-700 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+            <span>✅</span>
+            <span>Viso ben visibile, centrato e illuminato</span>
+          </div>
+
+          <div class="flex items-center gap-2 text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            <span>❌</span>
+            <span>Niente foto di gruppo, paesaggi, loghi o immagini poco riconoscibili</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <form id="fotoForm" method="post" enctype="multipart/form-data" class="space-y-4">
 
     <!-- Pulsante fotocamera -->
@@ -41,8 +72,10 @@
 
     <!-- Bottone salva -->
     <button type="submit"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
-      Salva foto profilo
+            id="submitFotoBtn"
+            disabled
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+      Caricamento controllo volto...
     </button>
 
     <a href="{{ url_for('dashboard') }}" class="block text-blue-600 mt-3 hover:underline">
@@ -78,55 +111,101 @@
 <script defer src="{{ url_for('static', filename='js/face-api.min.js') }}"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", async () => {
-
-    console.log("Controllo faceapi:", typeof faceapi);
-    if (typeof faceapi === "undefined") {
-        alert("Errore: face-api.js non è stato caricato.");
-        return;
-    }
-
-    // Carico modelli
-    console.log("Caricamento modelli...");
-    await faceapi.nets.tinyFaceDetector.loadFromUri("/static/models/");
-    console.log("Modelli caricati!");
+document.addEventListener("DOMContentLoaded", () => {
 
     const form = document.getElementById("fotoForm");
     const input = document.querySelector("input[name='foto']");
     const previewImg = document.getElementById("preview-img");
     const previewContainer = document.getElementById("preview-container");
+    const submitBtn = document.getElementById("submitFotoBtn");
 
-    let lastImageBlob = null;
-
-    /* -------------- UPLOAD FILE ---------------- */
-    input.addEventListener("change", () => {
-        if (!input.files.length) return;
-
-        lastImageBlob = input.files[0];   // <-- fondamentale!
-
-        const reader = new FileReader();
-        reader.onload = e => {
-            previewImg.src = e.target.result;
-            previewContainer.classList.remove("hidden");
-        };
-        reader.readAsDataURL(lastImageBlob);
-    });
-
-    /* -------------- FOTOCAMERA ---------------- */
     const openBtn = document.getElementById("openCameraBtn");
     const modal = document.getElementById("cameraModal");
     const closeBtn = document.getElementById("closeCameraBtn");
     const captureBtn = document.getElementById("captureBtn");
     const video = document.getElementById("camera");
-    let stream = null;
 
+    let lastImageBlob = null;
+    let stream = null;
+    let faceModelsReady = false;
+    let submitInProgress = false;
+
+    async function initFaceApi() {
+        console.log("Controllo faceapi:", typeof faceapi);
+
+        if (typeof faceapi === "undefined") {
+            alert("Errore: face-api.js non è stato caricato.");
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Controllo volto non disponibile";
+            }
+            return;
+        }
+
+        try {
+            console.log("Caricamento modelli...");
+            await faceapi.nets.tinyFaceDetector.loadFromUri("/static/models/");
+            console.log("Modelli caricati!");
+
+            faceModelsReady = true;
+
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Salva foto profilo";
+            }
+
+        } catch (err) {
+            console.error("Errore caricamento modelli face-api:", err);
+            alert("Errore nel caricamento del controllo volto. Riprova tra poco.");
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Controllo volto non disponibile";
+            }
+        }
+    }
+
+    initFaceApi();
+
+    /* -------------- UPLOAD FILE ---------------- */
+    input.addEventListener("change", () => {
+        if (!input.files || !input.files.length) {
+            lastImageBlob = null;
+            previewContainer.classList.add("hidden");
+            return;
+        }
+
+        lastImageBlob = input.files[0];
+
+        const reader = new FileReader();
+
+        reader.onload = e => {
+            previewImg.src = e.target.result;
+            previewContainer.classList.remove("hidden");
+        };
+
+        reader.onerror = () => {
+            lastImageBlob = null;
+            alert("Non sono riuscito a leggere questa immagine. Prova con un altro file.");
+        };
+
+        reader.readAsDataURL(lastImageBlob);
+    });
+
+    /* -------------- FOTOCAMERA ---------------- */
     openBtn.addEventListener("click", async () => {
         modal.classList.remove("hidden");
         modal.classList.add("flex");
 
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: "user"
+                }
+            });
+
             video.srcObject = stream;
+
         } catch (err) {
             alert("Impossibile accedere alla fotocamera: " + err.message);
             modal.classList.add("hidden");
@@ -136,6 +215,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     closeBtn.addEventListener("click", () => {
         if (stream) stream.getTracks().forEach(t => t.stop());
+        stream = null;
+
         modal.classList.add("hidden");
         modal.classList.remove("flex");
     });
@@ -145,16 +226,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         const canvas = document.createElement("canvas");
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
+
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         if (stream) stream.getTracks().forEach(t => t.stop());
+        stream = null;
+
         modal.classList.add("hidden");
         modal.classList.remove("flex");
 
         canvas.toBlob(blob => {
 
-            lastImageBlob = blob;  // <-- fondamentale!
+            if (!blob) {
+                alert("Non sono riuscito a creare la foto. Riprova.");
+                return;
+            }
+
+            lastImageBlob = blob;
 
             previewImg.src = URL.createObjectURL(blob);
             previewContainer.classList.remove("hidden");
@@ -169,34 +258,83 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     /* -------------- BLOCCO SUBMIT SE NON C’È VOLTO ---------------- */
     form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-        e.preventDefault(); // <-- IMPORTANTISSIMO: impedisce invio immediato
+        if (submitInProgress) return;
+
+        if (!faceModelsReady) {
+            alert("Il controllo del volto è ancora in caricamento. Attendi qualche secondo e riprova.");
+            return;
+        }
 
         if (!lastImageBlob) {
             alert("Seleziona o scatta una foto prima di continuare.");
             return;
         }
 
-        const img = await blobToImage(lastImageBlob);
-        const detection = await faceapi.detectSingleFace(
-            img,
-            new faceapi.TinyFaceDetectorOptions()
-        );
+        submitInProgress = true;
 
-        if (!detection) {
-            alert("Per favore carica una foto in cui il tuo viso sia chiaramente visibile.");
-            return;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Controllo foto in corso...";
         }
 
-        console.log("Volto rilevato! Invio form...");
-        form.submit();   // <-- invio manuale SOLO dopo verifica volto
+        try {
+            const img = await blobToImage(lastImageBlob);
+
+            const detection = await faceapi.detectSingleFace(
+                img,
+                new faceapi.TinyFaceDetectorOptions({
+                    inputSize: 416,
+                    scoreThreshold: 0.45
+                })
+            );
+
+            if (!detection) {
+                alert("La foto non sembra mostrare chiaramente il tuo viso. Carica una foto frontale, nitida e ben illuminata.");
+
+                submitInProgress = false;
+
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Salva foto profilo";
+                }
+
+                return;
+            }
+
+            console.log("Volto rilevato! Invio form...");
+            form.submit();
+
+        } catch (err) {
+            console.error("Errore controllo volto:", err);
+            alert("Non sono riuscito a controllare questa immagine. Prova con una foto diversa, meglio in formato JPG o PNG.");
+
+            submitInProgress = false;
+
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Salva foto profilo";
+            }
+        }
     });
 
     function blobToImage(blob) {
-        return new Promise(resolve => {
+        return new Promise((resolve, reject) => {
             const img = new Image();
-            img.onload = () => resolve(img);
-            img.src = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blob);
+
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve(img);
+            };
+
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error("Immagine non leggibile"));
+            };
+
+            img.src = url;
         });
     }
 
