@@ -10912,6 +10912,51 @@ def inject_pytz():
 def notifiche_unread_count():
     return jsonify({"count": conta_non_lette(g.utente['id'])})
 
+def conta_badge_pwa(user_id):
+    """
+    Conteggio unico per badge icona PWA:
+    notifiche non lette + messaggi chat non letti.
+
+    NON modifica i badge interni:
+    - campanella navbar = solo notifiche
+    - badge messaggi navbar = solo chat
+    """
+    try:
+        notifiche_count = int(conta_non_lette(user_id) or 0)
+    except Exception as e:
+        security_log(
+            "⚠️ [conta_badge_pwa] errore conteggio notifiche",
+            {
+                "user_id": user_id,
+                "error": str(e)
+            }
+        )
+        notifiche_count = 0
+
+    try:
+        messaggi_count = int(count_chat_non_letti(user_id) or 0)
+    except Exception as e:
+        security_log(
+            "⚠️ [conta_badge_pwa] errore conteggio messaggi",
+            {
+                "user_id": user_id,
+                "error": str(e)
+            }
+        )
+        messaggi_count = 0
+
+    return {
+        "count": notifiche_count + messaggi_count,
+        "notifications": notifiche_count,
+        "messages": messaggi_count
+    }
+
+
+@app.route('/pwa/badge_count')
+@login_required
+def pwa_badge_count():
+    return jsonify(conta_badge_pwa(g.utente['id']))
+
 # ==========================================================
 # 🔹 CACHE per ADMIN COUNTERS
 # ==========================================================
@@ -12870,6 +12915,40 @@ def invia_push(user_id, title, body, url=None):
             }
         )
 
+        # 🔢 Conteggio totale per icona PWA:
+        # notifiche non lette + messaggi chat non letti.
+        # Questo NON tocca i badge navbar.
+        try:
+            cur.execute("""
+                SELECT COUNT(*) AS count
+                FROM notifiche
+                WHERE id_utente = %s
+                  AND letta = 0
+            """, (user_id,))
+            row_notifiche = cur.fetchone()
+            unread_notifiche = int(row_notifiche["count"] or 0) if row_notifiche else 0
+
+            cur.execute("""
+                SELECT COUNT(*) AS count
+                FROM messaggi_chat
+                WHERE destinatario_id = %s
+                  AND letto = 0
+            """, (user_id,))
+            row_messaggi = cur.fetchone()
+            unread_messaggi = int(row_messaggi["count"] or 0) if row_messaggi else 0
+
+            pwa_badge_count = unread_notifiche + unread_messaggi
+
+        except Exception as e:
+            security_log(
+                "⚠️ [invia_push] impossibile calcolare pwa_badge_count",
+                {
+                    "user_id": user_id,
+                    "error": str(e)
+                }
+            )
+            pwa_badge_count = 1
+
         for sub in subs:
             endpoint = sub["endpoint"]
 
@@ -12887,8 +12966,9 @@ def invia_push(user_id, title, body, url=None):
                     data=json.dumps({
                         "title": title,
                         "body": body,
-                        "url": push_url
-                    }),
+                        "url": push_url,
+                        "pwa_badge_count": pwa_badge_count
+                    }),                    
                     vapid_private_key=VAPID_PRIVATE_KEY,
                     vapid_claims={
                         "sub": VAPID_CLAIM_EMAIL

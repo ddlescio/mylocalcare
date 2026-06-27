@@ -222,6 +222,70 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
   window.__current_socket_id = null;
 
   // ===============================
+  // BADGE ICONA PWA
+  // ===============================
+  async function lcSetPWABadge(count) {
+    try {
+      const numero = parseInt(count || 0, 10);
+
+      if (!("setAppBadge" in navigator) || !("clearAppBadge" in navigator)) {
+        return;
+      }
+
+      if (numero > 0) {
+        await navigator.setAppBadge(numero);
+      } else {
+        await navigator.clearAppBadge();
+      }
+
+      console.log("🔢 Badge icona PWA aggiornato:", numero);
+
+    } catch (e) {
+      console.warn("⚠️ Badge icona PWA non aggiornabile:", e);
+    }
+  }
+
+  async function lcRefreshPWABadgeFromServer() {
+    try {
+      const res = await fetch("/pwa/badge_count", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json"
+        }
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      await lcSetPWABadge(data.count || 0);
+
+    } catch (e) {
+      console.warn("⚠️ Errore refresh badge icona PWA:", e);
+    }
+  }
+
+  window.lcSetPWABadge = lcSetPWABadge;
+  window.lcRefreshPWABadgeFromServer = lcRefreshPWABadgeFromServer;
+
+  // Primo allineamento quando la pagina viene caricata.
+  lcRefreshPWABadgeFromServer();
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      lcRefreshPWABadgeFromServer();
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  window.addEventListener("pageshow", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  // ===============================
   // HEARTBEAT
   // ===============================
   function emitHeartbeat() {
@@ -299,6 +363,11 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
     window.__current_socket_id = socket.id;
 
     emitHeartbeat();
+
+    // Aggiorna solo il badge icona PWA.
+    // Non tocca i badge navbar.
+    lcRefreshPWABadgeFromServer();
+
     window.dispatchEvent(new Event("socket_ready"));
   });
 
@@ -308,6 +377,33 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
 
   socket.on("connect_error", (err) => {
     console.warn("⚠️ socket connect_error:", err?.message || err);
+  });
+
+  // ===============================
+  // EVENTI CHE AGGIORNANO SOLO ICONA PWA
+  // ===============================
+  socket.on("update_notifications", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  socket.on("nuova_notifica", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  socket.on("notifica_letta", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  socket.on("update_unread_count", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  socket.on("new_message", () => {
+    lcRefreshPWABadgeFromServer();
+  });
+
+  socket.on("messages_read", () => {
+    lcRefreshPWABadgeFromServer();
   });
 
   let fastReconnectTimer = null;
