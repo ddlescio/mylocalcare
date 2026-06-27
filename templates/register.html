@@ -25,8 +25,9 @@
 
   {% endwith %}
 
-  <form method="POST" action="{{ url_for('register') }}" class="space-y-5">
+  <form id="register-form" method="POST" action="{{ url_for('register') }}" class="space-y-5">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="email_warning_confirmed" id="email_warning_confirmed" value="0">
 
     <!-- Nome -->
 
@@ -114,10 +115,19 @@
 
       </label>
 
-      <input type="email" name="email" id="email" required
-
+      <input type="email"
+             name="email"
+             id="email"
+             required
+             autocomplete="email"
+             inputmode="email"
+             autocapitalize="none"
+             spellcheck="false"
              class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
 
+      <div id="email-warning"
+           class="hidden mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 leading-relaxed">
+      </div>
     </div>
 
     <!-- Username -->
@@ -247,24 +257,338 @@
 
 </div>
 
-<script>
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("register-form");
+    const emailInput = document.getElementById("email");
+    const emailWarning = document.getElementById("email-warning");
+    const emailWarningConfirmed = document.getElementById("email_warning_confirmed");
+    const password = document.getElementById("password");
+    const confermaPassword = document.getElementById("conferma_password");
 
-  // ✅ Verifica che le password coincidano
+    const providerComuni = [
+      "gmail.com",
+      "outlook.com",
+      "hotmail.com",
+      "live.com",
+      "msn.com",
+      "yahoo.com",
+      "yahoo.it",
+      "icloud.com",
+      "me.com",
+      "mac.com",
+      "libero.it",
+      "virgilio.it",
+      "alice.it",
+      "tim.it",
+      "tin.it",
+      "tiscali.it",
+      "fastwebnet.it",
+      "email.it",
+      "poste.it",
+      "posteitaliane.it",
+      "pec.it",
+      "aruba.it",
+      "arubapec.it",
+      "legalmail.it",
+      "register.it",
+      "gmx.com",
+      "gmx.it",
+      "proton.me",
+      "protonmail.com",
+      "aol.com",
+      "zoho.com",
+      "mail.com",
+      "yandex.com"
+    ];
 
-  document.querySelector('form').addEventListener('submit', function(e) {
+    const aliasManuali = {
+      "gmai.com": "gmail.com",
+      "gmial.com": "gmail.com",
+      "gmal.com": "gmail.com",
+      "gmail.it": "gmail.com",
+      "gmail.con": "gmail.com",
+      "gmail.cim": "gmail.com",
+      "gmail.cov": "gmail.com",
+      "gmail.co": "gmail.com",
+      "gmail.comm": "gmail.com",
 
-    const pw = document.getElementById('password').value;
+      "hotmai.com": "hotmail.com",
+      "hotmal.com": "hotmail.com",
+      "hotmial.com": "hotmail.com",
+      "hotmail.it": "hotmail.com",
+      "hotmail.con": "hotmail.com",
+      "hotmail.cov": "hotmail.com",
 
-    const confirm = document.getElementById('conferma_password').value;
+      "outlok.com": "outlook.com",
+      "outloo.com": "outlook.com",
+      "otlook.com": "outlook.com",
+      "outlook.it": "outlook.com",
+      "outlook.con": "outlook.com",
 
-    if (pw !== confirm) {
+      "yaho.com": "yahoo.com",
+      "yahho.com": "yahoo.com",
+      "yahoo.cov": "yahoo.com",
+      "yahoo.con": "yahoo.com",
+      "yahoo.cim": "yahoo.com",
+      "yahoo.comm": "yahoo.com",
 
-      e.preventDefault();
+      "iclod.com": "icloud.com",
+      "icoud.com": "icloud.com",
+      "icloud.it": "icloud.com",
+      "icloud.con": "icloud.com",
 
-      alert('Le password non coincidono.');
+      "libero.com": "libero.it",
+      "libero.i": "libero.it",
+      "libero.con": "libero.it",
+      "libero.cov": "libero.it",
 
+      "virgilio.i": "virgilio.it",
+      "virgilio.com": "virgilio.it",
+      "virgilio.con": "virgilio.it",
+      "virglio.it": "virgilio.it",
+      "viriglio.it": "virgilio.it",
+
+      "alice.com": "alice.it",
+      "alice.i": "alice.it",
+      "alice.con": "alice.it",
+
+      "tim.com": "tim.it",
+      "tim.i": "tim.it",
+      "tin.com": "tin.it",
+      "tin.i": "tin.it",
+      "tiscali.com": "tiscali.it",
+      "tiscali.i": "tiscali.it"
+    };
+
+    const tldSospetti = [
+      ".i",
+      ".con",
+      ".cov",
+      ".cim",
+      ".comm",
+      ".vom",
+      ".xom",
+      ".ney",
+      ".neyt"
+    ];
+
+    function normalizzaEmail(value) {
+      return (value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "");
     }
 
+    function levenshtein(a, b) {
+      const matrix = [];
+
+      for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+      }
+
+      for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+      }
+
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+          }
+        }
+      }
+
+      return matrix[b.length][a.length];
+    }
+
+    function analizzaEmail(emailOriginale) {
+      const email = normalizzaEmail(emailOriginale);
+
+      if (!email || !email.includes("@")) {
+        return null;
+      }
+
+      const parti = email.split("@");
+
+      if (parti.length !== 2) {
+        return {
+          tipo: "formato",
+          messaggio: "L’indirizzo email sembra avere un formato non corretto."
+        };
+      }
+
+      const nome = parti[0];
+      const dominio = parti[1];
+
+      if (!nome || !dominio || !dominio.includes(".")) {
+        return {
+          tipo: "formato",
+          messaggio: "Controlla bene l’indirizzo email: sembra mancare una parte del dominio."
+        };
+      }
+
+      if (aliasManuali[dominio]) {
+        return {
+          tipo: "suggerimento",
+          suggerimento: `${nome}@${aliasManuali[dominio]}`
+        };
+      }
+
+      let migliore = null;
+      let distanzaMigliore = 99;
+
+      providerComuni.forEach((provider) => {
+        const distanza = levenshtein(dominio, provider);
+
+        if (distanza < distanzaMigliore) {
+          distanzaMigliore = distanza;
+          migliore = provider;
+        }
+      });
+
+      if (migliore && distanzaMigliore <= 2 && dominio !== migliore) {
+        return {
+          tipo: "suggerimento",
+          suggerimento: `${nome}@${migliore}`
+        };
+      }
+
+      for (const tld of tldSospetti) {
+        if (dominio.endsWith(tld)) {
+          return {
+            tipo: "tld_sospetto",
+            messaggio: "Il dominio dell’email sembra insolito. Controlla bene prima di continuare."
+          };
+        }
+      }
+
+      return null;
+    }
+
+    function aggiornaAvvisoEmail() {
+      if (!emailInput || !emailWarning) return null;
+
+      const emailPulita = normalizzaEmail(emailInput.value);
+
+      if (emailPulita !== emailInput.value) {
+        emailInput.value = emailPulita;
+      }
+
+      if (emailWarningConfirmed) {
+        emailWarningConfirmed.value = "0";
+      }
+
+      const analisi = analizzaEmail(emailPulita);
+
+      emailWarning.classList.add("hidden");
+      emailWarning.innerHTML = "";
+
+      if (!analisi) return null;
+
+      if (analisi.tipo === "suggerimento") {
+        emailWarning.innerHTML = `
+          ⚠️ L’indirizzo email potrebbe contenere un errore.<br>
+          Forse intendevi
+          <button type="button"
+                  id="usa-email-suggerita"
+                  class="font-bold underline text-amber-900">
+            ${analisi.suggerimento}
+          </button>
+          ?
+          <br>
+          <span class="text-xs">
+            Se l’email è sbagliata non riceverai il link di conferma.
+          </span>
+        `;
+
+        emailWarning.classList.remove("hidden");
+
+        const btn = document.getElementById("usa-email-suggerita");
+        if (btn) {
+          btn.addEventListener("click", () => {
+            emailInput.value = analisi.suggerimento;
+            emailWarning.classList.add("hidden");
+            emailWarning.innerHTML = "";
+
+            if (emailWarningConfirmed) {
+              emailWarningConfirmed.value = "0";
+            }
+
+            emailInput.focus();
+          });
+        }
+
+        return analisi;
+      }
+
+      emailWarning.innerHTML = `
+        ⚠️ ${analisi.messaggio || "Controlla bene l’indirizzo email."}
+        <br>
+        <span class="text-xs">
+          Se l’email è sbagliata non riceverai il link di conferma.
+        </span>
+      `;
+
+      emailWarning.classList.remove("hidden");
+      return analisi;
+    }
+
+    if (emailInput) {
+      emailInput.addEventListener("input", aggiornaAvvisoEmail);
+      emailInput.addEventListener("blur", aggiornaAvvisoEmail);
+    }
+
+    if (form) {
+      form.addEventListener("submit", function(e) {
+        const analisi = aggiornaAvvisoEmail();
+
+        if (password && confermaPassword && password.value !== confermaPassword.value) {
+          e.preventDefault();
+          alert("Le password non coincidono.");
+          confermaPassword.focus();
+          return;
+        }
+
+        if (analisi && analisi.tipo === "suggerimento") {
+          const conferma = confirm(
+            `L’indirizzo email inserito potrebbe contenere un errore.\n\nHai scritto: ${emailInput.value}\nForse intendevi: ${analisi.suggerimento}\n\nSe l’email è sbagliata non riceverai il link di conferma.\n\nVuoi continuare comunque con l’email inserita?`
+          );
+
+          if (!conferma) {
+            e.preventDefault();
+            emailInput.focus();
+            return;
+          }
+
+          if (emailWarningConfirmed) {
+            emailWarningConfirmed.value = "1";
+          }
+        }
+
+        if (analisi && analisi.tipo !== "suggerimento") {
+          const conferma = confirm(
+            `Controlla bene l’indirizzo email:\n\n${emailInput.value}\n\nSe è sbagliato non riceverai il link di conferma.\n\nVuoi continuare comunque?`
+          );
+
+          if (!conferma) {
+            e.preventDefault();
+            emailInput.focus();
+            return;
+          }
+
+          if (emailWarningConfirmed) {
+            emailWarningConfirmed.value = "1";
+          }
+        }
+      });
+    }
   });
 
   function togglePasswordVisibility(inputId, button) {
@@ -272,19 +596,17 @@
 
     if (!input) return;
 
-    if (input.type === 'password') {
-      input.type = 'text';
-      button.textContent = '🙈';
-      button.setAttribute('aria-label', 'Nascondi password');
+    if (input.type === "password") {
+      input.type = "text";
+      button.textContent = "🙈";
+      button.setAttribute("aria-label", "Nascondi password");
     } else {
-      input.type = 'password';
-      button.textContent = '👁';
-      button.setAttribute('aria-label', 'Mostra password');
+      input.type = "password";
+      button.textContent = "👁";
+      button.setAttribute("aria-label", "Mostra password");
     }
   }
-
-</script>
-
+  </script>
 {% endblock %}
 
 {% block scripts %}

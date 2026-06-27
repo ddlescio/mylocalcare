@@ -12968,7 +12968,7 @@ def invia_push(user_id, title, body, url=None):
                         "body": body,
                         "url": push_url,
                         "pwa_badge_count": pwa_badge_count
-                    }),                    
+                    }),
                     vapid_private_key=VAPID_PRIVATE_KEY,
                     vapid_claims={
                         "sub": VAPID_CLAIM_EMAIL
@@ -13781,6 +13781,190 @@ def valida_password_minima(password):
 
     return True, ""
 
+from difflib import SequenceMatcher
+import re
+
+
+EMAIL_PROVIDER_COMUNI = [
+    "gmail.com",
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+    "msn.com",
+    "yahoo.com",
+    "yahoo.it",
+    "icloud.com",
+    "me.com",
+    "mac.com",
+    "libero.it",
+    "virgilio.it",
+    "alice.it",
+    "tim.it",
+    "tin.it",
+    "tiscali.it",
+    "fastwebnet.it",
+    "email.it",
+    "poste.it",
+    "posteitaliane.it",
+    "pec.it",
+    "aruba.it",
+    "arubapec.it",
+    "legalmail.it",
+    "register.it",
+    "gmx.com",
+    "gmx.it",
+    "proton.me",
+    "protonmail.com",
+    "aol.com",
+    "zoho.com",
+    "mail.com",
+    "yandex.com",
+]
+
+EMAIL_ALIAS_MANUALI = {
+    "gmai.com": "gmail.com",
+    "gmial.com": "gmail.com",
+    "gmal.com": "gmail.com",
+    "gmail.it": "gmail.com",
+    "gmail.con": "gmail.com",
+    "gmail.cim": "gmail.com",
+    "gmail.cov": "gmail.com",
+    "gmail.co": "gmail.com",
+    "gmail.comm": "gmail.com",
+
+    "hotmai.com": "hotmail.com",
+    "hotmal.com": "hotmail.com",
+    "hotmial.com": "hotmail.com",
+    "hotmail.it": "hotmail.com",
+    "hotmail.con": "hotmail.com",
+    "hotmail.cov": "hotmail.com",
+
+    "outlok.com": "outlook.com",
+    "outloo.com": "outlook.com",
+    "otlook.com": "outlook.com",
+    "outlook.it": "outlook.com",
+    "outlook.con": "outlook.com",
+
+    "yaho.com": "yahoo.com",
+    "yahho.com": "yahoo.com",
+    "yahoo.cov": "yahoo.com",
+    "yahoo.con": "yahoo.com",
+    "yahoo.cim": "yahoo.com",
+    "yahoo.comm": "yahoo.com",
+
+    "iclod.com": "icloud.com",
+    "icoud.com": "icloud.com",
+    "icloud.it": "icloud.com",
+    "icloud.con": "icloud.com",
+
+    "libero.com": "libero.it",
+    "libero.i": "libero.it",
+    "libero.con": "libero.it",
+    "libero.cov": "libero.it",
+
+    "virgilio.i": "virgilio.it",
+    "virgilio.com": "virgilio.it",
+    "virgilio.con": "virgilio.it",
+    "virglio.it": "virgilio.it",
+    "viriglio.it": "virgilio.it",
+
+    "alice.com": "alice.it",
+    "alice.i": "alice.it",
+    "alice.con": "alice.it",
+
+    "tim.com": "tim.it",
+    "tim.i": "tim.it",
+    "tin.com": "tin.it",
+    "tin.i": "tin.it",
+    "tiscali.com": "tiscali.it",
+    "tiscali.i": "tiscali.it",
+}
+
+EMAIL_TLD_SOSPETTI = (
+    ".i",
+    ".con",
+    ".cov",
+    ".cim",
+    ".comm",
+    ".vom",
+    ".xom",
+    ".ney",
+    ".neyt",
+)
+
+
+def normalizza_email_registrazione(email):
+    return (email or "").strip().lower().replace(" ", "")
+
+
+def analizza_email_registrazione(email):
+    """
+    Restituisce:
+    - None se non ci sono problemi evidenti
+    - dict con tipo/suggerimento/messaggio se l'email sembra sospetta
+    """
+    email = normalizza_email_registrazione(email)
+
+    if not email:
+        return {
+            "tipo": "formato",
+            "messaggio": "Inserisci un indirizzo email valido."
+        }
+
+    pattern_base = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    if not re.match(pattern_base, email):
+        return {
+            "tipo": "formato",
+            "messaggio": "L’indirizzo email non sembra valido."
+        }
+
+    try:
+        nome, dominio = email.split("@", 1)
+    except ValueError:
+        return {
+            "tipo": "formato",
+            "messaggio": "L’indirizzo email non sembra valido."
+        }
+
+    if not nome or not dominio or "." not in dominio:
+        return {
+            "tipo": "formato",
+            "messaggio": "L’indirizzo email sembra incompleto."
+        }
+
+    if dominio in EMAIL_ALIAS_MANUALI:
+        dominio_corretto = EMAIL_ALIAS_MANUALI[dominio]
+        return {
+            "tipo": "suggerimento",
+            "suggerimento": f"{nome}@{dominio_corretto}",
+            "messaggio": f"Forse intendevi {nome}@{dominio_corretto}?"
+        }
+
+    migliore = None
+    migliore_ratio = 0
+
+    for provider in EMAIL_PROVIDER_COMUNI:
+        ratio = SequenceMatcher(None, dominio, provider).ratio()
+
+        if ratio > migliore_ratio:
+            migliore_ratio = ratio
+            migliore = provider
+
+    if migliore and dominio != migliore and migliore_ratio >= 0.84:
+        return {
+            "tipo": "suggerimento",
+            "suggerimento": f"{nome}@{migliore}",
+            "messaggio": f"Forse intendevi {nome}@{migliore}?"
+        }
+
+    if dominio.endswith(EMAIL_TLD_SOSPETTI):
+        return {
+            "tipo": "tld_sospetto",
+            "messaggio": "Il dominio dell’indirizzo email sembra insolito. Controllalo bene."
+        }
+
+    return None
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -13789,7 +13973,8 @@ def register():
         nome = request.form['nome'].strip()
         cognome = request.form['cognome'].strip()
         citta = request.form['citta'].strip()
-        email = request.form['email'].strip().lower()
+        email = normalizza_email_registrazione(request.form['email'])
+        email_warning_confirmed = request.form.get("email_warning_confirmed") == "1"
         username = request.form['username'].strip().upper()
         password = request.form['password']
         conferma_password = request.form['conferma_password']
@@ -13809,10 +13994,27 @@ def register():
             flash(password_msg)
             return redirect(url_for('register'))
 
+        analisi_email = analizza_email_registrazione(email)
+
+        if analisi_email and not email_warning_confirmed:
+            if analisi_email.get("tipo") == "suggerimento":
+                flash(
+                    f"Controlla l’indirizzo email: hai scritto {email}. "
+                    f"Forse intendevi {analisi_email.get('suggerimento')}? "
+                    "Se l’email è sbagliata non riceverai il link di conferma."
+                )
+            else:
+                flash(
+                    f"Controlla l’indirizzo email: {email}. "
+                    "Sembra insolito o incompleto. "
+                    "Se è sbagliato non riceverai il link di conferma."
+                )
+
+            return redirect(url_for('register'))
 
         # 🔎 Provincia dal JSON
         info = get_comune_info(citta)
-
+        
         if not info:
             flash("Comune non valido. Selezionalo dall'elenco.")
             return redirect(url_for('register'))
