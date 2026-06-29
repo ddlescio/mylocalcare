@@ -14014,7 +14014,7 @@ def register():
 
         # 🔎 Provincia dal JSON
         info = get_comune_info(citta)
-        
+
         if not info:
             flash("Comune non valido. Selezionalo dall'elenco.")
             return redirect(url_for('register'))
@@ -17682,19 +17682,32 @@ def visualizza_annuncio_pubblico(id):
         if not g.utente or g.utente["id"] != annuncio["utente_id"]:
             return "Annuncio non ancora pubblicato.", 403
 
-    # ✅ SERVIZI — COME IN DASHBOARD
-    contatti_attivi = servizio_attivo_per_utente(
-        utente_id=annuncio["utente_id"],
-        codice_servizio="contatti"
-    )
+    # ✅ SERVIZI — CONTATTI
+    # I contatti diretti NON devono essere visibili agli utenti non loggati.
+    utente_loggato = bool(g.utente)
 
-    annuncio["contatti_visibili"] = bool(
-        contatti_attivi and (
-            (annuncio.get("email") or "").strip()
-            or
-            (annuncio.get("telefono") or "").strip()
+    contatti_attivi = False
+
+    if utente_loggato:
+        contatti_attivi = servizio_attivo_per_utente(
+            utente_id=annuncio["utente_id"],
+            codice_servizio="contatti"
         )
-    )
+
+        annuncio["contatti_visibili"] = bool(
+            contatti_attivi and (
+                (annuncio.get("email") or "").strip()
+                or
+                (annuncio.get("telefono") or "").strip()
+            )
+        )
+    else:
+        # 🔒 Anonimo: non solo nascondiamo i pulsanti,
+        # ma svuotiamo proprio i dati per evitare che finiscano nell'HTML.
+        annuncio["contatti_visibili"] = False
+        annuncio["email"] = ""
+        annuncio["telefono"] = ""
+
     # 🔁 Gestione intelligente del tasto “Torna”
     ref = request.referrer or ""
 
@@ -17714,7 +17727,8 @@ def visualizza_annuncio_pubblico(id):
 
     # --- Profilo pubblico dell’operatore ---
 @app.route("/profilo_operatore/<int:id>")
-def profilo_operatore(id):
+@login_required
+def profilo_operatore(id):    
     conn = get_db_connection()
 
     c = get_cursor(conn)
@@ -17731,6 +17745,7 @@ def profilo_operatore(id):
 from services import servizio_attivo_per_utente
 
 @app.route("/profilo/<int:id>")
+@login_required
 def profilo_pubblico(id):
     """Visualizza il profilo pubblico completo di un utente (stile Facebook)."""
     conn = get_db_connection()
