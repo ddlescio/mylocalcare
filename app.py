@@ -13965,6 +13965,69 @@ def analizza_email_registrazione(email):
 
     return None
 
+def username_contiene_email(username):
+    username = (username or "").strip().lower()
+
+    # email evidente
+    if "@" in username:
+        return True
+
+    # pattern tipo nome@gmail.com anche se scritto dentro altro testo
+    pattern_email = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
+    return bool(re.search(pattern_email, username))
+
+
+def username_contiene_telefono(username):
+    username = (username or "").strip()
+
+    # Tiene solo numeri
+    solo_numeri = re.sub(r"\D", "", username)
+
+    # Blocca numeri lunghi tipo telefono/cellulare
+    if len(solo_numeri) >= 8:
+        return True
+
+    # Blocca formati evidenti con prefissi
+    pattern_telefono = r"(\+39|0039|39)?[\s\-\.]*3\d{2}[\s\-\.]*\d{3}[\s\-\.]*\d{3,4}"
+    if re.search(pattern_telefono, username):
+        return True
+
+    return False
+
+
+def valida_username_pubblico(username):
+    """
+    Regole username pubblico:
+    - obbligatorio
+    - niente email
+    - niente telefono
+    - solo lettere, numeri, punto, underscore e trattino
+    - almeno 3 caratteri
+    - massimo 30 caratteri
+    """
+
+    username = (username or "").strip()
+
+    if not username:
+        return False, "Inserisci un ID utente."
+
+    if username_contiene_email(username):
+        return False, "L’ID utente non può essere un indirizzo email."
+
+    if username_contiene_telefono(username):
+        return False, "L’ID utente non può contenere un numero di telefono."
+
+    if len(username) < 3:
+        return False, "L’ID utente deve avere almeno 3 caratteri."
+
+    if len(username) > 30:
+        return False, "L’ID utente non può superare 30 caratteri."
+
+    if not re.match(r"^[A-Za-z0-9._-]+$", username):
+        return False, "L’ID utente può contenere solo lettere, numeri, punto, trattino e underscore."
+
+    return True, ""
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -13992,6 +14055,11 @@ def register():
         password_ok, password_msg = valida_password_minima(password)
         if not password_ok:
             flash(password_msg)
+            return redirect(url_for('register'))
+
+        username_ok, username_msg = valida_username_pubblico(username)
+        if not username_ok:
+            flash(username_msg)
             return redirect(url_for('register'))
 
         analisi_email = analizza_email_registrazione(email)
@@ -16773,6 +16841,11 @@ def modifica_username():
 
         nuovo = request.form.get("username", "").strip().upper()   # ✅ SALVA MAIUSCOLO
 
+        username_ok, username_msg = valida_username_pubblico(username)
+        if not username_ok:
+            flash(username_msg)
+            return redirect(url_for('register'))
+
         if nuovo:
             conn = get_db_connection()
             cur = get_cursor(conn)
@@ -17728,7 +17801,7 @@ def visualizza_annuncio_pubblico(id):
     # --- Profilo pubblico dell’operatore ---
 @app.route("/profilo_operatore/<int:id>")
 @login_required
-def profilo_operatore(id):    
+def profilo_operatore(id):
     conn = get_db_connection()
 
     c = get_cursor(conn)
