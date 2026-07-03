@@ -16841,11 +16841,11 @@ def modifica_username():
 
         nuovo = request.form.get("username", "").strip().upper()   # ✅ SALVA MAIUSCOLO
 
-        username_ok, username_msg = valida_username_pubblico(username)
+        username_ok, username_msg = valida_username_pubblico(nuovo)
         if not username_ok:
-            flash(username_msg)
-            return redirect(url_for('register'))
-
+            flash(username_msg, "error")
+            return redirect(url_for("modifica_username"))
+    
         if nuovo:
             conn = get_db_connection()
             cur = get_cursor(conn)
