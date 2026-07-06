@@ -442,6 +442,10 @@
 
         </div>
 
+        <p class="contatti-annuncio-note">
+          * I contatti saranno visibili dopo pubblicazione solo con servizio <strong>Contatti</strong> attivo in <strong>Aumenta visibilità</strong>. Se già attivo su un altro annuncio, restano visibili. Altrimenti gli utenti possono scriverti gratis in chat.
+        </p>
+
       </div>
 
       <!-- SEZIONE 4 -->
@@ -819,6 +823,35 @@
 
   </div>
 </div>
+
+<style>
+.contatti-annuncio-note {
+  margin-top: -0.3rem;
+  padding: 0.62rem 0.75rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(167, 243, 208, 0.95);
+  background: linear-gradient(180deg, rgba(236, 253, 245, 0.92), rgba(255, 255, 255, 0.88));
+  color: #475569;
+  font-size: 0.76rem;
+  line-height: 1.38;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.82),
+    0 5px 14px rgba(16,185,129,0.045);
+}
+
+.contatti-annuncio-note strong {
+  color: #047857;
+  font-weight: 750;
+}
+
+@media (max-width: 640px) {
+  .contatti-annuncio-note {
+    font-size: 0.72rem;
+    padding: 0.58rem 0.65rem;
+    border-radius: 0.82rem;
+  }
+}
+</style>
 
 {% endblock %}
 
