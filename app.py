@@ -10824,24 +10824,38 @@ def daily_matches_background_loop():
                                 channel=settings.get("channel", "internal")
                             )
 
-                            if result.get("ok"):
-                                redis_client.set(
-                                    last_run_key,
-                                    today_key,
-                                    ex=60 * 60 * 48
-                                )
-
-                            security_log(
-                                "✅ Daily Matches automatico eseguito",
-                                {
-                                    "date": today_key,
-                                    "time": current_hm,
-                                    "settings": settings,
-                                    "result": result
-                                },
-                                production=True
+                            # Segna comunque l'esecuzione giornaliera come tentata.
+                            # Se Daily Matches fallisce, non deve ripartire ogni minuto
+                            # saturando il pool DB.
+                            redis_client.set(
+                                last_run_key,
+                                today_key,
+                                ex=60 * 60 * 48
                             )
 
+                            if result.get("ok"):
+                                security_log(
+                                    "✅ Daily Matches automatico eseguito",
+                                    {
+                                        "date": today_key,
+                                        "time": current_hm,
+                                        "settings": settings,
+                                        "result": result
+                                    },
+                                    production=True
+                                )
+                            else:
+                                security_log(
+                                    "⚠️ Daily Matches automatico tentato ma fallito",
+                                    {
+                                        "date": today_key,
+                                        "time": current_hm,
+                                        "settings": settings,
+                                        "result": result
+                                    },
+                                    production=True
+                                )
+                                
                         finally:
                             try:
                                 valore_lock = redis_client.get(lock_key)
@@ -16845,7 +16859,7 @@ def modifica_username():
         if not username_ok:
             flash(username_msg, "error")
             return redirect(url_for("modifica_username"))
-    
+
         if nuovo:
             conn = get_db_connection()
             cur = get_cursor(conn)
