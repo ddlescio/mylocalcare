@@ -245,26 +245,54 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
     }
   }
 
+  let __lcPwaBadgeFetchInFlight = null;
+  let __lcPwaBadgeLastFetchAt = 0;
+
   async function lcRefreshPWABadgeFromServer() {
     try {
-      const res = await fetch("/pwa/badge_count", {
+      const now = Date.now();
+
+      // Se una richiesta badge è già in corso, riusa quella.
+      // Evita doppie chiamate partite nello stesso istante.
+      if (__lcPwaBadgeFetchInFlight) {
+        return __lcPwaBadgeFetchInFlight;
+      }
+
+      // Piccolo freno anti-raffica:
+      // evita richieste ripetute nello stesso secondo da focus/pageshow/visibilitychange.
+      if (now - __lcPwaBadgeLastFetchAt < 1500) {
+        return;
+      }
+
+      __lcPwaBadgeLastFetchAt = now;
+
+      __lcPwaBadgeFetchInFlight = fetch("/pwa/badge_count", {
         method: "GET",
         credentials: "same-origin",
         headers: {
           "Accept": "application/json"
         }
-      });
+      })
+        .then(async (res) => {
+          if (!res.ok) return;
 
-      if (!res.ok) return;
+          const data = await res.json();
+          await lcSetPWABadge(data.count || 0);
+        })
+        .catch((e) => {
+          console.warn("⚠️ Errore refresh badge icona PWA:", e);
+        })
+        .finally(() => {
+          __lcPwaBadgeFetchInFlight = null;
+        });
 
-      const data = await res.json();
-      await lcSetPWABadge(data.count || 0);
+      return __lcPwaBadgeFetchInFlight;
 
     } catch (e) {
       console.warn("⚠️ Errore refresh badge icona PWA:", e);
     }
   }
-
+  
   window.lcSetPWABadge = lcSetPWABadge;
   window.lcRefreshPWABadgeFromServer = lcRefreshPWABadgeFromServer;
 
