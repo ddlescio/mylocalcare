@@ -938,7 +938,13 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!isRipetizioni) {
       modalitaBox.classList.add("hidden");
       zonaSection.classList.remove("hidden");
+
+      zonaInput.disabled = false;
       zonaInput.required = true;
+
+      if (provinciaInput) {
+        provinciaInput.disabled = false;
+      }
 
       if (zonaInput.value === "Online") {
         zonaInput.value = "";
@@ -949,15 +955,18 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     modalitaBox.classList.remove("hidden");
-
+    
     const isOnline = getModalitaSelezionata() === "online";
 
     if (isOnline) {
       zonaSection.classList.add("hidden");
+
       zonaInput.required = false;
-      zonaInput.value = "Online";
+      zonaInput.disabled = true;
+      zonaInput.value = "";
 
       if (provinciaInput) {
+        provinciaInput.disabled = true;
         provinciaInput.value = "";
       }
 
@@ -965,7 +974,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     zonaSection.classList.remove("hidden");
+
+    zonaInput.disabled = false;
     zonaInput.required = true;
+
+    if (provinciaInput) {
+      provinciaInput.disabled = false;
+    }
 
     if (zonaInput.value === "Online") {
       zonaInput.value = "";
