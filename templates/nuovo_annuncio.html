@@ -583,7 +583,7 @@
 
       <div class="pt-2">
 
-        <button type="submit"
+        <button type="button"
 
                 id="submit-annuncio-btn"
                 class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3.5 rounded-2xl font-bold shadow-md transition">
@@ -955,7 +955,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     modalitaBox.classList.remove("hidden");
-    
+
     const isOnline = getModalitaSelezionata() === "online";
 
     if (isOnline) {
@@ -1795,8 +1795,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const submitBtn = document.getElementById("submit-annuncio-btn");
 
   if (submitBtn) {
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
+      submitBtn.addEventListener("click", function () {
 
       const draftBeforeValidation = collectDraftData();
 
@@ -1910,6 +1909,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (isNuovo) {
         sessionStorage.removeItem(storageKey);
+      }
+
+      if (isRipetizioniOnline) {
+        if (zona) {
+          zona.disabled = true;
+          zona.required = false;
+          zona.value = "";
+        }
+
+        const provinciaFinal = document.getElementById("zona_provincia");
+        if (provinciaFinal) {
+          provinciaFinal.disabled = true;
+          provinciaFinal.value = "";
+        }
       }
 
       form.submit();

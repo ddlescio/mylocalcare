@@ -220,6 +220,7 @@ def crea_tabella_annunci():
         filtri_categoria TEXT,
         zona TEXT,
         provincia TEXT,
+        modalita_servizio TEXT DEFAULT 'presenza',
         titolo TEXT NOT NULL,
         descrizione TEXT,
         bio_utente TEXT,
@@ -1342,6 +1343,16 @@ def aggiorna_colonne_mancanti():
         c.execute("ALTER TABLE annunci ADD COLUMN provincia TEXT;")
         print("✅ Colonna 'provincia' aggiunta a annunci.")
 
+    if "modalita_servizio" not in colonne_annunci:
+        c.execute("ALTER TABLE annunci ADD COLUMN modalita_servizio TEXT DEFAULT 'presenza';")
+        print("✅ Colonna 'modalita_servizio' aggiunta a annunci.")
+
+    c.execute("""
+        UPDATE annunci
+        SET modalita_servizio = 'presenza'
+        WHERE modalita_servizio IS NULL OR modalita_servizio = ''
+    """)        
+
     if "approvato_il" not in colonne_annunci:
         c.execute("ALTER TABLE annunci ADD COLUMN approvato_il TEXT;")
         print("✅ Colonna 'approvato_il' aggiunta a annunci.")
@@ -1480,7 +1491,7 @@ def crea_tabella_revisioni_profilo():
                 'foto_galleria'
             ));
         """)
-    
+
     c.execute(sql("""
         CREATE INDEX IF NOT EXISTS idx_revisioni_profilo_stato
         ON revisioni_profilo(stato);

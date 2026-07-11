@@ -389,13 +389,19 @@
         <span>Modifica</span>
       </a>
 
-      <a href="{{ url_for('elimina_annuncio', id=annuncio['id']) }}"
-         onclick="return confirm('Vuoi davvero eliminare questo annuncio?')"
-         class="annuncio-bottom-btn annuncio-bottom-btn-danger">
-        <span>🗑️</span>
-        <span>Elimina</span>
-      </a>
+      <form method="POST"
+            action="{{ url_for('elimina_annuncio', id=annuncio['id']) }}"
+            data-no-global-loader
+            onsubmit="return confirm('Vuoi davvero eliminare questo annuncio?');"
+            class="inline">
 
+        <button type="submit"
+                class="annuncio-bottom-btn annuncio-bottom-btn-danger">
+          <span>🗑️</span>
+          <span>Elimina</span>
+        </button>
+
+      </form>
     {% else %}
 
       <a href="{{ url_for('profilo_pubblico', id=annuncio['utente_id']) }}"
