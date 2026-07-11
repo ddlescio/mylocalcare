@@ -4594,6 +4594,18 @@ def admin_revisioni_profilo():
     c = get_cursor(conn)
 
     try:
+        try:
+            limite_gestite = int(request.args.get("limite_gestite", 10))
+        except Exception:
+            limite_gestite = 10
+
+        # Limite minimo 10, massimo 200 per non appesantire troppo la pagina
+        limite_gestite = max(10, min(limite_gestite, 200))
+
+        # Ne carichiamo una in più per capire se mostrare "Visualizza più revisioni"
+        limite_query = limite_gestite + 1
+        prossimo_limite = min(limite_gestite + 20, 200)
+
         if app.config.get("IS_POSTGRES"):
             query = """
                 WITH ultime_revisioni AS (
@@ -4636,6 +4648,7 @@ def admin_revisioni_profilo():
                     rp.testo_precedente,
                     rp.testo_proposto,
                     rp.stato,
+                    rp.posizione_gestite,
                     rp.data_modifica,
                     rp.data_decisione,
                     rp.deciso_da,
@@ -4659,7 +4672,7 @@ def admin_revisioni_profilo():
 
                 WHERE
                     rp.stato = 'in_attesa'
-                    OR COALESCE(rp.posizione_gestite, 0) <= 10
+                    OR COALESCE(rp.posizione_gestite, 0) <= ?
 
                 ORDER BY
                     CASE
@@ -4713,6 +4726,7 @@ def admin_revisioni_profilo():
                     rp.testo_precedente,
                     rp.testo_proposto,
                     rp.stato,
+                    rp.posizione_gestite,
                     rp.data_modifica,
                     rp.data_decisione,
                     rp.deciso_da,
@@ -4736,7 +4750,7 @@ def admin_revisioni_profilo():
 
                 WHERE
                     rp.stato = 'in_attesa'
-                    OR COALESCE(rp.posizione_gestite, 0) <= 10
+                    OR COALESCE(rp.posizione_gestite, 0) <= ?
 
                 ORDER BY
                     CASE
@@ -4749,8 +4763,22 @@ def admin_revisioni_profilo():
                     rp.id DESC
             """
 
-        c.execute(sql(query))
-        revisioni = [dict(r) for r in c.fetchall()]
+        c.execute(sql(query), (limite_query,))
+        revisioni_raw = [dict(r) for r in c.fetchall()]
+
+        ha_altre_revisioni = any(
+            (r.get("stato") != "in_attesa")
+            and r.get("posizione_gestite")
+            and int(r.get("posizione_gestite")) > limite_gestite
+            for r in revisioni_raw
+        )
+
+        revisioni = [
+            r for r in revisioni_raw
+            if r.get("stato") == "in_attesa"
+            or not r.get("posizione_gestite")
+            or int(r.get("posizione_gestite")) <= limite_gestite
+        ]
 
     finally:
         try:
@@ -4760,9 +4788,12 @@ def admin_revisioni_profilo():
 
     return render_template(
         "admin_revisioni_profilo.html",
-        revisioni=revisioni
+        revisioni=revisioni,
+        limite_gestite=limite_gestite,
+        prossimo_limite=prossimo_limite,
+        ha_altre_revisioni=ha_altre_revisioni
     )
-
+    
 @app.route("/admin/revisioni-profilo/<int:revision_id>/azione", methods=["POST"])
 @admin_required
 def admin_revisioni_profilo_azione(revision_id):

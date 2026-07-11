@@ -262,6 +262,20 @@
     </div>
   </div>
 
+  {% if ha_altre_revisioni %}
+    <div class="mt-6 flex flex-col items-center justify-center gap-2">
+      <a href="{{ url_for('admin_revisioni_profilo', limite_gestite=prossimo_limite) }}"
+         class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 text-white text-sm font-bold shadow-sm hover:bg-slate-800 transition">
+        <span>＋</span>
+        <span>Visualizza più revisioni</span>
+      </a>
+
+      <p class="text-xs text-slate-500">
+        Ora mostri le ultime {{ limite_gestite }} revisioni già gestite. Le revisioni in attesa sono sempre mostrate.
+      </p>
+    </div>
+  {% endif %}
+
   {% endif %}
 </div>
 
@@ -1266,7 +1280,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chiudiModale();
     }
   });
-  
+
   approvaBtn.addEventListener("click", () => inviaAzione("approva"));
   rifiutaBtn.addEventListener("click", () => inviaAzione("rifiuta"));
 });
