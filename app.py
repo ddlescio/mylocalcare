@@ -4762,7 +4762,7 @@ def admin_revisioni_profilo():
         "admin_revisioni_profilo.html",
         revisioni=revisioni
     )
-    
+
 @app.route("/admin/revisioni-profilo/<int:revision_id>/azione", methods=["POST"])
 @admin_required
 def admin_revisioni_profilo_azione(revision_id):
@@ -11400,9 +11400,23 @@ def modifica_annuncio(id):
         categoria = to_slug(raw_categoria)
         tipo_annuncio = request.form.get("tipo_annuncio", "").strip().lower()
 
-        # 🔹 ZONA + PROVINCIA
+        # 🔹 MODALITÀ SERVIZIO + ZONA / PROVINCIA
+        modalita_servizio = request.form.get("modalita_servizio", "presenza").strip().lower()
+
+        if categoria != "ripetizioni":
+            modalita_servizio = "presenza"
+
+        if modalita_servizio not in ("presenza", "online"):
+            modalita_servizio = "presenza"
+
         zona = request.form.get("zona", "").strip()
-        provincia = request.form.get("provincia", "").strip()
+        provincia = request.form.get("provincia", "").strip() or None
+
+        if categoria == "ripetizioni" and modalita_servizio == "online":
+            zona = "Online"
+            provincia = None
+        else:
+            modalita_servizio = "presenza"
 
         # 🔹 ALTRI CAMPI
         prezzo = request.form.get("prezzo", "").strip()
@@ -11439,11 +11453,10 @@ def modifica_annuncio(id):
             flash("Devi specificare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
 
-        if not zona or not provincia:
+        if modalita_servizio != "online" and (not zona or not provincia):
 
             flash("Seleziona un comune valido dall’elenco.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
-
         # =====================================================
         # 📸 MEDIA – gestione immagini
         # =====================================================
@@ -11511,6 +11524,7 @@ def modifica_annuncio(id):
                 tipo_annuncio = ?,
                 zona = ?,
                 provincia = ?,
+                modalita_servizio = ?,
                 prezzo = ?,
                 telefono = ?,
                 email = ?,
@@ -11527,6 +11541,7 @@ def modifica_annuncio(id):
             tipo_annuncio,
             zona,
             provincia,
+            modalita_servizio,
             prezzo,
             telefono,
             email,
@@ -15392,6 +15407,8 @@ def cerca():
 
     provincia_query = provincia_filtro or provincia_attiva or "__INVALID__"
 
+    is_ripetizioni = (json_key == "ripetizioni")
+
     # =========================================================
     # FILTRI CATEGORIA — letti da DB
     # =========================================================
@@ -15511,7 +15528,13 @@ def cerca():
             AND u.attivo = 1
             AND u.sospeso = 0
             AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
-            AND a.provincia = ?
+            AND (
+                a.provincia = ?
+                OR (
+                    a.categoria = 'ripetizioni'
+                    AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
+                )
+            )
             AND EXISTS (
                 SELECT 1
                 FROM attivazioni_servizi act
@@ -15535,8 +15558,17 @@ def cerca():
         params_vetrina.append(tipo_annuncio)
 
     if zona:
-        query_vetrina += " AND a.zona = ?"
-        params_vetrina.append(zona)
+        if is_ripetizioni:
+            query_vetrina += """
+                AND (
+                    a.zona = ?
+                    OR COALESCE(a.modalita_servizio, 'presenza') = 'online'
+                )
+            """
+            params_vetrina.append(zona)
+        else:
+            query_vetrina += " AND a.zona = ?"
+            params_vetrina.append(zona)
 
     for f_att in filtri_attivi:
         query_vetrina += " AND a.filtri_categoria LIKE ?"
@@ -15636,7 +15668,13 @@ def cerca():
               AND u.foto_profilo IS NOT NULL
               AND u.foto_profilo != ''
               AND (u.ruolo IS NULL OR u.ruolo != 'admin')
-              AND a.provincia = ?
+              AND (
+                  a.provincia = ?
+                  OR (
+                      a.categoria = 'ripetizioni'
+                      AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
+                  )
+              )
     """
 
     params = [provincia_query]
@@ -15650,8 +15688,17 @@ def cerca():
         params.append(tipo_annuncio)
 
     if zona:
-        query_annunci += " AND a.zona = ?"
-        params.append(zona)
+        if is_ripetizioni:
+            query_annunci += """
+                AND (
+                    a.zona = ?
+                    OR COALESCE(a.modalita_servizio, 'presenza') = 'online'
+                )
+            """
+            params.append(zona)
+        else:
+            query_annunci += " AND a.zona = ?"
+            params.append(zona)
 
     for f_att in filtri_attivi:
         query_annunci += " AND a.filtri_categoria LIKE ?"
@@ -17828,9 +17875,23 @@ def nuovo_annuncio():
             )
             return redirect(url_for("nuovo_annuncio"))
 
-        # 🔹 ZONA + PROVINCIA
+        # 🔹 MODALITÀ SERVIZIO + ZONA / PROVINCIA
+        modalita_servizio = request.form.get("modalita_servizio", "presenza").strip().lower()
+
+        if categoria != "ripetizioni":
+            modalita_servizio = "presenza"
+
+        if modalita_servizio not in ("presenza", "online"):
+            modalita_servizio = "presenza"
+
         zona = request.form.get("zona", "").strip()
         provincia = request.form.get("provincia", "").strip() or None
+
+        if categoria == "ripetizioni" and modalita_servizio == "online":
+            zona = "Online"
+            provincia = None
+        else:
+            modalita_servizio = "presenza"
 
         # 🔹 ALTRI CAMPI
         filtri = request.form.getlist("filtri_categoria")
@@ -17856,7 +17917,7 @@ def nuovo_annuncio():
             flash("Devi selezionare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("nuovo_annuncio"))
 
-        if not zona:
+        if modalita_servizio != "online" and not zona:
 
             flash("Seleziona una zona o un comune dall’elenco.", "warning")
             return redirect(url_for("nuovo_annuncio"))
@@ -17927,6 +17988,7 @@ def nuovo_annuncio():
                 bio_utente,
                 zona,
                 provincia,
+                modalita_servizio,
                 filtri_categoria,
                 media,
                 foto_card,
@@ -17934,7 +17996,7 @@ def nuovo_annuncio():
                 telefono,
                 email,
                 stato
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_attesa')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_attesa')
         """), (
             utente["id"],
             username_modificato,
@@ -17945,6 +18007,7 @@ def nuovo_annuncio():
             bio,
             zona,
             provincia,
+            modalita_servizio,
             ",".join(filtri),
             ",".join(media_paths),
             foto_card,

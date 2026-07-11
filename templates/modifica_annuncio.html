@@ -40,7 +40,7 @@
     {% set current_prezzo = annuncio['prezzo'] if modalita == 'modifica' else (request.form.get('prezzo', '')) %}
     {% set current_telefono = annuncio['telefono'] if modalita == 'modifica' else (request.form.get('telefono', '')) %}
     {% set current_email = annuncio['email'] if modalita == 'modifica' else (request.form.get('email', '')) %}
-
+    {% set current_modalita_servizio = annuncio['modalita_servizio'] if modalita == 'modifica' and annuncio['modalita_servizio'] else (request.form.get('modalita_servizio') or 'presenza') %}
     <form id="annuncio-form"
           method="POST"
           enctype="multipart/form-data"
@@ -188,8 +188,58 @@
 
         </div>
 
+        <!-- Modalità ripetizioni -->
+        <div id="modalita-ripetizioni-box"
+             class="hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-blue-50 p-4 sm:p-5 shadow-sm">
+
+          <label class="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
+            <span>💻 Modalità ripetizioni</span>
+            <span class="text-blue-600 font-extrabold">*</span>
+          </label>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            <label class="cursor-pointer">
+              <input type="radio"
+                     name="modalita_servizio"
+                     value="presenza"
+                     class="hidden peer"
+                     {% if current_modalita_servizio != 'online' %}checked{% endif %}>
+
+              <span class="block h-full rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-sm transition
+                           peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-4 peer-checked:ring-blue-100">
+                <span class="block text-base font-extrabold text-slate-900">
+                  📍 In presenza
+                </span>
+                <span class="mt-1 block text-sm text-slate-600 leading-relaxed">
+                  L’annuncio comparirà nella zona e nella provincia selezionate.
+                </span>
+              </span>
+            </label>
+
+            <label class="cursor-pointer">
+              <input type="radio"
+                     name="modalita_servizio"
+                     value="online"
+                     class="hidden peer"
+                     {% if current_modalita_servizio == 'online' %}checked{% endif %}>
+
+              <span class="block h-full rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-sm transition
+                           peer-checked:border-indigo-500 peer-checked:bg-indigo-50 peer-checked:ring-4 peer-checked:ring-indigo-100">
+                <span class="block text-base font-extrabold text-slate-900">
+                  💻 Online
+                </span>
+                <span class="mt-1 block text-sm text-slate-600 leading-relaxed">
+                  L’annuncio sarà visibile nella categoria Ripetizioni in tutta Italia.
+                </span>
+              </span>
+            </label>
+
+          </div>
+        </div>
+
         <!-- Zona -->
-        <div class="relative space-y-2">
+        <div id="zona-section" class="relative space-y-2">
           <label for="zona" class="flex items-center gap-1.5 text-base font-bold text-slate-800">
             <span>Zona</span>
             <span class="text-blue-600 font-extrabold">*</span>
@@ -744,6 +794,79 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const categoria = document.getElementById("categoria");
+  const modalitaBox = document.getElementById("modalita-ripetizioni-box");
+  const zonaSection = document.getElementById("zona-section");
+  const zonaInput = document.getElementById("zona-autocomplete");
+  const provinciaInput = document.getElementById("zona_provincia");
+  const modalitaRadios = document.querySelectorAll('input[name="modalita_servizio"]');
+
+  if (!categoria || !modalitaBox || !zonaSection || !zonaInput) return;
+
+  function getModalitaSelezionata() {
+    const checked = document.querySelector('input[name="modalita_servizio"]:checked');
+    return checked ? checked.value : "presenza";
+  }
+
+  function forzaPresenza() {
+    const presenza = document.querySelector('input[name="modalita_servizio"][value="presenza"]');
+    if (presenza) presenza.checked = true;
+  }
+
+  function aggiornaModalitaRipetizioni() {
+    const isRipetizioni = (categoria.value || "").trim() === "ripetizioni";
+
+    if (!isRipetizioni) {
+      modalitaBox.classList.add("hidden");
+      zonaSection.classList.remove("hidden");
+      zonaInput.required = true;
+
+      if (zonaInput.value === "Online") {
+        zonaInput.value = "";
+      }
+
+      forzaPresenza();
+      return;
+    }
+
+    modalitaBox.classList.remove("hidden");
+
+    const isOnline = getModalitaSelezionata() === "online";
+
+    if (isOnline) {
+      zonaSection.classList.add("hidden");
+      zonaInput.required = false;
+      zonaInput.value = "Online";
+
+      if (provinciaInput) {
+        provinciaInput.value = "";
+      }
+
+      return;
+    }
+
+    zonaSection.classList.remove("hidden");
+    zonaInput.required = true;
+
+    if (zonaInput.value === "Online") {
+      zonaInput.value = "";
+    }
+  }
+
+  categoria.addEventListener("change", aggiornaModalitaRipetizioni);
+
+  modalitaRadios.forEach((radio) => {
+    radio.addEventListener("change", aggiornaModalitaRipetizioni);
+  });
+
+  aggiornaModalitaRipetizioni();
+  setTimeout(aggiornaModalitaRipetizioni, 100);
+});
+</script>
+
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const openBtn = document.getElementById("open-ai-writing-helper");
@@ -1551,6 +1674,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const tipo = document.querySelector('input[name="tipo_annuncio"]:checked');
       const categoria = document.getElementById("categoria");
       const zona = document.getElementById("zona-autocomplete");
+      const modalitaServizio = document.querySelector('input[name="modalita_servizio"]:checked');
+      const isRipetizioniOnline =
+        categoria &&
+        categoria.value.trim() === "ripetizioni" &&
+        modalitaServizio &&
+        modalitaServizio.value === "online";
       const titolo = document.getElementById("titolo");
       const descrizione = document.getElementById("descrizione");
 
@@ -1594,7 +1723,7 @@ document.addEventListener("DOMContentLoaded", function () {
         errori.push("Seleziona almeno un filtro specifico per la categoria scelta.");
       }
 
-      if (!zona || !zona.value.trim()) {
+      if (!isRipetizioniOnline && (!zona || !zona.value.trim())) {
         errori.push("Inserisci una zona o un comune.");
       }
 
@@ -1621,7 +1750,7 @@ document.addEventListener("DOMContentLoaded", function () {
           (!tipo && document.querySelector('input[name="tipo_annuncio"]')) ||
           (!categoria?.value.trim() && categoria) ||
           (categoriaHaFiltri && !almenoUnFiltroSelezionato && filtriContainer) ||
-          (!zona?.value.trim() && zona) ||
+          (!isRipetizioniOnline && !zona?.value.trim() && zona) ||
           (!titolo?.value.trim() && titolo) ||
           (!descrizione?.value.trim() && descrizione);
 

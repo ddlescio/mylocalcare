@@ -299,7 +299,11 @@
             {% endif %}
 
             <div class="vetrina-ticket-meta">
-              {% if a['zona'] %}
+              {% if a.get('modalita_servizio') == 'online' %}
+                <span class="vetrina-ticket-location">
+                  💻 Online · tutta Italia
+                </span>
+              {% elif a['zona'] %}
                 <span class="vetrina-ticket-location">
                   📍 {{ a['zona'] }}
                 </span>
@@ -397,7 +401,11 @@
           {% endif %}
 
           <div class="vetrina-ticket-desktop-meta">
-            {% if a['zona'] %}
+            {% if a.get('modalita_servizio') == 'online' %}
+              <span class="vetrina-ticket-desktop-location">
+                💻 Online · tutta Italia
+              </span>
+            {% elif a['zona'] %}
               <span class="vetrina-ticket-desktop-location">
                 📍 {{ a['zona'] }}
               </span>
@@ -473,7 +481,7 @@
       {% else %}
         {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
       {% endif %}
-      
+
       {% if a.get('affidabilita_top', 0) == 1 %}
         <div class="card-trust-clip-wrap">
           <div class="badge-affidabilita-top badge-affidabilita-top-clip" title="Basato su recensioni verificate">
@@ -499,13 +507,19 @@
             </span>
           </div>
 
-          {% if a['zona'] %}
+          {% if a.get('modalita_servizio') == 'online' %}
+            <div class="card-hero-bottom">
+              <span class="card-hero-location">
+                💻 Online · tutta Italia
+              </span>
+            </div>
+          {% elif a['zona'] %}
             <div class="card-hero-bottom">
               <span class="card-hero-location">
                 {{ a['zona'] }}
               </span>
             </div>
-          {% endif %}
+          {% endif %}          
         </div>
 
         <div class="mini-card-dati">
