@@ -4604,7 +4604,31 @@ def admin_revisioni_profilo():
                             ORDER BY rp.data_modifica DESC, rp.id DESC
                         ) AS rn
                     FROM revisioni_profilo rp
+                ),
+                base AS (
+                    SELECT *
+                    FROM ultime_revisioni
+                    WHERE rn = 1
+                ),
+                ordinate AS (
+                    SELECT
+                        b.*,
+
+                        CASE
+                            WHEN b.stato <> 'in_attesa'
+                            THEN ROW_NUMBER() OVER (
+                                PARTITION BY CASE
+                                    WHEN b.stato <> 'in_attesa' THEN 1
+                                    ELSE 0
+                                END
+                                ORDER BY b.data_modifica DESC, b.id DESC
+                            )
+                            ELSE NULL
+                        END AS posizione_gestite
+
+                    FROM base b
                 )
+
                 SELECT
                     rp.id AS revisione_id,
                     rp.utente_id,
@@ -4630,10 +4654,12 @@ def admin_revisioni_profilo():
                         ELSE ''
                     END AS testo_pubblico_attuale
 
-                FROM ultime_revisioni rp
+                FROM ordinate rp
                 JOIN utenti u ON u.id = rp.utente_id
 
-                WHERE rp.rn = 1
+                WHERE
+                    rp.stato = 'in_attesa'
+                    OR COALESCE(rp.posizione_gestite, 0) <= 10
 
                 ORDER BY
                     CASE
@@ -4644,7 +4670,6 @@ def admin_revisioni_profilo():
                     END,
                     rp.data_modifica DESC,
                     rp.id DESC
-                LIMIT 300
             """
         else:
             query = """
@@ -4656,7 +4681,31 @@ def admin_revisioni_profilo():
                             ORDER BY rp.data_modifica DESC, rp.id DESC
                         ) AS rn
                     FROM revisioni_profilo rp
+                ),
+                base AS (
+                    SELECT *
+                    FROM ultime_revisioni
+                    WHERE rn = 1
+                ),
+                ordinate AS (
+                    SELECT
+                        b.*,
+
+                        CASE
+                            WHEN b.stato <> 'in_attesa'
+                            THEN ROW_NUMBER() OVER (
+                                PARTITION BY CASE
+                                    WHEN b.stato <> 'in_attesa' THEN 1
+                                    ELSE 0
+                                END
+                                ORDER BY b.data_modifica DESC, b.id DESC
+                            )
+                            ELSE NULL
+                        END AS posizione_gestite
+
+                    FROM base b
                 )
+
                 SELECT
                     rp.id AS revisione_id,
                     rp.utente_id,
@@ -4682,10 +4731,12 @@ def admin_revisioni_profilo():
                         ELSE ''
                     END AS testo_pubblico_attuale
 
-                FROM ultime_revisioni rp
+                FROM ordinate rp
                 JOIN utenti u ON u.id = rp.utente_id
 
-                WHERE rp.rn = 1
+                WHERE
+                    rp.stato = 'in_attesa'
+                    OR COALESCE(rp.posizione_gestite, 0) <= 10
 
                 ORDER BY
                     CASE
@@ -4696,7 +4747,6 @@ def admin_revisioni_profilo():
                     END,
                     rp.data_modifica DESC,
                     rp.id DESC
-                LIMIT 300
             """
 
         c.execute(sql(query))
@@ -4712,7 +4762,7 @@ def admin_revisioni_profilo():
         "admin_revisioni_profilo.html",
         revisioni=revisioni
     )
-
+    
 @app.route("/admin/revisioni-profilo/<int:revision_id>/azione", methods=["POST"])
 @admin_required
 def admin_revisioni_profilo_azione(revision_id):
@@ -7245,6 +7295,283 @@ def admin_utenti():
         totale_utenti=totale_utenti,
         totale_filtrati=totale_filtrati,
         has_filters=has_filters
+    )
+
+# ==========================================================
+# ADMIN – REPORT TERRITORIALE UTENTI / ANNUNCI
+# ==========================================================
+
+def _admin_utenti_report_data():
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    deleted_email_pattern_1 = "deleted_user_%@deleted.local"
+    deleted_email_pattern_2 = "deleted_user_%@mylocalcare.local"
+    deleted_username_pattern = "utente_eliminato_%"
+
+    report_map = {}
+
+    def norm_provincia(value):
+        value = (value or "").strip().upper()
+        return value if value else "ND"
+
+    def norm_comune(value):
+        value = (value or "").strip()
+        return value if value else "Non indicato"
+
+    def ensure_node(provincia, comune=None):
+        provincia = norm_provincia(provincia)
+
+        if provincia not in report_map:
+            report_map[provincia] = {
+                "provincia": provincia,
+                "utenti": 0,
+                "annunci_attivi": 0,
+                "comuni": {}
+            }
+
+        if comune is not None:
+            comune = norm_comune(comune)
+
+            if comune not in report_map[provincia]["comuni"]:
+                report_map[provincia]["comuni"][comune] = {
+                    "comune": comune,
+                    "utenti": 0,
+                    "annunci_attivi": 0
+                }
+
+            return report_map[provincia]["comuni"][comune]
+
+        return report_map[provincia]
+
+    # =====================================================
+    # UTENTI REALI PER PROVINCIA / COMUNE
+    # Esclude account anonimizzati/eliminati
+    # =====================================================
+    c.execute(sql("""
+        SELECT
+            CASE
+                WHEN TRIM(COALESCE(provincia, '')) = ''
+                THEN 'ND'
+                ELSE UPPER(TRIM(provincia))
+            END AS provincia,
+
+            CASE
+                WHEN TRIM(COALESCE(citta, '')) = ''
+                THEN 'Non indicato'
+                ELSE TRIM(citta)
+            END AS comune,
+
+            COUNT(*) AS totale_utenti
+
+        FROM utenti
+        WHERE COALESCE(email, '') NOT ILIKE ?
+          AND COALESCE(email, '') NOT ILIKE ?
+          AND COALESCE(username, '') NOT ILIKE ?
+
+        GROUP BY
+            CASE
+                WHEN TRIM(COALESCE(provincia, '')) = ''
+                THEN 'ND'
+                ELSE UPPER(TRIM(provincia))
+            END,
+            CASE
+                WHEN TRIM(COALESCE(citta, '')) = ''
+                THEN 'Non indicato'
+                ELSE TRIM(citta)
+            END
+    """), (
+        deleted_email_pattern_1,
+        deleted_email_pattern_2,
+        deleted_username_pattern
+    ))
+
+    for row in c.fetchall():
+        provincia = row["provincia"]
+        comune = row["comune"]
+        totale_utenti = int(row["totale_utenti"] or 0)
+
+        prov_node = ensure_node(provincia)
+        comune_node = ensure_node(provincia, comune)
+
+        prov_node["utenti"] += totale_utenti
+        comune_node["utenti"] += totale_utenti
+
+    # =====================================================
+    # ANNUNCI ATTIVI PER PROVINCIA / COMUNE
+    # Nel progetto gli annunci attivi/pubblici sono stato='approvato'
+    # Comune = zona dell'annuncio
+    # =====================================================
+    c.execute(sql("""
+        SELECT
+            CASE
+                WHEN TRIM(COALESCE(a.provincia, '')) = ''
+                THEN 'ND'
+                ELSE UPPER(TRIM(a.provincia))
+            END AS provincia,
+
+            CASE
+                WHEN TRIM(COALESCE(a.zona, '')) = ''
+                THEN 'Non indicato'
+                ELSE TRIM(a.zona)
+            END AS comune,
+
+            COUNT(*) AS totale_annunci
+
+        FROM annunci a
+        LEFT JOIN utenti u ON u.id = a.utente_id
+
+        WHERE a.stato = 'approvato'
+          AND COALESCE(u.email, '') NOT ILIKE ?
+          AND COALESCE(u.email, '') NOT ILIKE ?
+          AND COALESCE(u.username, '') NOT ILIKE ?
+
+        GROUP BY
+            CASE
+                WHEN TRIM(COALESCE(a.provincia, '')) = ''
+                THEN 'ND'
+                ELSE UPPER(TRIM(a.provincia))
+            END,
+            CASE
+                WHEN TRIM(COALESCE(a.zona, '')) = ''
+                THEN 'Non indicato'
+                ELSE TRIM(a.zona)
+            END
+    """), (
+        deleted_email_pattern_1,
+        deleted_email_pattern_2,
+        deleted_username_pattern
+    ))
+
+    for row in c.fetchall():
+        provincia = row["provincia"]
+        comune = row["comune"]
+        totale_annunci = int(row["totale_annunci"] or 0)
+
+        prov_node = ensure_node(provincia)
+        comune_node = ensure_node(provincia, comune)
+
+        prov_node["annunci_attivi"] += totale_annunci
+        comune_node["annunci_attivi"] += totale_annunci
+
+    report = []
+
+    for provincia_key in sorted(report_map.keys()):
+        prov = report_map[provincia_key]
+
+        comuni = list(prov["comuni"].values())
+        comuni.sort(
+            key=lambda x: (
+                -(int(x["utenti"] or 0) + int(x["annunci_attivi"] or 0)),
+                x["comune"].lower()
+            )
+        )
+
+        report.append({
+            "provincia": prov["provincia"],
+            "utenti": prov["utenti"],
+            "annunci_attivi": prov["annunci_attivi"],
+            "comuni": comuni
+        })
+
+    report.sort(
+        key=lambda x: (
+            -(int(x["utenti"] or 0) + int(x["annunci_attivi"] or 0)),
+            x["provincia"]
+        )
+    )
+
+    totale_utenti = sum(int(p["utenti"] or 0) for p in report)
+    totale_annunci = sum(int(p["annunci_attivi"] or 0) for p in report)
+
+    return {
+        "totale_utenti": totale_utenti,
+        "totale_annunci_attivi": totale_annunci,
+        "province": report
+    }
+
+
+@app.route("/admin/utenti/report")
+@admin_required
+def admin_utenti_report():
+    data = _admin_utenti_report_data()
+    return jsonify({
+        "ok": True,
+        "report": data
+    })
+
+
+@app.route("/admin/utenti/report/excel")
+@admin_required
+def admin_utenti_report_excel():
+    data = _admin_utenti_report_data()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Report territoriale"
+
+    headers = [
+        "Provincia",
+        "Comune",
+        "Utenti",
+        "Annunci attivi"
+    ]
+
+    ws.append(headers)
+
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="2563EB")
+        cell.alignment = Alignment(horizontal="center")
+
+    for provincia in data["province"]:
+        # Riga totale provincia
+        ws.append([
+            provincia["provincia"],
+            "TOTALE PROVINCIA",
+            provincia["utenti"],
+            provincia["annunci_attivi"]
+        ])
+
+        prov_row = ws.max_row
+
+        for cell in ws[prov_row]:
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill("solid", fgColor="DBEAFE")
+
+        # Righe comuni
+        for comune in provincia["comuni"]:
+            ws.append([
+                provincia["provincia"],
+                comune["comune"],
+                comune["utenti"],
+                comune["annunci_attivi"]
+            ])
+
+    ws.column_dimensions["A"].width = 16
+    ws.column_dimensions["B"].width = 34
+    ws.column_dimensions["C"].width = 14
+    ws.column_dimensions["D"].width = 18
+
+    for row in ws.iter_rows():
+        for cell in row:
+            cell.alignment = Alignment(vertical="center")
+            cell.border = Border(
+                left=Side(style="thin", color="E5E7EB"),
+                right=Side(style="thin", color="E5E7EB"),
+                top=Side(style="thin", color="E5E7EB"),
+                bottom=Side(style="thin", color="E5E7EB")
+            )
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="report_utenti_annunci_territorio.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 @app.route("/admin/utenti/toggle/<int:id>")
@@ -10855,7 +11182,7 @@ def daily_matches_background_loop():
                                     },
                                     production=True
                                 )
-                                
+
                         finally:
                             try:
                                 valore_lock = redis_client.get(lock_key)
