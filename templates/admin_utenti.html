@@ -84,6 +84,334 @@
     color: #2563eb;
 }
 
+/* ====== REPORT TERRITORIO ====== */
+.admin-report-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin: -4px 0 16px;
+}
+
+.admin-report-open-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #0f172a, #1e293b);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border: none;
+    box-shadow:
+        0 8px 20px rgba(15, 23, 42, 0.18),
+        inset 0 1px 0 rgba(255,255,255,0.14);
+    transition: all 0.18s ease;
+}
+
+.admin-report-open-btn:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        0 12px 26px rgba(15, 23, 42, 0.22),
+        inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+.admin-report-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.admin-report-backdrop.is-open {
+    display: flex;
+}
+
+.admin-report-modal {
+    width: min(980px, 100%);
+    max-height: min(84vh, 760px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 28px;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+}
+
+.admin-report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.admin-report-title {
+    font-size: 1.15rem;
+    font-weight: 850;
+    color: #0f172a;
+}
+
+.admin-report-subtitle {
+    margin-top: 4px;
+    font-size: 0.82rem;
+    color: #64748b;
+}
+
+.admin-report-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.admin-report-excel-btn {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    border-radius: 9999px;
+    background: #16a34a;
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 0 8px 18px rgba(22, 163, 74, 0.18);
+}
+
+.admin-report-close {
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.admin-report-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.admin-report-summary-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 12px 14px;
+}
+
+.admin-report-summary-label {
+    font-size: 0.72rem;
+    color: #64748b;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.admin-report-summary-value {
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #0f172a;
+    font-weight: 850;
+}
+
+.admin-report-body {
+    overflow: auto;
+    padding: 14px 20px 20px;
+}
+
+.admin-report-loading,
+.admin-report-empty {
+    padding: 24px;
+    text-align: center;
+    color: #64748b;
+    font-weight: 650;
+}
+
+.admin-report-province {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.admin-report-province details {
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: white;
+    overflow: hidden;
+}
+
+.admin-report-province summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto 18px;
+    gap: 10px;
+    align-items: center;
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.admin-report-province summary::-webkit-details-marker {
+    display: none;
+}
+
+.admin-report-province summary::after {
+    content: "▾";
+    color: #64748b;
+    font-size: 0.9rem;
+    transition: transform 0.16s ease;
+}
+
+.admin-report-province details[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.admin-report-prov-name {
+    min-width: 0;
+    font-weight: 900;
+    color: #0f172a;
+    font-size: 0.98rem;
+}
+
+.admin-report-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 96px;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 9999px;
+    font-size: 0.76rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.admin-report-pill.users {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.admin-report-pill.ads {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.admin-report-comuni {
+    border-top: 1px solid #e2e8f0;
+    padding: 10px;
+    background: #f8fafc;
+}
+
+.admin-report-comune-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px 96px;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 11px;
+    border-radius: 14px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 7px;
+}
+
+.admin-report-comune-row:last-child {
+    margin-bottom: 0;
+}
+
+.admin-report-comune-name {
+    min-width: 0;
+    color: #334155;
+    font-size: 0.85rem;
+    font-weight: 750;
+}
+
+.admin-report-small-count {
+    text-align: center;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+@media (max-width: 640px) {
+    .admin-report-toolbar {
+        justify-content: stretch;
+    }
+
+    .admin-report-open-btn {
+        width: 100%;
+    }
+
+    .admin-report-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .admin-report-modal {
+        max-height: 88vh;
+        border-radius: 28px 28px 0 0;
+    }
+
+    .admin-report-header {
+        padding: 16px;
+    }
+
+    .admin-report-actions {
+        flex-direction: column-reverse;
+        align-items: flex-end;
+    }
+
+    .admin-report-summary {
+        padding: 12px 16px;
+    }
+
+    .admin-report-body {
+        padding: 12px 16px 18px;
+    }
+
+    .admin-report-province summary {
+        grid-template-columns: minmax(0, 1fr) 18px;
+    }
+
+    .admin-report-province summary::after {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .admin-report-prov-name {
+        grid-column: 1;
+    }
+
+    .admin-report-province summary .admin-report-pill {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+        width: fit-content;
+    }
+
+    .admin-report-comune-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-report-small-count {
+        text-align: left;
+    }
+}
+
 /* ====== FILTRI ====== */
 .filter-box {
     background: rgba(255, 255, 255, 0.82);
@@ -897,6 +1225,7 @@
   </div>
 </div>
 
+
 <!-- FILTRI -->
 <form method="get" class="filter-box" id="admin-users-filter-form">
 
@@ -979,12 +1308,19 @@
         <button class="filter-btn-primary">
             Filtra
         </button>
+
         <a href="{{ url_for('admin_utenti') }}"
            class="filter-btn-secondary">
             Reset
         </a>
-    </div>
 
+        <button type="button"
+                id="open-users-report"
+                class="filter-btn-secondary">
+            📊 Report territorio
+        </button>
+    </div>
+    
 </form>
 
 <!-- TABELLA UTENTI -->
@@ -1158,6 +1494,58 @@
     </table>
 
 </div>
+
+<!-- MODALE REPORT TERRITORIO -->
+<div id="admin-users-report-backdrop" class="admin-report-backdrop" aria-hidden="true">
+  <div class="admin-report-modal" role="dialog" aria-modal="true" aria-labelledby="admin-users-report-title">
+
+    <div class="admin-report-header">
+      <div>
+        <div id="admin-users-report-title" class="admin-report-title">
+          Report territorio
+        </div>
+        <div class="admin-report-subtitle">
+          Utenti registrati e annunci attivi raggruppati per provincia e comune.
+        </div>
+      </div>
+
+      <div class="admin-report-actions">
+        <a href="{{ url_for('admin_utenti_report_excel') }}"
+           class="admin-report-excel-btn">
+          ⬇️ Excel
+        </a>
+
+        <button type="button"
+                id="admin-users-report-close"
+                class="admin-report-close"
+                aria-label="Chiudi">
+          ×
+        </button>
+      </div>
+    </div>
+
+    <div class="admin-report-summary">
+      <div class="admin-report-summary-card">
+        <div class="admin-report-summary-label">Utenti totali</div>
+        <div id="admin-report-total-users" class="admin-report-summary-value">-</div>
+      </div>
+
+      <div class="admin-report-summary-card">
+        <div class="admin-report-summary-label">Annunci attivi</div>
+        <div id="admin-report-total-annunci" class="admin-report-summary-value">-</div>
+      </div>
+    </div>
+
+    <div class="admin-report-body">
+      <div id="admin-report-content" class="admin-report-loading">
+        Caricamento report...
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
 <!-- MODALE UTENTE MOBILE/TABLET -->
 <div id="user-modal-backdrop" class="user-modal-backdrop" aria-hidden="true">
   <div class="user-modal-card" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
@@ -2053,7 +2441,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-  
+
   closeBtn.addEventListener("click", closeModal);
 
   backdrop.addEventListener("click", (e) => {
@@ -2095,6 +2483,153 @@ document.addEventListener("DOMContentLoaded", () => {
       const isOpen = panel.classList.toggle("is-open");
       toggleBtn.textContent = isOpen ? "Nascondi" : "Filtri";
     });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const openBtn = document.getElementById("open-users-report");
+  const backdrop = document.getElementById("admin-users-report-backdrop");
+  const closeBtn = document.getElementById("admin-users-report-close");
+  const content = document.getElementById("admin-report-content");
+  const totalUsers = document.getElementById("admin-report-total-users");
+  const totalAnnunci = document.getElementById("admin-report-total-annunci");
+
+  if (!openBtn || !backdrop || !closeBtn || !content) return;
+
+  let reportLoaded = false;
+
+  const escapeHtml = (value) => {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  };
+
+  function openReportModal() {
+    backdrop.classList.add("is-open");
+    backdrop.setAttribute("aria-hidden", "false");
+    document.documentElement.style.overflow = "hidden";
+
+    if (!reportLoaded) {
+      loadReport();
+    }
+  }
+
+  function closeReportModal() {
+    backdrop.classList.remove("is-open");
+    backdrop.setAttribute("aria-hidden", "true");
+    document.documentElement.style.overflow = "";
+  }
+
+  function renderReport(report) {
+    const province = report.province || [];
+
+    if (totalUsers) {
+      totalUsers.textContent = report.totale_utenti || 0;
+    }
+
+    if (totalAnnunci) {
+      totalAnnunci.textContent = report.totale_annunci_attivi || 0;
+    }
+
+    if (!province.length) {
+      content.className = "admin-report-empty";
+      content.textContent = "Nessun dato disponibile.";
+      return;
+    }
+
+    content.className = "admin-report-province";
+
+    content.innerHTML = province.map((p, index) => {
+      const comuni = Array.isArray(p.comuni) ? p.comuni : [];
+
+      const comuniHtml = comuni.length
+        ? comuni.map(c => `
+            <div class="admin-report-comune-row">
+              <div class="admin-report-comune-name">
+                ${escapeHtml(c.comune)}
+              </div>
+
+              <div class="admin-report-small-count">
+                👥 ${Number(c.utenti || 0)}
+              </div>
+
+              <div class="admin-report-small-count">
+                📣 ${Number(c.annunci_attivi || 0)}
+              </div>
+            </div>
+          `).join("")
+        : `<div class="admin-report-empty">Nessun comune presente.</div>`;
+
+      return `
+        <details ${index === 0 ? "open" : ""}>
+          <summary>
+            <div class="admin-report-prov-name">
+              📍 ${escapeHtml(p.provincia)}
+            </div>
+
+            <span class="admin-report-pill users">
+              👥 ${Number(p.utenti || 0)} utenti
+            </span>
+
+            <span class="admin-report-pill ads">
+              📣 ${Number(p.annunci_attivi || 0)} annunci
+            </span>
+          </summary>
+
+          <div class="admin-report-comuni">
+            ${comuniHtml}
+          </div>
+        </details>
+      `;
+    }).join("");
+  }
+
+  function loadReport() {
+    content.className = "admin-report-loading";
+    content.textContent = "Caricamento report...";
+
+    fetch("{{ url_for('admin_utenti_report') }}", {
+      method: "GET",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json"
+      }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) {
+        throw new Error(data.error || "Errore report");
+      }
+
+      reportLoaded = true;
+      renderReport(data.report || {});
+    })
+    .catch(err => {
+      console.error("Errore report territorio:", err);
+      content.className = "admin-report-empty";
+      content.textContent = "Errore nel caricamento del report.";
+    });
+  }
+
+  openBtn.addEventListener("click", openReportModal);
+  closeBtn.addEventListener("click", closeReportModal);
+
+  backdrop.addEventListener("click", (e) => {
+    if (!e.target.closest(".admin-report-modal")) {
+      closeReportModal();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!backdrop.classList.contains("is-open")) return;
+
+    closeReportModal();
+  });
 });
 </script>
 
