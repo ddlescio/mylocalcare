@@ -812,6 +812,43 @@
       margin-bottom: 16px;
   }
 
+  .user-modal-header-main {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+  }
+
+  .user-modal-photo-wrap {
+      flex-shrink: 0;
+  }
+
+  .user-modal-photo-wrap.hidden {
+      display: none;
+  }
+
+  .user-modal-photo {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 2px solid #ffffff;
+      box-shadow:
+          0 0 0 1px #dbe3ee,
+          0 8px 20px rgba(15, 23, 42, 0.14);
+  }
+
+  @media (max-width: 420px) {
+      .user-modal-photo {
+          width: 48px;
+          height: 48px;
+          border-radius: 16px;
+      }
+  }
+
   .user-modal-title {
       font-size: 1.2rem;
       line-height: 1.2;
@@ -1320,7 +1357,7 @@
             📊 Report territorio
         </button>
     </div>
-    
+
 </form>
 
 <!-- TABELLA UTENTI -->
@@ -1346,6 +1383,7 @@
             {% for u in utenti %}
             <tr class="hover:bg-gray-50 admin-user-row"
                 data-user-id="{{ u.id }}"
+                data-user-foto="{% if u.foto_profilo %}{{ url_for('static', filename=u.foto_profilo) }}{% else %}{% endif %}"
                 data-user-nome="{{ u.nome or '-' }}"
                 data-user-cognome="{{ u.cognome or '-' }}"
                 data-user-email="{{ u.email or '-' }}"
@@ -1548,20 +1586,36 @@
 
 <!-- MODALE UTENTE MOBILE/TABLET -->
 <div id="user-modal-backdrop" class="user-modal-backdrop" aria-hidden="true">
-  <div class="user-modal-card" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+  <div class="user-modal-card"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="user-modal-title">
 
     <div class="user-modal-handle"></div>
 
     <div class="user-modal-header">
-      <div>
-        <div id="user-modal-title" class="user-modal-title">
-          Utente
+
+      <div class="user-modal-header-main">
+        <div>
+          <div id="user-modal-title" class="user-modal-title">
+            Utente
+          </div>
+
+          <div id="user-modal-subtitle" class="user-modal-subtitle">
+            -
+          </div>
+
+          <div id="user-modal-status" class="user-modal-status non-attivo">
+            -
+          </div>
         </div>
-        <div id="user-modal-subtitle" class="user-modal-subtitle">
-          -
-        </div>
-        <div id="user-modal-status" class="user-modal-status non-attivo">
-          -
+
+        <div id="user-modal-photo-wrap"
+             class="user-modal-photo-wrap hidden">
+          <img id="user-modal-photo"
+               src=""
+               alt="Foto profilo"
+               class="user-modal-photo">
         </div>
       </div>
 
@@ -1571,9 +1625,10 @@
               aria-label="Chiudi">
         ×
       </button>
+
     </div>
 
-    <div class="user-modal-grid">
+    <div class="user-modal-grid">      
       <div class="user-modal-info">
         <div class="user-modal-info-label">ID</div>
         <div id="modal-user-id" class="user-modal-info-value">-</div>
@@ -2292,6 +2347,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setText("user-modal-title", fullName);
     setText("user-modal-subtitle", d.userEmail || "-");
+
+    const photoWrap = document.getElementById("user-modal-photo-wrap");
+    const photoImg = document.getElementById("user-modal-photo");
+
+    if (photoWrap && photoImg) {
+      const photoUrl = (d.userFoto || "").trim();
+
+      if (photoUrl) {
+        photoImg.src = photoUrl;
+        photoWrap.classList.remove("hidden");
+      } else {
+        photoImg.removeAttribute("src");
+        photoWrap.classList.add("hidden");
+      }
+    }
 
     const statusEl = document.getElementById("user-modal-status");
     if (statusEl) {

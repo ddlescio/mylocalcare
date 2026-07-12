@@ -519,7 +519,7 @@
                 {{ a['zona'] }}
               </span>
             </div>
-          {% endif %}          
+          {% endif %}
         </div>
 
         <div class="mini-card-dati">
@@ -2583,9 +2583,124 @@ document.addEventListener("DOMContentLoaded", function () {
               const comuneNorm = norm(c.comune);
               const provinciaNorm = norm(c.provincia || "");
 
-              // Se comune e provincia coincidono (es. Oristano, Milano),
-              // trattiamo la scelta come filtro per PROVINCIA
-              if (comuneNorm && provinciaNorm && comuneNorm === provinciaNorm) {
+              const capoluoghiProvincia = new Set([
+                "agrigento",
+                "alessandria",
+                "ancona",
+                "aosta",
+                "arezzo",
+                "ascoli piceno",
+                "asti",
+                "avellino",
+                "bari",
+                "barletta",
+                "belluno",
+                "benevento",
+                "bergamo",
+                "biella",
+                "bologna",
+                "bolzano",
+                "brescia",
+                "brindisi",
+                "cagliari",
+                "caltanissetta",
+                "campobasso",
+                "caserta",
+                "catania",
+                "catanzaro",
+                "chieti",
+                "como",
+                "cosenza",
+                "cremona",
+                "crotone",
+                "cuneo",
+                "enna",
+                "fermo",
+                "ferrara",
+                "firenze",
+                "foggia",
+                "forli",
+                "frosinone",
+                "genova",
+                "gorizia",
+                "grosseto",
+                "imperia",
+                "isernia",
+                "laquila",
+                "la spezia",
+                "latina",
+                "lecce",
+                "lecco",
+                "livorno",
+                "lodi",
+                "lucca",
+                "macerata",
+                "mantova",
+                "massa",
+                "matera",
+                "messina",
+                "milano",
+                "modena",
+                "monza",
+                "napoli",
+                "novara",
+                "nuoro",
+                "oristano",
+                "padova",
+                "palermo",
+                "parma",
+                "pavia",
+                "perugia",
+                "pesaro",
+                "pescara",
+                "piacenza",
+                "pisa",
+                "pistoia",
+                "pordenone",
+                "potenza",
+                "prato",
+                "ragusa",
+                "ravenna",
+                "reggio calabria",
+                "reggio emilia",
+                "rieti",
+                "rimini",
+                "roma",
+                "rovigo",
+                "salerno",
+                "sassari",
+                "savona",
+                "siena",
+                "siracusa",
+                "sondrio",
+                "taranto",
+                "teramo",
+                "terni",
+                "torino",
+                "trapani",
+                "trento",
+                "treviso",
+                "trieste",
+                "udine",
+                "varese",
+                "venezia",
+                "verbania",
+                "vercelli",
+                "verona",
+                "vibo valentia",
+                "vicenza",
+                "viterbo"
+              ]);
+
+              const isCapoluogo =
+                capoluoghiProvincia.has(comuneNorm) ||
+                (
+                  comuneNorm &&
+                  provinciaNorm &&
+                  comuneNorm === provinciaNorm
+                );
+
+              if (isCapoluogo) {
                 zonaInput.value = c.provincia;
                 zonaHidden.value = "";
                 provinciaHidden.value = c.provincia || "";
@@ -2594,7 +2709,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 zonaHidden.value = c.comune;
                 provinciaHidden.value = c.provincia || "";
               }
-
+              
               hasSelected = true;
               hideList();
             });
