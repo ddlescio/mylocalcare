@@ -4793,7 +4793,7 @@ def admin_revisioni_profilo():
         prossimo_limite=prossimo_limite,
         ha_altre_revisioni=ha_altre_revisioni
     )
-    
+
 @app.route("/admin/revisioni-profilo/<int:revision_id>/azione", methods=["POST"])
 @admin_required
 def admin_revisioni_profilo_azione(revision_id):
@@ -11484,10 +11484,34 @@ def modifica_annuncio(id):
             flash("Devi specificare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
 
-        if modalita_servizio != "online" and (not zona or not provincia):
+        if modalita_servizio != "online":
 
-            flash("Seleziona un comune valido dall’elenco.", "warning")
-            return redirect(url_for("modifica_annuncio", id=id))
+            zona_precedente = (annuncio["zona"] or "").strip()
+            provincia_precedente = (annuncio["provincia"] or "").strip()
+
+            zona_rimasta_identica = (
+                zona.casefold() == zona_precedente.casefold()
+                and
+                (provincia or "").casefold() == provincia_precedente.casefold()
+            )
+
+            if not zona_rimasta_identica:
+
+                zona_valida, zona_corretta, provincia_corretta = valida_zona_annuncio(
+                    zona,
+                    provincia
+                )
+
+                if not zona_valida:
+                    flash(
+                        "Seleziona un comune valido dai suggerimenti dell’elenco.",
+                        "warning"
+                    )
+                    return redirect(url_for("modifica_annuncio", id=id))
+
+                zona = zona_corretta
+                provincia = provincia_corretta
+
         # =====================================================
         # 📸 MEDIA – gestione immagini
         # =====================================================
@@ -15309,6 +15333,33 @@ def get_provincia_from_comune(comune_input):
 
     return None
 
+def valida_zona_annuncio(zona_input, provincia_input):
+    """
+    Controlla che la zona sia un comune realmente presente
+    nell'elenco usato dall'autocomplete e che la provincia corrisponda.
+
+    Ritorna:
+        (True, comune, provincia)
+    oppure:
+        (False, None, None)
+    """
+
+    zona = (zona_input or "").strip()
+    provincia = (provincia_input or "").strip()
+
+    if not zona or not provincia:
+        return False, None, None
+
+    provincia_corretta = get_provincia_from_comune(zona)
+
+    if not provincia_corretta:
+        return False, None, None
+
+    if provincia_corretta.strip().casefold() != provincia.casefold():
+        return False, None, None
+
+    return True, zona, provincia_corretta
+
 @app.route('/set-macro-area', methods=['POST'])
 def set_macro_area():
     comune = (request.form.get('macro_comune') or "").strip()
@@ -17948,10 +17999,22 @@ def nuovo_annuncio():
             flash("Devi selezionare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("nuovo_annuncio"))
 
-        if modalita_servizio != "online" and not zona:
+        if modalita_servizio != "online":
 
-            flash("Seleziona una zona o un comune dall’elenco.", "warning")
-            return redirect(url_for("nuovo_annuncio"))
+            zona_valida, zona_corretta, provincia_corretta = valida_zona_annuncio(
+                zona,
+                provincia
+            )
+
+            if not zona_valida:
+                flash(
+                    "Seleziona un comune valido dai suggerimenti dell’elenco.",
+                    "warning"
+                )
+                return redirect(url_for("nuovo_annuncio"))
+
+            zona = zona_corretta
+            provincia = provincia_corretta
 
         # 🔒 1 annuncio per categoria per utente
         c.execute(sql("""
