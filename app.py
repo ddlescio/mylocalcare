@@ -7056,6 +7056,7 @@ def admin_utenti():
             u.provincia,
             u.email,
             u.username,
+            u.foto_profilo,
             u.attivo,
             u.sospeso,
             u.data_creazione,
