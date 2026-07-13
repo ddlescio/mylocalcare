@@ -11466,6 +11466,14 @@ def modifica_annuncio(id):
             flash("Inserisci un titolo per l’annuncio.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
 
+        if len(titolo) > 90:
+
+            flash(
+                "Il titolo dell’annuncio può contenere al massimo 90 caratteri.",
+                "warning"
+            )
+            return redirect(url_for("modifica_annuncio", id=id))
+
         if not descrizione:
 
             flash("Inserisci una descrizione dettagliata.", "warning")
@@ -17942,6 +17950,14 @@ def nuovo_annuncio():
         if not titolo:
 
             flash("Inserisci un titolo per l’annuncio.", "warning")
+            return redirect(url_for("nuovo_annuncio"))
+
+        if len(titolo) > 90:
+
+            flash(
+                "Il titolo dell’annuncio può contenere al massimo 90 caratteri.",
+                "warning"
+            )
             return redirect(url_for("nuovo_annuncio"))
 
         if not descrizione:

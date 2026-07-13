@@ -289,10 +289,24 @@
 
           </div>
 
-          <input type="text" id="titolo" name="titolo"
+          <input type="text"
+                 id="titolo"
+                 name="titolo"
                  value="{{ current_titolo }}"
+                 maxlength="90"
                  class="block w-full border-2 border-blue-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
-                 placeholder="Inserisci un titolo breve e chiaro" required>
+                 placeholder="Inserisci un titolo breve e chiaro"
+                 required>
+
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-xs text-slate-500">
+              Massimo 90 caratteri.
+            </p>
+
+            <p class="text-xs font-semibold text-slate-500">
+              <span id="titolo-counter">0</span>/90
+            </p>
+          </div>
         </div>
 
         <!-- Descrizione -->
@@ -438,7 +452,7 @@
         </div>
 
         <div class="space-y-3">
-          
+
           <label for="media" class="flex items-center gap-2 text-base font-bold text-slate-800">
             <span>Immagini</span>
             <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">opzionale</span>
@@ -2066,6 +2080,22 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   aggiornaVisibilitaGrid();
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const titoloInput = document.getElementById("titolo");
+  const titoloCounter = document.getElementById("titolo-counter");
+
+  if (!titoloInput || !titoloCounter) return;
+
+  const aggiornaContatoreTitolo = () => {
+    titoloCounter.textContent = String(titoloInput.value.length);
+  };
+
+  titoloInput.addEventListener("input", aggiornaContatoreTitolo);
+  aggiornaContatoreTitolo();
 });
 </script>
 
