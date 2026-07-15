@@ -18541,89 +18541,153 @@ def ricerca_utenti():
     conn = get_db_connection()
     c = get_cursor(conn)
 
-    raw_nome = (request.args.get("username") or request.args.get("nome") or "").strip()
+    raw_nome = (
+        request.args.get("username")
+        or request.args.get("nome")
+        or ""
+    ).strip()
+
     zona = (request.args.get("zona") or "").strip()
     raw_cat = (request.args.get("categoria") or "").strip()
 
-    # 👉 normalizzo categoria a slug
+    # Paginazione
+    pagina = request.args.get("pagina", 1, type=int)
+    pagina = max(pagina, 1)
+
+    per_pagina = 20
+    offset = (pagina - 1) * per_pagina
+
     cat_slug = to_slug(raw_cat)
     cat_index = CATEGORIA_TO_INDEX.get(cat_slug)
 
-    print("DEBUG /ricerca-utenti →", {
-        "raw_nome": raw_nome,
-        "zona": zona,
-        "raw_cat": raw_cat,
-        "cat_slug": cat_slug,
-        "cat_index": cat_index
-    })
-
-    query = """
-        SELECT
-            u.id, u.username, u.nome, u.cognome, u.citta, u.foto_profilo,
-            u.visibile_pubblicamente,
-            COALESCE(ROUND(AVG(r.voto), 1), 0) AS media_recensioni,
-            COUNT(r.id) AS numero_recensioni
+    query_base = """
         FROM utenti u
+
         LEFT JOIN recensioni r
-               ON r.id_destinatario = u.id AND r.stato = 'approvato'
-        WHERE (u.visibile_pubblicamente = 1
-               OR (u.visibile_in_chat = 1 AND u.id IN (
-                   SELECT DISTINCT CASE
-                       WHEN mittente_id = ? THEN destinatario_id
-                       WHEN destinatario_id = ? THEN mittente_id
-                   END
-                   FROM messaggi_chat
-                   WHERE mittente_id = ? OR destinatario_id = ?
-               )))
+               ON r.id_destinatario = u.id
+              AND r.stato = 'approvato'
+
+        WHERE (
+            u.visibile_pubblicamente = 1
+
+            OR (
+                u.visibile_in_chat = 1
+                AND u.id IN (
+                    SELECT DISTINCT
+                        CASE
+                            WHEN mittente_id = ? THEN destinatario_id
+                            WHEN destinatario_id = ? THEN mittente_id
+                        END
+                    FROM messaggi_chat
+                    WHERE mittente_id = ?
+                       OR destinatario_id = ?
+                )
+            )
+        )
+
           AND u.sospeso = 0
-          AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
+          AND (
+              u.disattivato_admin IS NULL
+              OR u.disattivato_admin = 0
+          )
           AND u.attivo = 1
           AND u.foto_profilo IS NOT NULL
           AND u.foto_profilo != ''
-          AND (u.ruolo IS NULL OR u.ruolo != 'admin')
+          AND (
+              u.ruolo IS NULL
+              OR u.ruolo != 'admin'
+          )
     """
 
-    params = [session.get("utente_id")] * 4
+    params_base = [session.get("utente_id")] * 4
 
-    # 🔍 filtro username
+    # Filtro username
     if raw_nome:
         raw_nome_norm = raw_nome.lower()
 
-        # Se l'utente inserisce una sola lettera, cerco SOLO username che iniziano con quella lettera.
-        # Esempio: "b" trova "bubu", "barbara", "bruno", ma non "giangela".
         if len(raw_nome_norm) == 1:
             like = f"{raw_nome_norm}%"
         else:
-            # Se inserisce più caratteri, cerco username che contengono quel testo.
-            # Esempio: "bu" trova "bubu_topper_1000".
             like = f"%{raw_nome_norm}%"
 
-        query += """
+        query_base += """
             AND LOWER(u.username) LIKE ?
         """
-        params.append(like)
+        params_base.append(like)
 
-    # 📍 filtro zona
+    # Filtro zona
     if zona:
-        query += " AND LOWER(u.citta) LIKE ?"
-        params.append(f"%{zona.lower()}%")
+        query_base += """
+            AND LOWER(u.citta) LIKE ?
+        """
+        params_base.append(f"%{zona.lower()}%")
 
-    # ✅ filtro categoria CORRETTO (offro_X / cerco_X)
+    # Filtro categoria
     if cat_index:
-        query += f"""
+        query_base += f"""
             AND (
                 u.offro_{cat_index} = 1
                 OR u.cerco_{cat_index} = 1
             )
         """
 
-    query += " GROUP BY u.id ORDER BY media_recensioni DESC"
+    # Conta il totale senza caricare tutte le righe
+    query_count = f"""
+        SELECT COUNT(DISTINCT u.id) AS totale
+        {query_base}
+    """
 
-    c.execute(sql(query), params)
+    c.execute(sql(query_count), params_base)
+    count_row = c.fetchone()
+    totale_utenti = int(count_row["totale"] or 0)
+
+    # Carica soltanto la pagina richiesta
+    query_utenti = f"""
+        SELECT
+            u.id,
+            u.username,
+            u.nome,
+            u.cognome,
+            u.citta,
+            u.foto_profilo,
+            u.visibile_pubblicamente,
+
+            COALESCE(
+                ROUND(AVG(r.voto), 1),
+                0
+            ) AS media_recensioni,
+
+            COUNT(r.id) AS numero_recensioni
+
+        {query_base}
+
+        GROUP BY
+            u.id,
+            u.username,
+            u.nome,
+            u.cognome,
+            u.citta,
+            u.foto_profilo,
+            u.visibile_pubblicamente
+
+        ORDER BY
+            media_recensioni DESC,
+            u.id DESC
+
+        LIMIT ?
+        OFFSET ?
+    """
+
+    params_utenti = params_base + [per_pagina, offset]
+
+    c.execute(sql(query_utenti), params_utenti)
     utenti = c.fetchall()
 
-
     logged_in = "utente_id" in session
+
+    ha_pagina_successiva = (
+        pagina * per_pagina < totale_utenti
+    )
 
     return render_template(
         "ricerca_utenti.html",
@@ -18632,9 +18696,14 @@ def ricerca_utenti():
         nome=raw_nome,
         zona=zona,
         categoria=cat_slug,
-        CATEGORY_MAP=CATEGORY_MAP
-    )
+        CATEGORY_MAP=CATEGORY_MAP,
 
+        pagina=pagina,
+        per_pagina=per_pagina,
+        totale_utenti=totale_utenti,
+        ha_pagina_successiva=ha_pagina_successiva
+    )
+    
 # ==========================================================
 # 6️⃣ CHAT TRA UTENTI
 # ==========================================================
