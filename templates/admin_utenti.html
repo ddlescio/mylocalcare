@@ -1396,6 +1396,7 @@
                 data-user-attivo="{{ u.attivo }}"
                 data-user-chat-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('chat_conversazione_view', other_id=u.id) }}{% endif %}"
                 data-user-mail-url="{% if u.eliminato == 1 %}#{% else %}mailto:{{ u.email }}{% endif %}"
+                data-user-profile-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('profilo_pubblico', id=u.id) }}{% endif %}"
                 data-user-toggle-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('toggle_utente_admin', id=u.id) }}{% endif %}"
                 data-user-delete-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('elimina_utente_route', id=u.id) }}{% endif %}"
                 data-user-contatti="{{ 1 if u.contatti_attivi else 0 }}"
@@ -1610,13 +1611,17 @@
           </div>
         </div>
 
-        <div id="user-modal-photo-wrap"
-             class="user-modal-photo-wrap hidden">
+        <a id="user-modal-photo-wrap"
+           href="#"
+           class="user-modal-photo-wrap hidden"
+           title="Apri profilo utente">
+
           <img id="user-modal-photo"
                src=""
                alt="Foto profilo"
                class="user-modal-photo">
-        </div>
+
+        </a>
       </div>
 
       <button type="button"
@@ -1628,7 +1633,7 @@
 
     </div>
 
-    <div class="user-modal-grid">      
+    <div class="user-modal-grid">
       <div class="user-modal-info">
         <div class="user-modal-info-label">ID</div>
         <div id="modal-user-id" class="user-modal-info-value">-</div>
@@ -2350,6 +2355,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const photoWrap = document.getElementById("user-modal-photo-wrap");
     const photoImg = document.getElementById("user-modal-photo");
+
+    if (photoWrap) {
+      photoWrap.href = d.userProfileUrl || "#";
+    }
 
     if (photoWrap && photoImg) {
       const photoUrl = (d.userFoto || "").trim();
