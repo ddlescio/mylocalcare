@@ -4567,9 +4567,39 @@ def admin():
 @admin_required
 def admin_dashboard():
     """Dashboard principale operatori"""
+
+    # 🔔 Solo per l'admin che apre la dashboard:
+    # segna come lette tutte le sue notifiche ancora non lette.
+    admin_user_id = g.utente["id"]
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql(f"""
+        UPDATE notifiche
+        SET letta = 1,
+            data_lettura = {now_sql()}
+        WHERE id_utente = ?
+          AND letta = 0
+    """), (admin_user_id,))
+
+    notifiche_appena_lette = c.rowcount
+    conn.commit()
+
+    # Aggiorna il badge soltanto quando c'erano notifiche non lette.
+    if notifiche_appena_lette and notifiche_appena_lette > 0:
+        emit_update_notifications(admin_user_id)
+
     categoria = request.args.get('categoria', '').strip()
+
     if categoria:
-        categoria = categoria.replace("-", " ").replace("%26", "&").strip().lower()
+        categoria = (
+            categoria
+            .replace("-", " ")
+            .replace("%26", "&")
+            .strip()
+            .lower()
+        )
 
     zona = request.args.get('zona')
 
@@ -4583,7 +4613,7 @@ def admin_dashboard():
         categoria=categoria,
         zona=zona
     )
-
+    
 # ==========================================================
 # 🕵️ ADMIN — REVISIONE TESTI PROFILO
 # ==========================================================
