@@ -4613,7 +4613,7 @@ def admin_dashboard():
         categoria=categoria,
         zona=zona
     )
-    
+
 # ==========================================================
 # 🕵️ ADMIN — REVISIONE TESTI PROFILO
 # ==========================================================
@@ -10608,6 +10608,7 @@ def admin_annunci():
             u.cognome,
             u.email,
             u.username,
+            u.foto_profilo,
 
             /* BOOST LISTA */
             CASE WHEN EXISTS (

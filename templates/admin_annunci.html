@@ -610,6 +610,55 @@
     margin-bottom: 16px;
 }
 
+.annuncio-modal-header-main {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.annuncio-modal-profile-link {
+    flex-shrink: 0;
+    display: inline-flex;
+    border-radius: 18px;
+    transition: transform 0.16s ease;
+}
+
+.annuncio-modal-profile-link:hover {
+    transform: translateY(-1px);
+}
+
+.annuncio-modal-profile-link:active {
+    transform: scale(0.96);
+}
+
+.annuncio-modal-profile-photo {
+    width: 54px;
+    height: 54px;
+    display: block;
+    border-radius: 18px;
+    object-fit: cover;
+    background: #f1f5f9;
+    border: 2px solid #ffffff;
+    box-shadow:
+        0 0 0 1px #dbe3ee,
+        0 8px 20px rgba(15, 23, 42, 0.14);
+}
+
+@media (max-width: 420px) {
+    .annuncio-modal-profile-photo {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+    }
+
+    .annuncio-modal-profile-link {
+        border-radius: 16px;
+    }
+}
+
 .annuncio-modal-title {
     font-size: 1.15rem;
     line-height: 1.2;
@@ -1176,6 +1225,8 @@
                     data-annuncio-data="{% if a.data_pubblicazione %}{{ a.data_pubblicazione|fmt_it }}{% else %}-{% endif %}"
                     data-annuncio-chat-url="{{ url_for('chat_conversazione_view', other_id=a.utente_id) }}"
                     data-annuncio-mail-url="mailto:{{ a.email }}"
+                    data-annuncio-profilo-url="{{ url_for('profilo_pubblico', id=a.utente_id) }}"
+                    data-annuncio-foto-profilo="{% if a.foto_profilo %}{{ url_for('static', filename=a.foto_profilo) }}{% else %}{{ url_for('static', filename='img/user_default.png') }}{% endif %}"
                     data-annuncio-apri-url="{{ url_for('admin_visualizza_annuncio', id=a.id, next=request.full_path) }}"
                     data-annuncio-toggle-url="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
                     data-annuncio-approva-url="{% if a.stato == 'in_attesa' %}{{ url_for('approva_annuncio', id=a.id, next=request.full_path) }}{% else %}#{% endif %}"
@@ -1186,13 +1237,21 @@
 
                         <div class="mt-1 flex gap-1">
                             <a href="{{ url_for('chat_conversazione_view', other_id=a.utente_id) }}"
+                               title="Apri chat"
                                class="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs hover:bg-blue-100">
                                💬
                             </a>
 
                             <a href="mailto:{{ a.email }}"
+                               title="Invia email"
                                class="inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700 border border-gray-200 text-xs hover:bg-gray-100">
                                ✉️
+                            </a>
+
+                            <a href="{{ url_for('profilo_pubblico', id=a.utente_id) }}"
+                               title="Apri profilo"
+                               class="inline-block px-2 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200 text-xs hover:bg-violet-100">
+                               👤
                             </a>
                         </div>
 
@@ -1384,13 +1443,32 @@
         <div class="annuncio-modal-handle"></div>
 
         <div class="annuncio-modal-header">
-          <div>
-            <div id="annuncio-modal-title" class="annuncio-modal-title">
-              Annuncio
+
+          <div class="annuncio-modal-header-main">
+
+            <div>
+              <div id="annuncio-modal-title" class="annuncio-modal-title">
+                Annuncio
+              </div>
+
+              <div id="annuncio-modal-subtitle" class="annuncio-modal-subtitle">
+                -
+              </div>
             </div>
-            <div id="annuncio-modal-subtitle" class="annuncio-modal-subtitle">
-              -
-            </div>
+
+            <a id="annuncio-modal-profile-link"
+               href="#"
+               class="annuncio-modal-profile-link"
+               title="Apri profilo utente"
+               aria-label="Apri profilo utente">
+
+              <img id="annuncio-modal-profile-photo"
+                   src="{{ url_for('static', filename='img/user_default.png') }}"
+                   alt="Foto profilo utente"
+                   class="annuncio-modal-profile-photo">
+
+            </a>
+
           </div>
 
           <button type="button"
@@ -1399,6 +1477,7 @@
                   aria-label="Chiudi">
             ×
           </button>
+
         </div>
 
         <div class="annuncio-modal-grid">
@@ -1475,6 +1554,10 @@
 
           <a id="modal-annuncio-mail" href="#" class="annuncio-modal-action secondary">
             ✉️ Email
+          </a>
+
+          <a id="modal-annuncio-profilo" href="#" class="annuncio-modal-action secondary">
+            👤 Profilo
           </a>
 
           <button type="button"
@@ -2299,6 +2382,24 @@ document.addEventListener("click", async (e) => {
 
     setText("annuncio-modal-title", "Annuncio #" + (d.annuncioId || "-"));
     setText("annuncio-modal-subtitle", d.annuncioUtente || "-");
+    const profileLink = document.getElementById("annuncio-modal-profile-link");
+    const profilePhoto = document.getElementById("annuncio-modal-profile-photo");
+
+    if (profileLink) {
+      profileLink.href = d.annuncioProfiloUrl || "#";
+    }
+
+    if (profilePhoto) {
+      profilePhoto.src =
+        d.annuncioFotoProfilo ||
+        "{{ url_for('static', filename='img/user_default.png') }}";
+
+      profilePhoto.onerror = function () {
+        this.onerror = null;
+        this.src = "{{ url_for('static', filename='img/user_default.png') }}";
+      };
+    }
+
 
     setText("modal-annuncio-titolo", d.annuncioTitolo);
     setText("modal-annuncio-utente", d.annuncioUtente);
@@ -2410,7 +2511,8 @@ document.addEventListener("click", async (e) => {
     setHref("modal-annuncio-apri", d.annuncioApriUrl);
     setHref("modal-annuncio-chat", d.annuncioChatUrl);
     setHref("modal-annuncio-mail", d.annuncioMailUrl);
-
+    setHref("modal-annuncio-profilo", d.annuncioProfiloUrl);
+    
     aggiornaBottoniAzioneModale(row);
 
     const setServiceButton = (id, isActive, extraData = {}) => {
@@ -2654,7 +2756,7 @@ document.addEventListener("click", async (e) => {
     }
 
     closeAnnuncioModal();
-  });  
+  });
 });
 </script>
 {% endblock %}
