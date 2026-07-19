@@ -11471,7 +11471,8 @@ def modifica_annuncio(id):
 
         categorie_con_servizio_online = {
             "ripetizioni",
-            "operatori-benessere"
+            "operatori-benessere",
+            "escursioni-sport"
         }
 
         if categoria not in categorie_con_servizio_online:
@@ -15542,7 +15543,8 @@ def cerca():
 
     categorie_con_servizio_online = {
         "ripetizioni",
-        "operatori-benessere"
+        "operatori-benessere",
+        "escursioni-sport"
     }
 
     supporta_servizio_online = json_key in categorie_con_servizio_online
@@ -15669,7 +15671,11 @@ def cerca():
             AND (
                 a.provincia = ?
                 OR (
-                    a.categoria IN ('ripetizioni', 'operatori-benessere')
+                    a.categoria IN (
+                        'ripetizioni',
+                        'operatori-benessere',
+                        'escursioni-sport'
+                    )
                     AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
                 )
             )
@@ -15809,7 +15815,11 @@ def cerca():
               AND (
                   a.provincia = ?
                     OR (
-                        a.categoria IN ('ripetizioni', 'operatori-benessere')
+                        a.categoria IN (
+                            'ripetizioni',
+                            'operatori-benessere',
+                            'escursioni-sport'
+                        )
                         AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
                     )
               )
@@ -18029,7 +18039,8 @@ def nuovo_annuncio():
 
         categorie_con_servizio_online = {
             "ripetizioni",
-            "operatori-benessere"
+            "operatori-benessere",
+            "escursioni-sport"
         }
 
         if categoria not in categorie_con_servizio_online:

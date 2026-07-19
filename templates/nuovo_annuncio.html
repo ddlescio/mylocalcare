@@ -982,21 +982,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const supportaModalitaOnline =
       categoriaSelezionata === "ripetizioni" ||
-      categoriaSelezionata === "operatori-benessere";
+      categoriaSelezionata === "operatori-benessere" ||
+      categoriaSelezionata === "escursioni-sport";
 
       const titoloModalita = document.getElementById("modalita-servizio-titolo");
       const testoOnline = document.getElementById("modalita-servizio-online-testo");
 
       if (titoloModalita && testoOnline) {
-          if (categoriaSelezionata === "operatori-benessere") {
-              titoloModalita.textContent = "💻 Modalità servizio";
-              testoOnline.textContent =
-                  "L’annuncio sarà visibile nella categoria Operatori Benessere in tutta Italia.";
-          } else {
-              titoloModalita.textContent = "💻 Modalità ripetizioni";
-              testoOnline.textContent =
-                  "L’annuncio sarà visibile nella categoria Ripetizioni in tutta Italia.";
-          }
+        if (categoriaSelezionata === "operatori-benessere") {
+          titoloModalita.textContent = "💻 Modalità servizio";
+          testoOnline.textContent =
+            "L’annuncio sarà visibile nella categoria Operatori Benessere in tutta Italia.";
+        } else if (categoriaSelezionata === "escursioni-sport") {
+          titoloModalita.textContent = "💻 Modalità attività";
+          testoOnline.textContent =
+            "L’annuncio sarà visibile nella categoria Escursioni & Sport in tutta Italia.";
+        } else {
+          titoloModalita.textContent = "💻 Modalità ripetizioni";
+          testoOnline.textContent =
+            "L’annuncio sarà visibile nella categoria Ripetizioni in tutta Italia.";
+        }
       }
 
     if (!supportaModalitaOnline) {
@@ -1873,9 +1878,15 @@ document.addEventListener("DOMContentLoaded", function () {
       const categoria = document.getElementById("categoria");
       const zona = document.getElementById("zona-autocomplete");
       const modalitaServizio = document.querySelector('input[name="modalita_servizio"]:checked');
-      const isRipetizioniOnline =
+      const categorieConServizioOnline = [
+        "ripetizioni",
+        "operatori-benessere",
+        "escursioni-sport"
+      ];
+      
+      const isServizioOnline =
         categoria &&
-        categoria.value.trim() === "ripetizioni" &&
+        categorieConServizioOnline.includes(categoria.value.trim()) &&
         modalitaServizio &&
         modalitaServizio.value === "online";
       const titolo = document.getElementById("titolo");
@@ -1924,7 +1935,7 @@ document.addEventListener("DOMContentLoaded", function () {
         errori.push("Seleziona almeno un filtro specifico. Se non trovi quello che ti serve, seleziona Altro.");
       }
 
-      if (!isRipetizioniOnline && (!zona || !zona.value.trim())) {
+      if (!isServizioOnline && (!zona || !zona.value.trim())) {
         errori.push("Inserisci una zona o un comune.");
       }
 
@@ -1951,7 +1962,7 @@ document.addEventListener("DOMContentLoaded", function () {
           (!tipo && document.querySelector('input[name="tipo_annuncio"]')) ||
           (!categoria?.value.trim() && categoria) ||
           (categoriaHaFiltri && !almenoUnFiltroSelezionato && filtriContainer) ||
-          (!isRipetizioniOnline && !zona?.value.trim() && zona) ||
+          (!isServizioOnline && !zona?.value.trim() && zona) ||
           (!titolo?.value.trim() && titolo) ||
           (!descrizione?.value.trim() && descrizione);
 
@@ -1975,7 +1986,7 @@ document.addEventListener("DOMContentLoaded", function () {
         sessionStorage.removeItem(storageKey);
       }
 
-      if (isRipetizioniOnline) {
+      if (isServizioOnline) {
         if (zona) {
           zona.disabled = true;
           zona.required = false;
