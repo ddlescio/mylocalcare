@@ -15516,6 +15516,30 @@ def cerca():
     provincia_filtro = request.args.get("provincia", "").strip()
     filtri_attivi = request.args.getlist("filtri")
 
+    includi_confinanti = (
+        request.args.get("includi_confinanti", "").strip() == "1"
+    )
+
+    # =========================================================
+    # PROVINCE CONFINANTI
+    # =========================================================
+    province_confinanti = {}
+
+    path_province_confinanti = os.path.join(
+        app.static_folder,
+        "data",
+        "province_confinanti.json"
+    )
+
+    try:
+        with open(path_province_confinanti, "r", encoding="utf-8") as f:
+            province_confinanti = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        app.logger.error(
+            "Errore caricamento province_confinanti.json: %s",
+            e
+        )
+
     # 🔹 NUOVO: tipo annuncio (offro / cerco)
     tipo_annuncio = request.args.get("tipo_annuncio", "").strip().lower()
     if tipo_annuncio not in ("offro", "cerco"):
@@ -15540,6 +15564,30 @@ def cerca():
                 session["macro_area"] = provincia_attiva
 
     provincia_query = provincia_filtro or provincia_attiva or "__INVALID__"
+
+    # Province effettivamente utilizzate dalla ricerca.
+    # Senza spunta viene utilizzata soltanto la provincia selezionata.
+    province_query = [provincia_query]
+
+    if includi_confinanti and provincia_query != "__INVALID__":
+        province_query = province_confinanti.get(
+            provincia_query,
+            [provincia_query]
+        )
+
+    # Difesa da eventuali duplicati o valori vuoti nel JSON
+    province_query = list(dict.fromkeys(
+        provincia.strip()
+        for provincia in province_query
+        if isinstance(provincia, str) and provincia.strip()
+    ))
+
+    if not province_query:
+        province_query = ["__INVALID__"]
+
+    placeholders_province = ", ".join(
+        "?" for _ in province_query
+    )
 
     categorie_con_servizio_online = {
         "ripetizioni",
@@ -15669,7 +15717,7 @@ def cerca():
             AND u.sospeso = 0
             AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
             AND (
-                a.provincia = ?
+                a.provincia IN ({placeholders_province})
                 OR (
                     a.categoria IN (
                         'ripetizioni',
@@ -15679,6 +15727,7 @@ def cerca():
                     AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
                 )
             )
+
             AND EXISTS (
                 SELECT 1
                 FROM attivazioni_servizi act
@@ -15691,7 +15740,7 @@ def cerca():
             )
     """
 
-    params_vetrina = [provincia_query]
+    params_vetrina = list(province_query)
 
     if json_key:
         query_vetrina += " AND a.categoria = ?"
@@ -15813,7 +15862,7 @@ def cerca():
               AND u.foto_profilo != ''
               AND (u.ruolo IS NULL OR u.ruolo != 'admin')
               AND (
-                  a.provincia = ?
+                  a.provincia IN ({placeholders_province})
                     OR (
                         a.categoria IN (
                             'ripetizioni',
@@ -15822,10 +15871,10 @@ def cerca():
                         )
                         AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
                     )
-              )
+              )              
     """
 
-    params = [provincia_query]
+    params = list(province_query)
 
     if json_key:
         query_annunci += " AND a.categoria = ?"

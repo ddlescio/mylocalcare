@@ -51,7 +51,36 @@
         class="absolute z-10 left-0 right-0 bg-white border rounded shadow mt-1 hidden max-h-60 overflow-y-auto"></ul>
   </div>
 
-    <!-- 🔁 Tipo annuncio: Offro / Cerco -->
+  <!-- 🧭 Estensione ricerca alle province confinanti -->
+  <div class="mb-6">
+    <label
+      for="includi_confinanti"
+      class="flex items-start gap-3 cursor-pointer rounded-2xl border border-indigo-100
+             bg-white/80 px-4 py-3 shadow-sm
+             hover:bg-indigo-50/70 hover:border-indigo-200 transition-all"
+    >
+      <input
+        type="checkbox"
+        id="includi_confinanti"
+        name="includi_confinanti"
+        value="1"
+        class="mt-1 h-4 w-4 shrink-0 accent-indigo-600"
+        {% if request.args.get('includi_confinanti') == '1' %}checked{% endif %}
+      >
+
+      <span class="min-w-0">
+        <span class="block text-sm font-semibold text-slate-800">
+          Includi anche le province confinanti
+        </span>
+
+        <span class="block mt-0.5 text-xs leading-relaxed text-slate-500">
+          Mostra anche gli annunci pubblicati nelle province vicine a quella selezionata.
+        </span>
+      </span>
+    </label>
+  </div>
+
+    <!-- 🔁 Tipo annuncio: Offro / Cerco -->    
   <div class="mb-6">
     <label class="block font-semibold mb-2">🔁 Tipo annuncio</label>
 
@@ -2709,7 +2738,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 zonaHidden.value = c.comune;
                 provinciaHidden.value = c.provincia || "";
               }
-              
+
               hasSelected = true;
               hideList();
             });
