@@ -11464,9 +11464,17 @@ def modifica_annuncio(id):
         tipo_annuncio = request.form.get("tipo_annuncio", "").strip().lower()
 
         # 🔹 MODALITÀ SERVIZIO + ZONA / PROVINCIA
-        modalita_servizio = request.form.get("modalita_servizio", "presenza").strip().lower()
+        modalita_servizio = request.form.get(
+            "modalita_servizio",
+            "presenza"
+        ).strip().lower()
 
-        if categoria != "ripetizioni":
+        categorie_con_servizio_online = {
+            "ripetizioni",
+            "operatori-benessere"
+        }
+
+        if categoria not in categorie_con_servizio_online:
             modalita_servizio = "presenza"
 
         if modalita_servizio not in ("presenza", "online"):
@@ -11475,7 +11483,10 @@ def modifica_annuncio(id):
         zona = request.form.get("zona", "").strip()
         provincia = request.form.get("provincia", "").strip() or None
 
-        if categoria == "ripetizioni" and modalita_servizio == "online":
+        if (
+            categoria in categorie_con_servizio_online
+            and modalita_servizio == "online"
+        ):
             zona = "Online"
             provincia = None
         else:
@@ -15529,7 +15540,12 @@ def cerca():
 
     provincia_query = provincia_filtro or provincia_attiva or "__INVALID__"
 
-    is_ripetizioni = (json_key == "ripetizioni")
+    categorie_con_servizio_online = {
+        "ripetizioni",
+        "operatori-benessere"
+    }
+
+    supporta_servizio_online = json_key in categorie_con_servizio_online
 
     # =========================================================
     # FILTRI CATEGORIA — letti da DB
@@ -15653,7 +15669,7 @@ def cerca():
             AND (
                 a.provincia = ?
                 OR (
-                    a.categoria = 'ripetizioni'
+                    a.categoria IN ('ripetizioni', 'operatori-benessere')
                     AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
                 )
             )
@@ -15680,7 +15696,7 @@ def cerca():
         params_vetrina.append(tipo_annuncio)
 
     if zona:
-        if is_ripetizioni:
+        if supporta_servizio_online:
             query_vetrina += """
                 AND (
                     a.zona = ?
@@ -15792,10 +15808,10 @@ def cerca():
               AND (u.ruolo IS NULL OR u.ruolo != 'admin')
               AND (
                   a.provincia = ?
-                  OR (
-                      a.categoria = 'ripetizioni'
-                      AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
-                  )
+                    OR (
+                        a.categoria IN ('ripetizioni', 'operatori-benessere')
+                        AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
+                    )
               )
     """
 
@@ -15810,7 +15826,7 @@ def cerca():
         params.append(tipo_annuncio)
 
     if zona:
-        if is_ripetizioni:
+        if supporta_servizio_online:
             query_annunci += """
                 AND (
                     a.zona = ?
@@ -18006,9 +18022,17 @@ def nuovo_annuncio():
             return redirect(url_for("nuovo_annuncio"))
 
         # 🔹 MODALITÀ SERVIZIO + ZONA / PROVINCIA
-        modalita_servizio = request.form.get("modalita_servizio", "presenza").strip().lower()
+        modalita_servizio = request.form.get(
+            "modalita_servizio",
+            "presenza"
+        ).strip().lower()
 
-        if categoria != "ripetizioni":
+        categorie_con_servizio_online = {
+            "ripetizioni",
+            "operatori-benessere"
+        }
+
+        if categoria not in categorie_con_servizio_online:
             modalita_servizio = "presenza"
 
         if modalita_servizio not in ("presenza", "online"):
@@ -18017,7 +18041,10 @@ def nuovo_annuncio():
         zona = request.form.get("zona", "").strip()
         provincia = request.form.get("provincia", "").strip() or None
 
-        if categoria == "ripetizioni" and modalita_servizio == "online":
+        if (
+            categoria in categorie_con_servizio_online
+            and modalita_servizio == "online"
+        ):
             zona = "Online"
             provincia = None
         else:
@@ -18703,7 +18730,7 @@ def ricerca_utenti():
         totale_utenti=totale_utenti,
         ha_pagina_successiva=ha_pagina_successiva
     )
-    
+
 # ==========================================================
 # 6️⃣ CHAT TRA UTENTI
 # ==========================================================
