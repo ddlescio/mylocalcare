@@ -7162,10 +7162,16 @@ def admin_utenti():
         ])
 
     if nome:
-        query += " AND (LOWER(u.nome) LIKE ? OR LOWER(u.cognome) LIKE ?)"
+        query += """
+            AND (
+                LOWER(COALESCE(u.nome, '')) LIKE ?
+                OR LOWER(COALESCE(u.cognome, '')) LIKE ?
+                OR LOWER(COALESCE(u.username, '')) LIKE ?
+            )
+        """
         like = f"%{nome.lower()}%"
-        params.extend([like, like])
-
+        params.extend([like, like, like])
+        
     if email:
         query += " AND LOWER(u.email) LIKE ?"
         params.append(f"%{email.lower()}%")
@@ -15871,7 +15877,7 @@ def cerca():
                         )
                         AND COALESCE(a.modalita_servizio, 'presenza') = 'online'
                     )
-              )              
+              )
     """
 
     params = list(province_query)
