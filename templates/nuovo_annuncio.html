@@ -264,10 +264,10 @@
         <div id="modalita-ripetizioni-box"
              class="hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-blue-50 p-4 sm:p-5 shadow-sm">
 
-          <label class="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-            <span>💻 Modalità ripetizioni</span>
-            <span class="text-blue-600 font-extrabold">*</span>
-          </label>
+             <label class="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
+                 <span id="modalita-servizio-titolo">💻 Modalità ripetizioni</span>
+                 <span class="text-blue-600 font-extrabold">*</span>
+             </label>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
@@ -301,8 +301,10 @@
                 <span class="block text-base font-extrabold text-slate-900">
                   💻 Online
                 </span>
-                <span class="mt-1 block text-sm text-slate-600 leading-relaxed">
-                  L’annuncio sarà visibile nella categoria Ripetizioni in tutta Italia.
+                <span
+                    id="modalita-servizio-online-testo"
+                    class="mt-1 block text-sm text-slate-600 leading-relaxed">
+                    L’annuncio sarà visibile nella categoria Ripetizioni in tutta Italia.
                 </span>
               </span>
             </label>
@@ -976,9 +978,28 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function aggiornaModalitaRipetizioni() {
-    const isRipetizioni = (categoria.value || "").trim() === "ripetizioni";
+    const categoriaSelezionata = (categoria.value || "").trim();
 
-    if (!isRipetizioni) {
+    const supportaModalitaOnline =
+      categoriaSelezionata === "ripetizioni" ||
+      categoriaSelezionata === "operatori-benessere";
+
+      const titoloModalita = document.getElementById("modalita-servizio-titolo");
+      const testoOnline = document.getElementById("modalita-servizio-online-testo");
+
+      if (titoloModalita && testoOnline) {
+          if (categoriaSelezionata === "operatori-benessere") {
+              titoloModalita.textContent = "💻 Modalità servizio";
+              testoOnline.textContent =
+                  "L’annuncio sarà visibile nella categoria Operatori Benessere in tutta Italia.";
+          } else {
+              titoloModalita.textContent = "💻 Modalità ripetizioni";
+              testoOnline.textContent =
+                  "L’annuncio sarà visibile nella categoria Ripetizioni in tutta Italia.";
+          }
+      }
+
+    if (!supportaModalitaOnline) {
       modalitaBox.classList.add("hidden");
       zonaSection.classList.remove("hidden");
 
