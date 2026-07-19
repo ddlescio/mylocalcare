@@ -80,7 +80,7 @@
     </label>
   </div>
 
-    <!-- 🔁 Tipo annuncio: Offro / Cerco -->    
+    <!-- 🔁 Tipo annuncio: Offro / Cerco -->
   <div class="mb-6">
     <label class="block font-semibold mb-2">🔁 Tipo annuncio</label>
 
@@ -233,6 +233,24 @@
           <span>✕</span>
           <span>Azzera</span>
         </button>
+
+        <!-- Province confinanti con applicazione immediata -->
+        <label
+          for="includi-confinanti-rapido"
+          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
+                 bg-white/88 text-indigo-700 border border-indigo-200
+                 shadow-[0_8px_20px_rgba(15,23,42,0.06)]
+                 hover:bg-indigo-50 hover:border-indigo-300
+                 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            id="includi-confinanti-rapido"
+            class="h-4 w-4 shrink-0 accent-indigo-600"
+            {% if request.args.get('includi_confinanti') == '1' %}checked{% endif %}
+          >
+          <span>Province vicine</span>
+        </label>
 
         <a href="{{ url_for('nuovo_annuncio') }}"
            id="btn-pubblica-annuncio"
@@ -2490,6 +2508,14 @@ document.addEventListener("DOMContentLoaded", function () {
   const resetBtn = document.getElementById("reset-filtri");
   const closeBtn = document.getElementById("close-filtri");
 
+  const confinantiRapido = document.getElementById(
+    "includi-confinanti-rapido"
+  );
+
+  const confinantiFiltro = document.getElementById(
+    "includi_confinanti"
+  );
+
   if (toggleBtn && container) {
     toggleBtn.addEventListener("click", () => {
       container.classList.toggle("hidden");
@@ -2499,6 +2525,30 @@ document.addEventListener("DOMContentLoaded", function () {
   if (closeBtn && container) {
     closeBtn.addEventListener("click", () => {
       container.classList.add("hidden");
+    });
+  }
+
+  /* ==========================================
+     PROVINCE CONFINANTI — APPLICAZIONE RAPIDA
+  ========================================== */
+  if (confinantiRapido) {
+    confinantiRapido.addEventListener("change", () => {
+      const url = new URL(window.location.href);
+
+      if (confinantiRapido.checked) {
+        url.searchParams.set("includi_confinanti", "1");
+      } else {
+        url.searchParams.delete("includi_confinanti");
+      }
+
+      window.location.href = url.toString();
+    });
+  }
+
+  /* Sincronizza la spunta interna con quella rapida */
+  if (confinantiFiltro && confinantiRapido) {
+    confinantiFiltro.addEventListener("change", () => {
+      confinantiRapido.checked = confinantiFiltro.checked;
     });
   }
 
