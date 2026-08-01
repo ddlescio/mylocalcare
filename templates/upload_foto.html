@@ -310,9 +310,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.log("Volto rilevato! Invio form...");
 
-            // Invio forzato SOLO dopo controllo volto superato.
-            HTMLFormElement.prototype.submit.call(form);
+            const formData = new FormData(form);
 
+            let fileDaInviare = lastImageBlob;
+
+            if (!(fileDaInviare instanceof File)) {
+                fileDaInviare = new File(
+                    [lastImageBlob],
+                    "foto_profilo.jpg",
+                    {
+                        type: lastImageBlob.type || "image/jpeg"
+                    }
+                );
+            }
+
+            formData.set(
+                "foto",
+                fileDaInviare,
+                fileDaInviare.name || "foto_profilo.jpg"
+            );
+
+            const response = await fetch(form.action || window.location.href, {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin",
+                redirect: "follow"
+            });
+
+            if (!response.ok) {
+                throw new Error(`Errore upload: HTTP ${response.status}`);
+            }
+
+            window.location.href = response.url || "{{ url_for('dashboard') }}";
+            
         } catch (err) {
             console.error("Errore controllo volto:", err);
             alert("Non sono riuscito a controllare questa immagine. Prova con una foto diversa, meglio in formato JPG o PNG.");
@@ -325,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     });
-    
+
     function blobToImage(blob) {
         return new Promise((resolve, reject) => {
             const img = new Image();
