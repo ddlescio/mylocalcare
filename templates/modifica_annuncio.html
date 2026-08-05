@@ -1756,7 +1756,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const submitBtn = document.getElementById("submit-annuncio-btn");
 
   if (submitBtn) {
-    submitBtn.addEventListener("click", function () {
+    submitBtn.addEventListener("click", async function () {
       const draftBeforeValidation = collectDraftData();
 
       if (isNuovo) {
@@ -1774,7 +1774,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "operatori-benessere",
         "escursioni-sport"
       ];
-      
+
       const isServizioOnline =
         categoria &&
         categorieConServizioOnline.includes(categoria.value.trim()) &&
@@ -1874,7 +1874,80 @@ document.addEventListener("DOMContentLoaded", function () {
         sessionStorage.removeItem(storageKey);
       }
 
-      form.submit();
+      /*
+       * Per i servizi online zona e provincia non devono essere inviate.
+       */
+      if (isServizioOnline) {
+        if (zona) {
+          zona.disabled = true;
+          zona.required = false;
+          zona.value = "";
+        }
+
+        const provinciaOnline = document.getElementById("zona_provincia");
+
+        if (provinciaOnline) {
+          provinciaOnline.disabled = true;
+          provinciaOnline.value = "";
+        }
+      }
+
+      const testoOriginalePulsante = submitBtn.innerHTML;
+
+      submitBtn.disabled = true;
+      submitBtn.classList.add("opacity-60", "cursor-not-allowed");
+      submitBtn.innerHTML = "⏳ Salvataggio in corso...";
+
+      try {
+        const formData = new FormData(form);
+
+        if (tipo) {
+          formData.set("tipo_annuncio", tipo.value);
+        }
+
+        if (categoria) {
+          formData.set("categoria", categoria.value.trim());
+        }
+
+        if (!isServizioOnline && zona) {
+          formData.set("zona", zona.value.trim());
+        }
+
+        const provinciaFinal = document.getElementById("zona_provincia");
+
+        if (!isServizioOnline && provinciaFinal) {
+          formData.set("provincia", provinciaFinal.value.trim());
+        }
+
+        if (modalitaServizio) {
+          formData.set("modalita_servizio", modalitaServizio.value);
+        }
+
+        const response = await fetch(form.action || window.location.href, {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin",
+          redirect: "follow"
+        });
+
+        if (!response.ok) {
+          throw new Error(`Errore salvataggio: HTTP ${response.status}`);
+        }
+
+        window.location.href = response.url;
+
+      } catch (error) {
+        console.error("Errore modifica annuncio:", error);
+
+        alert(
+          "Non è stato possibile salvare le modifiche. " +
+          "Controlla la connessione e riprova."
+        );
+
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("opacity-60", "cursor-not-allowed");
+        submitBtn.innerHTML = testoOriginalePulsante;
+      }
     });
   }
 });
