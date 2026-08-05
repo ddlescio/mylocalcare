@@ -1864,7 +1864,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const submitBtn = document.getElementById("submit-annuncio-btn");
 
   if (submitBtn) {
-      submitBtn.addEventListener("click", function () {
+      submitBtn.addEventListener("click", async function () {
 
       const draftBeforeValidation = collectDraftData();
 
@@ -1883,7 +1883,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "operatori-benessere",
         "escursioni-sport"
       ];
-      
+
       const isServizioOnline =
         categoria &&
         categorieConServizioOnline.includes(categoria.value.trim()) &&
@@ -2000,7 +2000,67 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      form.submit();
+      const testoOriginalePulsante = submitBtn.innerHTML;
+
+      submitBtn.disabled = true;
+      submitBtn.classList.add("opacity-60", "cursor-not-allowed");
+      submitBtn.innerHTML = "⏳ Pubblicazione in corso...";
+
+      try {
+        const formData = new FormData(form);
+
+        /*
+         * Reinserisce esplicitamente i valori essenziali.
+         * Evita che Safari/iPhone perda campi durante l'invio
+         * multipart quando sono presenti immagini.
+         */
+        if (tipo) {
+          formData.set("tipo_annuncio", tipo.value);
+        }
+
+        if (categoria) {
+          formData.set("categoria", categoria.value.trim());
+        }
+
+        if (!isServizioOnline && zona) {
+          formData.set("zona", zona.value.trim());
+        }
+
+        const provinciaFinal = document.getElementById("zona_provincia");
+
+        if (!isServizioOnline && provinciaFinal) {
+          formData.set("provincia", provinciaFinal.value.trim());
+        }
+
+        if (modalitaServizio) {
+          formData.set("modalita_servizio", modalitaServizio.value);
+        }
+
+        const response = await fetch(form.action || window.location.href, {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin",
+          redirect: "follow"
+        });
+
+        if (!response.ok) {
+          throw new Error(`Errore pubblicazione: HTTP ${response.status}`);
+        }
+
+        window.location.href = response.url;
+
+      } catch (error) {
+        console.error("Errore pubblicazione annuncio:", error);
+
+        alert(
+          "Non è stato possibile pubblicare l’annuncio. " +
+          "Controlla la connessione e riprova."
+        );
+
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("opacity-60", "cursor-not-allowed");
+        submitBtn.innerHTML = testoOriginalePulsante;
+      }      
     });
   }
 });
