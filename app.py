@@ -882,6 +882,159 @@ def sincronizza_cicli_email_chat(dry_run=True):
         except Exception:
             pass
 
+def analizza_candidati_promemoria_chat():
+    """
+    Conta gli utenti candidati alla prima, seconda o terza email.
+
+    Non modifica il database e non invia email.
+    """
+
+    if not app.config.get("IS_POSTGRES"):
+        return {
+            "ok": False,
+            "error": "L'analisi dei promemoria chat richiede PostgreSQL."
+        }
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute("""
+            WITH stato_cicli AS (
+                SELECT
+                    ciclo.user_id,
+                    ciclo.reminders_sent,
+                    ciclo.unread_since,
+                    ciclo.first_email_sent_at,
+                    ciclo.last_email_sent_at,
+                    ciclo.last_emailed_message_id,
+                    COUNT(mc.id) AS messaggi_non_letti,
+                    MAX(mc.id) AS ultimo_messaggio_id,
+                    COUNT(mc.id) FILTER (
+                        WHERE ciclo.last_emailed_message_id IS NULL
+                           OR mc.id > ciclo.last_emailed_message_id
+                    ) AS nuovi_dopo_ultima_email
+                FROM chat_unread_email_cycles ciclo
+                JOIN utenti u
+                  ON u.id = ciclo.user_id
+                JOIN messaggi_chat mc
+                  ON mc.destinatario_id = ciclo.user_id
+                 AND mc.letto = 0
+                WHERE ciclo.reminders_sent < 3
+                  AND ciclo.send_status <> 'sending'
+                  AND u.attivo = 1
+                  AND COALESCE(u.sospeso, 0) = 0
+                  AND COALESCE(u.disattivato_admin, 0) = 0
+                  AND COALESCE(u.eliminato, 0) = 0
+                  AND COALESCE(u.email_notifiche, 0) = 1
+                  AND u.email IS NOT NULL
+                  AND BTRIM(u.email) <> ''
+                GROUP BY
+                    ciclo.user_id,
+                    ciclo.reminders_sent,
+                    ciclo.unread_since,
+                    ciclo.first_email_sent_at,
+                    ciclo.last_email_sent_at,
+                    ciclo.last_emailed_message_id
+            ),
+            candidati AS (
+                SELECT
+                    *,
+                    CASE
+                        WHEN reminders_sent = 0
+                         AND unread_since
+                             <= CURRENT_TIMESTAMP - INTERVAL '60 minutes'
+                        THEN 1
+
+                        WHEN reminders_sent = 1
+                         AND first_email_sent_at
+                             <= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+                         AND nuovi_dopo_ultima_email > 0
+                        THEN 2
+
+                        WHEN reminders_sent = 2
+                         AND first_email_sent_at
+                             <= CURRENT_TIMESTAMP - INTERVAL '7 days'
+                         AND last_email_sent_at
+                             <= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+                         AND nuovi_dopo_ultima_email > 0
+                        THEN 3
+
+                        ELSE NULL
+                    END AS prossimo_promemoria
+                FROM stato_cicli
+            )
+            SELECT
+                COUNT(*) FILTER (
+                    WHERE prossimo_promemoria = 1
+                ) AS prima_email,
+
+                COUNT(*) FILTER (
+                    WHERE prossimo_promemoria = 2
+                ) AS seconda_email,
+
+                COUNT(*) FILTER (
+                    WHERE prossimo_promemoria = 3
+                ) AS terza_email,
+
+                COUNT(*) FILTER (
+                    WHERE prossimo_promemoria IS NOT NULL
+                ) AS totale_candidati
+            FROM candidati
+        """)
+
+        row = cur.fetchone()
+
+        risultato = {
+            "ok": True,
+            "prima_email": int(
+                row["prima_email"] if row else 0
+            ),
+            "seconda_email": int(
+                row["seconda_email"] if row else 0
+            ),
+            "terza_email": int(
+                row["terza_email"] if row else 0
+            ),
+            "totale_candidati": int(
+                row["totale_candidati"] if row else 0
+            )
+        }
+
+        # Chiude la transazione di sola lettura prima di
+        # restituire la connessione al pool.
+        conn.rollback()
+
+        return risultato
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        log_exception_safe(
+            "❌ Errore analisi candidati promemoria chat",
+            e,
+            production=True
+        )
+
+        return {
+            "ok": False,
+            "error": str(e)
+        }
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 def norm_place(s: str) -> str:
     """Normalizza città/zona per confronto robusto."""
     if not s:
@@ -4748,14 +4901,34 @@ def cron_chat_email_cycles_dry_run():
     ):
         abort(403)
 
-    risultato = sincronizza_cicli_email_chat(
+    sincronizzazione = sincronizza_cicli_email_chat(
         dry_run=True
     )
 
-    status_code = 200 if risultato.get("ok") else 500
+    if not sincronizzazione.get("ok"):
+        return jsonify({
+            "ok": False,
+            "dry_run": True,
+            "sincronizzazione": sincronizzazione
+        }), 500
 
-    return jsonify(risultato), status_code
+    candidati = analizza_candidati_promemoria_chat()
 
+    if not candidati.get("ok"):
+        return jsonify({
+            "ok": False,
+            "dry_run": True,
+            "sincronizzazione": sincronizzazione,
+            "candidati_email": candidati
+        }), 500
+
+    return jsonify({
+        "ok": True,
+        "dry_run": True,
+        "sincronizzazione": sincronizzazione,
+        "candidati_email": candidati
+    }), 200
+    
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA
 # ==========================================================
@@ -10325,6 +10498,102 @@ def _normalizza_lista(value):
 # NOTIFICHE SERVIZIO URGENTE
 # ==========================================================
 import sqlite3
+
+def invia_email_promemoria_chat(
+    destinazione,
+    nome,
+    messaggi_non_letti,
+    nuovi_messaggi,
+    numero_promemoria
+):
+    """
+    Invia un promemoria aggregato per i messaggi chat non letti.
+
+    Non include testo, mittenti, contenuti delle conversazioni,
+    pulsanti o collegamenti alla chat.
+    """
+
+    try:
+        numero_promemoria = int(numero_promemoria)
+        messaggi_non_letti = int(messaggi_non_letti or 0)
+        nuovi_messaggi = int(nuovi_messaggi or 0)
+
+        if numero_promemoria not in (1, 2, 3):
+            raise ValueError(
+                "Numero promemoria chat non valido"
+            )
+
+        if messaggi_non_letti <= 0:
+            return False
+
+        nome_visualizzato = (
+            str(nome).strip()
+            if nome and str(nome).strip()
+            else "utente"
+        )
+
+        if numero_promemoria == 1:
+            oggetto = "Hai nuovi messaggi da leggere su MyLocalCare"
+
+            if messaggi_non_letti == 1:
+                testo_messaggi = "hai un messaggio non letto"
+            else:
+                testo_messaggi = (
+                    f"hai {messaggi_non_letti} messaggi non letti"
+                )
+
+            corpo = (
+                f"Ciao {nome_visualizzato},\n\n"
+                f"{testo_messaggi} su MyLocalCare.\n\n"
+                "Accedi a MyLocalCare per scoprire cosa ti hanno scritto "
+                "e continuare le tue conversazioni. Potrebbe esserci "
+                "qualcosa di importante per te."
+            )
+
+        else:
+            oggetto = "Hai ricevuto nuovi messaggi su MyLocalCare"
+
+            if nuovi_messaggi == 1:
+                testo_nuovi = "hai ricevuto un nuovo messaggio"
+            else:
+                testo_nuovi = (
+                    f"hai ricevuto {nuovi_messaggi} nuovi messaggi"
+                )
+
+            if messaggi_non_letti == 1:
+                testo_totale = "Ora hai un messaggio da leggere."
+            else:
+                testo_totale = (
+                    f"Ora hai {messaggi_non_letti} messaggi da leggere."
+                )
+
+            corpo = (
+                f"Ciao {nome_visualizzato},\n\n"
+                f"dalla nostra ultima email {testo_nuovi}.\n\n"
+                f"{testo_totale} Accedi a MyLocalCare per scoprire "
+                "le novità e non perdere conversazioni che potrebbero "
+                "interessarti."
+            )
+
+        return _invia_email(
+            destinazione=destinazione,
+            oggetto=oggetto,
+            corpo=corpo
+        )
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore invio promemoria email chat",
+            e,
+            {
+                "numero_promemoria": numero_promemoria,
+                "messaggi_non_letti": messaggi_non_letti,
+                "nuovi_messaggi": nuovi_messaggi
+            },
+            production=True
+        )
+
+        return False
 
 def invia_email_urgente_match(user_id, annuncio_id, categoria, tipo_annuncio, luogo, username, titolo):
     """
