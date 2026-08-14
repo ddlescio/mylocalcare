@@ -878,6 +878,17 @@ def sincronizza_cicli_email_chat(dry_run=True):
             pass
 
         try:
+            from flask import has_request_context
+
+            if (
+                has_request_context()
+                and getattr(g, "db_conn", None) is conn
+            ):
+                g.db_conn = None
+        except Exception:
+            pass
+
+        try:
             conn.close()
         except Exception:
             pass
@@ -921,7 +932,7 @@ def analizza_candidati_promemoria_chat():
                   ON mc.destinatario_id = ciclo.user_id
                  AND mc.letto = 0
                 WHERE ciclo.reminders_sent < 3
-                  AND ciclo.send_status <> 'sending'
+                  AND ciclo.send_status IN ('pending', 'sent')
                   AND u.attivo = 1
                   AND COALESCE(u.sospeso, 0) = 0
                   AND COALESCE(u.disattivato_admin, 0) = 0
@@ -1027,6 +1038,17 @@ def analizza_candidati_promemoria_chat():
     finally:
         try:
             cur.close()
+        except Exception:
+            pass
+
+        try:
+            from flask import has_request_context
+
+            if (
+                has_request_context()
+                and getattr(g, "db_conn", None) is conn
+            ):
+                g.db_conn = None
         except Exception:
             pass
 
@@ -4928,6 +4950,93 @@ def cron_chat_email_cycles_dry_run():
         "sincronizzazione": sincronizzazione,
         "candidati_email": candidati
     }), 200
+
+@app.route(
+    "/cron/chat-email-cycles/test-one",
+    methods=["POST"]
+)
+def cron_chat_email_cycles_test_one():
+    """
+    Esegue una prova reale su un solo utente configurato
+    tramite CHAT_EMAIL_TEST_USER_ID.
+
+    Può inviare al massimo una email.
+    """
+
+    secret_configurato = os.getenv(
+        "CHAT_EMAIL_CRON_SECRET",
+        ""
+    ).strip()
+
+    secret_ricevuto = request.headers.get(
+        "X-Cron-Secret",
+        ""
+    ).strip()
+
+    conferma_ricevuta = request.headers.get(
+        "X-Confirm-Send",
+        ""
+    ).strip()
+
+    if not secret_configurato:
+        security_log(
+            "❌ CHAT_EMAIL_CRON_SECRET non configurato",
+            production=True
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": "Cron chat email non configurato"
+        }), 503
+
+    if (
+        not secret_ricevuto
+        or not secrets.compare_digest(
+            secret_ricevuto,
+            secret_configurato
+        )
+    ):
+        abort(403)
+
+    if conferma_ricevuta != "SEND-ONE-TEST-EMAIL":
+        return jsonify({
+            "ok": False,
+            "error": "Conferma esplicita mancante"
+        }), 400
+
+    test_user_id_raw = os.getenv(
+        "CHAT_EMAIL_TEST_USER_ID",
+        ""
+    ).strip()
+
+    try:
+        test_user_id = int(test_user_id_raw)
+
+        if test_user_id <= 0:
+            raise ValueError
+
+    except (TypeError, ValueError):
+        return jsonify({
+            "ok": False,
+            "error": (
+                "CHAT_EMAIL_TEST_USER_ID non configurato "
+                "correttamente"
+            )
+        }), 503
+
+    risultato = processa_promemoria_email_chat(
+        limite=1,
+        solo_user_id=test_user_id
+    )
+
+    status_code = 200 if risultato.get("ok") else 500
+
+    return jsonify({
+        "ok": bool(risultato.get("ok")),
+        "modalita": "test_singolo_utente",
+        "test_user_id": test_user_id,
+        "risultato": risultato
+    }), status_code
     
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA
@@ -10594,6 +10703,466 @@ def invia_email_promemoria_chat(
         )
 
         return False
+
+def processa_promemoria_email_chat(
+    limite=10,
+    solo_user_id=None
+):
+    """
+    Elabora i promemoria email della chat.
+
+    Protezioni:
+    - massimo 3 email per ciclo;
+    - una sola email per utente in ogni elaborazione;
+    - prenotazione atomica tramite stato 'sending';
+    - FOR UPDATE SKIP LOCKED contro esecuzioni concorrenti;
+    - nessun retry automatico dopo un errore ambiguo;
+    - ricontrollo dei non letti prima dell'invio;
+    - limite massimo di utenti elaborati per chiamata.
+    """
+
+    if not app.config.get("IS_POSTGRES"):
+        return {
+            "ok": False,
+            "error": "I promemoria email chat richiedono PostgreSQL."
+        }
+
+    try:
+        limite = int(limite)
+    except (TypeError, ValueError):
+        limite = 10
+
+    limite = max(1, min(limite, 50))
+
+    if solo_user_id is not None:
+        try:
+            solo_user_id = int(solo_user_id)
+        except (TypeError, ValueError):
+            return {
+                "ok": False,
+                "error": "solo_user_id non valido"
+            }
+
+    # Prima allinea i cicli con la situazione reale.
+    sincronizzazione = sincronizza_cicli_email_chat(
+        dry_run=False
+    )
+
+    if not sincronizzazione.get("ok"):
+        return {
+            "ok": False,
+            "error": "Sincronizzazione cicli non riuscita",
+            "sincronizzazione": sincronizzazione
+        }
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    elaborati = 0
+    email_inviate = 0
+    email_fallite = 0
+    cicli_chiusi = 0
+    dettagli = []
+
+    try:
+        while elaborati < limite:
+            # --------------------------------------------------
+            # PRENOTAZIONE ATOMICA DI UN CANDIDATO
+            # --------------------------------------------------
+            cur.execute(sql("""
+                SELECT
+                    ciclo.user_id,
+                    ciclo.reminders_sent,
+                    ciclo.unread_since,
+                    ciclo.first_email_sent_at,
+                    ciclo.last_email_sent_at,
+                    ciclo.last_emailed_message_id,
+                    u.email,
+                    u.nome,
+                    u.username,
+                    dati.messaggi_non_letti,
+                    dati.ultimo_messaggio_id,
+                    dati.nuovi_dopo_ultima_email
+                FROM chat_unread_email_cycles ciclo
+                JOIN utenti u
+                  ON u.id = ciclo.user_id
+                CROSS JOIN LATERAL (
+                    SELECT
+                        COUNT(mc.id) AS messaggi_non_letti,
+                        MAX(mc.id) AS ultimo_messaggio_id,
+                        COUNT(mc.id) FILTER (
+                            WHERE ciclo.last_emailed_message_id IS NULL
+                               OR mc.id > ciclo.last_emailed_message_id
+                        ) AS nuovi_dopo_ultima_email
+                    FROM messaggi_chat mc
+                    WHERE mc.destinatario_id = ciclo.user_id
+                      AND mc.letto = 0
+                ) dati
+                WHERE ciclo.reminders_sent < 3
+                  AND ciclo.send_status IN ('pending', 'sent')
+                  AND u.attivo = 1
+                  AND COALESCE(u.sospeso, 0) = 0
+                  AND COALESCE(u.disattivato_admin, 0) = 0
+                  AND COALESCE(u.eliminato, 0) = 0
+                  AND COALESCE(u.email_notifiche, 0) = 1
+                  AND u.email IS NOT NULL
+                  AND BTRIM(u.email) <> ''
+                  AND dati.messaggi_non_letti > 0
+                  AND (
+                        (
+                            ciclo.reminders_sent = 0
+                            AND ciclo.unread_since
+                                <= CURRENT_TIMESTAMP
+                                   - INTERVAL '60 minutes'
+                        )
+                        OR
+                        (
+                            ciclo.reminders_sent = 1
+                            AND ciclo.first_email_sent_at
+                                <= CURRENT_TIMESTAMP
+                                   - INTERVAL '24 hours'
+                            AND dati.nuovi_dopo_ultima_email > 0
+                        )
+                        OR
+                        (
+                            ciclo.reminders_sent = 2
+                            AND ciclo.first_email_sent_at
+                                <= CURRENT_TIMESTAMP
+                                   - INTERVAL '7 days'
+                            AND ciclo.last_email_sent_at
+                                <= CURRENT_TIMESTAMP
+                                   - INTERVAL '24 hours'
+                            AND dati.nuovi_dopo_ultima_email > 0
+                        )
+                  )
+                  AND (
+                        ? IS NULL
+                        OR ciclo.user_id = ?
+                  )
+                ORDER BY
+                    ciclo.reminders_sent ASC,
+                    ciclo.unread_since ASC,
+                    ciclo.user_id ASC
+                FOR UPDATE OF ciclo SKIP LOCKED
+                LIMIT 1
+            """), (
+                solo_user_id,
+                solo_user_id
+            ))
+
+            candidato = cur.fetchone()
+
+            if not candidato:
+                conn.rollback()
+                break
+
+            user_id = int(candidato["user_id"])
+            promemoria_precedenti = int(
+                candidato["reminders_sent"] or 0
+            )
+            numero_promemoria = promemoria_precedenti + 1
+
+            # Segna il ciclo come prenotato prima di contattare
+            # il provider email.
+            cur.execute(sql("""
+                UPDATE chat_unread_email_cycles
+                SET send_status = 'sending',
+                    attempt_started_at = CURRENT_TIMESTAMP,
+                    last_error = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                  AND reminders_sent = ?
+                  AND send_status IN ('pending', 'sent')
+            """), (
+                user_id,
+                promemoria_precedenti
+            ))
+
+            if cur.rowcount != 1:
+                conn.rollback()
+                continue
+
+            conn.commit()
+            elaborati += 1
+
+            # --------------------------------------------------
+            # RICONTROLLO IMMEDIATO PRIMA DELL'EMAIL
+            # --------------------------------------------------
+            cur.execute(sql("""
+                SELECT
+                    u.email,
+                    u.nome,
+                    u.username,
+                    ciclo.last_emailed_message_id,
+                    COUNT(mc.id) AS messaggi_non_letti,
+                    MAX(mc.id) AS ultimo_messaggio_id,
+                    COUNT(mc.id) FILTER (
+                        WHERE ciclo.last_emailed_message_id IS NULL
+                           OR mc.id > ciclo.last_emailed_message_id
+                    ) AS nuovi_dopo_ultima_email
+                FROM chat_unread_email_cycles ciclo
+                JOIN utenti u
+                  ON u.id = ciclo.user_id
+                JOIN messaggi_chat mc
+                  ON mc.destinatario_id = ciclo.user_id
+                 AND mc.letto = 0
+                WHERE ciclo.user_id = ?
+                  AND ciclo.send_status = 'sending'
+                  AND ciclo.reminders_sent = ?
+                  AND u.attivo = 1
+                  AND COALESCE(u.sospeso, 0) = 0
+                  AND COALESCE(u.disattivato_admin, 0) = 0
+                  AND COALESCE(u.eliminato, 0) = 0
+                  AND COALESCE(u.email_notifiche, 0) = 1
+                  AND u.email IS NOT NULL
+                  AND BTRIM(u.email) <> ''
+                GROUP BY
+                    u.email,
+                    u.nome,
+                    u.username,
+                    ciclo.last_emailed_message_id
+            """), (
+                user_id,
+                promemoria_precedenti
+            ))
+
+            stato_attuale = cur.fetchone()
+
+            if not stato_attuale:
+                # Non esistono più non letti oppure l'utente
+                # non è più idoneo: chiude il ciclo.
+                cur.execute(sql("""
+                    DELETE FROM chat_unread_email_cycles
+                    WHERE user_id = ?
+                      AND send_status = 'sending'
+                      AND reminders_sent = ?
+                """), (
+                    user_id,
+                    promemoria_precedenti
+                ))
+
+                conn.commit()
+                cicli_chiusi += 1
+
+                dettagli.append({
+                    "user_id": user_id,
+                    "numero_promemoria": numero_promemoria,
+                    "esito": "ciclo_chiuso"
+                })
+                continue
+
+            messaggi_non_letti = int(
+                stato_attuale["messaggi_non_letti"] or 0
+            )
+            nuovi_messaggi = int(
+                stato_attuale["nuovi_dopo_ultima_email"] or 0
+            )
+            ultimo_messaggio_id = stato_attuale[
+                "ultimo_messaggio_id"
+            ]
+
+            # Per seconda e terza email devono esistere
+            # messaggi successivi all'ultima email.
+            if (
+                numero_promemoria in (2, 3)
+                and nuovi_messaggi <= 0
+            ):
+                cur.execute(sql("""
+                    UPDATE chat_unread_email_cycles
+                    SET send_status = 'sent',
+                        attempt_started_at = NULL,
+                        last_error = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                      AND send_status = 'sending'
+                      AND reminders_sent = ?
+                """), (
+                    user_id,
+                    promemoria_precedenti
+                ))
+
+                conn.commit()
+
+                dettagli.append({
+                    "user_id": user_id,
+                    "numero_promemoria": numero_promemoria,
+                    "esito": "nessun_nuovo_messaggio"
+                })
+                continue
+
+            nome_destinatario = (
+                stato_attuale["nome"]
+                or stato_attuale["username"]
+                or "utente"
+            )
+
+            # La query di ricontrollo ha aperto una transazione
+            # di sola lettura. La chiude prima della chiamata
+            # esterna a Postmark.
+            conn.rollback()
+
+            email_ok = invia_email_promemoria_chat(
+                destinazione=stato_attuale["email"],
+                nome=nome_destinatario,
+                messaggi_non_letti=messaggi_non_letti,
+                nuovi_messaggi=nuovi_messaggi,
+                numero_promemoria=numero_promemoria
+            )
+
+            if email_ok:
+                # --------------------------------------------------
+                # EMAIL CONFERMATA DA POSTMARK
+                # --------------------------------------------------
+                cur.execute(sql("""
+                    UPDATE chat_unread_email_cycles
+                    SET reminders_sent = reminders_sent + 1,
+                        first_email_sent_at = CASE
+                            WHEN reminders_sent = 0
+                            THEN CURRENT_TIMESTAMP
+                            ELSE first_email_sent_at
+                        END,
+                        last_email_sent_at = CURRENT_TIMESTAMP,
+                        last_emailed_message_id = ?,
+                        send_status = 'sent',
+                        attempt_started_at = NULL,
+                        last_error = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                      AND send_status = 'sending'
+                      AND reminders_sent = ?
+                """), (
+                    ultimo_messaggio_id,
+                    user_id,
+                    promemoria_precedenti
+                ))
+
+                if cur.rowcount == 1:
+                    conn.commit()
+                    email_inviate += 1
+
+                    dettagli.append({
+                        "user_id": user_id,
+                        "numero_promemoria": numero_promemoria,
+                        "esito": "inviata",
+                        "messaggi_non_letti": messaggi_non_letti,
+                        "nuovi_messaggi": nuovi_messaggi
+                    })
+
+                else:
+                    conn.rollback()
+
+                    log_exception_safe(
+                        "❌ Email chat inviata ma stato DB non aggiornato",
+                        RuntimeError(
+                            "Aggiornamento ciclo non riuscito"
+                        ),
+                        {
+                            "user_id": user_id,
+                            "numero_promemoria": numero_promemoria
+                        },
+                        production=True
+                    )
+
+                    dettagli.append({
+                        "user_id": user_id,
+                        "numero_promemoria": numero_promemoria,
+                        "esito": "inviata_stato_non_aggiornato"
+                    })
+
+            else:
+                # --------------------------------------------------
+                # INVIO NON CONFERMATO: NESSUN RETRY AUTOMATICO
+                # --------------------------------------------------
+                cur.execute(sql("""
+                    UPDATE chat_unread_email_cycles
+                    SET send_status = 'failed',
+                        last_error = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                      AND send_status = 'sending'
+                      AND reminders_sent = ?
+                """), (
+                    "Invio email non confermato dal provider",
+                    user_id,
+                    promemoria_precedenti
+                ))
+
+                conn.commit()
+                email_fallite += 1
+
+                dettagli.append({
+                    "user_id": user_id,
+                    "numero_promemoria": numero_promemoria,
+                    "esito": "fallita"
+                })
+
+        # Chiude eventuali transazioni di sola lettura residue.
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        return {
+            "ok": True,
+            "limite": limite,
+            "solo_user_id": solo_user_id,
+            "elaborati": elaborati,
+            "email_inviate": email_inviate,
+            "email_fallite": email_fallite,
+            "cicli_chiusi": cicli_chiusi,
+            "sincronizzazione": sincronizzazione,
+            "dettagli": dettagli
+        }
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        log_exception_safe(
+            "❌ Errore elaborazione promemoria email chat",
+            e,
+            {
+                "limite": limite,
+                "solo_user_id": solo_user_id
+            },
+            production=True
+        )
+
+        return {
+            "ok": False,
+            "limite": limite,
+            "solo_user_id": solo_user_id,
+            "email_inviate": email_inviate,
+            "email_fallite": email_fallite,
+            "error": str(e)
+        }
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        # Rimuove il riferimento dalla richiesta prima di
+        # restituire la connessione al pool PostgreSQL.
+        try:
+            from flask import has_request_context
+
+            if (
+                has_request_context()
+                and getattr(g, "db_conn", None) is conn
+            ):
+                g.db_conn = None
+
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 def invia_email_urgente_match(user_id, annuncio_id, categoria, tipo_annuncio, luogo, username, titolo):
     """
