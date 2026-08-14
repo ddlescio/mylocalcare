@@ -657,6 +657,231 @@ def invia_reminder_profili_incompleti(dry_run=False):
         except Exception:
             pass
 
+def sincronizza_cicli_email_chat(dry_run=True):
+    """
+    Sincronizza i cicli email con i messaggi chat non letti.
+
+    In modalità dry_run:
+    - non modifica il database;
+    - indica quanti cicli verrebbero creati o rimossi.
+
+    In modalità reale:
+    - crea un ciclo per ogni destinatario idoneo con messaggi non letti;
+    - elimina i cicli senza più messaggi non letti;
+    - elimina i cicli di utenti non più idonei.
+
+    Questa funzione non invia email.
+    """
+
+    if not app.config.get("IS_POSTGRES"):
+        return {
+            "ok": False,
+            "error": "La sincronizzazione dei cicli email chat richiede PostgreSQL.",
+            "dry_run": dry_run
+        }
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        # --------------------------------------------------
+        # CICLI MANCANTI
+        # --------------------------------------------------
+        cur.execute("""
+            SELECT COUNT(*) AS count
+            FROM (
+                SELECT
+                    u.id,
+                    MIN(mc.created_at) AS unread_since
+                FROM utenti u
+                JOIN messaggi_chat mc
+                  ON mc.destinatario_id = u.id
+                 AND mc.letto = 0
+                LEFT JOIN chat_unread_email_cycles ciclo
+                  ON ciclo.user_id = u.id
+                WHERE u.attivo = 1
+                  AND COALESCE(u.sospeso, 0) = 0
+                  AND COALESCE(u.disattivato_admin, 0) = 0
+                  AND COALESCE(u.eliminato, 0) = 0
+                  AND COALESCE(u.email_notifiche, 0) = 1
+                  AND u.email IS NOT NULL
+                  AND BTRIM(u.email) <> ''
+                  AND ciclo.user_id IS NULL
+                GROUP BY u.id
+            ) dati
+        """)
+
+        row_da_creare = cur.fetchone()
+        cicli_da_creare = int(
+            row_da_creare["count"] if row_da_creare else 0
+        )
+
+        # --------------------------------------------------
+        # CICLI DA RIMUOVERE
+        # --------------------------------------------------
+        cur.execute("""
+            SELECT COUNT(*) AS count
+            FROM chat_unread_email_cycles ciclo
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM utenti u
+                JOIN messaggi_chat mc
+                  ON mc.destinatario_id = u.id
+                 AND mc.letto = 0
+                WHERE u.id = ciclo.user_id
+                  AND u.attivo = 1
+                  AND COALESCE(u.sospeso, 0) = 0
+                  AND COALESCE(u.disattivato_admin, 0) = 0
+                  AND COALESCE(u.eliminato, 0) = 0
+                  AND COALESCE(u.email_notifiche, 0) = 1
+                  AND u.email IS NOT NULL
+                  AND BTRIM(u.email) <> ''
+            )
+        """)
+
+        row_da_rimuovere = cur.fetchone()
+        cicli_da_rimuovere = int(
+            row_da_rimuovere["count"] if row_da_rimuovere else 0
+        )
+
+        cicli_creati = 0
+        cicli_rimossi = 0
+
+        if not dry_run:
+            # Elimina cicli non più validi.
+            cur.execute("""
+                DELETE FROM chat_unread_email_cycles ciclo
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM utenti u
+                    JOIN messaggi_chat mc
+                      ON mc.destinatario_id = u.id
+                     AND mc.letto = 0
+                    WHERE u.id = ciclo.user_id
+                      AND u.attivo = 1
+                      AND COALESCE(u.sospeso, 0) = 0
+                      AND COALESCE(u.disattivato_admin, 0) = 0
+                      AND COALESCE(u.eliminato, 0) = 0
+                      AND COALESCE(u.email_notifiche, 0) = 1
+                      AND u.email IS NOT NULL
+                      AND BTRIM(u.email) <> ''
+                )
+            """)
+
+            cicli_rimossi = max(int(cur.rowcount or 0), 0)
+
+            # Crea i cicli mancanti.
+            cur.execute("""
+                INSERT INTO chat_unread_email_cycles (
+                    user_id,
+                    unread_since,
+                    reminders_sent,
+                    send_status,
+                    updated_at
+                )
+                SELECT
+                    u.id,
+                    MIN(mc.created_at),
+                    0,
+                    'pending',
+                    CURRENT_TIMESTAMP
+                FROM utenti u
+                JOIN messaggi_chat mc
+                  ON mc.destinatario_id = u.id
+                 AND mc.letto = 0
+                WHERE u.attivo = 1
+                  AND COALESCE(u.sospeso, 0) = 0
+                  AND COALESCE(u.disattivato_admin, 0) = 0
+                  AND COALESCE(u.eliminato, 0) = 0
+                  AND COALESCE(u.email_notifiche, 0) = 1
+                  AND u.email IS NOT NULL
+                  AND BTRIM(u.email) <> ''
+                GROUP BY u.id
+                ON CONFLICT (user_id) DO NOTHING
+            """)
+
+            cicli_creati = max(int(cur.rowcount or 0), 0)
+            conn.commit()
+
+        # --------------------------------------------------
+        # SITUAZIONE COMPLESSIVA
+        # --------------------------------------------------
+        cur.execute("""
+            SELECT
+                COUNT(*) AS cicli_totali,
+                COUNT(*) FILTER (
+                    WHERE reminders_sent = 0
+                ) AS in_attesa,
+                COUNT(*) FILTER (
+                    WHERE reminders_sent = 0
+                      AND unread_since
+                          <= CURRENT_TIMESTAMP - INTERVAL '60 minutes'
+                ) AS pronti_prima_email,
+                COUNT(*) FILTER (
+                    WHERE reminders_sent >= 3
+                ) AS completati
+            FROM chat_unread_email_cycles
+        """)
+
+        riepilogo = cur.fetchone()
+
+        # Chiude la transazione aperta dalle query di riepilogo
+        # prima di restituire la connessione al pool.
+        # Se dry_run=False, le modifiche erano già state confermate
+        # dal commit precedente e quindi non vengono annullate.
+        conn.rollback()
+
+        return {
+            "ok": True,
+            "dry_run": bool(dry_run),
+            "cicli_da_creare": cicli_da_creare,
+            "cicli_da_rimuovere": cicli_da_rimuovere,
+            "cicli_creati": cicli_creati,
+            "cicli_rimossi": cicli_rimossi,
+            "cicli_totali": int(
+                riepilogo["cicli_totali"] if riepilogo else 0
+            ),
+            "in_attesa": int(
+                riepilogo["in_attesa"] if riepilogo else 0
+            ),
+            "pronti_prima_email": int(
+                riepilogo["pronti_prima_email"] if riepilogo else 0
+            ),
+            "completati": int(
+                riepilogo["completati"] if riepilogo else 0
+            )
+        }
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        log_exception_safe(
+            "❌ Errore sincronizzazione cicli email chat",
+            e,
+            {"dry_run": bool(dry_run)},
+            production=True
+        )
+
+        return {
+            "ok": False,
+            "dry_run": bool(dry_run),
+            "error": str(e)
+        }
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 def norm_place(s: str) -> str:
     """Normalizza città/zona per confronto robusto."""
     if not s:
@@ -4485,6 +4710,52 @@ def cron_reminder_profili_incompleti():
     status_code = 200 if risultato.get("ok") else 500
     return jsonify(risultato), status_code
 
+@app.route("/cron/chat-email-cycles/dry-run")
+def cron_chat_email_cycles_dry_run():
+    """
+    Simula la sincronizzazione dei cicli email della chat.
+
+    Non modifica il database e non invia email.
+    """
+
+    secret_configurato = os.getenv(
+        "CHAT_EMAIL_CRON_SECRET",
+        ""
+    ).strip()
+
+    secret_ricevuto = request.headers.get(
+        "X-Cron-Secret",
+        ""
+    ).strip()
+
+    if not secret_configurato:
+        security_log(
+            "❌ CHAT_EMAIL_CRON_SECRET non configurato",
+            production=True
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": "Cron chat email non configurato"
+        }), 503
+
+    if (
+        not secret_ricevuto
+        or not secrets.compare_digest(
+            secret_ricevuto,
+            secret_configurato
+        )
+    ):
+        abort(403)
+
+    risultato = sincronizza_cicli_email_chat(
+        dry_run=True
+    )
+
+    status_code = 200 if risultato.get("ok") else 500
+
+    return jsonify(risultato), status_code
+
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA
 # ==========================================================
@@ -7171,7 +7442,7 @@ def admin_utenti():
         """
         like = f"%{nome.lower()}%"
         params.extend([like, like, like])
-        
+
     if email:
         query += " AND LOWER(u.email) LIKE ?"
         params.append(f"%{email.lower()}%")

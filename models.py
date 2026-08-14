@@ -528,16 +528,41 @@ def chat_threads(user_id: int):
     return threads
 
 def chat_segna_letti(user_id: int, other_id: int):
-    """Segna tutti i messaggi ricevuti dall’altro come letti."""
+    """
+    Segna come letti tutti i messaggi ricevuti dall'altro utente.
+
+    Se, dopo l'aggiornamento, il destinatario non ha più alcun
+    messaggio non letto, elimina anche il suo ciclo di promemoria email.
+    """
     conn = get_db_connection()
     c = conn.cursor()
+
     c.execute("""
         UPDATE messaggi_chat
         SET letto = 1
-        WHERE destinatario_id = ? AND mittente_id = ? AND letto = 0
+        WHERE destinatario_id = ?
+          AND mittente_id = ?
+          AND letto = 0
     """, (user_id, other_id))
-    conn.commit()
 
+    # Il ciclo termina soltanto quando il contatore complessivo
+    # dei messaggi non letti dell'utente torna a zero.
+    c.execute("""
+        SELECT COUNT(*)
+        FROM messaggi_chat
+        WHERE destinatario_id = ?
+          AND letto = 0
+    """, (user_id,))
+
+    messaggi_non_letti = fetchone_value(c.fetchone())
+
+    if int(messaggi_non_letti or 0) == 0:
+        c.execute("""
+            DELETE FROM chat_unread_email_cycles
+            WHERE user_id = ?
+        """, (user_id,))
+
+    conn.commit()
 
 
 def count_chat_non_letti(user_id: int) -> int:
