@@ -5037,7 +5037,74 @@ def cron_chat_email_cycles_test_one():
         "test_user_id": test_user_id,
         "risultato": risultato
     }), status_code
-    
+
+@app.route(
+    "/cron/chat-email-cycles/run",
+    methods=["POST"]
+)
+def cron_chat_email_cycles_run():
+    """
+    Esegue l'elaborazione generale dei promemoria email chat.
+
+    Ogni chiamata elabora al massimo 10 utenti idonei.    
+    """
+
+    secret_configurato = os.getenv(
+        "CHAT_EMAIL_CRON_SECRET",
+        ""
+    ).strip()
+
+    secret_ricevuto = request.headers.get(
+        "X-Cron-Secret",
+        ""
+    ).strip()
+
+    conferma_ricevuta = request.headers.get(
+        "X-Confirm-Run",
+        ""
+    ).strip()
+
+    if not secret_configurato:
+        security_log(
+            "❌ CHAT_EMAIL_CRON_SECRET non configurato",
+            production=True
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": "Cron chat email non configurato"
+        }), 503
+
+    if (
+        not secret_ricevuto
+        or not secrets.compare_digest(
+            secret_ricevuto,
+            secret_configurato
+        )
+    ):
+        abort(403)
+
+    if conferma_ricevuta != "RUN-CHAT-EMAIL-CYCLES":
+        return jsonify({
+            "ok": False,
+            "error": "Conferma esecuzione mancante"
+        }), 400
+
+    batch_size = 10
+
+    risultato = processa_promemoria_email_chat(
+        limite=batch_size
+    )
+
+    status_code = 200 if risultato.get("ok") else 500
+
+    return jsonify({
+        "ok": bool(risultato.get("ok")),
+        "modalita": "esecuzione_generale",
+        "batch_size": batch_size,
+        "risultato": risultato
+    }), status_code
+
 # ==========================================================
 # NOTIFICHE: LETTURA SINGOLA
 # ==========================================================
