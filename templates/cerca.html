@@ -294,7 +294,7 @@
     <div class="vetrina-mobile-scroll">
       {% for a in annunci_vetrina %}
 
-        {% set foto_vetrina = a['foto_profilo'] or 'img/user_default.png' %}
+        {% set foto_vetrina = a.get('foto_profilo_cerca') or a['foto_profilo'] or 'img/user_default.png' %}
 
         <article
           class="vetrina-ticket-mobile js-open-annuncio
@@ -396,7 +396,7 @@
   <div class="hidden lg:grid vetrina-grid-desktop">
     {% for a in annunci_vetrina %}
 
-      {% set foto_vetrina = a['foto_profilo'] or 'img/user_default.png' %}
+      {% set foto_vetrina = a.get('foto_profilo_cerca') or a['foto_profilo'] or 'img/user_default.png' %}
 
       <article
         class="vetrina-ticket-desktop js-open-annuncio
@@ -523,11 +523,7 @@
         </div>
       {% endif %}
 
-      {% if a['categoria'] in ['family-kids', 'eventi-socialita', 'spazi-sale'] and a.get('foto_card') %}
-        {% set foto = a['foto_card'] %}
-      {% else %}
-        {% set foto = a['foto_profilo'] or 'img/user_default.png' %}
-      {% endif %}
+      {% set foto = a.get('immagine_card') or a['foto_profilo'] or 'img/user_default.png' %}
 
       {% if a.get('affidabilita_top', 0) == 1 %}
         <div class="card-trust-clip-wrap">
@@ -544,6 +540,8 @@
             src="{{ url_for('static', filename=foto) }}"
             alt="{{ a['titolo'] }}"
             class="card-hero-image"
+            loading="lazy"
+            decoding="async"
           >
 
           <div class="card-hero-overlay"></div>

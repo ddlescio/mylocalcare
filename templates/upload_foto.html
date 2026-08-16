@@ -57,7 +57,8 @@
 
     <!-- Upload file -->
     <label class="block text-gray-700 font-semibold mb-1">Seleziona un file</label>
-    <input type="file" name="foto" accept="image/*"
+    <input type="file" name="foto"
+           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
            class="w-full border border-gray-300 rounded-lg p-2">
 
     <!-- Anteprima -->
@@ -245,12 +246,12 @@ document.addEventListener("DOMContentLoaded", () => {
             previewImg.src = URL.createObjectURL(blob);
             previewContainer.classList.remove("hidden");
 
-            const file = new File([blob], "foto.png", { type: "image/png" });
+            const file = new File([blob], "foto.jpg", { type: "image/jpeg" });
             const dt = new DataTransfer();
             dt.items.add(file);
             input.files = dt.files;
 
-        }, "image/png");
+        }, "image/jpeg", 0.90);
     });
 
     /* -------------- BLOCCO INVIO SE NON C’È VOLTO ---------------- */
@@ -342,10 +343,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             window.location.href = response.url || "{{ url_for('dashboard') }}";
-            
+
         } catch (err) {
             console.error("Errore controllo volto:", err);
-            alert("Non sono riuscito a controllare questa immagine. Prova con una foto diversa, meglio in formato JPG o PNG.");
+            alert("Non sono riuscito a controllare questa immagine. Prova con una foto diversa, meglio in formato JPG, PNG o WEBP.");
 
             submitInProgress = false;
 

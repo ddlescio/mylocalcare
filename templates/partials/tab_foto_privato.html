@@ -104,7 +104,7 @@
               type="file"
               name="foto_galleria"
               multiple
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
               class="mt-1 {{ 'opacity-50 cursor-not-allowed' if foto_count >= max_foto }}"
               id="input-foto"
               data-foto-count="{{ foto_count }}"
@@ -131,7 +131,15 @@
           class="flex flex-col gap-3">
       <label class="text-sm text-gray-700">
         📸 Aggiungi foto (massimo {{ max_foto }}):
-        <input type="file" name="foto_galleria" multiple accept="image/*" class="mt-1" id="input-foto" data-foto-count="0">
+        <input
+          type="file"
+          name="foto_galleria"
+          multiple
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+          class="mt-1"
+          id="input-foto"
+          data-foto-count="0"
+        >
       </label>
 
       <div id="upload-status-galleria"

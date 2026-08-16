@@ -81,6 +81,14 @@ from realtime_handlers import register_socket_lifecycle_handlers
 
 from chat_realtime import register_chat_socket_handlers, typing_state, pagina_attiva
 from realtime_auth import build_realtime_token
+from image_utils import (
+    ErroreImmagine,
+    crea_thumbnail_cerca,
+    percorso_thumbnail_relativo,
+    salva_immagine_ottimizzata,
+    scegli_immagine_cerca,
+)
+
 from io import BytesIO
 from flask import send_file
 from openpyxl import Workbook
@@ -12755,51 +12763,163 @@ def modifica_annuncio(id):
             if img.strip()
         ]
 
-        immagini_da_cancellare = request.form.getlist("cancellate")
+        richieste_cancellazione = set(
+            request.form.getlist("cancellate")
+        )
+
+        # Accetta soltanto immagini realmente appartenenti
+        # a questo annuncio.
+        immagini_da_cancellare = [
+            img for img in media_attuale
+            if img in richieste_cancellazione
+        ]
 
         immagini_rimanenti = [
             img for img in media_attuale
             if img not in immagini_da_cancellare
         ]
 
-        # 🗑️ Elimina immagini rimosse
-        for foto in immagini_da_cancellare:
-            percorso_file = os.path.join("static", foto)
-            if os.path.exists(percorso_file):
-                try:
-                    os.remove(percorso_file)
-                except Exception as e:
-                    print(f"⚠️ Impossibile eliminare {percorso_file}: {e}")
-
         # 📸 Upload nuove immagini
-        nuove_foto = request.files.getlist("media")
-        upload_dir = os.path.join("static", "uploads", "annunci")
+        nuove_foto = [
+            foto
+            for foto in request.files.getlist("media")
+            if foto and foto.filename
+        ]
+
+        if (
+            nuove_foto
+            and len(immagini_rimanenti) + len(nuove_foto) > 4
+        ):
+            flash(
+                "Puoi avere al massimo 4 foto per annuncio.",
+                "warning"
+            )
+            return redirect(url_for("modifica_annuncio", id=id))
+
+        upload_dir = os.path.join(
+            app.static_folder,
+            "uploads",
+            "annunci"
+        )
         os.makedirs(upload_dir, exist_ok=True)
 
+        nuovi_media_paths = []
+
         for foto in nuove_foto:
-            if foto and foto.filename:
+            try:
+                nome_file = salva_immagine_ottimizzata(
+                    file_storage=foto,
+                    directory_destinazione=upload_dir,
+                    prefisso=f"annuncio_{id}",
+                    dimensioni_massime=(1920, 1920),
+                    qualita=82,
+                )
+            except ErroreImmagine as e:
+                # Rimuove esclusivamente le nuove immagini create
+                # durante questo tentativo non completato.
+                for percorso_relativo in nuovi_media_paths:
+                    percorso_creato = os.path.join(
+                        app.static_folder,
+                        *percorso_relativo.split("/"),
+                    )
 
-                if not foto.mimetype.startswith("image/"):
-                    flash("Puoi caricare solo immagini.", "warning")
-                    return redirect(url_for("modifica_annuncio", id=id))
+                    if os.path.isfile(percorso_creato):
+                        try:
+                            os.remove(percorso_creato)
+                        except OSError as errore_rimozione:
+                            app.logger.warning(
+                                "Impossibile ripulire immagine annuncio %s: %s",
+                                percorso_creato,
+                                errore_rimozione,
+                            )
 
-                if len(immagini_rimanenti) >= 4:
-                    flash("Puoi avere al massimo 4 foto per annuncio.", "warning")
-                    return redirect(url_for("modifica_annuncio", id=id))
+                flash(str(e), "warning")
+                return redirect(url_for("modifica_annuncio", id=id))
 
-                nome_file = f"{uuid.uuid4().hex}_{foto.filename}"
-                percorso = os.path.join(upload_dir, nome_file)
-                foto.save(percorso)
+            percorso_relativo = f"uploads/annunci/{nome_file}"
+            nuovi_media_paths.append(percorso_relativo)
 
-                immagini_rimanenti.append(f"uploads/annunci/{nome_file}")
+        immagini_rimanenti.extend(nuovi_media_paths)
 
         media_finale = ",".join(immagini_rimanenti)
 
-        # Foto card opzionale: se non scelta, resta NULL/vuota e in Cerca userai foto profilo
-        foto_card = request.form.get("foto_card_path", "").strip()
+        # Foto card opzionale: può essere una foto già presente
+        # oppure una delle nuove immagini appena caricate.
+        categorie_con_foto_card = {
+            "family-kids",
+            "eventi-socialita",
+            "spazi-sale"
+        }
 
-        if foto_card and foto_card not in immagini_rimanenti:
+        foto_card = request.form.get(
+            "foto_card_path",
+            ""
+        ).strip()
+
+        foto_card_new_index_raw = request.form.get(
+            "foto_card_new_index",
+            ""
+        ).strip()
+
+        if categoria not in categorie_con_foto_card:
             foto_card = ""
+
+        else:
+            if foto_card_new_index_raw:
+                try:
+                    foto_card_new_index = int(
+                        foto_card_new_index_raw
+                    )
+                except ValueError:
+                    foto_card = ""
+                else:
+                    if (
+                        0 <= foto_card_new_index
+                        < len(nuovi_media_paths)
+                    ):
+                        foto_card = nuovi_media_paths[
+                            foto_card_new_index
+                        ]
+                    else:
+                        foto_card = ""
+
+            if foto_card and foto_card not in immagini_rimanenti:
+                foto_card = ""
+
+        # Crea la miniatura per cerca soltanto se non esiste già.
+        if foto_card:
+            percorso_thumbnail = percorso_thumbnail_relativo(
+                foto_card
+            )
+
+            if percorso_thumbnail:
+                percorso_foto_card_assoluto = os.path.join(
+                    app.static_folder,
+                    *foto_card.split("/"),
+                )
+
+                percorso_thumbnail_assoluto = os.path.join(
+                    app.static_folder,
+                    *percorso_thumbnail.split("/"),
+                )
+
+                if not os.path.isfile(
+                    percorso_thumbnail_assoluto
+                ):
+                    try:
+                        crea_thumbnail_cerca(
+                            percorso_originale_assoluto=percorso_foto_card_assoluto,
+                            percorso_thumbnail_assoluto=percorso_thumbnail_assoluto,
+                            dimensioni_massime=(960, 960),
+                            qualita=76,
+                        )
+                    except Exception as e:
+                        app.logger.warning(
+                            "Impossibile creare thumbnail cerca durante "
+                            "la modifica dell'annuncio %s: %s",
+                            id,
+                            e,
+                        )
 
         # =====================================================
         # 💾 UPDATE DB
@@ -12842,7 +12962,38 @@ def modifica_annuncio(id):
         ))
 
         conn.commit()
+        # Elimina i file soltanto dopo che il database
+        # è stato aggiornato correttamente.
+        for foto in immagini_da_cancellare:
+            percorso_file = os.path.join(
+                app.static_folder,
+                *foto.split("/"),
+            )
 
+            percorso_thumbnail = percorso_thumbnail_relativo(
+                foto
+            )
+
+            percorsi_da_eliminare = [percorso_file]
+
+            if percorso_thumbnail:
+                percorsi_da_eliminare.append(
+                    os.path.join(
+                        app.static_folder,
+                        *percorso_thumbnail.split("/"),
+                    )
+                )
+
+            for percorso_da_eliminare in percorsi_da_eliminare:
+                if os.path.isfile(percorso_da_eliminare):
+                    try:
+                        os.remove(percorso_da_eliminare)
+                    except OSError as e:
+                        app.logger.warning(
+                            "Impossibile eliminare immagine annuncio %s: %s",
+                            percorso_da_eliminare,
+                            e,
+                        )
 
         # 🔁 Aggiorna contatori admin
         invalidate_admin_counters()
@@ -13807,10 +13958,21 @@ def utente_update_galleria():
                 else ""
             )
 
-            if estensione not in {"jpg", "jpeg", "png", "gif", "webp"}:
-                continue
+            if estensione not in {
+                "jpg",
+                "jpeg",
+                "png",
+                "webp"
+            }:
+                flash(
+                    "Formato non valido. Usa JPG, PNG o WEBP.",
+                    "warning"
+                )
+                return redirect(
+                    url_for("dashboard") + "#foto"
+                )
 
-            file_validi.append((file, estensione))
+            file_validi.append(file)
 
         # =====================================================
         # 5) CASO SOLO ELIMINAZIONE
@@ -13891,13 +14053,45 @@ def utente_update_galleria():
         file_da_salvare = file_validi[:slot_disponibili]
         file_scartati = len(file_validi) - len(file_da_salvare)
 
-        for file, estensione in file_da_salvare:
-            nome_file = f"u{user_id}_{uuid.uuid4().hex}.{estensione}"
-            percorso = os.path.join(upload_dir, nome_file)
+        nuovi_file_creati = []
 
-            file.save(percorso)
+        for file in file_da_salvare:
+            try:
+                nome_file = salva_immagine_ottimizzata(
+                    file_storage=file,
+                    directory_destinazione=upload_dir,
+                    prefisso=f"utente_{user_id}_galleria_pending",
+                    dimensioni_massime=(1600, 1600),
+                    qualita=82,
+                )
+            except ErroreImmagine as e:
+                # Ripulisce soltanto i nuovi file creati
+                # durante questo tentativo non completato.
+                for percorso_creato in nuovi_file_creati:
+                    if os.path.isfile(percorso_creato):
+                        try:
+                            os.remove(percorso_creato)
+                        except OSError as errore_rimozione:
+                            app.logger.warning(
+                                "Impossibile ripulire foto galleria %s: %s",
+                                percorso_creato,
+                                errore_rimozione,
+                            )
 
-            correnti.append(f"uploads/profili/galleria/{nome_file}")
+                flash(str(e), "warning")
+                return redirect(
+                    url_for("dashboard") + "#foto"
+                )
+
+            percorso = os.path.join(
+                upload_dir,
+                nome_file
+            )
+            nuovi_file_creati.append(percorso)
+
+            correnti.append(
+                f"uploads/profili/galleria/{nome_file}"
+            )
 
         correnti = correnti[:MAX_FOTO_GALLERIA]
 
@@ -14052,7 +14246,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["UPLOAD_COPERTINE_FOLDER"] = UPLOAD_COPERTINE_FOLDER
 app.config["UPLOAD_GALLERIA_FOLDER"] = UPLOAD_GALLERIA_FOLDER
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -14072,7 +14266,7 @@ def upload_foto():
             return redirect(request.url)
 
         if not (file and allowed_file(file.filename)):
-            flash("Formato file non valido. Usa JPG, PNG o GIF.")
+            flash("Formato file non valido. Usa JPG, PNG o WEBP.")
             return redirect(request.url)
 
         user_id = g.utente['id']
@@ -14096,15 +14290,49 @@ def upload_foto():
             upload_dir = os.path.join(app.static_folder, "uploads", "profili", "revisioni")
             os.makedirs(upload_dir, exist_ok=True)
 
-            estensione = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "png"
-
-            # Nome NON fisso: serve per evitare cache browser e per non sovrascrivere
-            # la foto profilo pubblica ancora approvata.
-            filename = f"utente_{user_id}_foto_profilo_pending_{uuid.uuid4().hex}.{estensione}"
-            file_path = os.path.join(upload_dir, filename)
-            file.save(file_path)
+            # La nuova foto viene ridotta, ruotata correttamente e salvata in WebP.
+            # La foto pubblica approvata non viene sovrascritta.
+            try:
+                filename = salva_immagine_ottimizzata(
+                    file_storage=file,
+                    directory_destinazione=upload_dir,
+                    prefisso=f"utente_{user_id}_foto_profilo_pending",
+                    dimensioni_massime=(1200, 1200),
+                    qualita=82,
+                )
+            except ErroreImmagine as e:
+                flash(str(e), "warning")
+                return redirect(request.url)
 
             percorso_pending = f"uploads/profili/revisioni/{filename}"
+
+            # Miniatura separata per le card di cerca.
+            # Non viene salvata nel DB: il percorso deriva dalla foto principale.
+            percorso_thumbnail = percorso_thumbnail_relativo(percorso_pending)
+
+            if percorso_thumbnail:
+                percorso_thumbnail_assoluto = os.path.join(
+                    app.static_folder,
+                    *percorso_thumbnail.split("/"),
+                )
+
+                try:
+                    crea_thumbnail_cerca(
+                        percorso_originale_assoluto=os.path.join(
+                            upload_dir,
+                            filename,
+                        ),
+                        percorso_thumbnail_assoluto=percorso_thumbnail_assoluto,
+                        dimensioni_massime=(960, 960),
+                        qualita=76,
+                    )
+                except Exception as e:
+                    app.logger.warning(
+                        "Impossibile creare thumbnail cerca per foto profilo "
+                        "utente %s: %s",
+                        user_id,
+                        e,
+                    )
 
             revisione_id, nuova_revisione = salva_revisione_immagine_profilo(
                 cur,
@@ -14224,12 +14452,23 @@ def upload_copertina():
         )
         os.makedirs(upload_dir, exist_ok=True)
 
-        filename = f"utente_{user_id}_copertina_pending_{uuid.uuid4().hex}.{estensione}"
-        file_path = os.path.join(upload_dir, filename)
+        try:
+            filename = salva_immagine_ottimizzata(
+                file_storage=file,
+                directory_destinazione=upload_dir,
+                prefisso=f"utente_{user_id}_copertina_pending",
+                dimensioni_massime=(1920, 1200),
+                qualita=82,
+            )
+        except ErroreImmagine as e:
+            flash(str(e), "warning")
+            return redirect(
+                url_for("dashboard") + "#tab-foto"
+            )
 
-        file.save(file_path)
-
-        percorso_pending_db = f"uploads/profili/revisioni/{filename}"
+        percorso_pending_db = (
+            f"uploads/profili/revisioni/{filename}"
+        )
 
         # =====================================================
         # 3) Se la proposta è uguale alla pubblica, non creare revisione
@@ -17114,10 +17353,19 @@ def cerca():
             foto_card = (ann.get("foto_card") or "").strip()
             foto_profilo = (ann.get("foto_profilo") or "").strip()
 
+            foto_profilo_cerca = scegli_immagine_cerca(
+                app.static_folder,
+                foto_profilo,
+            )
+            ann["foto_profilo_cerca"] = foto_profilo_cerca
+
             if categoria_annuncio in categorie_con_foto_card and foto_card:
-                ann["immagine_card"] = foto_card
+                ann["immagine_card"] = scegli_immagine_cerca(
+                    app.static_folder,
+                    foto_card,
+                )
             else:
-                ann["immagine_card"] = foto_profilo
+                ann["immagine_card"] = foto_profilo_cerca
 
     assegna_immagine_card(annunci)
     assegna_immagine_card(annunci_vetrina)
@@ -19358,20 +19606,44 @@ def nuovo_annuncio():
         # =====================================================
         # 📸 UPLOAD MEDIA
         # =====================================================
-        media_files = request.files.getlist("media")
+        media_files = [
+            file
+            for file in request.files.getlist("media")
+            if file and file.filename
+        ]
+
+        if len(media_files) > 4:
+            flash(
+                "Puoi caricare al massimo 4 foto per annuncio.",
+                "warning"
+            )
+            return redirect(url_for("nuovo_annuncio"))
+
         media_paths = []
-        upload_dir = os.path.join("static", "uploads", "annunci")
+
+        upload_dir = os.path.join(
+            app.static_folder,
+            "uploads",
+            "annunci"
+        )
         os.makedirs(upload_dir, exist_ok=True)
 
         for file in media_files:
-            if file and file.filename:
-                if not file.mimetype.startswith("image/"):
-                    flash("Puoi caricare solo immagini, non video.", "warning")
-                    return redirect(url_for("nuovo_annuncio"))
+            try:
+                filename = salva_immagine_ottimizzata(
+                    file_storage=file,
+                    directory_destinazione=upload_dir,
+                    prefisso=f"annuncio_{utente['id']}",
+                    dimensioni_massime=(1920, 1920),
+                    qualita=82,
+                )
+            except ErroreImmagine as e:
+                flash(str(e), "warning")
+                return redirect(url_for("nuovo_annuncio"))
 
-                filename = f"{uuid.uuid4().hex}_{file.filename}"
-                file.save(os.path.join(upload_dir, filename))
-                media_paths.append(f"uploads/annunci/{filename}")
+            media_paths.append(
+                f"uploads/annunci/{filename}"
+            )
 
         foto_card = None
 
@@ -19385,6 +19657,38 @@ def nuovo_annuncio():
             except ValueError:
                 foto_card = None
 
+        # Crea la miniatura soltanto per l'immagine scelta
+        # come foto della card in cerca.
+        if foto_card:
+            percorso_thumbnail = percorso_thumbnail_relativo(
+                foto_card
+            )
+
+            if percorso_thumbnail:
+                percorso_foto_card_assoluto = os.path.join(
+                    app.static_folder,
+                    *foto_card.split("/"),
+                )
+
+                percorso_thumbnail_assoluto = os.path.join(
+                    app.static_folder,
+                    *percorso_thumbnail.split("/"),
+                )
+
+                try:
+                    crea_thumbnail_cerca(
+                        percorso_originale_assoluto=percorso_foto_card_assoluto,
+                        percorso_thumbnail_assoluto=percorso_thumbnail_assoluto,
+                        dimensioni_massime=(960, 960),
+                        qualita=76,
+                    )
+                except Exception as e:
+                    app.logger.warning(
+                        "Impossibile creare thumbnail cerca per nuovo "
+                        "annuncio dell'utente %s: %s",
+                        utente["id"],
+                        e,
+                    )
 
         # =====================================================
         # 💾 INSERT DB
