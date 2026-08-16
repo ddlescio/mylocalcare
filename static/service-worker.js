@@ -9,8 +9,9 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
 
-  // Gestiamo solo le navigazioni pagina della PWA
-  if (request.mode !== "navigate") {
+  // Gestiamo solo le normali navigazioni GET.
+  // I POST, soprattutto quelli con file, devono raggiungere direttamente il server.
+  if (request.mode !== "navigate" || request.method !== "GET") {
     return;
   }
 
