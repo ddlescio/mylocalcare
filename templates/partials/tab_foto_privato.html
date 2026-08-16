@@ -37,6 +37,23 @@
     </div>
   {% endif %}
 
+  {% if not pubblico %}
+    <div id="alert-galleria"
+         class="hidden opacity-0 transition-opacity duration-300 rounded-xl px-4 py-3 mb-4 flex items-start justify-between gap-3"
+         role="status"
+         aria-live="polite">
+      <div id="alert-galleria-text"
+           class="text-sm font-medium"></div>
+
+      <button type="button"
+              id="chiudi-alert"
+              class="shrink-0 text-xl font-bold leading-none"
+              aria-label="Chiudi messaggio">
+        ×
+      </button>
+    </div>
+  {% endif %}
+
   {% set foto_list = [] %}
   {% if utente.get('foto_galleria') %}
     {% set raw_foto = utente.get('foto_galleria') %}
