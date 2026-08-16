@@ -576,7 +576,7 @@
           </label>
 
           <input type="file" id="media" name="media" multiple
-                 accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"             
+                 accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                  class="block w-full text-sm text-slate-700 border-2 border-amber-200 rounded-2xl cursor-pointer bg-white focus:outline-none p-3.5 shadow-sm">
 
           <p class="text-xs text-slate-500">
@@ -2081,6 +2081,16 @@ document.addEventListener("DOMContentLoaded", function () {
   const MAX_FOTO_ANNUNCIO = 4;
   let selectedFiles = [];
 
+  function fileImmagineRiconosciuta(file) {
+    const tipo = String((file && file.type) || "").toLowerCase();
+    const nome = String((file && file.name) || "").toLowerCase();
+
+    return (
+      tipo.startsWith("image/")
+      || /\.(jpe?g|png|webp|heic|heif)$/.test(nome)
+    );
+  }
+
   const categorieConFotoCard = new Set([
     "family-kids",
     "eventi-socialita",
@@ -2135,7 +2145,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     selectedFiles.forEach((file, index) => {
-      if (!file.type || !file.type.startsWith("image/")) return;
+      if (!fileImmagineRiconosciuta(file)) return;
 
       const reader = new FileReader();
 
@@ -2229,7 +2239,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let scartate = 0;
 
     nuoviFile.forEach(file => {
-      if (!file.type || !file.type.startsWith("image/")) return;
+      if (!fileImmagineRiconosciuta(file)) return;
 
       if (selectedFiles.length < MAX_FOTO_ANNUNCIO) {
         selectedFiles.push(file);

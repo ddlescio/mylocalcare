@@ -13962,10 +13962,12 @@ def utente_update_galleria():
                 "jpg",
                 "jpeg",
                 "png",
-                "webp"
+                "webp",
+                "heic",
+                "heif"
             }:
                 flash(
-                    "Formato non valido. Usa JPG, PNG o WEBP.",
+                    "Formato non valido. Usa JPG, PNG, WEBP o HEIC.",
                     "warning"
                 )
                 return redirect(
@@ -14246,7 +14248,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["UPLOAD_COPERTINE_FOLDER"] = UPLOAD_COPERTINE_FOLDER
 app.config["UPLOAD_GALLERIA_FOLDER"] = UPLOAD_GALLERIA_FOLDER
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "heic", "heif"}
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -14266,7 +14268,7 @@ def upload_foto():
             return redirect(request.url)
 
         if not (file and allowed_file(file.filename)):
-            flash("Formato file non valido. Usa JPG, PNG o WEBP.")
+            flash("Formato file non valido. Usa JPG, PNG, WEBP o HEIC.")
             return redirect(request.url)
 
         user_id = g.utente['id']
@@ -14413,11 +14415,11 @@ def upload_copertina():
         flash("Seleziona un file valido.", "error")
         return redirect(url_for("dashboard") + "#tab-foto")
 
-    allowed_extensions = {'png', 'jpg', 'jpeg', 'webp'}
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'webp', 'heic', 'heif'}
     estensione = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else None
 
     if estensione not in allowed_extensions:
-        flash("Formato non valido. Usa JPG, PNG o WEBP.", "error")
+        flash("Formato non valido. Usa JPG, PNG, WEBP o HEIC.", "error")
         return redirect(url_for("dashboard") + "#tab-foto")
 
     user_id = g.utente['id']

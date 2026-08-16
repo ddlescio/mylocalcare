@@ -4,6 +4,9 @@ import uuid
 from pathlib import PurePosixPath
 
 from PIL import Image, ImageOps, UnidentifiedImageError
+from pillow_heif import register_heif_opener
+
+register_heif_opener(thumbnails=False)
 
 
 MAX_IMAGE_PIXELS_LOCALCARE = 60_000_000
@@ -33,10 +36,20 @@ def _apri_e_prepara_immagine(
         immagine_originale = Image.open(sorgente)
         formato_originale = (immagine_originale.format or "").upper()
         formato_mpo = formato_originale == "MPO"
+        formato_heif = formato_originale in {"HEIF", "HEIC"}
+        formato_multifoto_statico = formato_mpo or formato_heif
 
-        if formato_originale not in {"JPEG", "PNG", "WEBP", "MPO"}:
+        if formato_originale not in {
+            "JPEG",
+            "PNG",
+            "WEBP",
+            "MPO",
+            "HEIF",
+            "HEIC",
+        }:
             raise ErroreImmagine(
-                "Formato immagine non consentito. Usa JPG, PNG o WEBP."
+                "Formato immagine non consentito. "
+                "Usa JPG, PNG, WEBP o HEIC."
             )
 
         larghezza, altezza = immagine_originale.size
@@ -50,17 +63,22 @@ def _apri_e_prepara_immagine(
         if (
             getattr(immagine_originale, "is_animated", False)
             and not consenti_animata
-            and not formato_mpo
+            and not formato_multifoto_statico
         ):
             raise ImmagineAnimata(
                 "Le immagini animate non sono consentite."
             )
 
-        if (
-            formato_mpo
-            or getattr(immagine_originale, "is_animated", False)
+        if formato_mpo:
+            immagine_originale.seek(0)
+
+        elif (
+            getattr(immagine_originale, "is_animated", False)
+            and not formato_heif
         ):
             immagine_originale.seek(0)
+
+        # Il plugin HEIF apre già l'immagine principale del contenitore.
 
         immagine = ImageOps.exif_transpose(immagine_originale)
         immagine.load()
@@ -71,7 +89,9 @@ def _apri_e_prepara_immagine(
     except (
         UnidentifiedImageError,
         Image.DecompressionBombError,
+        EOFError,
         OSError,
+        RuntimeError,
         SyntaxError,
         ValueError,
     ) as exc:

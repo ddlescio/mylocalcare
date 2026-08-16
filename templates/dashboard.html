@@ -59,9 +59,9 @@
                 <input id="fileCopertina"
                        name="file"
                        type="file"
-                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                       accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                        class="hidden"
-                       onchange="document.getElementById('formCopertina').submit()">         
+                       onchange="document.getElementById('formCopertina').submit()">
               </form>
 
               {% if utente.get('copertina') %}
