@@ -20257,7 +20257,17 @@ def ricerca_utenti():
     params_utenti = params_base + [per_pagina, offset]
 
     c.execute(sql(query_utenti), params_utenti)
-    utenti = c.fetchall()
+
+    utenti = [
+        dict(row)
+        for row in c.fetchall()
+    ]
+
+    for utente in utenti:
+        utente["foto_profilo_cerca"] = scegli_immagine_cerca(
+            app.static_folder,
+            utente.get("foto_profilo"),
+        )
 
     logged_in = "utente_id" in session
 

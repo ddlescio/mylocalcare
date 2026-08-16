@@ -179,9 +179,13 @@
 
                 <div class="lc-user-avatar-wrap">
                   <img
-                    src="{{ url_for('static', filename=u['foto_profilo'] or 'img/user_default.png') }}"
+                    src="{{ url_for('static', filename=u.get('foto_profilo_cerca') or u.get('foto_profilo') or 'img/user_default.png') }}"
                     class="lc-user-avatar"
                     alt="Foto profilo di @{{ u['username'] }}"
+                    loading="lazy"
+                    decoding="async"
+                    width="66"
+                    height="66"
                   >
                 </div>
 
