@@ -14617,9 +14617,23 @@ def rimuovi_copertina():
 def utente_messaggi():
     """Mostra solo le chat dirette tra utenti"""
     from models import chat_threads
-    threads = chat_threads(g.utente['id'])
-    return render_template('utente_messaggi.html', threads=threads, utente=g.utente)
 
+    threads = [
+        dict(thread)
+        for thread in chat_threads(g.utente["id"])
+    ]
+
+    for thread in threads:
+        thread["altro_foto_cerca"] = scegli_immagine_cerca(
+            app.static_folder,
+            thread.get("altro_foto"),
+        )
+
+    return render_template(
+        "utente_messaggi.html",
+        threads=threads,
+        utente=g.utente,
+    )
 
 # --- Pagina "I miei annunci" ---
 @app.route('/utente/annunci')

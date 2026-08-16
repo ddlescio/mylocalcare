@@ -3,6 +3,7 @@
 {% set body_class = "offset-navbar page-chat-list" %}
 
 {% block content %}
+{% set totale_chat_non_letti = unread_chat() %}
 
 <div class="chat-list-page-shell max-w-4xl mx-auto px-4 pt-24 pb-14">
 
@@ -38,9 +39,9 @@
         </div>
       </div>
 
-      {% if unread_chat() > 0 %}
+      {% if totale_chat_non_letti > 0 %}
         <div class="chat-list-unread-pill">
-          <span>{{ unread_chat() }}</span>
+          <span>{{ totale_chat_non_letti }}</span>
           <span>nuove</span>
         </div>
       {% endif %}
@@ -59,9 +60,14 @@
 
         <!-- FOTO PROFILO -->
         <div class="chat-thread-avatar-wrap">
-          <img src="{{ url_for('static', filename=c['altro_foto']) if c['altro_foto'] else url_for('static', filename='images/default_user.png') }}"
+          <img
+               src="{{ url_for('static', filename=c.get('altro_foto_cerca') or c.get('altro_foto') or 'images/default_user.png') }}"
                class="chat-thread-avatar"
-               alt="Foto profilo di @{{ c['altro_username'] }}">
+               alt="Foto profilo di @{{ c['altro_username'] }}"
+               loading="lazy"
+               decoding="async"
+               width="60"
+               height="60">
 
           {% if c['non_letti'] > 0 %}
             <span class="chat-thread-dot"></span>
