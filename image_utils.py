@@ -32,8 +32,9 @@ def _apri_e_prepara_immagine(
     try:
         immagine_originale = Image.open(sorgente)
         formato_originale = (immagine_originale.format or "").upper()
+        formato_mpo = formato_originale == "MPO"
 
-        if formato_originale not in {"JPEG", "PNG", "WEBP"}:
+        if formato_originale not in {"JPEG", "PNG", "WEBP", "MPO"}:
             raise ErroreImmagine(
                 "Formato immagine non consentito. Usa JPG, PNG o WEBP."
             )
@@ -49,12 +50,16 @@ def _apri_e_prepara_immagine(
         if (
             getattr(immagine_originale, "is_animated", False)
             and not consenti_animata
+            and not formato_mpo
         ):
             raise ImmagineAnimata(
                 "Le immagini animate non sono consentite."
             )
 
-        if getattr(immagine_originale, "is_animated", False):
+        if (
+            formato_mpo
+            or getattr(immagine_originale, "is_animated", False)
+        ):
             immagine_originale.seek(0)
 
         immagine = ImageOps.exif_transpose(immagine_originale)
