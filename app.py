@@ -5046,7 +5046,7 @@ def cron_chat_email_cycles_run():
     """
     Esegue l'elaborazione generale dei promemoria email chat.
 
-    Ogni chiamata elabora al massimo 10 utenti idonei.    
+    Ogni chiamata elabora al massimo 10 utenti idonei.
     """
 
     secret_configurato = os.getenv(
@@ -19107,9 +19107,10 @@ def toggle_email_notifiche():
 # IMPOSTAZIONI → FOTO PROFILO
 # ---------------------------
 
-@app.route("/impostazioni/cambia-foto", methods=["GET", "POST"])
+@app.route("/impostazioni/cambia-foto", methods=["GET"])
 @login_required
 def cambia_foto():
+    return redirect(url_for("upload_foto"))
     if request.method == "POST":
         verify_csrf()
 
@@ -19143,7 +19144,7 @@ def cambia_foto():
     return render_template("forms/cambia_foto.html")
 
 
-@app.route("/impostazioni/cambia-copertina", methods=["GET", "POST"])
+@app.route("/impostazioni/cambia-copertina", methods=["GET"])
 @login_required
 def cambia_copertina():
     if request.method == "POST":
