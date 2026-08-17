@@ -1,0 +1,242 @@
+<section id="mylocalcare-story" class="lc-story" aria-labelledby="lc-story-title">
+  <div class="lc-story__glow lc-story__glow--blue" aria-hidden="true"></div>
+  <div class="lc-story__glow lc-story__glow--pink" aria-hidden="true"></div>
+
+  <div class="lc-story__shell">
+    <header class="lc-story__intro lc-reveal">
+      <span class="lc-eyebrow">Gratis per cercare e offrire</span>
+      <h2 id="lc-story-title">Trova ciò che ti serve.<br>Fatti trovare per ciò che sai fare.</h2>
+      <p>
+        MyLocalCare trasforma il passaparola in una rete locale più chiara:
+        persone, competenze e necessità si incontrano senza perdersi in un feed.
+      </p>
+
+      <div class="lc-proof" aria-label="I vantaggi principali di MyLocalCare">
+        <span><strong>500+</strong> persone già iscritte</span>
+        <span><strong>Gratis</strong> per partecipare</span>
+        <span><strong>Locale</strong> e anche online per le ripetizioni</span>
+      </div>
+    </header>
+
+    <article class="lc-scene lc-scene--annunci">
+      <div class="lc-scene__copy lc-reveal">
+        <span class="lc-section-label">Cerco e Offro</span>
+        <h3>Due esigenze. Un’unica rete.</h3>
+        <p class="lc-scene__lead">
+          Chi cerca incontra persone disponibili. Chi offre trasforma tempo,
+          capacità ed esperienza in una presenza visibile e contattabile.
+        </p>
+
+        <div class="lc-choice-grid">
+          <div class="lc-choice lc-choice--cerco">
+            <span class="lc-choice__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="6.5"></circle>
+                <path d="m16 16 4 4"></path>
+              </svg>
+            </span>
+            <div>
+              <h4>Cerco</h4>
+              <p>Trova persone e servizi coerenti con la tua esigenza e la tua zona.</p>
+            </div>
+          </div>
+
+          <div class="lc-choice lc-choice--offro">
+            <span class="lc-choice__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 3v18M3 12h18"></path>
+              </svg>
+            </span>
+            <div>
+              <h4>Offro</h4>
+              <p>Dai valore a ciò che sai fare e fatti trovare da chi ne ha bisogno.</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="lc-insight">
+          <span aria-hidden="true">↗</span>
+          Lo stesso profilo può cercare in alcune categorie e offrire in altre.
+        </p>
+      </div>
+
+      <figure class="lc-visual lc-visual--annunci lc-reveal">
+        <div class="lc-visual__halo" aria-hidden="true"></div>
+        <img
+          src="{{ url_for('static', filename='img/landing_story/story-annuncio.jpg') }}"
+          alt="Annunci Cerco e Offro su MyLocalCare"
+          loading="lazy"
+          decoding="async"
+        >
+        <figcaption>
+          <span class="lc-caption-dot" aria-hidden="true"></span>
+          Un’intenzione chiara aiuta a trovare la persona giusta.
+        </figcaption>
+      </figure>
+    </article>
+
+    <article class="lc-scene lc-scene--profile">
+      <figure class="lc-visual lc-visual--profile lc-reveal">
+        <div class="lc-visual__halo" aria-hidden="true"></div>
+        <img
+          src="{{ url_for('static', filename='img/landing_story/story-profilo.jpg') }}"
+          alt="Esempio di profilo completo su MyLocalCare"
+          loading="lazy"
+          decoding="async"
+        >
+      </figure>
+
+      <div class="lc-scene__copy lc-reveal">
+        <span class="lc-section-label">Il tuo spazio personale</span>
+        <h3>Non sei soltanto un nome sotto un post.</h3>
+        <p class="lc-scene__lead">
+          Un profilo completo racconta chi sei e rende immediatamente più chiaro
+          perché una persona dovrebbe scegliere proprio te.
+        </p>
+
+        <ul class="lc-value-list">
+          <li>
+            <span aria-hidden="true">✓</span>
+            <div><strong>Presentati davvero</strong><small>Foto, descrizione e ciò che ti distingue.</small></div>
+          </li>
+          <li>
+            <span aria-hidden="true">✓</span>
+            <div><strong>Rendi visibile il tuo valore</strong><small>Esperienze, competenze, lingue e servizi.</small></div>
+          </li>
+          <li>
+            <span aria-hidden="true">✓</span>
+            <div><strong>Costruisci fiducia</strong><small>Informazioni chiare, foto e recensioni in un solo posto.</small></div>
+          </li>
+        </ul>
+
+        <a class="lc-text-link" href="{{ url_for('register') }}">
+          Crea il tuo profilo gratis
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </article>
+
+    <section class="lc-connection lc-reveal" aria-labelledby="lc-connection-title">
+      <div class="lc-connection__heading">
+        <span class="lc-section-label lc-section-label--light">Dal primo interesse al contatto</span>
+        <h3 id="lc-connection-title">Le opportunità non si perdono nel feed.</h3>
+        <p>
+          La semplicità di notifiche e conversazioni che conosci già,
+          organizzata intorno a persone e servizi.
+        </p>
+      </div>
+
+      <div class="lc-connection__grid">
+        <article>
+          <span class="lc-feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+              <path d="M10 21h4"></path>
+            </svg>
+          </span>
+          <h4>Notifiche</h4>
+          <p>Sai quando c’è qualcosa che merita la tua attenzione.</p>
+        </article>
+
+        <article>
+          <span class="lc-feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+              <path d="M8 10h.01M12 10h.01M16 10h.01"></path>
+            </svg>
+          </span>
+          <h4>Messaggi</h4>
+          <p>Parli direttamente con la persona interessata, nello stesso spazio.</p>
+        </article>
+
+        <article>
+          <span class="lc-feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M8 7h12M8 12h12M8 17h8"></path>
+              <circle cx="4" cy="7" r="1"></circle>
+              <circle cx="4" cy="12" r="1"></circle>
+              <circle cx="4" cy="17" r="1"></circle>
+            </svg>
+          </span>
+          <h4>Intenzioni chiare</h4>
+          <p>Cerco e Offro fanno capire subito che tipo di contatto desideri.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="lc-categories" aria-labelledby="lc-categories-title">
+      <header class="lc-categories__heading lc-reveal">
+        <span class="lc-section-label">La community prende forma</span>
+        <h3 id="lc-categories-title">I servizi più richiesti. E nuove possibilità da far crescere.</h3>
+        <p>
+          Casa, famiglia, animali, studio e benessere convivono nella stessa rete:
+          ogni persona può trovare ciò che cerca e dare spazio a ciò che offre.
+        </p>
+      </header>
+
+      <div class="lc-category-grid">
+        <article class="lc-category-card lc-reveal">
+          <span class="lc-category-card__icon" aria-hidden="true">👶</span>
+          <div><h4>Babysitter</h4><p>Persone e famiglie possono incontrarsi nella stessa zona.</p></div>
+        </article>
+
+        <article class="lc-category-card lc-reveal">
+          <span class="lc-category-card__icon" aria-hidden="true">🐾</span>
+          <div><h4>Pet-sitter</h4><p>Supporto fidato per cani, gatti e altri animali domestici.</p></div>
+        </article>
+
+        <article class="lc-category-card lc-reveal">
+          <span class="lc-category-card__icon" aria-hidden="true">🏠</span>
+          <div><h4>Aiuto in casa</h4><p>Collaborazioni per pulizie, spesa, stiro e necessità quotidiane.</p></div>
+        </article>
+
+        <article class="lc-category-card lc-reveal">
+          <span class="lc-category-card__icon" aria-hidden="true">📚</span>
+          <div><h4>Ripetizioni</h4><p>Lezioni e sostegno scolastico, vicino a te oppure online.</p></div>
+        </article>
+
+        <article class="lc-category-card lc-category-card--spotlight lc-reveal">
+          <div class="lc-category-card__topline">
+            <span class="lc-category-card__icon" aria-hidden="true">🧘</span>
+            <span class="lc-new-badge">Nuova opportunità</span>
+          </div>
+          <div>
+            <h4>Benessere &amp; Personal Trainer</h4>
+            <p>
+              Una vetrina personale per professionisti che vogliono farsi conoscere
+              in una rete locale già interessata alla cura e alla qualità della vita.
+            </p>
+            <span class="lc-spotlight-note">Uno spazio nuovo in cui distinguersi.</span>
+          </div>
+        </article>
+      </div>
+
+      <div class="lc-more-categories lc-reveal" aria-label="Altre categorie disponibili">
+        <span>Caregiver</span>
+        <span>Family &amp; Kids</span>
+        <span>Escursioni &amp; Sport</span>
+        <span>Eventi &amp; Socialità</span>
+        <span>Spazi &amp; Sale</span>
+      </div>
+    </section>
+
+    <section class="lc-final-cta lc-reveal" aria-labelledby="lc-final-title">
+      <div class="lc-final-cta__orb lc-final-cta__orb--one" aria-hidden="true"></div>
+      <div class="lc-final-cta__orb lc-final-cta__orb--two" aria-hidden="true"></div>
+      <div class="lc-final-cta__content">
+        <span class="lc-eyebrow lc-eyebrow--glass">Iscrizione gratuita</span>
+        <h3 id="lc-final-title">La persona giusta potrebbe essere già nella tua rete.</h3>
+        <p>
+          Crea il tuo profilo, pubblica ciò che cerchi o offri e diventa parte
+          di un passaparola locale che cresce insieme alle persone.
+        </p>
+
+        <div class="lc-final-cta__actions">
+          <a class="lc-button lc-button--primary" href="{{ url_for('register') }}">Registrati gratis</a>
+          <a class="lc-button lc-button--secondary" href="#macro-autocomplete" data-lc-scroll-zone>Esplora la tua zona</a>
+        </div>
+        <small>Puoi esplorare gli annunci della tua zona anche prima di registrarti.</small>
+      </div>
+    </section>
+  </div>
+</section>

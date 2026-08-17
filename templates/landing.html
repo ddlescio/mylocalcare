@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% set body_class = "landing offset-navbar" %}
-
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing_story.css') }}">
+{% endblock %}
 {% block content %}
 
 <div class="max-w-2xl mx-auto px-4 pt-24 pb-16">
@@ -82,10 +84,13 @@
   </div>
 </div>
 
+{% include "_landing_story.html" %}
+
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/autocomplete_macro.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/landing_story.js') }}"></script>
 
 <style>
 /* Animazione logo soft */
