@@ -3,6 +3,13 @@
   <div class="lc-story__glow lc-story__glow--pink" aria-hidden="true"></div>
 
   <div class="lc-story__shell">
+    <a class="lc-scroll-cue" href="#lc-story-title">
+      <span>Scopri cosa puoi fare</span>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="m7 10 5 5 5-5"></path>
+      </svg>
+    </a>
+
     <header class="lc-story__intro lc-reveal">
       <span class="lc-eyebrow">Gratis per cercare e offrire</span>
       <h2 id="lc-story-title">Trova ciò che ti serve.<br>Fatti trovare per ciò che sai fare.</h2>
@@ -56,21 +63,25 @@
 
         <p class="lc-insight">
           <span aria-hidden="true">↗</span>
-          Lo stesso profilo può cercare in alcune categorie e offrire in altre.
+          <span>
+            Lo stesso profilo può cercare in alcune categorie e offrire in altre.
+            Se non trovi ciò che cerchi, puoi pubblicare la tua richiesta e renderla
+            visibile alle persone della rete.
+          </span>
         </p>
       </div>
 
       <figure class="lc-visual lc-visual--annunci lc-reveal">
         <div class="lc-visual__halo" aria-hidden="true"></div>
         <img
-          src="{{ url_for('static', filename='img/landing_story/story-annuncio.jpg') }}"
-          alt="Annunci Cerco e Offro su MyLocalCare"
+          src="{{ url_for('static', filename='img/landing_story/story-annunci-card.jpg') }}"
+          alt="Esempi di annunci e profili disponibili su MyLocalCare"
           loading="lazy"
           decoding="async"
         >
         <figcaption>
           <span class="lc-caption-dot" aria-hidden="true"></span>
-          Un’intenzione chiara aiuta a trovare la persona giusta.
+          Confronta annunci e profili per trovare la persona più adatta a te.
         </figcaption>
       </figure>
     </article>
