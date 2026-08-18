@@ -76,6 +76,229 @@ def _derive_shared_key(x_priv_bytes: bytes, other_pub_b64: str) -> bytes:
         raise
 
 # ------------------------------------------------------
+# CHAT – STATO BLOCCO TRA UTENTI
+# ------------------------------------------------------
+def _chat_stato_blocco_cursor(c, user_id: int, other_id: int):
+    """
+    Legge lo stato del blocco utilizzando un cursore già aperto.
+    Il blocco è direzionale, ma la conversazione è considerata
+    bloccata se esiste in almeno uno dei due sensi.
+    """
+    user_id = int(user_id)
+    other_id = int(other_id)
+
+    c.execute(sql("""
+        SELECT bloccante_id, bloccato_id
+        FROM chat_blocchi
+        WHERE (bloccante_id = ? AND bloccato_id = ?)
+           OR (bloccante_id = ? AND bloccato_id = ?)
+    """), (
+        user_id,
+        other_id,
+        other_id,
+        user_id
+    ))
+
+    rows = c.fetchall()
+
+    bloccato_da_me = any(
+        int(row["bloccante_id"]) == user_id
+        and int(row["bloccato_id"]) == other_id
+        for row in rows
+    )
+
+    sono_stato_bloccato = any(
+        int(row["bloccante_id"]) == other_id
+        and int(row["bloccato_id"]) == user_id
+        for row in rows
+    )
+
+    return {
+        "bloccata": bloccato_da_me or sono_stato_bloccato,
+        "bloccato_da_me": bloccato_da_me,
+        "sono_stato_bloccato": sono_stato_bloccato
+    }
+
+
+def chat_stato_blocco(user_id: int, other_id: int):
+    """
+    Restituisce lo stato del blocco tra due utenti,
+    gestendo autonomamente connessione e cursore.
+    """
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        return _chat_stato_blocco_cursor(
+            c,
+            user_id,
+            other_id
+        )
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+def chat_blocca(bloccante_id: int, bloccato_id: int):
+    """
+    Registra il blocco di un utente.
+    Il blocco non è consentito se uno dei due utenti è admin.
+    """
+    bloccante_id = int(bloccante_id)
+    bloccato_id = int(bloccato_id)
+
+    if bloccante_id == bloccato_id:
+        raise ValueError("Non puoi bloccare te stesso.")
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            SELECT id, ruolo
+            FROM utenti
+            WHERE id IN (?, ?)
+        """), (
+            bloccante_id,
+            bloccato_id
+        ))
+
+        utenti = {
+            int(row["id"]): row["ruolo"]
+            for row in c.fetchall()
+        }
+
+        if (
+            bloccante_id not in utenti
+            or bloccato_id not in utenti
+        ):
+            raise ValueError("Utente non trovato.")
+
+        if (
+            utenti[bloccante_id] == "admin"
+            or utenti[bloccato_id] == "admin"
+        ):
+            raise PermissionError(
+                "Il blocco non è disponibile nelle chat con l’amministratore."
+            )
+
+        c.execute(sql("""
+            INSERT INTO chat_blocchi (
+                bloccante_id,
+                bloccato_id
+            )
+            VALUES (?, ?)
+            ON CONFLICT (bloccante_id, bloccato_id)
+            DO NOTHING
+        """), (
+            bloccante_id,
+            bloccato_id
+        ))
+
+        # Elimina il ciclo e-mail per ciascuno dei due utenti
+        # se non rimangono messaggi non letti in chat non bloccate.
+        c.execute(sql("""
+            DELETE FROM chat_unread_email_cycles
+            WHERE user_id IN (?, ?)
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM messaggi_chat mc
+                  WHERE mc.destinatario_id =
+                        chat_unread_email_cycles.user_id
+                    AND mc.letto = 0
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM chat_blocchi cb
+                        WHERE (
+                            cb.bloccante_id = mc.mittente_id
+                            AND cb.bloccato_id = mc.destinatario_id
+                        )
+                        OR (
+                            cb.bloccante_id = mc.destinatario_id
+                            AND cb.bloccato_id = mc.mittente_id
+                        )
+                    )
+              )
+        """), (
+            bloccante_id,
+            bloccato_id
+        ))
+
+        conn.commit()
+
+        return _chat_stato_blocco_cursor(
+            c,
+            bloccante_id,
+            bloccato_id
+        )
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def chat_sblocca(bloccante_id: int, bloccato_id: int):
+    """
+    Rimuove esclusivamente il blocco creato dall’utente corrente.
+    Un eventuale blocco nella direzione opposta rimane attivo.
+    """
+    bloccante_id = int(bloccante_id)
+    bloccato_id = int(bloccato_id)
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            DELETE FROM chat_blocchi
+            WHERE bloccante_id = ?
+              AND bloccato_id = ?
+        """), (
+            bloccante_id,
+            bloccato_id
+        ))
+
+        conn.commit()
+
+        return _chat_stato_blocco_cursor(
+            c,
+            bloccante_id,
+            bloccato_id
+        )
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+# ------------------------------------------------------
 # CHAT – CIFRATURA E DECIFRATURA
 # ------------------------------------------------------
 def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
@@ -84,6 +307,34 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
 
     conn = get_db_connection()
     c = get_cursor(conn)
+
+    # Il controllo è eseguito anche nel modello:
+    # non deve essere possibile aggirare il blocco dal client.
+    stato_blocco = _chat_stato_blocco_cursor(
+        c,
+        mittente_id,
+        destinatario_id
+    )
+
+    if stato_blocco["bloccata"]:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+        if stato_blocco["bloccato_da_me"]:
+            raise PermissionError(
+                "Hai bloccato questo utente. Sbloccalo per inviare messaggi."
+            )
+
+        raise PermissionError(
+            "Non puoi inviare messaggi in questa conversazione."
+        )
 
     # --- Recupera materiale crittografico mittente ---
     x_priv_b64 = session.get("x25519_priv_b64")
@@ -433,10 +684,26 @@ def chat_threads(user_id: int):
             lm.letto AS ultimo_letto,
             (
                 SELECT COUNT(*)
-                FROM all_msgs
-                WHERE altro_id = a.altro_id
-                  AND mittente_id = a.altro_id
-                  AND letto = 0
+                FROM all_msgs unread_msgs
+                WHERE unread_msgs.altro_id = a.altro_id
+                  AND unread_msgs.mittente_id = a.altro_id
+                  AND unread_msgs.letto = 0
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM chat_blocchi cb
+                      WHERE (
+                          cb.bloccante_id =
+                              unread_msgs.mittente_id
+                          AND cb.bloccato_id =
+                              unread_msgs.destinatario_id
+                      )
+                      OR (
+                          cb.bloccante_id =
+                              unread_msgs.destinatario_id
+                          AND cb.bloccato_id =
+                              unread_msgs.mittente_id
+                      )
+                  )
             ) AS non_letti
         FROM (SELECT DISTINCT altro_id FROM all_msgs) a
         JOIN utenti u ON u.id = a.altro_id
@@ -545,13 +812,26 @@ def chat_segna_letti(user_id: int, other_id: int):
           AND letto = 0
     """, (user_id, other_id))
 
+
     # Il ciclo termina soltanto quando il contatore complessivo
     # dei messaggi non letti dell'utente torna a zero.
     c.execute("""
         SELECT COUNT(*)
-        FROM messaggi_chat
-        WHERE destinatario_id = ?
-          AND letto = 0
+        FROM messaggi_chat mc
+        WHERE mc.destinatario_id = ?
+          AND mc.letto = 0
+          AND NOT EXISTS (
+              SELECT 1
+              FROM chat_blocchi cb
+              WHERE (
+                  cb.bloccante_id = mc.mittente_id
+                  AND cb.bloccato_id = mc.destinatario_id
+              )
+              OR (
+                  cb.bloccante_id = mc.destinatario_id
+                  AND cb.bloccato_id = mc.mittente_id
+              )
+          )
     """, (user_id,))
 
     messaggi_non_letti = fetchone_value(c.fetchone())
@@ -566,23 +846,51 @@ def chat_segna_letti(user_id: int, other_id: int):
 
 
 def count_chat_non_letti(user_id: int) -> int:
-    """Conta tutti i messaggi di chat non letti da un utente."""
+    """Conta i messaggi non letti, escludendo le chat bloccate."""
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("""
-        SELECT COUNT(*)
-        FROM messaggi_chat mc
-        JOIN utenti u ON u.id = mc.mittente_id
-        WHERE mc.destinatario_id = ?
-          AND mc.letto = 0
-          AND u.sospeso = 0
-          AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
-          AND u.attivo = 1
-    """, (user_id,))
-    n = fetchone_value(c.fetchone())
+    c = get_cursor(conn)
 
-    return n
+    try:
+        c.execute(sql("""
+            SELECT COUNT(*)
+            FROM messaggi_chat mc
+            JOIN utenti u
+              ON u.id = mc.mittente_id
+            WHERE mc.destinatario_id = ?
+              AND mc.letto = 0
+              AND u.sospeso = 0
+              AND (
+                  u.disattivato_admin IS NULL
+                  OR u.disattivato_admin = 0
+              )
+              AND u.attivo = 1
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM chat_blocchi cb
+                  WHERE (
+                      cb.bloccante_id = mc.mittente_id
+                      AND cb.bloccato_id = mc.destinatario_id
+                  )
+                  OR (
+                      cb.bloccante_id = mc.destinatario_id
+                      AND cb.bloccato_id = mc.mittente_id
+                  )
+              )
+        """), (user_id,))
 
+        n = fetchone_value(c.fetchone())
+        return int(n or 0)
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 # ------------------ OPERATORI ------------------ #
 def get_operatori(categoria=None, zona=None, filtri=None):

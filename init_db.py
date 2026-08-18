@@ -382,6 +382,46 @@ def crea_tabella_messaggi_chat():
     conn.close()
     print("✅ Tabella 'messaggi_chat' pronta.")
 
+def crea_tabella_chat_blocchi():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql(f"""
+        CREATE TABLE IF NOT EXISTS chat_blocchi (
+            id {pk_col()},
+            bloccante_id INTEGER NOT NULL,
+            bloccato_id INTEGER NOT NULL,
+            created_at {dt_col(True)},
+
+            CONSTRAINT uq_chat_blocchi
+                UNIQUE (bloccante_id, bloccato_id),
+
+            CONSTRAINT chk_chat_blocchi_no_self
+                CHECK (bloccante_id <> bloccato_id),
+
+            FOREIGN KEY (bloccante_id)
+                REFERENCES utenti(id) ON DELETE CASCADE,
+
+            FOREIGN KEY (bloccato_id)
+                REFERENCES utenti(id) ON DELETE CASCADE
+        );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_chat_blocchi_bloccante
+        ON chat_blocchi(bloccante_id);
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_chat_blocchi_bloccato
+        ON chat_blocchi(bloccato_id);
+    """))
+
+    conn.commit()
+    conn.close()
+
+    print("✅ Tabella 'chat_blocchi' pronta.")
+
 def crea_tabella_chat_chiusure():
     conn = get_conn()
     c = conn.cursor()
@@ -1351,7 +1391,7 @@ def aggiorna_colonne_mancanti():
         UPDATE annunci
         SET modalita_servizio = 'presenza'
         WHERE modalita_servizio IS NULL OR modalita_servizio = ''
-    """)        
+    """)
 
     if "approvato_il" not in colonne_annunci:
         c.execute("ALTER TABLE annunci ADD COLUMN approvato_il TEXT;")
@@ -1630,6 +1670,7 @@ def inizializza_database():
     crea_indici_annunci()
     crea_tabella_match_utenti()
     crea_tabella_messaggi_chat()
+    crea_tabella_chat_blocchi()
     crea_tabella_recensioni()
     crea_tabella_risposte()
     crea_tabella_notifiche()

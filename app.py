@@ -29,6 +29,7 @@ from models import (
     aggiungi_operatore, modifica_operatore, elimina_operatore, get_tutte_le_zone,
     get_utenti, attiva_utente, elimina_utente,
     chat_invia, chat_conversazione, chat_threads, chat_segna_letti, count_chat_non_letti,
+    chat_stato_blocco, chat_blocca, chat_sblocca,
     get_recensioni_utente, aggiungi_o_modifica_recensione, get_recensione_autore_vs_destinatario,
     calcola_media_recensioni, get_risposta_by_recensione, aggiungi_o_modifica_risposta, elimina_risposta,
     get_annunci_utente
@@ -710,6 +711,18 @@ def sincronizza_cicli_email_chat(dry_run=True):
                 LEFT JOIN chat_unread_email_cycles ciclo
                   ON ciclo.user_id = u.id
                 WHERE u.attivo = 1
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM chat_blocchi cb
+                      WHERE (
+                          cb.bloccante_id = mc.mittente_id
+                          AND cb.bloccato_id = mc.destinatario_id
+                      )
+                      OR (
+                          cb.bloccante_id = mc.destinatario_id
+                          AND cb.bloccato_id = mc.mittente_id
+                      )
+                  )
                   AND COALESCE(u.sospeso, 0) = 0
                   AND COALESCE(u.disattivato_admin, 0) = 0
                   AND COALESCE(u.eliminato, 0) = 0
@@ -739,6 +752,18 @@ def sincronizza_cicli_email_chat(dry_run=True):
                   ON mc.destinatario_id = u.id
                  AND mc.letto = 0
                 WHERE u.id = ciclo.user_id
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM chat_blocchi cb
+                      WHERE (
+                          cb.bloccante_id = mc.mittente_id
+                          AND cb.bloccato_id = mc.destinatario_id
+                      )
+                      OR (
+                          cb.bloccante_id = mc.destinatario_id
+                          AND cb.bloccato_id = mc.mittente_id
+                      )
+                  )
                   AND u.attivo = 1
                   AND COALESCE(u.sospeso, 0) = 0
                   AND COALESCE(u.disattivato_admin, 0) = 0
@@ -768,6 +793,18 @@ def sincronizza_cicli_email_chat(dry_run=True):
                       ON mc.destinatario_id = u.id
                      AND mc.letto = 0
                     WHERE u.id = ciclo.user_id
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM chat_blocchi cb
+                          WHERE (
+                              cb.bloccante_id = mc.mittente_id
+                              AND cb.bloccato_id = mc.destinatario_id
+                          )
+                          OR (
+                              cb.bloccante_id = mc.destinatario_id
+                              AND cb.bloccato_id = mc.mittente_id
+                          )
+                      )
                       AND u.attivo = 1
                       AND COALESCE(u.sospeso, 0) = 0
                       AND COALESCE(u.disattivato_admin, 0) = 0
@@ -800,6 +837,18 @@ def sincronizza_cicli_email_chat(dry_run=True):
                   ON mc.destinatario_id = u.id
                  AND mc.letto = 0
                 WHERE u.attivo = 1
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM chat_blocchi cb
+                      WHERE (
+                          cb.bloccante_id = mc.mittente_id
+                          AND cb.bloccato_id = mc.destinatario_id
+                      )
+                      OR (
+                          cb.bloccante_id = mc.destinatario_id
+                          AND cb.bloccato_id = mc.mittente_id
+                      )
+                  )
                   AND COALESCE(u.sospeso, 0) = 0
                   AND COALESCE(u.disattivato_admin, 0) = 0
                   AND COALESCE(u.eliminato, 0) = 0
@@ -942,6 +991,18 @@ def analizza_candidati_promemoria_chat():
                   ON mc.destinatario_id = ciclo.user_id
                  AND mc.letto = 0
                 WHERE ciclo.reminders_sent < 3
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM chat_blocchi cb
+                      WHERE (
+                          cb.bloccante_id = mc.mittente_id
+                          AND cb.bloccato_id = mc.destinatario_id
+                      )
+                      OR (
+                          cb.bloccante_id = mc.destinatario_id
+                          AND cb.bloccato_id = mc.mittente_id
+                      )
+                  )
                   AND ciclo.send_status IN ('pending', 'sent')
                   AND u.attivo = 1
                   AND COALESCE(u.sospeso, 0) = 0
@@ -10266,6 +10327,15 @@ def processa_match_nuovi_annunci(channel=None):
                 if not match_zona:
                     continue
 
+                utente_cerca_id = (
+                    uid if tipo_match == "cerco" else autore_id
+                )
+                utente_offre_id = (
+                    autore_id if tipo_match == "cerco" else uid
+                )
+
+                match_id_creato = None
+
                 try:
                     if app.config.get("IS_POSTGRES"):
                         cur.execute(sql("""
@@ -10277,22 +10347,29 @@ def processa_match_nuovi_annunci(channel=None):
                                 annuncio_id
                             )
                             VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT (
+                                utente_cerca_id,
+                                utente_offre_id,
+                                annuncio_id
+                            )
+                            DO NOTHING
                             RETURNING id
                         """), (
-                            uid if tipo_match == "cerco" else autore_id,
-                            autore_id if tipo_match == "cerco" else uid,
+                            utente_cerca_id,
+                            utente_offre_id,
                             categoria,
                             zona,
                             annuncio_id
                         ))
 
                         row_match = cur.fetchone()
+
                         if row_match and row_match["id"]:
-                            match_ids_creati.append(int(row_match["id"]))
+                            match_id_creato = int(row_match["id"])
 
                     else:
                         cur.execute(sql("""
-                            INSERT INTO match_utenti (
+                            INSERT OR IGNORE INTO match_utenti (
                                 utente_cerca_id,
                                 utente_offre_id,
                                 categoria,
@@ -10301,30 +10378,38 @@ def processa_match_nuovi_annunci(channel=None):
                             )
                             VALUES (?, ?, ?, ?, ?)
                         """), (
-                            uid if tipo_match == "cerco" else autore_id,
-                            autore_id if tipo_match == "cerco" else uid,
+                            utente_cerca_id,
+                            utente_offre_id,
                             categoria,
                             zona,
                             annuncio_id
                         ))
 
-                        if cur.lastrowid:
-                            match_ids_creati.append(int(cur.lastrowid))
-
-                    match_creati += 1
+                        if cur.rowcount == 1 and cur.lastrowid:
+                            match_id_creato = int(cur.lastrowid)
 
                 except Exception as e:
-                    # Se il match esiste già o l'inserimento fallisce per un singolo utente,
-                    # non blocchiamo l'intero ciclo.
                     log_exception_safe(
                         "⚠️ Daily Matches: match singolo non inserito",
                         e,
                         {
                             "annuncio_id": annuncio_id,
                             "user_id": uid
-                        }
+                        },
+                        production=True
                     )
+                    continue
 
+                # Il match esisteva già: non è un nuovo annuncio
+                # per questo utente e non deve essere conteggiato.
+                if match_id_creato is None:
+                    continue
+
+                match_ids_creati.append(match_id_creato)
+                match_creati += 1
+
+                # Incrementa il riepilogo soltanto dopo
+                # l'inserimento effettivo di un nuovo match.
                 notifiche_per_utente.setdefault(uid, {})
                 notifiche_per_utente[uid].setdefault(categoria, 0)
                 notifiche_per_utente[uid][categoria] += 1
@@ -11060,6 +11145,18 @@ def processa_promemoria_email_chat(
                     FROM messaggi_chat mc
                     WHERE mc.destinatario_id = ciclo.user_id
                       AND mc.letto = 0
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM chat_blocchi cb
+                          WHERE (
+                              cb.bloccante_id = mc.mittente_id
+                              AND cb.bloccato_id = mc.destinatario_id
+                          )
+                          OR (
+                              cb.bloccante_id = mc.destinatario_id
+                              AND cb.bloccato_id = mc.mittente_id
+                          )
+                      )
                 ) dati
                 WHERE ciclo.reminders_sent < 3
                   AND ciclo.send_status IN ('pending', 'sent')
@@ -11169,6 +11266,18 @@ def processa_promemoria_email_chat(
                 JOIN messaggi_chat mc
                   ON mc.destinatario_id = ciclo.user_id
                  AND mc.letto = 0
+                 AND NOT EXISTS (
+                      SELECT 1
+                      FROM chat_blocchi cb
+                      WHERE (
+                          cb.bloccante_id = mc.mittente_id
+                          AND cb.bloccato_id = mc.destinatario_id
+                      )
+                      OR (
+                          cb.bloccante_id = mc.destinatario_id
+                          AND cb.bloccato_id = mc.mittente_id
+                      )
+                 )
                 WHERE ciclo.user_id = ?
                   AND ciclo.send_status = 'sending'
                   AND ciclo.reminders_sent = ?
@@ -15631,9 +15740,21 @@ def invia_push(user_id, title, body, url=None):
 
             cur.execute("""
                 SELECT COUNT(*) AS count
-                FROM messaggi_chat
-                WHERE destinatario_id = %s
-                  AND letto = 0
+                FROM messaggi_chat mc
+                WHERE mc.destinatario_id = %s
+                  AND mc.letto = 0
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM chat_blocchi cb
+                      WHERE (
+                          cb.bloccante_id = mc.mittente_id
+                          AND cb.bloccato_id = mc.destinatario_id
+                      )
+                      OR (
+                          cb.bloccante_id = mc.destinatario_id
+                          AND cb.bloccato_id = mc.mittente_id
+                      )
+                  )
             """, (user_id,))
             row_messaggi = cur.fetchone()
             unread_messaggi = int(row_messaggi["count"] or 0) if row_messaggi else 0
@@ -21272,9 +21393,27 @@ def chat_conversazione_json(other_id):
                 return m[k]
         return ""
 
+    blocco_disponibile = (
+        g.utente["ruolo"] != "admin"
+        and not is_admin(other_id)
+    )
+
+    if blocco_disponibile:
+        block_status = chat_stato_blocco(
+            user_id,
+            other_id
+        )
+    else:
+        block_status = {
+            "bloccata": False,
+            "bloccato_da_me": False,
+            "sono_stato_bloccato": False
+        }
+
     return jsonify({
         "ok": True,
         "me_id": user_id,
+        "block_status": block_status,
         "other_display_name": other_display_name,  # 👈 AGGIUNTO
         "other_avatar": other_avatar,              # 👈 AGGIUNTO
         "messages": [
@@ -21357,8 +21496,10 @@ def chat_conversazione_view(other_id):
 
         return "Utente non disponibile", 404
 
+    other_is_admin = is_admin(other_id)
+
     # 🔒 Maschera l'admin verso gli altri utenti
-    if is_admin(altro["id"]):
+    if other_is_admin:
         altro = dict(altro)
         altro["nome"] = "MyLocalCare"
         altro["cognome"] = "Supporto"
@@ -21376,13 +21517,190 @@ def chat_conversazione_view(other_id):
         {'count': chat_count_unread(g.utente["id"])},
         room=f"user_{g.utente['id']}"
     )
+
+    blocco_disponibile = (
+        g.utente["ruolo"] != "admin"
+        and not other_is_admin
+    )
+
+    if blocco_disponibile:
+        chat_block_status = chat_stato_blocco(
+            g.utente["id"],
+            other_id
+        )
+    else:
+        chat_block_status = {
+            "bloccata": False,
+            "bloccato_da_me": False,
+            "sono_stato_bloccato": False
+        }
+
     return render_template(
         "chat_conversazione.html",
         altro=altro,
         conversazione=messaggi,
         utente=g.utente,
-        is_support=is_admin(other_id)
+        is_support=other_is_admin,
+        blocco_disponibile=blocco_disponibile,
+        chat_block_status=chat_block_status
     )
+
+def _emit_chat_block_updates(user_a: int, user_b: int):
+    """
+    Aggiorna in tempo reale entrambi gli utenti dopo
+    un blocco o uno sblocco.
+    """
+    coppie = (
+        (int(user_a), int(user_b)),
+        (int(user_b), int(user_a))
+    )
+
+    for user_id, other_id in coppie:
+        try:
+            stato = chat_stato_blocco(
+                user_id,
+                other_id
+            )
+
+            socketio.emit(
+                "chat_block_status",
+                {
+                    "other_id": other_id,
+                    **stato
+                },
+                room=f"user_{user_id}"
+            )
+
+            socketio.emit(
+                "update_unread_count",
+                {
+                    "count": chat_count_unread(
+                        user_id
+                    )
+                },
+                room=f"user_{user_id}"
+            )
+
+            socketio.emit(
+                "chat_threads_update",
+                {
+                    "from": other_id
+                },
+                room=f"user_{user_id}"
+            )
+
+            # Nasconde immediatamente un eventuale
+            # indicatore "sta scrivendo".
+            socketio.emit(
+                "user_typing",
+                {
+                    "from": other_id,
+                    "typing": False
+                },
+                room=f"user_{user_id}"
+            )
+
+        except Exception as e:
+            print(
+                "⚠️ Errore aggiornamento realtime blocco "
+                f"user={user_id} other={other_id}: {e}",
+                flush=True
+            )
+
+@app.route("/chat/<int:other_id>/blocca", methods=["POST"])
+@login_required
+def blocca_utente_chat(other_id):
+    verify_csrf()
+
+    user_id = int(g.utente["id"])
+    other_id = int(other_id)
+
+    if user_id == other_id:
+        abort(400)
+
+    try:
+        chat_blocca(user_id, other_id)
+
+    except PermissionError as e:
+        # Comprende anche il tentativo di bloccare un admin
+        # o il tentativo effettuato da un admin.
+        flash(str(e), "error")
+
+        return redirect(
+            url_for(
+                "chat_conversazione_view",
+                other_id=other_id
+            )
+        )
+
+    except ValueError:
+        abort(404)
+
+    _emit_chat_block_updates(
+        user_id,
+        other_id
+    )
+
+    flash(
+        "Utente bloccato nella chat.",
+        "success"
+    )
+
+    return redirect(
+        url_for(
+            "chat_conversazione_view",
+            other_id=other_id
+        )
+    )
+
+
+@app.route("/chat/<int:other_id>/sblocca", methods=["POST"])
+@login_required
+def sblocca_utente_chat(other_id):
+    verify_csrf()
+
+    user_id = int(g.utente["id"])
+    other_id = int(other_id)
+
+    if user_id == other_id:
+        abort(400)
+
+    # Protezione server anche per lo sblocco:
+    # l’opzione non deve esistere nelle chat con admin.
+    if (
+        g.utente["ruolo"] == "admin"
+        or is_admin(other_id)
+    ):
+        abort(403)
+
+    stato = chat_sblocca(
+        user_id,
+        other_id
+    )
+
+    _emit_chat_block_updates(
+        user_id,
+        other_id
+    )
+
+    if stato["bloccata"]:
+        flash(
+            "Il tuo blocco è stato rimosso, ma la conversazione rimane bloccata dall’altro utente.",
+            "info"
+        )
+    else:
+        flash(
+            "Utente sbloccato.",
+            "success"
+        )
+
+    return redirect(
+        url_for(
+            "chat_conversazione_view",
+            other_id=other_id
+        )
+    )
+
 
 typing_state = {}
 pagina_attiva = {}
@@ -21656,11 +21974,40 @@ def admin_video_calls_toggle():
 @login_required
 def video_start():
 
-    data = request.get_json()
-    altro_id = data.get("altro_utente_id")
+    data = request.get_json(silent=True) or {}
 
-    if not altro_id:
-        return jsonify({"error": "Utente non valido"}), 400
+    try:
+        altro_id = int(
+            data.get("altro_utente_id")
+        )
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "Utente non valido"
+        }), 400
+
+    try:
+        stato_blocco = chat_stato_blocco(
+            g.utente["id"],
+            altro_id
+        )
+
+    except Exception:
+        log_exception_safe(
+            "⚠️ Errore verifica blocco videochiamata",
+            production=True
+        )
+
+        return jsonify({
+            "error": "Impossibile verificare lo stato della conversazione."
+        }), 503
+
+    if stato_blocco["bloccata"]:
+        return jsonify({
+            "error": (
+                "La videochiamata non è disponibile "
+                "perché la conversazione è bloccata."
+            )
+        }), 403
 
     if not is_video_calls_enabled():
         return jsonify({
@@ -22102,9 +22449,21 @@ def chat_count_unread(user_id):
 
     cur.execute(sql("""
         SELECT COUNT(*) AS count
-        FROM messaggi_chat
-        WHERE destinatario_id = ?
-        AND letto = 0
+        FROM messaggi_chat mc
+        WHERE mc.destinatario_id = ?
+          AND mc.letto = 0
+          AND NOT EXISTS (
+              SELECT 1
+              FROM chat_blocchi cb
+              WHERE (
+                  cb.bloccante_id = mc.mittente_id
+                  AND cb.bloccato_id = mc.destinatario_id
+              )
+              OR (
+                  cb.bloccante_id = mc.destinatario_id
+                  AND cb.bloccato_id = mc.mittente_id
+              )
+          )
     """), (user_id,))
 
     row = cur.fetchone()
@@ -22142,6 +22501,7 @@ if app.config["IS_REALTIME_SERVER"]:
         get_cursor=get_cursor,
         sql=sql,
         chat_invia=chat_invia,
+        chat_stato_blocco=chat_stato_blocco,
         chat_segna_letti=chat_segna_letti,
         emit_to_user_sids=emit_to_user_sids,
         chat_count_unread=chat_count_unread,

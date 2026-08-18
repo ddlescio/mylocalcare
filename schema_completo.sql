@@ -198,6 +198,30 @@ CREATE TABLE messaggi_chat (
         FOREIGN KEY (destinatario_id) REFERENCES utenti(id)
     );
 CREATE INDEX idx_chat_mitt_dest ON messaggi_chat(mittente_id, destinatario_id);
+CREATE TABLE chat_blocchi (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bloccante_id INTEGER NOT NULL,
+    bloccato_id INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+
+    CONSTRAINT uq_chat_blocchi
+        UNIQUE (bloccante_id, bloccato_id),
+
+    CONSTRAINT chk_chat_blocchi_no_self
+        CHECK (bloccante_id <> bloccato_id),
+
+    FOREIGN KEY (bloccante_id)
+        REFERENCES utenti(id) ON DELETE CASCADE,
+
+    FOREIGN KEY (bloccato_id)
+        REFERENCES utenti(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_chat_blocchi_bloccante
+ON chat_blocchi(bloccante_id);
+
+CREATE INDEX idx_chat_blocchi_bloccato
+ON chat_blocchi(bloccato_id);
 CREATE TABLE recensioni (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         id_autore INTEGER NOT NULL,

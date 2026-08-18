@@ -455,7 +455,39 @@ body {
             </button>
         </form>
         {% endif %}
+        {% if blocco_disponibile %}
+          {% if chat_block_status['bloccato_da_me'] %}
+            <form action="{{ url_for('sblocca_utente_chat', other_id=altro['id']) }}"
+                  method="POST"
+                  onsubmit="return confirm('Vuoi sbloccare questo utente?');">
 
+              <input type="hidden"
+                     name="csrf_token"
+                     value="{{ csrf_token() }}">
+
+              <button type="submit"
+                      title="Sblocca utente"
+                      class="px-3 py-1.5 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg text-xs hover:bg-gray-200">
+                🔓 <span class="hidden sm:inline">Sblocca</span>
+              </button>
+            </form>
+          {% else %}
+            <form action="{{ url_for('blocca_utente_chat', other_id=altro['id']) }}"
+                  method="POST"
+                  onsubmit="return confirm('Bloccare questo utente? Non potrete più inviarvi messaggi o videochiamate.');">
+
+              <input type="hidden"
+                     name="csrf_token"
+                     value="{{ csrf_token() }}">
+
+              <button type="submit"
+                      title="Blocca utente"
+                      class="px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded-lg text-xs hover:bg-red-200">
+                🚫 <span class="hidden sm:inline">Blocca</span>
+              </button>
+            </form>
+          {% endif %}
+        {% endif %}
       </div>
 
     <!-- Info utente -->
@@ -486,10 +518,12 @@ body {
     {% endif %}
     <!-- 🎥 Pulsante Video -->
     <button id="videoBtn"
-            class="px-3 py-1.5 bg-green-100 text-green-700 border border-green-300 rounded-lg text-xs hover:bg-green-200">
+            type="button"
+            data-chat-blocked="{{ '1' if chat_block_status['bloccata'] else '0' }}"
+            {% if chat_block_status['bloccata'] %}disabled{% endif %}
+            class="px-3 py-1.5 bg-green-100 text-green-700 border border-green-300 rounded-lg text-xs hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed">
         🎥 Video
     </button>
-
 
   </div>
 
@@ -527,6 +561,17 @@ body {
   <!-- indicatore sta scrivendo -->
   <div id="typingIndicator" class="px-4 py-2 text-center typing-indicator hidden">
     Sta scrivendo…
+  </div>
+
+  <!-- Stato blocco conversazione -->
+  <div id="chatBlockBanner"
+       class="{% if not chat_block_status['bloccata'] %}hidden {% endif %}px-4 py-3 text-center text-sm bg-amber-50 text-amber-800 border-t border-amber-200">
+
+    {% if chat_block_status['bloccato_da_me'] %}
+      Hai bloccato questo utente. Puoi sbloccarlo dal pulsante in alto.
+    {% elif chat_block_status['sono_stato_bloccato'] %}
+      Non puoi inviare messaggi in questa conversazione.
+    {% endif %}
   </div>
 
   <!-- composer -->
@@ -852,27 +897,152 @@ body {
     const sendBtn = document.getElementById('sendBtn');
 
     let chatRealtimeReady = false;
+    let chatBlockStatus = {{ chat_block_status | tojson }};
+
+    function isChatBlocked() {
+      return (
+        chatBlockStatus
+        && chatBlockStatus.bloccata === true
+      );
+    }
+
+    window.__isCurrentChatBlocked = isChatBlocked;
+    window.__chatBlockStatus = chatBlockStatus;
+
+    function refreshChatBlockBanner() {
+      const banner = document.getElementById('chatBlockBanner');
+      if (!banner) return;
+
+      if (!isChatBlocked()) {
+        banner.classList.add('hidden');
+        banner.textContent = '';
+        return;
+      }
+
+      banner.classList.remove('hidden');
+
+      if (chatBlockStatus.bloccato_da_me) {
+        banner.textContent =
+          'Hai bloccato questo utente. Puoi sbloccarlo dal pulsante in alto.';
+      } else {
+        banner.textContent =
+          'Non puoi inviare messaggi in questa conversazione.';
+      }
+    }
 
     function setComposerReady(ready, reason = "") {
       chatRealtimeReady = !!ready;
 
-      if (input) input.disabled = !chatRealtimeReady;
-      if (sendBtn) sendBtn.disabled = !chatRealtimeReady;
-
-      if (sendBtn) {
-        sendBtn.classList.toggle("opacity-50", !chatRealtimeReady);
-        sendBtn.classList.toggle("cursor-not-allowed", !chatRealtimeReady);
-        sendBtn.textContent = chatRealtimeReady ? "Invia" : "Connessione...";
-      }
+      const blocked = isChatBlocked();
+      const composerUsabile = (
+        chatRealtimeReady
+        && !blocked
+      );
 
       if (input) {
-        input.placeholder = chatRealtimeReady
-          ? "Scrivi un messaggio…"
-          : "Attendi connessione chat…";
+        input.disabled = !composerUsabile;
+
+        if (blocked) {
+          input.placeholder =
+            'Invio messaggi non disponibile';
+        } else if (chatRealtimeReady) {
+          input.placeholder =
+            'Scrivi un messaggio…';
+        } else {
+          input.placeholder =
+            'Attendi connessione chat…';
+        }
       }
 
-      console.log("🧷 [CHAT] composer ready =", chatRealtimeReady, "reason=", reason);
+      if (sendBtn) {
+        sendBtn.disabled = !composerUsabile;
+        sendBtn.classList.toggle(
+          'opacity-50',
+          !composerUsabile
+        );
+        sendBtn.classList.toggle(
+          'cursor-not-allowed',
+          !composerUsabile
+        );
+
+        if (blocked) {
+          sendBtn.textContent = 'Chat bloccata';
+        } else {
+          sendBtn.textContent = chatRealtimeReady
+            ? 'Invia'
+            : 'Connessione...';
+        }
+      }
+
+      const emojiControl =
+        document.getElementById('emojiBtn');
+
+      if (emojiControl) {
+        emojiControl.disabled = !composerUsabile;
+      }
+
+      if (blocked) {
+        const emojiPopover =
+          document.getElementById('emojiPopover');
+
+        if (emojiPopover) {
+          emojiPopover.classList.add('hidden');
+        }
+
+        typingIndicator?.classList.add('hidden');
+      }
+
+      refreshChatBlockBanner();
+
+      console.log(
+        '🧷 [CHAT] composer ready =',
+        chatRealtimeReady,
+        'blocked =',
+        blocked,
+        'reason =',
+        reason
+      );
     }
+
+    function applyChatBlockStatus(nextStatus) {
+      if (!nextStatus) return;
+
+      chatBlockStatus = {
+        bloccata: nextStatus.bloccata === true,
+        bloccato_da_me:
+          nextStatus.bloccato_da_me === true,
+        sono_stato_bloccato:
+          nextStatus.sono_stato_bloccato === true
+      };
+
+      window.__chatBlockStatus = chatBlockStatus;
+
+      setComposerReady(
+        chatRealtimeReady,
+        'block_status'
+      );
+
+      const videoBtn = document.getElementById('videoBtn');
+
+      if (videoBtn) {
+        const blocked = isChatBlocked();
+        const videoBusy = videoBtn.dataset.videoBusy === "1";
+
+        videoBtn.dataset.chatBlocked = blocked ? "1" : "0";
+
+        if (blocked) {
+          videoBtn.disabled = true;
+        } else if (
+          !videoBusy
+          && videoBtn.innerText.trim() === "🎥 Video"
+        ) {
+          videoBtn.disabled = false;
+        }
+      }
+    }
+
+    window.__applyChatBlockStatus =
+      applyChatBlockStatus;
 
     setComposerReady(false, "init");
 
@@ -898,6 +1068,12 @@ body {
         if (window.__chatHandlers.newMessage) previousSocket.off("new_message", window.__chatHandlers.newMessage);
         if (window.__chatHandlers.messagesRead) previousSocket.off("messages_read", window.__chatHandlers.messagesRead);
         if (window.__chatHandlers.messageDelivered) previousSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
+        if (window.__chatHandlers.chatBlockStatus) {
+          previousSocket.off(
+            "chat_block_status",
+            window.__chatHandlers.chatBlockStatus
+          );
+        }
       }
       // --------------------------------------------------
       // 2. STACCA COMUNQUE I LISTENER DAL SOCKET ATTUALE
@@ -908,6 +1084,12 @@ body {
       if (window.__chatHandlers.newMessage) socket.off("new_message", window.__chatHandlers.newMessage);
       if (window.__chatHandlers.messagesRead) socket.off("messages_read", window.__chatHandlers.messagesRead);
       if (window.__chatHandlers.messageDelivered) socket.off("message_delivered", window.__chatHandlers.messageDelivered);
+      if (window.__chatHandlers.chatBlockStatus) {
+        socket.off(
+          "chat_block_status",
+          window.__chatHandlers.chatBlockStatus
+        );
+      }
       // --------------------------------------------------
       // 3. MEMORIZZA QUESTO COME SOCKET CHAT ATTIVO
       // --------------------------------------------------
@@ -1108,6 +1290,31 @@ body {
       socket.on("user_typing", window.__chatHandlers.userTyping);
 
       // --------------------------------------------------
+      // STATO BLOCCO CHAT
+      // --------------------------------------------------
+      window.__chatHandlers.chatBlockStatus = function (data) {
+        if (socket !== window.__chatBoundSocket) {
+          return;
+        }
+
+        if (!data) return;
+
+        if (
+          parseInt(data.other_id, 10) !== destId
+        ) {
+          return;
+        }
+
+        typingIndicator.classList.add("hidden");
+        applyChatBlockStatus(data);
+      };
+
+      socket.on(
+        "chat_block_status",
+        window.__chatHandlers.chatBlockStatus
+      );
+
+      // --------------------------------------------------
       // MESSAGES READ
       // --------------------------------------------------
       window.__chatHandlers.messagesRead = function (data) {
@@ -1191,6 +1398,12 @@ body {
       }
       if (window.__chatHandlers.messageDelivered) {
         socket.off("message_delivered", window.__chatHandlers.messageDelivered);
+      }
+      if (window.__chatHandlers.chatBlockStatus) {
+        socket.off(
+          "chat_block_status",
+          window.__chatHandlers.chatBlockStatus
+        );
       }
 
       clearTimeout(markReadTimer);
@@ -1328,6 +1541,14 @@ body {
   let wasTyping = false;
 
   input.addEventListener("input", () => {
+
+    if (isChatBlocked()) {
+      wasTyping = false;
+      clearTimeout(typingTimeout);
+      typingIndicator?.classList.add('hidden');
+      return;
+    }
+
     // invia typing:true solo la prima volta
     if (!wasTyping) {
       wasTyping = true;
@@ -1458,6 +1679,16 @@ body {
 
       const data = await res.json();
 
+      if (
+        data
+        && data.block_status
+        && typeof window.__applyChatBlockStatus === 'function'
+      ) {
+        window.__applyChatBlockStatus(
+          data.block_status
+        );
+      }
+
       if (!data || !Array.isArray(data.messages) || !data.messages.length) {
         pollingInFlight = false;
         return;
@@ -1541,6 +1772,14 @@ body {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
 
+    if (isChatBlocked()) {
+      setComposerReady(
+        chatRealtimeReady,
+        'submit_blocked'
+      );
+      return;
+    }
+
     console.log("🧨 [CHAT] submit intercettato", {
       sending,
       rawValue: input.value,
@@ -1599,6 +1838,16 @@ body {
 
         if (!response || response.ok !== true) {
           console.error("❌ ACK send_message negativo:", response);
+
+          if (
+            response
+            && response.code === 'chat_blocked'
+            && response.block_status
+          ) {
+            applyChatBlockStatus(
+              response.block_status
+            );
+          }
 
           chatDebug("ack_send_message_negative", {
             response: response || null
@@ -1790,6 +2039,16 @@ async function initVideoSystem() {
     // 👇 METTI QUI LA FUNZIONE
     async function attemptVideoStart() {
 
+      if (
+          typeof window.__isCurrentChatBlocked === 'function'
+          && window.__isCurrentChatBlocked()
+      ) {
+          alert(
+              'La videochiamata non è disponibile perché la conversazione è bloccata.'
+          );
+          return false;
+      }
+
         const res = await fetch("/video/start", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1974,7 +2233,12 @@ async function initVideoSystem() {
     };
 
     function resetBtn() {
-        videoBtn.disabled = false;
+        const chatBlocked =
+            typeof window.__isCurrentChatBlocked === "function"
+            && window.__isCurrentChatBlocked();
+
+        videoBtn.dataset.chatBlocked = chatBlocked ? "1" : "0";
+        videoBtn.disabled = chatBlocked;
         videoBtn.innerText = "🎥 Video";
     }
 
@@ -2236,6 +2500,10 @@ async function initVideoSystem() {
 
         window.__videoHandlers.videoStatusResult = function(data) {
 
+            if (!data) return;
+
+            videoBtn.dataset.videoBusy = data.busy ? "1" : "0";
+
             if (data.busy) {
 
                 videoBtn.disabled = true;
@@ -2273,6 +2541,8 @@ async function initVideoSystem() {
 
             if (data.user_id === destId) {
 
+                videoBtn.dataset.videoBusy = data.busy ? "1" : "0";
+
                 if (data.busy) {
 
                     videoBtn.disabled = true;
@@ -2290,7 +2560,12 @@ async function initVideoSystem() {
 
                 } else {
 
-                    videoBtn.disabled = false;
+                    const chatBlocked =
+                        typeof window.__isCurrentChatBlocked === "function"
+                        && window.__isCurrentChatBlocked();
+
+                    videoBtn.dataset.chatBlocked = chatBlocked ? "1" : "0";
+                    videoBtn.disabled = chatBlocked;
                     videoBtn.innerText = "🎥 Video";
 
                     videoBtn.classList.add(
@@ -2302,11 +2577,8 @@ async function initVideoSystem() {
                         "bg-gray-200",
                         "text-gray-500"
                     );
-
                 }
-
             }
-
         };
 
         socket.on("video_busy", window.__videoHandlers.videoBusy);

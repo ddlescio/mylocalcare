@@ -41,6 +41,7 @@ def register_chat_socket_handlers(
     get_cursor,
     sql,
     chat_invia,
+    chat_stato_blocco,
     chat_segna_letti,
     emit_to_user_sids,
     chat_count_unread,
@@ -159,6 +160,40 @@ def register_chat_socket_handlers(
         if not mittente_id or not destinatario_id or not testo:
             print(f"❌ [send_message] dati mancanti mittente={mittente_id} destinatario={destinatario_id} testo='{testo}'")
             return {"ok": False, "error": "Dati mancanti o sessione non valida"}
+
+        try:
+            stato_blocco = chat_stato_blocco(
+                mittente_id,
+                destinatario_id
+            )
+
+        except Exception:
+            print(
+                "❌ [send_message] errore verifica blocco",
+                flush=True
+            )
+            traceback.print_exc()
+
+            # In caso di errore il controllo deve fallire
+            # in modo chiuso: nessun messaggio viene inviato.
+            return {
+                "ok": False,
+                "error": "Impossibile verificare lo stato della conversazione."
+            }
+
+        if stato_blocco["bloccata"]:
+            messaggio_errore = (
+                "Hai bloccato questo utente. Sbloccalo per inviare messaggi."
+                if stato_blocco["bloccato_da_me"]
+                else "Non puoi inviare messaggi in questa conversazione."
+            )
+
+            return {
+                "ok": False,
+                "code": "chat_blocked",
+                "error": messaggio_errore,
+                "block_status": stato_blocco
+            }
 
         conn = None
         c = None
@@ -445,6 +480,30 @@ def register_chat_socket_handlers(
         typing = data.get("typing", False)
 
         if not mittente_id or not destinatario_id:
+            return
+
+        try:
+            stato_blocco = chat_stato_blocco(
+                mittente_id,
+                destinatario_id
+            )
+
+        except Exception:
+            print(
+                "❌ [typing] errore verifica blocco",
+                flush=True
+            )
+            traceback.print_exc()
+            return
+
+        if stato_blocco["bloccata"]:
+            typing_state.pop(
+                (
+                    int(mittente_id),
+                    int(destinatario_id)
+                ),
+                None
+            )
             return
 
         typing_state[(mittente_id, destinatario_id)] = typing
