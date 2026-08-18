@@ -286,13 +286,25 @@ def leggi_riferimenti_database():
         # Revisioni profilo.
         cur.execute("""
             SELECT
-                utente_id,
-                campo,
-                testo_precedente,
-                testo_proposto,
-                stato
-            FROM revisioni_profilo
-            WHERE campo IN (
+                rp.utente_id,
+                rp.campo,
+                rp.testo_precedente,
+                rp.testo_proposto,
+                rp.stato,
+
+                EXISTS (
+                    SELECT 1
+                    FROM revisioni_profilo approvata
+                    WHERE approvata.utente_id = rp.utente_id
+                      AND approvata.campo = rp.campo
+                      AND approvata.stato = 'approvata'
+                      AND approvata.data_decisione IS NOT NULL
+                      AND rp.data_decisione IS NOT NULL
+                      AND approvata.data_decisione > rp.data_decisione
+                ) AS ha_approvazione_successiva
+
+            FROM revisioni_profilo rp
+            WHERE rp.campo IN (
                 'foto_profilo',
                 'copertina',
                 'foto_galleria'
@@ -305,6 +317,7 @@ def leggi_riferimenti_database():
             testo_precedente,
             testo_proposto,
             stato,
+            ha_approvazione_successiva,
         ) in cur.fetchall():
             precedenti = valori_revisione_immagine(
                 campo,
@@ -333,8 +346,13 @@ def leggi_riferimenti_database():
                     percorsi_invalidi,
                 )
 
-            elif stato == "rifiutata":
-                # La proposta rifiutata resta come prova.
+            elif (
+                stato == "rifiutata"
+                and not ha_approvazione_successiva
+            ):
+                # La proposta rifiutata resta come prova soltanto
+                # finché non viene approvata una modifica successiva
+                # dello stesso campo.
                 aggiungi_valori(
                     riferimenti_attivi,
                     proposti,
