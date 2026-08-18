@@ -84,6 +84,8 @@ from realtime_auth import build_realtime_token
 from image_utils import (
     ErroreImmagine,
     crea_thumbnail_cerca,
+    elimina_immagine_locale,
+    immagine_locale_esiste,
     percorso_thumbnail_relativo,
     salva_immagine_ottimizzata,
     scegli_immagine_cerca,
@@ -5516,6 +5518,91 @@ def admin_revisioni_profilo_azione(revision_id):
             }), 400
 
         # =====================================================
+        # FILE ELIMINABILI DOPO UN'EVENTUALE APPROVAZIONE
+        # =====================================================
+        percorsi_da_eliminare_dopo_commit = []
+        percorsi_da_conservare_dopo_commit = []
+
+        if (
+            azione == "approva"
+            and campo in campi_immagine
+        ):
+            # Immagini attualmente pubbliche.
+            percorsi_pubblici_attuali = (
+                percorsi_revisione_immagine(
+                    campo,
+                    revisione[campo],
+                )
+            )
+
+            # Nuove immagini che diventeranno pubbliche.
+            percorsi_proposti = (
+                percorsi_revisione_immagine(
+                    campo,
+                    testo_proposto,
+                )
+            )
+
+            # Non approvare e non eliminare la vecchia immagine
+            # se la nuova proposta non esiste realmente sul disco.
+            if (
+                not percorsi_proposti
+                or any(
+                    not immagine_locale_esiste(
+                        app.static_folder,
+                        percorso,
+                    )
+                    for percorso in percorsi_proposti
+                )
+            ):
+                return jsonify({
+                    "ok": False,
+                    "message": (
+                        "Una o più immagini proposte non sono "
+                        "disponibili sul disco. Nessuna modifica "
+                        "è stata applicata."
+                    )
+                }), 409
+
+            # Vecchie proposte rifiutate dello stesso campo.
+            # Non includiamo la revisione corrente perché
+            # potrebbe essere una revisione rifiutata
+            # che l'admin sta approvando nuovamente.
+            c.execute(sql("""
+                SELECT testo_proposto
+                FROM revisioni_profilo
+                WHERE utente_id = ?
+                  AND campo = ?
+                  AND stato = 'rifiutata'
+                  AND id <> ?
+            """), (
+                utente_id,
+                campo,
+                revision_id,
+            ))
+
+            percorsi_rifiutati_precedenti = []
+
+            for revisione_rifiutata in c.fetchall():
+                percorsi_rifiutati_precedenti.extend(
+                    percorsi_revisione_immagine(
+                        campo,
+                        revisione_rifiutata["testo_proposto"],
+                    )
+                )
+
+            percorsi_da_eliminare_dopo_commit = list(
+                dict.fromkeys(
+                    percorsi_pubblici_attuali
+                    + percorsi_rifiutati_precedenti
+                )
+            )
+
+            percorsi_da_conservare_dopo_commit = (
+                percorsi_proposti
+            )
+
+        # =====================================================
         # APPROVA
         # =====================================================
         if azione == "approva":
@@ -5578,15 +5665,19 @@ def admin_revisioni_profilo_azione(revision_id):
 
             if campo == "frase":
                 if stato_attuale == "approvata":
+                    # Un testo già pubblicato viene ritirato:
+                    # pubblicamente il campo torna vuoto.
                     c.execute(sql("""
                         UPDATE utenti SET
-                            frase = ?,
+                            frase = NULL,
                             frase_pending = NULL,
                             frase_stato = 'rifiutata',
                             frase_inviata_revisione_il = NULL
                         WHERE id = ?
-                    """), (testo_precedente, utente_id))
+                    """), (utente_id,))
                 else:
+                    # La proposta non era mai diventata pubblica:
+                    # il testo pubblico precedente rimane invariato.
                     c.execute(sql("""
                         UPDATE utenti SET
                             frase_pending = NULL,
@@ -5597,15 +5688,19 @@ def admin_revisioni_profilo_azione(revision_id):
 
             elif campo == "descrizione":
                 if stato_attuale == "approvata":
+                    # Una descrizione già pubblicata viene ritirata:
+                    # pubblicamente il campo torna vuoto.
                     c.execute(sql("""
                         UPDATE utenti SET
-                            descrizione = ?,
+                            descrizione = NULL,
                             descrizione_pending = NULL,
                             descrizione_stato = 'rifiutata',
                             descrizione_inviata_revisione_il = NULL
                         WHERE id = ?
-                    """), (testo_precedente, utente_id))
+                    """), (utente_id,))
                 else:
+                    # La proposta non era mai diventata pubblica:
+                    # la descrizione precedente rimane invariata.
                     c.execute(sql("""
                         UPDATE utenti SET
                             descrizione_pending = NULL,
@@ -5616,27 +5711,33 @@ def admin_revisioni_profilo_azione(revision_id):
 
             elif campo == "foto_profilo":
                 if stato_attuale == "approvata":
+                    # La foto viene rimossa dal profilo pubblico,
+                    # ma il file resta conservato come prova.
                     c.execute(sql("""
                         UPDATE utenti SET
-                            foto_profilo = ?
+                            foto_profilo = NULL
                         WHERE id = ?
-                    """), (testo_precedente, utente_id))
+                    """), (utente_id,))
 
             elif campo == "copertina":
                 if stato_attuale == "approvata":
+                    # La copertina viene rimossa dal profilo pubblico,
+                    # ma il file resta conservato come prova.
                     c.execute(sql("""
                         UPDATE utenti SET
-                            copertina = ?
+                            copertina = NULL
                         WHERE id = ?
-                    """), (testo_precedente, utente_id))
+                    """), (utente_id,))
 
             elif campo == "foto_galleria":
                 if stato_attuale == "approvata":
+                    # La galleria pubblica torna vuota,
+                    # ma i file restano conservati come prova.
                     c.execute(sql("""
                         UPDATE utenti SET
-                            foto_galleria = ?
+                            foto_galleria = NULL
                         WHERE id = ?
-                    """), (testo_precedente, utente_id))
+                    """), (utente_id,))
 
             c.execute(sql("""
                 UPDATE revisioni_profilo SET
@@ -5649,6 +5750,49 @@ def admin_revisioni_profilo_azione(revision_id):
             messaggio = "Revisione rifiutata."
 
         conn.commit()
+
+        # Le immagini obsolete vengono eliminate soltanto:
+        # - dopo il commit riuscito;
+        # - in caso di approvazione;
+        # - senza mai eliminare le immagini appena approvate.
+        if (
+            azione == "approva"
+            and campo in campi_immagine
+            and percorsi_da_eliminare_dopo_commit
+        ):
+            try:
+                file_eliminati = (
+                    elimina_percorsi_immagine_locale(
+                        percorsi_da_eliminare_dopo_commit,
+                        conserva=(
+                            percorsi_da_conservare_dopo_commit
+                        ),
+                    )
+                )
+
+                if file_eliminati:
+                    app.logger.info(
+                        "Eliminati %s file immagine obsoleti "
+                        "dopo approvazione revisione %s "
+                        "utente %s campo %s",
+                        file_eliminati,
+                        revision_id,
+                        utente_id,
+                        campo,
+                    )
+
+            except Exception as errore_eliminazione:
+                # Il database è già aggiornato correttamente.
+                # Un problema sul disco non deve compromettere
+                # l'approvazione o il funzionamento del sito.
+                app.logger.warning(
+                    "Impossibile completare la pulizia immagini "
+                    "revisione %s utente %s campo %s: %s",
+                    revision_id,
+                    utente_id,
+                    campo,
+                    errore_eliminazione,
+                )
 
         try:
             invalidate_admin_counters()
@@ -7608,7 +7752,51 @@ def toggle_utente(id):
 @app.route('/admin/elimina_utente/<int:id>')
 @admin_required
 def elimina_utente_route(id):
+    percorsi_immagini_account = []
+
+    # Raccogliamo i percorsi prima che la funzione nel model
+    # elimini annunci, revisioni e riferimenti del profilo.
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        percorsi_immagini_account = (
+            raccogli_percorsi_immagini_utente(
+                cur,
+                id,
+            )
+        )
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    # La funzione completa prima tutte le modifiche al database.
+    # Se genera un errore, il codice successivo non viene eseguito
+    # e nessun file viene cancellato.
     elimina_utente(id)
+
+    # Solo dopo il commit eseguito da elimina_utente()
+    # cancelliamo originali ed eventuali miniature.
+    if percorsi_immagini_account:
+        try:
+            elimina_percorsi_immagine_locale(
+                percorsi_immagini_account
+            )
+        except Exception as errore_pulizia:
+            app.logger.warning(
+                "Impossibile eliminare tutti i file "
+                "dell'account %s cancellato dall'admin: %s",
+                id,
+                errore_pulizia,
+            )
+
+    try:
+        invalidate_admin_counters()
+    except Exception:
+        pass
+
     flash("Utente eliminato correttamente. Email e username sono stati liberati.")
     return redirect(url_for('admin_utenti'))
 
@@ -12924,44 +13112,77 @@ def modifica_annuncio(id):
         # =====================================================
         # 💾 UPDATE DB
         # =====================================================
-        c.execute(sql("""
-            UPDATE annunci
-            SET
-                titolo = ?,
-                descrizione = ?,
-                categoria = ?,
-                tipo_annuncio = ?,
-                zona = ?,
-                provincia = ?,
-                modalita_servizio = ?,
-                prezzo = ?,
-                telefono = ?,
-                email = ?,
-                bio_utente = ?,
-                media = ?,
-                foto_card = ?,
-                filtri_categoria = ?,
-                stato = 'in_attesa'
-            WHERE id = ?
-        """), (
-            titolo,
-            descrizione,
-            categoria,
-            tipo_annuncio,
-            zona,
-            provincia,
-            modalita_servizio,
-            prezzo,
-            telefono,
-            email,
-            bio,
-            media_finale,
-            foto_card,
-            ",".join(filtri),
-            id
-        ))
+        commit_modifica_annuncio_avviato = False
 
-        conn.commit()
+        try:
+            c.execute(sql("""
+                UPDATE annunci
+                SET
+                    titolo = ?,
+                    descrizione = ?,
+                    categoria = ?,
+                    tipo_annuncio = ?,
+                    zona = ?,
+                    provincia = ?,
+                    modalita_servizio = ?,
+                    prezzo = ?,
+                    telefono = ?,
+                    email = ?,
+                    bio_utente = ?,
+                    media = ?,
+                    foto_card = ?,
+                    filtri_categoria = ?,
+                    stato = 'in_attesa'
+                WHERE id = ?
+            """), (
+                titolo,
+                descrizione,
+                categoria,
+                tipo_annuncio,
+                zona,
+                provincia,
+                modalita_servizio,
+                prezzo,
+                telefono,
+                email,
+                bio,
+                media_finale,
+                foto_card,
+                ",".join(filtri),
+                id
+            ))
+
+            # Da questo momento l'esito del commit potrebbe essere incerto:
+            # in caso di errore conserviamo prudentemente le immagini.
+            commit_modifica_annuncio_avviato = True
+            conn.commit()
+
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+            # Se l'UPDATE è fallito prima del tentativo di commit,
+            # le nuove immagini non sono utilizzate dall'annuncio.
+            if (
+                nuovi_media_paths
+                and not commit_modifica_annuncio_avviato
+            ):
+                try:
+                    elimina_percorsi_immagine_locale(
+                        nuovi_media_paths
+                    )
+                except Exception as errore_pulizia:
+                    app.logger.warning(
+                        "Impossibile ripulire le nuove immagini "
+                        "della modifica non salvata dell'annuncio %s: %s",
+                        id,
+                        errore_pulizia,
+                    )
+
+            raise
+
         # Elimina i file soltanto dopo che il database
         # è stato aggiornato correttamente.
         for foto in immagini_da_cancellare:
@@ -13187,6 +13408,219 @@ CAMPI_REVISIONE_IMMAGINI = {
     }
 }
 
+def percorsi_revisione_immagine(campo, valore):
+    """
+    Converte il valore di una revisione immagine
+    in una lista di percorsi senza duplicati.
+    """
+
+    if campo not in CAMPI_REVISIONE_IMMAGINI:
+        return []
+
+    if campo != "foto_galleria":
+        percorso = (
+            str(valore or "")
+            .strip()
+            .replace("\\", "/")
+        )
+
+        return [percorso] if percorso else []
+
+    if not valore:
+        return []
+
+    if isinstance(valore, (list, tuple, set)):
+        elementi = valore
+    else:
+        testo = str(valore).strip()
+
+        if not testo:
+            return []
+
+        parsed = None
+
+        if testo.startswith("["):
+            try:
+                parsed = json.loads(testo)
+            except (TypeError, ValueError):
+                parsed = None
+
+        if isinstance(parsed, list):
+            elementi = parsed
+        else:
+            elementi = testo.split(",")
+
+    percorsi = []
+
+    for elemento in elementi:
+        percorso = (
+            str(elemento or "")
+            .strip()
+            .replace("\\", "/")
+        )
+
+        if percorso and percorso not in percorsi:
+            percorsi.append(percorso)
+
+    return percorsi
+
+
+def elimina_percorsi_immagine_locale(
+    percorsi,
+    *,
+    conserva=None,
+    elimina_originale=True,
+    elimina_thumbnail=True,
+):
+    """
+    Elimina una raccolta di immagini dopo il commit.
+
+    I percorsi presenti in conserva non vengono eliminati.
+    """
+
+    if isinstance(percorsi, str):
+        percorsi = [percorsi]
+
+    if isinstance(conserva, str):
+        conserva = [conserva]
+
+    percorsi_da_conservare = {
+        str(percorso or "").strip().replace("\\", "/")
+        for percorso in (conserva or [])
+        if str(percorso or "").strip()
+    }
+
+    file_eliminati = 0
+
+    for percorso in dict.fromkeys(percorsi or []):
+        percorso = (
+            str(percorso or "")
+            .strip()
+            .replace("\\", "/")
+        )
+
+        if (
+            not percorso
+            or percorso in percorsi_da_conservare
+        ):
+            continue
+
+        file_eliminati += elimina_immagine_locale(
+            app.static_folder,
+            percorso,
+            elimina_originale=elimina_originale,
+            elimina_thumbnail=elimina_thumbnail,
+            logger=app.logger,
+        )
+
+    return file_eliminati
+
+
+def raccogli_percorsi_immagini_utente(cur, user_id):
+    """
+    Raccoglie tutti i percorsi immagine collegati a un utente.
+
+    La funzione non elimina e non modifica nulla.
+    Serve prima della cancellazione dell'account, quando
+    i riferimenti sono ancora presenti nel database.
+    """
+
+    percorsi = []
+
+    def aggiungi(nuovi_percorsi):
+        for percorso in nuovi_percorsi or []:
+            percorso = (
+                str(percorso or "")
+                .strip()
+                .replace("\\", "/")
+            )
+
+            if percorso and percorso not in percorsi:
+                percorsi.append(percorso)
+
+    # Immagini attualmente presenti nel profilo.
+    cur.execute(sql("""
+        SELECT
+            foto_profilo,
+            copertina,
+            foto_galleria
+        FROM utenti
+        WHERE id = ?
+    """), (user_id,))
+
+    utente = cur.fetchone()
+
+    if utente:
+        aggiungi(
+            percorsi_revisione_immagine(
+                "foto_profilo",
+                utente["foto_profilo"],
+            )
+        )
+        aggiungi(
+            percorsi_revisione_immagine(
+                "copertina",
+                utente["copertina"],
+            )
+        )
+        aggiungi(
+            percorsi_revisione_immagine(
+                "foto_galleria",
+                utente["foto_galleria"],
+            )
+        )
+
+    # Immagini conservate nello storico revisioni,
+    # comprese quelle pending, approvate e rifiutate.
+    cur.execute(sql("""
+        SELECT
+            campo,
+            testo_precedente,
+            testo_proposto
+        FROM revisioni_profilo
+        WHERE utente_id = ?
+          AND campo IN (
+              'foto_profilo',
+              'copertina',
+              'foto_galleria'
+          )
+    """), (user_id,))
+
+    for revisione in cur.fetchall():
+        aggiungi(
+            percorsi_revisione_immagine(
+                revisione["campo"],
+                revisione["testo_precedente"],
+            )
+        )
+        aggiungi(
+            percorsi_revisione_immagine(
+                revisione["campo"],
+                revisione["testo_proposto"],
+            )
+        )
+
+    # Immagini di tutti gli annunci dell'utente.
+    cur.execute(sql("""
+        SELECT
+            media,
+            foto_card
+        FROM annunci
+        WHERE utente_id = ?
+    """), (user_id,))
+
+    for annuncio in cur.fetchall():
+        aggiungi(
+            [
+                percorso
+                for percorso in (annuncio["media"] or "").split(",")
+                if percorso and percorso.strip()
+            ]
+        )
+
+        aggiungi([annuncio["foto_card"]])
+
+    return percorsi
 
 def get_revisione_profilo_pending(cur, user_id, campo):
     """
@@ -13882,6 +14316,9 @@ def utente_update_galleria():
     conn = get_db_connection()
     c = get_cursor(conn)
 
+    nuovi_file_creati = []
+    commit_revisione_galleria_avviato = False
+
     def normalizza_lista_foto(valore):
         if not valore:
             return []
@@ -13932,14 +14369,40 @@ def utente_update_galleria():
         # =====================================================
         # 3) Rimozioni richieste
         # =====================================================
+        correnti_prima_rimozioni = list(correnti)
+
         to_remove = request.form.getlist("remove")
         to_remove = [p.strip() for p in to_remove if p and str(p).strip()]
 
-        if to_remove:
-            correnti = [p for p in correnti if p not in to_remove]
+        # L'utente può eliminare soltanto immagini appartenenti
+        # alla propria galleria pubblica o alla propria proposta pending.
+        percorsi_selezionabili = list(dict.fromkeys(
+            galleria_pubblica + correnti_prima_rimozioni
+        ))
+
+        percorsi_rimossi = [
+            percorso
+            for percorso in percorsi_selezionabili
+            if percorso in to_remove
+        ]
+
+        if percorsi_rimossi:
+            correnti = [
+                percorso
+                for percorso in correnti
+                if percorso not in percorsi_rimossi
+            ]
 
         correnti = [p.strip() for p in correnti if p and str(p).strip()]
         correnti = list(dict.fromkeys(correnti))
+
+        # Le eliminazioni dalla galleria pubblica sono immediate:
+        # non richiedono mai approvazione admin.
+        galleria_pubblica_aggiornata = [
+            percorso
+            for percorso in galleria_pubblica
+            if percorso not in percorsi_rimossi
+        ]
 
         # =====================================================
         # 4) File caricati
@@ -13978,64 +14441,80 @@ def utente_update_galleria():
 
         # =====================================================
         # 5) CASO SOLO ELIMINAZIONE
-        # Se l'utente elimina una foto senza caricarne di nuove:
-        # - NON mandiamo notifica admin
-        # - NON creiamo nuova revisione
-        # - NON richiediamo approvazione
+        # La cancellazione richiesta dall'utente è immediata:
+        # - non richiede approvazione admin
+        # - aggiorna subito la galleria pubblica
+        # - aggiorna o annulla un'eventuale proposta pending
+        # - elimina i file soltanto dopo il commit
         # =====================================================
         if to_remove and not file_validi:
-            valore_precedente = json.dumps(galleria_pubblica)
+            if not percorsi_rimossi:
+                flash("ℹ️ Nessuna foto valida selezionata.", "info")
+                return redirect(url_for("dashboard") + "#foto")
+
+            valore_pubblico_aggiornato = json.dumps(
+                galleria_pubblica_aggiornata
+            )
             valore_proposto = json.dumps(correnti)
 
-            # Caso A: esiste già una revisione in attesa.
-            # L'utente sta modificando la proposta privata.
+            # La rimozione dalla galleria pubblica viene applicata
+            # immediatamente, anche se esiste una revisione pending.
+            c.execute(
+                sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"),
+                (valore_pubblico_aggiornato, user_id)
+            )
+
             if revisione_pending:
-                if valore_proposto == valore_precedente:
-                    # La proposta torna identica alla galleria pubblica:
-                    # eliminiamo la revisione pending.
+                if valore_proposto == valore_pubblico_aggiornato:
+                    # Dopo la cancellazione la proposta coincide con
+                    # la galleria pubblica: la revisione non serve più.
                     c.execute(sql("""
                         DELETE FROM revisioni_profilo
                         WHERE id = ?
                     """), (revisione_pending["id"],))
-
-                    conn.commit()
-
-                    try:
-                        invalidate_admin_counters()
-                    except Exception:
-                        pass
-
-                    flash(
-                        "✅ Modifica annullata: la galleria è tornata uguale a quella pubblica.",
-                        "success"
-                    )
-                    return redirect(url_for("dashboard") + "#foto")
-
-                # Resta una proposta diversa dalla pubblica:
-                # aggiorniamo la revisione esistente senza nuova notifica.
-                c.execute(sql("""
-                    UPDATE revisioni_profilo
-                    SET testo_proposto = ?,
-                        data_modifica = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                """), (valore_proposto, revisione_pending["id"]))
-
-                conn.commit()
-
-                flash("✅ Foto rimossa dalla galleria in revisione.", "success")
-                return redirect(url_for("dashboard") + "#foto")
-
-            # Caso B: non c'è revisione pending.
-            # L'utente elimina una foto già pubblica:
-            # la rimozione viene applicata subito senza revisione.
-            c.execute(
-                sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"),
-                (valore_proposto, user_id)
-            )
+                else:
+                    # Restano nuove foto ancora da approvare.
+                    # Aggiorniamo anche il valore pubblico di partenza,
+                    # perché le eliminazioni sono già state applicate.
+                    c.execute(sql("""
+                        UPDATE revisioni_profilo
+                        SET testo_precedente = ?,
+                            testo_proposto = ?,
+                            data_modifica = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    """), (
+                        valore_pubblico_aggiornato,
+                        valore_proposto,
+                        revisione_pending["id"]
+                    ))
 
             conn.commit()
 
-            flash("✅ Foto rimossa correttamente dalla galleria.", "success")
+            # Solo dopo il commit eliminiamo dal disco le foto rimosse.
+            # Restano protette quelle ancora pubbliche o ancora presenti
+            # nell'eventuale proposta in revisione.
+            try:
+                elimina_percorsi_immagine_locale(
+                    percorsi_rimossi,
+                    conserva=galleria_pubblica_aggiornata + correnti,
+                )
+            except Exception as errore_pulizia:
+                app.logger.warning(
+                    "Impossibile eliminare i file rimossi dalla "
+                    "galleria dell'utente %s: %s",
+                    user_id,
+                    errore_pulizia,
+                )
+
+            # Se la revisione è stata aggiornata o annullata,
+            # aggiorniamo soltanto i contatori admin.
+            if revisione_pending:
+                try:
+                    invalidate_admin_counters()
+                except Exception:
+                    pass
+
+            flash("✅ Foto eliminata correttamente dalla galleria.", "success")
             return redirect(url_for("dashboard") + "#foto")
 
         # =====================================================
@@ -14055,7 +14534,6 @@ def utente_update_galleria():
         file_da_salvare = file_validi[:slot_disponibili]
         file_scartati = len(file_validi) - len(file_da_salvare)
 
-        nuovi_file_creati = []
 
         for file in file_da_salvare:
             try:
@@ -14097,7 +14575,9 @@ def utente_update_galleria():
 
         correnti = correnti[:MAX_FOTO_GALLERIA]
 
-        valore_precedente = json.dumps(galleria_pubblica)
+        valore_precedente = json.dumps(
+            galleria_pubblica_aggiornata
+        )
         valore_proposto = json.dumps(correnti)
 
         # =====================================================
@@ -14116,6 +14596,15 @@ def utente_update_galleria():
         # =====================================================
         # 8) Salva revisione SOLO se sono state caricate nuove foto
         # =====================================================
+        # Eventuali eliminazioni dalla galleria pubblica vengono
+        # applicate subito. Soltanto le nuove foto richiedono revisione.
+        if percorsi_rimossi:
+            c.execute(
+                sql("UPDATE utenti SET foto_galleria = ? WHERE id = ?"),
+                (valore_precedente, user_id)
+            )
+
+
         revisione_id, nuova_revisione = salva_revisione_immagine_profilo(
             c,
             user_id=user_id,
@@ -14124,7 +14613,38 @@ def utente_update_galleria():
             valore_proposto=valore_proposto
         )
 
+        # Se esisteva già una proposta pending, il salvataggio generico
+        # ne aggiorna il contenuto proposto. Aggiorniamo anche la galleria
+        # pubblica di partenza, perché le eliminazioni sono già effettive.
+        if revisione_pending:
+            c.execute(sql("""
+                UPDATE revisioni_profilo
+                SET testo_precedente = ?
+                WHERE id = ?
+            """), (
+                valore_precedente,
+                revisione_pending["id"]
+            ))
+
+        commit_revisione_galleria_avviato = True
         conn.commit()
+
+        # Dopo il commit possiamo eliminare fisicamente le foto rimosse.
+        # Restano protette quelle ancora pubbliche o comprese nella
+        # proposta contenente le nuove foto.
+        if percorsi_rimossi:
+            try:
+                elimina_percorsi_immagine_locale(
+                    percorsi_rimossi,
+                    conserva=galleria_pubblica_aggiornata + correnti,
+                )
+            except Exception as errore_pulizia:
+                app.logger.warning(
+                    "Impossibile ripulire i file sostituiti nella "
+                    "galleria in revisione dell'utente %s: %s",
+                    user_id,
+                    errore_pulizia,
+                )
 
         # =====================================================
         # 9) Notifica admin solo quando nasce una nuova revisione
@@ -14178,6 +14698,26 @@ def utente_update_galleria():
     except Exception as e:
         conn.rollback()
 
+        # Se il database ha fallito prima ancora del tentativo di commit,
+        # i nuovi file non sono referenziati e possono essere rimossi.
+        # Se il commit era già iniziato, non cancelliamo nulla:
+        # privilegiamo la conservazione per evitare collegamenti interrotti.
+        if (
+            nuovi_file_creati
+            and not commit_revisione_galleria_avviato
+        ):
+            for percorso_creato in nuovi_file_creati:
+                if os.path.isfile(percorso_creato):
+                    try:
+                        os.remove(percorso_creato)
+                    except OSError as errore_rimozione:
+                        app.logger.warning(
+                            "Impossibile ripulire foto galleria "
+                            "non salvata %s: %s",
+                            percorso_creato,
+                            errore_rimozione,
+                        )
+
         log_exception_safe(
             "❌ Errore update_galleria con revisione",
             e,
@@ -14209,16 +14749,65 @@ def elimina_annuncio(id):
         flash("Non puoi eliminare questo annuncio.", "error")
         return redirect(url_for("dashboard"))
 
-    # Soft delete: non cancelliamo fisicamente l'annuncio perché può avere acquisti collegati.
-    # Lo marchiamo come eliminato per preservare storico pagamenti e vincoli FK.
+    # Recuperiamo esclusivamente le immagini registrate
+    # nell'annuncio che appartiene all'utente.
+    percorsi_immagini_annuncio = [
+        percorso.strip()
+        for percorso in (annuncio["media"] or "").split(",")
+        if percorso and percorso.strip()
+    ]
+
+    foto_card_annuncio = str(
+        annuncio["foto_card"] or ""
+    ).strip()
+
+    if (
+        foto_card_annuncio
+        and foto_card_annuncio not in percorsi_immagini_annuncio
+    ):
+        percorsi_immagini_annuncio.append(
+            foto_card_annuncio
+        )
+
+    # Soft delete: conserviamo la riga dell'annuncio per
+    # storico pagamenti e vincoli FK, ma rimuoviamo i riferimenti
+    # alle immagini che non devono più essere utilizzate.
     cur.execute(
-        sql("UPDATE annunci SET stato = ? WHERE id = ? AND utente_id = ?"),
-        ("eliminato", id, g.utente["id"])
+        sql("""
+            UPDATE annunci
+            SET stato = ?,
+                media = ?,
+                foto_card = ?
+            WHERE id = ?
+              AND utente_id = ?
+        """),
+        (
+            "eliminato",
+            "",
+            None,
+            id,
+            g.utente["id"],
+        )
     )
 
     conn.commit()
 
-    # 🔁 Se l'annuncio era 'in_attesa', i counters admin vanno aggiornati
+    # Solo dopo il commit eliminiamo originali ed eventuali miniature.
+    if percorsi_immagini_annuncio:
+        try:
+            elimina_percorsi_immagine_locale(
+                percorsi_immagini_annuncio
+            )
+        except Exception as errore_pulizia:
+            app.logger.warning(
+                "Impossibile eliminare tutti i file "
+                "dell'annuncio %s eliminato dall'utente %s: %s",
+                id,
+                g.utente["id"],
+                errore_pulizia,
+            )
+
+    # Se l'annuncio era in attesa, i contatori admin vanno aggiornati.
     invalidate_admin_counters()
 
     flash("Annuncio eliminato con successo.", "success")
@@ -14274,6 +14863,9 @@ def upload_foto():
         user_id = g.utente['id']
         conn = None
         cur = None
+        percorso_pending = ""
+        commit_revisione_foto_avviato = False
+        percorsi_pending_precedenti = []
 
         try:
             conn = get_db_connection()
@@ -14288,6 +14880,24 @@ def upload_foto():
 
             row = cur.fetchone()
             foto_attuale = row["foto_profilo"] if row and row["foto_profilo"] else ""
+
+            revisione_pending_precedente = (
+                get_revisione_profilo_pending(
+                    cur,
+                    user_id,
+                    "foto_profilo",
+                )
+            )
+
+            if revisione_pending_precedente:
+                percorsi_pending_precedenti = (
+                    percorsi_revisione_immagine(
+                        "foto_profilo",
+                        revisione_pending_precedente[
+                            "testo_proposto"
+                        ],
+                    )
+                )
 
             upload_dir = os.path.join(app.static_folder, "uploads", "profili", "revisioni")
             os.makedirs(upload_dir, exist_ok=True)
@@ -14344,7 +14954,30 @@ def upload_foto():
                 valore_proposto=percorso_pending
             )
 
+            # Da questo momento l'esito del commit potrebbe essere incerto.
+            # Per sicurezza non elimineremo più il nuovo file.
+            commit_revisione_foto_avviato = True
             conn.commit()
+
+            # Se l'utente aveva già un'altra foto in revisione,
+            # quella proposta è stata sostituita volontariamente.
+            # La eliminiamo solo dopo il commit della nuova proposta.
+            if percorsi_pending_precedenti:
+                try:
+                    elimina_percorsi_immagine_locale(
+                        percorsi_pending_precedenti,
+                        conserva=[
+                            foto_attuale,
+                            percorso_pending,
+                        ],
+                    )
+                except Exception as errore_pulizia:
+                    app.logger.warning(
+                        "Impossibile eliminare la precedente "
+                        "foto profilo pending dell'utente %s: %s",
+                        user_id,
+                        errore_pulizia,
+                    )
 
             try:
                 invalidate_admin_counters()
@@ -14380,6 +15013,27 @@ def upload_foto():
                     conn.rollback()
                 except Exception:
                     pass
+
+            # Il nuovo file viene eliminato soltanto se il tentativo
+            # di commit non era ancora iniziato.
+            # Dopo l'inizio del commit privilegiamo la conservazione:
+            # un eventuale file orfano è meno rischioso di un'immagine
+            # registrata nel database ma assente dal disco.
+            if (
+                percorso_pending
+                and not commit_revisione_foto_avviato
+            ):
+                try:
+                    elimina_percorsi_immagine_locale(
+                        [percorso_pending]
+                    )
+                except Exception as errore_pulizia:
+                    app.logger.warning(
+                        "Impossibile ripulire la nuova foto profilo "
+                        "non salvata dell'utente %s: %s",
+                        user_id,
+                        errore_pulizia,
+                    )
 
             print(f"❌ Errore upload_foto user={user_id}: {e}", flush=True)
             traceback.print_exc()
@@ -14425,6 +15079,9 @@ def upload_copertina():
     user_id = g.utente['id']
     conn = None
     cur = None
+    percorso_pending_db = ""
+    commit_revisione_copertina_avviato = False
+    percorsi_pending_precedenti = []
 
     try:
         conn = get_db_connection()
@@ -14441,6 +15098,24 @@ def upload_copertina():
 
         row = cur.fetchone()
         copertina_pubblica = row["copertina"] if row and row["copertina"] else ""
+
+        revisione_pending_precedente = (
+            get_revisione_profilo_pending(
+                cur,
+                user_id,
+                "copertina",
+            )
+        )
+
+        if revisione_pending_precedente:
+            percorsi_pending_precedenti = (
+                percorsi_revisione_immagine(
+                    "copertina",
+                    revisione_pending_precedente[
+                        "testo_proposto"
+                    ],
+                )
+            )
 
         # =====================================================
         # 2) Salva la nuova copertina come file tecnico pending
@@ -14491,7 +15166,30 @@ def upload_copertina():
             valore_proposto=percorso_pending_db
         )
 
+        # Da questo momento l'esito del commit potrebbe essere incerto.
+        # Per sicurezza non elimineremo più il nuovo file.
+        commit_revisione_copertina_avviato = True
         conn.commit()
+
+        # Una precedente copertina ancora pending è stata
+        # sostituita volontariamente dall'utente.
+        # La eliminiamo soltanto dopo il commit.
+        if percorsi_pending_precedenti:
+            try:
+                elimina_percorsi_immagine_locale(
+                    percorsi_pending_precedenti,
+                    conserva=[
+                        copertina_pubblica,
+                        percorso_pending_db,
+                    ],
+                )
+            except Exception as errore_pulizia:
+                app.logger.warning(
+                    "Impossibile eliminare la precedente "
+                    "copertina pending dell'utente %s: %s",
+                    user_id,
+                    errore_pulizia,
+                )
 
         # =====================================================
         # 5) Notifica admin solo quando nasce una nuova revisione
@@ -14532,6 +15230,26 @@ def upload_copertina():
             except Exception:
                 pass
 
+        # Il nuovo file viene eliminato soltanto se il tentativo
+        # di commit non era ancora iniziato.
+        # Dopo l'inizio del commit privilegiamo la conservazione
+        # per evitare immagini registrate nel database ma mancanti.
+        if (
+            percorso_pending_db
+            and not commit_revisione_copertina_avviato
+        ):
+            try:
+                elimina_percorsi_immagine_locale(
+                    [percorso_pending_db]
+                )
+            except Exception as errore_pulizia:
+                app.logger.warning(
+                    "Impossibile ripulire la nuova copertina "
+                    "non salvata dell'utente %s: %s",
+                    user_id,
+                    errore_pulizia,
+                )
+
         log_exception_safe(
             "❌ Errore upload copertina con revisione",
             e,
@@ -14560,33 +15278,107 @@ def upload_copertina():
 @app.route('/rimuovi_copertina', methods=['POST'])
 @login_required
 def rimuovi_copertina():
-    user_id = g.utente['id']
+    user_id = g.utente["id"]
 
     conn = None
     cur = None
+    percorsi_da_eliminare = []
+    revisione_pending = None
 
     try:
         conn = get_db_connection()
         cur = get_cursor(conn)
 
-        cur.execute(sql("SELECT copertina FROM utenti WHERE id = ?"), (user_id,))
+        # Recupera la copertina pubblica.
+        cur.execute(sql("""
+            SELECT copertina
+            FROM utenti
+            WHERE id = ?
+        """), (user_id,))
+
         row = cur.fetchone()
 
-        if row and row['copertina']:
-            file_path = os.path.join(app.static_folder, row['copertina'])
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except Exception as e:
-                    print(f"⚠️ Errore eliminando la copertina: {e}")
+        copertina_pubblica = (
+            row["copertina"]
+            if row and row["copertina"]
+            else ""
+        )
 
-        conn.execute(sql("UPDATE utenti SET copertina = NULL WHERE id = ?"), (user_id,))
+        if copertina_pubblica:
+            percorsi_da_eliminare.append(
+                copertina_pubblica
+            )
+
+        # Se esiste una nuova copertina ancora pending,
+        # la rimozione volontaria dell'utente annulla
+        # anche quella proposta.
+        revisione_pending = (
+            get_revisione_profilo_pending(
+                cur,
+                user_id,
+                "copertina",
+            )
+        )
+
+        if revisione_pending:
+            percorsi_da_eliminare.extend(
+                percorsi_revisione_immagine(
+                    "copertina",
+                    revisione_pending["testo_proposto"],
+                )
+            )
+
+            cur.execute(sql("""
+                DELETE FROM revisioni_profilo
+                WHERE id = ?
+                  AND stato = 'in_attesa'
+            """), (revisione_pending["id"],))
+
+        # Prima eliminiamo tutti i riferimenti dal database.
+        cur.execute(sql("""
+            UPDATE utenti
+            SET copertina = NULL
+            WHERE id = ?
+        """), (user_id,))
+
         conn.commit()
 
-        g.utente['copertina'] = None
+        # Solo dopo il commit eliminiamo i file.
+        if percorsi_da_eliminare:
+            try:
+                elimina_percorsi_immagine_locale(
+                    percorsi_da_eliminare
+                )
+            except Exception as errore_pulizia:
+                app.logger.warning(
+                    "Impossibile completare la rimozione "
+                    "dei file copertina dell'utente %s: %s",
+                    user_id,
+                    errore_pulizia,
+                )
 
-        flash("Copertina rimossa. Tornerà il fondo di default 💙", "info")
-        return redirect(request.referrer or url_for('dashboard'))
+        if revisione_pending:
+            try:
+                invalidate_admin_counters()
+            except Exception as errore_contatori:
+                app.logger.warning(
+                    "Impossibile aggiornare i contatori admin "
+                    "dopo rimozione copertina utente %s: %s",
+                    user_id,
+                    errore_contatori,
+                )
+
+        g.utente["copertina"] = None
+
+        flash(
+            "Copertina rimossa. Tornerà il fondo di default 💙",
+            "info"
+        )
+
+        return redirect(
+            request.referrer
+            or url_for("dashboard")
+        )
 
     except Exception as e:
         if conn:
@@ -14594,10 +15386,19 @@ def rimuovi_copertina():
                 conn.rollback()
             except Exception:
                 pass
+
         print(f"❌ Errore rimuovi_copertina: {e}")
         traceback.print_exc()
-        flash("Errore durante la rimozione della copertina.", "error")
-        return redirect(request.referrer or url_for('dashboard'))
+
+        flash(
+            "Errore durante la rimozione della copertina.",
+            "error"
+        )
+
+        return redirect(
+            request.referrer
+            or url_for("dashboard")
+        )
 
     finally:
         try:
@@ -19029,7 +19830,18 @@ def elimina_account_step2():
         conn = get_db_connection()
         cur = get_cursor(conn)
 
+        percorsi_immagini_account = []
+
         try:
+            # Raccogliamo i percorsi prima di eliminare dal database
+            # gli annunci e i riferimenti del profilo.
+            # In questa fase non viene cancellato nessun file.
+            percorsi_immagini_account = (
+                raccogli_percorsi_immagini_utente(
+                    cur,
+                    user_id,
+                )
+            )
             # =====================================================
             # 1) Rimuove notifiche dell'utente
             # =====================================================
@@ -19138,6 +19950,17 @@ def elimina_account_step2():
             """), (user_id, user_id, user_id))
 
             # =====================================================
+            # 6B) Rimuove le revisioni del profilo
+            # L'account non esiste più pubblicamente, quindi
+            # non serve conservare proposte o rifiuti.
+            # =====================================================
+            cur.execute(sql("""
+                DELETE FROM revisioni_profilo
+                WHERE utente_id = ?
+            """), (user_id,))
+
+
+            # =====================================================
             # 7) Rimuove annunci dell'utente
             # =====================================================
             cur.execute(sql("""
@@ -19235,6 +20058,26 @@ def elimina_account_step2():
             ))
 
             conn.commit()
+
+            # Database aggiornato correttamente: ora le immagini
+            # raccolte non sono più utilizzate dall'account.
+            if percorsi_immagini_account:
+                try:
+                    elimina_percorsi_immagine_locale(
+                        percorsi_immagini_account
+                    )
+                except Exception as errore_pulizia:
+                    app.logger.warning(
+                        "Impossibile eliminare tutti i file "
+                        "dell'account cancellato %s: %s",
+                        user_id,
+                        errore_pulizia,
+                    )
+
+            try:
+                invalidate_admin_counters()
+            except Exception:
+                pass
 
         except Exception as e:
             conn.rollback()
@@ -19654,6 +20497,23 @@ def nuovo_annuncio():
                     qualita=82,
                 )
             except ErroreImmagine as e:
+                # Se una delle immagini non è valida, eliminiamo
+                # quelle già create durante questo stesso tentativo.
+                # Nessuna di queste è ancora registrata nel database.
+                if media_paths:
+                    try:
+                        elimina_percorsi_immagine_locale(
+                            media_paths
+                        )
+                    except Exception as errore_pulizia:
+                        app.logger.warning(
+                            "Impossibile ripulire le immagini del "
+                            "nuovo annuncio non completato "
+                            "dell'utente %s: %s",
+                            utente["id"],
+                            errore_pulizia,
+                        )
+
                 flash(str(e), "warning")
                 return redirect(url_for("nuovo_annuncio"))
 
@@ -19709,46 +20569,79 @@ def nuovo_annuncio():
         # =====================================================
         # 💾 INSERT DB
         # =====================================================
-        c.execute(sql("""
-            INSERT INTO annunci (
-                utente_id,
-                username,
+        commit_nuovo_annuncio_avviato = False
+
+        try:
+            c.execute(sql("""
+                INSERT INTO annunci (
+                    utente_id,
+                    username,
+                    categoria,
+                    tipo_annuncio,
+                    titolo,
+                    descrizione,
+                    bio_utente,
+                    zona,
+                    provincia,
+                    modalita_servizio,
+                    filtri_categoria,
+                    media,
+                    foto_card,
+                    prezzo,
+                    telefono,
+                    email,
+                    stato
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_attesa')
+            """), (
+                utente["id"],
+                username_modificato,
                 categoria,
                 tipo_annuncio,
                 titolo,
                 descrizione,
-                bio_utente,
+                bio,
                 zona,
                 provincia,
                 modalita_servizio,
-                filtri_categoria,
-                media,
+                ",".join(filtri),
+                ",".join(media_paths),
                 foto_card,
                 prezzo,
                 telefono,
-                email,
-                stato
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_attesa')
-        """), (
-            utente["id"],
-            username_modificato,
-            categoria,
-            tipo_annuncio,
-            titolo,
-            descrizione,
-            bio,
-            zona,
-            provincia,
-            modalita_servizio,
-            ",".join(filtri),
-            ",".join(media_paths),
-            foto_card,
-            prezzo,
-            telefono,
-            email
-        ))
+                email
+            ))
 
-        conn.commit()
+            # Dal momento in cui il commit inizia, conserviamo
+            # prudentemente i file anche se il database restituisce errore.
+            commit_nuovo_annuncio_avviato = True
+            conn.commit()
+
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+            # Se l'errore è avvenuto prima del tentativo di commit,
+            # l'annuncio non può utilizzare questi file.
+            if (
+                media_paths
+                and not commit_nuovo_annuncio_avviato
+            ):
+                try:
+                    elimina_percorsi_immagine_locale(
+                        media_paths
+                    )
+                except Exception as errore_pulizia:
+                    app.logger.warning(
+                        "Impossibile ripulire le immagini del "
+                        "nuovo annuncio non salvato "
+                        "dell'utente %s: %s",
+                        utente["id"],
+                        errore_pulizia,
+                    )
+
+            raise
 
 
         # 👁️ Visibilità pubblica automatica

@@ -258,6 +258,161 @@ def percorso_thumbnail_relativo(percorso_originale):
         )
     )
 
+def _percorso_upload_assoluto_sicuro(
+    static_folder,
+    percorso_relativo,
+):
+    valore = (
+        str(percorso_relativo or "")
+        .strip()
+        .replace("\\", "/")
+    )
+
+    if not valore:
+        return None
+
+    percorso = PurePosixPath(valore)
+
+    if (
+        percorso.is_absolute()
+        or ".." in percorso.parts
+        or len(percorso.parts) < 2
+        or percorso.parts[0] != "uploads"
+    ):
+        return None
+
+    radice_uploads = os.path.realpath(
+        os.path.join(static_folder, "uploads")
+    )
+
+    percorso_assoluto = os.path.realpath(
+        os.path.join(
+            static_folder,
+            *percorso.parts,
+        )
+    )
+
+    try:
+        dentro_uploads = (
+            os.path.commonpath([
+                radice_uploads,
+                percorso_assoluto,
+            ])
+            == radice_uploads
+        )
+    except ValueError:
+        dentro_uploads = False
+
+    if not dentro_uploads:
+        return None
+
+    return percorso_assoluto
+
+def immagine_locale_esiste(
+    static_folder,
+    percorso_relativo,
+):
+    """
+    Controlla che un percorso valido sotto uploads
+    corrisponda a un file realmente presente.
+    """
+
+    percorso_assoluto = (
+        _percorso_upload_assoluto_sicuro(
+            static_folder,
+            percorso_relativo,
+        )
+    )
+
+    return bool(
+        percorso_assoluto
+        and os.path.isfile(percorso_assoluto)
+    )
+
+
+def elimina_immagine_locale(
+    static_folder,
+    percorso_originale,
+    *,
+    elimina_originale=True,
+    elimina_thumbnail=True,
+    logger=None,
+):
+    """
+    Elimina in sicurezza un'immagine sotto uploads.
+
+    Può eliminare:
+    - il file originale;
+    - la miniatura derivata;
+    - entrambi.
+
+    Non decide quando un'immagine è eliminabile:
+    questa decisione resta alle route dopo il commit del database.
+    """
+
+    valore = (
+        str(percorso_originale or "")
+        .strip()
+        .replace("\\", "/")
+    )
+
+    if not valore:
+        return 0
+
+    percorsi_da_eliminare = []
+
+    if elimina_originale:
+        percorsi_da_eliminare.append(valore)
+
+    if elimina_thumbnail:
+        percorso_thumbnail = percorso_thumbnail_relativo(
+            valore
+        )
+
+        if percorso_thumbnail:
+            percorsi_da_eliminare.append(
+                percorso_thumbnail
+            )
+
+    file_eliminati = 0
+
+    for percorso_relativo in dict.fromkeys(
+        percorsi_da_eliminare
+    ):
+        percorso_assoluto = (
+            _percorso_upload_assoluto_sicuro(
+                static_folder,
+                percorso_relativo,
+            )
+        )
+
+        if not percorso_assoluto:
+            if logger:
+                logger.warning(
+                    "Cancellazione immagine bloccata: "
+                    "percorso non valido %s",
+                    percorso_relativo,
+                )
+
+            continue
+
+        if not os.path.isfile(percorso_assoluto):
+            continue
+
+        try:
+            os.remove(percorso_assoluto)
+        except OSError as errore:
+            if logger:
+                logger.warning(
+                    "Impossibile eliminare il file %s: %s",
+                    percorso_assoluto,
+                    errore,
+                )
+        else:
+            file_eliminati += 1
+
+    return file_eliminati
+
 
 def crea_thumbnail_cerca(
     percorso_originale_assoluto,
