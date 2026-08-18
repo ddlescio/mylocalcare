@@ -7792,6 +7792,656 @@ def admin_elimina_filtro_categoria(id):
     return redirect(url_for("admin_filtri_categoria", open=categoria))
 
 # ==========================================================
+# 📍 GESTIONE ADMIN QUARTIERI
+# ==========================================================
+def riordina_quartieri_citta(c, provincia, comune):
+    c.execute(sql("""
+        SELECT id
+        FROM quartieri_citta
+        WHERE provincia = ?
+          AND comune = ?
+        ORDER BY ordine ASC, id ASC
+    """), (provincia, comune))
+
+    rows = c.fetchall()
+
+    for index, row in enumerate(rows, start=1):
+        row = dict(row)
+
+        c.execute(sql("""
+            UPDATE quartieri_citta
+            SET ordine = ?
+            WHERE id = ?
+        """), (index, row["id"]))
+
+
+@app.route("/admin/quartieri")
+@admin_required
+def admin_quartieri():
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        SELECT
+            q.id,
+            q.provincia,
+            q.comune,
+            q.quartiere,
+            q.ordine,
+            q.attivo,
+            (
+                SELECT COUNT(*)
+                FROM annunci_quartieri aq
+                WHERE aq.quartiere_id = q.id
+            ) AS annunci_collegati
+        FROM quartieri_citta q
+        ORDER BY
+            q.provincia ASC,
+            q.comune ASC,
+            q.ordine ASC,
+            q.quartiere ASC
+    """))
+
+    rows = [dict(row) for row in c.fetchall()]
+    conn.close()
+
+    gruppi_quartieri = {}
+
+    for row in rows:
+        chiave = f"{row['provincia']}|||{row['comune']}"
+
+        if chiave not in gruppi_quartieri:
+            gruppi_quartieri[chiave] = {
+                "provincia": row["provincia"],
+                "comune": row["comune"],
+                "quartieri": []
+            }
+
+        gruppi_quartieri[chiave]["quartieri"].append(row)
+
+    return render_template(
+        "admin_quartieri.html",
+        gruppi_quartieri=gruppi_quartieri,
+        provincia_aperta=request.args.get("provincia", ""),
+        comune_aperto=request.args.get("comune", "")
+    )
+
+@app.route(
+    "/admin/quartieri/importa-json",
+    methods=["POST"]
+)
+@admin_required
+def admin_importa_quartieri_json():
+    verify_csrf()
+
+    json_path = os.path.join(
+        app.root_path,
+        "static",
+        "data",
+        "quartieri_citta.json"
+    )
+
+    if not os.path.isfile(json_path):
+        flash(
+            "File quartieri_citta.json non trovato.",
+            "error"
+        )
+        return redirect(url_for("admin_quartieri"))
+
+    try:
+        with open(json_path, "r", encoding="utf-8") as file_json:
+            catalogo = json.load(file_json)
+    except Exception as e:
+        log_exception_safe(
+            "Errore lettura JSON quartieri",
+            e,
+            production=True
+        )
+
+        flash(
+            "Il catalogo JSON dei quartieri non è leggibile.",
+            "error"
+        )
+        return redirect(url_for("admin_quartieri"))
+
+    citta_catalogo = catalogo.get("citta")
+
+    if not isinstance(citta_catalogo, list):
+        flash(
+            "Struttura del catalogo quartieri non valida.",
+            "error"
+        )
+        return redirect(url_for("admin_quartieri"))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    quartieri_inseriti = 0
+    quartieri_esistenti = 0
+    citta_elaborate = 0
+
+    try:
+        for elemento_citta in citta_catalogo:
+            if not isinstance(elemento_citta, dict):
+                raise ValueError(
+                    "Elemento città non valido nel catalogo"
+                )
+
+            provincia = " ".join(
+                str(
+                    elemento_citta.get("provincia", "")
+                ).strip().split()
+            )
+
+            comune = " ".join(
+                str(
+                    elemento_citta.get("comune", "")
+                ).strip().split()
+            )
+
+            quartieri = elemento_citta.get("quartieri")
+
+            if (
+                not provincia
+                or not comune
+                or not isinstance(quartieri, list)
+            ):
+                raise ValueError(
+                    "Provincia, comune o quartieri non validi"
+                )
+
+            quartieri_normalizzati = []
+            quartieri_visti = set()
+
+            for quartiere_raw in quartieri:
+                quartiere = " ".join(
+                    str(quartiere_raw).strip().split()
+                )
+
+                if not quartiere:
+                    raise ValueError(
+                        f"Quartiere vuoto per {comune}"
+                    )
+
+                if len(quartiere) > 150:
+                    raise ValueError(
+                        f"Quartiere troppo lungo per {comune}"
+                    )
+
+                chiave_quartiere = quartiere.casefold()
+
+                if chiave_quartiere in quartieri_visti:
+                    raise ValueError(
+                        f"Quartiere duplicato nel JSON: "
+                        f"{comune} - {quartiere}"
+                    )
+
+                quartieri_visti.add(chiave_quartiere)
+                quartieri_normalizzati.append(quartiere)
+
+            c.execute(sql("""
+                SELECT COALESCE(MAX(ordine), 0) AS max_ordine
+                FROM quartieri_citta
+                WHERE LOWER(TRIM(provincia)) = LOWER(TRIM(?))
+                  AND LOWER(TRIM(comune)) = LOWER(TRIM(?))
+            """), (
+                provincia,
+                comune
+            ))
+
+            row_ordine = c.fetchone()
+            ordine_corrente = int(
+                dict(row_ordine)["max_ordine"] or 0
+            )
+
+            for quartiere in quartieri_normalizzati:
+                c.execute(sql("""
+                    INSERT INTO quartieri_citta (
+                        provincia,
+                        comune,
+                        quartiere,
+                        ordine,
+                        attivo
+                    )
+                    VALUES (?, ?, ?, ?, 1)
+                    ON CONFLICT DO NOTHING
+                """), (
+                    provincia,
+                    comune,
+                    quartiere,
+                    ordine_corrente + 1
+                ))
+
+                if c.rowcount == 1:
+                    ordine_corrente += 1
+                    quartieri_inseriti += 1
+                else:
+                    quartieri_esistenti += 1
+
+            citta_elaborate += 1
+
+        conn.commit()
+
+    except Exception as e:
+        conn.rollback()
+
+        log_exception_safe(
+            "Errore importazione catalogo quartieri",
+            e,
+            {
+                "json_versione": catalogo.get("versione")
+            },
+            production=True
+        )
+
+        flash(
+            "Importazione annullata: il catalogo contiene "
+            "dati non validi.",
+            "error"
+        )
+
+        return redirect(url_for("admin_quartieri"))
+
+    finally:
+        conn.close()
+
+    flash(
+        f"Importazione completata: "
+        f"{quartieri_inseriti} quartieri aggiunti, "
+        f"{quartieri_esistenti} già presenti, "
+        f"{citta_elaborate} città elaborate.",
+        "success"
+    )
+
+    return redirect(url_for("admin_quartieri"))
+
+
+@app.route("/admin/quartieri/aggiungi", methods=["POST"])
+@admin_required
+def admin_aggiungi_quartiere():
+    verify_csrf()
+
+    provincia = " ".join(
+        request.form.get("provincia", "").strip().split()
+    )
+    comune = " ".join(
+        request.form.get("comune", "").strip().split()
+    )
+    quartiere = " ".join(
+        request.form.get("quartiere", "").strip().split()
+    )
+
+    if not provincia or not comune or not quartiere:
+        flash(
+            "Provincia, comune e quartiere sono obbligatori.",
+            "error"
+        )
+        return redirect(url_for("admin_quartieri"))
+
+    if (
+        len(provincia) > 100
+        or len(comune) > 100
+        or len(quartiere) > 150
+    ):
+        flash("Uno dei valori inseriti è troppo lungo.", "error")
+        return redirect(url_for("admin_quartieri"))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            SELECT COALESCE(MAX(ordine), 0) + 1 AS nuovo_ordine
+            FROM quartieri_citta
+            WHERE LOWER(TRIM(provincia)) = LOWER(TRIM(?))
+              AND LOWER(TRIM(comune)) = LOWER(TRIM(?))
+        """), (provincia, comune))
+
+        row = c.fetchone()
+        nuovo_ordine = int(dict(row)["nuovo_ordine"])
+
+        c.execute(sql("""
+            INSERT INTO quartieri_citta (
+                provincia,
+                comune,
+                quartiere,
+                ordine,
+                attivo
+            )
+            VALUES (?, ?, ?, ?, 1)
+        """), (
+            provincia,
+            comune,
+            quartiere,
+            nuovo_ordine
+        ))
+
+        conn.commit()
+        flash("Quartiere aggiunto correttamente.", "success")
+
+    except Exception as e:
+        conn.rollback()
+
+        flash(
+            "Quartiere già presente nella città oppure dati non validi.",
+            "error"
+        )
+
+        log_exception_safe(
+            "Errore aggiunta quartiere admin",
+            e,
+            {
+                "provincia": provincia,
+                "comune": comune
+            },
+            production=True
+        )
+
+    finally:
+        conn.close()
+
+    return redirect(url_for(
+        "admin_quartieri",
+        provincia=provincia,
+        comune=comune
+    ))
+
+
+@app.route(
+    "/admin/quartieri/<int:id>/modifica",
+    methods=["POST"]
+)
+@admin_required
+def admin_modifica_quartiere(id):
+    verify_csrf()
+
+    quartiere = " ".join(
+        request.form.get("quartiere", "").strip().split()
+    )
+
+    if not quartiere:
+        flash(
+            "Il nome del quartiere non può essere vuoto.",
+            "error"
+        )
+        return redirect(url_for("admin_quartieri"))
+
+    if len(quartiere) > 150:
+        flash("Il nome del quartiere è troppo lungo.", "error")
+        return redirect(url_for("admin_quartieri"))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        SELECT provincia, comune
+        FROM quartieri_citta
+        WHERE id = ?
+    """), (id,))
+
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        flash("Quartiere non trovato.", "error")
+        return redirect(url_for("admin_quartieri"))
+
+    row = dict(row)
+    provincia = row["provincia"]
+    comune = row["comune"]
+
+    try:
+        c.execute(sql("""
+            UPDATE quartieri_citta
+            SET quartiere = ?
+            WHERE id = ?
+        """), (quartiere, id))
+
+        conn.commit()
+        flash("Quartiere aggiornato.", "success")
+
+    except Exception as e:
+        conn.rollback()
+
+        flash(
+            "Nome già utilizzato nella stessa città oppure non valido.",
+            "error"
+        )
+
+        log_exception_safe(
+            "Errore modifica quartiere admin",
+            e,
+            {
+                "quartiere_id": id,
+                "provincia": provincia,
+                "comune": comune
+            },
+            production=True
+        )
+
+    finally:
+        conn.close()
+
+    return redirect(url_for(
+        "admin_quartieri",
+        provincia=provincia,
+        comune=comune
+    ))
+
+
+@app.route(
+    "/admin/quartieri/<int:id>/sposta/<direzione>",
+    methods=["POST"]
+)
+@admin_required
+def admin_sposta_quartiere(id, direzione):
+    verify_csrf()
+
+    if direzione not in ("su", "giu"):
+        return redirect(url_for("admin_quartieri"))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        SELECT id, provincia, comune
+        FROM quartieri_citta
+        WHERE id = ?
+    """), (id,))
+
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        flash("Quartiere non trovato.", "error")
+        return redirect(url_for("admin_quartieri"))
+
+    row = dict(row)
+    provincia = row["provincia"]
+    comune = row["comune"]
+
+    riordina_quartieri_citta(c, provincia, comune)
+
+    c.execute(sql("""
+        SELECT id, ordine
+        FROM quartieri_citta
+        WHERE id = ?
+    """), (id,))
+
+    quartiere_corrente = dict(c.fetchone())
+    ordine_corrente = quartiere_corrente["ordine"]
+
+    if direzione == "su":
+        ordine_target = ordine_corrente - 1
+    else:
+        ordine_target = ordine_corrente + 1
+
+    c.execute(sql("""
+        SELECT id, ordine
+        FROM quartieri_citta
+        WHERE provincia = ?
+          AND comune = ?
+          AND ordine = ?
+    """), (
+        provincia,
+        comune,
+        ordine_target
+    ))
+
+    quartiere_vicino = c.fetchone()
+
+    if quartiere_vicino:
+        quartiere_vicino = dict(quartiere_vicino)
+
+        c.execute(sql("""
+            UPDATE quartieri_citta
+            SET ordine = ?
+            WHERE id = ?
+        """), (
+            ordine_target,
+            id
+        ))
+
+        c.execute(sql("""
+            UPDATE quartieri_citta
+            SET ordine = ?
+            WHERE id = ?
+        """), (
+            ordine_corrente,
+            quartiere_vicino["id"]
+        ))
+
+    riordina_quartieri_citta(c, provincia, comune)
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for(
+        "admin_quartieri",
+        provincia=provincia,
+        comune=comune
+    ))
+
+
+@app.route(
+    "/admin/quartieri/<int:id>/toggle",
+    methods=["POST"]
+)
+@admin_required
+def admin_toggle_quartiere(id):
+    verify_csrf()
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        SELECT provincia, comune
+        FROM quartieri_citta
+        WHERE id = ?
+    """), (id,))
+
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        flash("Quartiere non trovato.", "error")
+        return redirect(url_for("admin_quartieri"))
+
+    row = dict(row)
+    provincia = row["provincia"]
+    comune = row["comune"]
+
+    c.execute(sql("""
+        UPDATE quartieri_citta
+        SET attivo = CASE
+            WHEN attivo = 1 THEN 0
+            ELSE 1
+        END
+        WHERE id = ?
+    """), (id,))
+
+    conn.commit()
+    conn.close()
+
+    flash("Stato quartiere aggiornato.", "success")
+
+    return redirect(url_for(
+        "admin_quartieri",
+        provincia=provincia,
+        comune=comune
+    ))
+
+
+@app.route(
+    "/admin/quartieri/<int:id>/elimina",
+    methods=["POST"]
+)
+@admin_required
+def admin_elimina_quartiere(id):
+    verify_csrf()
+
+    conn = get_db_connection()    
+    c = get_cursor(conn)
+
+    c.execute(sql("""
+        SELECT provincia, comune
+        FROM quartieri_citta
+        WHERE id = ?
+    """), (id,))
+
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        flash("Quartiere non trovato.", "error")
+        return redirect(url_for("admin_quartieri"))
+
+    row = dict(row)
+    provincia = row["provincia"]
+    comune = row["comune"]
+
+    c.execute(sql("""
+        SELECT COUNT(*) AS totale
+        FROM annunci_quartieri
+        WHERE quartiere_id = ?
+    """), (id,))
+
+    utilizzo = dict(c.fetchone())["totale"]
+
+    if int(utilizzo or 0) > 0:
+        conn.close()
+
+        flash(
+            "Il quartiere è già utilizzato da uno o più annunci. "
+            "Puoi disattivarlo, ma non eliminarlo.",
+            "error"
+        )
+
+        return redirect(url_for(
+            "admin_quartieri",
+            provincia=provincia,
+            comune=comune
+        ))
+
+    c.execute(sql("""
+        DELETE FROM quartieri_citta
+        WHERE id = ?
+    """), (id,))
+
+    riordina_quartieri_citta(c, provincia, comune)
+
+    conn.commit()
+    conn.close()
+
+    flash("Quartiere eliminato.", "success")
+
+    return redirect(url_for(
+        "admin_quartieri",
+        provincia=provincia,
+        comune=comune
+    ))
+
+# ==========================================================
 # GESTIONE UTENTI
 # ==========================================================
 @app.route('/admin/toggle_utente/<int:id>')

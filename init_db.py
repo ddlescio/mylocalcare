@@ -221,6 +221,16 @@ def crea_tabella_annunci():
         zona TEXT,
         provincia TEXT,
         modalita_servizio TEXT DEFAULT 'presenza',
+
+        copertura_quartieri TEXT NOT NULL DEFAULT 'non_specificato'
+            CHECK (
+                copertura_quartieri IN (
+                    'non_specificato',
+                    'tutta_citta',
+                    'quartieri'
+                )
+            ),
+
         titolo TEXT NOT NULL,
         descrizione TEXT,
         bio_utente TEXT,
@@ -267,6 +277,77 @@ def crea_tabella_filtri_categoria():
     conn.commit()
     conn.close()
     print("✅ Tabella 'filtri_categoria' pronta.")
+
+# ---------------------------------------------------------
+# 📍 CATALOGO QUARTIERI E COLLEGAMENTI CON GLI ANNUNCI
+# ---------------------------------------------------------
+def crea_tabelle_quartieri():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql(f"""
+    CREATE TABLE IF NOT EXISTS quartieri_citta (
+        id {pk_col()},
+        provincia TEXT NOT NULL,
+        comune TEXT NOT NULL,
+        quartiere TEXT NOT NULL,
+        ordine INTEGER NOT NULL DEFAULT 0,
+        attivo INTEGER NOT NULL DEFAULT 1
+            CHECK (attivo IN (0, 1)),
+        created_at {dt_col(True)},
+
+        CHECK (TRIM(provincia) <> ''),
+        CHECK (TRIM(comune) <> ''),
+        CHECK (TRIM(quartiere) <> '')
+    );
+    """))
+
+    c.execute(sql("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_quartieri_citta_univoco
+        ON quartieri_citta (
+            LOWER(TRIM(provincia)),
+            LOWER(TRIM(comune)),
+            LOWER(TRIM(quartiere))
+        );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_quartieri_citta_ricerca
+        ON quartieri_citta (
+            LOWER(TRIM(provincia)),
+            LOWER(TRIM(comune)),
+            attivo,
+            ordine
+        );
+    """))
+
+    c.execute(sql(f"""
+    CREATE TABLE IF NOT EXISTS annunci_quartieri (
+        annuncio_id INTEGER NOT NULL,
+        quartiere_id INTEGER NOT NULL,
+        created_at {dt_col(True)},
+
+        PRIMARY KEY (annuncio_id, quartiere_id),
+
+        FOREIGN KEY (annuncio_id)
+            REFERENCES annunci(id)
+            ON DELETE CASCADE,
+
+        FOREIGN KEY (quartiere_id)
+            REFERENCES quartieri_citta(id)
+            ON DELETE RESTRICT
+    );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_annunci_quartieri_quartiere
+        ON annunci_quartieri(quartiere_id, annuncio_id);
+    """))
+
+    conn.commit()
+    conn.close()
+
+    print("✅ Tabelle quartieri e collegamenti annunci pronte.")
 
 def crea_indici_annunci():
     conn = get_conn()
@@ -1387,6 +1468,22 @@ def aggiorna_colonne_mancanti():
         c.execute("ALTER TABLE annunci ADD COLUMN modalita_servizio TEXT DEFAULT 'presenza';")
         print("✅ Colonna 'modalita_servizio' aggiunta a annunci.")
 
+    if "copertura_quartieri" not in colonne_annunci:
+        c.execute("""
+            ALTER TABLE annunci
+            ADD COLUMN copertura_quartieri TEXT
+            NOT NULL
+            DEFAULT 'non_specificato'
+            CHECK (
+                copertura_quartieri IN (
+                    'non_specificato',
+                    'tutta_citta',
+                    'quartieri'
+                )
+            );
+        """)
+        print("✅ Colonna 'copertura_quartieri' aggiunta a annunci.")
+
     c.execute("""
         UPDATE annunci
         SET modalita_servizio = 'presenza'
@@ -1667,6 +1764,7 @@ def inizializza_database():
     crea_tabella_operatori()
     crea_tabella_annunci()
     crea_tabella_filtri_categoria()
+    crea_tabelle_quartieri()
     crea_indici_annunci()
     crea_tabella_match_utenti()
     crea_tabella_messaggi_chat()

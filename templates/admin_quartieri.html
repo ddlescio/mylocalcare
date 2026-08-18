@@ -1,0 +1,639 @@
+{% extends "layout_admin.html" %}
+
+{% block admin_title %}Quartieri{% endblock %}
+
+{% block admin_subtitle %}
+Gestisci i quartieri selezionabili negli annunci, raggruppati per città.
+{% endblock %}
+
+{% block admin_content %}
+
+<style>
+  .quartieri-admin-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .citta-details {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  }
+
+  .citta-summary {
+    cursor: pointer;
+    padding: 1rem 1.25rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 900;
+    color: #0f172a;
+    list-style: none;
+  }
+
+  .citta-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .citta-summary-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .citta-arrow {
+    color: #64748b;
+    transition: transform 0.2s ease;
+  }
+
+  details[open] .citta-arrow {
+    transform: rotate(180deg);
+  }
+
+  .quartieri-table-desktop {
+    display: block;
+  }
+
+  .quartieri-mobile-list {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .quartieri-table-desktop {
+      display: none;
+    }
+
+    .quartieri-mobile-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .quartiere-mobile-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 0.9rem;
+      padding: 0.7rem;
+      background: #ffffff;
+    }
+
+    .quartiere-mobile-main {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .quartiere-mobile-move {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .quartiere-mobile-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.4rem;
+      margin-top: 0.55rem;
+    }
+
+    .quartiere-mobile-actions button {
+      width: 100%;
+      min-height: 38px;
+      font-size: 0.78rem;
+      padding: 0.45rem 0.3rem;
+    }
+  }
+</style>
+
+<div class="quartieri-admin-wrap">
+
+  <section class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+    <div class="mb-4">
+      <h2 class="text-lg font-black text-slate-900">
+        Aggiungi città o quartiere
+      </h2>
+
+      <p class="text-sm text-slate-500 mt-1">
+        Per creare una nuova città, inserisci provincia, comune e il primo quartiere.
+      </p>
+    </div>
+
+    <form
+      method="post"
+      action="{{ url_for('admin_aggiungi_quartiere') }}"
+      class="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end"
+    >
+      <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ session['csrf_token'] }}"
+      >
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">
+          Provincia
+        </label>
+
+        <input
+          type="text"
+          name="provincia"
+          required
+          maxlength="100"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2"
+          placeholder="Es. Milano"
+        >
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">
+          Comune
+        </label>
+
+        <input
+          type="text"
+          name="comune"
+          required
+          maxlength="100"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2"
+          placeholder="Es. Milano"
+        >
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">
+          Primo quartiere
+        </label>
+
+        <input
+          type="text"
+          name="quartiere"
+          required
+          maxlength="150"
+          class="w-full rounded-xl border border-slate-200 px-3 py-2"
+          placeholder="Es. Lambrate"
+        >
+      </div>
+
+      <button
+        type="submit"
+        class="rounded-xl bg-blue-600 text-white font-bold px-4 py-2 hover:bg-blue-700"
+      >
+        + Aggiungi
+      </button>
+    </form>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-black text-slate-900">
+          Catalogo ufficiale
+        </h2>
+
+        <p class="text-sm text-slate-500 mt-1">
+          Importa dal JSON soltanto città e quartieri non ancora presenti.
+        </p>
+      </div>
+
+      <form
+        method="post"
+        action="{{ url_for('admin_importa_quartieri_json') }}"
+        onsubmit="return confirm(
+          'Importare i quartieri mancanti dal catalogo JSON?'
+        );"
+      >
+        <input
+          type="hidden"
+          name="csrf_token"
+          value="{{ session['csrf_token'] }}"
+        >
+
+        <button
+          type="submit"
+          class="rounded-xl bg-slate-900 text-white font-bold px-4 py-2 hover:bg-slate-800"
+        >
+          Importa catalogo JSON
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <div class="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+    <p class="text-sm font-semibold text-blue-900">
+      La bolla “Tutta la città” sarà generata automaticamente negli annunci:
+      non deve essere inserita come quartiere.
+    </p>
+  </div>
+
+  {% if not gruppi_quartieri %}
+    <div class="bg-white border border-slate-200 rounded-2xl p-8 text-center">
+      <div class="text-3xl mb-2">📍</div>
+
+      <p class="font-black text-slate-800">
+        Nessun quartiere configurato
+      </p>
+
+      <p class="text-sm text-slate-500 mt-1">
+        Inserisci sopra la prima città e il suo primo quartiere.
+      </p>
+    </div>
+  {% endif %}
+
+  {% for gruppo in gruppi_quartieri.values() %}
+    <details
+      class="citta-details"
+      {% if
+        gruppo.provincia == provincia_aperta
+        and gruppo.comune == comune_aperto
+      %}open{% endif %}
+    >
+      <summary class="citta-summary">
+        <div class="citta-summary-inner">
+          <div>
+            <span>{{ gruppo.comune }}</span>
+
+            <span class="text-sm font-semibold text-slate-500">
+              · {{ gruppo.provincia }}
+              ({{ gruppo.quartieri|length }} quartieri)
+            </span>
+          </div>
+
+          <span class="citta-arrow">⌄</span>
+        </div>
+      </summary>
+
+      <div class="p-4 space-y-4">
+
+        <form
+          method="post"
+          action="{{ url_for('admin_aggiungi_quartiere') }}"
+          class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end bg-blue-50/60 border border-blue-100 rounded-2xl p-4"
+        >
+          <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ session['csrf_token'] }}"
+          >
+
+          <input
+            type="hidden"
+            name="provincia"
+            value="{{ gruppo.provincia }}"
+          >
+
+          <input
+            type="hidden"
+            name="comune"
+            value="{{ gruppo.comune }}"
+          >
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">
+              Nuovo quartiere di {{ gruppo.comune }}
+            </label>
+
+            <input
+              type="text"
+              name="quartiere"
+              required
+              maxlength="150"
+              class="w-full rounded-xl border border-slate-200 px-3 py-2"
+              placeholder="Es. Nuovo quartiere"
+            >
+          </div>
+
+          <button
+            type="submit"
+            class="rounded-xl bg-blue-600 text-white font-bold px-4 py-2 hover:bg-blue-700"
+          >
+            + Aggiungi
+          </button>
+        </form>
+
+        <div class="quartieri-table-desktop overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left p-3">ID</th>
+                <th class="text-left p-3">Quartiere</th>
+                <th class="text-left p-3">Stato</th>
+                <th class="text-left p-3">Annunci</th>
+                <th class="text-center p-3">Ordine</th>
+                <th class="text-right p-3">Azioni</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+              {% for q in gruppo.quartieri %}
+                <tr>
+                  <td class="p-3 text-slate-500">
+                    {{ q.id }}
+                  </td>
+
+                  <td class="p-3">
+                    <form
+                      id="modifica-quartiere-{{ q.id }}"
+                      method="post"
+                      action="{{ url_for(
+                        'admin_modifica_quartiere',
+                        id=q.id
+                      ) }}"
+                    >
+                      <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ session['csrf_token'] }}"
+                      >
+
+                      <input
+                        type="text"
+                        name="quartiere"
+                        required
+                        maxlength="150"
+                        value="{{ q.quartiere }}"
+                        class="w-full rounded-xl border border-slate-200 px-3 py-2"
+                      >
+                    </form>
+                  </td>
+
+                  <td class="p-3">
+                    {% if q.attivo == 1 %}
+                      <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+                        Attivo
+                      </span>
+                    {% else %}
+                      <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">
+                        Disattivo
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td class="p-3">
+                    <span class="font-bold text-slate-700">
+                      {{ q.annunci_collegati }}
+                    </span>
+                  </td>
+
+                  <td class="p-3">
+                    <div class="flex justify-center gap-2">
+                      <form
+                        method="post"
+                        action="{{ url_for(
+                          'admin_sposta_quartiere',
+                          id=q.id,
+                          direzione='su'
+                        ) }}"
+                      >
+                        <input
+                          type="hidden"
+                          name="csrf_token"
+                          value="{{ session['csrf_token'] }}"
+                        >
+
+                        <button class="rounded-lg bg-slate-100 text-slate-700 font-black px-3 py-2">
+                          ↑
+                        </button>
+                      </form>
+
+                      <form
+                        method="post"
+                        action="{{ url_for(
+                          'admin_sposta_quartiere',
+                          id=q.id,
+                          direzione='giu'
+                        ) }}"
+                      >
+                        <input
+                          type="hidden"
+                          name="csrf_token"
+                          value="{{ session['csrf_token'] }}"
+                        >
+
+                        <button class="rounded-lg bg-slate-100 text-slate-700 font-black px-3 py-2">
+                          ↓
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+
+                  <td class="p-3">
+                    <div class="flex justify-end gap-2">
+                      <button
+                        form="modifica-quartiere-{{ q.id }}"
+                        class="rounded-xl bg-slate-900 text-white font-bold px-3 py-2"
+                      >
+                        Salva
+                      </button>
+
+                      <form
+                        method="post"
+                        action="{{ url_for(
+                          'admin_toggle_quartiere',
+                          id=q.id
+                        ) }}"
+                      >
+                        <input
+                          type="hidden"
+                          name="csrf_token"
+                          value="{{ session['csrf_token'] }}"
+                        >
+
+                        <button class="rounded-xl bg-amber-100 text-amber-800 font-bold px-3 py-2">
+                          {% if q.attivo == 1 %}
+                            Disattiva
+                          {% else %}
+                            Attiva
+                          {% endif %}
+                        </button>
+                      </form>
+
+                      {% if q.annunci_collegati == 0 %}
+                        <form
+                          method="post"
+                          action="{{ url_for(
+                            'admin_elimina_quartiere',
+                            id=q.id
+                          ) }}"
+                          onsubmit="return confirm(
+                            'Eliminare definitivamente questo quartiere?'
+                          );"
+                        >
+                          <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ session['csrf_token'] }}"
+                          >
+
+                          <button class="rounded-xl bg-red-100 text-red-700 font-bold px-3 py-2">
+                            Elimina
+                          </button>
+                        </form>
+                      {% else %}
+                        <span
+                          class="rounded-xl bg-slate-100 text-slate-500 font-bold px-3 py-2"
+                          title="Il quartiere è utilizzato da annunci"
+                        >
+                          In uso
+                        </span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="quartieri-mobile-list">
+          {% for q in gruppo.quartieri %}
+            <div class="quartiere-mobile-card">
+
+              <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="text-xs font-bold text-slate-400">
+                  ID {{ q.id }} · {{ q.annunci_collegati }} annunci
+                </div>
+
+                {% if q.attivo == 1 %}
+                  <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+                    Attivo
+                  </span>
+                {% else %}
+                  <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">
+                    Disattivo
+                  </span>
+                {% endif %}
+              </div>
+
+              <div class="quartiere-mobile-main">
+                <form
+                  id="modifica-quartiere-mobile-{{ q.id }}"
+                  method="post"
+                  action="{{ url_for(
+                    'admin_modifica_quartiere',
+                    id=q.id
+                  ) }}"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session['csrf_token'] }}"
+                  >
+
+                  <input
+                    type="text"
+                    name="quartiere"
+                    required
+                    maxlength="150"
+                    value="{{ q.quartiere }}"
+                    class="w-full rounded-xl border border-slate-200 px-3 py-2"
+                  >
+                </form>
+
+                <div class="quartiere-mobile-move">
+                  <form
+                    method="post"
+                    action="{{ url_for(
+                      'admin_sposta_quartiere',
+                      id=q.id,
+                      direzione='su'
+                    ) }}"
+                  >
+                    <input
+                      type="hidden"
+                      name="csrf_token"
+                      value="{{ session['csrf_token'] }}"
+                    >
+
+                    <button class="rounded-xl bg-slate-100 text-slate-700 font-black px-3 py-2">
+                      ↑
+                    </button>
+                  </form>
+
+                  <form
+                    method="post"
+                    action="{{ url_for(
+                      'admin_sposta_quartiere',
+                      id=q.id,
+                      direzione='giu'
+                    ) }}"
+                  >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session['csrf_token'] }}"
+                  >
+
+                  <button class="rounded-xl bg-slate-100 text-slate-700 font-black px-3 py-2">
+                    ↓
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div class="quartiere-mobile-actions">
+              <button
+                form="modifica-quartiere-mobile-{{ q.id }}"
+                class="rounded-xl bg-slate-900 text-white font-bold"
+              >
+                Salva
+              </button>
+
+              <form
+                method="post"
+                action="{{ url_for(
+                  'admin_toggle_quartiere',
+                  id=q.id
+                ) }}"
+              >
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ session['csrf_token'] }}"
+                >
+
+                <button class="rounded-xl bg-amber-100 text-amber-800 font-bold">
+                  {% if q.attivo == 1 %}Off{% else %}On{% endif %}
+                </button>
+              </form>
+
+              {% if q.annunci_collegati == 0 %}
+                <form
+                  method="post"
+                  action="{{ url_for(
+                    'admin_elimina_quartiere',
+                    id=q.id
+                  ) }}"
+                  onsubmit="return confirm(
+                    'Eliminare definitivamente questo quartiere?'
+                  );"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session['csrf_token'] }}"
+                  >
+
+                  <button class="rounded-xl bg-red-100 text-red-700 font-bold">
+                    Elimina
+                  </button>
+                </form>
+              {% else %}
+                <div class="rounded-xl bg-slate-100 text-slate-500 font-bold flex items-center justify-center">
+                  In uso
+                </div>
+              {% endif %}
+            </div>
+
+          </div>
+        {% endfor %}
+      </div>
+
+    </div>
+  </details>
+{% endfor %}
+
+</div>
+
+{% endblock %}
