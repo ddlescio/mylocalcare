@@ -225,12 +225,27 @@ body {
     padding-bottom: 0.25rem !important;
   }
 
-  /* BLOCCA ZOOM IOS */
+  /* BLOCCA ZOOM IOS + TEXTAREA ADATTIVA */
   .chat-input {
+    display: block;
+    box-sizing: border-box;
+    min-height: 2.5rem;
+    max-height: 7.5rem;
+    line-height: 1.35rem;
+    padding: 0.55rem 2.5rem 0.55rem 0.75rem;
+
     font-size: 16px !important;
+
+    resize: none;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .send-btn {
+    flex: 0 0 auto;
+    min-height: 2.5rem;
     font-size: 14px;
   }
 
@@ -468,7 +483,7 @@ body {
               <button type="submit"
                       title="Sblocca utente"
                       class="px-3 py-1.5 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg text-xs hover:bg-gray-200">
-                🔓 <span class="hidden sm:inline">Sblocca</span>
+                🔓 <span>Sblocca</span>
               </button>
             </form>
           {% else %}
@@ -483,7 +498,7 @@ body {
               <button type="submit"
                       title="Blocca utente"
                       class="px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded-lg text-xs hover:bg-red-200">
-                🚫 <span class="hidden sm:inline">Blocca</span>
+                🚫 <span>Blocca</span>
               </button>
             </form>
           {% endif %}
@@ -575,17 +590,19 @@ body {
   </div>
 
   <!-- composer -->
-  <form id="composer" action="javascript:void(0)" class="flex items-center gap-2 p-3 border-t bg-white" autocomplete="off">
+  <form id="composer" action="javascript:void(0)" class="flex items-end gap-2 p-3 border-t bg-white" autocomplete="off">
     <input type="hidden" id="destinatario_id" value="{{ altro['id'] }}">
 
     <!-- input + emoji -->
-    <div class="relative flex-1">
-      <input id="msgInput" type="text" name="testo"
-             class="chat-input w-full pr-10"
-             placeholder="Scrivi un messaggio…">
+    <div class="relative flex-1 min-w-0">
+      <textarea id="msgInput"
+                name="testo"
+                rows="1"
+                class="chat-input w-full pr-10"
+                placeholder="Scrivi un messaggio…"></textarea>
 
       <button type="button" id="emojiBtn"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 emoji-btn text-lg"
+              class="absolute right-3 bottom-2.5 text-gray-500 emoji-btn text-lg"
               aria-label="Apri emoji">😊</button>
 
       <!-- emoji popover -->
@@ -895,6 +912,66 @@ body {
     const form = document.getElementById('composer');
     const typingIndicator = document.getElementById('typingIndicator');
     const sendBtn = document.getElementById('sendBtn');
+
+    function resizeMessageInput() {
+      if (!input) return;
+
+      input.style.height = 'auto';
+
+      const maxHeight =
+        parseFloat(window.getComputedStyle(input).maxHeight)
+        || 120;
+
+      const nextHeight = Math.min(
+        input.scrollHeight,
+        maxHeight
+      );
+
+      input.style.height = `${nextHeight}px`;
+      input.style.overflowY =
+        input.scrollHeight > maxHeight
+          ? 'auto'
+          : 'hidden';
+    }
+
+    input.addEventListener(
+      'input',
+      resizeMessageInput
+    );
+
+    resizeMessageInput();
+
+    input.addEventListener('keydown', (event) => {
+      if (
+        event.key !== 'Enter'
+        || event.shiftKey
+        || event.isComposing
+      ) {
+        return;
+      }
+
+      const tastieraMobile =
+        window.matchMedia('(pointer: coarse)').matches;
+
+      // Su mobile Invio crea una nuova riga:
+      // la spedizione avviene dal pulsante.
+      if (tastieraMobile) {
+        return;
+      }
+
+      // Su desktop Invio spedisce,
+      // mentre Shift+Invio va a capo.
+      event.preventDefault();
+
+      if (
+        !input.value.trim()
+        || sendBtn.disabled
+      ) {
+        return;
+      }
+
+      form.requestSubmit();
+    });
 
     let chatRealtimeReady = false;
     let chatBlockStatus = {{ chat_block_status | tojson }};
@@ -1464,7 +1541,12 @@ body {
     const end = el.selectionEnd ?? el.value.length;
     el.value = el.value.slice(0, start) + text + el.value.slice(end);
     const pos = start + text.length;
-    el.setSelectionRange(pos, pos); el.focus();
+    el.setSelectionRange(pos, pos);
+    el.focus();
+
+    el.dispatchEvent(
+      new Event('input', { bubbles: true })
+    );
   }
   emojiBtn.addEventListener('click', e => { e.preventDefault(); toggleEmoji(true); });
   emojiPopover.addEventListener('click', e => {
@@ -1895,6 +1977,7 @@ body {
         }
 
         input.value = '';
+        resizeMessageInput();
         toggleEmoji(false);
 
         setTimeout(() => {

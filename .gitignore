@@ -1,2 +1,6 @@
 .env
 .env.secrets
+database.db
+database.db-shm
+database.db-wal
+.DS_Store
