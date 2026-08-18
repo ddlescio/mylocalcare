@@ -453,13 +453,7 @@ body {
 
   <!-- header -->
 <div class="chat-header flex items-center justify-between px-4 py-3 border-b bg-white/80 backdrop-blur">
-      <!-- Pulsante torna indietro -->
       <div class="flex items-center gap-2">
-
-        <a id="backBtn" href="#"
-           class="chat-back flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition">
-          ← <span class="hidden sm:inline">Torna</span>
-        </a>
 
         {% if g.utente['ruolo'] == 'admin' %}
         <form action="{{ url_for('chiudi_chat', other_id=altro['id']) }}"
@@ -2040,29 +2034,6 @@ body {
   } else {
     console.error("❌ [CHAT] window.socket non disponibile");
   }
-});
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const back = document.getElementById("backBtn");
-  if (!back) return;
-
-  back.addEventListener("click", (e) => {
-    e.preventDefault();
-
-    try {
-      window.__emitChatClosedOnce?.();
-    } catch (_) {}
-
-    // 2️⃣ Torna alla pagina precedente se esiste
-    if (document.referrer && document.referrer !== window.location.href) {
-      window.history.back();
-      return;
-    }
-
-    // 3️⃣ Fallback: torna alla lista chat
-    window.location.href = "{{ url_for('chat_threads_view') }}";
-  });
 });
 </script>
   <script>
