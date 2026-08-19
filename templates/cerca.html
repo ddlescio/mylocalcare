@@ -54,12 +54,12 @@
     <input type="hidden"
            name="provincia"
            id="provincia"
-           value="{{ request.args.get('provincia', '') }}">
+           value="{{ request.args.get('provincia', provincia_quartieri_iniziale or '') }}">
 
-    <input type="hidden"
+   <input type="hidden"
            name="comune_quartieri"
            id="comune-quartieri"
-           value="{{ request.args.get('comune_quartieri', '') }}">
+           value="{{ request.args.get('comune_quartieri', comune_quartieri_iniziale or '') }}">
 
     <ul id="zona-suggerimenti"
         class="absolute z-10 left-0 right-0 bg-white border rounded shadow mt-1 hidden max-h-60 overflow-y-auto"></ul>
