@@ -259,6 +259,80 @@
               class="absolute w-full mt-1 border border-gray-200 rounded-xl bg-white shadow-md hidden z-10 max-h-56 overflow-y-auto"></ul>
         </div>
 
+        <!-- Quartieri facoltativi -->
+        <div id="quartieri-section"
+             class="hidden rounded-3xl border border-blue-100 bg-white shadow-sm overflow-hidden">
+
+          <button type="button"
+                  id="quartieri-toggle"
+                  class="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left hover:bg-blue-50/60 transition"
+                  aria-expanded="false"
+                  aria-controls="quartieri-panel">
+
+            <span class="min-w-0">
+              <span class="flex items-center gap-2 text-base font-bold text-slate-800">
+                <span>📍</span>
+                <span>Quartieri</span>
+                <span class="text-xs font-semibold text-slate-500">
+                  Facoltativo
+                </span>
+              </span>
+
+              <span id="quartieri-riepilogo"
+                    class="block mt-1 text-sm text-slate-500">
+                Puoi indicare tutta la città oppure uno o più quartieri.
+              </span>
+            </span>
+
+            <span id="quartieri-freccia"
+                  class="shrink-0 text-slate-500 text-lg transition-transform duration-200">
+              ▾
+            </span>
+          </button>
+
+          <div id="quartieri-panel"
+               class="hidden border-t border-blue-100 p-4 sm:p-5">
+
+            <p class="text-sm text-slate-600 mb-4">
+              Seleziona soltanto le zone interessate. Puoi lasciare questa sezione vuota.
+            </p>
+
+            <div id="quartieri-ricerca-box"
+                 class="hidden mb-4">
+
+              <label for="quartieri-ricerca"
+                     class="block mb-1.5 text-sm font-bold text-slate-700">
+                Cerca un quartiere
+              </label>
+
+              <input type="search"
+                     id="quartieri-ricerca"
+                     autocomplete="off"
+                     class="block w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white"
+                     placeholder="Scrivi il nome del quartiere">
+            </div>
+
+            <div id="quartieri-checkboxes"
+                 class="flex flex-wrap gap-2">
+            </div>
+
+            <p id="quartieri-stato"
+               class="hidden mt-3 text-sm text-slate-500">
+            </p>
+          </div>
+
+          <input type="hidden"
+                 id="copertura-quartieri"
+                 name="copertura_quartieri"
+                 value="{{ annuncio['copertura_quartieri'] or 'non_specificato' }}">
+
+          <script type="application/json"
+                  id="quartieri-selezionati-iniziali">
+            {{ quartieri_selezionati | default([]) | tojson }}
+          </script>
+        </div>
+
+
       </div>
 
       <!-- SEZIONE 2 -->
@@ -845,6 +919,7 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
+<script src="{{ url_for('static', filename='js/quartieri_annuncio.js') }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const categoria = document.getElementById("categoria");

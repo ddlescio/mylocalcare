@@ -8380,7 +8380,7 @@ def admin_toggle_quartiere(id):
 def admin_elimina_quartiere(id):
     verify_csrf()
 
-    conn = get_db_connection()    
+    conn = get_db_connection()
     c = get_cursor(conn)
 
     c.execute(sql("""
@@ -13637,6 +13637,16 @@ def modifica_annuncio(id):
         bio = request.form.get("bio_utente", "").strip()
         filtri = request.form.getlist("filtri_categoria")
 
+        # 🔹 QUARTIERI FACOLTATIVI
+        copertura_quartieri_input = request.form.get(
+            "copertura_quartieri",
+            "non_specificato"
+        )
+
+        quartieri_ids_input = request.form.getlist(
+            "quartieri_ids"
+        )
+
         # =====================================================
         # 🛡️ VALIDAZIONI
         # =====================================================
@@ -13700,6 +13710,29 @@ def modifica_annuncio(id):
 
                 zona = zona_corretta
                 provincia = provincia_corretta
+
+        # 🔒 Validazione server dei quartieri
+        try:
+            (
+                copertura_quartieri,
+                quartieri_ids
+            ) = valida_quartieri_annuncio(
+                cursore=c,
+                zona=zona,
+                provincia=provincia,
+                modalita_servizio=modalita_servizio,
+                copertura_input=copertura_quartieri_input,
+                quartieri_ids_input=quartieri_ids_input
+            )
+
+        except ValueError as errore_quartieri:
+            flash(
+                str(errore_quartieri),
+                "warning"
+            )
+            return redirect(
+                url_for("modifica_annuncio", id=id)
+            )
 
         # =====================================================
         # 📸 MEDIA – gestione immagini
@@ -13891,6 +13924,7 @@ def modifica_annuncio(id):
                     media = ?,
                     foto_card = ?,
                     filtri_categoria = ?,
+                    copertura_quartieri = ?,
                     stato = 'in_attesa'
                 WHERE id = ?
             """), (
@@ -13908,8 +13942,37 @@ def modifica_annuncio(id):
                 media_finale,
                 foto_card,
                 ",".join(filtri),
+                copertura_quartieri,
                 id
             ))
+
+            # Sostituisce atomicamente i precedenti collegamenti.
+            # Se l'annuncio non specifica quartieri, la tabella
+            # di collegamento deve restare vuota.
+            c.execute(sql("""
+                DELETE FROM annunci_quartieri
+                WHERE annuncio_id = ?
+            """), (
+                id,
+            ))
+
+            if (
+                copertura_quartieri == "quartieri"
+                and quartieri_ids
+            ):
+                c.executemany(sql("""
+                    INSERT INTO annunci_quartieri (
+                        annuncio_id,
+                        quartiere_id
+                    )
+                    VALUES (?, ?)
+                """), [
+                    (
+                        id,
+                        quartiere_id
+                    )
+                    for quartiere_id in quartieri_ids
+                ])
 
             # Da questo momento l'esito del commit potrebbe essere incerto:
             # in caso di errore conserviamo prudentemente le immagini.
@@ -13992,11 +14055,31 @@ def modifica_annuncio(id):
     # 📥 GET
     # =========================================================
 
+    c.execute(sql("""
+        SELECT aq.quartiere_id
+        FROM annunci_quartieri aq
+        JOIN quartieri_citta qc
+          ON qc.id = aq.quartiere_id
+        WHERE aq.annuncio_id = ?
+          AND qc.attivo = 1
+        ORDER BY
+            qc.ordine ASC,
+            qc.quartiere ASC
+    """), (
+        id,
+    ))
+
+    quartieri_selezionati = [
+        int(riga["quartiere_id"])
+        for riga in c.fetchall()
+    ]
+
     return render_template(
         "modifica_annuncio.html",
         modalita="modifica",
         annuncio=annuncio,
-        filtri_per_categoria=get_filtri_categoria_da_db()
+        filtri_per_categoria=get_filtri_categoria_da_db(),
+        quartieri_selezionati=quartieri_selezionati
     )
 
 # --- Dashboard: carica anche i nuovi campi (sostituisci la tua dashboard() attuale) ---
@@ -18480,6 +18563,240 @@ def get_filtri_categoria_da_db():
 def api_filtri_categoria():
     return jsonify(get_filtri_categoria_da_db())
 
+@app.route("/api/quartieri-citta")
+def api_quartieri_citta():
+    comune = " ".join(
+        request.args.get("comune", "").strip().split()
+    )
+
+    provincia = " ".join(
+        request.args.get("provincia", "").strip().split()
+    )
+
+    if not comune or not provincia:
+        return jsonify({
+            "ok": False,
+            "error": "Comune e provincia sono obbligatori.",
+            "quartieri": []
+        }), 400
+
+    if len(comune) > 100 or len(provincia) > 100:
+        return jsonify({
+            "ok": False,
+            "error": "Comune o provincia non validi.",
+            "quartieri": []
+        }), 400
+
+    provincia_corretta = get_provincia_from_comune(comune)
+
+    if (
+        not provincia_corretta
+        or provincia_corretta.strip().casefold()
+            != provincia.casefold()
+    ):
+        return jsonify({
+            "ok": False,
+            "error": "Comune e provincia non corrispondono.",
+            "quartieri": []
+        }), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            SELECT
+                id,
+                quartiere,
+                ordine
+            FROM quartieri_citta
+            WHERE attivo = 1
+              AND LOWER(TRIM(provincia)) = LOWER(TRIM(?))
+              AND LOWER(TRIM(comune)) = LOWER(TRIM(?))
+            ORDER BY ordine ASC, quartiere ASC
+        """), (
+            provincia_corretta,
+            comune
+        ))
+
+        quartieri = [
+            {
+                "id": int(row["id"]),
+                "nome": row["quartiere"],
+                "ordine": int(row["ordine"] or 0)
+            }
+            for row in c.fetchall()
+        ]
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        conn.close()
+
+    response = jsonify({
+        "ok": True,
+        "disponibile": len(quartieri) > 0,
+        "comune": comune,
+        "provincia": provincia_corretta,
+        "tutta_citta_label": f"Tutta {comune}",
+        "quartieri": quartieri
+    })
+
+    response.headers["Cache-Control"] = "no-store"
+
+    return response
+
+def valida_quartieri_annuncio(
+    cursore,
+    zona,
+    provincia,
+    modalita_servizio,
+    copertura_input,
+    quartieri_ids_input
+):
+    """
+    Valida esclusivamente sul server la selezione dei quartieri.
+
+    Restituisce:
+        (copertura_quartieri, quartieri_ids)
+
+    I quartieri sono accettati soltanto se attivi e appartenenti
+    esattamente al comune e alla provincia dell'annuncio.
+    """
+
+    if modalita_servizio == "online":
+        return "non_specificato", []
+
+    zona = " ".join(str(zona or "").strip().split())
+    provincia = " ".join(str(provincia or "").strip().split())
+
+    copertura = str(
+        copertura_input or "non_specificato"
+    ).strip().lower()
+
+    coperture_consentite = {
+        "non_specificato",
+        "tutta_citta",
+        "quartieri"
+    }
+
+    if copertura not in coperture_consentite:
+        raise ValueError(
+            "La selezione dei quartieri non è valida."
+        )
+
+    valori_ricevuti = [
+        str(valore).strip()
+        for valore in (quartieri_ids_input or [])
+        if str(valore).strip()
+    ]
+
+    if len(valori_ricevuti) > 200:
+        raise ValueError(
+            "Sono stati selezionati troppi quartieri."
+        )
+
+    quartieri_ids = []
+
+    for valore in valori_ricevuti:
+        try:
+            quartiere_id = int(valore)
+        except (TypeError, ValueError):
+            raise ValueError(
+                "La selezione dei quartieri non è valida."
+            )
+
+        if quartiere_id <= 0:
+            raise ValueError(
+                "La selezione dei quartieri non è valida."
+            )
+
+        quartieri_ids.append(quartiere_id)
+
+    if len(quartieri_ids) != len(set(quartieri_ids)):
+        raise ValueError(
+            "La selezione contiene quartieri duplicati."
+        )
+
+    if copertura == "non_specificato":
+        if quartieri_ids:
+            raise ValueError(
+                "La selezione dei quartieri non è coerente."
+            )
+
+        return "non_specificato", []
+
+    if not zona or not provincia:
+        raise ValueError(
+            "Seleziona prima un comune valido."
+        )
+
+    cursore.execute(sql("""
+        SELECT COUNT(*) AS totale
+        FROM quartieri_citta
+        WHERE attivo = 1
+          AND LOWER(TRIM(provincia)) = LOWER(TRIM(?))
+          AND LOWER(TRIM(comune)) = LOWER(TRIM(?))
+    """), (
+        provincia,
+        zona
+    ))
+
+    riga_totale = cursore.fetchone()
+    totale_disponibile = int(
+        riga_totale["totale"] if riga_totale else 0
+    )
+
+    if totale_disponibile <= 0:
+        raise ValueError(
+            "Per il comune selezionato non sono disponibili quartieri."
+        )
+
+    if copertura == "tutta_citta":
+        if quartieri_ids:
+            raise ValueError(
+                "Non puoi selezionare tutta la città e singoli quartieri insieme."
+            )
+
+        return "tutta_citta", []
+
+    if not quartieri_ids:
+        raise ValueError(
+            "Seleziona almeno un quartiere oppure lascia la sezione vuota."
+        )
+
+    segnaposto = ", ".join(
+        "?" for _ in quartieri_ids
+    )
+
+    cursore.execute(sql(f"""
+        SELECT id
+        FROM quartieri_citta
+        WHERE id IN ({segnaposto})
+          AND attivo = 1
+          AND LOWER(TRIM(provincia)) = LOWER(TRIM(?))
+          AND LOWER(TRIM(comune)) = LOWER(TRIM(?))
+    """), (
+        *quartieri_ids,
+        provincia,
+        zona
+    ))
+
+    ids_validi = {
+        int(riga["id"])
+        for riga in cursore.fetchall()
+    }
+
+    if ids_validi != set(quartieri_ids):
+        raise ValueError(
+            "Uno o più quartieri non appartengono al comune selezionato."
+        )
+
+    return "quartieri", quartieri_ids
+
 @app.route("/cerca")
 def cerca():
 
@@ -18524,6 +18841,17 @@ def cerca():
     zona = request.args.get("zona", "").strip()
     provincia_filtro = request.args.get("provincia", "").strip()
     filtri_attivi = request.args.getlist("filtri")
+
+    comune_quartieri = " ".join(
+        request.args.get(
+            "comune_quartieri",
+            ""
+        ).strip().split()
+    )
+
+    quartieri_filtro_input = request.args.getlist(
+        "quartieri"
+    )
 
     includi_confinanti = (
         request.args.get("includi_confinanti", "").strip() == "1"
@@ -18639,6 +18967,63 @@ def cerca():
     conn = get_db_connection()
 
     c = get_cursor(conn)
+
+    # =========================================================
+    # 📍 VALIDAZIONE FILTRO QUARTIERI
+    # =========================================================
+
+    quartieri_filtro = []
+    filtro_quartieri_sql = ""
+    filtro_quartieri_parametri = []
+
+    if quartieri_filtro_input:
+        try:
+            (
+                _,
+                quartieri_filtro
+            ) = valida_quartieri_annuncio(
+                cursore=c,
+                zona=comune_quartieri,
+                provincia=provincia_filtro,
+                modalita_servizio="presenza",
+                copertura_input="quartieri",
+                quartieri_ids_input=quartieri_filtro_input
+            )
+
+        except ValueError as errore_quartieri:
+            abort(
+                400,
+                description=str(errore_quartieri)
+            )
+
+        segnaposto_quartieri = ", ".join(
+            "?" for _ in quartieri_filtro
+        )
+
+        filtro_quartieri_sql = f"""
+            AND (
+                (
+                    COALESCE(
+                        a.copertura_quartieri,
+                        'non_specificato'
+                    ) = 'tutta_citta'
+                    AND LOWER(TRIM(a.zona))
+                        = LOWER(TRIM(?))
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM annunci_quartieri aq_filtro
+                    WHERE aq_filtro.annuncio_id = a.id
+                      AND aq_filtro.quartiere_id
+                          IN ({segnaposto_quartieri})
+                )
+            )
+        """
+
+        filtro_quartieri_parametri = [
+            comune_quartieri,
+            *quartieri_filtro
+        ]
 
     # =========================================================
     # SQL FLAGS (DEVONO STARE PRIMA DI ESSERE USATE)
@@ -18776,6 +19161,12 @@ def cerca():
         query_vetrina += " AND a.filtri_categoria LIKE ?"
         params_vetrina.append(f"%{f_att}%")
 
+    if filtro_quartieri_sql:
+        query_vetrina += filtro_quartieri_sql
+        params_vetrina.extend(
+            filtro_quartieri_parametri
+        )
+
     query_vetrina += " ORDER BY a.id ASC"
 
     c.execute(sql(query_vetrina), params_vetrina)
@@ -18910,7 +19301,13 @@ def cerca():
         query_annunci += " AND a.filtri_categoria LIKE ?"
         params.append(f"%{f_att}%")
 
-    # 🔒 CHIUSURA SUBQUERY + ORDER BY ESTERNO (PostgreSQL safe)
+    if filtro_quartieri_sql:
+        query_annunci += filtro_quartieri_sql
+        params.extend(
+            filtro_quartieri_parametri
+        )
+
+    # 🔒 CHIUSURA SUBQUERY
     query_annunci += """
         ) sub
         ORDER BY
@@ -18932,6 +19329,92 @@ def cerca():
 
     c.execute(sql(query_annunci), params)
     annunci = [dict(row) for row in c.fetchall()]
+
+    # =========================================================
+    # 📍 QUARTIERI PER LE CARD
+    # Una sola query per tutti gli annunci, evitando N+1 query.
+    # =========================================================
+
+    def assegna_quartieri_alle_card(*liste_annunci):
+        oggetti_per_annuncio = {}
+
+        for lista_annunci in liste_annunci:
+            for annuncio_corrente in lista_annunci:
+                annuncio_corrente["quartieri_card"] = []
+
+                if (
+                    annuncio_corrente.get("copertura_quartieri")
+                    != "quartieri"
+                ):
+                    continue
+
+                try:
+                    annuncio_id = int(
+                        annuncio_corrente["id"]
+                    )
+                except (TypeError, ValueError, KeyError):
+                    continue
+
+                oggetti_per_annuncio.setdefault(
+                    annuncio_id,
+                    []
+                ).append(annuncio_corrente)
+
+        if not oggetti_per_annuncio:
+            return
+
+        annunci_ids = list(
+            oggetti_per_annuncio.keys()
+        )
+
+        segnaposto = ", ".join(
+            "?" for _ in annunci_ids
+        )
+
+        c.execute(sql(f"""
+            SELECT
+                aq.annuncio_id,
+                qc.quartiere
+            FROM annunci_quartieri aq
+            JOIN quartieri_citta qc
+              ON qc.id = aq.quartiere_id
+            WHERE aq.annuncio_id IN ({segnaposto})
+              AND qc.attivo = 1
+            ORDER BY
+                aq.annuncio_id ASC,
+                qc.ordine ASC,
+                qc.quartiere ASC
+        """), tuple(annunci_ids))
+
+        quartieri_per_annuncio = {}
+
+        for riga in c.fetchall():
+            annuncio_id = int(
+                riga["annuncio_id"]
+            )
+
+            quartieri_per_annuncio.setdefault(
+                annuncio_id,
+                []
+            ).append(
+                riga["quartiere"]
+            )
+
+        for annuncio_id, oggetti in oggetti_per_annuncio.items():
+            quartieri = quartieri_per_annuncio.get(
+                annuncio_id,
+                []
+            )
+
+            for annuncio_corrente in oggetti:
+                annuncio_corrente["quartieri_card"] = list(
+                    quartieri
+                )
+
+    assegna_quartieri_alle_card(
+        annunci,
+        annunci_vetrina
+    )
 
     categorie_con_foto_card = {"family-kids", "eventi-socialita", "spazi-sale"}
 
@@ -21179,6 +21662,16 @@ def nuovo_annuncio():
         email = request.form.get("email", "").strip()
         username_modificato = request.form.get("username", utente["username"])
 
+        # 🔹 QUARTIERI FACOLTATIVI
+        copertura_quartieri_input = request.form.get(
+            "copertura_quartieri",
+            "non_specificato"
+        )
+
+        quartieri_ids_input = request.form.getlist(
+            "quartieri_ids"
+        )
+
         categorie_con_foto_card = {
             "family-kids",
             "eventi-socialita",
@@ -21211,6 +21704,29 @@ def nuovo_annuncio():
 
             zona = zona_corretta
             provincia = provincia_corretta
+
+        # 🔒 Validazione server dei quartieri
+        try:
+            (
+                copertura_quartieri,
+                quartieri_ids
+            ) = valida_quartieri_annuncio(
+                cursore=c,
+                zona=zona,
+                provincia=provincia,
+                modalita_servizio=modalita_servizio,
+                copertura_input=copertura_quartieri_input,
+                quartieri_ids_input=quartieri_ids_input
+            )
+
+        except ValueError as errore_quartieri:
+            flash(
+                str(errore_quartieri),
+                "warning"
+            )
+            return redirect(
+                url_for("nuovo_annuncio")
+            )
 
         # 🔒 1 annuncio per categoria per utente
         c.execute(sql("""
@@ -21343,7 +21859,7 @@ def nuovo_annuncio():
         commit_nuovo_annuncio_avviato = False
 
         try:
-            c.execute(sql("""
+            query_nuovo_annuncio = """
                 INSERT INTO annunci (
                     utente_id,
                     username,
@@ -21361,9 +21877,19 @@ def nuovo_annuncio():
                     prezzo,
                     telefono,
                     email,
+                    copertura_quartieri,
                     stato
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_attesa')
-            """), (
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?,
+                    'in_attesa'
+                )
+            """
+
+            if app.config.get("IS_POSTGRES"):
+                query_nuovo_annuncio += " RETURNING id"
+
+            c.execute(sql(query_nuovo_annuncio), (
                 utente["id"],
                 username_modificato,
                 categoria,
@@ -21379,8 +21905,50 @@ def nuovo_annuncio():
                 foto_card,
                 prezzo,
                 telefono,
-                email
+                email,
+                copertura_quartieri
             ))
+
+            if app.config.get("IS_POSTGRES"):
+                riga_annuncio_creato = c.fetchone()
+
+                if (
+                    not riga_annuncio_creato
+                    or not riga_annuncio_creato["id"]
+                ):
+                    raise RuntimeError(
+                        "Impossibile recuperare il nuovo annuncio."
+                    )
+
+                nuovo_annuncio_id = int(
+                    riga_annuncio_creato["id"]
+                )
+
+            else:
+                if not c.lastrowid:
+                    raise RuntimeError(
+                        "Impossibile recuperare il nuovo annuncio."
+                    )
+
+                nuovo_annuncio_id = int(c.lastrowid)
+
+            if (
+                copertura_quartieri == "quartieri"
+                and quartieri_ids
+            ):
+                c.executemany(sql("""
+                    INSERT INTO annunci_quartieri (
+                        annuncio_id,
+                        quartiere_id
+                    )
+                    VALUES (?, ?)
+                """), [
+                    (
+                        nuovo_annuncio_id,
+                        quartiere_id
+                    )
+                    for quartiere_id in quartieri_ids
+                ])
 
             # Dal momento in cui il commit inizia, conserviamo
             # prudentemente i file anche se il database restituisce errore.
@@ -21555,6 +22123,34 @@ def visualizza_annuncio_pubblico(id):
         if not g.utente or g.utente["id"] != annuncio["utente_id"]:
             return "Annuncio non ancora pubblicato.", 403
 
+    # 📍 Quartieri associati all'annuncio
+    quartieri_annuncio = []
+
+    if annuncio.get("copertura_quartieri") == "quartieri":
+        c.execute(sql("""
+            SELECT
+                qc.id,
+                qc.quartiere
+            FROM annunci_quartieri aq
+            JOIN quartieri_citta qc
+              ON qc.id = aq.quartiere_id
+            WHERE aq.annuncio_id = ?
+              AND qc.attivo = 1
+            ORDER BY
+                qc.ordine ASC,
+                qc.quartiere ASC
+        """), (
+            id,
+        ))
+
+        quartieri_annuncio = [
+            {
+                "id": int(riga["id"]),
+                "nome": riga["quartiere"]
+            }
+            for riga in c.fetchall()
+        ]
+
     # ✅ SERVIZI — CONTATTI
     # I contatti diretti NON devono essere visibili agli utenti non loggati.
     utente_loggato = bool(g.utente)
@@ -21594,6 +22190,7 @@ def visualizza_annuncio_pubblico(id):
     return render_template(
         "annuncio_pubblico.html",
         annuncio=annuncio,
+        quartieri_annuncio=quartieri_annuncio,
         contatti_attivi=contatti_attivi,
         back_url=back_url
     )

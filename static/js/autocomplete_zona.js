@@ -47,14 +47,31 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function invalidate() {
-    // 🔒 appena l’utente digita, la selezione NON è più certificata
+    // Appena l’utente modifica il testo, la selezione
+    // del comune non è più certificata.
     hiddenProvincia.value = "";
+
+    input.dispatchEvent(
+      new CustomEvent("localcare:comune-invalidato", {
+        bubbles: true
+      })
+    );
   }
 
   function selectComune(c) {
     input.value = c.comune;
     hiddenProvincia.value = c.provincia || "";
     hideList();
+
+    input.dispatchEvent(
+      new CustomEvent("localcare:comune-selezionato", {
+        bubbles: true,
+        detail: {
+          comune: c.comune || "",
+          provincia: c.provincia || ""
+        }
+      })
+    );
   }
 
   input.addEventListener("input", () => {

@@ -39,16 +39,64 @@
       type="text"
       id="zona-autocomplete"
       name="zona_autocomplete_visuale"
+      value="{% if request.args.get('zona') %}{{ request.args.get('zona') }}{% if request.args.get('provincia') %} ({{ request.args.get('provincia') }}){% endif %}{% else %}{{ request.args.get('provincia', '') }}{% endif %}"
       class="border border-indigo-100 px-4 py-3 rounded-xl w-full text-base
        focus:ring-2 focus:ring-indigo-400 focus:outline-none
        shadow-md transition-all"
       placeholder="Comune o zona (es. Milano, Lambrate...)"
       autocomplete="off"
     >
-    <input type="hidden" name="zona" id="zona">
-    <input type="hidden" name="provincia" id="provincia">
+    <input type="hidden"
+           name="zona"
+           id="zona"
+           value="{{ request.args.get('zona', '') }}">
+
+    <input type="hidden"
+           name="provincia"
+           id="provincia"
+           value="{{ request.args.get('provincia', '') }}">
+
+    <input type="hidden"
+           name="comune_quartieri"
+           id="comune-quartieri"
+           value="{{ request.args.get('comune_quartieri', '') }}">
+
     <ul id="zona-suggerimenti"
         class="absolute z-10 left-0 right-0 bg-white border rounded shadow mt-1 hidden max-h-60 overflow-y-auto"></ul>
+  </div>
+
+  <!-- 📍 Quartieri disponibili per il comune selezionato -->
+  <div id="filtro-quartieri-section"
+       class="hidden mb-6 rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm">
+
+    <div class="mb-3">
+      <span class="block text-sm font-bold text-slate-800">
+        📍 Quartieri
+      </span>
+
+      <span class="block mt-0.5 text-xs text-slate-500">
+        Seleziona uno o più quartieri oppure lascia attiva tutta la città.
+      </span>
+    </div>
+
+    <div id="filtro-quartieri-ricerca-box"
+         class="hidden mb-3">
+
+      <label for="filtro-quartieri-ricerca"
+             class="block mb-1.5 text-xs font-bold text-slate-600">
+        Cerca un quartiere
+      </label>
+
+      <input type="search"
+             id="filtro-quartieri-ricerca"
+             autocomplete="off"
+             class="block w-full rounded-xl border border-blue-100 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+             placeholder="Scrivi il nome del quartiere">
+    </div>
+
+    <div id="filtro-quartieri-bolle"
+         class="flex flex-wrap gap-2">
+    </div>
   </div>
 
   <!-- 🧭 Estensione ricerca alle province confinanti -->
@@ -350,11 +398,30 @@
                 <span class="vetrina-ticket-location">
                   💻 Online · tutta Italia
                 </span>
-              {% elif a['zona'] %}
-                <span class="vetrina-ticket-location">
-                  📍 {{ a['zona'] }}
-                </span>
-              {% endif %}
+                {% elif a['zona'] %}
+                  <span class="vetrina-ticket-location">
+                    {% if a.get('copertura_quartieri') == 'tutta_citta' %}
+
+                      📍 Tutta {{ a['zona'] }}
+
+                    {% elif
+                      a.get('copertura_quartieri') == 'quartieri'
+                      and a.get('quartieri_card')
+                    %}
+
+                      📍 {{ a['zona'] }} · {{ a.get('quartieri_card', [])[0] }}
+
+                      {% if a.get('quartieri_card', [])|length > 1 %}
+                        +{{ (a.get('quartieri_card', [])|length) - 1 }}
+                      {% endif %}
+
+                    {% else %}
+
+                      📍 {{ a['zona'] }}
+
+                    {% endif %}
+                  </span>
+                {% endif %}
 
               {% if a['tipo_annuncio'] %}
                 <span class="vetrina-ticket-dot">•</span>
@@ -452,11 +519,30 @@
               <span class="vetrina-ticket-desktop-location">
                 💻 Online · tutta Italia
               </span>
-            {% elif a['zona'] %}
-              <span class="vetrina-ticket-desktop-location">
-                📍 {{ a['zona'] }}
-              </span>
-            {% endif %}
+              {% elif a['zona'] %}
+                <span class="vetrina-ticket-desktop-location">
+                  {% if a.get('copertura_quartieri') == 'tutta_citta' %}
+
+                    📍 Tutta {{ a['zona'] }}
+
+                  {% elif
+                    a.get('copertura_quartieri') == 'quartieri'
+                    and a.get('quartieri_card')
+                  %}
+
+                    📍 {{ a['zona'] }} · {{ a.get('quartieri_card', [])[0] }}
+
+                    {% if a.get('quartieri_card', [])|length > 1 %}
+                      +{{ (a.get('quartieri_card', [])|length) - 1 }}
+                    {% endif %}
+
+                  {% else %}
+
+                    📍 {{ a['zona'] }}
+
+                  {% endif %}
+                </span>
+              {% endif %}
 
             {% if a['tipo_annuncio'] %}
               <span class="vetrina-ticket-desktop-dot">•</span>
@@ -604,6 +690,46 @@
               <p class="card-description-premium">
                 {{ a['descrizione'] }}
               </p>
+            {% endif %}
+
+            {% if
+              a.get('copertura_quartieri') == 'tutta_citta'
+              or
+              (
+                a.get('copertura_quartieri') == 'quartieri'
+                and a.get('quartieri_card')
+              )
+            %}
+              <div class="card-quartieri-summary">
+
+                <span class="card-quartieri-icon"
+                      aria-hidden="true">
+                  📍
+                </span>
+
+                {% if a.get('copertura_quartieri') == 'tutta_citta' %}
+
+                  <span class="card-quartiere-mini">
+                    Tutta {{ a['zona'] }}
+                  </span>
+
+                {% else %}
+
+                  {% for quartiere in a.get('quartieri_card', [])[:2] %}
+                    <span class="card-quartiere-mini">
+                      {{ quartiere }}
+                    </span>
+                  {% endfor %}
+
+                  {% if a.get('quartieri_card', [])|length > 2 %}
+                    <span class="card-quartieri-more">
+                      +{{ (a.get('quartieri_card', [])|length) - 2 }}
+                    </span>
+                  {% endif %}
+
+                {% endif %}
+
+              </div>
             {% endif %}
 
             {% if a['filtri_categoria'] %}
@@ -1146,6 +1272,44 @@ body.annuncio-navigation-loading #annuncio-loading-overlay * {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  .card-quartieri-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.52rem;
+    margin-bottom: 0.18rem;
+    line-height: 1.2;
+  }
+
+  .card-quartieri-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+  }
+
+  .card-quartiere-mini,
+  .card-quartieri-more {
+    display: inline-flex;
+    align-items: center;
+    min-height: 21px;
+    padding: 0.16rem 0.48rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(147, 197, 253, 0.68);
+    background: rgba(239, 246, 255, 0.9);
+    color: #1d4ed8;
+    font-size: 0.66rem;
+    font-weight: 760;
+    white-space: nowrap;
+  }
+
+  .card-quartieri-more {
+    border-color: rgba(203, 213, 225, 0.82);
+    background: rgba(248, 250, 252, 0.94);
+    color: #64748b;
   }
 
   .card-pill-wrap {
@@ -2495,6 +2659,7 @@ body.annuncio-navigation-loading #annuncio-loading-overlay * {
 
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/filtro_quartieri_cerca.js') }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
@@ -2556,9 +2721,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const zonaHidden = container.querySelector('input[name="zona"]');
       const provinciaHidden = container.querySelector('input[name="provincia"]');
+      const comuneQuartieriHidden = container.querySelector(
+        'input[name="comune_quartieri"]'
+      );
 
       if (zonaHidden) zonaHidden.value = "";
       if (provinciaHidden) provinciaHidden.value = "";
+      if (comuneQuartieriHidden) {
+        comuneQuartieriHidden.value = "";
+      }
 
       container.submit();
     });
@@ -2570,16 +2741,31 @@ document.addEventListener("DOMContentLoaded", function () {
   const zonaInput = document.getElementById("zona-autocomplete");
   const zonaHidden = document.getElementById("zona");
   const provinciaHidden = document.getElementById("provincia");
+  const comuneQuartieriHidden = document.getElementById(
+    "comune-quartieri"
+  );
   const suggerimentiBox = document.getElementById("zona-suggerimenti");
 
-  if (!zonaInput || !zonaHidden || !provinciaHidden || !suggerimentiBox) return;
+  if (
+    !zonaInput ||
+    !zonaHidden ||
+    !provinciaHidden ||
+    !comuneQuartieriHidden ||
+    !suggerimentiBox
+  ) {
+    return;
+  }
 
   // 🔒 anti doppia inizializzazione
   if (zonaInput.dataset.autocompleteInit === "1") return;
   zonaInput.dataset.autocompleteInit = "1";
 
   let timeoutId = null;
-  let hasSelected = false;
+
+  let hasSelected = Boolean(
+    zonaHidden.value.trim() ||
+    provinciaHidden.value.trim()
+  );
 
   const norm = (s) =>
     (s || "")
@@ -2609,6 +2795,16 @@ document.addEventListener("DOMContentLoaded", function () {
     hasSelected = false;
     zonaHidden.value = "";
     provinciaHidden.value = "";
+    comuneQuartieriHidden.value = "";
+
+    zonaInput.dispatchEvent(
+      new CustomEvent(
+        "localcare:filtro-comune-invalidato",
+        {
+          bubbles: true
+        }
+      )
+    );
   }
 
   zonaInput.setAttribute("autocomplete", "off");
@@ -2786,6 +2982,22 @@ document.addEventListener("DOMContentLoaded", function () {
                 zonaHidden.value = c.comune;
                 provinciaHidden.value = c.provincia || "";
               }
+
+              comuneQuartieriHidden.value =
+                c.comune || "";
+
+              zonaInput.dispatchEvent(
+                new CustomEvent(
+                  "localcare:filtro-comune-selezionato",
+                  {
+                    bubbles: true,
+                    detail: {
+                      comune: c.comune || "",
+                      provincia: c.provincia || ""
+                    }
+                  }
+                )
+              );
 
               hasSelected = true;
               hideList();
