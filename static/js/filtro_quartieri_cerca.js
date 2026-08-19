@@ -62,6 +62,8 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
     numeroRichiesta += 1;
 
+    section.open = false;
+
     bolleContainer.innerHTML = "";
     ricercaInput.value = "";
     ricercaBox.classList.add("hidden");
