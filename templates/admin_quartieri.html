@@ -189,34 +189,67 @@ Gestisci i quartieri selezionabili negli annunci, raggruppati per città.
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
         <h2 class="text-lg font-black text-slate-900">
-          Catalogo ufficiale
+          Catalogo quartieri
         </h2>
 
         <p class="text-sm text-slate-500 mt-1">
-          Importa dal JSON soltanto città e quartieri non ancora presenti.
+          Aggiungi i quartieri mancanti oppure sostituisci interamente il catalogo quando non è ancora utilizzato dagli annunci.
         </p>
       </div>
 
-      <form
-        method="post"
-        action="{{ url_for('admin_importa_quartieri_json') }}"
-        onsubmit="return confirm(
-          'Importare i quartieri mancanti dal catalogo JSON?'
-        );"
-      >
-        <input
-          type="hidden"
-          name="csrf_token"
-          value="{{ session['csrf_token'] }}"
-        >
+      <div class="flex flex-wrap gap-2">
 
-        <button
-          type="submit"
-          class="rounded-xl bg-slate-900 text-white font-bold px-4 py-2 hover:bg-slate-800"
+        <form
+          method="post"
+          action="{{ url_for('admin_importa_quartieri_json') }}"
+          onsubmit="return confirm(
+            'Importare soltanto i quartieri mancanti dal catalogo JSON?'
+          );"
         >
-          Importa catalogo JSON
-        </button>
-      </form>
+          <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ session['csrf_token'] }}"
+          >
+
+          <button
+            type="submit"
+            class="rounded-xl bg-slate-900 text-white font-bold px-4 py-2 hover:bg-slate-800"
+          >
+            Importa mancanti
+          </button>
+        </form>
+
+        <form
+          method="post"
+          action="{{ url_for('admin_importa_quartieri_json') }}"
+          onsubmit="return confirm(
+            'Sostituire completamente il catalogo attuale? '
+            + 'L’operazione sarà consentita soltanto se nessun annuncio '
+            + 'utilizza i quartieri esistenti.'
+          );"
+        >
+          <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ session['csrf_token'] }}"
+          >
+
+          <input
+            type="hidden"
+            name="modalita"
+            value="sostituisci"
+          >
+
+          <button
+            type="submit"
+            class="rounded-xl bg-red-600 text-white font-bold px-4 py-2 hover:bg-red-700"
+          >
+            Sostituisci catalogo
+          </button>
+        </form>
+
+      </div>
     </div>
   </section>
 

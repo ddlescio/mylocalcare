@@ -7814,6 +7814,46 @@ def riordina_quartieri_citta(c, provincia, comune):
             WHERE id = ?
         """), (index, row["id"]))
 
+def ordina_quartieri_citta_alfabeticamente(
+    c,
+    provincia,
+    comune
+):
+    """
+    Riordina alfabeticamente tutti i quartieri di una città
+    e assegna valori ordine consecutivi a partire da 1.
+    """
+
+    c.execute(sql("""
+        SELECT id
+        FROM quartieri_citta
+        WHERE provincia = ?
+          AND comune = ?
+        ORDER BY
+            LOWER(TRIM(quartiere)) ASC,
+            id ASC
+    """), (
+        provincia,
+        comune
+    ))
+
+    quartieri = [
+        dict(row)
+        for row in c.fetchall()
+    ]
+
+    for nuovo_ordine, quartiere in enumerate(
+        quartieri,
+        start=1
+    ):
+        c.execute(sql("""
+            UPDATE quartieri_citta
+            SET ordine = ?
+            WHERE id = ?
+        """), (
+            nuovo_ordine,
+            quartiere["id"]
+        ))
 
 @app.route("/admin/quartieri")
 @admin_required
@@ -7874,6 +7914,11 @@ def admin_quartieri():
 def admin_importa_quartieri_json():
     verify_csrf()
 
+    sostituisci_catalogo = (
+        request.form.get("modalita", "").strip()
+        == "sostituisci"
+    )
+
     json_path = os.path.join(
         app.root_path,
         "static",
@@ -7920,7 +7965,35 @@ def admin_importa_quartieri_json():
     quartieri_esistenti = 0
     citta_elaborate = 0
 
+    if sostituisci_catalogo:
+        c.execute(sql("""
+            SELECT COUNT(*) AS totale
+            FROM annunci_quartieri
+        """))
+
+        collegamenti_presenti = int(
+            dict(c.fetchone())["totale"] or 0
+        )
+
+        if collegamenti_presenti > 0:
+            conn.close()
+
+            flash(
+                "Sostituzione annullata: uno o più annunci "
+                "utilizzano già i quartieri attuali.",
+                "error"
+            )
+
+            return redirect(
+                url_for("admin_quartieri")
+            )
+
     try:
+        if sostituisci_catalogo:
+            c.execute(sql("""
+                DELETE FROM quartieri_citta
+            """))
+
         for elemento_citta in citta_catalogo:
             if not isinstance(elemento_citta, dict):
                 raise ValueError(
@@ -8017,6 +8090,12 @@ def admin_importa_quartieri_json():
                     quartieri_inseriti += 1
                 else:
                     quartieri_esistenti += 1
+
+            ordina_quartieri_citta_alfabeticamente(
+                c,
+                provincia,
+                comune
+            )
 
             citta_elaborate += 1
 
@@ -8116,6 +8195,12 @@ def admin_aggiungi_quartiere():
             nuovo_ordine
         ))
 
+        ordina_quartieri_citta_alfabeticamente(
+            c,
+            provincia,
+            comune
+        )
+
         conn.commit()
         flash("Quartiere aggiunto correttamente.", "success")
 
@@ -8196,6 +8281,12 @@ def admin_modifica_quartiere(id):
             SET quartiere = ?
             WHERE id = ?
         """), (quartiere, id))
+
+        ordina_quartieri_citta_alfabeticamente(
+            c,
+            provincia,
+            comune
+        )
 
         conn.commit()
         flash("Quartiere aggiornato.", "success")
