@@ -19041,33 +19041,26 @@ def cerca():
     provincia_query = provincia_filtro or provincia_attiva or "__INVALID__"
 
     # Comune e provincia iniziali usati dal filtro quartieri.
-    # Se l'utente non ha impostato manualmente una zona,
-    # utilizziamo la città presente nel suo profilo.
+    #
+    # La pagina Cerca lavora normalmente sull'intera provincia.
+    # Se non è stato scelto manualmente un comune, proviamo quindi
+    # a caricare i quartieri del capoluogo che porta lo stesso nome
+    # della provincia attiva: ad esempio Milano/Milano.
     comune_quartieri_iniziale = comune_quartieri
     provincia_quartieri_iniziale = provincia_filtro
 
     if (
         not comune_quartieri_iniziale
         and not zona
-        and not provincia_filtro
-        and g.utente
+        and provincia_query != "__INVALID__"
     ):
-        comune_utente = str(
-            g.utente["citta"] or ""
-        ).strip()
+        provincia_predefinita = " ".join(
+            str(provincia_query).strip().split()
+        )
 
-        provincia_utente = str(
-            g.utente["provincia"] or ""
-        ).strip()
-
-        if (
-            comune_utente
-            and provincia_utente
-            and norm_place(provincia_utente)
-                == norm_place(provincia_query)
-        ):
-            comune_quartieri_iniziale = comune_utente
-            provincia_quartieri_iniziale = provincia_utente
+        if provincia_predefinita:
+            comune_quartieri_iniziale = provincia_predefinita
+            provincia_quartieri_iniziale = provincia_predefinita
 
     # Province effettivamente utilizzate dalla ricerca.
     # Senza spunta viene utilizzata soltanto la provincia selezionata.
