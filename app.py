@@ -7965,31 +7965,34 @@ def admin_importa_quartieri_json():
     quartieri_esistenti = 0
     citta_elaborate = 0
 
+    associazioni_da_ripristinare = []
+
     if sostituisci_catalogo:
         c.execute(sql("""
-            SELECT COUNT(*) AS totale
-            FROM annunci_quartieri
+            SELECT
+                aq.annuncio_id,
+                qc.provincia,
+                qc.comune,
+                qc.quartiere
+            FROM annunci_quartieri aq
+            JOIN quartieri_citta qc
+              ON qc.id = aq.quartiere_id
+            ORDER BY
+                aq.annuncio_id ASC,
+                qc.id ASC
         """))
 
-        collegamenti_presenti = int(
-            dict(c.fetchone())["totale"] or 0
-        )
-
-        if collegamenti_presenti > 0:
-            conn.close()
-
-            flash(
-                "Sostituzione annullata: uno o più annunci "
-                "utilizzano già i quartieri attuali.",
-                "error"
-            )
-
-            return redirect(
-                url_for("admin_quartieri")
-            )
+        associazioni_da_ripristinare = [
+            dict(row)
+            for row in c.fetchall()
+        ]
 
     try:
         if sostituisci_catalogo:
+            c.execute(sql("""
+                DELETE FROM annunci_quartieri
+            """))
+
             c.execute(sql("""
                 DELETE FROM quartieri_citta
             """))
@@ -8098,6 +8101,50 @@ def admin_importa_quartieri_json():
             )
 
             citta_elaborate += 1
+
+        if sostituisci_catalogo:
+            for associazione in associazioni_da_ripristinare:
+                c.execute(sql("""
+                    SELECT id
+                    FROM quartieri_citta
+                    WHERE LOWER(TRIM(provincia))
+                        = LOWER(TRIM(?))
+                      AND LOWER(TRIM(comune))
+                        = LOWER(TRIM(?))
+                      AND LOWER(TRIM(quartiere))
+                        = LOWER(TRIM(?))
+                    LIMIT 1
+                """), (
+                    associazione["provincia"],
+                    associazione["comune"],
+                    associazione["quartiere"]
+                ))
+
+                nuovo_quartiere = c.fetchone()
+
+                if not nuovo_quartiere:
+                    raise ValueError(
+                        "Il nuovo catalogo non contiene il quartiere "
+                        f"{associazione['comune']} - "
+                        f"{associazione['quartiere']}, già utilizzato "
+                        "da un annuncio."
+                    )
+
+                nuovo_quartiere_id = int(
+                    dict(nuovo_quartiere)["id"]
+                )
+
+                c.execute(sql("""
+                    INSERT INTO annunci_quartieri (
+                        annuncio_id,
+                        quartiere_id
+                    )
+                    VALUES (?, ?)
+                    ON CONFLICT DO NOTHING
+                """), (
+                    associazione["annuncio_id"],
+                    nuovo_quartiere_id
+                ))
 
         conn.commit()
 
