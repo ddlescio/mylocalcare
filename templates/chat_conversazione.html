@@ -97,6 +97,15 @@ body {
   z-index: 2;
 }
 
+.message-menu-trigger::after {
+  content: "";
+  position: absolute;
+  top: -0.25rem;
+  bottom: -0.25rem;
+  left: 100%;
+  width: 0.5rem;
+}
+
 .bubble-me:hover .message-menu-trigger,
 .message-menu-trigger:focus-visible {
   opacity: 1;
@@ -674,13 +683,7 @@ body {
              data-destinatario-id="{{ m['destinatario_id'] }}"
              class="bubble {% if is_me %}bubble-me{% else %}bubble-other{% endif %}"
            >
-             <div class="message-text whitespace-pre-wrap break-words{% if is_deleted %} italic opacity-75{% endif %}">
-               {% if is_deleted %}
-                 Messaggio eliminato
-               {% else %}
-                 {{ m['testo'] }}
-               {% endif %}
-             </div>
+          <div class="message-text whitespace-pre-wrap break-words{% if is_deleted %} italic opacity-75{% endif %}">{% if is_deleted %}Messaggio eliminato{% else %}{{ m['testo'] }}{% endif %}</div>
 
              <div class="message-meta flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-70 text-right">
                {% if m['edited_at'] and not is_deleted %}
@@ -2080,9 +2083,7 @@ body {
         : '';
 
     inner.innerHTML = `
-      <div class="${classeTesto}">
-        ${escapeHTML(testoVisibile)}
-      </div>
+    <div class="${classeTesto}">${escapeHTML(testoVisibile)}</div>
 
       <div class="message-meta flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-70 text-right">
         ${etichettaModificato}
