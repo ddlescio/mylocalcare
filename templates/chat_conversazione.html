@@ -171,8 +171,11 @@ body {
 }
 
 @media (max-width: 640px) {
-  .bubble-me {
+  .bubble-me,
+  .bubble-me * {
     -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .message-menu-trigger {
@@ -2310,13 +2313,43 @@ body {
         )
       );
 
-      const top = Math.max(
+      const chatPanel =
+        bubbleEl.closest('.max-w-3xl');
+
+      const chatRect = chatPanel
+        ? chatPanel.getBoundingClientRect()
+        : {
+            top: 0,
+            bottom: window.innerHeight
+          };
+
+      const limiteSuperiore = Math.max(
         8,
+        chatRect.top + 8
+      );
+
+      const limiteInferiore = Math.min(
+        window.innerHeight - 8,
+        chatRect.bottom - 8
+      );
+
+      let top = bubbleRect.top;
+
+      if (
+        top + menuHeight >
+        limiteInferiore
+      ) {
+        top =
+          bubbleRect.bottom -
+          menuHeight;
+      }
+
+      top = Math.max(
+        limiteSuperiore,
         Math.min(
-          bubbleRect.top,
-          window.innerHeight -
-          menuHeight -
-          8
+          top,
+          limiteInferiore -
+          menuHeight
         )
       );
 
