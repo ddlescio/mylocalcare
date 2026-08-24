@@ -1488,12 +1488,17 @@
 
   .annuncio-hero-tags-line {
     order: 4;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
     margin-top: 0.8rem;
+    padding-inline: 0.25rem;
     color: #2563eb;
     font-size: 0.82rem;
     font-weight: 720;
@@ -1501,7 +1506,10 @@
   }
 
   .annuncio-hero-tags-line span {
-    white-space: nowrap;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
   }
 
   .annuncio-hero-tags-line em {

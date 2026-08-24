@@ -2195,12 +2195,27 @@ body {
       'deleteMessageAction'
     );
 
-  const closeMessageActions =
-    document.getElementById(
-      'closeMessageActions'
-    );
+    const closeMessageActions =
+      document.getElementById(
+        'closeMessageActions'
+      );
 
-  let messaggioSelezionato = null;
+    /*
+      L’overlay deve essere figlio diretto del body.
+      Altrimenti il contenitore della chat, che usa overflow hidden,
+      taglia il menu sui bordi.
+    */
+    if (
+      messageActionsOverlay &&
+      messageActionsOverlay.parentElement !==
+        document.body
+    ) {
+      document.body.appendChild(
+        messageActionsOverlay
+      );
+    }
+
+    let messaggioSelezionato = null;
 
   function chiudiMenuMessaggio() {
     messaggioSelezionato = null;
