@@ -418,7 +418,606 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
     conn.commit()
     return msg_id
 
-def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: int | None = None, before_id: int | None = None):
+def chat_modifica(
+    mittente_id: int,
+    messaggio_id: int,
+    nuovo_testo: str
+):
+    """
+    Modifica un messaggio inviato entro 15 minuti.
+
+    Il testo precedente viene sostituito e il nuovo contenuto
+    viene cifrato nuovamente con chiave effimera, nonce e tag nuovi.
+    """
+    from datetime import datetime, timezone, timedelta
+    from nacl.public import Box
+
+    try:
+        mittente_id = int(mittente_id)
+        messaggio_id = int(messaggio_id)
+    except (TypeError, ValueError):
+        raise ValueError("Identificativo messaggio non valido")
+
+    nuovo_testo = str(nuovo_testo or "").strip()
+
+    if not nuovo_testo:
+        raise ValueError("Il messaggio non può essere vuoto")
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    def to_utc(value):
+        if value is None:
+            return None
+
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            valore = str(value).strip()
+
+            if valore.endswith("Z"):
+                valore = valore[:-1] + "+00:00"
+
+            dt = datetime.fromisoformat(
+                valore.replace(" ", "T", 1)
+            )
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        return dt.astimezone(timezone.utc)
+
+    try:
+        blocco_riga = (
+            " FOR UPDATE"
+            if is_postgres()
+            else ""
+        )
+
+        query_messaggio = """
+            SELECT
+                id,
+                mittente_id,
+                destinatario_id,
+                created_at,
+                deleted_at,
+                CURRENT_TIMESTAMP AS server_now
+            FROM messaggi_chat
+            WHERE id = ?
+        """ + blocco_riga
+
+        c.execute(
+            sql(query_messaggio),
+            (messaggio_id,)
+        )
+
+        messaggio = c.fetchone()
+
+        if not messaggio:
+            raise ValueError("Messaggio non trovato")
+
+        if int(messaggio["mittente_id"]) != mittente_id:
+            raise PermissionError(
+                "Non puoi modificare questo messaggio"
+            )
+
+        if messaggio["deleted_at"] is not None:
+            raise ValueError(
+                "Un messaggio eliminato non può essere modificato"
+            )
+
+        created_at = to_utc(
+            messaggio["created_at"]
+        )
+        server_now = to_utc(
+            messaggio["server_now"]
+        )
+
+        if not created_at or not server_now:
+            raise ValueError(
+                "Impossibile verificare l'orario del messaggio"
+            )
+
+        if server_now - created_at > timedelta(minutes=15):
+            raise PermissionError(
+                "Il tempo disponibile per modificare il messaggio è scaduto"
+            )
+
+        destinatario_id = int(
+            messaggio["destinatario_id"]
+        )
+
+        stato_blocco = _chat_stato_blocco_cursor(
+            c,
+            mittente_id,
+            destinatario_id
+        )
+
+        if stato_blocco["bloccata"]:
+            raise PermissionError(
+                "Non puoi modificare messaggi in una conversazione bloccata"
+            )
+
+        # Recupera le chiavi del mittente dalla sessione.
+        x_priv_b64 = session.get(
+            "x25519_priv_b64"
+        )
+        dek_b64 = session.get(
+            "dek_b64"
+        )
+
+        # Fallback sicuro se le chiavi non sono presenti
+        # direttamente nella sessione realtime.
+        if not x_priv_b64 or not dek_b64:
+            c.execute(sql("""
+                SELECT
+                    dek_enc,
+                    dek_nonce,
+                    x25519_priv_enc,
+                    x25519_priv_nonce
+                FROM utenti
+                WHERE id = ?
+            """), (mittente_id,))
+
+            sender_row = c.fetchone()
+
+            if not sender_row:
+                raise ValueError(
+                    "Mittente non trovato"
+                )
+
+            dek = _decrypt_with_master_local(
+                sender_row["dek_enc"],
+                sender_row["dek_nonce"]
+            )
+
+            x_nonce = base64.b64decode(
+                sender_row["x25519_priv_nonce"]
+            )
+            x_ct, x_tag = _gcm_unpack_local(
+                sender_row["x25519_priv_enc"]
+            )
+
+            cipher_x = AES.new(
+                dek,
+                AES.MODE_GCM,
+                nonce=x_nonce
+            )
+
+            x_priv_bytes = (
+                cipher_x.decrypt_and_verify(
+                    x_ct,
+                    x_tag
+                )
+            )
+
+            x_priv_b64 = base64.b64encode(
+                x_priv_bytes
+            ).decode()
+
+            dek_b64 = base64.b64encode(
+                dek
+            ).decode()
+
+        # Recupera la chiave pubblica del destinatario.
+        c.execute(sql("""
+            SELECT x25519_pub
+            FROM utenti
+            WHERE id = ?
+        """), (destinatario_id,))
+
+        destinatario = c.fetchone()
+
+        dest_pub_b64 = (
+            destinatario["x25519_pub"]
+            if destinatario
+            else None
+        )
+
+        if not dest_pub_b64:
+            raise ValueError(
+                "Destinatario senza chiave pubblica registrata"
+            )
+
+        pub_dest = PublicKey(
+            base64.b64decode(dest_pub_b64)
+        )
+
+        # Genera una nuova chiave effimera.
+        eph_priv = PrivateKey.generate()
+        eph_pub = eph_priv.public_key
+
+        box = Box(
+            eph_priv,
+            pub_dest
+        )
+        shared = box.shared_key()
+
+        # Cifra integralmente il nuovo testo.
+        cipher = AES.new(
+            shared,
+            AES.MODE_GCM
+        )
+
+        ciphertext, tag = (
+            cipher.encrypt_and_digest(
+                nuovo_testo.encode("utf-8")
+            )
+        )
+
+        blob_b64 = base64.b64encode(
+            ciphertext + tag
+        ).decode()
+
+        nonce_b64 = base64.b64encode(
+            cipher.nonce
+        ).decode()
+
+        eph_pub_b64 = base64.b64encode(
+            bytes(eph_pub)
+        ).decode()
+
+        # Protegge la nuova chiave effimera privata
+        # con la DEK personale del mittente.
+        dek = base64.b64decode(dek_b64)
+
+        cipher_eph = AES.new(
+            dek,
+            AES.MODE_GCM
+        )
+
+        eph_ct, eph_tag = (
+            cipher_eph.encrypt_and_digest(
+                bytes(eph_priv)
+            )
+        )
+
+        eph_priv_enc_b64 = base64.b64encode(
+            eph_ct + eph_tag
+        ).decode()
+
+        eph_priv_nonce_b64 = base64.b64encode(
+            cipher_eph.nonce
+        ).decode()
+
+        # Sostituisce definitivamente il vecchio testo cifrato.
+        c.execute(sql("""
+            UPDATE messaggi_chat
+            SET testo = ?,
+                ciphertext = ?,
+                nonce = ?,
+                eph_pub = ?,
+                eph_priv_enc = ?,
+                eph_priv_nonce = ?,
+                edited_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND mittente_id = ?
+              AND deleted_at IS NULL
+        """), (
+            "🔒",
+            blob_b64,
+            nonce_b64,
+            eph_pub_b64,
+            eph_priv_enc_b64,
+            eph_priv_nonce_b64,
+            messaggio_id,
+            mittente_id
+        ))
+
+        if c.rowcount != 1:
+            raise RuntimeError(
+                "Il messaggio non è stato modificato"
+            )
+
+        c.execute(sql("""
+            SELECT
+                edited_at,
+                updated_at
+            FROM messaggi_chat
+            WHERE id = ?
+        """), (messaggio_id,))
+
+        risultato = c.fetchone()
+
+        conn.commit()
+
+        edited_at = (
+            risultato["edited_at"]
+            if risultato
+            else None
+        )
+        updated_at = (
+            risultato["updated_at"]
+            if risultato
+            else None
+        )
+
+        return {
+            "id": messaggio_id,
+            "mittente_id": mittente_id,
+            "destinatario_id": destinatario_id,
+            "testo": nuovo_testo,
+            "edited_at": (
+                edited_at.isoformat()
+                if hasattr(edited_at, "isoformat")
+                else edited_at
+            ),
+            "updated_at": (
+                updated_at.isoformat()
+                if hasattr(updated_at, "isoformat")
+                else updated_at
+            )
+        }
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        raise
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+def chat_elimina(
+    mittente_id: int,
+    messaggio_id: int
+):
+    """
+    Elimina per tutti un messaggio inviato entro 60 ore.
+
+    La riga rimane nel database per conservare posizione,
+    mittente, destinatario e data, ma il contenuto cifrato
+    e tutto il materiale crittografico vengono cancellati.
+    """
+    from datetime import datetime, timezone, timedelta
+
+    try:
+        mittente_id = int(mittente_id)
+        messaggio_id = int(messaggio_id)
+    except (TypeError, ValueError):
+        raise ValueError(
+            "Identificativo messaggio non valido"
+        )
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    def to_utc(value):
+        if value is None:
+            return None
+
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            valore = str(value).strip()
+
+            if valore.endswith("Z"):
+                valore = valore[:-1] + "+00:00"
+
+            dt = datetime.fromisoformat(
+                valore.replace(" ", "T", 1)
+            )
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        return dt.astimezone(timezone.utc)
+
+    def iso_value(value):
+        if value is None:
+            return None
+
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+
+        return str(value)
+
+    try:
+        blocco_riga = (
+            " FOR UPDATE"
+            if is_postgres()
+            else ""
+        )
+
+        query_messaggio = """
+            SELECT
+                id,
+                mittente_id,
+                destinatario_id,
+                created_at,
+                deleted_at,
+                letto,
+                CURRENT_TIMESTAMP AS server_now
+            FROM messaggi_chat
+            WHERE id = ?
+        """ + blocco_riga
+
+        c.execute(
+            sql(query_messaggio),
+            (messaggio_id,)
+        )
+
+        messaggio = c.fetchone()
+
+        if not messaggio:
+            raise ValueError(
+                "Messaggio non trovato"
+            )
+
+        if int(messaggio["mittente_id"]) != mittente_id:
+            raise PermissionError(
+                "Non puoi eliminare questo messaggio"
+            )
+
+        destinatario_id = int(
+            messaggio["destinatario_id"]
+        )
+
+        # Gestione idempotente:
+        # se la richiesta precedente è riuscita ma la risposta
+        # non è arrivata al browser, il secondo tentativo non fallisce.
+        if messaggio["deleted_at"] is not None:
+            return {
+                "id": messaggio_id,
+                "mittente_id": mittente_id,
+                "destinatario_id": destinatario_id,
+                "deleted_at": iso_value(
+                    messaggio["deleted_at"]
+                ),
+                "gia_eliminato": True
+            }
+
+        created_at = to_utc(
+            messaggio["created_at"]
+        )
+        server_now = to_utc(
+            messaggio["server_now"]
+        )
+
+        if not created_at or not server_now:
+            raise ValueError(
+                "Impossibile verificare l'orario del messaggio"
+            )
+
+        if server_now - created_at > timedelta(hours=60):
+            raise PermissionError(
+                "Il tempo disponibile per eliminare il messaggio è scaduto"
+            )
+
+        # Mantiene la riga come segnaposto, ma elimina
+        # definitivamente testo cifrato e chiavi del messaggio.
+        # Il messaggio eliminato non deve più risultare non letto.
+        c.execute(sql("""
+            UPDATE messaggi_chat
+            SET testo = ?,
+                ciphertext = NULL,
+                nonce = NULL,
+                eph_pub = NULL,
+                eph_priv_enc = NULL,
+                eph_priv_nonce = NULL,
+                edited_at = NULL,
+                deleted_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP,
+                letto = 1
+            WHERE id = ?
+              AND mittente_id = ?
+              AND deleted_at IS NULL
+        """), (
+            "🗑️",
+            messaggio_id,
+            mittente_id
+        ))
+
+        if c.rowcount != 1:
+            raise RuntimeError(
+                "Il messaggio non è stato eliminato"
+            )
+
+        # Verifica quanti messaggi non letti restano
+        # complessivamente al destinatario.
+        c.execute(sql("""
+            SELECT COUNT(*)
+            FROM messaggi_chat mc
+            WHERE mc.destinatario_id = ?
+              AND mc.letto = 0
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM chat_blocchi cb
+                  WHERE (
+                      cb.bloccante_id = mc.mittente_id
+                      AND cb.bloccato_id = mc.destinatario_id
+                  )
+                  OR (
+                      cb.bloccante_id = mc.destinatario_id
+                      AND cb.bloccato_id = mc.mittente_id
+                  )
+              )
+        """), (destinatario_id,))
+
+        messaggi_non_letti = int(
+            fetchone_value(c.fetchone()) or 0
+        )
+
+        # Se non rimangono messaggi non letti,
+        # chiude anche il ciclo delle email promemoria.
+        if messaggi_non_letti == 0:
+            c.execute(sql("""
+                DELETE FROM chat_unread_email_cycles
+                WHERE user_id = ?
+            """), (destinatario_id,))
+
+        c.execute(sql("""
+            SELECT
+                deleted_at,
+                updated_at
+            FROM messaggi_chat
+            WHERE id = ?
+        """), (messaggio_id,))
+
+        risultato = c.fetchone()
+
+        conn.commit()
+
+        deleted_at = (
+            risultato["deleted_at"]
+            if risultato
+            else None
+        )
+        updated_at = (
+            risultato["updated_at"]
+            if risultato
+            else None
+        )
+
+        return {
+            "id": messaggio_id,
+            "mittente_id": mittente_id,
+            "destinatario_id": destinatario_id,
+            "deleted_at": iso_value(deleted_at),
+            "updated_at": iso_value(updated_at),
+            "messaggi_non_letti": messaggi_non_letti,
+            "gia_eliminato": False
+        }
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        raise
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+def chat_conversazione(
+    user_id: int,
+    other_id: int,
+    limit: int = 35,
+    after_id: int | None = None,
+    before_id: int | None = None,
+    changed_after=None,
+    changed_before=None
+):
     """
     Restituisce la conversazione decifrando i messaggi leggibili con la chiave privata X25519.
     LOGICA IDENTICA, solo ottimizzata.
@@ -455,19 +1054,60 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: i
     # QUERY MESSAGGI
     # -----------------------------
 
-    # apertura chat (ultimi N messaggi)
-    if after_id is None and before_id is None:
+    # Modifiche o eliminazioni di messaggi già esistenti.
+    # Entrambi i limiti temporali provengono dal database,
+    # evitando di dipendere dall'orologio del dispositivo.
+    if (
+        changed_after is not None
+        and changed_before is not None
+    ):
+        query = """
+            SELECT id, mittente_id, destinatario_id,
+                   testo, ciphertext, nonce, eph_pub,
+                   eph_priv_enc, eph_priv_nonce,
+                   created_at, edited_at, deleted_at, updated_at,
+                   consegnato, letto
+            FROM messaggi_chat
+            WHERE (
+                   (mittente_id = ? AND destinatario_id = ?)
+                OR (mittente_id = ? AND destinatario_id = ?)
+            )
+            AND updated_at >= ?
+            AND updated_at <= ?
+            AND (
+                edited_at IS NOT NULL
+                OR deleted_at IS NOT NULL
+            )
+            AND ( ? IS NULL OR created_at > ? )
+            ORDER BY updated_at ASC, id ASC
+        """
+
+        params = [
+            user_id,
+            other_id,
+            other_id,
+            user_id,
+            changed_after,
+            changed_before,
+            cutoff,
+            cutoff
+        ]
+
+    # Apertura chat: ultimi N messaggi.
+    elif after_id is None and before_id is None:
 
         query = """
             SELECT id, mittente_id, destinatario_id,
                    testo, ciphertext, nonce, eph_pub,
                    eph_priv_enc, eph_priv_nonce,
-                   created_at, consegnato, letto
+                   created_at, edited_at, deleted_at, updated_at,
+                   consegnato, letto
             FROM (
                 SELECT id, mittente_id, destinatario_id,
                        testo, ciphertext, nonce, eph_pub,
                        eph_priv_enc, eph_priv_nonce,
-                       created_at, consegnato, letto
+                       created_at, edited_at, deleted_at, updated_at,
+                       consegnato, letto
                 FROM messaggi_chat
                 WHERE (
                        (mittente_id = ? AND destinatario_id = ?)
@@ -489,7 +1129,8 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: i
             SELECT id, mittente_id, destinatario_id,
                    testo, ciphertext, nonce, eph_pub,
                    eph_priv_enc, eph_priv_nonce,
-                   created_at, consegnato, letto
+                   created_at, edited_at, deleted_at, updated_at,
+                   consegnato, letto
             FROM messaggi_chat
             WHERE (
                    (mittente_id = ? AND destinatario_id = ?)
@@ -509,7 +1150,8 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: i
             SELECT id, mittente_id, destinatario_id,
                    testo, ciphertext, nonce, eph_pub,
                    eph_priv_enc, eph_priv_nonce,
-                   created_at, consegnato, letto
+                   created_at, edited_at, deleted_at, updated_at,
+                   consegnato, letto
             FROM messaggi_chat
             WHERE (
                    (mittente_id = ? AND destinatario_id = ?)
@@ -525,14 +1167,25 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: i
 
     rows = c.execute(sql(query), params).fetchall()
 
-    # se carico messaggi vecchi invertiamo ordine
+    # Se carico messaggi vecchi, inverto l'ordine.
     if before_id is not None:
         rows = list(reversed(rows))
 
-    # 🔑 Se non ho chiave privata → ritorno senza decrypt
+    # Converte subito tutte le righe in dizionari.
+    rows = [dict(r) for r in rows]
+
+    # Un messaggio eliminato conserva la propria posizione
+    # nella conversazione, ma non espone più il contenuto.
+    for messaggio in rows:
+        if messaggio.get("deleted_at") is not None:
+            messaggio["testo"] = "Messaggio eliminato"
+
+    # Se non ho la chiave privata, restituisco comunque
+    # correttamente gli eventuali segnaposto eliminati.
     x_priv_b64 = session.get("x25519_priv_b64")
+
     if not x_priv_b64:
-        return [dict(r) for r in rows]
+        return rows
 
     priv = PrivateKey(base64.b64decode(x_priv_b64))
     dek = base64.b64decode(session["dek_b64"])
@@ -551,7 +1204,12 @@ def chat_conversazione(user_id: int, other_id: int, limit: int = 35, after_id: i
     messaggi_decifrati = []
 
     for r in rows:
-        r = dict(r)
+        # Il materiale cifrato dei messaggi eliminati è stato
+        # cancellato: non deve essere effettuato alcun tentativo
+        # di decifratura.
+        if r.get("deleted_at") is not None:
+            messaggi_decifrati.append(r)
+            continue
 
         try:
             raw = base64.b64decode(r["ciphertext"])
@@ -646,6 +1304,9 @@ def chat_threads(user_id: int):
                 eph_priv_enc,
                 eph_priv_nonce,
                 created_at,
+                edited_at,
+                deleted_at,
+                updated_at,
                 consegnato,
                 letto
             FROM messaggi_chat
@@ -680,6 +1341,9 @@ def chat_threads(user_id: int):
             lm.eph_priv_enc AS ultimo_eph_priv_enc,
             lm.eph_priv_nonce AS ultimo_eph_priv_nonce,
             lm.created_at AS ultimo_invio,
+            lm.edited_at AS ultimo_edited_at,
+            lm.deleted_at AS ultimo_deleted_at,
+            lm.updated_at AS ultimo_updated_at,
             lm.consegnato AS ultimo_consegnato,
             lm.letto AS ultimo_letto,
             (
@@ -751,9 +1415,18 @@ def chat_threads(user_id: int):
         d["altro_username"] = r["username_altro"]
         d["nome_chat"] = "@" + d["altro_username"]
 
-        testo = "🔒 Messaggio cifrato"
+        testo = (
+            "Messaggio eliminato"
+            if r["ultimo_deleted_at"] is not None
+            else "🔒 Messaggio cifrato"
+        )
 
-        if priv and dek and r["ultimo_ciphertext"]:
+        if (
+            r["ultimo_deleted_at"] is None
+            and priv
+            and dek
+            and r["ultimo_ciphertext"]
+        ):
             try:
                 raw = base64.b64decode(r["ultimo_ciphertext"])
                 nonce = base64.b64decode(r["ultimo_nonce"])

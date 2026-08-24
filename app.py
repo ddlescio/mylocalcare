@@ -28,7 +28,8 @@ from models import (
     get_operatori, get_operatore_by_id,
     aggiungi_operatore, modifica_operatore, elimina_operatore, get_tutte_le_zone,
     get_utenti, attiva_utente, elimina_utente,
-    chat_invia, chat_conversazione, chat_threads, chat_segna_letti, count_chat_non_letti,
+    chat_invia, chat_modifica, chat_elimina,
+    chat_conversazione, chat_threads, chat_segna_letti, count_chat_non_letti,
     chat_stato_blocco, chat_blocca, chat_sblocca,
     get_recensioni_utente, aggiungi_o_modifica_recensione, get_recensione_autore_vs_destinatario,
     calcola_media_recensioni, get_risposta_by_recensione, aggiungi_o_modifica_risposta, elimina_risposta,
@@ -22832,6 +22833,9 @@ def chat_conversazione_json(other_id):
                 "destinatario_id": m["destinatario_id"],
                 "testo": m["testo"],
                 "created_at": m["created_at"],
+                "edited_at": m["edited_at"],
+                "deleted_at": m["deleted_at"],
+                "updated_at": m["updated_at"],
                 "consegnato": m["consegnato"],
                 "letto": m["letto"]
             }
@@ -22864,11 +22868,116 @@ def chat_load_older(other_id):
             "destinatario_id": m["destinatario_id"],
             "testo": m["testo"],
             "created_at": m["created_at"],
+            "edited_at": m["edited_at"],
+            "deleted_at": m["deleted_at"],
+            "updated_at": m["updated_at"],
             "consegnato": m["consegnato"],
             "letto": m["letto"]
         }
         for m in messaggi
     ])
+
+@app.route("/chat/<int:other_id>/changes")
+@login_required
+def chat_message_changes(other_id):
+    """
+    Recupera modifiche ed eliminazioni eventualmente perse
+    durante una disconnessione realtime.
+
+    Il token superiore viene generato dal database prima della
+    lettura, così nessun cambiamento successivo viene perso.
+    """
+    user_id = int(g.utente["id"])
+
+    changed_after = (
+        request.args.get("after", type=str)
+        or "1970-01-01 00:00:00+00:00"
+    ).strip()
+
+    # Il token arriva soltanto dal server, ma viene comunque
+    # validato per impedire richieste manomesse o valori anomali.
+    if len(changed_after) > 80:
+        return jsonify({
+            "ok": False,
+            "error": "Token di sincronizzazione non valido"
+        }), 400
+
+    try:
+        datetime.fromisoformat(
+            changed_after.replace("Z", "+00:00")
+        )
+    except (TypeError, ValueError):
+        return jsonify({
+            "ok": False,
+            "error": "Token di sincronizzazione non valido"
+        }), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        c.execute(sql("""
+            SELECT CURRENT_TIMESTAMP AS sync_token
+        """))
+
+        token_row = c.fetchone()
+
+        if not token_row:
+            raise RuntimeError(
+                "Impossibile generare il token di sincronizzazione"
+            )
+
+        changed_before = token_row["sync_token"]
+
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+    cambiamenti = chat_conversazione(
+        user_id,
+        other_id,
+        changed_after=changed_after,
+        changed_before=changed_before
+    )
+
+    def iso_value(value):
+        if value is None:
+            return None
+
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+
+        return str(value)
+
+    return jsonify({
+        "ok": True,
+        "sync_token": iso_value(changed_before),
+        "changes": [
+            {
+                "id": m["id"],
+                "mittente_id": m["mittente_id"],
+                "destinatario_id": m["destinatario_id"],
+                "testo": m["testo"],
+                "created_at": iso_value(
+                    m["created_at"]
+                ),
+                "edited_at": iso_value(
+                    m["edited_at"]
+                ),
+                "deleted_at": iso_value(
+                    m["deleted_at"]
+                ),
+                "updated_at": iso_value(
+                    m["updated_at"]
+                ),
+                "consegnato": m["consegnato"],
+                "letto": m["letto"]
+            }
+            for m in cambiamenti
+        ]
+    })
 
 @app.route("/chat/unread_count")
 def chat_unread_count():
@@ -23910,6 +24019,8 @@ if app.config["IS_REALTIME_SERVER"]:
         get_cursor=get_cursor,
         sql=sql,
         chat_invia=chat_invia,
+        chat_modifica=chat_modifica,
+        chat_elimina=chat_elimina,
         chat_stato_blocco=chat_stato_blocco,
         chat_segna_letti=chat_segna_letti,
         emit_to_user_sids=emit_to_user_sids,

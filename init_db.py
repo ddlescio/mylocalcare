@@ -438,6 +438,7 @@ def crea_tabella_match_utenti():
 def crea_tabella_messaggi_chat():
     conn = get_conn()
     c = conn.cursor()
+
     c.execute(sql(f"""
     CREATE TABLE IF NOT EXISTS messaggi_chat (
         id {pk_col()},
@@ -450,6 +451,9 @@ def crea_tabella_messaggi_chat():
         eph_priv_enc TEXT,
         eph_priv_nonce TEXT,
         created_at {dt_col(True)},
+        edited_at {dt_col()},
+        deleted_at {dt_col()},
+        updated_at {dt_col(True)} NOT NULL,
         consegnato INTEGER DEFAULT 0,
         letto INTEGER DEFAULT 0,
         visibile_destinatario INTEGER DEFAULT 1,
@@ -458,9 +462,24 @@ def crea_tabella_messaggi_chat():
         FOREIGN KEY (destinatario_id) REFERENCES utenti(id)
     );
     """))
-    c.execute("CREATE INDEX IF NOT EXISTS idx_chat_mitt_dest ON messaggi_chat(mittente_id, destinatario_id)")
+
+    c.execute("""
+        CREATE INDEX IF NOT EXISTS idx_chat_mitt_dest
+        ON messaggi_chat(mittente_id, destinatario_id)
+    """)
+
+    c.execute("""
+        CREATE INDEX IF NOT EXISTS idx_chat_conversation_updated
+        ON messaggi_chat(
+            mittente_id,
+            destinatario_id,
+            updated_at
+        )
+    """)
+
     conn.commit()
     conn.close()
+
     print("✅ Tabella 'messaggi_chat' pronta.")
 
 def crea_tabella_chat_blocchi():

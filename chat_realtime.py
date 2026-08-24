@@ -50,6 +50,8 @@ def register_chat_socket_handlers(
     clear_open_chat,
     invia_push,
     recently_read_timers,
+    chat_modifica=None,
+    chat_elimina=None,
 ):
     def clear_recently_read(user_id, delay=None):
         if delay is None:
@@ -358,6 +360,273 @@ def register_chat_socket_handlers(
             print("❌ [send_message] ECCEZIONE nella fase emit/finale")
             traceback.print_exc()
             return {"ok": False, "error": str(e)}
+
+    @socketio.on("edit_message")
+    def handle_edit_message(data):
+        """
+        Modifica un messaggio già inviato.
+
+        Proprietà del messaggio e limite di 15 minuti vengono
+        verificati nuovamente dal database.
+        """
+        user_id = _resolve_socket_user_id()
+
+        if not user_id:
+            return {
+                "ok": False,
+                "error": "Sessione non valida"
+            }
+
+        if not callable(chat_modifica):
+            return {
+                "ok": False,
+                "error": "Modifica messaggi non disponibile"
+            }
+
+        if not isinstance(data, dict):
+            data = {}
+
+        try:
+            messaggio_id = int(
+                data.get("messaggio_id")
+            )
+        except (TypeError, ValueError):
+            return {
+                "ok": False,
+                "error": "Identificativo messaggio non valido"
+            }
+
+        nuovo_testo = str(
+            data.get("testo") or ""
+        ).strip()
+
+        if not nuovo_testo:
+            return {
+                "ok": False,
+                "error": "Il messaggio non può essere vuoto"
+            }
+
+        try:
+            risultato = chat_modifica(
+                user_id,
+                messaggio_id,
+                nuovo_testo
+            )
+
+        except (ValueError, PermissionError) as e:
+            return {
+                "ok": False,
+                "error": str(e)
+            }
+
+        except Exception:
+            print(
+                "❌ [edit_message] errore modifica messaggio",
+                flush=True
+            )
+            traceback.print_exc()
+
+            return {
+                "ok": False,
+                "error": "Impossibile modificare il messaggio"
+            }
+
+        evento = {
+            "id": risultato["id"],
+            "mittente_id": risultato["mittente_id"],
+            "destinatario_id": risultato["destinatario_id"],
+            "testo": risultato["testo"],
+            "edited_at": risultato["edited_at"],
+            "updated_at": risultato["updated_at"]
+        }
+
+        # La modifica è già stata salvata nel database.
+        # Se un evento realtime non arriva, verrà recuperato
+        # dalla rotta di sincronizzazione /changes.
+        try:
+            emit_to_user_sids(
+                risultato["mittente_id"],
+                "message_edited",
+                evento
+            )
+
+            emit_to_user_sids(
+                risultato["destinatario_id"],
+                "message_edited",
+                evento
+            )
+
+            emit_to_user_sids(
+                risultato["mittente_id"],
+                "chat_threads_update",
+                {
+                    "from": risultato["mittente_id"]
+                }
+            )
+
+            emit_to_user_sids(
+                risultato["destinatario_id"],
+                "chat_threads_update",
+                {
+                    "from": risultato["mittente_id"]
+                }
+            )
+
+        except Exception:
+            print(
+                "❌ [edit_message] modifica salvata, "
+                "ma invio realtime non riuscito",
+                flush=True
+            )
+            traceback.print_exc()
+
+        return {
+            "ok": True,
+            "message": evento
+        }
+
+    @socketio.on("delete_message")
+    def handle_delete_message(data):
+        """
+        Elimina per tutti un messaggio inviato.
+
+        Proprietà del messaggio e limite di 60 ore vengono
+        verificati nuovamente dal database.
+        """
+        user_id = _resolve_socket_user_id()
+
+        if not user_id:
+            return {
+                "ok": False,
+                "error": "Sessione non valida"
+            }
+
+        if not callable(chat_elimina):
+            return {
+                "ok": False,
+                "error": "Eliminazione messaggi non disponibile"
+            }
+
+        if not isinstance(data, dict):
+            data = {}
+
+        try:
+            messaggio_id = int(
+                data.get("messaggio_id")
+            )
+        except (TypeError, ValueError):
+            return {
+                "ok": False,
+                "error": "Identificativo messaggio non valido"
+            }
+
+        try:
+            risultato = chat_elimina(
+                user_id,
+                messaggio_id
+            )
+
+        except (ValueError, PermissionError) as e:
+            return {
+                "ok": False,
+                "error": str(e)
+            }
+
+        except Exception:
+            print(
+                "❌ [delete_message] errore eliminazione messaggio",
+                flush=True
+            )
+            traceback.print_exc()
+
+            return {
+                "ok": False,
+                "error": "Impossibile eliminare il messaggio"
+            }
+
+        evento = {
+            "id": risultato["id"],
+            "mittente_id": risultato["mittente_id"],
+            "destinatario_id": risultato["destinatario_id"],
+            "testo": "Messaggio eliminato",
+            "edited_at": None,
+            "deleted_at": risultato.get("deleted_at"),
+            "updated_at": risultato.get("updated_at")
+        }
+
+        messaggi_non_letti = risultato.get(
+            "messaggi_non_letti"
+        )
+
+        # Nei tentativi ripetuti il messaggio potrebbe essere già
+        # eliminato: in quel caso ricalcola il badge corrente.
+        if messaggi_non_letti is None:
+            try:
+                messaggi_non_letti = chat_count_unread(
+                    risultato["destinatario_id"]
+                )
+            except Exception:
+                messaggi_non_letti = None
+                print(
+                    "❌ [delete_message] impossibile ricalcolare "
+                    "il contatore non letti",
+                    flush=True
+                )
+                traceback.print_exc()
+
+        # L’eliminazione è già stata salvata nel database.
+        # Se un evento realtime viene perso, sarà recuperato
+        # dalla rotta di sincronizzazione /changes.
+        try:
+            emit_to_user_sids(
+                risultato["mittente_id"],
+                "message_deleted",
+                evento
+            )
+
+            emit_to_user_sids(
+                risultato["destinatario_id"],
+                "message_deleted",
+                evento
+            )
+
+            if messaggi_non_letti is not None:
+                emit_to_user_sids(
+                    risultato["destinatario_id"],
+                    "update_unread_count",
+                    {
+                        "count": int(messaggi_non_letti)
+                    }
+                )
+
+            emit_to_user_sids(
+                risultato["mittente_id"],
+                "chat_threads_update",
+                {
+                    "from": risultato["mittente_id"]
+                }
+            )
+
+            emit_to_user_sids(
+                risultato["destinatario_id"],
+                "chat_threads_update",
+                {
+                    "from": risultato["mittente_id"]
+                }
+            )
+
+        except Exception:
+            print(
+                "❌ [delete_message] eliminazione salvata, "
+                "ma invio realtime non riuscito",
+                flush=True
+            )
+            traceback.print_exc()
+
+        return {
+            "ok": True,
+            "message": evento
+        }
 
     @socketio.on("chat_aperta")
     def handle_chat_aperta(data):

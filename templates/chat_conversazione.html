@@ -71,6 +71,125 @@ body {
   border-top-left-radius: 0.4rem;
 }
 
+/* Azioni sui messaggi */
+.bubble {
+  position: relative;
+}
+
+.message-menu-trigger {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 0.35rem);
+  transform: translateY(-50%);
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 9999px;
+  border: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.96);
+  color: #475569;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 2;
+}
+
+.bubble-me:hover .message-menu-trigger,
+.message-menu-trigger:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.message-actions-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(15, 23, 42, 0.16);
+}
+
+.message-actions-overlay.hidden {
+  display: none;
+}
+
+.message-actions-menu {
+  position: fixed;
+  min-width: 13rem;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.9rem;
+  background: white;
+  color: #1f2937;
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.2);
+}
+
+.message-action-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  background: white;
+  color: #1f2937;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.message-action-button:hover,
+.message-action-button:focus-visible {
+  background: #f8fafc;
+}
+
+.message-action-button + .message-action-button {
+  border-top: 1px solid #eef2f7;
+}
+
+.message-action-delete {
+  color: #dc2626;
+}
+
+.message-action-cancel {
+  color: #475569;
+}
+
+@media (min-width: 641px) {
+  .message-action-cancel {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .bubble-me {
+    -webkit-touch-callout: none;
+  }
+
+  .message-menu-trigger {
+    display: none !important;
+  }
+
+  .message-actions-overlay {
+    background: rgba(15, 23, 42, 0.28);
+  }
+
+  .message-actions-menu {
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    bottom: calc(
+      0.75rem + env(safe-area-inset-bottom)
+    ) !important;
+    top: auto !important;
+    width: auto;
+  }
+
+  .message-action-button {
+    min-height: 3.1rem;
+    font-size: 1rem;
+  }
+}
+
 /* 🧩 Header Desktop */
 .chat-header {
   position: sticky;
@@ -542,31 +661,99 @@ body {
        {% set last_written_day = None %}
        {% for m in conversazione %}
          {% set is_me = (m['mittente_id'] == g.utente['id']) %}
-         <div class="flex {% if is_me %}justify-end{% else %}justify-start{% endif %}">
-           <div data-mid="{{ m['id'] }}" data-created-at="{{ m['created_at'] }}"
-                class="bubble {% if is_me %}bubble-me{% else %}bubble-other{% endif %}">
-             <div class="whitespace-pre-wrap break-words">{{ m['testo'] }}</div>
-             <div class="flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-70 text-right">
+         {% set is_deleted = (m['deleted_at'] is not none) %}
+
+         <div class="msg-line flex {% if is_me %}justify-end{% else %}justify-start{% endif %}">
+           <div
+             data-mid="{{ m['id'] }}"
+             data-created-at="{{ m['created_at'] }}"
+             data-updated-at="{{ m['updated_at'] or '' }}"
+             data-edited-at="{{ m['edited_at'] or '' }}"
+             data-deleted-at="{{ m['deleted_at'] or '' }}"
+             data-mittente-id="{{ m['mittente_id'] }}"
+             data-destinatario-id="{{ m['destinatario_id'] }}"
+             class="bubble {% if is_me %}bubble-me{% else %}bubble-other{% endif %}"
+           >
+             <div class="message-text whitespace-pre-wrap break-words{% if is_deleted %} italic opacity-75{% endif %}">
+               {% if is_deleted %}
+                 Messaggio eliminato
+               {% else %}
+                 {{ m['testo'] }}
+               {% endif %}
+             </div>
+
+             <div class="message-meta flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-70 text-right">
+               {% if m['edited_at'] and not is_deleted %}
+                 <span class="message-edited-label">modificato</span>
+               {% endif %}
+
                {% set dt = m['created_at'] | replace("T", " ") | to_datetime %}
-               <span>
-                 {% if dt %}{{ dt.astimezone(pytz.timezone("Europe/Rome")).strftime("%H:%M") }}{% endif %}
-               </span>
-               {% if is_me %}
-               <span class="spunte">
-                 {% if m['letto'] %}
-                   <span class="text-blue-400">✅✅</span>
-                 {% elif m['consegnato'] %}
-                   <span class="text-gray-400">✅</span>
-                 {% else %}
-                   <span class="text-gray-400">⏳</span>
+               <span class="message-time">
+                 {% if dt %}
+                   {{ dt.astimezone(pytz.timezone("Europe/Rome")).strftime("%H:%M") }}
                  {% endif %}
                </span>
+
+               {% if is_me %}
+                 <span class="spunte">
+                   {% if m['letto'] %}
+                     <span class="text-blue-400">✅✅</span>
+                   {% elif m['consegnato'] %}
+                     <span class="text-gray-400">✅</span>
+                   {% else %}
+                     <span class="text-gray-400">⏳</span>
+                   {% endif %}
+                 </span>
                {% endif %}
              </div>
            </div>
          </div>
        {% endfor %}
       </div>
+
+      <div
+        id="messageActionsOverlay"
+        class="message-actions-overlay hidden"
+        aria-hidden="true"
+      >
+        <div
+          id="messageActionsMenu"
+          class="message-actions-menu"
+          role="menu"
+          aria-label="Azioni messaggio"
+        >
+          <button
+            type="button"
+            id="editMessageAction"
+            class="message-action-button"
+            role="menuitem"
+          >
+            <span aria-hidden="true">✏️</span>
+            <span>Modifica</span>
+          </button>
+
+          <button
+            type="button"
+            id="deleteMessageAction"
+            class="message-action-button message-action-delete"
+            role="menuitem"
+          >
+            <span aria-hidden="true">🗑️</span>
+            <span>Elimina per tutti</span>
+          </button>
+
+          <button
+            type="button"
+            id="closeMessageActions"
+            class="message-action-button message-action-cancel"
+            role="menuitem"
+          >
+            <span aria-hidden="true">✕</span>
+            <span>Annulla</span>
+          </button>
+        </div>
+      </div>
+
   <!-- indicatore sta scrivendo -->
   <div id="typingIndicator" class="px-4 py-2 text-center typing-indicator hidden">
     Sta scrivendo…
@@ -581,6 +768,31 @@ body {
     {% elif chat_block_status['sono_stato_bloccato'] %}
       Non puoi inviare messaggi in questa conversazione.
     {% endif %}
+  </div>
+
+  <div
+    id="editMessageBanner"
+    class="hidden flex items-center justify-between gap-3 px-4 py-2 bg-blue-50 border-t border-blue-200"
+  >
+    <div class="min-w-0">
+      <div class="text-xs font-semibold text-blue-700">
+        Modifica messaggio
+      </div>
+
+      <div
+        id="editMessagePreview"
+        class="text-xs text-gray-600 truncate"
+      ></div>
+    </div>
+
+    <button
+      type="button"
+      id="cancelEditMessage"
+      class="shrink-0 w-8 h-8 rounded-full text-gray-500 hover:bg-white"
+      aria-label="Annulla modifica"
+    >
+      ✕
+    </button>
   </div>
 
   <!-- composer -->
@@ -813,6 +1025,7 @@ body {
       emitPageVisible();
 
       if (document.visibilityState === "visible") {
+        sincronizzaModificheMessaggi();
         chatClosedEmitted = false;
         chatOpenedOnce = false;
         emitChatOpened();
@@ -821,6 +1034,7 @@ body {
 
     window.addEventListener("focus", () => {
       emitPageVisible();
+      sincronizzaModificheMessaggi();
       chatClosedEmitted = false;
       chatOpenedOnce = false;
       emitChatOpened();
@@ -906,6 +1120,24 @@ body {
     const form = document.getElementById('composer');
     const typingIndicator = document.getElementById('typingIndicator');
     const sendBtn = document.getElementById('sendBtn');
+    const editMessageBanner =
+      document.getElementById(
+        'editMessageBanner'
+      );
+
+    const editMessagePreview =
+      document.getElementById(
+        'editMessagePreview'
+      );
+
+    const cancelEditMessage =
+      document.getElementById(
+        'cancelEditMessage'
+      );
+
+    let messaggioInModificaId = null;
+    let bollaInModifica = null;
+    let bozzaPrimaDellaModifica = '';
 
     function resizeMessageInput() {
       if (!input) return;
@@ -1018,7 +1250,9 @@ body {
             'Invio messaggi non disponibile';
         } else if (chatRealtimeReady) {
           input.placeholder =
-            'Scrivi un messaggio…';
+            messaggioInModificaId
+              ? 'Modifica il messaggio…'
+              : 'Scrivi un messaggio…';
         } else {
           input.placeholder =
             'Attendi connessione chat…';
@@ -1040,7 +1274,11 @@ body {
           sendBtn.textContent = 'Chat bloccata';
         } else {
           sendBtn.textContent = chatRealtimeReady
-            ? 'Invia'
+            ? (
+                messaggioInModificaId
+                  ? 'Salva'
+                  : 'Invia'
+              )
             : 'Connessione...';
         }
       }
@@ -1074,6 +1312,105 @@ body {
         reason
       );
     }
+
+    function avviaModalitaModifica(bubbleEl) {
+      if (
+        !bubbleEl ||
+        bubbleEl.dataset.deletedAt
+      ) {
+        return;
+      }
+
+      const messaggioId = Number(
+        bubbleEl.dataset.mid
+      );
+
+      const testoEl = bubbleEl.querySelector(
+        '.message-text'
+      );
+
+      if (
+        !Number.isInteger(messaggioId) ||
+        !testoEl
+      ) {
+        return;
+      }
+
+      bozzaPrimaDellaModifica =
+        input.value;
+
+      messaggioInModificaId =
+        messaggioId;
+
+      bollaInModifica =
+        bubbleEl;
+
+      const testoCorrente =
+        testoEl.textContent.trim();
+
+      editMessagePreview.textContent =
+        testoCorrente;
+
+      editMessageBanner.classList.remove(
+        'hidden'
+      );
+
+      input.value =
+        testoCorrente;
+
+      resizeMessageInput();
+      toggleEmoji(false);
+
+      setComposerReady(
+        chatRealtimeReady,
+        'edit_start'
+      );
+
+      input.focus({
+        preventScroll: true
+      });
+
+      input.setSelectionRange(
+        input.value.length,
+        input.value.length
+      );
+    }
+
+    function terminaModalitaModifica() {
+      messaggioInModificaId = null;
+      bollaInModifica = null;
+
+      editMessageBanner.classList.add(
+        'hidden'
+      );
+
+      editMessagePreview.textContent = '';
+
+      input.value =
+        bozzaPrimaDellaModifica;
+
+      bozzaPrimaDellaModifica = '';
+
+      resizeMessageInput();
+
+      setComposerReady(
+        chatRealtimeReady,
+        'edit_end'
+      );
+    }
+
+    cancelEditMessage.addEventListener(
+      'click',
+      () => {
+        terminaModalitaModifica();
+
+        if (!input.disabled) {
+          input.focus({
+            preventScroll: true
+          });
+        }
+      }
+    );
 
     function applyChatBlockStatus(nextStatus) {
       if (!nextStatus) return;
@@ -1137,6 +1474,8 @@ body {
         if (window.__chatHandlers.disconnectChat) previousSocket.off("disconnect", window.__chatHandlers.disconnectChat);
         if (window.__chatHandlers.userTyping) previousSocket.off("user_typing", window.__chatHandlers.userTyping);
         if (window.__chatHandlers.newMessage) previousSocket.off("new_message", window.__chatHandlers.newMessage);
+        if (window.__chatHandlers.messageEdited) previousSocket.off("message_edited", window.__chatHandlers.messageEdited);
+        if (window.__chatHandlers.messageDeleted) previousSocket.off("message_deleted", window.__chatHandlers.messageDeleted);
         if (window.__chatHandlers.messagesRead) previousSocket.off("messages_read", window.__chatHandlers.messagesRead);
         if (window.__chatHandlers.messageDelivered) previousSocket.off("message_delivered", window.__chatHandlers.messageDelivered);
         if (window.__chatHandlers.chatBlockStatus) {
@@ -1153,6 +1492,8 @@ body {
       if (window.__chatHandlers.disconnectChat) socket.off("disconnect", window.__chatHandlers.disconnectChat);
       if (window.__chatHandlers.userTyping) socket.off("user_typing", window.__chatHandlers.userTyping);
       if (window.__chatHandlers.newMessage) socket.off("new_message", window.__chatHandlers.newMessage);
+      if (window.__chatHandlers.messageEdited) socket.off("message_edited", window.__chatHandlers.messageEdited);
+      if (window.__chatHandlers.messageDeleted) socket.off("message_deleted", window.__chatHandlers.messageDeleted);
       if (window.__chatHandlers.messagesRead) socket.off("messages_read", window.__chatHandlers.messagesRead);
       if (window.__chatHandlers.messageDelivered) socket.off("message_delivered", window.__chatHandlers.messageDelivered);
       if (window.__chatHandlers.chatBlockStatus) {
@@ -1187,6 +1528,8 @@ body {
         console.log("🟢 [CHAT] connect/reconnect su socket", socket.id);
 
         stopPollingFallback();
+
+        sincronizzaModificheMessaggi();
 
         setComposerReady(true, "connect");
 
@@ -1340,6 +1683,76 @@ body {
       socket.on("new_message", window.__chatHandlers.newMessage);
 
       // --------------------------------------------------
+      // MESSAGE EDITED
+      // --------------------------------------------------
+      window.__chatHandlers.messageEdited = function (m) {
+        if (socket !== window.__chatBoundSocket) {
+          console.log(
+            "⏭️ [CHAT] message_edited stale ignorato",
+            socket.id,
+            m
+          );
+          return;
+        }
+
+        const belongsToThisChat =
+          (
+            Number(m.mittente_id) === Number(meId) &&
+            Number(m.destinatario_id) === Number(destId)
+          ) ||
+          (
+            Number(m.mittente_id) === Number(destId) &&
+            Number(m.destinatario_id) === Number(meId)
+          );
+
+        if (!belongsToThisChat) {
+          return;
+        }
+
+        applicaAggiornamentoMessaggio(m);
+      };
+
+      socket.on(
+        "message_edited",
+        window.__chatHandlers.messageEdited
+      );
+
+      // --------------------------------------------------
+      // MESSAGE DELETED
+      // --------------------------------------------------
+      window.__chatHandlers.messageDeleted = function (m) {
+        if (socket !== window.__chatBoundSocket) {
+          console.log(
+            "⏭️ [CHAT] message_deleted stale ignorato",
+            socket.id,
+            m
+          );
+          return;
+        }
+
+        const belongsToThisChat =
+          (
+            Number(m.mittente_id) === Number(meId) &&
+            Number(m.destinatario_id) === Number(destId)
+          ) ||
+          (
+            Number(m.mittente_id) === Number(destId) &&
+            Number(m.destinatario_id) === Number(meId)
+          );
+
+        if (!belongsToThisChat) {
+          return;
+        }
+
+        applicaAggiornamentoMessaggio(m);
+      };
+
+      socket.on(
+        "message_deleted",
+        window.__chatHandlers.messageDeleted
+      );
+
+      // --------------------------------------------------
       // USER TYPING
       // --------------------------------------------------
       window.__chatHandlers.userTyping = function (data) {
@@ -1433,6 +1846,8 @@ body {
 
         stopPollingFallback();
 
+        sincronizzaModificheMessaggi();
+
         setComposerReady(true, "already_connected");
 
         chatOpenedOnce = false;
@@ -1463,6 +1878,19 @@ body {
       }
       if (window.__chatHandlers.newMessage) {
         socket.off("new_message", window.__chatHandlers.newMessage);
+      }
+
+      if (window.__chatHandlers.messageEdited) {
+        socket.off(
+          "message_edited",
+          window.__chatHandlers.messageEdited
+        );
+      }
+      if (window.__chatHandlers.messageDeleted) {
+        socket.off(
+          "message_deleted",
+          window.__chatHandlers.messageDeleted
+        );
       }
       if (window.__chatHandlers.messagesRead) {
         socket.off("messages_read", window.__chatHandlers.messagesRead);
@@ -1576,14 +2004,58 @@ body {
   }
 
   // 🧱 Genera bubbleEl messaggio
-  function bubble({ id, mittente_id, testo, created_at, consegnato, letto, me_id }) {
-    const isMe = mittente_id === me_id;
+  function bubble({
+    id,
+    mittente_id,
+    destinatario_id,
+    testo,
+    created_at,
+    consegnato,
+    letto,
+    edited_at,
+    deleted_at,
+    updated_at,
+    me_id
+  }) {
+    const isMe = Number(mittente_id) === Number(me_id);
+    const isDeleted = Boolean(deleted_at);
+
     const outer = document.createElement('div');
-    outer.className = 'msg-line flex ' + (isMe ? 'justify-end' : 'justify-start');
+    outer.className =
+      'msg-line flex ' +
+      (isMe ? 'justify-end' : 'justify-start');
+
     const inner = document.createElement('div');
-    inner.className = 'bubble ' + (isMe ? 'bubble-me' : 'bubble-other');
+    inner.className =
+      'bubble ' +
+      (isMe ? 'bubble-me' : 'bubble-other');
+
     inner.setAttribute('data-mid', id);
-    inner.setAttribute('data-created-at', created_at);
+    inner.setAttribute(
+      'data-created-at',
+      created_at || ''
+    );
+    inner.setAttribute(
+      'data-updated-at',
+      updated_at || ''
+    );
+    inner.setAttribute(
+      'data-edited-at',
+      edited_at || ''
+    );
+    inner.setAttribute(
+      'data-deleted-at',
+      deleted_at || ''
+    );
+    inner.setAttribute(
+      'data-mittente-id',
+      mittente_id
+    );
+    inner.setAttribute(
+      'data-destinatario-id',
+      destinatario_id
+    );
+
     const spunte = isMe
       ? `<span class="spunte">${
           letto
@@ -1591,14 +2063,725 @@ body {
             : consegnato
               ? '<span class="text-gray-400">✅</span>'
               : '<span class="text-gray-400">⏳</span>'
-        }</span>` : '';
+        }</span>`
+      : '';
+
+    const testoVisibile = isDeleted
+      ? 'Messaggio eliminato'
+      : String(testo || '');
+
+    const classeTesto = isDeleted
+      ? 'message-text whitespace-pre-wrap break-words italic opacity-75'
+      : 'message-text whitespace-pre-wrap break-words';
+
+    const etichettaModificato =
+      edited_at && !isDeleted
+        ? '<span class="message-edited-label">modificato</span>'
+        : '';
+
     inner.innerHTML = `
-      <div class="whitespace-pre-wrap break-words">${escapeHTML(testo)}</div>
-      <div class="flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-70 text-right">
-        <span>${formatOra(created_at)}</span>${spunte}
-      </div>`;
+      <div class="${classeTesto}">
+        ${escapeHTML(testoVisibile)}
+      </div>
+
+      <div class="message-meta flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-70 text-right">
+        ${etichettaModificato}
+        <span class="message-time">${formatOra(created_at)}</span>
+        ${spunte}
+      </div>
+    `;
+
+    preparaAzioniBolla(inner);
     outer.appendChild(inner);
+
     return outer;
+  }
+
+  function preparaAzioniBolla(bubbleEl) {
+    if (!bubbleEl) {
+      return;
+    }
+
+    if (
+      !bubbleEl.classList.contains('bubble-me')
+    ) {
+      return;
+    }
+
+    if (bubbleEl.dataset.deletedAt) {
+      return;
+    }
+
+    if (
+      bubbleEl.querySelector(
+        '.message-menu-trigger'
+      )
+    ) {
+      return;
+    }
+
+    // Oltre 60 ore non esiste più nessuna azione
+    // disponibile. Il server farà comunque il
+    // controllo definitivo.
+    const createdAt = bubbleEl.dataset.createdAt;
+    const createdDate = createdAt
+      ? new Date(
+          createdAt.replace(' ', 'T')
+        )
+      : null;
+
+    if (
+      createdDate &&
+      !Number.isNaN(createdDate.getTime())
+    ) {
+      const elapsedMs =
+        Date.now() - createdDate.getTime();
+
+      if (
+        elapsedMs >
+        60 * 60 * 60 * 1000
+      ) {
+        return;
+      }
+    }
+
+    const trigger = document.createElement(
+      'button'
+    );
+
+    trigger.type = 'button';
+    trigger.className =
+      'message-menu-trigger';
+    trigger.setAttribute(
+      'aria-label',
+      'Azioni messaggio'
+    );
+    trigger.setAttribute(
+      'aria-haspopup',
+      'menu'
+    );
+    trigger.textContent = '⋮';
+
+    bubbleEl.appendChild(trigger);
+  }
+
+  wrap.querySelectorAll(
+    '.bubble-me[data-mid]'
+  ).forEach((bubbleEl) => {
+    preparaAzioniBolla(bubbleEl);
+  });
+
+  const messageActionsOverlay =
+    document.getElementById(
+      'messageActionsOverlay'
+    );
+
+  const messageActionsMenu =
+    document.getElementById(
+      'messageActionsMenu'
+    );
+
+  const editMessageAction =
+    document.getElementById(
+      'editMessageAction'
+    );
+
+  const deleteMessageAction =
+    document.getElementById(
+      'deleteMessageAction'
+    );
+
+  const closeMessageActions =
+    document.getElementById(
+      'closeMessageActions'
+    );
+
+  let messaggioSelezionato = null;
+
+  function chiudiMenuMessaggio() {
+    messaggioSelezionato = null;
+
+    messageActionsOverlay.classList.add(
+      'hidden'
+    );
+    messageActionsOverlay.setAttribute(
+      'aria-hidden',
+      'true'
+    );
+
+    messageActionsMenu.style.left = '';
+    messageActionsMenu.style.top = '';
+    messageActionsMenu.style.right = '';
+    messageActionsMenu.style.bottom = '';
+  }
+
+  function apriMenuMessaggio(bubbleEl) {
+    if (
+      !bubbleEl ||
+      !bubbleEl.classList.contains('bubble-me') ||
+      bubbleEl.dataset.deletedAt
+    ) {
+      return;
+    }
+
+    const createdAt =
+      bubbleEl.dataset.createdAt;
+
+    const createdDate = createdAt
+      ? new Date(
+          createdAt.replace(' ', 'T')
+        )
+      : null;
+
+    let puoModificare = true;
+    let puoEliminare = true;
+
+    if (
+      createdDate &&
+      !Number.isNaN(createdDate.getTime())
+    ) {
+      const elapsedMs =
+        Date.now() - createdDate.getTime();
+
+      puoModificare =
+        elapsedMs <=
+        15 * 60 * 1000;
+
+      puoEliminare =
+        elapsedMs <=
+        60 * 60 * 60 * 1000;
+    }
+
+    if (
+      !puoModificare &&
+      !puoEliminare
+    ) {
+      return;
+    }
+
+    editMessageAction.hidden =
+      !puoModificare;
+
+    deleteMessageAction.hidden =
+      !puoEliminare;
+
+    messaggioSelezionato = bubbleEl;
+
+    messageActionsOverlay.classList.remove(
+      'hidden'
+    );
+    messageActionsOverlay.setAttribute(
+      'aria-hidden',
+      'false'
+    );
+
+    if (
+      window.matchMedia(
+        '(min-width: 641px)'
+      ).matches
+    ) {
+      const bubbleRect =
+        bubbleEl.getBoundingClientRect();
+
+      const menuWidth =
+        messageActionsMenu.offsetWidth;
+
+      const menuHeight =
+        messageActionsMenu.offsetHeight;
+
+      let left =
+        bubbleRect.left -
+        menuWidth -
+        10;
+
+      if (left < 8) {
+        left =
+          bubbleRect.right + 10;
+      }
+
+      left = Math.max(
+        8,
+        Math.min(
+          left,
+          window.innerWidth -
+          menuWidth -
+          8
+        )
+      );
+
+      const top = Math.max(
+        8,
+        Math.min(
+          bubbleRect.top,
+          window.innerHeight -
+          menuHeight -
+          8
+        )
+      );
+
+      messageActionsMenu.style.left =
+        `${left}px`;
+
+      messageActionsMenu.style.top =
+        `${top}px`;
+    }
+
+    const primaAzioneVisibile =
+      !editMessageAction.hidden
+        ? editMessageAction
+        : deleteMessageAction;
+
+    primaAzioneVisibile.focus({
+      preventScroll: true
+    });
+  }
+
+  wrap.addEventListener(
+    'click',
+    (event) => {
+      const trigger = event.target.closest(
+        '.message-menu-trigger'
+      );
+
+      if (!trigger) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      apriMenuMessaggio(
+        trigger.closest('.bubble')
+      );
+    }
+  );
+
+  let longPressTimer = null;
+  let longPressStartX = 0;
+  let longPressStartY = 0;
+
+  function annullaPressioneProlungata() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }
+
+  wrap.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (
+        event.pointerType !== 'touch' &&
+        event.pointerType !== 'pen'
+      ) {
+        return;
+      }
+
+      const bubbleEl = event.target.closest(
+        '.bubble-me[data-mid]'
+      );
+
+      if (
+        !bubbleEl ||
+        bubbleEl.dataset.deletedAt
+      ) {
+        return;
+      }
+
+      annullaPressioneProlungata();
+
+      longPressStartX = event.clientX;
+      longPressStartY = event.clientY;
+
+      longPressTimer = setTimeout(() => {
+        longPressTimer = null;
+
+        apriMenuMessaggio(
+          bubbleEl
+        );
+
+        if (
+          navigator.vibrate &&
+          typeof navigator.vibrate === 'function'
+        ) {
+          navigator.vibrate(30);
+        }
+      }, 550);
+    }
+  );
+
+  wrap.addEventListener(
+    'pointermove',
+    (event) => {
+      if (!longPressTimer) {
+        return;
+      }
+
+      const distanzaX = Math.abs(
+        event.clientX - longPressStartX
+      );
+
+      const distanzaY = Math.abs(
+        event.clientY - longPressStartY
+      );
+
+      if (
+        distanzaX > 12 ||
+        distanzaY > 12
+      ) {
+        annullaPressioneProlungata();
+      }
+    }
+  );
+
+  [
+    'pointerup',
+    'pointercancel',
+    'pointerleave'
+  ].forEach((eventName) => {
+    wrap.addEventListener(
+      eventName,
+      annullaPressioneProlungata
+    );
+  });
+
+  wrap.addEventListener(
+    'scroll',
+    annullaPressioneProlungata,
+    {
+      passive: true
+    }
+  );
+
+  wrap.addEventListener(
+    'contextmenu',
+    (event) => {
+      const bubbleEl = event.target.closest(
+        '.bubble-me[data-mid]'
+      );
+
+      if (!bubbleEl) {
+        return;
+      }
+
+      event.preventDefault();
+
+      apriMenuMessaggio(
+        bubbleEl
+      );
+    }
+  );
+
+  messageActionsOverlay.addEventListener(
+    'click',
+    (event) => {
+      if (
+        event.target ===
+        messageActionsOverlay
+      ) {
+        chiudiMenuMessaggio();
+      }
+    }
+  );
+
+  editMessageAction.addEventListener(
+    'click',
+    () => {
+      const bubbleDaModificare =
+        messaggioSelezionato;
+
+      chiudiMenuMessaggio();
+
+      if (!bubbleDaModificare) {
+        return;
+      }
+
+      const nuovoMessaggioId = Number(
+        bubbleDaModificare.dataset.mid
+      );
+
+      if (
+        messaggioInModificaId ===
+        nuovoMessaggioId
+      ) {
+        if (!input.disabled) {
+          input.focus({
+            preventScroll: true
+          });
+        }
+
+        return;
+      }
+
+      if (
+        messaggioInModificaId !== null
+      ) {
+        terminaModalitaModifica();
+      }
+
+      avviaModalitaModifica(
+        bubbleDaModificare
+      );
+    }
+  );
+
+  deleteMessageAction.addEventListener(
+    'click',
+    () => {
+      const bubbleDaEliminare =
+        messaggioSelezionato;
+
+      if (!bubbleDaEliminare) {
+        chiudiMenuMessaggio();
+        return;
+      }
+
+      const messaggioId = Number(
+        bubbleDaEliminare.dataset.mid
+      );
+
+      if (!Number.isInteger(messaggioId)) {
+        chiudiMenuMessaggio();
+        return;
+      }
+
+      const confermato = window.confirm(
+        "Vuoi eliminare questo messaggio per tutti?"
+      );
+
+      chiudiMenuMessaggio();
+
+      if (!confermato) {
+        return;
+      }
+
+      const socketAttivo =
+        getChatSocket();
+
+      if (
+        !socketAttivo ||
+        !socketAttivo.connected
+      ) {
+        window.alert(
+          "Connessione non disponibile. Riprova tra qualche secondo."
+        );
+        return;
+      }
+
+      deleteMessageAction.disabled = true;
+
+      socketAttivo.timeout(8000).emit(
+        'delete_message',
+        {
+          messaggio_id: messaggioId
+        },
+        (err, response) => {
+          deleteMessageAction.disabled =
+            false;
+
+          if (err) {
+            console.error(
+              "❌ ACK delete_message timeout/errore:",
+              err
+            );
+
+            // La richiesta potrebbe essere arrivata al server
+            // anche se la conferma non è tornata al browser.
+            sincronizzaModificheMessaggi();
+
+            window.alert(
+              "Non è stato possibile verificare l’eliminazione. Controlla il messaggio prima di riprovare."
+            );
+
+            return;
+          }
+
+          if (
+            !response ||
+            response.ok !== true
+          ) {
+            console.error(
+              "❌ ACK delete_message negativo:",
+              response
+            );
+
+            window.alert(
+              response?.error ||
+              "Non è stato possibile eliminare il messaggio."
+            );
+
+            return;
+          }
+
+          if (response.message) {
+            applicaAggiornamentoMessaggio(
+              response.message
+            );
+          }
+        }
+      );
+    }
+  );
+
+  closeMessageActions.addEventListener(
+    'click',
+    chiudiMenuMessaggio
+  );
+
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (
+        event.key === 'Escape' &&
+        !messageActionsOverlay.classList.contains(
+          'hidden'
+        )
+      ) {
+        chiudiMenuMessaggio();
+      }
+    }
+  );
+
+  function applicaAggiornamentoMessaggio(messaggio) {
+    if (!messaggio) {
+      return false;
+    }
+
+    const messaggioId = Number(
+      messaggio.id
+    );
+
+    if (!Number.isInteger(messaggioId)) {
+      return false;
+    }
+
+    const bubbleEl = wrap.querySelector(
+      `[data-mid="${messaggioId}"]`
+    );
+
+    if (!bubbleEl) {
+      return false;
+    }
+
+    const hasOwn = (nomeCampo) =>
+      Object.prototype.hasOwnProperty.call(
+        messaggio,
+        nomeCampo
+      );
+
+    if (hasOwn('updated_at')) {
+      bubbleEl.dataset.updatedAt =
+        messaggio.updated_at || '';
+    }
+
+    if (hasOwn('edited_at')) {
+      bubbleEl.dataset.editedAt =
+        messaggio.edited_at || '';
+    }
+
+    if (hasOwn('deleted_at')) {
+      bubbleEl.dataset.deletedAt =
+        messaggio.deleted_at || '';
+    }
+
+    const isDeleted = Boolean(
+      bubbleEl.dataset.deletedAt
+    );
+
+    const testoEl = bubbleEl.querySelector(
+      '.message-text'
+    );
+
+    if (testoEl) {
+      if (isDeleted) {
+        testoEl.textContent =
+          'Messaggio eliminato';
+      } else if (hasOwn('testo')) {
+        testoEl.textContent =
+          String(messaggio.testo || '');
+      }
+
+      testoEl.classList.toggle(
+        'italic',
+        isDeleted
+      );
+      testoEl.classList.toggle(
+        'opacity-75',
+        isDeleted
+      );
+    }
+
+    const metaEl = bubbleEl.querySelector(
+      '.message-meta'
+    );
+
+    if (metaEl) {
+      let editedLabel = metaEl.querySelector(
+        '.message-edited-label'
+      );
+
+      const deveMostrareModificato = Boolean(
+        bubbleEl.dataset.editedAt
+      ) && !isDeleted;
+
+      if (
+        deveMostrareModificato &&
+        !editedLabel
+      ) {
+        editedLabel = document.createElement(
+          'span'
+        );
+        editedLabel.className =
+          'message-edited-label';
+        editedLabel.textContent =
+          'modificato';
+
+        const timeEl = metaEl.querySelector(
+          '.message-time'
+        );
+
+        metaEl.insertBefore(
+          editedLabel,
+          timeEl || metaEl.firstChild
+        );
+      }
+
+      if (
+        !deveMostrareModificato &&
+        editedLabel
+      ) {
+        editedLabel.remove();
+      }
+    }
+
+    if (isDeleted) {
+      const trigger = bubbleEl.querySelector(
+        '.message-menu-trigger'
+      );
+
+      if (trigger) {
+        trigger.remove();
+      }
+
+      if (
+        messaggioSelezionato === bubbleEl
+      ) {
+        chiudiMenuMessaggio();
+      }
+
+      if (
+        messaggioInModificaId ===
+        messaggioId
+      ) {
+        terminaModalitaModifica();
+      }
+    } else {
+      preparaAzioniBolla(
+        bubbleEl
+      );
+    }
+
+    return true;
   }
 
   // 🧭 Scroll
@@ -1726,6 +2909,93 @@ body {
   let pollTimer = null;
   let pollingInFlight = false;
 
+  let changesSyncInFlight = false;
+  let chatChangesSyncToken =
+    '1970-01-01T00:00:00+00:00';
+
+  async function sincronizzaModificheMessaggi() {
+    if (changesSyncInFlight) {
+      return;
+    }
+
+    if (
+      document.body.dataset.chat !== "true"
+    ) {
+      return;
+    }
+
+    changesSyncInFlight = true;
+
+    try {
+      const params = new URLSearchParams({
+        after: chatChangesSyncToken
+      });
+
+      const response = await fetch(
+        `/chat/${destId}/changes?${params.toString()}`,
+        {
+          credentials: "same-origin",
+          cache: "no-store"
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Sincronizzazione modifiche fallita: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (
+        !data ||
+        data.ok !== true ||
+        !Array.isArray(data.changes) ||
+        !data.sync_token
+      ) {
+        throw new Error(
+          "Risposta sincronizzazione modifiche non valida"
+        );
+      }
+
+      data.changes.forEach((messaggio) => {
+        const belongsToThisChat =
+          (
+            Number(messaggio.mittente_id) === Number(meId) &&
+            Number(messaggio.destinatario_id) === Number(destId)
+          ) ||
+          (
+            Number(messaggio.mittente_id) === Number(destId) &&
+            Number(messaggio.destinatario_id) === Number(meId)
+          );
+
+        if (!belongsToThisChat) {
+          return;
+        }
+
+        applicaAggiornamentoMessaggio(
+          messaggio
+        );
+      });
+
+      // Il token viene avanzato soltanto dopo aver elaborato
+      // correttamente tutta la risposta.
+      chatChangesSyncToken =
+        data.sync_token;
+
+    } catch (error) {
+      console.warn(
+        "❌ Errore sincronizzazione modifiche chat:",
+        error
+      );
+
+    } finally {
+      changesSyncInFlight = false;
+    }
+  }
+
+  sincronizzaModificheMessaggi();
+
   function getLastRenderedMessageId() {
     const nodes = [...document.querySelectorAll('#msgWrap [data-mid]')];
     if (!nodes.length) return 0;
@@ -1746,6 +3016,8 @@ body {
     pollingInFlight = true;
 
     try {
+      await sincronizzaModificheMessaggi();
+
       const afterId = getLastRenderedMessageId();
 
       const res = await fetch(`/chat/${destId}/json?after_id=${afterId}`, {
@@ -1886,6 +3158,94 @@ body {
 
     if (!s.connected) {
       console.warn("❌ Socket non connessa: invio bloccato");
+      return;
+    }
+
+    if (messaggioInModificaId !== null) {
+      const testoPrecedente =
+        bollaInModifica
+          ?.querySelector('.message-text')
+          ?.textContent
+          ?.trim() || '';
+
+      // Se il testo non è cambiato, esce dalla modalità
+      // modifica senza segnare il messaggio come modificato.
+      if (testo === testoPrecedente) {
+        terminaModalitaModifica();
+        return;
+      }
+
+      const idDaModificare =
+        messaggioInModificaId;
+
+      sending = true;
+      sendBtn.disabled = true;
+      sendBtn.textContent =
+        'Salvataggio...';
+
+      s.timeout(8000).emit(
+        'edit_message',
+        {
+          messaggio_id: idDaModificare,
+          testo: testo
+        },
+        (err, response) => {
+          if (err) {
+            console.error(
+              "❌ ACK edit_message timeout/errore:",
+              err
+            );
+
+            sending = false;
+
+            setComposerReady(
+              chatRealtimeReady,
+              'edit_timeout'
+            );
+
+            window.alert(
+              "Non è stato possibile modificare il messaggio. Riprova."
+            );
+
+            return;
+          }
+
+          if (
+            !response ||
+            response.ok !== true
+          ) {
+            console.error(
+              "❌ ACK edit_message negativo:",
+              response
+            );
+
+            sending = false;
+
+            setComposerReady(
+              chatRealtimeReady,
+              'edit_failed'
+            );
+
+            window.alert(
+              response?.error ||
+              "Non è stato possibile modificare il messaggio."
+            );
+
+            return;
+          }
+
+          if (response.message) {
+            applicaAggiornamentoMessaggio(
+              response.message
+            );
+          }
+
+          sending = false;
+
+          terminaModalitaModifica();
+        }
+      );
+
       return;
     }
 
