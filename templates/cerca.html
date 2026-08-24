@@ -223,7 +223,7 @@
           class="peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-pink-500
                 peer-checked:text-white
                  bg-gray-100 hover:bg-blue-50 text-gray-700
-                 text-sm px-4 py-2 rounded-full border border-gray-200
+                 text-sm px-3 py-1.5 rounded-full border border-gray-200
                  shadow-sm transition-all duration-150
                  hover:shadow-md hover:-translate-y-0.5 select-none inline-block">
           {{ filtro }}
@@ -232,8 +232,10 @@
     {% endfor %}
   </div>
 
-  <!-- ✅ Applica filtri -->
-  <div class="flex justify-center mt-4">
+  <!-- ✅ Applica filtri / Chiudi -->
+  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 mt-4">
+    <span aria-hidden="true"></span>
+
     <button type="submit"
             class="inline-flex items-center justify-center gap-2
                    px-6 py-2 text-sm font-semibold
@@ -242,6 +244,18 @@
                    hover:shadow-xl hover:scale-[1.02]
                    transition-all duration-150">
       ✨ Applica filtri
+    </button>
+
+    <button
+      type="button"
+      id="close-filtri-bottom"
+      class="justify-self-end inline-flex items-center gap-2 px-3 py-1.5 rounded-full
+             bg-white/90 text-slate-600 border border-slate-200
+             shadow-sm hover:bg-slate-50 hover:text-slate-800
+             transition-all duration-150 shrink-0"
+      aria-label="Chiudi filtri">
+      <span class="text-sm">✕</span>
+      <span class="text-sm font-semibold">Chiudi</span>
     </button>
   </div>
 </form>
@@ -266,7 +280,7 @@
           {% elif categoria == 'caregiver' %}Caregiver
           {% elif categoria == 'ripetizioni' %}Ripetizioni
           {% elif categoria == 'aiuto-in-casa' %}Aiuto in Casa
-          {% elif categoria == 'escursioni & sport' %}Escursioni & Sport
+          {% elif categoria == 'escursioni-sport' %}Sport
           {% elif categoria == 'biglietti spettacoli' %}Biglietti Spettacoli
           {% elif categoria == 'libri scuola' %}Libri Scuola
           {% elif categoria == 'family-kids' %}Family & Kids
@@ -2687,7 +2701,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const container = document.getElementById("filtri-container");
   const resetBtn = document.getElementById("reset-filtri");
   const closeBtn = document.getElementById("close-filtri");
-
+  const closeBtnBottom = document.getElementById(
+    "close-filtri-bottom"
+  );
   const confinantiRapido = document.getElementById(
     "includi-confinanti-rapido"
   );
@@ -2704,6 +2720,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (closeBtn && container) {
     closeBtn.addEventListener("click", () => {
+      container.classList.add("hidden");
+    });
+  }
+
+  if (closeBtnBottom && container) {
+    closeBtnBottom.addEventListener("click", () => {
       container.classList.add("hidden");
     });
   }

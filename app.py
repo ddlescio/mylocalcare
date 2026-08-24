@@ -407,7 +407,7 @@ CATEGORY_MAP = {
     "ripetizioni": ("ripetizioni", "Ripetizioni"),
     "aiuto-in-casa": ("aiuto-in-casa", "Aiuto in Casa"),
 
-    "escursioni-sport": ("escursioni-sport", "Escursioni & Sport"),
+    "escursioni-sport": ("escursioni-sport", "Sport"),
     "biglietti-spettacoli": ("biglietti-spettacoli", "Biglietti Spettacoli"),
     "libri-scuola": ("libri-scuola", "Libri Scuola"),
     "caffe-parole": ("caffe-parole", "Caffè & Parole"),
