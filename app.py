@@ -11636,6 +11636,9 @@ def processa_match_nuovi_annunci(channel=None):
                 + "\n".join(righe)
             )
 
+            # Notifica interna e push:
+            # - internal
+            # - both
             if channel in ("internal", "both"):
                 link_notifica = "/home"
 
@@ -11659,26 +11662,25 @@ def processa_match_nuovi_annunci(channel=None):
 
                 emit_update_notifications(int(user_id))
 
-                # REGOLA DAILY MATCHES:
-                # - internal = notifica interna + push
-                # - both = notifica interna + push + email
-                # - email = solo email
-                if channel in ("internal", "both"):
-                    try:
-                        invia_push(
-                            int(user_id),
-                            "Nuovi annunci compatibili",
-                            messaggio,
-                            url=link_notifica
-                        )
-                    except Exception as e:
-                        log_exception_safe(
-                            "⚠️ Errore push Daily Matches",
-                            e,
-                            {"user_id": int(user_id)},
-                            production=True
-                        )
+                try:
+                    invia_push(
+                        int(user_id),
+                        "Nuovi annunci compatibili",
+                        messaggio,
+                        url=link_notifica
+                    )
+                except Exception as e:
+                    log_exception_safe(
+                        "⚠️ Errore push Daily Matches",
+                        e,
+                        {"user_id": int(user_id)},
+                        production=True
+                    )
 
+            # Email:
+            # - email
+            # - both
+            if channel in ("email", "both"):
                 invia_email_daily_match(
                     user_id=int(user_id),
                     categorie_count=categorie_count,
