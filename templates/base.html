@@ -1425,23 +1425,42 @@ button, input[type="submit"] {
       }
     });
   </script>
-<script>
-document.addEventListener("click", function(e) {
-  const menu = document.getElementById("nav-menu");
-  const toggle = document.getElementById("nav-toggle");
+  <script>
+  document.addEventListener("click", function (e) {
+    const menu = document.getElementById("nav-menu");
+    const toggle = document.getElementById("nav-toggle");
 
-  // se il menu è aperto
-  if (!menu.classList.contains("hidden")) {
-
-    // clic fuori → chiudi
-    if (!menu.contains(e.target) && !toggle.contains(e.target)) {
-      menu.classList.add("hidden");
-      menu.classList.add("opacity-0");
-      menu.classList.remove("opacity-100", "translate-y-2");
+    if (!menu || !toggle) {
+      return;
     }
-  }
-});
-</script>
+
+    if (menu.classList.contains("hidden")) {
+      return;
+    }
+
+    if (
+      menu.contains(e.target) ||
+      toggle.contains(e.target)
+    ) {
+      return;
+    }
+
+    // Il primo clic esterno deve soltanto chiudere il menu.
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    menu.classList.add(
+      "hidden",
+      "opacity-0"
+    );
+
+    menu.classList.remove(
+      "opacity-100",
+      "translate-y-2"
+    );
+  }, true);
+  </script>
 <!-- ✅ Socket.IO unificato per badge e chat -->
 <script>
 (function () {
