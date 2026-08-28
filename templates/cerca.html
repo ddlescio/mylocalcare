@@ -380,6 +380,12 @@
                  {% if a.get('has_urgente', 0) == 1 %}is-urgent{% endif %}
                  {% if a.get('affidabilita_top', 0) == 1 %}is-trusted{% endif %}"
           data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
+          {% if cerca_admin_mode %}
+            data-admin-details-url="{{ url_for(
+                'admin_annuncio_dettagli_rapidi',
+                annuncio_id=a['id']
+            ) }}"
+          {% endif %}
         >
 
           <div class="vetrina-ticket-photo-wrap">
@@ -501,6 +507,12 @@
                {% if a.get('has_urgente', 0) == 1 %}is-urgent{% endif %}
                {% if a.get('affidabilita_top', 0) == 1 %}is-trusted{% endif %}"
         data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
+        {% if cerca_admin_mode %}
+          data-admin-details-url="{{ url_for(
+              'admin_annuncio_dettagli_rapidi',
+              annuncio_id=a['id']
+          ) }}"
+        {% endif %}
       >
 
         {% if a.get('has_urgente', 0) == 1 %}
@@ -625,6 +637,12 @@
                card-evidenza
              {% endif %}"
       data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
+      {% if cerca_admin_mode %}
+        data-admin-details-url="{{ url_for(
+            'admin_annuncio_dettagli_rapidi',
+            annuncio_id=a['id']
+        ) }}"
+      {% endif %}
     >
 
     {% if a.get('has_urgente', 0) == 1 %}
@@ -787,6 +805,109 @@
    class="fab-pubblica-annuncio block">
    ➕ <span>Pubblica</span>
 </a>
+{% if cerca_admin_mode %}
+<!-- DETTAGLI RAPIDI ANNUNCIO — SOLO ADMIN -->
+<div
+  id="admin-card-info-modal"
+  class="admin-card-info-modal hidden"
+  aria-hidden="true">
+
+  <button
+    type="button"
+    id="admin-card-info-backdrop"
+    class="admin-card-info-backdrop"
+    aria-label="Chiudi dettagli annuncio">
+  </button>
+
+  <section
+    class="admin-card-info-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="admin-card-info-heading">
+
+    <header class="admin-card-info-header">
+      <div>
+        <span class="admin-card-info-eyebrow">
+          CONTROLLO ADMIN
+        </span>
+
+        <h2
+          id="admin-card-info-heading"
+          class="admin-card-info-heading">
+          Dettagli annuncio
+        </h2>
+      </div>
+
+      <button
+        type="button"
+        id="admin-card-info-close"
+        class="admin-card-info-close"
+        aria-label="Chiudi">
+        ✕
+      </button>
+    </header>
+
+    <div class="admin-card-info-body">
+
+      <div
+        id="admin-card-info-loading"
+        class="admin-card-info-message">
+        Caricamento dettagli…
+      </div>
+
+      <div
+        id="admin-card-info-error"
+        class="admin-card-info-message admin-card-info-error hidden">
+        Impossibile caricare i dettagli.
+      </div>
+
+      <div
+        id="admin-card-info-content"
+        class="hidden">
+
+        <div class="admin-card-info-summary">
+          <h3 id="admin-card-info-title">
+            Annuncio
+          </h3>
+
+          <div class="admin-card-info-row">
+            <span>🗓️ Pubblicato il</span>
+            <strong id="admin-card-info-date">—</strong>
+          </div>
+
+          <div class="admin-card-info-row">
+            <span>👤 Utente</span>
+            <strong id="admin-card-info-user">—</strong>
+          </div>
+        </div>
+
+        <div class="admin-card-info-chat-section">
+
+          <div class="admin-card-info-chat-heading">
+            <span>💬 Chat aperte</span>
+
+            <span
+              id="admin-card-info-chat-count"
+              class="admin-card-info-count">
+              0
+            </span>
+          </div>
+
+          <div
+            id="admin-card-info-chat-list"
+            class="admin-card-info-chat-list">
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+</div>
+{% endif %}
+
 <!-- OVERLAY APERTURA ANNUNCIO -->
 <div id="annuncio-loading-overlay"
      class="hidden fixed inset-0 z-[9999] bg-white/70 backdrop-blur-sm items-center justify-center">
@@ -795,6 +916,249 @@
     <p class="text-sm font-medium text-slate-700">Apertura annuncio...</p>
   </div>
 </div>
+
+{% if cerca_admin_mode %}
+<style>
+  .admin-card-info-modal.hidden {
+    display: none !important;
+  }
+
+  .admin-card-info-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10020;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .admin-card-info-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(15, 23, 42, 0.52);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+  }
+
+  .admin-card-info-panel {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 36rem;
+    max-height: min(82vh, 46rem);
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow: hidden;
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    border-radius: 1.75rem 1.75rem 0 0;
+    background:
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.99),
+        rgba(248, 250, 252, 0.98)
+      );
+    box-shadow:
+      0 -18px 55px rgba(15, 23, 42, 0.24),
+      0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+  }
+
+  .admin-card-info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.2rem 0.95rem;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+    background: rgba(255, 255, 255, 0.92);
+  }
+
+  .admin-card-info-eyebrow {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: #2563eb;
+    font-size: 0.66rem;
+    font-weight: 850;
+    letter-spacing: 0.12em;
+  }
+
+  .admin-card-info-heading {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.15rem;
+    font-weight: 850;
+    line-height: 1.15;
+  }
+
+  .admin-card-info-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.65rem;
+    height: 2.65rem;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid #dbe4f0;
+    border-radius: 9999px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .admin-card-info-body {
+    min-height: 8rem;
+    padding: 1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-card-info-message {
+    padding: 2.5rem 1rem;
+    color: #64748b;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 650;
+  }
+
+  .admin-card-info-error {
+    color: #b91c1c;
+  }
+
+  .admin-card-info-summary {
+    padding: 1rem;
+    border: 1px solid #dbeafe;
+    border-radius: 1.25rem;
+    background:
+      linear-gradient(
+        145deg,
+        rgba(239, 246, 255, 0.96),
+        rgba(248, 250, 252, 0.98)
+      );
+  }
+
+  .admin-card-info-summary h3 {
+    margin: 0 0 0.85rem;
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-card-info-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.48rem 0;
+    color: #64748b;
+    font-size: 0.84rem;
+  }
+
+  .admin-card-info-row strong {
+    min-width: 0;
+    color: #1e293b;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-card-info-chat-section {
+    margin-top: 1rem;
+  }
+
+  .admin-card-info-chat-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.65rem;
+    padding: 0 0.15rem;
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 850;
+  }
+
+  .admin-card-info-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.45rem;
+    border-radius: 9999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.75rem;
+    font-weight: 850;
+  }
+
+  .admin-card-info-chat-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .admin-card-info-chat-item,
+  .admin-card-info-chat-empty {
+    padding: 0.85rem 0.95rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    background: #ffffff;
+  }
+
+  .admin-card-info-chat-item strong {
+    display: block;
+    color: #0f172a;
+    font-size: 0.88rem;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-card-info-chat-item span {
+    display: block;
+    margin-top: 0.22rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .admin-card-info-chat-empty {
+    color: #64748b;
+    text-align: center;
+    font-size: 0.84rem;
+    font-weight: 650;
+  }
+
+  body.admin-card-info-open {
+    overflow: hidden;
+  }
+
+  .js-open-annuncio[data-admin-details-url] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  @media (min-width: 768px) {
+    .admin-card-info-modal {
+      align-items: center;
+      padding: 1.5rem;
+    }
+
+    .admin-card-info-panel {
+      border-radius: 1.75rem;
+      box-shadow:
+        0 28px 80px rgba(15, 23, 42, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.72) inset;
+    }
+  }
+</style>
+{% endif %}
 
 <script>
 (function () {
@@ -886,6 +1250,494 @@
   });
 })();
 </script>
+
+{% if cerca_admin_mode %}
+<script>
+(function () {
+  if (window.__adminCardLongPressInit) return;
+  window.__adminCardLongPressInit = true;
+
+  const LONG_PRESS_MS = 650;
+  const MOVE_TOLERANCE = 12;
+
+  let pressTimer = null;
+  let pressCard = null;
+  let startX = 0;
+  let startY = 0;
+  let activePointerId = null;
+  let currentRequest = null;
+  let previousFocus = null;
+
+  const modal = document.getElementById(
+    "admin-card-info-modal"
+  );
+
+  const backdrop = document.getElementById(
+    "admin-card-info-backdrop"
+  );
+
+  const closeButton = document.getElementById(
+    "admin-card-info-close"
+  );
+
+  const loadingBox = document.getElementById(
+    "admin-card-info-loading"
+  );
+
+  const errorBox = document.getElementById(
+    "admin-card-info-error"
+  );
+
+  const contentBox = document.getElementById(
+    "admin-card-info-content"
+  );
+
+  const titleBox = document.getElementById(
+    "admin-card-info-title"
+  );
+
+  const dateBox = document.getElementById(
+    "admin-card-info-date"
+  );
+
+  const userBox = document.getElementById(
+    "admin-card-info-user"
+  );
+
+  const chatCountBox = document.getElementById(
+    "admin-card-info-chat-count"
+  );
+
+  const chatListBox = document.getElementById(
+    "admin-card-info-chat-list"
+  );
+
+  if (
+    !modal
+    || !backdrop
+    || !closeButton
+    || !loadingBox
+    || !errorBox
+    || !contentBox
+    || !titleBox
+    || !dateBox
+    || !userBox
+    || !chatCountBox
+    || !chatListBox
+  ) {
+    return;
+  }
+
+  function mostra(elemento) {
+    elemento.classList.remove("hidden");
+  }
+
+  function nascondi(elemento) {
+    elemento.classList.add("hidden");
+  }
+
+  function annullaPressione() {
+    if (pressTimer) {
+      window.clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+
+    pressCard = null;
+    activePointerId = null;
+  }
+
+  function preparaPopup() {
+    titleBox.textContent = "Annuncio";
+    dateBox.textContent = "—";
+    userBox.textContent = "—";
+    chatCountBox.textContent = "0";
+    chatListBox.replaceChildren();
+
+    mostra(loadingBox);
+    nascondi(errorBox);
+    nascondi(contentBox);
+  }
+
+  function mostraErrore() {
+    nascondi(loadingBox);
+    nascondi(contentBox);
+    mostra(errorBox);
+  }
+
+  function creaChatItem(chat) {
+    const item = document.createElement("div");
+    item.className = "admin-card-info-chat-item";
+
+    const nome = document.createElement("strong");
+
+    const riferimentoUtente = (
+      chat.altro_username
+      || chat.altro_email
+      || "Utente"
+    );
+
+    nome.textContent = chat.altro_username
+      ? `@${riferimentoUtente}`
+      : riferimentoUtente;
+
+    const dettagli = document.createElement("span");
+
+    const messaggi = Number(
+      chat.numero_messaggi || 0
+    );
+
+    const nonLetti = Number(
+      chat.messaggi_non_letti || 0
+    );
+
+    dettagli.textContent =
+      `${messaggi} messaggi · ${nonLetti} non letti`;
+
+    item.append(nome, dettagli);
+
+    return item;
+  }
+
+  function popolaPopup(data) {
+    const annuncio = data.annuncio || {};
+    const chatAperte = Array.isArray(data.chat_aperte)
+      ? data.chat_aperte
+      : [];
+
+    titleBox.textContent =
+      annuncio.titolo || "Annuncio senza titolo";
+
+    dateBox.textContent =
+      annuncio.data_pubblicazione || "—";
+
+    if (annuncio.username) {
+      userBox.textContent = `@${annuncio.username}`;
+    } else {
+      userBox.textContent =
+        annuncio.email || `Utente ${annuncio.utente_id || ""}`;
+    }
+
+    chatCountBox.textContent = String(
+      chatAperte.length
+    );
+
+    chatListBox.replaceChildren();
+
+    if (chatAperte.length === 0) {
+      const vuoto = document.createElement("div");
+      vuoto.className = "admin-card-info-chat-empty";
+      vuoto.textContent = "Nessuna chat aperta.";
+
+      chatListBox.appendChild(vuoto);
+    } else {
+      chatAperte.forEach((chat) => {
+        chatListBox.appendChild(
+          creaChatItem(chat)
+        );
+      });
+    }
+
+    nascondi(loadingBox);
+    nascondi(errorBox);
+    mostra(contentBox);
+  }
+
+  async function caricaDettagli(card) {
+    const detailsUrl = card.dataset.adminDetailsUrl;
+
+    if (!detailsUrl) return;
+
+    if (currentRequest) {
+      currentRequest.abort();
+    }
+
+    currentRequest = new AbortController();
+
+    previousFocus = document.activeElement;
+
+    preparaPopup();
+
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add(
+      "admin-card-info-open"
+    );
+
+    window.requestAnimationFrame(() => {
+      closeButton.focus({
+        preventScroll: true
+      });
+    });
+
+    try {
+      const response = await fetch(detailsUrl, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json"
+        },
+        signal: currentRequest.signal
+      });
+
+      const contentType = (
+        response.headers.get("content-type") || ""
+      ).toLowerCase();
+
+      if (
+        !response.ok
+        || !contentType.includes("application/json")
+      ) {
+        throw new Error(
+          "Risposta dettagli non valida"
+        );
+      }
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        throw new Error(
+          data.error || "Dettagli non disponibili"
+        );
+      }
+
+      popolaPopup(data);
+
+    } catch (errore) {
+      if (errore.name === "AbortError") {
+        return;
+      }
+
+      console.error(
+        "Errore dettagli rapidi annuncio:",
+        errore
+      );
+
+      mostraErrore();
+    }
+  }
+
+  function chiudiPopup() {
+    if (currentRequest) {
+      currentRequest.abort();
+      currentRequest = null;
+    }
+
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+
+    document.body.classList.remove(
+      "admin-card-info-open"
+    );
+
+    if (
+      previousFocus
+      && typeof previousFocus.focus === "function"
+    ) {
+      previousFocus.focus({
+        preventScroll: true
+      });
+    }
+
+    previousFocus = null;
+  }
+
+  function avviaPressione(evento, card) {
+    if (
+      evento.pointerType === "mouse"
+      && evento.button !== 0
+    ) {
+      return;
+    }
+
+    if (
+      evento.target.closest(
+        "a, button, input, textarea, select, label, form"
+      )
+    ) {
+      return;
+    }
+
+    annullaPressione();
+
+    pressCard = card;
+    activePointerId = evento.pointerId;
+    startX = evento.clientX;
+    startY = evento.clientY;
+
+    pressTimer = window.setTimeout(() => {
+      if (!pressCard) return;
+
+      const cardDaAprire = pressCard;
+
+      cardDaAprire.dataset.adminSuppressClickUntil =
+        String(Date.now() + 1200);
+
+      annullaPressione();
+
+      if (
+        navigator.vibrate
+        && typeof navigator.vibrate === "function"
+      ) {
+        navigator.vibrate(30);
+      }
+
+      caricaDettagli(cardDaAprire);
+    }, LONG_PRESS_MS);
+  }
+
+  function controllaMovimento(evento) {
+    if (
+      activePointerId === null
+      || evento.pointerId !== activePointerId
+    ) {
+      return;
+    }
+
+    const deltaX = Math.abs(
+      evento.clientX - startX
+    );
+
+    const deltaY = Math.abs(
+      evento.clientY - startY
+    );
+
+    if (
+      deltaX > MOVE_TOLERANCE
+      || deltaY > MOVE_TOLERANCE
+    ) {
+      annullaPressione();
+    }
+  }
+
+  function inizializzaPressioneProlungata() {
+    const cards = document.querySelectorAll(
+      ".js-open-annuncio[data-admin-details-url]"
+    );
+
+    cards.forEach((card) => {
+      if (
+        card.dataset.adminLongPressInit === "1"
+      ) {
+        return;
+      }
+
+      card.dataset.adminLongPressInit = "1";
+
+      card.addEventListener(
+        "pointerdown",
+        (evento) => {
+          avviaPressione(evento, card);
+        }
+      );
+
+      card.addEventListener(
+        "contextmenu",
+        (evento) => {
+          evento.preventDefault();
+        }
+      );
+
+      card.addEventListener(
+        "dragstart",
+        (evento) => {
+          evento.preventDefault();
+        }
+      );
+    });
+
+    window.addEventListener(
+      "pointermove",
+      controllaMovimento,
+      {
+        passive: true
+      }
+    );
+
+    window.addEventListener(
+      "pointerup",
+      annullaPressione,
+      {
+        passive: true
+      }
+    );
+
+    window.addEventListener(
+      "pointercancel",
+      annullaPressione,
+      {
+        passive: true
+      }
+    );
+
+    /*
+      Intercetta il click successivo alla pressione prolungata
+      prima del normale listener che apre l'annuncio.
+    */
+    document.addEventListener(
+      "click",
+      (evento) => {
+        const target = evento.target;
+
+        if (!(target instanceof Element)) {
+          return;
+        }
+
+        const card = target.closest(
+          ".js-open-annuncio[data-admin-details-url]"
+        );
+
+        if (!card) return;
+
+        const bloccaFinoA = Number(
+          card.dataset.adminSuppressClickUntil || 0
+        );
+
+        if (Date.now() < bloccaFinoA) {
+          evento.preventDefault();
+          evento.stopImmediatePropagation();
+          evento.stopPropagation();
+        }
+      },
+      true
+    );
+  }
+
+  backdrop.addEventListener(
+    "click",
+    chiudiPopup
+  );
+
+  closeButton.addEventListener(
+    "click",
+    chiudiPopup
+  );
+
+  document.addEventListener(
+    "keydown",
+    (evento) => {
+      if (
+        evento.key === "Escape"
+        && !modal.classList.contains("hidden")
+      ) {
+        chiudiPopup();
+      }
+    }
+  );
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      inizializzaPressioneProlungata,
+      {
+        once: true
+      }
+    );
+  } else {
+    inizializzaPressioneProlungata();
+  }
+})();
+</script>
+{% endif %}
 
 <style>
 .annuncio-opening {

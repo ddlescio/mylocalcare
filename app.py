@@ -19369,8 +19369,161 @@ def valida_quartieri_annuncio(
 
     return "quartieri", quartieri_ids
 
+@app.route(
+    "/admin/api/annunci/<int:annuncio_id>/dettagli-rapidi",
+    methods=["GET"]
+)
+@admin_required
+def admin_annuncio_dettagli_rapidi(annuncio_id):
+    """
+    Restituisce all'amministratore i dettagli rapidi di una card
+    presente nella pagina Cerca.
+
+    La definizione di chat aperta è la stessa utilizzata nella
+    pagina Admin utenti: esiste almeno un messaggio tra l'autore
+    dell'annuncio e un altro utente.
+    """
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT
+                a.id AS annuncio_id,
+                a.utente_id,
+                a.titolo,
+                a.data_pubblicazione,
+                u.username,
+                u.email
+            FROM annunci a
+            JOIN utenti u
+              ON u.id = a.utente_id
+            WHERE a.id = ?
+            LIMIT 1
+        """), (
+            annuncio_id,
+        ))
+
+        annuncio = cur.fetchone()
+
+        if not annuncio:
+            return jsonify({
+                "ok": False,
+                "error": "Annuncio non trovato"
+            }), 404
+
+        utente_id = int(annuncio["utente_id"])
+
+        cur.execute(sql("""
+            SELECT
+                altro.id AS altro_utente_id,
+                altro.username AS altro_username,
+                altro.email AS altro_email,
+                COUNT(m.id) AS numero_messaggi,
+                SUM(
+                    CASE
+                        WHEN m.destinatario_id = ?
+                         AND COALESCE(m.letto, 0) = 0
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS messaggi_non_letti,
+                MAX(m.id) AS ultimo_messaggio_id
+            FROM messaggi_chat m
+            JOIN utenti altro
+              ON altro.id = CASE
+                  WHEN m.mittente_id = ?
+                  THEN m.destinatario_id
+                  ELSE m.mittente_id
+              END
+            WHERE m.mittente_id = ?
+               OR m.destinatario_id = ?
+            GROUP BY
+                altro.id,
+                altro.username,
+                altro.email
+            ORDER BY MAX(m.id) DESC
+            LIMIT 10
+        """), (
+            utente_id,
+            utente_id,
+            utente_id,
+            utente_id
+        ))
+
+        chat_aperte = []
+
+        for chat in cur.fetchall():
+            chat_aperte.append({
+                "altro_utente_id": int(
+                    chat["altro_utente_id"]
+                ),
+                "altro_username": (
+                    chat["altro_username"] or ""
+                ),
+                "altro_email": (
+                    chat["altro_email"] or ""
+                ),
+                "numero_messaggi": int(
+                    chat["numero_messaggi"] or 0
+                ),
+                "messaggi_non_letti": int(
+                    chat["messaggi_non_letti"] or 0
+                )
+            })
+
+        return jsonify({
+            "ok": True,
+            "annuncio": {
+                "id": int(annuncio["annuncio_id"]),
+                "titolo": annuncio["titolo"] or "",
+                "data_pubblicazione": fmt_it(
+                    annuncio["data_pubblicazione"]
+                ),
+                "utente_id": utente_id,
+                "username": annuncio["username"] or "",
+                "email": annuncio["email"] or ""
+            },
+            "chat_aperte": chat_aperte,
+            "chat_aperte_count": len(chat_aperte)
+        })
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore dettagli rapidi annuncio admin",
+            e,
+            {
+                "annuncio_id": annuncio_id
+            },
+            production=True
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": "Impossibile caricare i dettagli"
+        }), 500
+
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 @app.route("/cerca")
 def cerca():
+
+    utente_corrente = getattr(
+        g,
+        "utente",
+        None
+    )
+
+    cerca_admin_mode = bool(
+        utente_corrente
+        and "ruolo" in utente_corrente.keys()
+        and utente_corrente["ruolo"] == "admin"
+    )
 
     raw_cat = request.args.get("categoria", "").strip()
     cat_slug = to_slug(raw_cat)
@@ -20047,6 +20200,7 @@ def cerca():
         filtri_possibili=filtri_possibili,
         comune_quartieri_iniziale=comune_quartieri_iniziale,
         provincia_quartieri_iniziale=provincia_quartieri_iniziale,
+        cerca_admin_mode=cerca_admin_mode,
     )
 
 @app.route("/notifica/<int:id>/apri")
