@@ -6598,6 +6598,48 @@ def admin_toggle_servizio():
         if codice_servizio in ("contatti", "badge_affidabilita"):
             ambito = "profilo"
 
+        # Se i contatti sono compresi in un servizio Urgente attivo,
+        # non consentiamo al toggle Contatti di creare o revocare
+        # accidentalmente un'attivazione diretta.
+        if codice_servizio == "contatti":
+            contatti_da_urgente = conn.execute(
+                sql(f"""
+                    SELECT 1
+                    FROM attivazioni_servizi act
+                    JOIN servizi s
+                      ON s.id = act.servizio_id
+                    WHERE act.utente_id = ?
+                      AND s.codice = 'annuncio_urgente'
+                      AND act.annuncio_id IS NOT NULL
+                      AND act.stato = 'attivo'
+                      AND act.data_inizio <= {now_sql()}
+                      AND (
+                            act.data_fine IS NULL
+                            OR act.data_fine > {now_sql()}
+                      )
+                      AND EXISTS (
+                            SELECT 1
+                            FROM annunci ann
+                            WHERE ann.id = act.annuncio_id
+                              AND ann.utente_id = act.utente_id
+                      )
+                    LIMIT 1
+                """),
+                (
+                    int(utente_id),
+                )
+            ).fetchone()
+
+            if contatti_da_urgente:
+                return jsonify({
+                    "ok": False,
+                    "error": (
+                        "I contatti sono inclusi in un servizio Urgente "
+                        "attivo. Per rimuovere questo beneficio è necessario "
+                        "disattivare il relativo servizio Urgente."
+                    )
+                }), 409
+
         # 2️⃣ cerca attivazione attiva
         if ambito == "annuncio":
 
@@ -8770,7 +8812,19 @@ def admin_utenti():
               FROM attivazioni_servizi a
               JOIN servizi s ON s.id = a.servizio_id
               WHERE a.utente_id = u.id
-                AND s.codice = 'contatti'
+                AND (
+                    s.codice = 'contatti'
+                    OR (
+                        s.codice = 'annuncio_urgente'
+                        AND a.annuncio_id IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1
+                            FROM annunci ann
+                            WHERE ann.id = a.annuncio_id
+                              AND ann.utente_id = a.utente_id
+                        )
+                    )
+                )
                 AND a.stato = 'attivo'
                 AND a.data_inizio <= {now_sql()}
                 AND (a.data_fine IS NULL OR a.data_fine > {now_sql()})
@@ -10927,25 +10981,180 @@ def set_daily_matches_settings(enabled: bool, time_value: str, channel: str):
         except Exception:
             pass
 
+def get_daily_match_email_monthly_limit():
+    """
+    Limite massimo mensile riservato alle sole email Daily Match.
 
-def invia_email_daily_match(user_id, categorie_count):
+    Il valore arriva dalla variabile Render:
+    DAILY_MATCH_EMAIL_MONTHLY_LIMIT
+
+    Un valore mancante, non valido o uguale a zero blocca
+    prudenzialmente le email Daily Match, senza bloccare
+    notifiche interne e push.
     """
-    Invia email riepilogativa Daily Matches all'utente.
-    Non blocca il processo se fallisce.
+
+    valore = os.getenv(
+        "DAILY_MATCH_EMAIL_MONTHLY_LIMIT",
+        "0"
+    ).strip()
+
+    try:
+        limite = int(valore)
+    except (TypeError, ValueError):
+        security_log(
+            "⚠️ Limite email Daily Match non valido",
+            {
+                "valore_configurato": valore
+            },
+            production=True
+        )
+        return 0
+
+    return max(0, limite)
+
+def get_postmark_billing_cycle_day():
     """
-    conn = get_db_connection()
+    Giorno del mese in cui si rinnova il periodo Postmark.
+
+    Per evitare problemi con febbraio, il valore accettato
+    deve essere compreso tra 1 e 28.
+    """
+
+    valore = os.getenv(
+        "POSTMARK_BILLING_CYCLE_DAY",
+        "1"
+    ).strip()
+
+    try:
+        giorno = int(valore)
+    except (TypeError, ValueError):
+        security_log(
+            "⚠️ Giorno rinnovo Postmark non valido",
+            {
+                "valore_configurato": valore
+            },
+            production=True
+        )
+        return 1
+
+    if giorno < 1 or giorno > 28:
+        security_log(
+            "⚠️ Giorno rinnovo Postmark fuori intervallo",
+            {
+                "valore_configurato": giorno
+            },
+            production=True
+        )
+        return 1
+
+    return giorno
+
+def invia_email_daily_match(
+    user_id,
+    categorie_count,
+    conn=None
+):
+    """
+    Invia al massimo una email Daily Match per utente al giorno.
+
+    Prima dell'invio:
+    - verifica utente e consenso email;
+    - controlla il limite mensile;
+    - registra una prenotazione anti-duplicazione.
+
+    Ogni tentativo viene registrato come:
+    - reserved;
+    - sent;
+    - failed;
+    - skipped_limit.
+    """
+
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        return False
+
+    conteggi_validi = {}
+
+    for categoria, count in (categorie_count or {}).items():
+        try:
+            numero = int(count or 0)
+        except (TypeError, ValueError):
+            numero = 0
+
+        categoria = str(categoria or "").strip()
+
+        if categoria and numero > 0:
+            conteggi_validi[categoria] = numero
+
+    match_count = sum(conteggi_validi.values())
+
+    if match_count <= 0:
+        return False
+
+    limite_mensile = get_daily_match_email_monthly_limit()
+
+    ora_roma = datetime.now(
+        ZoneInfo("Europe/Rome")
+    )
+
+    data_esecuzione = ora_roma.date()
+    giorno_rinnovo = get_postmark_billing_cycle_day()
+
+    # Il periodo Postmark non coincide necessariamente
+    # con il mese solare. Nel nostro caso parte il giorno 7.
+    if data_esecuzione.day >= giorno_rinnovo:
+        inizio_periodo = data_esecuzione.replace(
+            day=giorno_rinnovo
+        )
+    else:
+        ultimo_giorno_mese_precedente = (
+            data_esecuzione.replace(day=1)
+            - timedelta(days=1)
+        )
+
+        inizio_periodo = (
+            ultimo_giorno_mese_precedente.replace(
+                day=giorno_rinnovo
+            )
+        )
+
+    if inizio_periodo.month == 12:
+        fine_periodo = inizio_periodo.replace(
+            year=inizio_periodo.year + 1,
+            month=1
+        )
+    else:
+        fine_periodo = inizio_periodo.replace(
+            month=inizio_periodo.month + 1
+        )
+
+    conn_propria = conn is None
+
+    if conn_propria:
+        conn = get_db_connection()
+
     cur = get_cursor(conn)
+
+    prenotazione_creata = False
 
     try:
         cur.execute(sql("""
-            SELECT email, nome, username, email_notifiche
+            SELECT
+                email,
+                nome,
+                username,
+                email_notifiche
             FROM utenti
             WHERE id = ?
               AND attivo = 1
               AND sospeso = 0
               AND COALESCE(disattivato_admin, 0) = 0
-            LIMIT 1
-        """), (int(user_id),))
+              AND COALESCE(eliminato, 0) = 0
+            LIMIT 1            
+        """), (
+            user_id,
+        ))
 
         user = cur.fetchone()
 
@@ -10955,37 +11164,240 @@ def invia_email_daily_match(user_id, categorie_count):
         if int(user["email_notifiche"] or 0) != 1:
             return False
 
+        destinazione = str(
+            user["email"] or ""
+        ).strip()
+
+        if not destinazione:
+            return False
+
+        # Anti-duplicazione: nessun secondo tentativo
+        # per lo stesso utente nello stesso giorno.
+        cur.execute(sql("""
+            SELECT id, status
+            FROM daily_match_email_sends
+            WHERE user_id = ?
+              AND run_date = ?
+            LIMIT 1
+        """), (
+            user_id,
+            data_esecuzione
+        ))
+
+        invio_esistente = cur.fetchone()
+
+        if invio_esistente:
+            security_log(
+                "ℹ️ Email Daily Match già gestita oggi",
+                {
+                    "user_id": user_id,
+                    "run_date": str(data_esecuzione),
+                    "status": invio_esistente["status"]
+                },
+                production=True
+            )
+            return False
+
+        # Conteggiamo tutti i tentativi effettuati nel mese.
+        # Anche un timeout o un fallimento viene conteggiato
+        # prudenzialmente, perché Postmark potrebbe aver ricevuto
+        # comunque la richiesta.
+        cur.execute(sql("""
+            SELECT COUNT(*) AS totale
+            FROM daily_match_email_sends
+            WHERE run_date >= ?
+              AND run_date < ?
+              AND status IN (
+                    'reserved',
+                    'sent',
+                    'failed'
+              )
+        """), (
+            inizio_periodo,
+            fine_periodo
+        ))
+
+        riga_totale = cur.fetchone()
+
+        invii_mese = int(
+            riga_totale["totale"]
+            if riga_totale
+            else 0
+        )
+
+        if (
+            limite_mensile <= 0
+            or invii_mese >= limite_mensile
+        ):
+            cur.execute(sql("""
+                INSERT INTO daily_match_email_sends (
+                    user_id,
+                    run_date,
+                    match_count,
+                    status
+                )
+                VALUES (?, ?, ?, 'skipped_limit')
+                ON CONFLICT (user_id, run_date)
+                DO NOTHING
+            """), (
+                user_id,
+                data_esecuzione,
+                match_count
+            ))
+
+            conn.commit()
+
+            security_log(
+                "⚠️ Email Daily Match bloccata dal limite mensile",
+                {
+                    "user_id": user_id,
+                    "run_date": str(data_esecuzione),
+                    "invii_mese": invii_mese,
+                    "limite_mensile": limite_mensile
+                },
+                production=True
+            )
+
+            return False
+
+        # Prenotazione persistente prima di contattare Postmark.
+        # In caso di richieste simultanee, il vincolo UNIQUE
+        # consente a una sola richiesta di procedere.
+        cur.execute(sql("""
+            INSERT INTO daily_match_email_sends (
+                user_id,
+                run_date,
+                match_count,
+                status
+            )
+            VALUES (?, ?, ?, 'reserved')
+            ON CONFLICT (user_id, run_date)
+            DO NOTHING
+        """), (
+            user_id,
+            data_esecuzione,
+            match_count
+        ))
+
+        if cur.rowcount != 1:
+            conn.commit()
+            return False
+
+        conn.commit()
+        prenotazione_creata = True
+
         righe = []
-        for categoria, count in categorie_count.items():
-            label = "nuovo annuncio" if count == 1 else "nuovi annunci"
-            righe.append(f"- {categoria}: {count} {label}")
 
-        nome = user["nome"] or user["username"] or "utente"
+        for categoria, count in conteggi_validi.items():
+            label = (
+                "nuovo annuncio"
+                if count == 1
+                else "nuovi annunci"
+            )
 
-        home_url = f"{app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')}/home"
+            righe.append(
+                f"- {categoria}: {count} {label}"
+            )
+
+        nome = (
+            user["nome"]
+            or user["username"]
+            or "utente"
+        )
+
+        home_url = (
+            f"{app.config.get(
+                'APP_BASE_URL',
+                'https://www.mylocalcare.it'
+            ).rstrip('/')}/home"
+        )
 
         corpo = (
             f"Ciao {nome},\n\n"
-            "abbiamo trovato nuovi annunci compatibili con le tue preferenze:\n\n"
+            "abbiamo trovato nuovi annunci compatibili "
+            "con le tue preferenze:\n\n"
             + "\n".join(righe)
             + "\n\nPuoi consultarli accedendo a MyLocalCare."
         )
 
-        return _invia_email(
-            destinazione=user["email"],
+        email_inviata = _invia_email(
+            destinazione=destinazione,
             oggetto="Nuovi annunci compatibili su MyLocalCare",
             corpo=corpo,
             action_url=home_url,
             action_label="Vedi annunci compatibili"
         )
 
+        if email_inviata:
+            cur.execute(sql(f"""
+                UPDATE daily_match_email_sends
+                SET status = 'sent',
+                    sent_at = {now_sql()},
+                    last_error = NULL
+                WHERE user_id = ?
+                  AND run_date = ?
+                  AND status = 'reserved'
+            """), (
+                user_id,
+                data_esecuzione
+            ))
+        else:
+            cur.execute(sql("""
+                UPDATE daily_match_email_sends
+                SET status = 'failed',
+                    last_error = ?
+                WHERE user_id = ?
+                  AND run_date = ?
+                  AND status = 'reserved'
+            """), (
+                "Invio Postmark non riuscito",
+                user_id,
+                data_esecuzione
+            ))
+
+        conn.commit()
+
+        return bool(email_inviata)
+
     except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        if prenotazione_creata:
+            try:
+                cur.execute(sql("""
+                    UPDATE daily_match_email_sends
+                    SET status = 'failed',
+                        last_error = ?
+                    WHERE user_id = ?
+                      AND run_date = ?
+                      AND status = 'reserved'
+                """), (
+                    "Errore interno durante invio Daily Match",
+                    user_id,
+                    data_esecuzione
+                ))
+
+                conn.commit()
+
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+
         log_exception_safe(
             "⚠️ Errore invio email Daily Matches",
             e,
-            {"user_id": user_id},
+            {
+                "user_id": user_id,
+                "run_date": str(data_esecuzione)
+            },
             production=True
         )
+
         return False
 
     finally:
@@ -10994,11 +11406,22 @@ def invia_email_daily_match(user_id, categorie_count):
         except Exception:
             pass
 
-        try:
-            conn.close()
-        except Exception:
-            pass
+        if conn_propria:
+            try:
+                from flask import has_request_context
 
+                if (
+                    has_request_context()
+                    and getattr(g, "db_conn", None) is conn
+                ):
+                    g.db_conn = None
+            except Exception:
+                pass
+
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 def processa_match_nuovi_annunci(channel=None):
     """
@@ -11247,9 +11670,9 @@ def processa_match_nuovi_annunci(channel=None):
 
                 # REGOLA DAILY MATCHES:
                 # - internal = notifica interna + push
-                # - both = email + notifica interna, NO push
-                # - email = solo email, NO push
-                if channel == "internal":
+                # - both = notifica interna + push + email
+                # - email = solo email
+                if channel in ("internal", "both"):
                     try:
                         invia_push(
                             int(user_id),
@@ -11265,10 +11688,10 @@ def processa_match_nuovi_annunci(channel=None):
                             production=True
                         )
 
-            if channel in ("email", "both"):
                 invia_email_daily_match(
                     user_id=int(user_id),
-                    categorie_count=categorie_count
+                    categorie_count=categorie_count,
+                    conn=conn
                 )
 
             utenti_notificati += 1
@@ -12945,15 +13368,32 @@ def admin_annunci():
                   AND act.stato = 'attivo'
             ) THEN 1 ELSE 0 END AS has_affidabilita,
 
-            /* CONTATTI PROFILO */
+            /* CONTATTI PROFILO O ATTIVATI DA ANNUNCIO URGENTE */
             CASE WHEN EXISTS (
                 SELECT 1
                 FROM attivazioni_servizi act
-                JOIN servizi s ON s.id = act.servizio_id
+                JOIN servizi s
+                  ON s.id = act.servizio_id
                 WHERE act.utente_id = a.utente_id
-                  AND act.annuncio_id IS NULL
-                  AND s.codice = 'contatti'
                   AND act.stato = 'attivo'
+                  AND act.data_inizio <= {now_sql()}
+                  AND (
+                        act.data_fine IS NULL
+                        OR act.data_fine > {now_sql()}
+                  )
+                  AND (
+                        s.codice = 'contatti'
+                        OR (
+                            s.codice = 'annuncio_urgente'
+                            AND act.annuncio_id IS NOT NULL
+                            AND EXISTS (
+                                SELECT 1
+                                FROM annunci ann
+                                WHERE ann.id = act.annuncio_id
+                                  AND ann.utente_id = act.utente_id
+                            )
+                        )
+                  )
             ) THEN 1 ELSE 0 END AS has_contatti,
 
             /* PACCHETTO VISIBILITÀ

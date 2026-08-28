@@ -431,6 +431,60 @@ def crea_tabella_match_utenti():
     conn.close()
     print("✅ Tabella 'match_utenti' pronta.")
 
+def crea_tabella_daily_match_email_sends():
+    """
+    Registro degli invii email Daily Match.
+
+    Garantisce:
+    - massimo un tentativo per utente al giorno;
+    - conteggio mensile degli invii;
+    - tracciamento di invii riusciti, falliti o bloccati;
+    - eliminazione automatica dei dati se l'utente viene eliminato.
+    """
+
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(sql(f"""
+        CREATE TABLE IF NOT EXISTS daily_match_email_sends (
+            id {pk_col()},
+            user_id INTEGER NOT NULL,
+            run_date DATE NOT NULL,
+            match_count INTEGER NOT NULL DEFAULT 0
+                CHECK (match_count >= 0),
+            status TEXT NOT NULL
+                CHECK (
+                    status IN (
+                        'reserved',
+                        'sent',
+                        'failed',
+                        'skipped_limit'
+                    )
+                ),
+            created_at {dt_col(True)},
+            sent_at {dt_col()},
+            last_error TEXT,
+
+            UNIQUE (user_id, run_date),
+
+            FOREIGN KEY (user_id)
+                REFERENCES utenti(id)
+                ON DELETE CASCADE
+        );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_daily_match_email_month_status
+        ON daily_match_email_sends (
+            run_date,
+            status
+        );
+    """))
+
+    conn.commit()
+    conn.close()
+
+    print("✅ Tabella 'daily_match_email_sends' pronta.")
 
 # ---------------------------------------------------------
 # 💬 TABELLA MESSAGGI CHAT
@@ -1786,7 +1840,8 @@ def inizializza_database():
     crea_tabelle_quartieri()
     crea_indici_annunci()
     crea_tabella_match_utenti()
-    crea_tabella_messaggi_chat()
+    crea_tabella_daily_match_email_sends()
+    crea_tabella_messaggi_chat()    
     crea_tabella_chat_blocchi()
     crea_tabella_recensioni()
     crea_tabella_risposte()

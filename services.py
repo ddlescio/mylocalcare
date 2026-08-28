@@ -76,29 +76,90 @@ def _to_int_bool(v: Any) -> int:
     except Exception:
         return 0
 
-def servizio_attivo_per_utente(utente_id: int, codice_servizio: str, conn=None) -> bool:
+def servizio_attivo_per_utente(
+    utente_id: int,
+    codice_servizio: str,
+    conn=None
+) -> bool:
     """
-    True se l'utente ha una attivazione attiva (non scaduta) per quel servizio.
+    Verifica se un servizio profilo è attivo e non scaduto.
+
+    Regola speciale Contatti:
+    - un'attivazione diretta di "contatti" abilita i contatti;
+    - anche un "annuncio_urgente" attivo abilita i contatti
+      su tutto il profilo dell'utente e su tutti i suoi annunci;
+    - tra più attivazioni prevale automaticamente quella
+      con la scadenza più lunga;
+    - nessuna attivazione viene duplicata o prolungata.
     """
-    codice_servizio = _normalize_codice_servizio(codice_servizio)
+
+    codice_servizio = _normalize_codice_servizio(
+        codice_servizio
+    )
+
     if conn is None:
         conn = get_db_connection()
 
-    row = _fetchone(conn, f"""
-        SELECT 1
-        FROM attivazioni_servizi a
-        JOIN servizi s ON s.id = a.servizio_id
-        WHERE a.utente_id = ?
-          AND s.codice = ?
-          AND a.stato = 'attivo'
-          AND {dt_sql("a.data_inizio")} <= {_now_sql()}
-          AND (a.data_fine IS NULL OR {dt_sql("a.data_fine")} > {_now_sql()})
-        LIMIT 1
-    """, (utente_id, codice_servizio))
+    if codice_servizio == "contatti":
+        row = _fetchone(
+            conn,
+            f"""
+                SELECT 1
+                FROM attivazioni_servizi a
+                JOIN servizi s
+                  ON s.id = a.servizio_id
+                WHERE a.utente_id = ?
+                  AND a.stato = 'attivo'
+                  AND {dt_sql("a.data_inizio")} <= {_now_sql()}
+                  AND (
+                        a.data_fine IS NULL
+                        OR {dt_sql("a.data_fine")} > {_now_sql()}
+                  )
+                  AND (
+                        s.codice = 'contatti'
+                        OR (
+                            s.codice = 'annuncio_urgente'
+                            AND a.annuncio_id IS NOT NULL
+                            AND EXISTS (
+                                SELECT 1
+                                FROM annunci ann
+                                WHERE ann.id = a.annuncio_id
+                                  AND ann.utente_id = a.utente_id
+                            )
+                        )
+                  )
+                LIMIT 1
+            """,
+            (
+                int(utente_id),
+            )
+        )
 
+    else:
+        row = _fetchone(
+            conn,
+            f"""
+                SELECT 1
+                FROM attivazioni_servizi a
+                JOIN servizi s
+                  ON s.id = a.servizio_id
+                WHERE a.utente_id = ?
+                  AND s.codice = ?
+                  AND a.stato = 'attivo'
+                  AND {dt_sql("a.data_inizio")} <= {_now_sql()}
+                  AND (
+                        a.data_fine IS NULL
+                        OR {dt_sql("a.data_fine")} > {_now_sql()}
+                  )
+                LIMIT 1
+            """,
+            (
+                int(utente_id),
+                codice_servizio
+            )
+        )
 
     return row is not None
-
 
 def servizio_attivo_per_annuncio(annuncio_id: int, codice_servizio: str, conn=None) -> bool:
     """
