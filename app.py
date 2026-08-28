@@ -11305,27 +11305,18 @@ def invia_email_daily_match(
             or "utente"
         )
 
-        base_url = app.config.get(
-            "APP_BASE_URL",
-            "https://www.mylocalcare.it"
-        ).rstrip("/")
-
-        home_url = f"{base_url}/home"
-
         corpo = (
             f"Ciao {nome},\n\n"
             "abbiamo trovato nuovi annunci compatibili "
             "con le tue preferenze:\n\n"
             + "\n".join(righe)
-            + "\n\nPuoi consultarli accedendo a MyLocalCare."
+            + "\n\nApri MyLocalCare per consultarli."
         )
 
         email_inviata = _invia_email(
             destinazione=destinazione,
             oggetto="Nuovi annunci compatibili su MyLocalCare",
-            corpo=corpo,
-            action_url=home_url,
-            action_label="Vedi annunci compatibili"
+            corpo=corpo
         )
 
         if email_inviata:
