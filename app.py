@@ -11151,7 +11151,7 @@ def invia_email_daily_match(
               AND sospeso = 0
               AND COALESCE(disattivato_admin, 0) = 0
               AND COALESCE(eliminato, 0) = 0
-            LIMIT 1            
+            LIMIT 1
         """), (
             user_id,
         ))
@@ -11305,12 +11305,12 @@ def invia_email_daily_match(
             or "utente"
         )
 
-        home_url = (
-            f"{app.config.get(
-                'APP_BASE_URL',
-                'https://www.mylocalcare.it'
-            ).rstrip('/')}/home"
-        )
+        base_url = app.config.get(
+            "APP_BASE_URL",
+            "https://www.mylocalcare.it"
+        ).rstrip("/")
+
+        home_url = f"{base_url}/home"
 
         corpo = (
             f"Ciao {nome},\n\n"
