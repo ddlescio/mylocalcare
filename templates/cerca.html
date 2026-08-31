@@ -900,6 +900,90 @@
 
         </div>
 
+        <div class="admin-card-info-services">
+
+          <div class="admin-card-info-services-title">
+            SERVIZI ANNUNCIO
+          </div>
+
+          <div class="admin-card-info-services-grid">
+            <button
+              type="button"
+              class="admin-card-info-service-btn"
+              data-admin-service="vetrina_annuncio">
+              Vetrina
+            </button>
+
+            <button
+              type="button"
+              class="admin-card-info-service-btn"
+              data-admin-service="boost_lista">
+              Lista
+            </button>
+
+            <button
+              type="button"
+              class="admin-card-info-service-btn"
+              data-admin-service="badge_evidenza">
+              Evidenza
+            </button>
+
+            <button
+              type="button"
+              class="admin-card-info-service-btn"
+              data-admin-service="annuncio_urgente">
+              🚨 Urgente
+            </button>
+          </div>
+
+          <div class="admin-card-info-services-title">
+            SERVIZI PROFILO
+          </div>
+
+          <div class="admin-card-info-services-grid">
+            <button
+              type="button"
+              class="admin-card-info-service-btn"
+              data-admin-service="badge_affidabilita">
+              🛡️ Affidabilità
+            </button>
+
+            <button
+              type="button"
+              class="admin-card-info-service-btn"
+              data-admin-service="contatti">
+              📞 Contatti
+            </button>
+          </div>
+
+          <div class="admin-card-info-services-title">
+            PACCHETTI
+          </div>
+
+          <div class="admin-card-info-services-grid">
+            <button
+              type="button"
+              class="admin-card-info-service-btn"
+              data-admin-package="pacchetto_visibilita">
+              📦 Visibilità
+            </button>
+
+            <button
+              type="button"
+              class="admin-card-info-service-btn"
+              data-admin-package="visibilita_premium">
+              🌟 Premium
+            </button>
+          </div>
+
+          <div
+            id="admin-card-info-service-status"
+            class="admin-card-info-service-status"
+            aria-live="polite">
+          </div>
+
+        </div>
+
       </div>
 
     </div>
@@ -1134,6 +1218,135 @@
     font-weight: 650;
   }
 
+  .admin-card-info-services {
+    margin-top: 1.15rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .admin-card-info-services-title {
+    margin: 0.95rem 0 0.55rem;
+    color: #475569;
+    font-size: 0.76rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+  }
+
+  .admin-card-info-services-title:first-child {
+    margin-top: 0;
+  }
+
+  .admin-card-info-services-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .admin-card-info-service-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #dbe4f0;
+    border-radius: 9999px;
+    background: #f8fafc;
+    color: #475569;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.04);
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      transform 120ms ease,
+      background 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .admin-card-info-service-btn:active {
+    transform: scale(0.98);
+  }
+
+  .admin-card-info-service-btn:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+
+  .admin-card-info-service-btn.is-active {
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 5px 12px rgba(37, 99, 235, 0.2);
+  }
+
+  .admin-card-info-service-btn.is-active[
+    data-admin-service="vetrina_annuncio"
+  ] {
+    background: #7c3aed;
+  }
+
+  .admin-card-info-service-btn.is-active[
+    data-admin-service="boost_lista"
+  ] {
+    background: #2563eb;
+  }
+
+  .admin-card-info-service-btn.is-active[
+    data-admin-service="badge_evidenza"
+  ] {
+    background: #d97706;
+  }
+
+  .admin-card-info-service-btn.is-active[
+    data-admin-service="annuncio_urgente"
+  ] {
+    background: #dc2626;
+  }
+
+  .admin-card-info-service-btn.is-active[
+    data-admin-service="badge_affidabilita"
+  ] {
+    background: #16a34a;
+  }
+
+  .admin-card-info-service-btn.is-active[
+    data-admin-service="contatti"
+  ] {
+    background: #2563eb;
+  }
+
+  .admin-card-info-service-btn.is-active[
+    data-admin-package="pacchetto_visibilita"
+  ] {
+    background: #1d4ed8;
+  }
+
+  .admin-card-info-service-btn.is-active[
+    data-admin-package="visibilita_premium"
+  ] {
+    background: #ca8a04;
+  }
+
+  .admin-card-info-service-status {
+    min-height: 1.15rem;
+    margin-top: 0.7rem;
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 650;
+    text-align: center;
+  }
+
+  .admin-card-info-service-status.is-error {
+    color: #b91c1c;
+  }
+
+  .admin-card-info-service-status.is-success {
+    color: #15803d;
+  }
+
   body.admin-card-info-open {
     overflow: hidden;
   }
@@ -1267,6 +1480,10 @@
   let activePointerId = null;
   let currentRequest = null;
   let previousFocus = null;
+  let currentDetailsUrl = "";
+  let currentAnnuncioId = null;
+  let currentUtenteId = null;
+  let toggleInProgress = false;
 
   const modal = document.getElementById(
     "admin-card-info-modal"
@@ -1312,6 +1529,24 @@
     "admin-card-info-chat-list"
   );
 
+  const serviceStatusBox = document.getElementById(
+    "admin-card-info-service-status"
+  );
+
+  const serviceButtons = modal.querySelectorAll(
+    "[data-admin-service]"
+  );
+
+  const packageButtons = modal.querySelectorAll(
+    "[data-admin-package]"
+  );
+
+  const allServiceButtons = modal.querySelectorAll(
+    ".admin-card-info-service-btn"
+  );
+
+  const csrfToken = {{ session.get("csrf_token", "")|tojson }};
+
   if (
     !modal
     || !backdrop
@@ -1324,6 +1559,7 @@
     || !userBox
     || !chatCountBox
     || !chatListBox
+    || !serviceStatusBox
   ) {
     return;
   }
@@ -1346,12 +1582,62 @@
     activePointerId = null;
   }
 
+  function azzeraPulsantiServizi() {
+    currentAnnuncioId = null;
+    currentUtenteId = null;
+    toggleInProgress = false;
+
+    allServiceButtons.forEach((button) => {
+      button.classList.remove("is-active");
+      button.disabled = false;
+    });
+
+    serviceStatusBox.textContent = "";
+    serviceStatusBox.classList.remove(
+      "is-error",
+      "is-success"
+    );
+  }
+
+  function aggiornaPulsantiServizi(data) {
+    const annuncio = data.annuncio || {};
+    const servizi = data.servizi || {};
+    const pacchetti = data.pacchetti || {};
+
+    currentAnnuncioId = Number(
+      annuncio.id || 0
+    );
+
+    currentUtenteId = Number(
+      annuncio.utente_id || 0
+    );
+
+    serviceButtons.forEach((button) => {
+      const codice = button.dataset.adminService;
+
+      button.classList.toggle(
+        "is-active",
+        servizi[codice] === true
+      );
+    });
+
+    packageButtons.forEach((button) => {
+      const codice = button.dataset.adminPackage;
+
+      button.classList.toggle(
+        "is-active",
+        pacchetti[codice] === true
+      );
+    });
+  }
+
   function preparaPopup() {
     titleBox.textContent = "Annuncio";
     dateBox.textContent = "—";
     userBox.textContent = "—";
     chatCountBox.textContent = "0";
     chatListBox.replaceChildren();
+    azzeraPulsantiServizi();
 
     mostra(loadingBox);
     nascondi(errorBox);
@@ -1403,6 +1689,7 @@
     const chatAperte = Array.isArray(data.chat_aperte)
       ? data.chat_aperte
       : [];
+    aggiornaPulsantiServizi(data);
 
     titleBox.textContent =
       annuncio.titolo || "Annuncio senza titolo";
@@ -1442,10 +1729,196 @@
     mostra(contentBox);
   }
 
+  function mostraStatoServizio(
+    messaggio,
+    tipo = ""
+  ) {
+    serviceStatusBox.textContent = messaggio || "";
+
+    serviceStatusBox.classList.toggle(
+      "is-error",
+      tipo === "error"
+    );
+
+    serviceStatusBox.classList.toggle(
+      "is-success",
+      tipo === "success"
+    );
+  }
+
+  function disabilitaPulsantiServizi(disabilitati) {
+    allServiceButtons.forEach((button) => {
+      button.disabled = disabilitati;
+    });
+  }
+
+  async function leggiRispostaJson(response) {
+    const contentType = (
+      response.headers.get("content-type") || ""
+    ).toLowerCase();
+
+    if (!contentType.includes("application/json")) {
+      throw new Error("Risposta del server non valida.");
+    }
+
+    return response.json();
+  }
+
+  async function ricaricaStatiServizi(
+    detailsUrl,
+    annuncioId
+  ) {
+    const response = await fetch(detailsUrl, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json"
+      }
+    });
+
+    const data = await leggiRispostaJson(response);
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || "Impossibile aggiornare gli stati."
+      );
+    }
+
+    if (
+      currentDetailsUrl === detailsUrl
+      && currentAnnuncioId === annuncioId
+      && !modal.classList.contains("hidden")
+    ) {
+      aggiornaPulsantiServizi(data);
+    }
+  }
+
+  async function eseguiToggleServizio(button) {
+    if (toggleInProgress) return;
+
+    const codiceServizio =
+      button.dataset.adminService || "";
+
+    const codicePacchetto =
+      button.dataset.adminPackage || "";
+
+    if (
+      !currentDetailsUrl
+      || !currentAnnuncioId
+      || !currentUtenteId
+      || (!codiceServizio && !codicePacchetto)
+    ) {
+      mostraStatoServizio(
+        "Dati dell’annuncio non disponibili.",
+        "error"
+      );
+      return;
+    }
+
+    const detailsUrl = currentDetailsUrl;
+    const annuncioId = currentAnnuncioId;
+    const utenteId = currentUtenteId;
+
+    let endpoint = "";
+    let payload = {};
+
+    if (codiceServizio) {
+      endpoint = "/admin/toggle-servizio";
+
+      payload = {
+        codice_servizio: codiceServizio,
+        utente_id: utenteId
+      };
+
+      const servizioProfilo = [
+        "badge_affidabilita",
+        "contatti"
+      ].includes(codiceServizio);
+
+      if (!servizioProfilo) {
+        payload.annuncio_id = annuncioId;
+      }
+    } else {
+      endpoint = "/admin/toggle-pacchetto";
+
+      payload = {
+        codice_pacchetto: codicePacchetto,
+        utente_id: utenteId,
+        annuncio_id: annuncioId
+      };
+    }
+
+    toggleInProgress = true;
+    disabilitaPulsantiServizi(true);
+    mostraStatoServizio("Aggiornamento in corso…");
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await leggiRispostaJson(response);
+
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.error
+          || data.messaggio
+          || "Impossibile aggiornare il servizio."
+        );
+      }
+
+      await ricaricaStatiServizi(
+        detailsUrl,
+        annuncioId
+      );
+
+      const azione = data.azione === "attivato"
+        ? "attivato"
+        : "disattivato";
+
+      mostraStatoServizio(
+        `Servizio ${azione} correttamente.`,
+        "success"
+      );
+
+    } catch (errore) {
+      console.error(
+        "Errore gestione servizio admin:",
+        errore
+      );
+
+      mostraStatoServizio(
+        errore.message
+        || "Errore durante l’aggiornamento.",
+        "error"
+      );
+
+    } finally {
+      toggleInProgress = false;
+      disabilitaPulsantiServizi(false);
+    }
+  }
+
+  allServiceButtons.forEach((button) => {
+    button.addEventListener("click", (evento) => {
+      evento.preventDefault();
+      evento.stopPropagation();
+
+      eseguiToggleServizio(button);
+    });
+  });
+
   async function caricaDettagli(card) {
     const detailsUrl = card.dataset.adminDetailsUrl;
 
     if (!detailsUrl) return;
+    currentDetailsUrl = detailsUrl;
 
     if (currentRequest) {
       currentRequest.abort();
@@ -1524,6 +1997,10 @@
 
     modal.classList.add("hidden");
     modal.setAttribute("aria-hidden", "true");
+
+    currentDetailsUrl = "";
+    currentAnnuncioId = null;
+    currentUtenteId = null;
 
     document.body.classList.remove(
       "admin-card-info-open"

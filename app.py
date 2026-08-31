@@ -19415,6 +19415,92 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
 
         utente_id = int(annuncio["utente_id"])
 
+        # Stato corrente dei servizi collegati all'utente
+        # e allo specifico annuncio.
+        cur.execute(sql(f"""
+            SELECT
+                s.codice,
+                s.ambito,
+                act.annuncio_id
+            FROM attivazioni_servizi act
+            JOIN servizi s
+              ON s.id = act.servizio_id
+            WHERE act.utente_id = ?
+              AND act.stato = 'attivo'
+              AND act.data_inizio <= {now_sql()}
+              AND (
+                    act.data_fine IS NULL
+                    OR act.data_fine > {now_sql()}
+              )
+        """), (
+            utente_id,
+        ))
+
+        attivazioni_correnti = [
+            dict(riga)
+            for riga in cur.fetchall()
+        ]
+
+        attivazioni_utente = {
+            riga["codice"]
+            for riga in attivazioni_correnti
+        }
+
+        attivazioni_profilo = {
+            riga["codice"]
+            for riga in attivazioni_correnti
+            if riga["annuncio_id"] is None
+        }
+
+        attivazioni_annuncio = {
+            riga["codice"]
+            for riga in attivazioni_correnti
+            if (
+                riga["annuncio_id"] is not None
+                and int(riga["annuncio_id"]) == annuncio_id
+            )
+        }
+
+        stato_servizi = {
+            "vetrina_annuncio": (
+                "vetrina_annuncio" in attivazioni_annuncio
+            ),
+            "boost_lista": (
+                "boost_lista" in attivazioni_annuncio
+            ),
+            "badge_evidenza": (
+                "badge_evidenza" in attivazioni_annuncio
+            ),
+            "annuncio_urgente": (
+                "annuncio_urgente" in attivazioni_annuncio
+            ),
+            "badge_affidabilita": (
+                "badge_affidabilita" in attivazioni_utente
+            ),
+            "contatti": (
+                "contatti" in attivazioni_utente
+                or "annuncio_urgente" in attivazioni_utente
+            )
+        }
+
+        def servizio_pacchetto_attivo(codice):
+            if codice in {
+                "contatti",
+                "badge_affidabilita"
+            }:
+                return codice in attivazioni_profilo
+
+            return codice in attivazioni_annuncio
+
+        stato_pacchetti = {
+            codice_pacchetto: all(
+                servizio_pacchetto_attivo(codice_servizio)
+                for codice_servizio in servizi_pacchetto
+            )
+            for codice_pacchetto, servizi_pacchetto
+            in PACCHETTI.items()
+        }
+
         cur.execute(sql("""
             SELECT
                 altro.id AS altro_utente_id,
@@ -19485,6 +19571,8 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
                 "username": annuncio["username"] or "",
                 "email": annuncio["email"] or ""
             },
+            "servizi": stato_servizi,
+            "pacchetti": stato_pacchetti,
             "chat_aperte": chat_aperte,
             "chat_aperte_count": len(chat_aperte)
         })
@@ -23619,7 +23707,7 @@ def chat_conversazione_view(other_id):
         return redirect(url_for("dashboard"))
 
     # 🔒 Maschera l'admin verso gli altri utenti
-    if other_is_admin:        
+    if other_is_admin:
         altro = dict(altro)
         altro["nome"] = "MyLocalCare"
         altro["cognome"] = "Supporto"
