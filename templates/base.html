@@ -4185,7 +4185,8 @@ window.addEventListener("beforeunload", () => {
     if (
       document.body.classList.contains("modal-open") ||
       document.body.classList.contains("user-modal-page-locked") ||
-      document.body.classList.contains("acquisto-modal-open")
+      document.body.classList.contains("acquisto-modal-open") ||
+      document.body.classList.contains("admin-card-info-open")
     ) {
       return true;
     }
@@ -4334,6 +4335,12 @@ window.addEventListener("beforeunload", () => {
 
   document.addEventListener("touchmove", function (e) {
     if (!pulling || refreshing) return;
+
+    if (hasOpenModal()) {
+      resetPullRefresh();
+      return;
+    }
+
     if (e.touches.length !== 1) return;
 
     currentY = e.touches[0].clientY;
@@ -4355,6 +4362,11 @@ window.addEventListener("beforeunload", () => {
 
   document.addEventListener("touchend", function () {
     if (!pulling || refreshing) return;
+
+    if (hasOpenModal()) {
+      resetPullRefresh();
+      return;
+    }
 
     if (ready) {
       startRefresh();
