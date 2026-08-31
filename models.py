@@ -1038,16 +1038,23 @@ def chat_conversazione(
 
     ruolo = ruolo_row["ruolo"] if ruolo_row else None
 
-    # 🔪 cutoff solo per NON admin
+    # La chiusura riguarda esclusivamente la conversazione
+    # tra questo utente e lo specifico admin che l'ha chiusa.
     cutoff = None
+
     if ruolo != "admin":
         row = c.execute("""
             SELECT closed_at
             FROM chat_chiusure
-            WHERE admin_id = 1 AND user_id = ?
+            WHERE admin_id = ?
+              AND user_id = ?
             ORDER BY closed_at DESC
             LIMIT 1
-        """, (user_id,)).fetchone()
+        """, (
+            other_id,
+            user_id
+        )).fetchone()
+
         cutoff = row["closed_at"] if row else None
 
     # -----------------------------
@@ -1273,17 +1280,6 @@ def chat_threads(user_id: int):
     ).fetchone()
     ruolo = ruolo_row["ruolo"] if ruolo_row else None
 
-    cutoff = None
-    if ruolo != "admin":
-        row = c.execute("""
-            SELECT closed_at
-            FROM chat_chiusure
-            WHERE admin_id = 1 AND user_id = ?
-            ORDER BY closed_at DESC
-            LIMIT 1
-        """, (user_id,)).fetchone()
-        cutoff = row["closed_at"] if row else None
-
     filtro_chat = ""
     if ruolo != "admin":
         filtro_chat = " AND chat_chiusa = 0 "
@@ -1309,10 +1305,26 @@ def chat_threads(user_id: int):
                 updated_at,
                 consegnato,
                 letto
-            FROM messaggi_chat
-            WHERE (mittente_id = ? OR destinatario_id = ?)
+            FROM messaggi_chat mc
+            WHERE (
+                mc.mittente_id = ?
+                OR mc.destinatario_id = ?
+            )
             {filtro_chat}
-            AND ( ? IS NULL OR created_at > ? )
+            AND (
+                ? = 'admin'
+                OR NOT EXISTS (
+                    SELECT 1
+                    FROM chat_chiusure cc
+                    WHERE cc.user_id = ?
+                      AND cc.admin_id = CASE
+                          WHEN mc.mittente_id = ?
+                          THEN mc.destinatario_id
+                          ELSE mc.mittente_id
+                      END
+                      AND mc.created_at <= cc.closed_at
+                )
+            )
         ),
         last_msg AS (
             SELECT *
@@ -1376,7 +1388,14 @@ def chat_threads(user_id: int):
             AND u.attivo = 1
         JOIN last_msg lm ON lm.altro_id = a.altro_id
         ORDER BY last_msg_id DESC;
-    """, (user_id, user_id, user_id, cutoff, cutoff)).fetchall()
+    """, (
+        user_id,
+        user_id,
+        user_id,
+        ruolo,
+        user_id,
+        user_id
+    )).fetchall()
 
     # 🔑 Recupero chiavi sessione
     x_priv_b64 = session.get("x25519_priv_b64")

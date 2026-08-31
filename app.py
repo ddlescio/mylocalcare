@@ -23580,7 +23580,6 @@ def chat_unread_count():
 
 @app.route("/chat/<int:other_id>")
 @login_required
-@foto_obbligatoria
 def chat_conversazione_view(other_id):
     """Mostra la pagina della chat tra l’utente loggato e un altro utente."""
     conn = get_db_connection()
@@ -23602,9 +23601,25 @@ def chat_conversazione_view(other_id):
         return "Utente non disponibile", 404
 
     other_is_admin = is_admin(other_id)
+    current_is_admin = g.utente["ruolo"] == "admin"
+
+    # La foto profilo rimane obbligatoria nelle chat normali.
+    # Se almeno uno dei due partecipanti è admin, la chat
+    # deve funzionare anche quando l'utente non ha ancora una foto.
+    chat_con_admin = current_is_admin or other_is_admin
+
+    if (
+        not chat_con_admin
+        and not g.utente["foto_profilo"]
+    ):
+        flash(
+            "Per usare la chat devi prima caricare una foto profilo.",
+            "error"
+        )
+        return redirect(url_for("dashboard"))
 
     # 🔒 Maschera l'admin verso gli altri utenti
-    if other_is_admin:
+    if other_is_admin:        
         altro = dict(altro)
         altro["nome"] = "MyLocalCare"
         altro["cognome"] = "Supporto"

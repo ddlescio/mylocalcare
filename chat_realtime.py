@@ -207,16 +207,57 @@ def register_chat_socket_handlers(
             print("📨 [send_message] ottengo cursore")
             c = get_cursor(conn)
 
-            print("📨 [send_message] verifico foto profilo")
-            c.execute(sql("SELECT foto_profilo FROM utenti WHERE id = ?"), (mittente_id,))
-            row = c.fetchone()
+            print(
+                "📨 [send_message] verifico partecipanti e foto profilo"
+            )
 
-            if not row or not row["foto_profilo"]:
-                print("❌ [send_message] foto profilo mancante")
+            c.execute(sql("""
+                SELECT id, ruolo, foto_profilo
+                FROM utenti
+                WHERE id IN (?, ?)
+            """), (
+                mittente_id,
+                destinatario_id
+            ))
+
+            partecipanti = {
+                int(partecipante["id"]): partecipante
+                for partecipante in c.fetchall()
+            }
+
+            mittente = partecipanti.get(int(mittente_id))
+            destinatario = partecipanti.get(
+                int(destinatario_id)
+            )
+
+            if not mittente or not destinatario:
+                print(
+                    "❌ [send_message] partecipante non disponibile"
+                )
                 return {
                     "ok": False,
-                    "error": "Per inviare messaggi devi prima caricare una foto profilo."
+                    "error": "Utente non disponibile."
                 }
+
+            chat_con_admin = (
+                mittente["ruolo"] == "admin"
+                or destinatario["ruolo"] == "admin"
+            )
+
+            if (
+                not chat_con_admin
+                and not mittente["foto_profilo"]
+            ):
+                print(
+                    "❌ [send_message] foto profilo mancante"
+                )
+                return {
+                    "ok": False,
+                    "error": (
+                        "Per inviare messaggi devi prima "
+                        "caricare una foto profilo."
+                    )
+                }                
 
             print("📨 [send_message] prima di chat_invia")
             msg_id = chat_invia(mittente_id, destinatario_id, testo)
