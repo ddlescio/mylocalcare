@@ -1284,6 +1284,12 @@ def chat_threads(user_id: int):
     if ruolo != "admin":
         filtro_chat = " AND chat_chiusa = 0 "
 
+    closed_at_sql = (
+        "CAST(cc.closed_at AS TIMESTAMPTZ)"
+        if is_postgres()
+        else "cc.closed_at"
+    )
+
     rows = c.execute(f"""
         WITH all_msgs AS (
             SELECT
@@ -1322,7 +1328,7 @@ def chat_threads(user_id: int):
                           THEN mc.destinatario_id
                           ELSE mc.mittente_id
                       END
-                      AND mc.created_at <= cc.closed_at
+                      AND mc.created_at <= {closed_at_sql}
                 )
             )
         ),
