@@ -4677,6 +4677,7 @@ def admin_counters():
             JOIN attivazioni_servizi attivazione
               ON attivazione.acquisto_id = acquisto.id
             WHERE acquisto.stato = 'paid'
+              AND acquisto.metodo = 'stripe'
               AND attivazione.stato = 'attivo'
               AND attivazione.data_inizio <= {now_sql()}
               AND (
@@ -5303,6 +5304,175 @@ def admin_dashboard():
         categoria=categoria,
         zona=zona
     )
+
+
+@app.route("/admin/interessi")
+@admin_required
+def admin_interessi():
+    """Panoramica amministrativa della funzione Mi interessa."""
+
+    stato = (request.args.get("stato") or "tutti").strip().lower()
+    if stato not in {"tutti", "attivi", "disattivati"}:
+        stato = "tutti"
+
+    ricerca = (request.args.get("q") or "").strip()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT
+                COUNT(*) AS totale,
+                SUM(CASE WHEN attivo = TRUE THEN 1 ELSE 0 END) AS attivi,
+                SUM(CASE WHEN attivo = FALSE THEN 1 ELSE 0 END) AS disattivati,
+                COUNT(DISTINCT utente_interessato_id) AS utenti_coinvolti,
+                COUNT(DISTINCT annuncio_id) AS annunci_coinvolti,
+                SUM(
+                    CASE
+                        WHEN chat_opened_at IS NOT NULL THEN 1
+                        ELSE 0
+                    END
+                ) AS chat_aperte,
+                SUM(
+                    CASE
+                        WHEN ultima_notifica_at IS NOT NULL THEN 1
+                        ELSE 0
+                    END
+                ) AS notifiche_inviate
+            FROM interessi_annunci
+        """))
+
+        stats_row = cur.fetchone()
+
+        def valore_statistica(nome):
+            if not stats_row:
+                return 0
+            return int(stats_row[nome] or 0)
+
+        totale = valore_statistica("totale")
+        chat_aperte = valore_statistica("chat_aperte")
+
+        statistiche = {
+            "totale": totale,
+            "attivi": valore_statistica("attivi"),
+            "disattivati": valore_statistica("disattivati"),
+            "utenti_coinvolti": valore_statistica("utenti_coinvolti"),
+            "annunci_coinvolti": valore_statistica("annunci_coinvolti"),
+            "chat_aperte": chat_aperte,
+            "notifiche_inviate": valore_statistica("notifiche_inviate"),
+            "conversione_chat": round(
+                (chat_aperte / totale * 100) if totale else 0,
+                1,
+            ),
+        }
+
+        cur.execute(sql("""
+            SELECT
+                i.annuncio_id,
+                a.titolo,
+                proprietario.username AS proprietario_username,
+                COUNT(*) AS interessi_attivi,
+                SUM(
+                    CASE
+                        WHEN i.chat_opened_at IS NOT NULL THEN 1
+                        ELSE 0
+                    END
+                ) AS chat_aperte,
+                MAX(i.updated_at) AS ultimo_interesse_at
+            FROM interessi_annunci i
+            JOIN annunci a
+              ON a.id = i.annuncio_id
+            JOIN utenti proprietario
+              ON proprietario.id = a.utente_id
+            WHERE i.attivo = TRUE
+            GROUP BY
+                i.annuncio_id,
+                a.titolo,
+                proprietario.username
+            ORDER BY
+                COUNT(*) DESC,
+                MAX(i.updated_at) DESC
+            LIMIT 10
+        """))
+        annunci_piu_interessanti = [
+            dict(record)
+            for record in cur.fetchall()
+        ]
+
+        condizioni = []
+        parametri = []
+
+        if stato == "attivi":
+            condizioni.append("i.attivo = TRUE")
+        elif stato == "disattivati":
+            condizioni.append("i.attivo = FALSE")
+
+        if ricerca:
+            condizioni.append("""
+                (
+                    LOWER(COALESCE(interessato.username, '')) LIKE ?
+                    OR LOWER(COALESCE(proprietario.username, '')) LIKE ?
+                    OR LOWER(COALESCE(a.titolo, '')) LIKE ?
+                    OR CAST(a.id AS TEXT) LIKE ?
+                )
+            """)
+            termine = f"%{ricerca.lower()}%"
+            parametri.extend((termine, termine, termine, termine))
+
+        where_sql = ""
+        if condizioni:
+            where_sql = "WHERE " + " AND ".join(condizioni)
+
+        cur.execute(sql(f"""
+            SELECT
+                i.id,
+                i.annuncio_id,
+                i.utente_interessato_id,
+                i.attivo,
+                i.created_at,
+                i.updated_at,
+                i.disattivato_at,
+                i.ultima_notifica_at,
+                i.chat_opened_at,
+                interessato.username AS interessato_username,
+                interessato.nome AS interessato_nome,
+                interessato.cognome AS interessato_cognome,
+                a.titolo AS annuncio_titolo,
+                a.stato AS annuncio_stato,
+                proprietario.id AS proprietario_id,
+                proprietario.username AS proprietario_username
+            FROM interessi_annunci i
+            JOIN utenti interessato
+              ON interessato.id = i.utente_interessato_id
+            JOIN annunci a
+              ON a.id = i.annuncio_id
+            JOIN utenti proprietario
+              ON proprietario.id = a.utente_id
+            {where_sql}
+            ORDER BY i.updated_at DESC, i.id DESC
+            LIMIT 300
+        """), tuple(parametri))
+        attivita = [dict(record) for record in cur.fetchall()]
+
+        return render_template(
+            "admin_interessi.html",
+            statistiche=statistiche,
+            annunci_piu_interessanti=annunci_piu_interessanti,
+            attivita=attivita,
+            stato=stato,
+            ricerca=ricerca,
+        )
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 # ==========================================================
 # 🕵️ ADMIN — REVISIONE TESTI PROFILO
