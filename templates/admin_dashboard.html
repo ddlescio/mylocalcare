@@ -130,7 +130,7 @@
 
     <div class="flex flex-col items-center text-center">
       <p class="text-sm font-medium text-slate-500">Storico acquisti</p>
-      <p class="text-2xl font-bold text-slate-800 mt-2">→</p>
+      <p id="dash-acquisti-attivi" class="text-2xl font-bold text-slate-800 mt-2">—</p>
     </div>
   </a>
 
@@ -255,6 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setText("dash-recensioni", data.recensioni);
         setText("dash-revisioni-profilo", data.revisioni_profilo);
         setText("dash-video-minuti", data.video_minuti);
+        setText("dash-acquisti-attivi", data.acquisti_attivi);
         setText("dash-openai-costo", data.openai_costo || "—");
 
         setAlertCard("card-annunci-alert", data.annunci);

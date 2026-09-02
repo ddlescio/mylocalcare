@@ -891,24 +891,34 @@
           </div>
         </div>
 
-        <div class="admin-card-info-chat-section">
+        <details
+          id="admin-card-info-chat-details"
+          class="admin-card-info-chat-section">
 
-          <div class="admin-card-info-chat-heading">
+          <summary class="admin-card-info-chat-heading">
             <span>💬 Chat aperte</span>
 
-            <span
-              id="admin-card-info-chat-count"
-              class="admin-card-info-count">
-              0
+            <span class="admin-card-info-chat-controls">
+              <span
+                id="admin-card-info-chat-count"
+                class="admin-card-info-count">
+                0
+              </span>
+
+              <span
+                class="admin-card-info-chat-chevron"
+                aria-hidden="true">
+                ⌄
+              </span>
             </span>
-          </div>
+          </summary>
 
           <div
             id="admin-card-info-chat-list"
             class="admin-card-info-chat-list">
           </div>
 
-        </div>
+        </details>
 
         <div class="admin-card-info-services">
 
@@ -1192,11 +1202,40 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 0.65rem;
-    padding: 0 0.15rem;
+    margin-bottom: 0;
+    padding: 0.25rem 0.15rem;
     color: #0f172a;
     font-size: 0.95rem;
     font-weight: 850;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .admin-card-info-chat-heading::-webkit-details-marker {
+    display: none;
+  }
+
+  .admin-card-info-chat-section[open]
+  .admin-card-info-chat-heading {
+    margin-bottom: 0.65rem;
+  }
+
+  .admin-card-info-chat-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .admin-card-info-chat-chevron {
+    color: #64748b;
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 180ms ease;
+  }
+
+  .admin-card-info-chat-section[open]
+  .admin-card-info-chat-chevron {
+    transform: rotate(180deg);
   }
 
   .admin-card-info-count {
@@ -1686,6 +1725,10 @@
     "admin-card-info-chat-count"
   );
 
+  const chatDetails = document.getElementById(
+    "admin-card-info-chat-details"
+  );
+
   const chatListBox = document.getElementById(
     "admin-card-info-chat-list"
   );
@@ -1731,6 +1774,7 @@
     || !dateBox
     || !userBox
     || !chatCountBox
+    || !chatDetails
     || !chatListBox
     || !serviceStatusBox
     || !interestCountBox
@@ -1812,6 +1856,7 @@
     dateBox.textContent = "—";
     userBox.textContent = "—";
     chatCountBox.textContent = "0";
+    chatDetails.open = false;
     chatListBox.replaceChildren();
     interestCountBox.textContent = "0";
     interestListBox.replaceChildren();

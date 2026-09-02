@@ -4670,6 +4670,21 @@ def admin_counters():
         except Exception as e:
             raise RuntimeError(f"Errore lettura valore admin_counters step=video_minuti: {repr(e)}")
 
+        step = "acquisti_attivi"
+        acquisti_attivi = get_count(cur, f"""
+            SELECT COUNT(DISTINCT acquisto.id) AS valore
+            FROM acquisti acquisto
+            JOIN attivazioni_servizi attivazione
+              ON attivazione.acquisto_id = acquisto.id
+            WHERE acquisto.stato = 'paid'
+              AND attivazione.stato = 'attivo'
+              AND attivazione.data_inizio <= {now_sql()}
+              AND (
+                    attivazione.data_fine IS NULL
+                    OR attivazione.data_fine > {now_sql()}
+              )
+        """, step=step)
+
         step = "openai_costo"
         openai_costo = get_openai_month_cost()
 
@@ -4767,6 +4782,7 @@ def admin_counters():
             "messaggi": messaggi_non_letti,
             "totale": pending_annunci + pending_recensioni_totali + pending_revisioni_profilo,
             "video_minuti": video_minuti,
+            "acquisti_attivi": acquisti_attivi,
 
             "openai_costo": format_openai_euro(openai_costo),
 
@@ -4809,6 +4825,7 @@ def admin_counters():
             "messaggi": 0,
             "totale": 0,
             "video_minuti": 0,
+            "acquisti_attivi": 0,
             "openai_costo": "—"
         }
 

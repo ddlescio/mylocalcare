@@ -75,6 +75,18 @@
         </span>
       </a>
 
+      <a href="{{ url_for('cerca') }}"
+         title="Apri Cerca e tieni premuta una card per vedere gli interessi"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/cerca') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>💗</span>
+        <span>Interessi annunci</span>
+      </a>
+
       <a href="{{ url_for('admin_recensioni') }}"
          class="flex items-center gap-2 px-3 py-2 rounded-xl
                 {% if current.startswith('/admin/recensioni') or current.startswith('/admin/risposte') %}
