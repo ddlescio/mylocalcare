@@ -252,6 +252,50 @@ def crea_tabella_annunci():
     conn.close()
     print("✅ Tabella 'annunci' pronta.")
 
+
+def crea_tabella_interessi_annunci():
+    conn = get_conn()
+    c = conn.cursor()
+
+    attivo_col = (
+        "BOOLEAN NOT NULL DEFAULT FALSE"
+        if IS_POSTGRES
+        else "INTEGER NOT NULL DEFAULT 0 CHECK(attivo IN (0, 1))"
+    )
+
+    c.execute(sql(f"""
+    CREATE TABLE IF NOT EXISTS interessi_annunci (
+        id {pk_col()},
+        annuncio_id INTEGER NOT NULL,
+        utente_interessato_id INTEGER NOT NULL,
+        attivo {attivo_col},
+        created_at {dt_col(True)} NOT NULL,
+        updated_at {dt_col(True)} NOT NULL,
+        disattivato_at {dt_col()},
+        ultima_notifica_at {dt_col()},
+        chat_opened_at {dt_col()},
+        UNIQUE(annuncio_id, utente_interessato_id),
+        FOREIGN KEY (annuncio_id)
+            REFERENCES annunci(id) ON DELETE CASCADE,
+        FOREIGN KEY (utente_interessato_id)
+            REFERENCES utenti(id) ON DELETE CASCADE
+    );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_interessi_annunci_annuncio_attivo_data
+        ON interessi_annunci(annuncio_id, attivo, updated_at DESC);
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_interessi_annunci_utente_attivo
+        ON interessi_annunci(utente_interessato_id, attivo);
+    """))
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'interessi_annunci' pronta.")
+
 def crea_tabella_filtri_categoria():
     conn = get_conn()
     c = conn.cursor()
@@ -1836,6 +1880,7 @@ def inizializza_database():
 
     crea_tabella_operatori()
     crea_tabella_annunci()
+    crea_tabella_interessi_annunci()
     crea_tabella_filtri_categoria()
     crea_tabelle_quartieri()
     crea_indici_annunci()

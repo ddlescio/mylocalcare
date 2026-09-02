@@ -59,6 +59,7 @@ import os
 from flask import g
 from db import (insert_and_get_id)
 from realtime import emit_update_notifications
+from interessi_annunci import imposta_interesse_annuncio
 from socket_registry import (
     configure_socket_registry,
     SOCKET_TTL_SECONDS,
@@ -5176,26 +5177,6 @@ def cron_chat_email_cycles_run():
         "batch_size": batch_size,
         "risultato": risultato
     }), status_code
-
-# ==========================================================
-# NOTIFICHE: LETTURA SINGOLA
-# ==========================================================
-@app.route('/notifiche/leggi/<int:id>', methods=["GET", "POST"])
-@login_required
-def leggi_notifica(id):
-    if request.method == "POST":
-        verify_csrf()
-
-    segna_notifica_letta(id, g.utente['id'])
-
-    # 🔔 aggiorna il badge in tempo reale
-    emit_update_notifications(g.utente['id'])
-
-    if request.method == "POST":
-        return jsonify({"success": True})
-
-    flash("Notifica segnata come letta.")
-    return redirect(url_for('notifiche'))
 
 # ==========================================================
 # ANNUNCI – VISTA SINGOLA + TOGGLE STATO
@@ -13659,30 +13640,30 @@ def conta_non_lette(user_id):
 
     return count
 
-def segna_notifica_letta(notifica_id, user_id):
-    conn = get_db_connection()
-    conn.execute(sql(f"""
-        UPDATE notifiche
-        SET letta = 1,
-            data_lettura = {now_sql()}
-        WHERE id = ? AND id_utente = ?
-    """), (notifica_id, user_id))
-    conn.commit()
-
 @app.route("/notifiche/segna_tutte_lette", methods=["POST"])
+@login_required
 def segna_tutte_lette_route():
     verify_csrf()
 
-    if "utente_id" not in session:
-        return jsonify({"success": False}), 403
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute(sql(f"""
+        UPDATE notifiche
+        SET letta = 1,
+            data_lettura = COALESCE(data_lettura, {now_sql()})
+        WHERE id_utente = ?
+          AND letta = 0
+    """), (g.utente["id"],))
+    notifiche_lette = max(int(cur.rowcount or 0), 0)
+    conn.commit()
 
-    from models import segna_tutte_lette
-    segna_tutte_lette(session["utente_id"])
+    if notifiche_lette:
+        emit_update_notifications(g.utente["id"])
 
-    # 🔔 Aggiorna il badge in tempo reale
-    emit_update_notifications(session["utente_id"])
-
-    return jsonify({"success": True})
+    return jsonify({
+        "success": True,
+        "changed": notifiche_lette,
+    })
 
 @app.route("/notifiche/elimina_tutte", methods=["POST"])
 def elimina_tutte_notifiche_route():
@@ -14720,7 +14701,20 @@ def dashboard():
     c = get_cursor(conn)
     c.execute(sql("""
         SELECT id, titolo, categoria, descrizione, zona, filtri_categoria,
-               data_pubblicazione, stato
+               data_pubblicazione, stato,
+               COALESCE((
+                   SELECT COUNT(*)
+                   FROM interessi_annunci i
+                   JOIN utenti interessato
+                     ON interessato.id = i.utente_interessato_id
+                   WHERE i.annuncio_id = annunci.id
+                     AND i.attivo = TRUE
+                     AND interessato.attivo = 1
+                     AND COALESCE(interessato.sospeso, 0) = 0
+                     AND COALESCE(interessato.disattivato_admin, 0) = 0
+                     AND COALESCE(interessato.eliminato, 0) = 0
+                     AND COALESCE(interessato.ruolo, 'user') <> 'admin'
+               ), 0) AS interessi_count
         FROM annunci
         WHERE utente_id = ?
           AND COALESCE(stato, '') <> 'eliminato'
@@ -16203,6 +16197,17 @@ def elimina_annuncio(id):
             g.utente["id"],
         )
     )
+
+    # Gli interessi restano nello storico ma diventano inattivi insieme
+    # all'annuncio. Non viene generata alcuna notifica di annullamento.
+    cur.execute(sql(f"""
+        UPDATE interessi_annunci
+        SET attivo = FALSE,
+            updated_at = {now_sql()},
+            disattivato_at = {now_sql()}
+        WHERE annuncio_id = ?
+          AND attivo = TRUE
+    """), (id,))
 
     conn.commit()
 
@@ -18696,8 +18701,13 @@ def login():
 
         flash("Accesso effettuato con successo.", "success")
 
-        next_page = request.args.get('next')
-        if next_page:
+        next_page = (
+            request.form.get("next")
+            or request.args.get("next")
+            or ""
+        ).strip()
+
+        if next_page.startswith("/") and not next_page.startswith("//"):
             return redirect(next_page)
 
         return redirect(url_for('dashboard'))
@@ -19369,6 +19379,412 @@ def valida_quartieri_annuncio(
 
     return "quartieri", quartieri_ids
 
+def _conta_interessi_attivi(cur, annuncio_id):
+    cur.execute(sql("""
+        SELECT COUNT(*) AS totale
+        FROM interessi_annunci i
+        JOIN utenti u
+          ON u.id = i.utente_interessato_id
+        WHERE i.annuncio_id = ?
+          AND i.attivo = TRUE
+          AND u.attivo = 1
+          AND COALESCE(u.sospeso, 0) = 0
+          AND COALESCE(u.disattivato_admin, 0) = 0
+          AND COALESCE(u.eliminato, 0) = 0
+          AND COALESCE(u.ruolo, 'user') <> 'admin'
+    """), (int(annuncio_id),))
+
+    row = cur.fetchone()
+    return int(row["totale"] or 0) if row else 0
+
+
+def _contatti_interessato_autorizzati(utente, conn):
+    utente_id = int(utente["utente_id"])
+
+    if not servizio_attivo_per_utente(
+        utente_id=utente_id,
+        codice_servizio="contatti",
+        conn=conn,
+    ):
+        return []
+
+    contatti = []
+    email = (utente.get("email_pubblica") or "").strip()
+    telefono = (utente.get("telefono") or "").strip()
+
+    if email:
+        contatti.append({
+            "tipo": "email",
+            "label": email,
+            "url": f"mailto:{email}",
+        })
+
+    if telefono:
+        numero = re.sub(r"[^+\d]", "", telefono)
+
+        if numero:
+            contatti.append({
+                "tipo": "telefono",
+                "label": telefono,
+                "url": f"tel:{numero}",
+            })
+
+    return contatti
+
+
+def _elenca_interessati_annuncio(conn, annuncio_id):
+    cur = get_cursor(conn)
+    cur.execute(sql("""
+        SELECT
+            i.utente_interessato_id AS utente_id,
+            i.updated_at AS interessato_dal,
+            i.chat_opened_at,
+            u.username,
+            u.nome,
+            u.cognome,
+            u.citta,
+            u.frase,
+            u.descrizione,
+            u.foto_profilo,
+            u.telefono,
+            u.email_pubblica
+        FROM interessi_annunci i
+        JOIN utenti u
+          ON u.id = i.utente_interessato_id
+        WHERE i.annuncio_id = ?
+          AND i.attivo = TRUE
+          AND u.attivo = 1
+          AND COALESCE(u.sospeso, 0) = 0
+          AND COALESCE(u.disattivato_admin, 0) = 0
+          AND COALESCE(u.eliminato, 0) = 0
+          AND COALESCE(u.ruolo, 'user') <> 'admin'
+        ORDER BY i.updated_at DESC, i.id DESC
+    """), (int(annuncio_id),))
+
+    interessati = []
+
+    for record in cur.fetchall():
+        utente = dict(record)
+        utente_id = int(utente["utente_id"])
+        profilo_breve = (
+            utente.get("frase")
+            or utente.get("descrizione")
+            or "Profilo MyLocalCare"
+        ).strip()
+
+        if len(profilo_breve) > 150:
+            profilo_breve = profilo_breve[:147].rstrip() + "…"
+
+        interessati.append({
+            "utente_id": utente_id,
+            "username": (utente.get("username") or "").strip(),
+            "nome": " ".join(
+                parte.strip()
+                for parte in (
+                    utente.get("nome") or "",
+                    utente.get("cognome") or "",
+                )
+                if parte.strip()
+            ),
+            "zona": (utente.get("citta") or "Zona non indicata").strip(),
+            "profilo_breve": profilo_breve,
+            "avatar_url": url_for(
+                "static",
+                filename=(
+                    utente.get("foto_profilo")
+                    or "img/user_default.png"
+                ),
+            ),
+            "profilo_url": url_for("profilo_pubblico", id=utente_id),
+            "chat_url": url_for(
+                "chat_conversazione_view",
+                other_id=utente_id,
+            ),
+            "contatti": _contatti_interessato_autorizzati(
+                utente,
+                conn,
+            ),
+            "chat_aperta_da_interesse": bool(
+                utente.get("chat_opened_at")
+            ),
+        })
+
+    return interessati
+
+
+@app.route(
+    "/api/annunci/<int:annuncio_id>/interesse",
+    methods=["POST"],
+)
+def imposta_interesse_annuncio_route(annuncio_id):
+    if not g.utente:
+        return jsonify({
+            "ok": False,
+            "error": "Accedi per indicare il tuo interesse.",
+            "login_url": url_for(
+                "login",
+                next=request.referrer or url_for("cerca"),
+            ),
+        }), 401
+
+    verify_csrf()
+
+    if g.utente["ruolo"] == "admin":
+        return jsonify({
+            "ok": False,
+            "error": "Gli amministratori non possono usare questa funzione.",
+        }), 403
+
+    payload = request.get_json(silent=True) or {}
+    attivo = payload.get("attivo")
+
+    if not isinstance(attivo, bool):
+        return jsonify({
+            "ok": False,
+            "error": "Lo stato richiesto non è valido.",
+        }), 400
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute(sql("""
+        SELECT
+            a.id,
+            a.utente_id,
+            a.titolo,
+            a.stato,
+            proprietario.attivo AS proprietario_attivo,
+            proprietario.sospeso AS proprietario_sospeso,
+            proprietario.disattivato_admin,
+            proprietario.eliminato AS proprietario_eliminato,
+            proprietario.ruolo AS proprietario_ruolo
+        FROM annunci a
+        JOIN utenti proprietario
+          ON proprietario.id = a.utente_id
+        WHERE a.id = ?
+        LIMIT 1
+    """), (annuncio_id,))
+
+    annuncio = cur.fetchone()
+
+    if (
+        not annuncio
+        or annuncio["stato"] != "approvato"
+        or int(annuncio["proprietario_attivo"] or 0) != 1
+        or int(annuncio["proprietario_sospeso"] or 0) != 0
+        or int(annuncio["disattivato_admin"] or 0) != 0
+        or int(annuncio["proprietario_eliminato"] or 0) != 0
+        or annuncio["proprietario_ruolo"] == "admin"
+    ):
+        return jsonify({
+            "ok": False,
+            "error": "Questo annuncio non è disponibile.",
+        }), 404
+
+    user_id = int(g.utente["id"])
+    proprietario_id = int(annuncio["utente_id"])
+
+    if user_id == proprietario_id:
+        return jsonify({
+            "ok": False,
+            "error": "Non puoi indicare interesse per il tuo annuncio.",
+        }), 403
+
+    if attivo and not (g.utente["foto_profilo"] or "").strip():
+        return jsonify({
+            "ok": False,
+            "code": "foto_profilo_richiesta",
+            "error": (
+                "Per usare “Mi interessa” devi prima caricare "
+                "una foto profilo, che sarà pubblica dopo l’approvazione."
+            ),
+            "action_label": "Carica la foto profilo",
+            "action_url": url_for("upload_foto"),
+        }), 409
+
+    risultato = imposta_interesse_annuncio(
+        conn=conn,
+        annuncio_id=annuncio_id,
+        utente_interessato_id=user_id,
+        attivo=attivo,
+    )
+
+    totale_interessi = _conta_interessi_attivi(cur, annuncio_id)
+
+    if risultato["transizione"]:
+        socketio.emit(
+            "interesse_annuncio_update",
+            {
+                "annuncio_id": annuncio_id,
+                "count": totale_interessi,
+            },
+            room=f"user_{proprietario_id}",
+        )
+
+    if risultato["notifica"]:
+        username = (
+            g.utente["username"]
+            or g.utente["nome"]
+            or "Un utente"
+        ).strip()
+        titolo_annuncio = (annuncio["titolo"] or "Annuncio").strip()
+        testo_notifica = (
+            f"@{username} è interessato a “{titolo_annuncio}”."
+        )
+        link_notifica = url_for(
+            "dashboard",
+            tab="annunci",
+            interesse_annuncio=annuncio_id,
+        )
+
+        try:
+            cur.execute(sql("""
+                INSERT INTO notifiche (
+                    id_utente,
+                    titolo,
+                    messaggio,
+                    link,
+                    tipo
+                )
+                VALUES (?, ?, ?, ?, 'interesse_annuncio')
+            """), (
+                proprietario_id,
+                "Nuovo interesse",
+                testo_notifica,
+                link_notifica,
+            ))
+            conn.commit()
+            emit_update_notifications(proprietario_id)
+
+            try:
+                invia_push(
+                    proprietario_id,
+                    "Nuovo interesse",
+                    testo_notifica,
+                    url=link_notifica,
+                )
+            except Exception as e:
+                log_exception_safe(
+                    "⚠️ Push nuovo interesse non inviata",
+                    e,
+                    {
+                        "annuncio_id": annuncio_id,
+                        "proprietario_id": proprietario_id,
+                    },
+                    production=True,
+                )
+
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Notifica interna nuovo interesse non creata",
+                e,
+                {
+                    "annuncio_id": annuncio_id,
+                    "proprietario_id": proprietario_id,
+                },
+                production=True,
+            )
+
+    return jsonify({
+        "ok": True,
+        "attivo": bool(risultato["attivo"]),
+        "changed": bool(risultato["transizione"]),
+    })
+
+
+@app.route(
+    "/api/annunci/<int:annuncio_id>/interessati",
+    methods=["GET"],
+)
+@login_required
+def interessati_annuncio_route(annuncio_id):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute(sql("""
+        SELECT utente_id, titolo
+        FROM annunci
+        WHERE id = ?
+        LIMIT 1
+    """), (annuncio_id,))
+    annuncio = cur.fetchone()
+
+    if not annuncio:
+        return jsonify({"ok": False, "error": "Annuncio non trovato."}), 404
+
+    if int(annuncio["utente_id"]) != int(g.utente["id"]):
+        return jsonify({"ok": False, "error": "Accesso non autorizzato."}), 403
+
+    interessati = _elenca_interessati_annuncio(conn, annuncio_id)
+
+    return jsonify({
+        "ok": True,
+        "annuncio": {
+            "id": annuncio_id,
+            "titolo": annuncio["titolo"] or "Annuncio",
+        },
+        "count": len(interessati),
+        "interessati": interessati,
+    })
+
+
+@app.route(
+    "/api/annunci/<int:annuncio_id>/interessati/"
+    "<int:utente_interessato_id>/apri-chat",
+    methods=["POST"],
+)
+@login_required
+def apri_chat_da_interesse_route(
+    annuncio_id,
+    utente_interessato_id,
+):
+    verify_csrf()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute(sql("""
+        SELECT a.utente_id
+        FROM annunci a
+        JOIN interessi_annunci i
+          ON i.annuncio_id = a.id
+         AND i.utente_interessato_id = ?
+         AND i.attivo = TRUE
+        WHERE a.id = ?
+        LIMIT 1
+    """), (utente_interessato_id, annuncio_id))
+    annuncio = cur.fetchone()
+
+    if not annuncio:
+        return jsonify({
+            "ok": False,
+            "error": "Interesse non disponibile.",
+        }), 404
+
+    if int(annuncio["utente_id"]) != int(g.utente["id"]):
+        return jsonify({
+            "ok": False,
+            "error": "Accesso non autorizzato.",
+        }), 403
+
+    cur.execute(sql(f"""
+        UPDATE interessi_annunci
+        SET chat_opened_at = COALESCE(
+                chat_opened_at,
+                {now_sql()}
+            )
+        WHERE annuncio_id = ?
+          AND utente_interessato_id = ?
+          AND attivo = TRUE
+    """), (annuncio_id, utente_interessato_id))
+    conn.commit()
+
+    return jsonify({
+        "ok": True,
+        "chat_url": url_for(
+            "chat_conversazione_view",
+            other_id=utente_interessato_id,
+        ),
+    })
+
+
 @app.route(
     "/admin/api/annunci/<int:annuncio_id>/dettagli-rapidi",
     methods=["GET"]
@@ -19559,6 +19975,11 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
                 )
             })
 
+        interessati = _elenca_interessati_annuncio(
+            conn,
+            annuncio_id,
+        )
+
         return jsonify({
             "ok": True,
             "annuncio": {
@@ -19574,7 +19995,9 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
             "servizi": stato_servizi,
             "pacchetti": stato_pacchetti,
             "chat_aperte": chat_aperte,
-            "chat_aperte_count": len(chat_aperte)
+            "chat_aperte_count": len(chat_aperte),
+            "interessati": interessati,
+            "interessi_count": len(interessati),
         })
 
     except Exception as e:
@@ -20276,6 +20699,43 @@ def cerca():
     assegna_immagine_card(annunci)
     assegna_immagine_card(annunci_vetrina)
 
+    interesse_ids_attivi = set()
+
+    if utente_corrente and not cerca_admin_mode:
+        tutti_annunci_ids = list(dict.fromkeys(
+            int(annuncio_corrente["id"])
+            for lista in (annunci, annunci_vetrina)
+            for annuncio_corrente in lista
+        ))
+
+        if tutti_annunci_ids:
+            placeholders_interessi = ", ".join(
+                "?" for _ in tutti_annunci_ids
+            )
+
+            c.execute(sql(f"""
+                SELECT annuncio_id
+                FROM interessi_annunci
+                WHERE utente_interessato_id = ?
+                  AND attivo = TRUE
+                  AND annuncio_id IN ({placeholders_interessi})
+            """), (
+                int(utente_corrente["id"]),
+                *tutti_annunci_ids,
+            ))
+
+            interesse_ids_attivi = {
+                int(riga["annuncio_id"])
+                for riga in c.fetchall()
+            }
+
+    for lista in (annunci, annunci_vetrina):
+        for annuncio_corrente in lista:
+            annuncio_corrente["interesse_attivo"] = (
+                int(annuncio_corrente["id"])
+                in interesse_ids_attivi
+            )
+
     return render_template(
         "cerca.html",
         categoria=json_key,
@@ -20303,13 +20763,14 @@ def apri_notifica(id):
         flash("Notifica non trovata.", "error")
         return redirect(url_for("notifiche"))
 
-    # Segna come letta
+    # Aprire una notifica conclude la visita: tutte diventano lette.
     conn.execute(sql(f"""
         UPDATE notifiche
         SET letta = 1,
-            data_lettura = {now_sql()}
-        WHERE id = ? AND id_utente = ?
-    """), (id, g.utente["id"]))
+            data_lettura = COALESCE(data_lettura, {now_sql()})
+        WHERE id_utente = ?
+          AND letta = 0
+    """), (g.utente["id"],))
     conn.commit()
 
 
@@ -22051,6 +22512,18 @@ def elimina_account_step2():
                 WHERE utente_id = ?
             """), (user_id,))
 
+            # Gli interessi lasciati dall'utente vanno rimossi anche se
+            # la riga utente verrà anonimizzata anziché cancellata.
+            cur.execute(sql("""
+                DELETE FROM interessi_annunci
+                WHERE utente_interessato_id = ?
+                   OR annuncio_id IN (
+                       SELECT id
+                       FROM annunci
+                       WHERE utente_id = ?
+                   )
+            """), (user_id, user_id))
+
 
             # =====================================================
             # 7) Rimuove annunci dell'utente
@@ -22955,6 +23428,22 @@ def visualizza_annuncio_pubblico(id):
 
     annuncio = dict(row)
     annuncio["tipo_annuncio"] = (annuncio.get("tipo_annuncio") or "").lower()
+    annuncio["interesse_attivo"] = False
+
+    if (
+        g.utente
+        and g.utente["ruolo"] != "admin"
+        and int(g.utente["id"]) != int(annuncio["utente_id"])
+    ):
+        c.execute(sql("""
+            SELECT 1
+            FROM interessi_annunci
+            WHERE annuncio_id = ?
+              AND utente_interessato_id = ?
+              AND attivo = TRUE
+            LIMIT 1
+        """), (id, int(g.utente["id"])))
+        annuncio["interesse_attivo"] = bool(c.fetchone())
 
     # 🔒 Annuncio non approvato → visibile solo al proprietario
     if annuncio["stato"] != "approvato":

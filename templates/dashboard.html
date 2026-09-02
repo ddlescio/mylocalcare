@@ -630,6 +630,27 @@
 
                   </a>
 
+                  {% if not pubblico and a['stato'] == 'approvato' %}
+                    {% set interessi_count = a.get('interessi_count', 0)|int %}
+                    <div class="profile-annuncio-interest-summary {% if interessi_count <= 0 %}hidden{% endif %}"
+                         data-interest-summary="{{ a['id'] }}">
+                      <button
+                        type="button"
+                        class="profile-annuncio-interest-badge js-open-interest-panel"
+                        data-annuncio-id="{{ a['id'] }}"
+                        data-endpoint="{{ url_for('interessati_annuncio_route', annuncio_id=a['id']) }}"
+                        aria-label="Apri le persone interessate a {{ a['titolo'] }}">
+                        <svg viewBox="0 0 48 48" aria-hidden="true">
+                          <path class="house" d="M8.5 22.3 24 8.9l15.5 13.4v16.1a2.7 2.7 0 0 1-2.7 2.7H11.2a2.7 2.7 0 0 1-2.7-2.7Z" />
+                          <path class="heart" d="M24 36.6c-1.1-1-8.1-6.5-8.1-12.1 0-3.3 2.3-5.6 5.3-5.6 1.7 0 3.2.8 4.1 2.1.9-1.3 2.4-2.1 4.1-2.1 3 0 5.3 2.3 5.3 5.6 0 5.6-7 11.1-8.1 12.1a1.9 1.9 0 0 1-2.6 0Z" />
+                        </svg>
+                        <span data-interest-label>
+                          {{ interessi_count }} {{ 'interessato' if interessi_count == 1 else 'interessati' }}
+                        </span>
+                      </button>
+                    </div>
+                  {% endif %}
+
                   {% if not pubblico %}
                     <div class="profile-annuncio-actions">
 
@@ -733,6 +754,65 @@
     </section>
 
 </div>
+{% if not pubblico %}
+<div
+  id="announcement-interest-panel"
+  class="announcement-interest-panel hidden"
+  aria-hidden="true">
+
+  <button
+    type="button"
+    id="announcement-interest-backdrop"
+    class="announcement-interest-backdrop"
+    aria-label="Chiudi persone interessate">
+  </button>
+
+  <section
+    class="announcement-interest-sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="announcement-interest-title">
+
+    <header class="announcement-interest-header">
+      <div>
+        <span class="announcement-interest-eyebrow">MI INTERESSA</span>
+        <h2 id="announcement-interest-title">Persone interessate</h2>
+        <p id="announcement-interest-subtitle"></p>
+      </div>
+
+      <button
+        type="button"
+        id="announcement-interest-close"
+        class="announcement-interest-close"
+        aria-label="Chiudi">
+        ✕
+      </button>
+    </header>
+
+    <div class="announcement-interest-body">
+      <div id="announcement-interest-loading" class="announcement-interest-message">
+        Caricamento…
+      </div>
+
+      <div id="announcement-interest-error" class="announcement-interest-message is-error hidden">
+        Impossibile caricare le persone interessate.
+      </div>
+
+      <div id="announcement-interest-empty" class="announcement-interest-message hidden">
+        Nessun interesse attivo in questo momento.
+      </div>
+
+      <div id="announcement-interest-list" class="announcement-interest-list hidden"></div>
+
+      <button
+        type="button"
+        id="announcement-interest-show-all"
+        class="announcement-interest-show-all hidden">
+      </button>
+    </div>
+  </section>
+</div>
+{% endif %}
 <!-- 🚀 MODALE AUMENTA VISIBILITÀ -->
 <div id="modale-visibilita"
      class="hidden fixed inset-0 z-[999] bg-black/60 flex items-end sm:items-center justify-center">
@@ -5590,10 +5670,19 @@ document.addEventListener("DOMContentLoaded", () => {
     ? window.location.hash.replace("#", "").trim()
     : "";
 
+  const tabRichiestaQuery = new URLSearchParams(
+    window.location.search
+  ).get("tab") || "";
+
   const tabRichiesta =
     tabRichiestaHash && document.querySelector(`.tab-btn[data-tab="${tabRichiestaHash}"]`)
       ? tabRichiestaHash
-      : tabRichiestaSession;
+      : (
+          tabRichiestaQuery
+          && document.querySelector(`.tab-btn[data-tab="${tabRichiestaQuery}"]`)
+            ? tabRichiestaQuery
+            : tabRichiestaSession
+        );
 
   const tabIniziale =
     tabRichiesta && document.querySelector(`.tab-btn[data-tab="${tabRichiesta}"]`)
@@ -7191,6 +7280,598 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
+
+{% if not pubblico %}
+<style>
+  .profile-annuncio-interest-summary {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0.85rem 0.62rem;
+  }
+
+  .profile-annuncio-interest-summary.hidden {
+    display: none;
+  }
+
+  .profile-annuncio-interest-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    gap: 0.4rem;
+    padding: 0.28rem 0.7rem 0.28rem 0.4rem;
+    border: 1px solid rgba(147, 197, 253, 0.82);
+    border-radius: 9999px;
+    background: rgba(239, 246, 255, 0.96);
+    color: #1d4ed8;
+    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.1);
+    font-size: 0.72rem;
+    font-weight: 880;
+    cursor: pointer;
+  }
+
+  .profile-annuncio-interest-badge svg {
+    width: 27px;
+    height: 27px;
+  }
+
+  .profile-annuncio-interest-badge .house {
+    fill: rgba(219, 234, 254, 0.7);
+    stroke: #2563eb;
+    stroke-width: 2.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .profile-annuncio-interest-badge .heart {
+    fill: #ec4899;
+    stroke: #db2777;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+  }
+
+  .announcement-interest-panel.hidden {
+    display: none !important;
+  }
+
+  .announcement-interest-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 10030;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .announcement-interest-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+  }
+
+  .announcement-interest-sheet {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 39rem;
+    max-height: min(86vh, 48rem);
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow: hidden;
+    border: 1px solid rgba(203, 213, 225, 0.92);
+    border-radius: 1.7rem 1.7rem 0 0;
+    background: #f8fafc;
+    box-shadow: 0 -22px 60px rgba(15, 23, 42, 0.27);
+  }
+
+  .announcement-interest-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.1rem 0.9rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  .announcement-interest-eyebrow {
+    color: #2563eb;
+    font-size: 0.65rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  .announcement-interest-header h2 {
+    margin: 0.15rem 0 0;
+    color: #0f172a;
+    font-size: 1.15rem;
+    font-weight: 900;
+  }
+
+  .announcement-interest-header p {
+    max-width: 29rem;
+    margin: 0.2rem 0 0;
+    color: #64748b;
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .announcement-interest-close {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border: 1px solid #dbe4f0;
+    border-radius: 9999px;
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 850;
+  }
+
+  .announcement-interest-body {
+    padding: 0.85rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .announcement-interest-message {
+    padding: 2.5rem 1rem;
+    color: #64748b;
+    text-align: center;
+    font-size: 0.88rem;
+    font-weight: 700;
+  }
+
+  .announcement-interest-message.is-error {
+    color: #b91c1c;
+  }
+
+  .announcement-interest-list {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .announcement-interest-list.hidden,
+  .announcement-interest-message.hidden,
+  .announcement-interest-show-all.hidden {
+    display: none;
+  }
+
+  .announcement-interest-person {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 0.7rem;
+    padding: 0.78rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.1rem;
+    background: #ffffff;
+    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.045);
+  }
+
+  .announcement-interest-avatar {
+    width: 48px;
+    height: 48px;
+    border: 2px solid #dbeafe;
+    border-radius: 9999px;
+    object-fit: cover;
+  }
+
+  .announcement-interest-person-main {
+    min-width: 0;
+  }
+
+  .announcement-interest-name-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.55rem;
+  }
+
+  .announcement-interest-name-row strong {
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 880;
+  }
+
+  .announcement-interest-name-row span,
+  .announcement-interest-zone {
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 650;
+  }
+
+  .announcement-interest-bio {
+    display: -webkit-box;
+    margin: 0.32rem 0 0;
+    overflow: hidden;
+    color: #475569;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .announcement-interest-actions,
+  .announcement-interest-contact-options {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.38rem;
+    margin-top: 0.58rem;
+  }
+
+  .announcement-interest-action,
+  .announcement-interest-contact-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0.34rem 0.68rem;
+    border: 1px solid #bfdbfe;
+    border-radius: 9999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 820;
+    text-decoration: none;
+  }
+
+  .announcement-interest-action.is-primary {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+  }
+
+  .announcement-interest-contact-options {
+    padding-top: 0.48rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .announcement-interest-contact-options.hidden {
+    display: none;
+  }
+
+  .announcement-interest-show-all {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 0.75rem;
+    border: 1px solid #bfdbfe;
+    border-radius: 9999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.8rem;
+    font-weight: 850;
+  }
+
+  body.announcement-interest-open {
+    overflow: hidden;
+  }
+
+  @media (min-width: 768px) {
+    .announcement-interest-panel {
+      align-items: center;
+      padding: 1.5rem;
+    }
+
+    .announcement-interest-sheet {
+      border-radius: 1.7rem;
+      box-shadow: 0 30px 85px rgba(15, 23, 42, 0.31);
+    }
+  }
+</style>
+
+<script>
+(function () {
+  const panel = document.getElementById("announcement-interest-panel");
+  if (!panel) return;
+
+  const backdrop = document.getElementById("announcement-interest-backdrop");
+  const closeButton = document.getElementById("announcement-interest-close");
+  const title = document.getElementById("announcement-interest-title");
+  const subtitle = document.getElementById("announcement-interest-subtitle");
+  const loading = document.getElementById("announcement-interest-loading");
+  const error = document.getElementById("announcement-interest-error");
+  const empty = document.getElementById("announcement-interest-empty");
+  const list = document.getElementById("announcement-interest-list");
+  const showAllButton = document.getElementById("announcement-interest-show-all");
+  const csrfToken = {{ csrf_token()|tojson }};
+
+  let currentAnnouncementId = 0;
+  let people = [];
+  let showAll = false;
+  let previousFocus = null;
+  let requestController = null;
+
+  function setVisible(element, visible) {
+    element.classList.toggle("hidden", !visible);
+  }
+
+  function updateSummary(announcementId, count) {
+    const summary = document.querySelector(
+      `[data-interest-summary="${announcementId}"]`
+    );
+    if (!summary) return;
+
+    const safeCount = Math.max(0, Number(count || 0));
+    const label = summary.querySelector("[data-interest-label]");
+
+    summary.classList.toggle("hidden", safeCount === 0);
+    if (label) {
+      label.textContent = `${safeCount} ${safeCount === 1 ? "interessato" : "interessati"}`;
+    }
+  }
+
+  function createAction(label, className = "") {
+    const element = document.createElement("button");
+    element.type = "button";
+    element.className = `announcement-interest-action ${className}`.trim();
+    element.textContent = label;
+    return element;
+  }
+
+  async function openTrackedChat(person) {
+    const endpoint = (
+      `/api/annunci/${currentAnnouncementId}/interessati/`
+      + `${person.utente_id}/apri-chat`
+    );
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Impossibile aprire la chat.");
+      }
+
+      window.location.href = data.chat_url;
+    } catch (chatError) {
+      window.alert(chatError.message || "Impossibile aprire la chat.");
+    }
+  }
+
+  function createPerson(person) {
+    const row = document.createElement("article");
+    row.className = "announcement-interest-person";
+
+    const avatar = document.createElement("img");
+    avatar.className = "announcement-interest-avatar";
+    avatar.src = person.avatar_url;
+    avatar.alt = "";
+
+    const main = document.createElement("div");
+    main.className = "announcement-interest-person-main";
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "announcement-interest-name-row";
+
+    const username = document.createElement("strong");
+    username.textContent = person.username
+      ? `@${person.username}`
+      : (person.nome || "Utente MyLocalCare");
+    nameRow.appendChild(username);
+
+    if (person.nome && person.username) {
+      const fullName = document.createElement("span");
+      fullName.textContent = person.nome;
+      nameRow.appendChild(fullName);
+    }
+
+    const zone = document.createElement("div");
+    zone.className = "announcement-interest-zone";
+    zone.textContent = `📍 ${person.zona || "Zona non indicata"}`;
+
+    const bio = document.createElement("p");
+    bio.className = "announcement-interest-bio";
+    bio.textContent = person.profilo_breve || "Profilo MyLocalCare";
+
+    const actions = document.createElement("div");
+    actions.className = "announcement-interest-actions";
+
+    const profile = document.createElement("a");
+    profile.className = "announcement-interest-action";
+    profile.href = person.profilo_url;
+    profile.textContent = "Profilo";
+    actions.appendChild(profile);
+
+    const contacts = Array.isArray(person.contatti)
+      ? person.contatti
+      : [];
+    const contact = createAction("Contatta", "is-primary");
+    actions.appendChild(contact);
+
+    if (contacts.length === 0) {
+      contact.addEventListener("click", () => openTrackedChat(person));
+    } else {
+      const options = document.createElement("div");
+      options.className = "announcement-interest-contact-options hidden";
+
+      const chat = createAction("Chat", "is-primary");
+      chat.addEventListener("click", () => openTrackedChat(person));
+      options.appendChild(chat);
+
+      contacts.forEach((channel) => {
+        const link = document.createElement("a");
+        link.className = "announcement-interest-contact-link";
+        link.href = channel.url;
+        link.textContent = channel.tipo === "telefono"
+          ? `Chiama · ${channel.label}`
+          : `Email · ${channel.label}`;
+        options.appendChild(link);
+      });
+
+      contact.addEventListener("click", () => {
+        options.classList.toggle("hidden");
+      });
+
+      main.append(nameRow, zone, bio, actions, options);
+      row.append(avatar, main);
+      return row;
+    }
+
+    main.append(nameRow, zone, bio, actions);
+    row.append(avatar, main);
+    return row;
+  }
+
+  function renderPeople() {
+    list.replaceChildren();
+
+    const visiblePeople = showAll ? people : people.slice(0, 5);
+    visiblePeople.forEach((person) => list.appendChild(createPerson(person)));
+
+    setVisible(loading, false);
+    setVisible(error, false);
+    setVisible(empty, people.length === 0);
+    setVisible(list, people.length > 0);
+    setVisible(showAllButton, people.length > 5);
+
+    if (people.length > 5) {
+      showAllButton.textContent = showAll
+        ? "Mostra i primi 5"
+        : `Vedi tutti i ${people.length} interessati`;
+    }
+  }
+
+  async function openPanel(button) {
+    const announcementId = Number(button.dataset.annuncioId || 0);
+    const endpoint = button.dataset.endpoint || "";
+    if (!announcementId || !endpoint) return;
+
+    currentAnnouncementId = announcementId;
+    people = [];
+    showAll = false;
+    previousFocus = document.activeElement;
+
+    title.textContent = "Persone interessate";
+    subtitle.textContent = "";
+    list.replaceChildren();
+    setVisible(loading, true);
+    setVisible(error, false);
+    setVisible(empty, false);
+    setVisible(list, false);
+    setVisible(showAllButton, false);
+
+    panel.classList.remove("hidden");
+    panel.setAttribute("aria-hidden", "false");
+    document.body.classList.add("announcement-interest-open");
+    closeButton.focus({ preventScroll: true });
+
+    requestController?.abort();
+    requestController = new AbortController();
+
+    try {
+      const response = await fetch(endpoint, {
+        credentials: "same-origin",
+        headers: { "Accept": "application/json" },
+        signal: requestController.signal
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Dati non disponibili.");
+      }
+
+      people = Array.isArray(data.interessati) ? data.interessati : [];
+      title.textContent = data.annuncio?.titolo || "Persone interessate";
+      subtitle.textContent = `${people.length} ${people.length === 1 ? "persona interessata" : "persone interessate"}`;
+      updateSummary(announcementId, people.length);
+      renderPeople();
+
+    } catch (loadError) {
+      if (loadError.name === "AbortError") return;
+      setVisible(loading, false);
+      setVisible(error, true);
+    }
+  }
+
+  function closePanel() {
+    requestController?.abort();
+    requestController = null;
+    panel.classList.add("hidden");
+    panel.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("announcement-interest-open");
+
+    if (previousFocus && typeof previousFocus.focus === "function") {
+      previousFocus.focus({ preventScroll: true });
+    }
+  }
+
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest(".js-open-interest-panel");
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openPanel(button);
+  });
+
+  showAllButton.addEventListener("click", () => {
+    showAll = !showAll;
+    renderPeople();
+  });
+  backdrop.addEventListener("click", closePanel);
+  closeButton.addEventListener("click", closePanel);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !panel.classList.contains("hidden")) {
+      closePanel();
+    }
+  });
+
+  function bindRealtime(socket) {
+    if (window.__lcInterestDashboardUpdate) {
+      socket.off(
+        "interesse_annuncio_update",
+        window.__lcInterestDashboardUpdate
+      );
+    }
+
+    window.__lcInterestDashboardUpdate = (data) => {
+      if (!data) return;
+      updateSummary(Number(data.annuncio_id || 0), Number(data.count || 0));
+    };
+    socket.on("interesse_annuncio_update", window.__lcInterestDashboardUpdate);
+  }
+
+  if (window.whenSocketReady) {
+    window.whenSocketReady(bindRealtime);
+  } else if (window.socket) {
+    bindRealtime(window.socket);
+  } else {
+    window.addEventListener("socket_ready", () => {
+      if (window.socket) bindRealtime(window.socket);
+    }, { once: true });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const requestedId = Number(
+      new URLSearchParams(window.location.search).get("interesse_annuncio") || 0
+    );
+    if (!requestedId) return;
+
+    const button = document.querySelector(
+      `.js-open-interest-panel[data-annuncio-id="${requestedId}"]`
+    );
+    if (button) openPanel(button);
+  });
+})();
+</script>
+{% endif %}
 
 {% if not pubblico %}
   <button

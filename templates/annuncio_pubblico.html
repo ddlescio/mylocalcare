@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% set body_class = "offset-navbar" %}
 {% block content %}
+{% from "partials/interesse_annuncio_button.html" import interesse_annuncio_button with context %}
 
 
 <div class="page-wrapper annuncio-page max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
@@ -79,6 +80,8 @@
             </div>
           {% endif %}
         </button>
+
+        {{ interesse_annuncio_button(annuncio, 'public') }}
       </div>
 
       <!-- DATI ANNUNCIO -->
@@ -5092,6 +5095,8 @@ document.addEventListener("DOMContentLoaded", () => {
   backBtn.href = dashboardUrl;
 });
 </script>
+
+{% include "partials/interesse_annuncio_assets.html" %}
 
 
 {% endblock %}

@@ -1696,6 +1696,7 @@ def elimina_utente(id):
     - revisioni profilo
     - video call log
     - servizi attivi collegati all'utente o ai suoi annunci
+    - interessi lasciati dall'utente o ricevuti dai suoi annunci
     """
 
     conn = get_db_connection()
@@ -1846,6 +1847,20 @@ def elimina_utente(id):
             DELETE FROM revisioni_profilo
             WHERE utente_id = ?
         """), (id,))
+
+        # La riga utente viene anonimizzata, non cancellata: rimuoviamo
+        # quindi esplicitamente gli interessi lasciati dall'account.
+        # Quelli ricevuti sarebbero eliminati anche dalla FK CASCADE sugli
+        # annunci, ma farlo qui rende l'ordine di pulizia esplicito.
+        cur.execute(sql("""
+            DELETE FROM interessi_annunci
+            WHERE utente_interessato_id = ?
+               OR annuncio_id IN (
+                   SELECT id
+                   FROM annunci
+                   WHERE utente_id = ?
+               )
+        """), (id, id))
 
         # =====================================================
         # 12) Elimina log videochiamate collegate all'utente.

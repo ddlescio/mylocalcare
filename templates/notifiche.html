@@ -26,10 +26,6 @@
     </div>
 
     <div class="notifications-actions-bar">
-      <button id="markAllRead" class="notifications-action-btn is-primary is-compact" type="button">
-        ✓ Tutte lette
-      </button>
-
       <button id="deleteAll" class="notifications-action-btn is-danger is-compact" type="button">
         🗑 Elimina tutto
       </button>
@@ -44,21 +40,38 @@
           <div
             class="notification-card-premium {% if n['letta'] == 0 %}is-unread{% else %}is-read{% endif %}"
             {% if n['link'] %}
-              onclick="window.location.href='{{ url_for('apri_notifica', id=n['id']) }}'"
+              onclick="markNotificationsReadBeforeLeaving(); window.location.href='{{ url_for('apri_notifica', id=n['id']) }}'"
             {% endif %}
           >
             <div class="notification-card-icon-wrap">
-              <div class="notification-card-icon">🔔</div>
+              {% if n['tipo'] == 'interesse_annuncio' %}
+                <div class="notification-card-icon notification-card-interest-icon">
+                  <svg viewBox="0 0 48 48" aria-hidden="true">
+                    <path class="house" d="M8.5 22.3 24 8.9l15.5 13.4v16.1a2.7 2.7 0 0 1-2.7 2.7H11.2a2.7 2.7 0 0 1-2.7-2.7Z" />
+                    <path class="heart" d="M24 36.6c-1.1-1-8.1-6.5-8.1-12.1 0-3.3 2.3-5.6 5.3-5.6 1.7 0 3.2.8 4.1 2.1.9-1.3 2.4-2.1 4.1-2.1 3 0 5.3 2.3 5.3 5.6 0 5.6-7 11.1-8.1 12.1a1.9 1.9 0 0 1-2.6 0Z" />
+                  </svg>
+                </div>
+              {% else %}
+                <div class="notification-card-icon">🔔</div>
+              {% endif %}
             </div>
 
             <div class="notification-card-body">
               <div class="notification-card-head">
                 <p class="notification-card-title">
-                  {{ righe[0] }}
+                  {% if n['tipo'] == 'interesse_annuncio' %}
+                    {{ n['titolo'] or 'Nuovo interesse' }}
+                  {% else %}
+                    {{ righe[0] }}
+                  {% endif %}
                 </p>
               </div>
 
-              {% if n['tipo'] == 'match' %}
+              {% if n['tipo'] == 'interesse_annuncio' %}
+                <p class="notification-card-interest-copy">
+                  {{ n['messaggio'] }}
+                </p>
+              {% elif n['tipo'] == 'match' %}
                 <div class="notification-meta-row">
                   {% for riga in righe[1:] %}
                     {% if riga.strip() %}
@@ -112,14 +125,6 @@
                 </p>
 
                 <div class="notification-card-actions">
-                  {% if n['letta'] == 0 %}
-                    <button type="button"
-                            class="notification-inline-btn is-read"
-                            onclick="event.stopPropagation(); markSingleNotificationRead({{ n['id'] }}, this);">
-                      Segna letta
-                    </button>
-                  {% endif %}
-
                   <button type="button"
                           class="notification-inline-btn is-delete"
                           onclick="event.stopPropagation(); deleteSingleNotification({{ n['id'] }});">
@@ -485,6 +490,33 @@
     inset 0 1px 0 rgba(255,255,255,0.94);
 }
 
+.notification-card-interest-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.notification-card-interest-icon .house {
+  fill: rgba(219,234,254,0.78);
+  stroke: #2563eb;
+  stroke-width: 2.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.notification-card-interest-icon .heart {
+  fill: #ec4899;
+  stroke: #db2777;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.notification-card-interest-copy {
+  margin: 0.35rem 0 0;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .notification-card-body {
   flex: 1 1 auto;
   min-width: 0;
@@ -769,27 +801,54 @@ function csrfFetch(url, options = {}) {
   });
 }
 
-document.getElementById("markAllRead")?.addEventListener("click", async () => {
-  const resp = await csrfFetch("/notifiche/segna_tutte_lette", {
-    method: "POST"
+let notificationsAutoReadSent = false;
+
+function markNotificationsReadBeforeLeaving() {
+  if (notificationsAutoReadSent) return;
+
+  const hasUnread = document.querySelector(
+    ".notification-card-premium.is-unread"
+  );
+
+  if (!hasUnread) return;
+  notificationsAutoReadSent = true;
+
+  const body = new URLSearchParams({
+    csrf_token: CSRF_TOKEN
   });
 
-  const data = await resp.json();
+  let beaconAccepted = false;
 
-  if (data.success) {
-    document.querySelectorAll(".notification-card-premium.is-unread").forEach(card => {
-      card.classList.remove("is-unread");
-      card.classList.add("is-read");
+  if (navigator.sendBeacon) {
+    try {
+      beaconAccepted = navigator.sendBeacon(
+        "/notifiche/segna_tutte_lette",
+        body
+      );
+    } catch (_) {
+      beaconAccepted = false;
+    }
+  }
 
-      const badge = card.querySelector(".notification-unread-badge");
-      if (badge) badge.remove();
+  if (!beaconAccepted) {
+    fetch("/notifiche/segna_tutte_lette", {
+      method: "POST",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "X-CSRF-Token": CSRF_TOKEN
+      },
+      body: body.toString()
+    }).catch(() => {});
+  }
+}
 
-      const form = card.querySelector("form[action*='/notifiche/leggi/']");
-      if (form) form.remove();
+window.addEventListener("pagehide", markNotificationsReadBeforeLeaving);
 
-      const readBtn = card.querySelector(".notification-inline-btn.is-read");
-      if (readBtn) readBtn.remove();
-    });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    markNotificationsReadBeforeLeaving();
   }
 });
 
@@ -807,32 +866,6 @@ document.getElementById("deleteAll")?.addEventListener("click", async () => {
       '<div class="notifications-empty-card"><p class="notifications-empty-text">Nessuna notifica.</p></div>';
   }
 });
-
-async function markSingleNotificationRead(id, button) {
-  try {
-    const resp = await csrfFetch(`/notifiche/leggi/${id}`, {
-      method: "POST"
-    });
-
-    if (!resp.ok) {
-      alert("Errore durante l'aggiornamento della notifica.");
-      return;
-    }
-
-    const card = button.closest(".notification-card-premium");
-
-    if (card) {
-      card.classList.remove("is-unread");
-      card.classList.add("is-read");
-    }
-
-    button.remove();
-
-  } catch (err) {
-    console.error(err);
-    alert("Errore di rete.");
-  }
-}
 
 async function deleteSingleNotification(id) {
   if (!confirm("Vuoi davvero eliminare questa notifica?")) return;

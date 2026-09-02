@@ -1,0 +1,275 @@
+<style>
+  .lc-interest-slot {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 35;
+  }
+
+  .lc-interest-slot--public {
+    right: 0.8rem;
+    bottom: 0.8rem;
+  }
+
+  .lc-interest-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.38rem 0.82rem 0.38rem 0.48rem;
+    gap: 0.34rem;
+    border: 1px solid rgba(203, 213, 225, 0.88);
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #334155;
+    box-shadow:
+      0 9px 24px rgba(15, 23, 42, 0.16),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: 0.74rem;
+    font-weight: 850;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      width 180ms ease,
+      padding 180ms ease,
+      transform 150ms ease,
+      background 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .lc-interest-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(147, 197, 253, 0.95);
+  }
+
+  .lc-interest-button:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.34);
+    outline-offset: 2px;
+  }
+
+  .lc-interest-button:active {
+    transform: scale(0.96);
+  }
+
+  .lc-interest-icon {
+    width: 31px;
+    height: 31px;
+    flex: 0 0 31px;
+    overflow: visible;
+  }
+
+  .lc-interest-house {
+    fill: rgba(255, 255, 255, 0.45);
+    stroke: #64748b;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: fill 180ms ease, stroke 180ms ease, stroke-width 180ms ease;
+  }
+
+  .lc-interest-heart {
+    fill: transparent;
+    stroke: #94a3b8;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    transform-origin: center;
+    transition: fill 180ms ease, stroke 180ms ease, transform 220ms ease;
+  }
+
+  .lc-interest-button.is-active {
+    width: 44px;
+    padding: 0;
+    border-color: rgba(96, 165, 250, 0.76);
+    background: rgba(239, 246, 255, 0.95);
+    box-shadow:
+      0 10px 25px rgba(37, 99, 235, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  }
+
+  .lc-interest-button.is-active .lc-interest-house {
+    fill: rgba(219, 234, 254, 0.68);
+    stroke: #2563eb;
+    stroke-width: 2.8;
+  }
+
+  .lc-interest-button.is-active .lc-interest-heart {
+    fill: #ec4899;
+    stroke: #db2777;
+    stroke-width: 1.8;
+    animation: lcInterestPop 260ms ease;
+  }
+
+  .lc-interest-button.is-active .lc-interest-label {
+    display: none;
+  }
+
+  .lc-interest-button.is-pending {
+    pointer-events: none;
+    opacity: 0.68;
+  }
+
+  @keyframes lcInterestPop {
+    0% { transform: scale(0.72); }
+    65% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lc-interest-button,
+    .lc-interest-house,
+    .lc-interest-heart {
+      transition: none;
+      animation: none !important;
+    }
+  }
+
+  .lc-interest-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    z-index: 11000;
+    width: min(92vw, 31rem);
+    transform: translateX(-50%);
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(191, 219, 254, 0.95);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.98);
+    color: #334155;
+    box-shadow: 0 20px 55px rgba(15, 23, 42, 0.24);
+    font-size: 0.86rem;
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  .lc-interest-toast a {
+    display: inline-flex;
+    margin-top: 0.55rem;
+    color: #1d4ed8;
+    font-weight: 850;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+</style>
+
+<script>
+(function () {
+  if (window.__lcInterestButtonsReady) return;
+  window.__lcInterestButtonsReady = true;
+
+  const csrfToken = {{ csrf_token()|tojson }};
+  const requestsInFlight = new Set();
+
+  function setState(button, active) {
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.setAttribute(
+      "aria-label",
+      active ? "Rimuovi interesse" : "Mi interessa"
+    );
+  }
+
+  function setAnnouncementState(announcementId, active) {
+    document.querySelectorAll(
+      `.js-interest-button[data-annuncio-id="${announcementId}"]`
+    ).forEach((button) => setState(button, active));
+  }
+
+  function setPending(announcementId, pending) {
+    document.querySelectorAll(
+      `.js-interest-button[data-annuncio-id="${announcementId}"]`
+    ).forEach((button) => {
+      button.classList.toggle("is-pending", pending);
+      button.disabled = pending;
+    });
+  }
+
+  function showMessage(message, actionLabel, actionUrl) {
+    document.querySelector(".lc-interest-toast")?.remove();
+
+    const toast = document.createElement("div");
+    toast.className = "lc-interest-toast";
+    toast.setAttribute("role", "alert");
+
+    const text = document.createElement("div");
+    text.textContent = message || "Operazione non riuscita.";
+    toast.appendChild(text);
+
+    if (actionLabel && actionUrl) {
+      const action = document.createElement("a");
+      action.href = actionUrl;
+      action.textContent = actionLabel;
+      toast.appendChild(action);
+    }
+
+    document.body.appendChild(toast);
+    window.setTimeout(() => toast.remove(), 8000);
+  }
+
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest(".js-interest-button");
+    if (!button) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const announcementId = Number(button.dataset.annuncioId || 0);
+    const endpoint = button.dataset.endpoint || "";
+
+    if (!announcementId || !endpoint || requestsInFlight.has(announcementId)) {
+      return;
+    }
+
+    const previousState = button.getAttribute("aria-pressed") === "true";
+    const requestedState = !previousState;
+
+    requestsInFlight.add(announcementId);
+    setAnnouncementState(announcementId, requestedState);
+    setPending(announcementId, true);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({ attivo: requestedState })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw Object.assign(
+          new Error(data.error || "Operazione non riuscita."),
+          { responseData: data }
+        );
+      }
+
+      setAnnouncementState(announcementId, data.attivo === true);
+
+    } catch (error) {
+      setAnnouncementState(announcementId, previousState);
+
+      const data = error.responseData || {};
+      showMessage(
+        error.message,
+        data.action_label,
+        data.action_url
+      );
+
+    } finally {
+      requestsInFlight.delete(announcementId);
+      setPending(announcementId, false);
+    }
+  });
+})();
+</script>
