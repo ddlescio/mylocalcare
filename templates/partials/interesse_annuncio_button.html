@@ -1,3 +1,49 @@
+{% macro interesse_annuncio_icon() %}
+  <svg
+    class="lc-interest-icon"
+    viewBox="0 0 64 64"
+    aria-hidden="true"
+    focusable="false">
+    <path
+      class="lc-interest-house-halo"
+      fill="none"
+      stroke="rgba(255,255,255,0.96)"
+      stroke-width="8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M8.5 29.2 32 8.4l23.5 20.8v24.1a4.7 4.7 0 0 1-4.7 4.7H13.2a4.7 4.7 0 0 1-4.7-4.7Z" />
+    <path
+      class="lc-interest-house house"
+      fill="rgba(239,246,255,0.96)"
+      stroke="#2563eb"
+      stroke-width="3.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M8.5 29.2 32 8.4l23.5 20.8v24.1a4.7 4.7 0 0 1-4.7 4.7H13.2a4.7 4.7 0 0 1-4.7-4.7Z" />
+    <path
+      class="lc-interest-heart-frame"
+      fill="#ffffff"
+      stroke="#1e3a8a"
+      stroke-width="4.4"
+      stroke-linejoin="round"
+      d="M32 54c-2.2-1.9-17-12.4-17-23.2 0-6.2 4.5-10.5 10.2-10.5 2.9 0 5.4 1.3 6.8 3.5 1.4-2.2 3.9-3.5 6.8-3.5 5.7 0 10.2 4.3 10.2 10.5C49 41.6 34.2 52.1 32 54Z" />
+    <path
+      class="lc-interest-heart heart"
+      fill="#ec4899"
+      stroke="#db2777"
+      stroke-width="1.8"
+      stroke-linejoin="round"
+      d="M32 50.5c-1.8-1.5-14-9.9-14-18.8 0-4.9 3.5-8.3 8-8.3 2.3 0 4.4 1 6 2.8 1.6-1.8 3.7-2.8 6-2.8 4.5 0 8 3.4 8 8.3 0 8.9-12.2 17.3-14 18.8Z" />
+    <path
+      class="lc-interest-heart-shine"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      d="M25.2 31.5c.7-1.6 2.4-2.4 3.9-1.8" />
+  </svg>
+{% endmacro %}
+
 {% macro interesse_annuncio_button(annuncio, variant='card') %}
   {% set utente_corrente = g.utente %}
   {% set proprietario_id = annuncio.get('utente_id') %}
@@ -29,18 +75,7 @@
           aria-label="Accedi per indicare il tuo interesse">
       {% endif %}
 
-        <svg
-          class="lc-interest-icon"
-          viewBox="0 0 48 48"
-          aria-hidden="true"
-          focusable="false">
-          <path
-            class="lc-interest-house"
-            d="M8.5 22.3 24 8.9l15.5 13.4v16.1a2.7 2.7 0 0 1-2.7 2.7H11.2a2.7 2.7 0 0 1-2.7-2.7Z" />
-          <path
-            class="lc-interest-heart"
-            d="M24 36.6c-1.1-1-8.1-6.5-8.1-12.1 0-3.3 2.3-5.6 5.3-5.6 1.7 0 3.2.8 4.1 2.1.9-1.3 2.4-2.1 4.1-2.1 3 0 5.3 2.3 5.3 5.6 0 5.6-7 11.1-8.1 12.1a1.9 1.9 0 0 1-2.6 0Z" />
-        </svg>
+        {{ interesse_annuncio_icon() }}
 
         <span class="lc-interest-label">Mi interessa</span>
 
