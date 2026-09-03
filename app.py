@@ -3130,6 +3130,22 @@ def admin_required(view_func):
 
         if request.endpoint not in stepup_exempt_endpoints and not admin_stepup_is_valid():
             next_url = request.full_path if request.query_string else request.path
+
+            # Le richieste asincrone non possono visualizzare correttamente la
+            # pagina HTML di sblocco restituita da un redirect. Comunichiamo al
+            # frontend che serve la passkey, così può aprire lo sblocco sul posto
+            # e ripetere l'operazione dopo la verifica.
+            if (
+                request.accept_mimetypes.best == "application/json"
+                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            ):
+                return jsonify({
+                    "ok": False,
+                    "code": "admin_stepup_required",
+                    "error": "Conferma la tua identità amministratore con la passkey.",
+                    "unlock_url": url_for("admin_unlock", next=next_url),
+                }), 401
+
             return redirect(url_for("admin_unlock", next=next_url))
 
         # 5) tutto ok → esegui la view

@@ -942,6 +942,35 @@
       </div>
 
       <div
+        id="admin-card-info-unlock"
+        class="admin-card-info-unlock hidden">
+        <span class="admin-card-info-unlock-icon" aria-hidden="true">
+          🔐
+        </span>
+
+        <strong>Conferma la tua identità</strong>
+        <p>
+          Lo sblocco amministratore è scaduto. Usa la passkey e i dettagli
+          dell’annuncio si apriranno automaticamente.
+        </p>
+
+        <button
+          type="button"
+          id="admin-card-info-unlock-button"
+          class="admin-card-info-unlock-button">
+          <span aria-hidden="true">🔐</span>
+          Sblocca con passkey
+        </button>
+
+        <p
+          id="admin-card-info-unlock-message"
+          class="admin-card-info-unlock-message hidden"
+          role="status"
+          aria-live="polite">
+        </p>
+      </div>
+
+      <div
         id="admin-card-info-content"
         class="hidden">
 
@@ -1240,6 +1269,82 @@
 
   .admin-card-info-error {
     color: #b91c1c;
+  }
+
+  .admin-card-info-unlock {
+    padding: 1.5rem 1.15rem;
+    border: 1px solid #dbeafe;
+    border-radius: 1.35rem;
+    background:
+      radial-gradient(circle at top, rgba(219, 234, 254, 0.72), transparent 58%),
+      linear-gradient(145deg, #ffffff, #f8fafc);
+    text-align: center;
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.08);
+  }
+
+  .admin-card-info-unlock-icon {
+    display: inline-flex;
+    width: 3rem;
+    height: 3rem;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+    border: 1px solid rgba(147, 197, 253, 0.75);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 1.25rem;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.1);
+  }
+
+  .admin-card-info-unlock > strong {
+    display: block;
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 880;
+  }
+
+  .admin-card-info-unlock > p:not(.admin-card-info-unlock-message) {
+    max-width: 27rem;
+    margin: 0.45rem auto 1rem;
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+
+  .admin-card-info-unlock-button {
+    display: inline-flex;
+    min-height: 2.8rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.15rem;
+    border: 1px solid #1d4ed8;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 850;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+  }
+
+  .admin-card-info-unlock-button:disabled {
+    cursor: wait;
+    opacity: 0.64;
+  }
+
+  .admin-card-info-unlock-message {
+    margin-top: 0.8rem;
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .admin-card-info-unlock-message.is-error {
+    color: #b91c1c;
+  }
+
+  .admin-card-info-unlock-message.is-success {
+    color: #15803d;
   }
 
   .admin-card-info-summary {
@@ -1804,6 +1909,8 @@
   let toggleInProgress = false;
   let adminInterestPeople = [];
   let adminShowAllInterests = false;
+  let pendingDetailsCard = null;
+  let adminUnlockInProgress = false;
 
   const modal = document.getElementById(
     "admin-card-info-modal"
@@ -1823,6 +1930,18 @@
 
   const errorBox = document.getElementById(
     "admin-card-info-error"
+  );
+
+  const unlockBox = document.getElementById(
+    "admin-card-info-unlock"
+  );
+
+  const unlockButton = document.getElementById(
+    "admin-card-info-unlock-button"
+  );
+
+  const unlockMessage = document.getElementById(
+    "admin-card-info-unlock-message"
   );
 
   const contentBox = document.getElementById(
@@ -1886,6 +2005,8 @@
   );
 
   const csrfToken = {{ session.get("csrf_token", "")|tojson }};
+  const passkeyOptionsUrl = {{ url_for('admin_passkey_auth_options')|tojson }};
+  const passkeyVerifyUrl = {{ url_for('admin_passkey_auth_verify')|tojson }};
 
   if (
     !modal
@@ -1893,6 +2014,9 @@
     || !closeButton
     || !loadingBox
     || !errorBox
+    || !unlockBox
+    || !unlockButton
+    || !unlockMessage
     || !contentBox
     || !titleBox
     || !dateBox
@@ -1916,6 +2040,204 @@
   function nascondi(elemento) {
     elemento.classList.add("hidden");
   }
+
+  function mostraMessaggioSblocco(messaggio, tipo = "") {
+    unlockMessage.textContent = messaggio || "";
+    unlockMessage.classList.toggle("hidden", !messaggio);
+    unlockMessage.classList.toggle("is-error", tipo === "error");
+    unlockMessage.classList.toggle("is-success", tipo === "success");
+  }
+
+  function bufferDaBase64url(base64url) {
+    const padding = "=".repeat((4 - base64url.length % 4) % 4);
+    const base64 = (base64url + padding)
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const raw = window.atob(base64);
+    const buffer = new ArrayBuffer(raw.length);
+    const view = new Uint8Array(buffer);
+
+    for (let i = 0; i < raw.length; i += 1) {
+      view[i] = raw.charCodeAt(i);
+    }
+
+    return buffer;
+  }
+
+  function base64urlDaBuffer(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+
+    for (let i = 0; i < bytes.byteLength; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+
+    return window.btoa(binary)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+  }
+
+  function preparaOpzioniPasskey(options) {
+    options.challenge = bufferDaBase64url(options.challenge);
+
+    if (Array.isArray(options.allowCredentials)) {
+      options.allowCredentials = options.allowCredentials.map((credential) => ({
+        ...credential,
+        id: bufferDaBase64url(credential.id)
+      }));
+    }
+
+    return options;
+  }
+
+  function serializzaPasskey(assertion) {
+    return {
+      id: assertion.id,
+      rawId: base64urlDaBuffer(assertion.rawId),
+      type: assertion.type,
+      response: {
+        authenticatorData: base64urlDaBuffer(
+          assertion.response.authenticatorData
+        ),
+        clientDataJSON: base64urlDaBuffer(
+          assertion.response.clientDataJSON
+        ),
+        signature: base64urlDaBuffer(assertion.response.signature),
+        userHandle: assertion.response.userHandle
+          ? base64urlDaBuffer(assertion.response.userHandle)
+          : null
+      }
+    };
+  }
+
+  async function rispostaJsonPasskey(response) {
+    const contentType = (
+      response.headers.get("content-type") || ""
+    ).toLowerCase();
+
+    if (!contentType.includes("application/json")) {
+      throw new Error(
+        "La sessione amministratore è terminata. Accedi di nuovo e riprova."
+      );
+    }
+
+    return response.json();
+  }
+
+  function mostraSbloccoAdmin(card) {
+    pendingDetailsCard = card;
+    adminUnlockInProgress = false;
+    unlockButton.disabled = false;
+    mostraMessaggioSblocco("");
+
+    nascondi(loadingBox);
+    nascondi(errorBox);
+    nascondi(contentBox);
+    mostra(unlockBox);
+
+    window.requestAnimationFrame(() => {
+      unlockButton.focus({ preventScroll: true });
+    });
+  }
+
+  async function sbloccaAdminConPasskey() {
+    if (adminUnlockInProgress) return;
+
+    if (!window.PublicKeyCredential || !navigator.credentials) {
+      mostraMessaggioSblocco(
+        "Questo browser non supporta le passkey.",
+        "error"
+      );
+      return;
+    }
+
+    adminUnlockInProgress = true;
+    unlockButton.disabled = true;
+    mostraMessaggioSblocco("Richiesta passkey in corso…");
+
+    try {
+      const optionsResponse = await fetch(passkeyOptionsUrl, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "X-CSRF-Token": csrfToken
+        }
+      });
+
+      const optionsData = await rispostaJsonPasskey(optionsResponse);
+
+      if (!optionsResponse.ok || optionsData.ok === false) {
+        throw new Error(
+          optionsData.error || "Impossibile avviare la passkey."
+        );
+      }
+
+      const assertion = await navigator.credentials.get({
+        publicKey: preparaOpzioniPasskey(optionsData)
+      });
+
+      if (!assertion) {
+        throw new Error("Verifica passkey annullata.");
+      }
+
+      const verifyResponse = await fetch(passkeyVerifyUrl, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken
+        },
+        body: JSON.stringify(serializzaPasskey(assertion))
+      });
+
+      const verifyData = await rispostaJsonPasskey(verifyResponse);
+
+      if (!verifyResponse.ok || verifyData.ok !== true) {
+        throw new Error(
+          verifyData.error || "Passkey non valida."
+        );
+      }
+
+      mostraMessaggioSblocco(
+        "Identità confermata. Apro i dettagli…",
+        "success"
+      );
+
+      const card = pendingDetailsCard;
+      adminUnlockInProgress = false;
+      unlockButton.disabled = false;
+
+      if (card && !modal.classList.contains("hidden")) {
+        await caricaDettagli(card);
+      }
+
+    } catch (errore) {
+      console.error(
+        "Errore sblocco passkey dal popup annuncio:",
+        errore
+      );
+
+      const messaggio = errore.name === "NotAllowedError"
+        ? "Verifica passkey annullata. Puoi riprovare quando vuoi."
+        : (errore.message || "Sblocco con passkey non riuscito.");
+
+      mostraMessaggioSblocco(
+        messaggio,
+        "error"
+      );
+      adminUnlockInProgress = false;
+      unlockButton.disabled = false;
+    }
+  }
+
+  unlockButton.addEventListener("click", (evento) => {
+    evento.preventDefault();
+    evento.stopPropagation();
+    sbloccaAdminConPasskey();
+  });
 
   function annullaPressione() {
     if (pressTimer) {
@@ -1989,15 +2311,20 @@
     interestShowAllButton.classList.add("hidden");
     adminInterestPeople = [];
     adminShowAllInterests = false;
+    adminUnlockInProgress = false;
+    unlockButton.disabled = false;
+    mostraMessaggioSblocco("");
     azzeraPulsantiServizi();
 
     mostra(loadingBox);
     nascondi(errorBox);
+    nascondi(unlockBox);
     nascondi(contentBox);
   }
 
   function mostraErrore() {
     nascondi(loadingBox);
+    nascondi(unlockBox);
     nascondi(contentBox);
     mostra(errorBox);
   }
@@ -2163,7 +2490,9 @@
 
     nascondi(loadingBox);
     nascondi(errorBox);
+    nascondi(unlockBox);
     mostra(contentBox);
+    pendingDetailsCard = null;
   }
 
   function mostraStatoServizio(
@@ -2363,6 +2692,7 @@
 
     if (!detailsUrl) return;
     currentDetailsUrl = detailsUrl;
+    pendingDetailsCard = card;
 
     if (currentRequest) {
       currentRequest.abort();
@@ -2370,7 +2700,9 @@
 
     currentRequest = new AbortController();
 
-    previousFocus = document.activeElement;
+    if (modal.classList.contains("hidden")) {
+      previousFocus = document.activeElement;
+    }
 
     preparaPopup();
 
@@ -2400,16 +2732,36 @@
         response.headers.get("content-type") || ""
       ).toLowerCase();
 
-      if (
-        !response.ok
-        || !contentType.includes("application/json")
-      ) {
+      if (response.redirected) {
+        const redirectPath = new URL(response.url).pathname;
+
+        if (redirectPath === "/admin/sblocca") {
+          mostraSbloccoAdmin(card);
+          return;
+        }
+      }
+
+      if (!contentType.includes("application/json")) {
         throw new Error(
           "Risposta dettagli non valida"
         );
       }
 
       const data = await response.json();
+
+      if (
+        response.status === 401
+        && data.code === "admin_stepup_required"
+      ) {
+        mostraSbloccoAdmin(card);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Dettagli non disponibili"
+        );
+      }
 
       if (!data.ok) {
         throw new Error(
@@ -2445,6 +2797,10 @@
     currentDetailsUrl = "";
     currentAnnuncioId = null;
     currentUtenteId = null;
+    pendingDetailsCard = null;
+    adminUnlockInProgress = false;
+    unlockButton.disabled = false;
+    mostraMessaggioSblocco("");
 
     document.body.classList.remove(
       "admin-card-info-open"
