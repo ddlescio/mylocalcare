@@ -6,7 +6,7 @@
   <details class="annuncio-owner-interests-details">
 
     <summary class="annuncio-info-card-header annuncio-owner-interests-header">
-      <div class="annuncio-info-card-icon annuncio-owner-interests-icon">
+      <div class="annuncio-info-card-icon annuncio-owner-interests-icon is-active">
         {{ interesse_annuncio_icon() }}
       </div>
 
@@ -175,6 +175,14 @@
   .annuncio-owner-interests-icon .lc-interest-icon {
     width: 2rem;
     height: 2rem;
+  }
+
+  .annuncio-owner-interests-icon.is-active .lc-interest-heart {
+    fill: #f23894;
+  }
+
+  .annuncio-owner-interests-icon.is-active .lc-interest-heart-frame {
+    stroke: #2444aa;
   }
 
   .annuncio-owner-interests-count {
