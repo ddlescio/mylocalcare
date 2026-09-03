@@ -1,0 +1,511 @@
+{% from "partials/interesse_annuncio_button.html" import interesse_annuncio_icon with context %}
+
+<section
+  id="sezione-interessati"
+  class="annuncio-info-card annuncio-owner-interests-card mt-5 mx-[calc(50%-50vw+1mm)] sm:mx-0">
+
+  <div class="annuncio-info-card-header annuncio-owner-interests-header">
+    <div class="annuncio-info-card-icon annuncio-owner-interests-icon">
+      {{ interesse_annuncio_icon() }}
+    </div>
+
+    <div class="annuncio-info-card-titlebox">
+      <span>Area privata</span>
+      <h2>Persone interessate</h2>
+      <p>
+        {% if interessati_annuncio %}
+          Contatta chi ha indicato interesse per questo annuncio
+        {% else %}
+          Qui compariranno le persone interessate al tuo annuncio
+        {% endif %}
+      </p>
+    </div>
+
+    <span class="annuncio-owner-interests-count" aria-label="Numero persone interessate">
+      {{ interessati_annuncio|length }}
+    </span>
+  </div>
+
+  <div class="annuncio-info-card-body">
+    {% if interessati_annuncio %}
+      <div class="annuncio-owner-interests-list">
+        {% for persona in interessati_annuncio %}
+          <article class="annuncio-owner-interest-person">
+            <a
+              href="{{ persona.profilo_url }}"
+              class="annuncio-owner-interest-avatar-link"
+              aria-label="Apri il profilo di {{ persona.username or persona.nome or 'questa persona' }}">
+              <img
+                src="{{ persona.avatar_url }}"
+                alt=""
+                class="annuncio-owner-interest-avatar"
+                loading="lazy">
+            </a>
+
+            <div class="annuncio-owner-interest-main">
+              <div class="annuncio-owner-interest-heading">
+                <div class="annuncio-owner-interest-identity">
+                  <a href="{{ persona.profilo_url }}">
+                    <strong>
+                      {% if persona.username %}@{{ persona.username }}{% else %}{{ persona.nome or 'Utente MyLocalCare' }}{% endif %}
+                    </strong>
+                  </a>
+
+                  {% if persona.nome and persona.username %}
+                    <span>{{ persona.nome }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="annuncio-owner-interest-flags">
+                  <span class="is-active">Interessato</span>
+                  {% if persona.chat_aperta_da_interesse %}
+                    <span class="has-chat">Chat avviata</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <p class="annuncio-owner-interest-zone">📍 {{ persona.zona }}</p>
+              <p class="annuncio-owner-interest-bio">{{ persona.profilo_breve }}</p>
+
+              <div class="annuncio-owner-interest-footer">
+                <small>Ultima conferma: {{ persona.interessato_dal | fmt_it }}</small>
+
+                <div class="annuncio-owner-interest-actions">
+                  <a href="{{ persona.profilo_url }}" class="is-secondary">
+                    Profilo
+                  </a>
+
+                  {% set canali = namespace(telefono=None, email=None) %}
+                  {% for contatto in persona.contatti %}
+                    {% if contatto.tipo == 'telefono' %}
+                      {% set canali.telefono = contatto %}
+                    {% elif contatto.tipo == 'email' %}
+                      {% set canali.email = contatto %}
+                    {% endif %}
+                  {% endfor %}
+
+                  {% if canali.telefono %}
+                    {% set numero_whatsapp = canali.telefono.label
+                      | replace(' ', '')
+                      | replace('+', '')
+                      | replace('-', '')
+                      | replace('(', '')
+                      | replace(')', '') %}
+
+                    <a
+                      href="https://wa.me/{{ numero_whatsapp }}"
+                      target="_blank"
+                      rel="noopener"
+                      class="is-contact-icon is-whatsapp"
+                      title="WhatsApp"
+                      aria-label="Scrivi su WhatsApp a {{ persona.username or persona.nome or 'questa persona' }}">
+                      <svg viewBox="0 0 32 32" aria-hidden="true">
+                        <path d="M16 2.667C8.64 2.667 2.667 8.64 2.667 16c0 2.56.747 5.04 2.133 7.147L2.667 29.333l6.347-2.08A13.27 13.27 0 0 0 16 29.333c7.36 0 13.333-5.973 13.333-13.333C29.333 8.64 23.36 2.667 16 2.667zm0 24.053c-2.133 0-4.213-.587-6.027-1.707l-.427-.253-3.76 1.227 1.253-3.653-.28-.44A10.69 10.69 0 0 1 5.333 16c0-5.893 4.773-10.667 10.667-10.667S26.667 10.107 26.667 16 21.893 26.72 16 26.72z"/>
+                        <path d="M21.76 18.987c-.293-.147-1.76-.867-2.027-.973-.267-.107-.453-.147-.64.147-.187.293-.733.973-.893 1.173-.16.2-.333.227-.627.08-.293-.147-1.24-.453-2.36-1.453-.867-.773-1.453-1.733-1.627-2.027-.173-.293-.013-.453.133-.6.133-.133.293-.333.44-.507.147-.173.2-.293.293-.48.093-.187.053-.347-.027-.493-.08-.147-.64-1.547-.88-2.12-.233-.56-.467-.48-.64-.493h-.547c-.187 0-.493.067-.747.347-.253.28-.973.947-.973 2.307 0 1.36 1 2.667 1.133 2.853.147.187 1.96 3 4.747 4.2.667.287 1.187.46 1.6.587.673.213 1.287.183 1.773.113.54-.08 1.76-.72 2.013-1.413.253-.693.253-1.293.173-1.413-.08-.12-.267-.187-.56-.333z"/>
+                      </svg>
+                    </a>
+
+                    <a
+                      href="{{ canali.telefono.url }}"
+                      class="is-contact-icon is-neutral"
+                      title="Chiama"
+                      aria-label="Chiama {{ persona.username or persona.nome or 'questa persona' }}">
+                      <span aria-hidden="true">📞</span>
+                    </a>
+                  {% endif %}
+
+                  {% if canali.email %}
+                    <a
+                      href="{{ canali.email.url }}"
+                      class="is-contact-icon is-neutral"
+                      title="Email"
+                      aria-label="Invia un’email a {{ persona.username or persona.nome or 'questa persona' }}">
+                      <span aria-hidden="true">✉️</span>
+                    </a>
+                  {% endif %}
+
+                  <a
+                    href="{{ persona.chat_url }}"
+                    class="is-primary js-private-interest-chat"
+                    data-endpoint="{{ url_for('apri_chat_da_interesse_route', annuncio_id=annuncio['id'], utente_interessato_id=persona.utente_id) }}">
+                    <span aria-hidden="true">💬</span>
+                    <span>Scrivi in chat</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="annuncio-owner-interests-empty">
+        <span class="annuncio-owner-interests-empty-icon">♡</span>
+        <strong>Ancora nessun interesse</strong>
+        <p>Quando qualcuno premerà “Mi interessa”, troverai qui il suo profilo e potrai contattarlo.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<style>
+  .annuncio-owner-interests-card {
+    border-color: rgba(191, 219, 254, 0.95);
+    background:
+      radial-gradient(circle at 96% 2%, rgba(244, 114, 182, 0.11), transparent 31%),
+      linear-gradient(145deg, #ffffff, #f8fbff);
+  }
+
+  .annuncio-owner-interests-header {
+    align-items: center;
+  }
+
+  .annuncio-owner-interests-header .annuncio-info-card-titlebox {
+    flex: 1;
+  }
+
+  .annuncio-owner-interests-icon .lc-interest-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .annuncio-owner-interests-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.35rem;
+    height: 2.35rem;
+    padding: 0 0.65rem;
+    border: 1px solid rgba(147, 197, 253, 0.9);
+    border-radius: 9999px;
+    background: rgba(239, 246, 255, 0.92);
+    color: #1d4ed8;
+    font-size: 0.9rem;
+    font-weight: 900;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .annuncio-owner-interests-list {
+    display: grid;
+    gap: 0.8rem;
+    max-height: 42rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.2rem;
+  }
+
+  .annuncio-owner-interest-person {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.2rem;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
+  }
+
+  .annuncio-owner-interest-avatar-link {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 1rem;
+    padding: 2px;
+    background: linear-gradient(145deg, #60a5fa, #c084fc, #f472b6);
+  }
+
+  .annuncio-owner-interest-avatar {
+    width: 100%;
+    height: 100%;
+    border: 2px solid #ffffff;
+    border-radius: 0.88rem;
+    object-fit: cover;
+    background: #f1f5f9;
+  }
+
+  .annuncio-owner-interest-main {
+    min-width: 0;
+  }
+
+  .annuncio-owner-interest-heading,
+  .annuncio-owner-interest-footer,
+  .annuncio-owner-interest-actions,
+  .annuncio-owner-interest-flags {
+    display: flex;
+    align-items: center;
+  }
+
+  .annuncio-owner-interest-heading,
+  .annuncio-owner-interest-footer {
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+
+  .annuncio-owner-interest-identity {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+
+  .annuncio-owner-interest-identity a {
+    min-width: 0;
+    color: #0f172a;
+    text-decoration: none;
+  }
+
+  .annuncio-owner-interest-identity strong {
+    display: block;
+    overflow: hidden;
+    font-size: 0.9rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .annuncio-owner-interest-identity span {
+    color: #64748b;
+    font-size: 0.75rem;
+  }
+
+  .annuncio-owner-interest-flags {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+
+  .annuncio-owner-interest-flags span {
+    padding: 0.25rem 0.52rem;
+    border-radius: 9999px;
+    font-size: 0.63rem;
+    font-weight: 850;
+  }
+
+  .annuncio-owner-interest-flags .is-active {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .annuncio-owner-interest-flags .has-chat {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .annuncio-owner-interest-zone {
+    margin-top: 0.32rem;
+    color: #475569;
+    font-size: 0.74rem;
+    font-weight: 720;
+  }
+
+  .annuncio-owner-interest-bio {
+    display: -webkit-box;
+    margin-top: 0.38rem;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 0.77rem;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .annuncio-owner-interest-footer {
+    align-items: flex-end;
+    margin-top: 0.75rem;
+  }
+
+  .annuncio-owner-interest-footer small {
+    color: #94a3b8;
+    font-size: 0.66rem;
+  }
+
+  .annuncio-owner-interest-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
+
+  .annuncio-owner-interest-actions a {
+    display: inline-flex;
+    min-height: 2rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.72rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 830;
+    text-decoration: none;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .annuncio-owner-interest-actions .is-contact-icon {
+    width: 2.12rem;
+    min-width: 2.12rem;
+    height: 2.12rem;
+    min-height: 2.12rem;
+    flex: 0 0 2.12rem;
+    padding: 0;
+  }
+
+  .annuncio-owner-interest-actions .is-contact-icon svg {
+    width: 1rem;
+    height: 1rem;
+    fill: currentColor;
+  }
+
+  .annuncio-owner-interest-actions .is-contact-icon span {
+    font-size: 0.88rem;
+    line-height: 1;
+  }
+
+  .annuncio-owner-interest-actions .is-whatsapp {
+    border-color: rgba(34, 197, 94, 0.32);
+    background: #25d366;
+    color: #ffffff;
+    box-shadow:
+      0 0 0 1px rgba(34, 197, 94, 0.16),
+      0 7px 15px rgba(34, 197, 94, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .annuncio-owner-interest-actions .is-neutral {
+    border-color: rgba(203, 213, 225, 0.76);
+    background: linear-gradient(180deg, #ffffff, #f1f5f9);
+    color: #475569;
+    box-shadow:
+      0 0 0 1px rgba(147, 197, 253, 0.18),
+      0 6px 14px rgba(37, 99, 235, 0.07),
+      inset 0 1px 0 #ffffff;
+  }
+
+  .annuncio-owner-interest-actions a:hover {
+    transform: translateY(-1px);
+  }
+
+  .annuncio-owner-interest-actions .is-secondary {
+    background: #ffffff;
+    color: #334155;
+  }
+
+  .annuncio-owner-interest-actions .is-primary {
+    gap: 0.34rem;
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 7px 16px rgba(37, 99, 235, 0.18);
+  }
+
+  .annuncio-owner-interests-empty {
+    display: flex;
+    min-height: 11rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.4rem;
+    border: 1px dashed #bfdbfe;
+    border-radius: 1.25rem;
+    background: rgba(239, 246, 255, 0.58);
+    text-align: center;
+  }
+
+  .annuncio-owner-interests-empty-icon {
+    color: #ec4899;
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .annuncio-owner-interests-empty strong {
+    margin-top: 0.55rem;
+    color: #1e293b;
+    font-size: 0.93rem;
+    font-weight: 900;
+  }
+
+  .annuncio-owner-interests-empty p {
+    max-width: 26rem;
+    margin-top: 0.3rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 639px) {
+    .annuncio-owner-interests-count {
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0 0.5rem;
+      font-size: 0.78rem;
+    }
+
+    .annuncio-owner-interest-person {
+      grid-template-columns: 2.8rem minmax(0, 1fr);
+      gap: 0.7rem;
+      padding: 0.82rem;
+    }
+
+    .annuncio-owner-interest-avatar-link {
+      width: 2.8rem;
+      height: 2.8rem;
+      border-radius: 0.9rem;
+    }
+
+    .annuncio-owner-interest-heading,
+    .annuncio-owner-interest-footer {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .annuncio-owner-interest-flags,
+    .annuncio-owner-interest-actions {
+      justify-content: flex-start;
+    }
+
+    .annuncio-owner-interest-footer small {
+      order: 2;
+    }
+  }
+</style>
+
+<script>
+(function () {
+  const section = document.getElementById("sezione-interessati");
+  if (!section) return;
+
+  const csrfToken = {{ csrf_token()|tojson }};
+
+  section.addEventListener("click", async (event) => {
+    const link = event.target.closest(".js-private-interest-chat");
+    if (!link) return;
+
+    event.preventDefault();
+
+    if (link.dataset.pending === "1") return;
+    link.dataset.pending = "1";
+    link.setAttribute("aria-busy", "true");
+
+    try {
+      const response = await fetch(link.dataset.endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Impossibile aprire la chat.");
+      }
+
+      window.location.href = data.chat_url || link.href;
+    } catch (error) {
+      window.alert(error.message || "Impossibile aprire la chat.");
+      link.dataset.pending = "0";
+      link.removeAttribute("aria-busy");
+    }
+  });
+})();
+</script>

@@ -23616,11 +23616,15 @@ def visualizza_annuncio_pubblico(id):
     annuncio = dict(row)
     annuncio["tipo_annuncio"] = (annuncio.get("tipo_annuncio") or "").lower()
     annuncio["interesse_attivo"] = False
+    proprietario_corrente = bool(
+        g.utente
+        and int(g.utente["id"]) == int(annuncio["utente_id"])
+    )
 
     if (
         g.utente
         and g.utente["ruolo"] != "admin"
-        and int(g.utente["id"]) != int(annuncio["utente_id"])
+        and not proprietario_corrente
     ):
         c.execute(sql("""
             SELECT 1
@@ -23634,8 +23638,19 @@ def visualizza_annuncio_pubblico(id):
 
     # 🔒 Annuncio non approvato → visibile solo al proprietario
     if annuncio["stato"] != "approvato":
-        if not g.utente or g.utente["id"] != annuncio["utente_id"]:
+        if not proprietario_corrente:
             return "Annuncio non ancora pubblicato.", 403
+
+    # La lista è caricata solo nella vista privata del proprietario.
+    # In questo modo nomi, contatti e stato delle chat non finiscono mai
+    # nell'HTML pubblico dell'annuncio.
+    interessati_annuncio = []
+
+    if proprietario_corrente:
+        interessati_annuncio = _elenca_interessati_annuncio(
+            conn,
+            id,
+        )
 
     # 📍 Quartieri associati all'annuncio
     quartieri_annuncio = []
@@ -23706,6 +23721,8 @@ def visualizza_annuncio_pubblico(id):
         annuncio=annuncio,
         quartieri_annuncio=quartieri_annuncio,
         contatti_attivi=contatti_attivi,
+        proprietario_corrente=proprietario_corrente,
+        interessati_annuncio=interessati_annuncio,
         back_url=back_url
     )
 

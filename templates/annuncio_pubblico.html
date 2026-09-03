@@ -274,6 +274,10 @@
   </section>
   {% endif %}
 
+  {% if proprietario_corrente %}
+    {% include "partials/interessati_annuncio_privato.html" %}
+  {% endif %}
+
   <!-- 💬 AREA CONTATTO CHAT -->
   <div id="sezione-contatto" class="annuncio-contact-section mt-6 mx-[calc(50%-50vw+1mm)] sm:mx-0 scroll-mt-28">
     {% if g.utente and g.utente['id'] != annuncio['utente_id'] %}
