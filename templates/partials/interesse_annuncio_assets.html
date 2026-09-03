@@ -328,6 +328,15 @@
       }
 
       setAnnouncementState(announcementId, data.attivo === true);
+      document.dispatchEvent(new CustomEvent(
+        "localcare:interesse-annuncio",
+        {
+          detail: {
+            annuncioId: announcementId,
+            attivo: data.attivo === true
+          }
+        }
+      ));
 
     } catch (error) {
       setAnnouncementState(announcementId, previousState);

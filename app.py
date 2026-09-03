@@ -20223,6 +20223,25 @@ def cerca():
         and utente_corrente["ruolo"] == "admin"
     )
 
+    solo_interessi_richiesto = (
+        request.args.get("solo_interessi", "").strip() == "1"
+    )
+
+    if solo_interessi_richiesto and not utente_corrente:
+        return redirect(url_for(
+            "login",
+            next=request.full_path,
+        ))
+
+    puo_filtrare_interessi = bool(
+        utente_corrente
+        and not cerca_admin_mode
+    )
+    solo_interessi = bool(
+        solo_interessi_richiesto
+        and puo_filtrare_interessi
+    )
+
     raw_cat = request.args.get("categoria", "").strip()
     cat_slug = to_slug(raw_cat)
 
@@ -20581,6 +20600,18 @@ def cerca():
 
     params_vetrina = list(province_query)
 
+    if solo_interessi:
+        query_vetrina += """
+            AND EXISTS (
+                SELECT 1
+                FROM interessi_annunci interesse_filtro
+                WHERE interesse_filtro.annuncio_id = a.id
+                  AND interesse_filtro.utente_interessato_id = ?
+                  AND interesse_filtro.attivo = TRUE
+            )
+        """
+        params_vetrina.append(int(utente_corrente["id"]))
+
     if json_key:
         query_vetrina += " AND a.categoria = ?"
         params_vetrina.append(json_key)
@@ -20720,6 +20751,18 @@ def cerca():
     """
 
     params = list(province_query)
+
+    if solo_interessi:
+        query_annunci += """
+              AND EXISTS (
+                  SELECT 1
+                  FROM interessi_annunci interesse_filtro
+                  WHERE interesse_filtro.annuncio_id = a.id
+                    AND interesse_filtro.utente_interessato_id = ?
+                    AND interesse_filtro.attivo = TRUE
+              )
+        """
+        params.append(int(utente_corrente["id"]))
 
     if json_key:
         query_annunci += " AND a.categoria = ?"
@@ -20936,6 +20979,8 @@ def cerca():
         comune_quartieri_iniziale=comune_quartieri_iniziale,
         provincia_quartieri_iniziale=provincia_quartieri_iniziale,
         cerca_admin_mode=cerca_admin_mode,
+        puo_filtrare_interessi=puo_filtrare_interessi,
+        solo_interessi=solo_interessi,
     )
 
 @app.route("/notifica/<int:id>/apri")
