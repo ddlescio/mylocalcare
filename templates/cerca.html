@@ -2,7 +2,7 @@
 {% set body_class = "page-cerca" %}
 
 {% block content %}
-{% from "partials/interesse_annuncio_button.html" import interesse_annuncio_button, interesse_annuncio_icon with context %}
+{% from "partials/interesse_annuncio_button.html" import admin_interesse_annuncio_badge, interesse_annuncio_button, interesse_annuncio_icon with context %}
 
 {% if categoria %}
 
@@ -449,7 +449,11 @@
               </span>
             {% endif %}
 
-            {{ interesse_annuncio_button(a, 'vetrina-mobile') }}
+            {% if cerca_admin_mode %}
+              {{ admin_interesse_annuncio_badge(a, 'vetrina-mobile') }}
+            {% else %}
+              {{ interesse_annuncio_button(a, 'vetrina-mobile') }}
+            {% endif %}
           </div>
 
           {% if a.get('has_urgente', 0) == 1 %}
@@ -585,7 +589,11 @@
             </span>
           {% endif %}
 
-          {{ interesse_annuncio_button(a, 'vetrina-desktop') }}
+          {% if cerca_admin_mode %}
+            {{ admin_interesse_annuncio_badge(a, 'vetrina-desktop') }}
+          {% else %}
+            {{ interesse_annuncio_button(a, 'vetrina-desktop') }}
+          {% endif %}
         </div>
 
         <div class="vetrina-ticket-desktop-body">
@@ -766,7 +774,11 @@
             </div>
           {% endif %}
 
-          {{ interesse_annuncio_button(a, 'card') }}
+          {% if cerca_admin_mode %}
+            {{ admin_interesse_annuncio_badge(a, 'card') }}
+          {% else %}
+            {{ interesse_annuncio_button(a, 'card') }}
+          {% endif %}
         </div>
 
         <div class="mini-card-dati">
@@ -978,6 +990,27 @@
 
         </details>
 
+        <div class="admin-card-info-interest-section">
+          <div class="admin-card-info-interest-heading">
+            <span class="admin-card-info-interest-title">
+              {{ interesse_annuncio_icon() }}
+              Interessi annuncio ·
+              <span id="admin-card-info-interest-count">0</span>
+            </span>
+          </div>
+
+          <div
+            id="admin-card-info-interest-list"
+            class="admin-card-info-interest-list">
+          </div>
+
+          <button
+            type="button"
+            id="admin-card-info-interest-show-all"
+            class="admin-card-info-interest-show-all hidden">
+          </button>
+        </div>
+
         <div class="admin-card-info-services">
 
           <div class="admin-card-info-services-title">
@@ -1060,27 +1093,6 @@
             aria-live="polite">
           </div>
 
-        </div>
-
-        <div class="admin-card-info-interest-section">
-          <div class="admin-card-info-interest-heading">
-            <span class="admin-card-info-interest-title">
-              {{ interesse_annuncio_icon() }}
-              Interessi annuncio ·
-              <span id="admin-card-info-interest-count">0</span>
-            </span>
-          </div>
-
-          <div
-            id="admin-card-info-interest-list"
-            class="admin-card-info-interest-list">
-          </div>
-
-          <button
-            type="button"
-            id="admin-card-info-interest-show-all"
-            class="admin-card-info-interest-show-all hidden">
-          </button>
         </div>
 
       </div>

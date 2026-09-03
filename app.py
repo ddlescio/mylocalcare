@@ -2298,7 +2298,7 @@ def get_admin_security_version(user_id):
     cur = get_cursor(conn)
 
     try:
-        cur.execute(sql("""
+        cur.execute(sql(f"""
             SELECT COALESCE(admin_security_version, 0) AS admin_security_version
             FROM utenti
             WHERE id = ?
@@ -5309,37 +5309,78 @@ def admin_dashboard():
 @app.route("/admin/interessi")
 @admin_required
 def admin_interessi():
-    """Panoramica amministrativa della funzione Mi interessa."""
+    """Classifica amministrativa della funzione Mi interessa."""
 
-    stato = (request.args.get("stato") or "tutti").strip().lower()
-    if stato not in {"tutti", "attivi", "disattivati"}:
-        stato = "tutti"
-
-    ricerca = (request.args.get("q") or "").strip()
     conn = get_db_connection()
     cur = get_cursor(conn)
+    chat_relazione_sql = """
+        (
+            i.chat_opened_at IS NOT NULL
+            OR EXISTS (
+                SELECT 1
+                FROM messaggi_chat messaggio_chat
+                WHERE (
+                    messaggio_chat.mittente_id = a.utente_id
+                    AND messaggio_chat.destinatario_id = i.utente_interessato_id
+                ) OR (
+                    messaggio_chat.mittente_id = i.utente_interessato_id
+                    AND messaggio_chat.destinatario_id = a.utente_id
+                )
+            )
+        )
+    """
 
     try:
-        cur.execute(sql("""
+        cur.execute(sql(f"""
             SELECT
-                COUNT(*) AS totale,
-                SUM(CASE WHEN attivo = TRUE THEN 1 ELSE 0 END) AS attivi,
-                SUM(CASE WHEN attivo = FALSE THEN 1 ELSE 0 END) AS disattivati,
-                COUNT(DISTINCT utente_interessato_id) AS utenti_coinvolti,
-                COUNT(DISTINCT annuncio_id) AS annunci_coinvolti,
+                SUM(CASE
+                    WHEN i.attivo = TRUE
+                     AND a.stato = 'approvato'
+                    THEN 1
+                    ELSE 0
+                END) AS attivi,
+                SUM(CASE
+                    WHEN i.attivo = FALSE THEN 1
+                    ELSE 0
+                END) AS disattivati,
+                COUNT(DISTINCT CASE
+                    WHEN i.attivo = TRUE
+                     AND a.stato = 'approvato'
+                    THEN i.annuncio_id
+                    ELSE NULL
+                END) AS annunci_coinvolti,
                 SUM(
                     CASE
-                        WHEN chat_opened_at IS NOT NULL THEN 1
+                        WHEN i.attivo = TRUE
+                         AND a.stato = 'approvato'
+                         AND {chat_relazione_sql}
+                        THEN 1
                         ELSE 0
                     END
                 ) AS chat_aperte,
                 SUM(
                     CASE
-                        WHEN ultima_notifica_at IS NOT NULL THEN 1
+                        WHEN i.ultima_notifica_at IS NOT NULL THEN 1
                         ELSE 0
                     END
                 ) AS notifiche_inviate
-            FROM interessi_annunci
+            FROM interessi_annunci i
+            JOIN annunci a
+              ON a.id = i.annuncio_id
+            JOIN utenti interessato
+              ON interessato.id = i.utente_interessato_id
+            JOIN utenti proprietario
+              ON proprietario.id = a.utente_id
+            WHERE interessato.attivo = 1
+              AND COALESCE(interessato.sospeso, 0) = 0
+              AND COALESCE(interessato.disattivato_admin, 0) = 0
+              AND COALESCE(interessato.eliminato, 0) = 0
+              AND COALESCE(interessato.ruolo, 'user') <> 'admin'
+              AND proprietario.attivo = 1
+              AND COALESCE(proprietario.sospeso, 0) = 0
+              AND COALESCE(proprietario.disattivato_admin, 0) = 0
+              AND COALESCE(proprietario.eliminato, 0) = 0
+              AND COALESCE(proprietario.ruolo, 'user') <> 'admin'
         """))
 
         stats_row = cur.fetchone()
@@ -5349,32 +5390,35 @@ def admin_interessi():
                 return 0
             return int(stats_row[nome] or 0)
 
-        totale = valore_statistica("totale")
+        interessi_attivi = valore_statistica("attivi")
         chat_aperte = valore_statistica("chat_aperte")
 
         statistiche = {
-            "totale": totale,
-            "attivi": valore_statistica("attivi"),
+            "attivi": interessi_attivi,
             "disattivati": valore_statistica("disattivati"),
-            "utenti_coinvolti": valore_statistica("utenti_coinvolti"),
             "annunci_coinvolti": valore_statistica("annunci_coinvolti"),
             "chat_aperte": chat_aperte,
             "notifiche_inviate": valore_statistica("notifiche_inviate"),
             "conversione_chat": round(
-                (chat_aperte / totale * 100) if totale else 0,
+                (
+                    chat_aperte / interessi_attivi * 100
+                    if interessi_attivi
+                    else 0
+                ),
                 1,
             ),
         }
 
-        cur.execute(sql("""
+        cur.execute(sql(f"""
             SELECT
                 i.annuncio_id,
                 a.titolo,
+                a.utente_id AS proprietario_id,
                 proprietario.username AS proprietario_username,
                 COUNT(*) AS interessi_attivi,
                 SUM(
                     CASE
-                        WHEN i.chat_opened_at IS NOT NULL THEN 1
+                        WHEN {chat_relazione_sql} THEN 1
                         ELSE 0
                     END
                 ) AS chat_aperte,
@@ -5384,83 +5428,135 @@ def admin_interessi():
               ON a.id = i.annuncio_id
             JOIN utenti proprietario
               ON proprietario.id = a.utente_id
+            JOIN utenti interessato
+              ON interessato.id = i.utente_interessato_id
             WHERE i.attivo = TRUE
+              AND a.stato = 'approvato'
+              AND interessato.attivo = 1
+              AND COALESCE(interessato.sospeso, 0) = 0
+              AND COALESCE(interessato.disattivato_admin, 0) = 0
+              AND COALESCE(interessato.eliminato, 0) = 0
+              AND COALESCE(interessato.ruolo, 'user') <> 'admin'
+              AND proprietario.attivo = 1
+              AND COALESCE(proprietario.sospeso, 0) = 0
+              AND COALESCE(proprietario.disattivato_admin, 0) = 0
+              AND COALESCE(proprietario.eliminato, 0) = 0
+              AND COALESCE(proprietario.ruolo, 'user') <> 'admin'
             GROUP BY
                 i.annuncio_id,
                 a.titolo,
+                a.utente_id,
                 proprietario.username
             ORDER BY
                 COUNT(*) DESC,
+                chat_aperte DESC,
                 MAX(i.updated_at) DESC
-            LIMIT 10
         """))
         annunci_piu_interessanti = [
             dict(record)
             for record in cur.fetchall()
         ]
 
-        condizioni = []
-        parametri = []
+        dettagli_per_annuncio = {
+            int(annuncio["annuncio_id"]): []
+            for annuncio in annunci_piu_interessanti
+        }
 
-        if stato == "attivi":
-            condizioni.append("i.attivo = TRUE")
-        elif stato == "disattivati":
-            condizioni.append("i.attivo = FALSE")
+        if dettagli_per_annuncio:
+            annunci_ids = list(dettagli_per_annuncio)
+            placeholders = ", ".join("?" for _ in annunci_ids)
 
-        if ricerca:
-            condizioni.append("""
-                (
-                    LOWER(COALESCE(interessato.username, '')) LIKE ?
-                    OR LOWER(COALESCE(proprietario.username, '')) LIKE ?
-                    OR LOWER(COALESCE(a.titolo, '')) LIKE ?
-                    OR CAST(a.id AS TEXT) LIKE ?
+            cur.execute(sql(f"""
+                SELECT
+                    i.annuncio_id,
+                    i.utente_interessato_id,
+                    i.updated_at,
+                    i.chat_opened_at,
+                    interessato.username,
+                    interessato.nome,
+                    interessato.cognome,
+                    interessato.citta,
+                    interessato.foto_profilo,
+                    COALESCE((
+                        SELECT COUNT(m.id)
+                        FROM messaggi_chat m
+                        WHERE (
+                            m.mittente_id = a.utente_id
+                            AND m.destinatario_id = i.utente_interessato_id
+                        ) OR (
+                            m.mittente_id = i.utente_interessato_id
+                            AND m.destinatario_id = a.utente_id
+                        )
+                    ), 0) AS numero_messaggi
+                FROM interessi_annunci i
+                JOIN annunci a
+                  ON a.id = i.annuncio_id
+                JOIN utenti interessato
+                  ON interessato.id = i.utente_interessato_id
+                WHERE i.attivo = TRUE
+                  AND i.annuncio_id IN ({placeholders})
+                  AND interessato.attivo = 1
+                  AND COALESCE(interessato.sospeso, 0) = 0
+                  AND COALESCE(interessato.disattivato_admin, 0) = 0
+                  AND COALESCE(interessato.eliminato, 0) = 0
+                  AND COALESCE(interessato.ruolo, 'user') <> 'admin'
+                ORDER BY i.updated_at DESC, i.id DESC
+            """), tuple(annunci_ids))
+
+            for record in cur.fetchall():
+                persona = dict(record)
+                annuncio_id = int(persona["annuncio_id"])
+                utente_id = int(persona["utente_interessato_id"])
+                nome_completo = " ".join(
+                    parte.strip()
+                    for parte in (
+                        persona.get("nome") or "",
+                        persona.get("cognome") or "",
+                    )
+                    if parte.strip()
                 )
-            """)
-            termine = f"%{ricerca.lower()}%"
-            parametri.extend((termine, termine, termine, termine))
 
-        where_sql = ""
-        if condizioni:
-            where_sql = "WHERE " + " AND ".join(condizioni)
+                numero_messaggi = int(
+                    persona.get("numero_messaggi") or 0
+                )
 
-        cur.execute(sql(f"""
-            SELECT
-                i.id,
-                i.annuncio_id,
-                i.utente_interessato_id,
-                i.attivo,
-                i.created_at,
-                i.updated_at,
-                i.disattivato_at,
-                i.ultima_notifica_at,
-                i.chat_opened_at,
-                interessato.username AS interessato_username,
-                interessato.nome AS interessato_nome,
-                interessato.cognome AS interessato_cognome,
-                a.titolo AS annuncio_titolo,
-                a.stato AS annuncio_stato,
-                proprietario.id AS proprietario_id,
-                proprietario.username AS proprietario_username
-            FROM interessi_annunci i
-            JOIN utenti interessato
-              ON interessato.id = i.utente_interessato_id
-            JOIN annunci a
-              ON a.id = i.annuncio_id
-            JOIN utenti proprietario
-              ON proprietario.id = a.utente_id
-            {where_sql}
-            ORDER BY i.updated_at DESC, i.id DESC
-            LIMIT 300
-        """), tuple(parametri))
-        attivita = [dict(record) for record in cur.fetchall()]
+                dettagli_per_annuncio[annuncio_id].append({
+                    "utente_id": utente_id,
+                    "username": (persona.get("username") or "").strip(),
+                    "nome": nome_completo,
+                    "citta": (
+                        persona.get("citta")
+                        or "Zona non indicata"
+                    ).strip(),
+                    "avatar_url": url_for(
+                        "static",
+                        filename=(
+                            persona.get("foto_profilo")
+                            or "img/user_default.png"
+                        ),
+                    ),
+                    "profilo_url": url_for(
+                        "profilo_pubblico",
+                        id=utente_id,
+                    ),
+                    "interessato_dal": persona.get("updated_at"),
+                    "chat_aperta": bool(
+                        persona.get("chat_opened_at")
+                        or numero_messaggi > 0
+                    ),
+                    "numero_messaggi": numero_messaggi,
+                })
+
+        for annuncio in annunci_piu_interessanti:
+            annuncio["interessati"] = dettagli_per_annuncio.get(
+                int(annuncio["annuncio_id"]),
+                [],
+            )
 
         return render_template(
             "admin_interessi.html",
             statistiche=statistiche,
             annunci_piu_interessanti=annunci_piu_interessanti,
-            attivita=attivita,
-            stato=stato,
-            ricerca=ricerca,
         )
 
     finally:
@@ -15395,15 +15491,6 @@ def utente_update_info():
 
     frase_cambiata = frase_pulita != (frase_attualmente_in_modifica or "").strip()
 
-    # Notifica admin solo quando nasce una nuova revisione con testo NON vuoto.
-    # Se l'utente cancella completamente la frase, la rimuoviamo direttamente
-    # senza mandarla in approvazione admin.
-    nuova_revisione_frase = (
-        frase_cambiata
-        and not frase_vuota
-        and frase_stato_db != "in_revisione"
-    )
-
     esperienza_1 = request.form.get("esperienza_1", "")
     esperienza_2 = request.form.get("esperienza_2", "")
     esperienza_3 = request.form.get("esperienza_3", "")
@@ -15541,19 +15628,16 @@ def utente_update_info():
 
         conn.commit()
 
-        # 🔁 Aggiorna sempre il contatore admin se è coinvolto il sistema revisioni.
-        # La push admin parte solo quando nasce una nuova revisione.
+        # 🔁 Il salvataggio resta immediato, mentre la notifica admin viene
+        # posticipata e ripianificata a ogni nuova modifica del testo.
         try:
             if frase_cambiata:
                 invalidate_admin_counters()
 
-            if nuova_revisione_frase:
-                notifica_admin_evento(
-                    "Nuova revisione profilo 🕵️",
-                    "Un utente ha modificato la frase del profilo. La modifica è in attesa di approvazione.",
-                    link=url_for("admin_revisioni_profilo"),
-                    push=True
-                )
+                if frase_vuota:
+                    annulla_notifica_admin_revisione_profilo(user_id, "frase")
+                else:
+                    pianifica_notifica_admin_revisione_profilo(user_id, "frase")
         except Exception as e:
             log_exception_safe(
                 "⚠️ Errore notifica admin revisione frase",
@@ -15791,12 +15875,6 @@ def utente_update_descrizione():
 
         descrizione_cambiata = descrizione_pulita != (descrizione_attualmente_in_modifica or "").strip()
 
-        nuova_revisione_descrizione = (
-            descrizione_cambiata
-            and not descrizione_vuota
-            and descrizione_stato_db != "in_revisione"
-        )
-
         if not descrizione_cambiata:
             if is_ajax:
                 return jsonify({
@@ -15846,18 +15924,15 @@ def utente_update_descrizione():
 
         conn.commit()
 
-        # 🔁 Aggiorna dashboard admin in tempo reale.
-        # La push admin parte solo quando nasce una nuova revisione.
+        # 🔁 Il salvataggio resta immediato, mentre la notifica admin viene
+        # posticipata e ripianificata a ogni nuova modifica del testo.
         try:
             invalidate_admin_counters()
 
-            if nuova_revisione_descrizione:
-                notifica_admin_evento(
-                    "Nuova revisione profilo 🕵️",
-                    "Un utente ha modificato la descrizione del profilo. La modifica è in attesa di approvazione.",
-                    link=url_for("admin_revisioni_profilo"),
-                    push=True
-                )
+            if descrizione_vuota:
+                annulla_notifica_admin_revisione_profilo(user_id, "descrizione")
+            else:
+                pianifica_notifica_admin_revisione_profilo(user_id, "descrizione")
         except Exception as e:
             log_exception_safe(
                 "⚠️ Errore notifica admin revisione descrizione",
@@ -17487,6 +17562,236 @@ def notifica_admin_evento(titolo, messaggio, link=None, push=True):
                 conn.close()
         except Exception:
             pass
+
+
+# ==========================================================
+# ⏳ REVISIONI PROFILO — NOTIFICA ADMIN DOPO INATTIVITÀ
+# ==========================================================
+
+try:
+    PROFILE_REVISION_NOTIFICATION_DELAY_SECONDS = int(
+        os.getenv("PROFILE_REVISION_NOTIFICATION_DELAY_SECONDS", "60")
+    )
+except (TypeError, ValueError):
+    PROFILE_REVISION_NOTIFICATION_DELAY_SECONDS = 60
+
+PROFILE_REVISION_NOTIFICATION_DELAY_SECONDS = max(
+    15,
+    min(PROFILE_REVISION_NOTIFICATION_DELAY_SECONDS, 600)
+)
+PROFILE_REVISION_NOTIFICATION_QUEUE_KEY = "queue:notifiche_revisioni_profilo"
+PROFILE_REVISION_NOTIFICATION_LOCK_KEY = "lock:notifiche_revisioni_profilo"
+
+PROFILE_REVISION_NOTIFICATION_MESSAGES = {
+    "frase": "Un utente ha modificato la frase del profilo. La modifica è in attesa di approvazione.",
+    "descrizione": "Un utente ha modificato la descrizione del profilo. La modifica è in attesa di approvazione."
+}
+
+
+def _profile_revision_notification_member(user_id, campo):
+    return f"{int(user_id)}:{campo}"
+
+
+def pianifica_notifica_admin_revisione_profilo(user_id, campo):
+    """
+    Sposta in avanti la notifica admin a ogni autosave dello stesso testo.
+
+    La coda è in Redis, quindi è condivisa tra tutti i worker web e non si
+    perde quando la richiesta HTTP che ha salvato il testo termina.
+    """
+
+    if campo not in PROFILE_REVISION_NOTIFICATION_MESSAGES:
+        return
+
+    try:
+        member = _profile_revision_notification_member(user_id, campo)
+        invio_previsto_il = time.time() + PROFILE_REVISION_NOTIFICATION_DELAY_SECONDS
+
+        # ZADD aggiorna il punteggio se il membro esiste già: questo è il
+        # debounce server-side che riparte dall'ultima modifica ricevuta.
+        redis_client.zadd(
+            PROFILE_REVISION_NOTIFICATION_QUEUE_KEY,
+            {member: invio_previsto_il}
+        )
+    except Exception as e:
+        log_exception_safe(
+            "⚠️ Errore pianificazione notifica revisione profilo",
+            e,
+            {"user_id": user_id, "campo": campo},
+            production=True
+        )
+
+
+def annulla_notifica_admin_revisione_profilo(user_id, campo):
+    """Rimuove una notifica pianificata quando il testo viene svuotato."""
+
+    if campo not in PROFILE_REVISION_NOTIFICATION_MESSAGES:
+        return
+
+    try:
+        redis_client.zrem(
+            PROFILE_REVISION_NOTIFICATION_QUEUE_KEY,
+            _profile_revision_notification_member(user_id, campo)
+        )
+    except Exception as e:
+        log_exception_safe(
+            "⚠️ Errore annullamento notifica revisione profilo",
+            e,
+            {"user_id": user_id, "campo": campo},
+            production=True
+        )
+
+
+def _revisione_profilo_in_attesa(user_id, campo):
+    """Controlla che la revisione esista ancora prima di avvisare l'admin."""
+
+    conn = None
+    cur = None
+
+    try:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute(sql("""
+            SELECT 1 AS presente
+            FROM revisioni_profilo
+            WHERE utente_id = ?
+              AND campo = ?
+              AND stato = 'in_attesa'
+            LIMIT 1
+        """), (user_id, campo))
+
+        return cur.fetchone() is not None
+
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
+
+
+def notifiche_revisioni_profilo_background_loop():
+    """
+    Invia le notifiche scadute dalla coda Redis.
+
+    Un lock distribuito e una rimozione atomica impediscono duplicati anche
+    con più worker web attivi su Render.
+    """
+
+    socketio.sleep(5)
+
+    claim_script = """
+        local score = redis.call('ZSCORE', KEYS[1], ARGV[1])
+        if score and tonumber(score) <= tonumber(ARGV[2]) then
+            redis.call('ZREM', KEYS[1], ARGV[1])
+            return 1
+        end
+        return 0
+    """
+
+    release_lock_script = """
+        if redis.call('GET', KEYS[1]) == ARGV[1] then
+            return redis.call('DEL', KEYS[1])
+        end
+        return 0
+    """
+
+    while True:
+        lock_token = secrets.token_hex(16)
+        lock_acquisito = False
+
+        try:
+            lock_acquisito = bool(redis_client.set(
+                PROFILE_REVISION_NOTIFICATION_LOCK_KEY,
+                lock_token,
+                nx=True,
+                ex=20
+            ))
+
+            if lock_acquisito:
+                adesso = time.time()
+                membri_scaduti = redis_client.zrangebyscore(
+                    PROFILE_REVISION_NOTIFICATION_QUEUE_KEY,
+                    "-inf",
+                    adesso,
+                    start=0,
+                    num=100
+                )
+
+                for membro_raw in membri_scaduti:
+                    membro = (
+                        membro_raw.decode("utf-8")
+                        if isinstance(membro_raw, bytes)
+                        else str(membro_raw)
+                    )
+
+                    claimed = redis_client.eval(
+                        claim_script,
+                        1,
+                        PROFILE_REVISION_NOTIFICATION_QUEUE_KEY,
+                        membro,
+                        adesso
+                    )
+
+                    if not claimed:
+                        continue
+
+                    try:
+                        user_id_testo, campo = membro.split(":", 1)
+                        user_id = int(user_id_testo)
+
+                        if campo not in PROFILE_REVISION_NOTIFICATION_MESSAGES:
+                            continue
+
+                        with app.app_context():
+                            if not _revisione_profilo_in_attesa(user_id, campo):
+                                continue
+
+                            notifica_admin_evento(
+                                "Nuova revisione profilo 🕵️",
+                                PROFILE_REVISION_NOTIFICATION_MESSAGES[campo],
+                                link="/admin/revisioni-profilo",
+                                push=True
+                            )
+
+                    except Exception as e:
+                        log_exception_safe(
+                            "⚠️ Errore invio notifica revisione profilo posticipata",
+                            e,
+                            {"membro": membro},
+                            production=True
+                        )
+
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Errore loop notifiche revisioni profilo",
+                e,
+                production=True
+            )
+
+        finally:
+            if lock_acquisito:
+                try:
+                    redis_client.eval(
+                        release_lock_script,
+                        1,
+                        PROFILE_REVISION_NOTIFICATION_LOCK_KEY,
+                        lock_token
+                    )
+                except Exception:
+                    pass
+
+        socketio.sleep(5)
+
+
+if APP_RUNTIME_ROLE == "web":
+    socketio.start_background_task(notifiche_revisioni_profilo_background_loop)
 
 @app.route("/internal/push/send", methods=["POST"])
 def internal_push_send():
@@ -20930,19 +21235,42 @@ def cerca():
     assegna_immagine_card(annunci_vetrina)
 
     interesse_ids_attivi = set()
+    interessi_count_per_annuncio = {}
+    tutti_annunci_ids = list(dict.fromkeys(
+        int(annuncio_corrente["id"])
+        for lista in (annunci, annunci_vetrina)
+        for annuncio_corrente in lista
+    ))
 
-    if utente_corrente and not cerca_admin_mode:
-        tutti_annunci_ids = list(dict.fromkeys(
-            int(annuncio_corrente["id"])
-            for lista in (annunci, annunci_vetrina)
-            for annuncio_corrente in lista
-        ))
+    if tutti_annunci_ids:
+        placeholders_interessi = ", ".join(
+            "?" for _ in tutti_annunci_ids
+        )
 
-        if tutti_annunci_ids:
-            placeholders_interessi = ", ".join(
-                "?" for _ in tutti_annunci_ids
-            )
+        if cerca_admin_mode:
+            c.execute(sql(f"""
+                SELECT
+                    i.annuncio_id,
+                    COUNT(*) AS totale
+                FROM interessi_annunci i
+                JOIN utenti interessato
+                  ON interessato.id = i.utente_interessato_id
+                WHERE i.attivo = TRUE
+                  AND i.annuncio_id IN ({placeholders_interessi})
+                  AND interessato.attivo = 1
+                  AND COALESCE(interessato.sospeso, 0) = 0
+                  AND COALESCE(interessato.disattivato_admin, 0) = 0
+                  AND COALESCE(interessato.eliminato, 0) = 0
+                  AND COALESCE(interessato.ruolo, 'user') <> 'admin'
+                GROUP BY i.annuncio_id
+            """), tuple(tutti_annunci_ids))
 
+            interessi_count_per_annuncio = {
+                int(riga["annuncio_id"]): int(riga["totale"] or 0)
+                for riga in c.fetchall()
+            }
+
+        elif utente_corrente:
             c.execute(sql(f"""
                 SELECT annuncio_id
                 FROM interessi_annunci
@@ -20964,6 +21292,12 @@ def cerca():
             annuncio_corrente["interesse_attivo"] = (
                 int(annuncio_corrente["id"])
                 in interesse_ids_attivi
+            )
+            annuncio_corrente["interessi_count"] = (
+                interessi_count_per_annuncio.get(
+                    int(annuncio_corrente["id"]),
+                    0,
+                )
             )
 
     return render_template(

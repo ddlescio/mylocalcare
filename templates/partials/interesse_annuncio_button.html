@@ -26,6 +26,23 @@
   </svg>
 {% endmacro %}
 
+{% macro admin_interesse_annuncio_badge(annuncio, variant='card') %}
+  {% set totale = annuncio.get('interessi_count', 0)|int %}
+
+  <div class="lc-interest-slot lc-interest-slot--{{ variant }}">
+    <span
+      class="lc-interest-button lc-interest-admin-indicator {% if totale > 0 %}is-active has-count{% endif %}"
+      aria-label="{{ totale }} {{ 'interesse attivo' if totale == 1 else 'interessi attivi' }}"
+      title="{{ totale }} {{ 'interesse attivo' if totale == 1 else 'interessi attivi' }}">
+      {{ interesse_annuncio_icon() }}
+
+      {% if totale > 0 %}
+        <span class="lc-interest-admin-count">{{ totale }}</span>
+      {% endif %}
+    </span>
+  </div>
+{% endmacro %}
+
 {% macro interesse_annuncio_button(annuncio, variant='card') %}
   {% set utente_corrente = g.utente %}
   {% set proprietario_id = annuncio.get('utente_id') %}
