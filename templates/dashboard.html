@@ -577,7 +577,9 @@
                   {% set stato_class = 'is-rejected' %}
                 {% endif %}
 
-                <article class="profile-annuncio-premium-card {{ stato_class }}">
+                <article
+                  class="profile-annuncio-premium-card {{ stato_class }}"
+                  data-annuncio-card="{{ a['id'] }}">
 
                   <a href="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
                      class="profile-annuncio-premium-link">
@@ -7585,6 +7587,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let showAll = false;
   let previousFocus = null;
   let requestController = null;
+  let scrollAnnouncementOnClose = false;
 
   function setVisible(element, visible) {
     element.classList.toggle("hidden", !visible);
@@ -7744,12 +7747,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function openPanel(button) {
+  async function openPanel(button, options = {}) {
     const announcementId = Number(button.dataset.annuncioId || 0);
     const endpoint = button.dataset.endpoint || "";
     if (!announcementId || !endpoint) return;
 
     currentAnnouncementId = announcementId;
+    scrollAnnouncementOnClose = Boolean(options.scrollOnClose);
     people = [];
     showAll = false;
     previousFocus = document.activeElement;
@@ -7797,6 +7801,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function closePanel() {
+    const announcementId = currentAnnouncementId;
+    const shouldScroll = scrollAnnouncementOnClose;
+
     requestController?.abort();
     requestController = null;
     panel.classList.add("hidden");
@@ -7806,6 +7813,31 @@ document.addEventListener("DOMContentLoaded", () => {
     if (previousFocus && typeof previousFocus.focus === "function") {
       previousFocus.focus({ preventScroll: true });
     }
+
+    if (shouldScroll && announcementId) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("interesse_annuncio");
+      window.history.replaceState(
+        null,
+        "",
+        url.pathname + url.search + url.hash
+      );
+
+      const announcementCard = document.querySelector(
+        `[data-annuncio-card="${announcementId}"]`
+      );
+
+      if (announcementCard) {
+        window.requestAnimationFrame(() => {
+          announcementCard.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+        });
+      }
+    }
+
+    scrollAnnouncementOnClose = false;
   }
 
   document.addEventListener("click", (event) => {
@@ -7863,7 +7895,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const button = document.querySelector(
       `.js-open-interest-panel[data-annuncio-id="${requestedId}"]`
     );
-    if (button) openPanel(button);
+    if (button) {
+      openPanel(button, { scrollOnClose: true });
+    }
   });
 })();
 </script>

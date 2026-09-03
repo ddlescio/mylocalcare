@@ -3,34 +3,37 @@
 <section
   id="sezione-interessati"
   class="annuncio-info-card annuncio-owner-interests-card mt-5 mx-[calc(50%-50vw+1mm)] sm:mx-0">
+  <details class="annuncio-owner-interests-details">
 
-  <div class="annuncio-info-card-header annuncio-owner-interests-header">
-    <div class="annuncio-info-card-icon annuncio-owner-interests-icon">
-      {{ interesse_annuncio_icon() }}
-    </div>
+    <summary class="annuncio-info-card-header annuncio-owner-interests-header">
+      <div class="annuncio-info-card-icon annuncio-owner-interests-icon">
+        {{ interesse_annuncio_icon() }}
+      </div>
 
-    <div class="annuncio-info-card-titlebox">
-      <span>Area privata</span>
-      <h2>Persone interessate</h2>
-      <p>
-        {% if interessati_annuncio %}
-          Contatta chi ha indicato interesse per questo annuncio
-        {% else %}
-          Qui compariranno le persone interessate al tuo annuncio
-        {% endif %}
-      </p>
-    </div>
+      <div class="annuncio-info-card-titlebox">
+        <span>Area privata</span>
+        <h2>Persone interessate</h2>
+        <p>
+          {% if interessati_annuncio %}
+            Apri per vedere e contattare le persone interessate
+          {% else %}
+            Qui compariranno le persone interessate al tuo annuncio
+          {% endif %}
+        </p>
+      </div>
 
-    <span class="annuncio-owner-interests-count" aria-label="Numero persone interessate">
-      {{ interessati_annuncio|length }}
-    </span>
-  </div>
+      <span class="annuncio-owner-interests-count" aria-label="Numero persone interessate">
+        {{ interessati_annuncio|length }}
+      </span>
 
-  <div class="annuncio-info-card-body">
-    {% if interessati_annuncio %}
-      <div class="annuncio-owner-interests-list">
-        {% for persona in interessati_annuncio %}
-          <article class="annuncio-owner-interest-person">
+      <span class="annuncio-owner-interests-chevron" aria-hidden="true">⌄</span>
+    </summary>
+
+    <div class="annuncio-info-card-body">
+      {% if interessati_annuncio %}
+        <div class="annuncio-owner-interests-list">
+          {% for persona in interessati_annuncio %}
+            <article class="annuncio-owner-interest-person">
             <a
               href="{{ persona.profilo_url }}"
               class="annuncio-owner-interest-avatar-link"
@@ -68,8 +71,6 @@
               <p class="annuncio-owner-interest-bio">{{ persona.profilo_breve }}</p>
 
               <div class="annuncio-owner-interest-footer">
-                <small>Ultima conferma: {{ persona.interessato_dal | fmt_it }}</small>
-
                 <div class="annuncio-owner-interest-actions">
                   <a href="{{ persona.profilo_url }}" class="is-secondary">
                     Profilo
@@ -134,17 +135,18 @@
                 </div>
               </div>
             </div>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="annuncio-owner-interests-empty">
-        <span class="annuncio-owner-interests-empty-icon">♡</span>
-        <strong>Ancora nessun interesse</strong>
-        <p>Quando qualcuno premerà “Mi interessa”, troverai qui il suo profilo e potrai contattarlo.</p>
-      </div>
-    {% endif %}
-  </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="annuncio-owner-interests-empty">
+          <span class="annuncio-owner-interests-empty-icon">♡</span>
+          <strong>Ancora nessun interesse</strong>
+          <p>Quando qualcuno premerà “Mi interessa”, troverai qui il suo profilo e potrai contattarlo.</p>
+        </div>
+      {% endif %}
+    </div>
+  </details>
 </section>
 
 <style>
@@ -157,6 +159,13 @@
 
   .annuncio-owner-interests-header {
     align-items: center;
+    cursor: pointer;
+    list-style: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .annuncio-owner-interests-header::-webkit-details-marker {
+    display: none;
   }
 
   .annuncio-owner-interests-header .annuncio-info-card-titlebox {
@@ -182,6 +191,32 @@
     font-size: 0.9rem;
     font-weight: 900;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .annuncio-owner-interests-chevron {
+    display: inline-flex;
+    width: 1.7rem;
+    height: 1.7rem;
+    flex: 0 0 1.7rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #475569;
+    font-size: 1rem;
+    font-weight: 900;
+    transition: transform 180ms ease, color 180ms ease;
+  }
+
+  .annuncio-owner-interests-details[open]
+    .annuncio-owner-interests-chevron {
+    transform: rotate(180deg);
+    color: #2563eb;
+  }
+
+  .annuncio-owner-interests-header:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.28);
+    outline-offset: -3px;
   }
 
   .annuncio-owner-interests-list {
@@ -309,13 +344,8 @@
   }
 
   .annuncio-owner-interest-footer {
-    align-items: flex-end;
+    justify-content: flex-end;
     margin-top: 0.75rem;
-  }
-
-  .annuncio-owner-interest-footer small {
-    color: #94a3b8;
-    font-size: 0.66rem;
   }
 
   .annuncio-owner-interest-actions {
@@ -449,8 +479,7 @@
       border-radius: 0.9rem;
     }
 
-    .annuncio-owner-interest-heading,
-    .annuncio-owner-interest-footer {
+    .annuncio-owner-interest-heading {
       align-items: flex-start;
       flex-direction: column;
       gap: 0.55rem;
@@ -461,9 +490,6 @@
       justify-content: flex-start;
     }
 
-    .annuncio-owner-interest-footer small {
-      order: 2;
-    }
   }
 </style>
 
