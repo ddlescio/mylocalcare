@@ -326,12 +326,30 @@
     font-size: 0.78rem;
   }
 
-  .admin-interest-ranking-item {
-    border-bottom: 1px solid #eef2f7;
+  .admin-interest-ranking {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    background: #f8fafc;
   }
 
-  .admin-interest-ranking-item:last-child {
-    border-bottom: 0;
+  .admin-interest-ranking-item {
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.025);
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .admin-interest-ranking-item[open] {
+    border-color: #bfdbfe;
+    box-shadow:
+      0 13px 28px rgba(37, 99, 235, 0.09),
+      0 3px 9px rgba(15, 23, 42, 0.04);
   }
 
   .admin-interest-ranking-summary {
@@ -351,7 +369,7 @@
 
   .admin-interest-ranking-summary:hover,
   .admin-interest-ranking-item[open] > .admin-interest-ranking-summary {
-    background: #f8fafc;
+    background: linear-gradient(135deg, #f8fbff, #f8fafc);
   }
 
   .admin-interest-rank {
@@ -457,8 +475,10 @@
   }
 
   .admin-interest-ranking-detail {
-    padding: 0 20px 18px 71px;
-    background: linear-gradient(180deg, #f8fafc, #ffffff);
+    padding: 0 20px 20px 71px;
+    border-top: 1px solid #dbeafe;
+    background:
+      linear-gradient(180deg, rgba(239, 246, 255, 0.8), #ffffff 78px);
   }
 
   .admin-interest-detail-heading {
@@ -629,6 +649,15 @@
 
     .admin-interest-panel {
       border-radius: 21px;
+    }
+
+    .admin-interest-ranking {
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .admin-interest-ranking-item {
+      border-radius: 16px;
     }
 
     .admin-interest-ranking-summary {
