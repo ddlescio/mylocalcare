@@ -20430,6 +20430,9 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
                 altro.id AS altro_utente_id,
                 altro.username AS altro_username,
                 altro.email AS altro_email,
+                altro.foto_profilo AS altro_foto_profilo,
+                altro.citta AS altro_citta,
+                altro.provincia AS altro_provincia,
                 COUNT(m.id) AS numero_messaggi,
                 SUM(
                     CASE
@@ -20439,6 +20442,16 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
                         ELSE 0
                     END
                 ) AS messaggi_non_letti,
+                (
+                    SELECT COUNT(DISTINCT CASE
+                        WHEN tutte_chat.mittente_id = altro.id
+                        THEN tutte_chat.destinatario_id
+                        ELSE tutte_chat.mittente_id
+                    END)
+                    FROM messaggi_chat tutte_chat
+                    WHERE tutte_chat.mittente_id = altro.id
+                       OR tutte_chat.destinatario_id = altro.id
+                ) AS altro_chat_aperte_count,
                 MAX(m.id) AS ultimo_messaggio_id
             FROM messaggi_chat m
             JOIN utenti altro
@@ -20452,7 +20465,10 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
             GROUP BY
                 altro.id,
                 altro.username,
-                altro.email
+                altro.email,
+                altro.foto_profilo,
+                altro.citta,
+                altro.provincia
             ORDER BY MAX(m.id) DESC
             LIMIT 10
         """), (
@@ -20462,13 +20478,60 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
             utente_id
         ))
 
+        chat_rows = [dict(chat) for chat in cur.fetchall()]
+        annunci_attivi_per_utente = {
+            int(chat["altro_utente_id"]): []
+            for chat in chat_rows
+        }
+
+        if annunci_attivi_per_utente:
+            utenti_chat_ids = list(annunci_attivi_per_utente.keys())
+            placeholders = ", ".join("?" for _ in utenti_chat_ids)
+
+            cur.execute(sql(f"""
+                SELECT
+                    id,
+                    utente_id,
+                    titolo,
+                    categoria,
+                    zona,
+                    provincia
+                FROM annunci
+                WHERE utente_id IN ({placeholders})
+                  AND stato = 'approvato'
+                ORDER BY data_pubblicazione DESC, id DESC
+            """), utenti_chat_ids)
+
+            for annuncio_attivo_row in cur.fetchall():
+                annuncio_attivo = dict(annuncio_attivo_row)
+                proprietario_id = int(annuncio_attivo["utente_id"])
+
+                annunci_attivi_per_utente[proprietario_id].append({
+                    "id": int(annuncio_attivo["id"]),
+                    "titolo": annuncio_attivo["titolo"] or "Annuncio senza titolo",
+                    "categoria": annuncio_attivo["categoria"] or "Categoria non indicata",
+                    "zona": (
+                        annuncio_attivo["zona"]
+                        or annuncio_attivo["provincia"]
+                        or "Zona non indicata"
+                    ),
+                    "url": url_for(
+                        "visualizza_annuncio_pubblico",
+                        id=int(annuncio_attivo["id"]),
+                    ),
+                })
+
         chat_aperte = []
 
-        for chat in cur.fetchall():
+        for chat in chat_rows:
+            altro_utente_id = int(chat["altro_utente_id"])
+            annunci_attivi = annunci_attivi_per_utente.get(
+                altro_utente_id,
+                [],
+            )
+
             chat_aperte.append({
-                "altro_utente_id": int(
-                    chat["altro_utente_id"]
-                ),
+                "altro_utente_id": altro_utente_id,
                 "altro_username": (
                     chat["altro_username"] or ""
                 ),
@@ -20480,7 +20543,28 @@ def admin_annuncio_dettagli_rapidi(annuncio_id):
                 ),
                 "messaggi_non_letti": int(
                     chat["messaggi_non_letti"] or 0
-                )
+                ),
+                "avatar_url": url_for(
+                    "static",
+                    filename=(
+                        chat["altro_foto_profilo"]
+                        or "img/user_default.png"
+                    ),
+                ),
+                "profilo_url": url_for(
+                    "profilo_pubblico",
+                    id=altro_utente_id,
+                ),
+                "zona": (
+                    chat["altro_citta"]
+                    or chat["altro_provincia"]
+                    or "Zona non indicata"
+                ),
+                "chat_aperte_count": int(
+                    chat["altro_chat_aperte_count"] or 0
+                ),
+                "annunci_attivi_count": len(annunci_attivi),
+                "annunci_attivi": annunci_attivi,
             })
 
         interessati = _elenca_interessati_annuncio(

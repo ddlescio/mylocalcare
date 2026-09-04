@@ -1448,31 +1448,224 @@
     gap: 0.55rem;
   }
 
-  .admin-card-info-chat-item,
-  .admin-card-info-chat-empty {
-    padding: 0.85rem 0.95rem;
+  .admin-card-info-chat-item {
+    overflow: hidden;
     border: 1px solid #e2e8f0;
     border-radius: 1rem;
     background: #ffffff;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
   }
 
-  .admin-card-info-chat-item strong {
+  .admin-card-info-chat-item[open] {
+    border-color: #bfdbfe;
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.08);
+  }
+
+  .admin-card-info-chat-item-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.78rem 0.85rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .admin-card-info-chat-item-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .admin-card-info-chat-item-main {
+    min-width: 0;
+  }
+
+  .admin-card-info-chat-item-name,
+  .admin-card-info-chat-item-meta {
     display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-card-info-chat-item-name {
     color: #0f172a;
     font-size: 0.88rem;
     font-weight: 800;
-    overflow-wrap: anywhere;
   }
 
-  .admin-card-info-chat-item span {
-    display: block;
+  .admin-card-info-chat-item-meta {
     margin-top: 0.22rem;
     color: #64748b;
     font-size: 0.78rem;
     font-weight: 600;
   }
 
+  .admin-card-info-chat-item-chevron {
+    display: inline-flex;
+    width: 1.7rem;
+    height: 1.7rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 850;
+    transition: transform 180ms ease, color 180ms ease;
+  }
+
+  .admin-card-info-chat-item[open]
+  .admin-card-info-chat-item-chevron {
+    transform: rotate(180deg);
+    color: #2563eb;
+  }
+
+  .admin-card-info-chat-item-detail {
+    padding: 0.8rem;
+    border-top: 1px solid #dbeafe;
+    background: linear-gradient(180deg, #eff6ff, #ffffff 6rem);
+  }
+
+  .admin-card-info-chat-user {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .admin-card-info-chat-avatar,
+  .admin-card-info-chat-avatar img {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+  }
+
+  .admin-card-info-chat-avatar {
+    display: block;
+    padding: 2px;
+    background: linear-gradient(145deg, #60a5fa, #c084fc, #f472b6);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.14);
+  }
+
+  .admin-card-info-chat-avatar img {
+    display: block;
+    border: 2px solid #ffffff;
+    object-fit: cover;
+  }
+
+  .admin-card-info-chat-user-data {
+    min-width: 0;
+  }
+
+  .admin-card-info-chat-user-zone,
+  .admin-card-info-chat-user-stats {
+    display: block;
+  }
+
+  .admin-card-info-chat-user-zone {
+    overflow: hidden;
+    color: #334155;
+    font-size: 0.79rem;
+    font-weight: 820;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-card-info-chat-user-stats {
+    margin-top: 0.22rem;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 680;
+  }
+
+  .admin-card-info-chat-announcements {
+    margin-top: 0.8rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgba(191, 219, 254, 0.86);
+  }
+
+  .admin-card-info-chat-announcements-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.48rem;
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 850;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .admin-card-info-chat-announcements-count {
+    display: inline-flex;
+    min-width: 1.45rem;
+    height: 1.45rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.35rem;
+    border-radius: 9999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.66rem;
+  }
+
+  .admin-card-info-chat-announcement-list {
+    display: grid;
+    gap: 0.42rem;
+  }
+
+  .admin-card-info-chat-announcement {
+    display: block;
+    padding: 0.62rem 0.7rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.94);
+    text-decoration: none;
+  }
+
+  .admin-card-info-chat-announcement:hover {
+    border-color: #bfdbfe;
+    background: #ffffff;
+  }
+
+  .admin-card-info-chat-announcement strong,
+  .admin-card-info-chat-announcement span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-card-info-chat-announcement strong {
+    color: #172033;
+    font-size: 0.75rem;
+    font-weight: 830;
+  }
+
+  .admin-card-info-chat-announcement span {
+    margin-top: 0.18rem;
+    color: #64748b;
+    font-size: 0.66rem;
+    font-weight: 650;
+  }
+
+  .admin-card-info-chat-announcement-empty {
+    padding: 0.65rem;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.8rem;
+    color: #64748b;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 680;
+  }
+
   .admin-card-info-chat-empty {
+    padding: 0.85rem 0.95rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    background: #ffffff;
     color: #64748b;
     text-align: center;
     font-size: 0.84rem;
@@ -2330,10 +2523,17 @@
   }
 
   function creaChatItem(chat) {
-    const item = document.createElement("div");
+    const item = document.createElement("details");
     item.className = "admin-card-info-chat-item";
 
+    const summary = document.createElement("summary");
+    summary.className = "admin-card-info-chat-item-summary";
+
+    const main = document.createElement("span");
+    main.className = "admin-card-info-chat-item-main";
+
     const nome = document.createElement("strong");
+    nome.className = "admin-card-info-chat-item-name";
 
     const riferimentoUtente = (
       chat.altro_username
@@ -2346,6 +2546,7 @@
       : riferimentoUtente;
 
     const dettagli = document.createElement("span");
+    dettagli.className = "admin-card-info-chat-item-meta";
 
     const messaggi = Number(
       chat.numero_messaggi || 0
@@ -2358,7 +2559,102 @@
     dettagli.textContent =
       `${messaggi} messaggi · ${nonLetti} non letti`;
 
-    item.append(nome, dettagli);
+    const chevron = document.createElement("span");
+    chevron.className = "admin-card-info-chat-item-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    chevron.textContent = "⌄";
+
+    main.append(nome, dettagli);
+    summary.append(main, chevron);
+
+    const detail = document.createElement("div");
+    detail.className = "admin-card-info-chat-item-detail";
+
+    const user = document.createElement("div");
+    user.className = "admin-card-info-chat-user";
+
+    const avatarLink = document.createElement("a");
+    avatarLink.className = "admin-card-info-chat-avatar";
+    avatarLink.href = chat.profilo_url;
+    avatarLink.setAttribute(
+      "aria-label",
+      `Apri il profilo di ${nome.textContent}`
+    );
+
+    const avatar = document.createElement("img");
+    avatar.src = chat.avatar_url;
+    avatar.alt = `Foto profilo di ${nome.textContent}`;
+    avatar.loading = "lazy";
+    avatarLink.appendChild(avatar);
+
+    const userData = document.createElement("div");
+    userData.className = "admin-card-info-chat-user-data";
+
+    const zona = document.createElement("span");
+    zona.className = "admin-card-info-chat-user-zone";
+    zona.textContent = `📍 ${chat.zona || "Zona non indicata"}`;
+
+    const chatCount = Number(chat.chat_aperte_count || 0);
+    const annunciCount = Number(chat.annunci_attivi_count || 0);
+    const statistiche = document.createElement("span");
+    statistiche.className = "admin-card-info-chat-user-stats";
+    statistiche.textContent =
+      `${chatCount} ${chatCount === 1 ? "chat aperta" : "chat aperte"}`
+      + ` · ${annunciCount} ${annunciCount === 1 ? "annuncio attivo" : "annunci attivi"}`;
+
+    userData.append(zona, statistiche);
+    user.append(avatarLink, userData);
+
+    const announcements = document.createElement("div");
+    announcements.className = "admin-card-info-chat-announcements";
+
+    const announcementsHeading = document.createElement("div");
+    announcementsHeading.className =
+      "admin-card-info-chat-announcements-heading";
+
+    const announcementsTitle = document.createElement("span");
+    announcementsTitle.textContent = "Annunci attivi";
+
+    const announcementsCount = document.createElement("span");
+    announcementsCount.className =
+      "admin-card-info-chat-announcements-count";
+    announcementsCount.textContent = String(annunciCount);
+    announcementsHeading.append(announcementsTitle, announcementsCount);
+
+    const announcementList = document.createElement("div");
+    announcementList.className = "admin-card-info-chat-announcement-list";
+
+    const annunciAttivi = Array.isArray(chat.annunci_attivi)
+      ? chat.annunci_attivi
+      : [];
+
+    if (annunciAttivi.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "admin-card-info-chat-announcement-empty";
+      empty.textContent = "Nessun annuncio attivo.";
+      announcementList.appendChild(empty);
+    } else {
+      annunciAttivi.forEach((annuncio) => {
+        const announcement = document.createElement("a");
+        announcement.className = "admin-card-info-chat-announcement";
+        announcement.href = annuncio.url;
+
+        const title = document.createElement("strong");
+        title.textContent = annuncio.titolo || "Annuncio senza titolo";
+
+        const meta = document.createElement("span");
+        meta.textContent =
+          `${annuncio.categoria || "Categoria non indicata"}`
+          + ` · ${annuncio.zona || "Zona non indicata"}`;
+
+        announcement.append(title, meta);
+        announcementList.appendChild(announcement);
+      });
+    }
+
+    announcements.append(announcementsHeading, announcementList);
+    detail.append(user, announcements);
+    item.append(summary, detail);
 
     return item;
   }
