@@ -19,9 +19,20 @@
       <input type="text" name="username" value="{{ utente['username'] }}" required class="border rounded w-full px-3 py-2">
     </div>
 
-    <div>
-      <label class="block text-gray-700 font-semibold mb-1">Città</label>
-      <input type="text" name="citta" id="citta" value="{{ utente['citta'] }}" required class="border rounded w-full px-3 py-2">
+    <div class="relative">
+      <label for="citta-autocomplete" class="block text-gray-700 font-semibold mb-1">Città</label>
+      <input
+        type="text"
+        id="citta-autocomplete"
+        value="{{ utente['citta'] }}"
+        autocomplete="off"
+        required
+        class="border rounded w-full px-3 py-2"
+      >
+      <input type="hidden" name="citta" id="citta_hidden" value="{{ utente['citta'] }}">
+      <ul id="citta-suggerimenti"
+          class="absolute z-50 w-full bg-white border border-gray-200 rounded-md mt-1 hidden max-h-56 overflow-y-auto shadow-lg">
+      </ul>
     </div>
 
     <hr class="my-4">

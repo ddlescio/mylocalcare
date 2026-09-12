@@ -3435,29 +3435,22 @@ document.addEventListener("DOMContentLoaded", () => {
     Memorizziamo l'ultimo valore valido già presente al caricamento pagina.
   */
   let ultimaCittaValida = (
-    cittaHidden?.value?.trim() ||
-    cittaInputVisibile?.value?.trim() ||
-    ""
+    cittaHidden?.value?.trim() || ""
   );
 
   function ripristinaCittaSeVuota() {
     if (!cittaHidden) return true;
 
     const valoreHidden = cittaHidden.value.trim();
-    const valoreVisibile = cittaInputVisibile?.value?.trim() || "";
-
     /*
-      Se almeno uno dei due campi contiene un valore, lo consideriamo valido
-      e aggiorniamo il riferimento.
+      Solo il campo hidden valorizzato dall'autocomplete è attendibile.
+      Il testo visibile può essere libero e non deve mai diventare una città.
     */
-    if (valoreHidden || valoreVisibile) {
-      const valoreValido = valoreHidden || valoreVisibile;
-
-      ultimaCittaValida = valoreValido;
-      cittaHidden.value = valoreValido;
+    if (valoreHidden) {
+      ultimaCittaValida = valoreHidden;
 
       if (cittaInputVisibile) {
-        cittaInputVisibile.value = valoreValido;
+        cittaInputVisibile.value = valoreHidden;
       }
 
       return true;
@@ -3637,8 +3630,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
+      const payload = await res.json().catch(() => null);
+
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        throw new Error(
+          payload?.message || payload?.error || "Errore di salvataggio"
+        );
       }
 
       setStatus("success", "Modifiche salvate");
@@ -3647,7 +3644,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (err) {
       console.error("Errore autosave overview:", err);
-      setStatus("error", "Errore di salvataggio");
+      setStatus("error", err?.message || "Errore di salvataggio");
     } finally {
       autosaveInCorso = false;
 

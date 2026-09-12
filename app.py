@@ -15414,13 +15414,33 @@ def utente_update_info():
         flash("Errore: sessione utente non valida.", "error")
         return redirect(url_for("dashboard"))
 
+    # 🔹 Campi base
+    citta_inviata = request.form.get("citta", "").strip()
+    info_citta = get_comune_info(citta_inviata) if citta_inviata else None
+
+    # Il campo hidden dell'autocomplete non è una misura di sicurezza:
+    # una richiesta costruita a mano (o un errore JavaScript) può modificarlo.
+    # Salviamo quindi soltanto comuni presenti nel nostro elenco ufficiale.
+    if not info_citta:
+        messaggio = "Comune non valido. Selezionalo dall’elenco dei suggerimenti."
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({
+                "ok": False,
+                "message": messaggio,
+                "error": messaggio
+            }), 400
+
+        flash(messaggio, "error")
+        return redirect(url_for("dashboard") + "#tab-info")
+
+    # Usa sempre grafia e provincia canoniche del dataset, mai il testo del client.
+    citta = info_citta["comune"]
+    provincia = info_citta["provincia"]
+
     conn = get_db_connection()
     c = get_cursor(conn)
 
-    # 🔹 Campi base
-    citta = request.form.get("citta", "")
-    citta = citta.strip()
-    provincia = get_provincia_from_comune(citta) if citta else None
     lingue = request.form.get("lingue", "")
     frase = request.form.get("frase", "")
     descrizione = request.form.get("descrizione", "")
@@ -18358,14 +18378,21 @@ import json
 def get_comune_info(comune_input):
     path = os.path.join(app.static_folder, "data", "comuni.json")
 
-    with open(path, encoding="utf-8") as f:
-        comuni = json.load(f)
+    try:
+        with open(path, encoding="utf-8") as f:
+            comuni = json.load(f)
+    except (OSError, ValueError, TypeError):
+        return None
 
-    comune_input = comune_input.strip().lower()
+    comune_normalizzato = (comune_input or "").strip().casefold()
+    if not comune_normalizzato:
+        return None
 
     for c in comuni:
-        if c["comune"].lower() == comune_input:
+        comune = (c.get("comune") or "").strip()
+        if comune.casefold() == comune_normalizzato:
             return {
+                "comune": comune,
                 "provincia": c.get("provincia"),
                 "regione": c.get("regione")
             }
@@ -18727,6 +18754,7 @@ def register():
             flash("Comune non valido. Selezionalo dall'elenco.")
             return redirect(url_for('register'))
 
+        citta = info["comune"]
         provincia = info["provincia"]
         regione = info["regione"]
         macro_area = provincia
@@ -19550,22 +19578,8 @@ def home_v2():
     return render_template('home.html', brand_name=brand_name)
 
 def get_provincia_from_comune(comune_input):
-    path = os.path.join(app.static_folder, "data", "comuni.json")
-
-    try:
-        with open(path, encoding="utf-8") as f:
-            comuni = json.load(f)
-    except Exception:
-        return None
-
-    comune_norm = comune_input.strip().lower()
-
-    for c in comuni:
-        if c.get("comune", "").strip().lower() == comune_norm:
-            # ⬅️ QUI
-            return c.get("provincia_nome") or c.get("provincia")
-
-    return None
+    info = get_comune_info(comune_input)
+    return info.get("provincia") if info else None
 
 def valida_zona_annuncio(zona_input, provincia_input):
     """
@@ -22798,10 +22812,19 @@ def modifica_profilo():
     if request.method == 'POST':
         nome = request.form['nome'].strip()
         cognome = request.form['cognome'].strip()
-        citta = request.form['citta'].strip()
+        citta_inviata = request.form['citta'].strip()
         username = request.form['username'].strip()
         nuova_password = request.form.get('nuova_password', '').strip()
         conferma_password = request.form.get('conferma_password', '').strip()
+
+        info_citta = get_comune_info(citta_inviata)
+        if not info_citta:
+            conn.close()
+            flash("Comune non valido. Selezionalo dall’elenco.", "error")
+            return redirect(url_for('modifica_profilo'))
+
+        citta = info_citta["comune"]
+        provincia = info_citta["provincia"]
 
         # 🔹 Controlla che lo username non sia già usato da altri
         c.execute(sql("SELECT id FROM utenti WHERE username = ? AND id != ?"), (username, g.utente['id']))
@@ -22826,19 +22849,21 @@ def modifica_profilo():
             hashed_pw = generate_password_hash(nuova_password)
 
             c.execute(
-                "UPDATE utenti SET nome = ?, cognome = ?, citta = ?, username = ?, password = ? WHERE id = ?",
-                (nome, cognome, citta, username, hashed_pw, g.utente['id'])
+                "UPDATE utenti SET nome = ?, cognome = ?, citta = ?, provincia = ?, macro_area = ?, username = ?, password = ? WHERE id = ?",
+                (nome, cognome, citta, provincia, provincia, username, hashed_pw, g.utente['id'])
             )
         else:
             c.execute(
-                "UPDATE utenti SET nome = ?, cognome = ?, citta = ?, username = ? WHERE id = ?",
-                (nome, cognome, citta, username, g.utente['id'])
+                "UPDATE utenti SET nome = ?, cognome = ?, citta = ?, provincia = ?, macro_area = ?, username = ? WHERE id = ?",
+                (nome, cognome, citta, provincia, provincia, username, g.utente['id'])
             )
 
         conn.commit()
 
         # 🔹 Aggiorna la sessione con i nuovi dati dell'utente
         session['utente_username'] = username
+        session['macro_area'] = provincia
+        session['macro_comune'] = citta
         session.modified = True
 
 

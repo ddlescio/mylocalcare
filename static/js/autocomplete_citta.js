@@ -6,9 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!input || !list || !hidden || !form) return;
 
-  let comuni = [];
-  let hasSelected = false; // ✅ true SOLO se clicchi un suggerimento
-
   const norm = (s) =>
     (s || "")
       .toString()
@@ -17,6 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/['’]/g, "");
+
+  let comuni = [];
+  let hasSelected = Boolean(
+    hidden.value.trim() && norm(hidden.value) === norm(input.value)
+  );
 
   fetch("/static/data/comuni.json")
     .then((r) => r.json())
@@ -76,6 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // ✅ selezione certificata
         hasSelected = true;
         hidden.value = c.comune;
+        hidden.dispatchEvent(new Event("change", { bubbles: true }));
 
         list.classList.add("hidden");
       });
