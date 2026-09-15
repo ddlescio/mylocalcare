@@ -389,6 +389,51 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
       0 2px 8px rgba(15, 23, 42, 0.04);
   }
 
+  .daily-match-count-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 999px;
+    padding: 7px 10px;
+    color: #3730a3;
+    background: rgba(238, 242, 255, 0.92);
+    border: 1px solid #c7d2fe;
+    font-size: 0.75rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .daily-match-email-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    margin: 0 0 18px;
+  }
+
+  .daily-match-email-stat {
+    padding: 13px 9px;
+    border-radius: 16px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(99, 102, 241, 0.16);
+  }
+
+  .daily-match-email-stat strong {
+    display: block;
+    color: #1e1b4b;
+    font-size: 1.35rem;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .daily-match-email-stat span {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 750;
+  }
+
   .daily-match-status {
     display: inline-flex;
     align-items: center;
@@ -491,6 +536,30 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
     font-size: 0.88rem;
     font-weight: 850;
     transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+
+  @media (max-width: 640px) {
+    .daily-match-toggle {
+      align-items: flex-start;
+    }
+
+    .daily-match-toggle-right {
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .daily-match-chevron {
+      position: absolute;
+      right: 1.05rem;
+      bottom: 0.8rem;
+    }
+
+    .daily-match-count-pill,
+    .daily-match-status {
+      padding: 6px 9px;
+      font-size: 0.68rem;
+    }
   }
 
   @media (max-width: 420px) {
@@ -596,7 +665,7 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
 </div>
 
 <!-- 🔁 CARD: Daily Matches automatici -->
-<div class="daily-match-card notify-card-mobile-padding p-6 mb-8">
+<div id="daily-matches-card" class="daily-match-card notify-card-mobile-padding p-6 mb-8 scroll-mt-24">
 
   <!-- HEADER CHIUSO / CLICCABILE -->
   <button
@@ -618,6 +687,10 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
     </div>
 
     <div class="daily-match-toggle-right">
+      <span class="daily-match-count-pill" title="Email inviate nel ciclo Postmark corrente">
+        ✉️ {{ daily_match_email_stats.ciclo or 0 }}
+      </span>
+
       {% if daily_matches_settings.enabled %}
         <span class="daily-match-status daily-match-status-on">
           <span>●</span>
@@ -637,6 +710,21 @@ Gestisci la durata, la pulizia e lo stato generale delle notifiche inviate agli 
 
   <!-- CONTENUTO NASCOSTO -->
   <div id="dailyMatchesBody" class="daily-match-body hidden">
+
+    <div class="daily-match-email-stats" aria-label="Statistiche invii email Daily Match">
+      <div class="daily-match-email-stat">
+        <strong>{{ daily_match_email_stats.oggi or 0 }}</strong>
+        <span>Inviate oggi</span>
+      </div>
+      <div class="daily-match-email-stat">
+        <strong>{{ daily_match_email_stats.ciclo or 0 }}</strong>
+        <span>Ciclo corrente</span>
+      </div>
+      <div class="daily-match-email-stat">
+        <strong>{{ daily_match_email_stats.totale or 0 }}</strong>
+        <span>Totale inviate</span>
+      </div>
+    </div>
 
     <p class="text-sm text-slate-500 leading-relaxed mb-5">
       Invia ogni giorno un riepilogo agli utenti quando ci sono nuovi annunci compatibili
@@ -1271,6 +1359,17 @@ document.addEventListener("DOMContentLoaded", () => {
     icon.classList.toggle("daily-match-chevron-open", !isOpen);
     icon.textContent = isOpen ? "▸" : "▸";
   });
+
+  if (window.location.hash === "#daily-matches-card") {
+    body.classList.remove("hidden");
+    icon.classList.add("daily-match-chevron-open");
+    window.requestAnimationFrame(() => {
+      document.getElementById("daily-matches-card")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    });
+  }
 });
 </script>
 

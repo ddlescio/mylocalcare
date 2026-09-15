@@ -89,6 +89,17 @@
         {% endif %}
 
         {% if not pubblico %}
+          <button type="button"
+                  data-language-open
+                  class="hero-floating-btn hero-language-btn"
+                  aria-label="{{ tr('language.open') }}"
+                  title="{{ tr('language.open') }}">
+            <span class="hero-language-flag" aria-hidden="true">{{ current_language.flag }}</span>
+            <span class="hero-language-arrow" aria-hidden="true">▾</span>
+          </button>
+        {% endif %}
+
+        {% if not pubblico %}
           <div class="hero-actions-cluster">
             {% if session.get('is_admin') or utente.get('is_admin') or utente.get('ruolo') == 'admin' or utente.get('username') == 'ADMIN' %}
             <a href="{{ url_for('admin_dashboard') }}"
@@ -102,7 +113,7 @@
             <a href="{{ url_for('impostazioni') }}"
                id="btn-impostazioni"
                class="hero-floating-btn hero-settings-btn"
-               title="Impostazioni">
+               title="{{ tr('profile.settings') }}">
               <span class="text-xl">⚙️</span>
             </a>
           </div>
@@ -221,12 +232,12 @@
           {% if not session.get('utente_id') or session.get('utente_id') != utente['id'] %}
             <a href="{{ url_for('chat_conversazione_view', other_id=utente['id']) }}"
                class="hero-primary-cta">
-              💬 Scrivi in chat
+              💬 {{ tr('profile.write_chat') }}
             </a>
           {% else %}
             <a href="{{ url_for('nuovo_annuncio') }}"
                class="hero-primary-cta">
-              ＋ Crea annuncio
+              ＋ {{ tr('profile.create_listing') }}
             </a>
           {% endif %}
         </div>
@@ -235,24 +246,35 @@
     </div>
   </section>
 
-  <!-- 🖼️ MODALE FOTO PROFILO PUBBLICA (versione tonda) -->
-  <div id="modaleFotoProfilo" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[999] hidden">
-    <div class="relative flex items-center justify-center">
+  <!-- 🖼️ MODALE FOTO PROFILO PUBBLICA OTTIMIZZATA PER MOBILE -->
+  <div id="modaleFotoProfilo" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center hidden"
+       role="dialog" aria-modal="true" aria-label="Foto profilo ingrandita">
+    <div class="relative flex items-center justify-center w-full h-full px-3 pt-24 pb-5 sm:p-8">
       <img id="fotoProfiloGrande" src="" alt="Foto profilo ingrandita"
-           class="w-64 h-64 sm:w-80 sm:h-80 object-cover rounded-full shadow-2xl border-4 border-white transition-all duration-300 scale-95 opacity-0" />
+           class="max-w-full max-h-full object-contain rounded-2xl shadow-2xl transition-all duration-300 scale-95 opacity-0" />
       <button id="chiudiModaleFoto"
-              class="absolute -top-4 -right-4 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow px-3 py-1 text-lg font-semibold transition">
+              type="button"
+              aria-label="Chiudi foto profilo"
+              class="w-11 h-11 bg-slate-900/70 hover:bg-slate-900 text-white border border-white/25 rounded-full shadow-lg text-lg font-semibold transition">
         ✕
       </button>
     </div>
   </div>
+  {% if not pubblico %}
+    {% include "partials/language_selector.html" %}
+  {% endif %}
   <!-- ▲ FINE WRAPPER -->
   <!-- 🌟 BARRA TABS RINNOVATA -->
   <div class="sticky top-16 sm:top-14 z-[60] bg-transparent relative">
     <div class="w-full px-0 sm:px-0">
       <nav class="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 p-1.5">
 
-        {% set tabs = [('annunci','Annunci'), ('info','Info'), ('foto','Foto'), ('recensioni','Recensioni')] %}
+        {% set tabs = [
+          ('annunci', tr('profile.announcements')),
+          ('info', tr('profile.info')),
+          ('foto', tr('profile.photos')),
+          ('recensioni', tr('profile.reviews'))
+        ] %}
 
         {% for key,label in tabs %}
           <button
@@ -1505,6 +1527,34 @@
   color: #475569;
 }
 
+.hero-language-btn {
+  top: 1rem;
+  bottom: auto;
+  left: 1rem;
+  right: auto;
+  gap: 0.1rem;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(203,213,225,0.95);
+  color: #475569;
+}
+
+.hero-language-btn:hover {
+  background: #fff;
+  color: #2563eb;
+}
+
+.hero-language-flag {
+  font-size: 1.25rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(15,23,42,.15));
+}
+
+.hero-language-arrow {
+  margin-top: 1px;
+  font-size: 0.55rem;
+  line-height: 1;
+}
+
 .hero-settings-btn:hover {
   background: #fff;
   color: #2563eb;
@@ -1906,6 +1956,13 @@
     right: 0.9rem;
   }
 
+  .hero-language-btn {
+    top: 0.85rem;
+    bottom: auto;
+    left: 0.85rem;
+    right: auto;
+  }
+
   .hero-actions-cluster {
     top: 0.85rem;
     right: 0.85rem;
@@ -2137,7 +2194,15 @@ nav::before {
    ============================================================ */
 
 #modaleFotoProfilo {
+  z-index: 9999;
   animation: fadeInModal .25s ease;
+}
+
+#chiudiModaleFoto {
+  position: absolute;
+  z-index: 2;
+  top: calc(.75rem + env(safe-area-inset-top, 0px));
+  right: max(.85rem, env(safe-area-inset-right, 0px));
 }
 
 @keyframes fadeInModal {
@@ -2146,6 +2211,12 @@ nav::before {
 }
 
 #fotoProfiloGrande {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(94vw, 980px);
+  max-height: calc(100dvh - 8rem);
+  object-fit: contain;
   opacity: 0;
   transform: scale(.9);
   transition: transform .35s cubic-bezier(.25,1.15,.5,1), opacity .3s ease;
@@ -2154,6 +2225,14 @@ nav::before {
 #fotoProfiloGrande.animate-in {
   opacity: 1;
   transform: scale(1);
+}
+
+@media (max-width: 640px) {
+  #fotoProfiloGrande {
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 7rem);
+    border-radius: 1rem;
+  }
 }
 
 /* ============================================================
@@ -5789,6 +5868,7 @@ document.addEventListener("DOMContentLoaded", () => {
       imgGrande.classList.remove("animate-in"); // reset animazione
       imgGrande.src = img.src;
       modal.classList.remove("hidden");
+      document.body.classList.add("overflow-hidden", "modal-open");
 
       // Forza repaint per evitare glitch
       void imgGrande.offsetWidth;
@@ -5802,11 +5882,19 @@ document.addEventListener("DOMContentLoaded", () => {
     chiudi.addEventListener("click", () => {
       imgGrande.classList.remove("animate-in");
       modal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden", "modal-open");
+      imgGrande.removeAttribute("src");
     });
   }
 
   modal?.addEventListener("click", (e) => {
     if (e.target === modal) chiudi.click();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      chiudi?.click();
+    }
   });
 });
 </script>

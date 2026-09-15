@@ -60,6 +60,7 @@ def crea_tabella_utenti():
         provincia TEXT,
         regione TEXT,
         lingue TEXT,
+        lingua_interfaccia TEXT NOT NULL DEFAULT 'it',
 
         -- ✅ Testi profilo approvati / pubblici
         frase TEXT,
@@ -1452,6 +1453,7 @@ def aggiorna_colonne_mancanti():
         # Info base / testo profilo
         "frase": "TEXT",
         "lingue": "TEXT",
+        "lingua_interfaccia": "TEXT NOT NULL DEFAULT 'it'",
         "descrizione": "TEXT",
 
         # 🕵️ Revisione admin testi profilo

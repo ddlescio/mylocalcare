@@ -89,6 +89,7 @@ from chat_risk import (
     segnalazione_chat_controllata,
     valuta_rischio_chat,
 )
+from i18n import SUPPORTED_LANGUAGES, normalize_language, translate
 from realtime_auth import build_realtime_token
 from image_utils import (
     ErroreImmagine,
@@ -1293,6 +1294,40 @@ def inject_csrf_token():
     """
     return {
         "csrf_token": lambda: session.get("csrf_token", "")
+    }
+
+
+def get_interface_language():
+    """Lingua UI corrente: sessione, preferenza account, poi italiano."""
+    session_language = session.get("lingua_interfaccia")
+
+    if session_language:
+        return normalize_language(session_language)
+
+    current_user = getattr(g, "utente", None)
+
+    if current_user:
+        try:
+            saved_language = current_user["lingua_interfaccia"]
+        except (KeyError, IndexError, TypeError):
+            saved_language = None
+
+        if saved_language:
+            language = normalize_language(saved_language)
+            session["lingua_interfaccia"] = language
+            return language
+
+    return "it"
+
+
+@app.context_processor
+def inject_interface_language():
+    language = get_interface_language()
+    return {
+        "current_language_code": language,
+        "current_language": SUPPORTED_LANGUAGES[language],
+        "supported_languages": SUPPORTED_LANGUAGES,
+        "tr": lambda key, **values: translate(key, language, **values),
     }
 
 
@@ -5119,6 +5154,9 @@ def admin_counters():
                 production=True
             )
 
+        step = "daily_match_email"
+        daily_match_email_stats = get_daily_match_email_stats(conn)
+
         step = "statistiche_annunci_totali"
 
         annunci_totali = get_count(cur, """
@@ -5215,6 +5253,7 @@ def admin_counters():
             "video_minuti": video_minuti,
             "acquisti_attivi": acquisti_attivi,
             "utenti_chat_sospetti": utenti_chat_sospetti,
+            "daily_match_email_inviate": daily_match_email_stats["ciclo"],
 
             "openai_costo": format_openai_euro(openai_costo),
 
@@ -5259,6 +5298,7 @@ def admin_counters():
             "video_minuti": 0,
             "acquisti_attivi": 0,
             "utenti_chat_sospetti": 0,
+            "daily_match_email_inviate": 0,
             "openai_costo": "—"
         }
 
@@ -11282,6 +11322,7 @@ def admin_notifiche():
     categorie = sorted(list(data.keys()))
 
     daily_matches_settings = get_daily_matches_settings()
+    daily_match_email_stats = get_daily_match_email_stats(conn)
 
     return render_template(
         "admin_notifiche.html",
@@ -11289,7 +11330,8 @@ def admin_notifiche():
         utenti=utenti,
         categorie=categorie,
         notifiche_admin=notifiche_admin,
-        daily_matches_settings=daily_matches_settings
+        daily_matches_settings=daily_matches_settings,
+        daily_match_email_stats=daily_match_email_stats
     )
 
 @app.route("/admin/notifiche/daily-matches/salva", methods=["POST"])
@@ -12127,6 +12169,107 @@ def get_postmark_billing_cycle_day():
 
     return giorno
 
+
+def _daily_match_billing_period(reference_date=None):
+    """Restituisce inizio/fine del ciclo Postmark che contiene la data."""
+    data_riferimento = reference_date or datetime.now(
+        ZoneInfo("Europe/Rome")
+    ).date()
+    giorno_rinnovo = get_postmark_billing_cycle_day()
+
+    if data_riferimento.day >= giorno_rinnovo:
+        inizio_periodo = data_riferimento.replace(day=giorno_rinnovo)
+    else:
+        ultimo_giorno_mese_precedente = (
+            data_riferimento.replace(day=1) - timedelta(days=1)
+        )
+        inizio_periodo = ultimo_giorno_mese_precedente.replace(
+            day=giorno_rinnovo
+        )
+
+    if inizio_periodo.month == 12:
+        fine_periodo = inizio_periodo.replace(
+            year=inizio_periodo.year + 1,
+            month=1
+        )
+    else:
+        fine_periodo = inizio_periodo.replace(
+            month=inizio_periodo.month + 1
+        )
+
+    return inizio_periodo, fine_periodo
+
+
+def get_daily_match_email_stats(conn=None):
+    """Conta soltanto le email Daily Match inviate con esito positivo."""
+    oggi = datetime.now(ZoneInfo("Europe/Rome")).date()
+    inizio_periodo, fine_periodo = _daily_match_billing_period(oggi)
+    conn_propria = conn is None
+
+    if conn_propria:
+        conn = get_db_connection()
+
+    cur = None
+
+    try:
+        cur = get_cursor(conn)
+        cur.execute(sql("""
+            SELECT
+                COALESCE(SUM(CASE
+                    WHEN status = 'sent' AND run_date = ? THEN 1 ELSE 0
+                END), 0) AS oggi,
+                COALESCE(SUM(CASE
+                    WHEN status = 'sent'
+                     AND run_date >= ?
+                     AND run_date < ? THEN 1 ELSE 0
+                END), 0) AS ciclo,
+                COALESCE(SUM(CASE
+                    WHEN status = 'sent' THEN 1 ELSE 0
+                END), 0) AS totale
+            FROM daily_match_email_sends
+        """), (oggi, inizio_periodo, fine_periodo))
+
+        row = cur.fetchone()
+        return {
+            "oggi": int(row["oggi"] or 0) if row else 0,
+            "ciclo": int(row["ciclo"] or 0) if row else 0,
+            "totale": int(row["totale"] or 0) if row else 0,
+            "limite_ciclo": get_daily_match_email_monthly_limit(),
+            "inizio_ciclo": inizio_periodo,
+            "fine_ciclo": fine_periodo,
+        }
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+        log_exception_safe(
+            "⚠️ Errore lettura contatori email Daily Match",
+            e,
+            production=True
+        )
+        return {
+            "oggi": 0,
+            "ciclo": 0,
+            "totale": 0,
+            "limite_ciclo": get_daily_match_email_monthly_limit(),
+            "inizio_ciclo": inizio_periodo,
+            "fine_ciclo": fine_periodo,
+        }
+    finally:
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+
+        if conn_propria:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
 def invia_email_daily_match(
     user_id,
     categorie_count,
@@ -12177,35 +12320,10 @@ def invia_email_daily_match(
     )
 
     data_esecuzione = ora_roma.date()
-    giorno_rinnovo = get_postmark_billing_cycle_day()
-
-    # Il periodo Postmark non coincide necessariamente
-    # con il mese solare. Nel nostro caso parte il giorno 7.
-    if data_esecuzione.day >= giorno_rinnovo:
-        inizio_periodo = data_esecuzione.replace(
-            day=giorno_rinnovo
-        )
-    else:
-        ultimo_giorno_mese_precedente = (
-            data_esecuzione.replace(day=1)
-            - timedelta(days=1)
-        )
-
-        inizio_periodo = (
-            ultimo_giorno_mese_precedente.replace(
-                day=giorno_rinnovo
-            )
-        )
-
-    if inizio_periodo.month == 12:
-        fine_periodo = inizio_periodo.replace(
-            year=inizio_periodo.year + 1,
-            month=1
-        )
-    else:
-        fine_periodo = inizio_periodo.replace(
-            month=inizio_periodo.month + 1
-        )
+    # Il periodo Postmark non coincide necessariamente con il mese solare.
+    inizio_periodo, fine_periodo = _daily_match_billing_period(
+        data_esecuzione
+    )
 
     conn_propria = conn is None
 
@@ -15220,6 +15338,25 @@ def load_logged_in_user():
         cur = get_cursor(conn)
         cur.execute(sql("SELECT * FROM utenti WHERE id = ?"), (user_id,))
         g.utente = cur.fetchone()
+
+        session_language = session.get("lingua_interfaccia")
+
+        if g.utente and session_language:
+            session_language = normalize_language(session_language)
+            try:
+                saved_language = normalize_language(
+                    g.utente["lingua_interfaccia"]
+                )
+            except (KeyError, IndexError, TypeError):
+                saved_language = session_language
+
+            if saved_language != session_language:
+                cur.execute(sql("""
+                    UPDATE utenti
+                    SET lingua_interfaccia = ?
+                    WHERE id = ?
+                """), (session_language, user_id))
+                conn.commit()
     except Exception as e:
         print(f"⚠️ load_logged_in_user errore: {e}")
         g.utente = None
@@ -20396,6 +20533,49 @@ def landing():
 
     # 3️⃣ Altrimenti mostra landing
     return render_template('landing.html')
+
+
+@app.route('/lingua', methods=['POST'])
+def imposta_lingua_interfaccia():
+    verify_csrf()
+
+    language = normalize_language(request.form.get("lingua"))
+    session["lingua_interfaccia"] = language
+
+    if getattr(g, "utente", None):
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+
+        try:
+            cur.execute(sql("""
+                UPDATE utenti
+                SET lingua_interfaccia = ?
+                WHERE id = ?
+            """), (language, int(g.utente["id"])))
+            conn.commit()
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            log_exception_safe(
+                "⚠️ Salvataggio lingua interfaccia non riuscito",
+                e,
+                {"user_id": int(g.utente["id"]), "language": language},
+                production=True
+            )
+        finally:
+            try:
+                cur.close()
+            except Exception:
+                pass
+
+    next_url = (request.form.get("next") or "").strip()
+
+    if not next_url.startswith("/") or next_url.startswith("//"):
+        next_url = url_for("home")
+
+    return redirect(next_url)
 
 @app.route('/home')
 def home_v2():

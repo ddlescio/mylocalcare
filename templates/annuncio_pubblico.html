@@ -3,6 +3,14 @@
 {% block content %}
 {% from "partials/interesse_annuncio_button.html" import interesse_annuncio_button with context %}
 
+{% set zoom_foto_profilo_annuncio = url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) %}
+{% set zoom_foto_annuncio = [] %}
+{% if annuncio['media'] %}
+  {% for foto in annuncio['media'].split(',') if foto and foto.strip() %}
+    {% set _ = zoom_foto_annuncio.append(url_for('static', filename=foto.strip())) %}
+  {% endfor %}
+{% endif %}
+
 
 <div class="page-wrapper annuncio-page max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
 
@@ -44,7 +52,7 @@
 
         <button
           type="button"
-          onclick="apriZoom('{{ url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) }}')"
+          onclick="apriZoomProfiloAnnuncio()"
           class="annuncio-hero-photo-button"
           aria-label="Apri immagine profilo">
 
@@ -254,10 +262,10 @@
 
     <div class="annuncio-info-card-body">
       <div class="annuncio-media-grid">
-        {% for foto in annuncio['media'].split(',') if foto %}
+        {% for foto in annuncio['media'].split(',') if foto and foto.strip() %}
         <button
           type="button"
-          onclick="apriZoom('{{ url_for('static', filename=foto.strip()) }}')"
+          onclick="apriZoom({{ loop.index0 }})"
           class="annuncio-media-thumb">
           <img
             src="{{ url_for('static', filename=foto.strip()) }}"
@@ -457,10 +465,142 @@
 
 <!-- ZOOM -->
 <div id="zoom-overlay"
-     class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-     onclick="chiudiZoom()">
-  <img id="zoom-img" class="max-w-[90%] max-h-[90%] rounded-lg shadow-2xl">
+     class="hidden fixed inset-0 flex items-center justify-center"
+     role="dialog"
+     aria-modal="true"
+     aria-label="Galleria immagini annuncio">
+  <button type="button"
+          id="zoom-close"
+          class="zoom-round-control zoom-close-control"
+          aria-label="Chiudi galleria">✕</button>
+
+  <button type="button"
+          id="zoom-prev"
+          class="zoom-round-control zoom-side-control zoom-prev-control"
+          aria-label="Foto precedente">‹</button>
+
+  <figure class="zoom-stage">
+    <img id="zoom-img" alt="Immagine annuncio ingrandita">
+    <figcaption id="zoom-counter" class="zoom-counter"></figcaption>
+  </figure>
+
+  <button type="button"
+          id="zoom-next"
+          class="zoom-round-control zoom-side-control zoom-next-control"
+          aria-label="Foto successiva">›</button>
 </div>
+
+<style>
+  #zoom-overlay {
+    z-index: 10050;
+    padding: calc(5.4rem + env(safe-area-inset-top, 0px)) 0.75rem
+             calc(1rem + env(safe-area-inset-bottom, 0px));
+    background: rgba(2, 6, 23, 0.94);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  #zoom-overlay.hidden { display: none !important; }
+
+  .zoom-stage {
+    width: min(100%, 1080px);
+    height: 100%;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  #zoom-img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 1.1rem;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.5);
+    transition: opacity .16s ease, transform .2s ease;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  #zoom-img.is-changing {
+    opacity: .25;
+    transform: scale(.985);
+  }
+
+  .zoom-round-control {
+    position: absolute;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(15, 23, 42, 0.68);
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .zoom-close-control {
+    top: calc(4.55rem + env(safe-area-inset-top, 0px));
+    right: max(0.85rem, env(safe-area-inset-right, 0px));
+    font-size: 1.05rem;
+  }
+
+  .zoom-side-control {
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .zoom-prev-control { left: max(0.85rem, env(safe-area-inset-left, 0px)); }
+  .zoom-next-control { right: max(0.85rem, env(safe-area-inset-right, 0px)); }
+
+  .zoom-counter {
+    position: absolute;
+    left: 50%;
+    bottom: 0.75rem;
+    transform: translateX(-50%);
+    min-width: 54px;
+    padding: 0.42rem 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.68);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-align: center;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  @media (max-width: 640px) {
+    #zoom-overlay {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .zoom-stage { width: 100%; }
+    #zoom-img { max-width: 100vw; border-radius: 0; }
+
+    .zoom-side-control {
+      width: 40px;
+      height: 52px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.58);
+    }
+  }
+</style>
 
 <!-- 🚀 MODALE AUMENTA VISIBILITÀ -->
 <div id="modale-visibilita"
@@ -3544,16 +3684,102 @@
 
   </style>
   <script>
-  function apriZoom(src) {
-    document.getElementById("zoom-img").src = src;
-    document.getElementById("zoom-overlay").classList.remove("hidden");
+  const FOTO_ZOOM_ANNUNCIO = {{ zoom_foto_annuncio | tojson }};
+  const FOTO_ZOOM_PROFILO_ANNUNCIO = {{ zoom_foto_profilo_annuncio | tojson }};
+  let fotoZoomAttiveAnnuncio = FOTO_ZOOM_ANNUNCIO;
+  let indiceZoomAnnuncio = 0;
+  let zoomTouchStartX = null;
+
+  function aggiornaZoomAnnuncio(indice, conAnimazione = true) {
+    if (!fotoZoomAttiveAnnuncio.length) return;
+
+    indiceZoomAnnuncio = (
+      indice + fotoZoomAttiveAnnuncio.length
+    ) % fotoZoomAttiveAnnuncio.length;
+
+    const immagine = document.getElementById("zoom-img");
+    const contatore = document.getElementById("zoom-counter");
+    const precedente = document.getElementById("zoom-prev");
+    const successiva = document.getElementById("zoom-next");
+    const haPiuFoto = fotoZoomAttiveAnnuncio.length > 1;
+
+    if (conAnimazione) immagine.classList.add("is-changing");
+
+    window.setTimeout(() => {
+      immagine.onload = () => immagine.classList.remove("is-changing");
+      immagine.src = fotoZoomAttiveAnnuncio[indiceZoomAnnuncio];
+    }, conAnimazione ? 90 : 0);
+
+    contatore.textContent = `${indiceZoomAnnuncio + 1} / ${fotoZoomAttiveAnnuncio.length}`;
+    contatore.classList.toggle("hidden", !haPiuFoto);
+    precedente.classList.toggle("hidden", !haPiuFoto);
+    successiva.classList.toggle("hidden", !haPiuFoto);
+  }
+
+  function apriZoom(indice = 0) {
+    fotoZoomAttiveAnnuncio = FOTO_ZOOM_ANNUNCIO;
+    if (!fotoZoomAttiveAnnuncio.length) return;
+    const overlay = document.getElementById("zoom-overlay");
+    overlay.classList.remove("hidden");
+    aggiornaZoomAnnuncio(Number(indice) || 0, false);
     bodyModalOn();
+    document.getElementById("zoom-close")?.focus({ preventScroll: true });
+  }
+
+  function apriZoomProfiloAnnuncio() {
+    fotoZoomAttiveAnnuncio = [FOTO_ZOOM_PROFILO_ANNUNCIO];
+    const overlay = document.getElementById("zoom-overlay");
+    overlay.classList.remove("hidden");
+    aggiornaZoomAnnuncio(0, false);
+    bodyModalOn();
+    document.getElementById("zoom-close")?.focus({ preventScroll: true });
   }
 
   function chiudiZoom() {
-    document.getElementById("zoom-overlay").classList.add("hidden");
+    const overlay = document.getElementById("zoom-overlay");
+    if (!overlay || overlay.classList.contains("hidden")) return;
+    overlay.classList.add("hidden");
+    document.getElementById("zoom-img")?.removeAttribute("src");
     bodyModalOff();
   }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const overlay = document.getElementById("zoom-overlay");
+    const immagine = document.getElementById("zoom-img");
+
+    document.getElementById("zoom-close")?.addEventListener("click", chiudiZoom);
+    document.getElementById("zoom-prev")?.addEventListener("click", () => {
+      aggiornaZoomAnnuncio(indiceZoomAnnuncio - 1);
+    });
+    document.getElementById("zoom-next")?.addEventListener("click", () => {
+      aggiornaZoomAnnuncio(indiceZoomAnnuncio + 1);
+    });
+
+    overlay?.addEventListener("click", (event) => {
+      if (event.target === overlay) chiudiZoom();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (!overlay || overlay.classList.contains("hidden")) return;
+      if (event.key === "Escape") chiudiZoom();
+      if (event.key === "ArrowLeft") aggiornaZoomAnnuncio(indiceZoomAnnuncio - 1);
+      if (event.key === "ArrowRight") aggiornaZoomAnnuncio(indiceZoomAnnuncio + 1);
+    });
+
+    immagine?.addEventListener("touchstart", (event) => {
+      zoomTouchStartX = event.touches?.[0]?.clientX ?? null;
+    }, { passive: true });
+
+    immagine?.addEventListener("touchend", (event) => {
+      if (zoomTouchStartX === null) return;
+      const fineX = event.changedTouches?.[0]?.clientX ?? zoomTouchStartX;
+      const distanza = fineX - zoomTouchStartX;
+      zoomTouchStartX = null;
+
+      if (Math.abs(distanza) < 45 || fotoZoomAttiveAnnuncio.length < 2) return;
+      aggiornaZoomAnnuncio(indiceZoomAnnuncio + (distanza < 0 ? 1 : -1));
+    }, { passive: true });
+  });
 </script>
 <script>
 let ANNUNCIO_ID_CORRENTE = null;

@@ -5,7 +5,16 @@
 {% endblock %}
 {% block content %}
 
-<div class="max-w-2xl mx-auto px-4 pt-24 pb-16">
+<div class="relative max-w-2xl mx-auto px-4 pt-24 pb-16">
+
+  <button type="button"
+          data-language-open
+          class="absolute top-4 right-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm font-extrabold text-slate-700 shadow-sm backdrop-blur-md hover:border-blue-300 hover:text-blue-700 transition"
+          aria-label="{{ tr('language.open') }}">
+    <span class="text-lg" aria-hidden="true">{{ current_language.flag }}</span>
+    <span>{{ current_language.short }}</span>
+    <span class="text-[10px] text-slate-400" aria-hidden="true">▾</span>
+  </button>
 
   <!-- LOGO + CLAIM -->
   <div class="flex flex-col items-center text-center mb-12">
@@ -18,12 +27,11 @@
     </div>
 
     <h1 class="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
-      Il passaparola di una volta, a portata di mano!
+      {{ tr('landing.title') }}
     </h1>
 
     <p class="mt-3 text-slate-600 text-sm sm:text-base max-w-md">
-      La rete locale dove trovare o offrire aiuto per casa, famiglia, benessere e tempo libero.
-      Più persone partecipano, più il passaparola diventa utile per tutti.
+      {{ tr('landing.subtitle') }}
     </p>
 
   </div>
@@ -34,17 +42,17 @@
               rounded-3xl shadow-md p-6 sm:p-8">
 
     <h2 class="text-lg font-semibold text-slate-800">
-      Da dove vuoi iniziare?
+      {{ tr('landing.start') }}
     </h2>
 
     <p class="text-slate-600 mt-1 text-sm">
-      Scegli la tua zona per entrare nella rete locale di persone vicino a te.
+      {{ tr('landing.zone_intro') }}
     </p>
 
     <form method="post" action="{{ url_for('set_macro_area') }}" class="mt-5">
 
       <label class="block text-sm font-semibold text-slate-700 mb-2">
-        La tua zona
+        {{ tr('landing.your_zone') }}
       </label>
 
       <div class="relative">
@@ -54,7 +62,7 @@
           type="text"
           required
           autocomplete="off"
-          placeholder="Es. Milano, Roma, Torino..."
+          placeholder="{{ tr('landing.zone_placeholder') }}"
           class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base
                  focus:outline-none focus:ring-2 focus:ring-blue-500
                  focus:border-blue-500 bg-white transition"
@@ -73,18 +81,19 @@
       <button type="submit"
               class="mt-6 w-full rounded-2xl bg-blue-600 hover:bg-blue-700
                      text-white font-semibold py-3 transition shadow-md">
-        Continua
+        {{ tr('common.continue') }}
       </button>
     </form>
 
     <p class="text-xs text-center text-slate-400 mt-4">
-      Potrai cambiare zona in qualsiasi momento e scoprire nuove reti locali.
+      {{ tr('landing.change_zone') }}
     </p>
 
   </div>
 </div>
 
 {% include "_landing_story.html" %}
+{% include "partials/language_selector.html" %}
 
 {% endblock %}
 

@@ -4,29 +4,23 @@
 
   <div class="lc-story__shell">
     <a class="lc-scroll-cue" href="#lc-story-title">
-      <span>Scopri cosa puoi fare</span>
+      <span>{{ tr('story.cue') }}</span>
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="m7 10 5 5 5-5"></path>
       </svg>
     </a>
 
     <header class="lc-story__intro lc-reveal">
-      <h2 id="lc-story-title">Trova ciò che ti serve.<br>Fatti trovare per ciò che sai fare.</h2>
-      <p>
-        MyLocalCare trasforma il passaparola in una rete locale più chiara:
-        persone, servizi e necessità si incontrano senza perdersi in un feed.
-      </p>
+      <h2 id="lc-story-title">{{ tr('story.title') }}</h2>
+      <p>{{ tr('story.intro') }}</p>
 
     </header>
 
     <article class="lc-scene lc-scene--annunci">
       <div class="lc-scene__copy lc-reveal">
-        <span class="lc-section-label">Cerco e Offro</span>
-        <h3>Due esigenze. Un’unica rete.</h3>
-        <p class="lc-scene__lead">
-          Chi cerca incontra persone disponibili. Chi offre trasforma tempo,
-          capacità ed esperienza in una presenza visibile e contattabile.
-        </p>
+        <span class="lc-section-label">{{ tr('story.seek_offer') }}</span>
+        <h3>{{ tr('story.two_needs') }}</h3>
+        <p class="lc-scene__lead">{{ tr('story.two_needs_text') }}</p>
 
         <div class="lc-choice-grid">
           <div class="lc-choice lc-choice--cerco">
@@ -37,8 +31,8 @@
               </svg>
             </span>
             <div>
-              <h4>Cerco</h4>
-              <p>Trova persone e servizi coerenti con la tua esigenza e la tua zona.</p>
+              <h4>{{ tr('story.seek') }}</h4>
+              <p>{{ tr('story.seek_text') }}</p>
             </div>
           </div>
 
@@ -49,18 +43,15 @@
               </svg>
             </span>
             <div>
-              <h4>Offro</h4>
-              <p>Dai valore a ciò che sai fare e fatti trovare da chi ne ha bisogno.</p>
+              <h4>{{ tr('story.offer') }}</h4>
+              <p>{{ tr('story.offer_text') }}</p>
             </div>
           </div>
         </div>
 
         <p class="lc-insight">
           <span aria-hidden="true">↗</span>
-          <span>
-            Se non trovi ciò che cerchi, pubblica la tua richiesta e fatti contattare dalle
-            persone della rete
-          </span>
+          <span>{{ tr('story.publish_request') }}</span>
         </p>
       </div>
 
@@ -74,7 +65,7 @@
         >
         <figcaption>
           <span class="lc-caption-dot" aria-hidden="true"></span>
-          Confronta annunci e profili per trovare la persona più adatta a te.
+          {{ tr('story.compare') }}
         </figcaption>
       </figure>
     </article>
@@ -91,25 +82,22 @@
       </figure>
 
       <div class="lc-scene__copy lc-reveal">
-        <span class="lc-section-label">Il tuo spazio personale</span>
-        <h3>Non sei soltanto un nome sotto un post.</h3>
-        <p class="lc-scene__lead">
-          Un profilo completo racconta chi sei e rende immediatamente più chiaro
-          perché una persona dovrebbe scegliere proprio te.
-        </p>
+        <span class="lc-section-label">{{ tr('story.personal_space') }}</span>
+        <h3>{{ tr('story.not_just_name') }}</h3>
+        <p class="lc-scene__lead">{{ tr('story.profile_text') }}</p>
 
         <ul class="lc-value-list">
           <li>
             <span aria-hidden="true">✓</span>
-            <div><strong>Presentati davvero</strong><small>Foto, descrizione e ciò che ti distingue.</small></div>
+            <div><strong>{{ tr('story.present_yourself') }}</strong><small>{{ tr('story.present_yourself_text') }}</small></div>
           </li>
           <li>
             <span aria-hidden="true">✓</span>
-            <div><strong>Rendi visibile il tuo valore</strong><small>Esperienze, competenze, lingue e servizi.</small></div>
+            <div><strong>{{ tr('story.show_value') }}</strong><small>{{ tr('story.show_value_text') }}</small></div>
           </li>
           <li>
             <span aria-hidden="true">✓</span>
-            <div><strong>Costruisci fiducia</strong><small>Informazioni chiare, foto e recensioni in un solo posto.</small></div>
+            <div><strong>{{ tr('story.build_trust') }}</strong><small>{{ tr('story.build_trust_text') }}</small></div>
           </li>
         </ul>
 
@@ -118,7 +106,7 @@
 
     <section class="lc-connection lc-reveal" aria-labelledby="lc-connection-title">
       <div class="lc-connection__heading">
-        <h3 id="lc-connection-title">Le opportunità non si perdono</h3>
+        <h3 id="lc-connection-title">{{ tr('story.opportunities') }}</h3>
       </div>
 
       <div class="lc-connection__grid">
@@ -129,8 +117,8 @@
               <path d="M10 21h4"></path>
             </svg>
           </span>
-          <h4>Notifiche</h4>
-          <p>Sai quando c’è qualcosa che merita la tua attenzione.</p>
+          <h4>{{ tr('story.notifications') }}</h4>
+          <p>{{ tr('story.notifications_text') }}</p>
         </article>
 
         <article>
@@ -140,8 +128,8 @@
               <path d="M8 10h.01M12 10h.01M16 10h.01"></path>
             </svg>
           </span>
-          <h4>Messaggi</h4>
-          <p>Parli direttamente con la persona interessata, nello stesso spazio.</p>
+          <h4>{{ tr('story.messages') }}</h4>
+          <p>{{ tr('story.messages_text') }}</p>
         </article>
 
         <article>
@@ -153,55 +141,49 @@
               <circle cx="4" cy="17" r="1"></circle>
             </svg>
           </span>
-          <h4>Intenzioni chiare</h4>
-          <p>Cerco e Offro fanno capire subito che tipo di contatto desideri.</p>
+          <h4>{{ tr('story.clear_intent') }}</h4>
+          <p>{{ tr('story.clear_intent_text') }}</p>
         </article>
       </div>
     </section>
 
     <section class="lc-categories" aria-labelledby="lc-categories-title">
       <header class="lc-categories__heading lc-reveal">
-        <span class="lc-section-label">La community prende forma</span>
-        <h3 id="lc-categories-title">I servizi più richiesti. E nuove possibilità da far crescere.</h3>
-        <p>
-          Casa, famiglia, animali, studio e benessere convivono nella stessa rete:
-          ogni persona può trovare ciò che cerca e dare spazio a ciò che offre.
-        </p>
+        <span class="lc-section-label">{{ tr('story.community') }}</span>
+        <h3 id="lc-categories-title">{{ tr('story.categories_title') }}</h3>
+        <p>{{ tr('story.categories_text') }}</p>
       </header>
 
       <div class="lc-category-grid">
         <article class="lc-category-card lc-reveal">
           <span class="lc-category-card__icon" aria-hidden="true">👶</span>
-          <div><h4>Babysitter</h4><p>Persone e famiglie possono incontrarsi nella stessa zona.</p></div>
+          <div><h4>Babysitter</h4><p>{{ tr('story.babysitter_text') }}</p></div>
         </article>
 
         <article class="lc-category-card lc-reveal">
           <span class="lc-category-card__icon" aria-hidden="true">🐾</span>
-          <div><h4>Pet-sitter</h4><p>Supporto fidato per cani, gatti e altri animali domestici.</p></div>
+          <div><h4>Pet-sitter</h4><p>{{ tr('story.pet_text') }}</p></div>
         </article>
 
         <article class="lc-category-card lc-reveal">
           <span class="lc-category-card__icon" aria-hidden="true">🏠</span>
-          <div><h4>Aiuto in casa</h4><p>Collaborazioni per pulizie, spesa, stiro e necessità quotidiane.</p></div>
+          <div><h4>{{ tr('story.home_help') }}</h4><p>{{ tr('story.home_help_text') }}</p></div>
         </article>
 
         <article class="lc-category-card lc-reveal">
           <span class="lc-category-card__icon" aria-hidden="true">📚</span>
-          <div><h4>Ripetizioni</h4><p>Lezioni e sostegno scolastico, vicino a te oppure online.</p></div>
+          <div><h4>{{ tr('story.tutoring') }}</h4><p>{{ tr('story.tutoring_text') }}</p></div>
         </article>
 
         <article class="lc-category-card lc-category-card--spotlight lc-reveal">
           <div class="lc-category-card__topline">
             <span class="lc-category-card__icon" aria-hidden="true">🧘</span>
-            <span class="lc-new-badge">Nuova opportunità</span>
+            <span class="lc-new-badge">{{ tr('story.new_opportunity') }}</span>
           </div>
           <div>
-            <h4>Benessere &amp; Personal Trainer</h4>
-            <p>
-              Una vetrina personale per professionisti che vogliono farsi conoscere
-              in una rete locale già interessata alla cura e alla qualità della vita.
-            </p>
-            <span class="lc-spotlight-note">Uno spazio nuovo in cui distinguersi.</span>
+            <h4>{{ tr('story.wellbeing') }}</h4>
+            <p>{{ tr('story.wellbeing_text') }}</p>
+            <span class="lc-spotlight-note">{{ tr('story.wellbeing_note') }}</span>
           </div>
         </article>
       </div>
@@ -219,18 +201,15 @@
       <div class="lc-final-cta__orb lc-final-cta__orb--one" aria-hidden="true"></div>
       <div class="lc-final-cta__orb lc-final-cta__orb--two" aria-hidden="true"></div>
       <div class="lc-final-cta__content">
-        <span class="lc-eyebrow lc-eyebrow--glass">Iscrizione gratuita</span>
-        <h3 id="lc-final-title">La persona giusta potrebbe essere già nella tua rete.</h3>
-        <p>
-          Crea il tuo profilo, pubblica ciò che cerchi o offri e diventa parte
-          di un passaparola locale che cresce insieme alle persone.
-        </p>
+        <span class="lc-eyebrow lc-eyebrow--glass">{{ tr('story.free_signup') }}</span>
+        <h3 id="lc-final-title">{{ tr('story.final_title') }}</h3>
+        <p>{{ tr('story.final_text') }}</p>
 
         <div class="lc-final-cta__actions">
-          <a class="lc-button lc-button--primary" href="{{ url_for('register') }}">Registrati gratis</a>
-          <a class="lc-button lc-button--secondary" href="#macro-autocomplete" data-lc-scroll-zone>Esplora la tua zona</a>
+          <a class="lc-button lc-button--primary" href="{{ url_for('register') }}">{{ tr('story.register_free') }}</a>
+          <a class="lc-button lc-button--secondary" href="#macro-autocomplete" data-lc-scroll-zone>{{ tr('story.explore_zone') }}</a>
         </div>
-        <small>Puoi esplorare gli annunci della tua zona anche prima di registrarti.</small>
+        <small>{{ tr('story.explore_guest') }}</small>
       </div>
     </section>
   </div>
