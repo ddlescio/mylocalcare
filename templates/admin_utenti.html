@@ -1284,6 +1284,15 @@
             </select>
         </div>
 
+        <label class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 cursor-pointer">
+            <input type="checkbox"
+                   name="rischio_chat"
+                   value="1"
+                   class="h-4 w-4"
+                   {% if rischio_chat %}checked{% endif %}>
+            🚨 Solo attività chat sospetta
+        </label>
+
         <button type="button"
                 id="toggle-extra-filters"
                 class="filter-btn-secondary filter-toggle-btn">
@@ -1360,6 +1369,22 @@
 
 </form>
 
+{% if rischio_chat %}
+  <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+    <div class="font-bold">Controllo preventivo attività chat</div>
+    <div class="mt-1 text-red-800">
+      Sono mostrate le persone che hanno iniziato almeno
+      {{ chat_risk_thresholds.nuove_chat_24h }} conversazioni in 24 ore,
+      {{ chat_risk_thresholds.nuove_chat_7g }} in 7 giorni o
+      {{ chat_risk_thresholds.nuove_chat_30g }} in 30 giorni, oppure presentano
+      continuità anomala, molti contatti senza risposta o una forte dispersione territoriale.
+      Viene segnalato anche chi riceve almeno
+      {{ chat_risk_thresholds.blocchi_ricevuti_30g }} blocchi da utenti diversi in 30 giorni.
+      La segnalazione non disattiva automaticamente l'account.
+    </div>
+  </div>
+{% endif %}
+
 <!-- TABELLA UTENTI -->
 <div class="table-wrapper">
 
@@ -1404,6 +1429,8 @@
                 data-admin-annunci='{{ u.admin_annunci_attivi_json|default("[]")|e }}'
                 data-admin-chat='{{ u.admin_chat_aperte_json|default("[]")|e }}'
                 data-admin-chat-count="{{ u.admin_chat_aperte_count|default(0) }}"
+                data-user-chat-risk="{{ 1 if u.chat_rischio else 0 }}"
+                data-user-chat-risk-reason="{{ u.chat_rischio_motivo|default('')|e }}"
                 data-admin-recensioni-scritte='{{ u.admin_recensioni_scritte_json|default("[]")|e }}'
                 data-admin-recensioni-ricevute='{{ u.admin_recensioni_ricevute_json|default("[]")|e }}'>
 
@@ -1413,6 +1440,12 @@
                   <div class="font-semibold text-slate-800">
                     {{ u.username }}
                   </div>
+
+                  {% if u.chat_rischio %}
+                    <div class="mt-1 max-w-xs text-xs font-semibold text-red-700">
+                      🚨 {{ u.chat_rischio_motivo }}
+                    </div>
+                  {% endif %}
 
                   <div class="mt-1 flex gap-1">
                     <a href="{{ url_for('chat_conversazione_view', other_id=u.id) }}"
@@ -1446,6 +1479,10 @@
                         <span class="badge badge-green">Attivo</span>
                     {% else %}
                         <span class="badge badge-red">Non attivo</span>
+                    {% endif %}
+
+                    {% if u.chat_rischio %}
+                        <span class="badge badge-red mt-1">Rischio chat</span>
                     {% endif %}
                 </td>
 
@@ -1683,6 +1720,12 @@
         <div class="user-modal-info-label">Registrato il</div>
         <div id="modal-user-created" class="user-modal-info-value">-</div>
       </div>
+    </div>
+
+    <div id="modal-user-chat-risk"
+         class="hidden mx-5 mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+      <div class="font-bold">🚨 Attività chat da verificare</div>
+      <div id="modal-user-chat-risk-reason" class="mt-1 text-red-800"></div>
     </div>
 
     <div id="modal-user-actions" class="user-modal-actions">
@@ -2404,6 +2447,20 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         statusEl.classList.add("non-attivo");
       }
+    }
+
+    const chatRiskBox = document.getElementById("modal-user-chat-risk");
+    const chatRiskReason = document.getElementById("modal-user-chat-risk-reason");
+    const hasChatRisk = d.userChatRisk === "1";
+
+    if (chatRiskBox) {
+      chatRiskBox.classList.toggle("hidden", !hasChatRisk);
+    }
+
+    if (chatRiskReason) {
+      chatRiskReason.textContent = hasChatRisk
+        ? (d.userChatRiskReason || "Comportamento anomalo nelle nuove conversazioni.")
+        : "";
     }
 
     setText("modal-user-id", d.userId);

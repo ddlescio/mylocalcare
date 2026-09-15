@@ -84,6 +84,7 @@ from socket_registry import (
 from realtime_handlers import register_socket_lifecycle_handlers
 
 from chat_realtime import register_chat_socket_handlers, typing_state, pagina_attiva
+from chat_risk import CHAT_RISK_THRESHOLDS, valuta_rischio_chat
 from realtime_auth import build_realtime_token
 from image_utils import (
     ErroreImmagine,
@@ -4673,6 +4674,242 @@ def admin_recovery_code_verify():
         except Exception:
             pass
 
+_CHAT_REGIONI_PER_PROVINCIA = None
+
+
+def _get_chat_regioni_per_provincia():
+    """Carica una sola volta la relazione provincia -> regione."""
+    global _CHAT_REGIONI_PER_PROVINCIA
+
+    if _CHAT_REGIONI_PER_PROVINCIA is not None:
+        return _CHAT_REGIONI_PER_PROVINCIA
+
+    mappa = {}
+    path = os.path.join(app.static_folder, "data", "comuni.json")
+
+    try:
+        with open(path, encoding="utf-8") as file_comuni:
+            for comune in json.load(file_comuni):
+                provincia = (comune.get("provincia") or "").strip().casefold()
+                regione = (comune.get("regione") or "").strip()
+
+                if provincia and regione:
+                    mappa[provincia] = regione
+    except (OSError, ValueError, TypeError) as e:
+        log_exception_safe(
+            "⚠️ Impossibile caricare le regioni per il controllo chat",
+            e,
+            production=True
+        )
+
+    _CHAT_REGIONI_PER_PROVINCIA = mappa
+    return mappa
+
+
+def _chat_risk_datetime(value):
+    if not value:
+        return None
+
+    try:
+        if isinstance(value, datetime):
+            data = value
+        else:
+            data = datetime.fromisoformat(
+                str(value).strip().replace("Z", "+00:00")
+            )
+
+        if data.tzinfo is None:
+            data = data.replace(tzinfo=timezone.utc)
+
+        return data.astimezone(timezone.utc)
+    except (TypeError, ValueError):
+        return None
+
+
+def analizza_utenti_chat_sospetti(cur):
+    """
+    Restituisce gli account attivi che hanno iniziato nuove conversazioni
+    con un andamento anomalo. Non applica mai blocchi automatici.
+    """
+    adesso = datetime.now(timezone.utc)
+    limite_24h = adesso - timedelta(hours=24)
+    limite_7g = adesso - timedelta(days=7)
+    limite_30g = adesso - timedelta(days=30)
+
+    cur.execute(sql("""
+        WITH messaggi_ordinati AS (
+            SELECT
+                m.id,
+                m.mittente_id,
+                m.destinatario_id,
+                m.created_at,
+                ROW_NUMBER() OVER (
+                    PARTITION BY
+                        CASE
+                            WHEN m.mittente_id < m.destinatario_id
+                            THEN m.mittente_id
+                            ELSE m.destinatario_id
+                        END,
+                        CASE
+                            WHEN m.mittente_id > m.destinatario_id
+                            THEN m.mittente_id
+                            ELSE m.destinatario_id
+                        END
+                    ORDER BY m.created_at ASC, m.id ASC
+                ) AS posizione_chat
+            FROM messaggi_chat m
+            WHERE m.mittente_id <> m.destinatario_id
+        )
+        SELECT
+            prima.mittente_id AS utente_id,
+            prima.destinatario_id AS altro_utente_id,
+            prima.created_at,
+            autore.username,
+            autore.provincia AS provincia_autore,
+            destinatario.provincia AS provincia_destinatario,
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM messaggi_chat risposta
+                    WHERE risposta.mittente_id = prima.destinatario_id
+                      AND risposta.destinatario_id = prima.mittente_id
+                )
+                THEN 1
+                ELSE 0
+            END AS ha_risposta
+        FROM messaggi_ordinati prima
+        JOIN utenti autore
+          ON autore.id = prima.mittente_id
+        JOIN utenti destinatario
+          ON destinatario.id = prima.destinatario_id
+        WHERE prima.posizione_chat = 1
+          AND prima.created_at >= ?
+          AND autore.attivo = 1
+          AND COALESCE(autore.sospeso, 0) = 0
+          AND COALESCE(autore.disattivato_admin, 0) = 0
+          AND COALESCE(autore.ruolo, 'user') <> 'admin'
+        ORDER BY prima.created_at DESC, prima.id DESC
+    """), (limite_30g.strftime("%Y-%m-%d %H:%M:%S"),))
+
+    regioni_per_provincia = _get_chat_regioni_per_provincia()
+    metriche_per_utente = {}
+
+    def nuove_metriche(utente_id, username):
+        return {
+            "utente_id": int(utente_id),
+            "username": username,
+            "nuove_chat_24h": 0,
+            "nuove_chat_7g": 0,
+            "nuove_chat_30g": 0,
+            "giorni_attivi_7g_set": set(),
+            "province_contattate_7g_set": set(),
+            "regioni_contattate_7g_set": set(),
+            "fuori_regione_7g": 0,
+            "senza_risposta_7g": 0,
+            "blocchi_ricevuti_30g": 0,
+        }
+
+    for row in cur.fetchall():
+        data_apertura = _chat_risk_datetime(row["created_at"])
+        if not data_apertura or data_apertura < limite_30g:
+            continue
+
+        utente_id = int(row["utente_id"])
+        metriche = metriche_per_utente.setdefault(
+            utente_id,
+            nuove_metriche(utente_id, row["username"])
+        )
+
+        metriche["nuove_chat_30g"] += 1
+
+        if data_apertura >= limite_24h:
+            metriche["nuove_chat_24h"] += 1
+
+        if data_apertura < limite_7g:
+            continue
+
+        metriche["nuove_chat_7g"] += 1
+        metriche["giorni_attivi_7g_set"].add(data_apertura.date().isoformat())
+
+        provincia_autore = (row["provincia_autore"] or "").strip()
+        provincia_destinatario = (row["provincia_destinatario"] or "").strip()
+
+        if provincia_destinatario:
+            metriche["province_contattate_7g_set"].add(
+                provincia_destinatario.casefold()
+            )
+
+        regione_autore = regioni_per_provincia.get(provincia_autore.casefold())
+        regione_destinatario = regioni_per_provincia.get(
+            provincia_destinatario.casefold()
+        )
+
+        if regione_destinatario:
+            metriche["regioni_contattate_7g_set"].add(regione_destinatario)
+
+        if (
+            regione_autore
+            and regione_destinatario
+            and regione_autore != regione_destinatario
+        ):
+            metriche["fuori_regione_7g"] += 1
+
+        if int(row["ha_risposta"] or 0) == 0:
+            metriche["senza_risposta_7g"] += 1
+
+    # Conta esclusivamente i blocchi ricevuti da persone diverse. I blocchi
+    # applicati dall'utente verso altri non aumentano il suo rischio.
+    cur.execute(sql("""
+        SELECT
+            blocco.bloccato_id AS utente_id,
+            utente.username,
+            COUNT(DISTINCT blocco.bloccante_id) AS blocchi_ricevuti_30g
+        FROM chat_blocchi blocco
+        JOIN utenti utente
+          ON utente.id = blocco.bloccato_id
+        WHERE blocco.created_at >= ?
+          AND utente.attivo = 1
+          AND COALESCE(utente.sospeso, 0) = 0
+          AND COALESCE(utente.disattivato_admin, 0) = 0
+          AND COALESCE(utente.ruolo, 'user') <> 'admin'
+        GROUP BY blocco.bloccato_id, utente.username
+    """), (limite_30g.strftime("%Y-%m-%d %H:%M:%S"),))
+
+    for row in cur.fetchall():
+        utente_id = int(row["utente_id"])
+        metriche = metriche_per_utente.setdefault(
+            utente_id,
+            nuove_metriche(utente_id, row["username"])
+        )
+        metriche["blocchi_ricevuti_30g"] = int(
+            row["blocchi_ricevuti_30g"] or 0
+        )
+
+    sospetti = {}
+
+    for utente_id, metriche in metriche_per_utente.items():
+        giorni_attivi = len(metriche["giorni_attivi_7g_set"])
+        province_contattate = len(metriche["province_contattate_7g_set"])
+        regioni_contattate = len(metriche["regioni_contattate_7g_set"])
+        metriche_finali = {
+            chiave: valore
+            for chiave, valore in metriche.items()
+            if not chiave.endswith("_set")
+        }
+        metriche_finali["giorni_attivi_7g"] = giorni_attivi
+        metriche_finali["province_contattate_7g"] = province_contattate
+        metriche_finali["regioni_contattate_7g"] = regioni_contattate
+        valutazione = valuta_rischio_chat(metriche_finali)
+
+        if valutazione["sospetto"]:
+            sospetti[utente_id] = {
+                **metriche_finali,
+                **valutazione,
+            }
+
+    return sospetti
+
+
 @app.route("/admin/counters")
 @admin_required
 def admin_counters():
@@ -4817,6 +5054,17 @@ def admin_counters():
         step = "openai_costo"
         openai_costo = get_openai_month_cost()
 
+        step = "utenti_chat_sospetti"
+        try:
+            utenti_chat_sospetti = len(analizza_utenti_chat_sospetti(cur))
+        except Exception as e:
+            utenti_chat_sospetti = 0
+            log_exception_safe(
+                "❌ Errore calcolo utenti con attività chat sospetta",
+                e,
+                production=True
+            )
+
         step = "statistiche_annunci_totali"
 
         annunci_totali = get_count(cur, """
@@ -4912,6 +5160,7 @@ def admin_counters():
             "totale": pending_annunci + pending_recensioni_totali + pending_revisioni_profilo,
             "video_minuti": video_minuti,
             "acquisti_attivi": acquisti_attivi,
+            "utenti_chat_sospetti": utenti_chat_sospetti,
 
             "openai_costo": format_openai_euro(openai_costo),
 
@@ -4955,6 +5204,7 @@ def admin_counters():
             "totale": 0,
             "video_minuti": 0,
             "acquisti_attivi": 0,
+            "utenti_chat_sospetti": 0,
             "openai_costo": "—"
         }
 
@@ -9378,8 +9628,9 @@ def admin_utenti():
     citta = request.args.get("citta", "").strip() or ""
     provincia = request.args.get("provincia", "").strip() or ""
     stato = request.args.get("stato", "").strip() or ""
+    rischio_chat = request.args.get("rischio_chat", "").strip() == "1"
 
-    has_filters = any([nome, email, citta, provincia, stato])
+    has_filters = any([nome, email, citta, provincia, stato, rischio_chat])
 
     conn = get_db_connection()
     c = get_cursor(conn)
@@ -9547,6 +9798,31 @@ def admin_utenti():
 
     # Converto in dict per poter aggiungere i dettagli admin
     utenti = [dict(u) for u in c.fetchall()]
+
+    try:
+        rischio_chat_per_utente = analizza_utenti_chat_sospetti(c)
+    except Exception as e:
+        rischio_chat_per_utente = {}
+        log_exception_safe(
+            "❌ Errore caricamento filtro attività chat sospetta",
+            e,
+            production=True
+        )
+
+    for utente in utenti:
+        rischio = rischio_chat_per_utente.get(int(utente["id"]))
+        utente["chat_rischio"] = bool(rischio)
+        utente["chat_rischio_motivo"] = rischio["motivo"] if rischio else ""
+        utente["chat_rischio_punteggio"] = rischio["punteggio"] if rischio else 0
+        utente["chat_rischio_metriche"] = rischio or {}
+
+    if rischio_chat:
+        utenti = [utente for utente in utenti if utente["chat_rischio"]]
+        utenti.sort(
+            key=lambda utente: utente["chat_rischio_punteggio"],
+            reverse=True
+        )
+
     totale_filtrati = len(utenti)
 
     def _safe_json_value(value):
@@ -9717,6 +9993,8 @@ def admin_utenti():
         citta=citta,
         provincia=provincia,
         stato=stato,
+        rischio_chat=rischio_chat,
+        chat_risk_thresholds=CHAT_RISK_THRESHOLDS,
         totale_utenti=totale_utenti,
         totale_filtrati=totale_filtrati,
         has_filters=has_filters
