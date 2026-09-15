@@ -4790,9 +4790,12 @@ def analizza_utenti_chat_sospetti(cur):
         WHERE prima.posizione_chat = 1
           AND prima.created_at >= ?
           AND COALESCE(autore.ruolo, 'user') <> 'admin'
-          AND LOWER(COALESCE(autore.username, '')) NOT LIKE 'utente_eliminato_%'
+          AND LOWER(COALESCE(autore.username, '')) NOT LIKE ?
         ORDER BY prima.created_at DESC, prima.id DESC
-    """), (limite_30g.strftime("%Y-%m-%d %H:%M:%S"),))
+    """), (
+        limite_30g.strftime("%Y-%m-%d %H:%M:%S"),
+        "utente_eliminato_%",
+    ))
 
     regioni_per_provincia = _get_chat_regioni_per_provincia()
     metriche_per_utente = {}
@@ -4877,9 +4880,12 @@ def analizza_utenti_chat_sospetti(cur):
           ON utente.id = blocco.bloccato_id
         WHERE blocco.created_at >= ?
           AND COALESCE(utente.ruolo, 'user') <> 'admin'
-          AND LOWER(COALESCE(utente.username, '')) NOT LIKE 'utente_eliminato_%'
+          AND LOWER(COALESCE(utente.username, '')) NOT LIKE ?
         GROUP BY blocco.bloccato_id, utente.username
-    """), (limite_30g.strftime("%Y-%m-%d %H:%M:%S"),))
+    """), (
+        limite_30g.strftime("%Y-%m-%d %H:%M:%S"),
+        "utente_eliminato_%",
+    ))
 
     for row in cur.fetchall():
         utente_id = int(row["utente_id"])
