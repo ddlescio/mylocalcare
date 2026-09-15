@@ -1,6 +1,7 @@
 import unittest
+from datetime import datetime, timedelta, timezone
 
-from chat_risk import valuta_rischio_chat
+from chat_risk import segnalazione_chat_controllata, valuta_rischio_chat
 
 
 class ChatRiskTest(unittest.TestCase):
@@ -58,6 +59,20 @@ class ChatRiskTest(unittest.TestCase):
 
         self.assertTrue(risultato["sospetto"])
         self.assertIn("bloccato da 2 utenti", risultato["motivo"])
+
+    def test_controllo_successivo_all_ultima_attivita_archivia_il_caso(self):
+        attivita = datetime(2026, 9, 15, 8, 0, tzinfo=timezone.utc)
+        controllo = attivita + timedelta(minutes=5)
+
+        self.assertTrue(segnalazione_chat_controllata(controllo, attivita))
+
+    def test_nuova_attivita_successiva_riapre_il_caso(self):
+        controllo = datetime(2026, 9, 15, 8, 0, tzinfo=timezone.utc)
+        nuova_attivita = controllo + timedelta(minutes=5)
+
+        self.assertFalse(
+            segnalazione_chat_controllata(controllo, nuova_attivita)
+        )
 
 
 if __name__ == "__main__":

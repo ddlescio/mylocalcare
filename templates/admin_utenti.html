@@ -426,70 +426,33 @@
         0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
-.filter-main-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-    align-items: end;
-}
-
-.filter-status-field {
-    min-width: 0;
-}
-
-.filter-toggle-btn {
-    display: inline-flex;
-    white-space: nowrap;
-}
-
-.filter-extra-panel {
-    margin-top: 12px;
-}
-
-/* Mobile + tablet: i filtri extra sono chiusi di default */
-@media (max-width: 1023px) {
-    .filter-extra-panel {
-        display: none;
-    }
-
-    .filter-extra-panel.is-open {
-        display: block;
-    }
-}
-
-/* Desktop: tutti i filtri sempre visibili, pulsante nascosto */
-@media (min-width: 1024px) {
-    .filter-main-row {
-        grid-template-columns: 1fr;
-        max-width: 260px;
-        margin-bottom: 12px;
-    }
-
-    .filter-toggle-btn {
-        display: none;
-    }
-
-    .filter-extra-panel {
-        display: block;
-        margin-top: 0;
-    }
-}
-
 .filter-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
 
-@media (min-width: 640px) {
+.filter-field-full {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 359px) {
     .filter-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .filter-field-full {
+        grid-column: auto;
     }
 }
 
 @media (min-width: 1024px) {
     .filter-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .filter-field-full {
+        grid-column: auto;
     }
 }
 
@@ -502,7 +465,7 @@
     letter-spacing: 0.01em;
 }
 
-.filter-box input,
+.filter-box input:not([type="checkbox"]),
 .filter-box select {
     width: 100%;
     min-height: 40px;
@@ -516,12 +479,155 @@
     box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.02);
 }
 
-.filter-box input:focus,
+.filter-box input:not([type="checkbox"]):focus,
 .filter-box select:focus {
     outline: none;
     border-color: #93c5fd;
     box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.18);
     background: #fff;
+}
+
+.filter-field .filter-risk-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #fecaca;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fff, #fff7f7);
+    color: #b91c1c;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 0;
+    letter-spacing: 0;
+}
+
+.filter-risk-control input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 19px;
+    height: 19px;
+    min-width: 19px;
+    min-height: 19px;
+    margin: 0;
+    padding: 0;
+    border: 1.5px solid #fca5a5;
+    border-radius: 6px;
+    background: #fff;
+    display: grid;
+    place-content: center;
+    flex: 0 0 19px;
+}
+
+.filter-risk-control input[type="checkbox"]::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    background: #dc2626;
+    transform: scale(0);
+    transition: transform 0.12s ease;
+}
+
+.filter-risk-control input[type="checkbox"]:checked::before {
+    transform: scale(1);
+}
+
+.filter-risk-control:has(input:checked) {
+    border-color: #f87171;
+    background: #fff1f2;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
+}
+
+.filter-field select:disabled {
+    color: #94a3b8;
+    background: #f8fafc;
+    cursor: not-allowed;
+}
+
+.chat-risk-info {
+    margin-bottom: 18px;
+    border: 1px solid #fecaca;
+    border-radius: 16px;
+    background: #fffafa;
+    color: #991b1b;
+    overflow: hidden;
+}
+
+.chat-risk-info summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 14px;
+    font-size: 0.86rem;
+    font-weight: 750;
+    cursor: pointer;
+    list-style: none;
+}
+
+.chat-risk-info summary::-webkit-details-marker {
+    display: none;
+}
+
+.chat-risk-info summary::after {
+    content: "▾";
+    color: #ef4444;
+}
+
+.chat-risk-info[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.chat-risk-info p {
+    margin: 0;
+    padding: 0 14px 12px;
+    color: #b91c1c;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.chat-risk-review-inline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.chat-risk-review-status,
+.chat-risk-review-button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 750;
+}
+
+.chat-risk-review-status.pending {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.chat-risk-review-status.reviewed {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.chat-risk-review-button {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #334155;
+    cursor: pointer;
+}
+
+.chat-risk-review-button:hover {
+    background: #f8fafc;
 }
 
 .filter-actions {
@@ -1265,87 +1371,93 @@
 
 <!-- FILTRI -->
 <form method="get" class="filter-box" id="admin-users-filter-form">
+    <div class="filter-grid">
 
-    <!-- FILTRO SEMPRE VISIBILE: STATO -->
-    <div class="filter-main-row">
+        <div class="filter-field filter-field-full">
+            <label>Nome, cognome o username</label>
+            <input type="text"
+                   name="nome"
+                   value="{{ request.args.get('nome','') }}"
+                   placeholder="Cerca utente">
+        </div>
 
-        <div class="filter-field filter-status-field">
+        <div class="filter-field filter-field-full">
+            <label>Email</label>
+            <input type="text"
+                   name="email"
+                   value="{{ request.args.get('email','') }}"
+                   placeholder="Cerca email">
+        </div>
+
+        <div class="filter-field relative">
+          <label>Città</label>
+          <input
+            type="text"
+            id="citta-autocomplete"
+            name="citta"
+            value="{{ request.args.get('citta','') }}"
+            placeholder="Cerca città"
+          >
+
+          <div id="citta-suggerimenti"
+               class="filter-suggestions hidden">
+          </div>
+        </div>
+
+        <div class="filter-field relative">
+          <label>Provincia</label>
+          <input
+            type="text"
+            id="provincia-autocomplete"
+            name="provincia"
+            value="{{ request.args.get('provincia','') }}"
+            placeholder="Es. MI, PV, RM"
+          >
+
+          <div id="provincia-suggerimenti"
+               class="filter-suggestions hidden">
+          </div>
+        </div>
+
+        <div class="filter-field">
             <label>Stato account</label>
             <select name="stato">
                 <option value="">Tutti</option>
                 <option value="attivo"
-                  {% if request.args.get('stato')=='attivo' %}selected{% endif %}>Attivo</option>
+                  {% if stato == 'attivo' %}selected{% endif %}>Attivo</option>
                 <option value="sospeso"
-                  {% if request.args.get('stato')=='sospeso' %}selected{% endif %}>Sospeso</option>
+                  {% if stato == 'sospeso' %}selected{% endif %}>Sospeso</option>
                 <option value="non_attivo"
-                  {% if request.args.get('stato')=='non_attivo' %}selected{% endif %}>Non attivo</option>
+                  {% if stato == 'non_attivo' %}selected{% endif %}>Non attivo</option>
                 <option value="eliminato"
-                  {% if request.args.get('stato')=='eliminato' %}selected{% endif %}>Eliminato</option>
+                  {% if stato == 'eliminato' %}selected{% endif %}>Eliminato</option>
             </select>
         </div>
 
-        <label class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 cursor-pointer">
-            <input type="checkbox"
-                   name="rischio_chat"
-                   value="1"
-                   class="h-4 w-4"
-                   {% if rischio_chat %}checked{% endif %}>
-            🚨 Solo attività chat sospetta
-        </label>
+        <div class="filter-field">
+            <label>Stato controllo chat</label>
+            <select name="stato_controllo_chat"
+                    id="stato-controllo-chat"
+                    {% if not rischio_chat %}disabled{% endif %}>
+                <option value="da_controllare"
+                  {% if stato_controllo_chat == 'da_controllare' %}selected{% endif %}>Da controllare</option>
+                <option value="controllati"
+                  {% if stato_controllo_chat == 'controllati' %}selected{% endif %}>Controllati</option>
+                <option value="tutti"
+                  {% if stato_controllo_chat == 'tutti' %}selected{% endif %}>Tutti i segnalati</option>
+            </select>
+        </div>
 
-        <button type="button"
-                id="toggle-extra-filters"
-                class="filter-btn-secondary filter-toggle-btn">
-            Filtri
-        </button>
-
-    </div>
-
-    <!-- FILTRI SECONDARI: COLLASSATI SU MOBILE/TABLET -->
-    <div class="filter-extra-panel" id="extra-filters-panel">
-
-        <div class="filter-grid">
-
-            <div class="filter-field">
-                <label>Nome / Cognome</label>
-                <input type="text" name="nome" value="{{ request.args.get('nome','') }}" placeholder="Cerca nome">
-            </div>
-
-            <div class="filter-field">
-                <label>Email</label>
-                <input type="text" name="email" value="{{ request.args.get('email','') }}" placeholder="Email">
-            </div>
-
-            <div class="filter-field relative">
-              <label>Città</label>
-              <input
-                type="text"
-                id="citta-autocomplete"
-                name="citta"
-                value="{{ request.args.get('citta','') }}"
-                placeholder="Città"
-              >
-
-              <div id="citta-suggerimenti"
-                   class="filter-suggestions hidden">
-              </div>
-            </div>
-
-            <div class="filter-field relative">
-              <label>Provincia</label>
-              <input
-                type="text"
-                id="provincia-autocomplete"
-                name="provincia"
-                value="{{ request.args.get('provincia','') }}"
-                placeholder="Es. MI, PV, RM"
-              >
-
-              <div id="provincia-suggerimenti"
-                   class="filter-suggestions hidden">
-              </div>
-            </div>
-
+        <div class="filter-field filter-field-full">
+            <label>Segnalazioni chat</label>
+            <label class="filter-risk-control">
+                <input type="checkbox"
+                       id="rischio-chat-filter"
+                       name="rischio_chat"
+                       value="1"
+                       {% if rischio_chat %}checked{% endif %}>
+                <span>Solo attività sospetta</span>
+            </label>
         </div>
 
     </div>
@@ -1370,9 +1482,9 @@
 </form>
 
 {% if rischio_chat %}
-  <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-    <div class="font-bold">Controllo preventivo attività chat</div>
-    <div class="mt-1 text-red-800">
+  <details class="chat-risk-info">
+    <summary>🚨 Come vengono individuate le attività chat da verificare</summary>
+    <p>
       Sono mostrate le persone che hanno iniziato almeno
       {{ chat_risk_thresholds.nuove_chat_24h }} conversazioni in 24 ore,
       {{ chat_risk_thresholds.nuove_chat_7g }} in 7 giorni o
@@ -1381,8 +1493,8 @@
       Viene segnalato anche chi riceve almeno
       {{ chat_risk_thresholds.blocchi_ricevuti_30g }} blocchi da utenti diversi in 30 giorni.
       La segnalazione non disattiva automaticamente l'account.
-    </div>
-  </div>
+    </p>
+  </details>
 {% endif %}
 
 <!-- TABELLA UTENTI -->
@@ -1431,6 +1543,8 @@
                 data-admin-chat-count="{{ u.admin_chat_aperte_count|default(0) }}"
                 data-user-chat-risk="{{ 1 if u.chat_rischio else 0 }}"
                 data-user-chat-risk-reason="{{ u.chat_rischio_motivo|default('')|e }}"
+                data-user-chat-risk-reviewed="{{ 1 if u.chat_rischio_controllato else 0 }}"
+                data-user-chat-risk-review-url="{{ url_for('admin_utente_rischio_chat_review', user_id=u.id) }}"
                 data-admin-recensioni-scritte='{{ u.admin_recensioni_scritte_json|default("[]")|e }}'
                 data-admin-recensioni-ricevute='{{ u.admin_recensioni_ricevute_json|default("[]")|e }}'>
 
@@ -1444,6 +1558,24 @@
                   {% if u.chat_rischio %}
                     <div class="mt-1 max-w-xs text-xs font-semibold text-red-700">
                       🚨 {{ u.chat_rischio_motivo }}
+                    </div>
+
+                    <div class="chat-risk-review-inline">
+                      <span class="chat-risk-review-status {{ 'reviewed' if u.chat_rischio_controllato else 'pending' }}">
+                        {{ '✓ Controllato' if u.chat_rischio_controllato else 'Da controllare' }}
+                      </span>
+
+                      <form method="POST"
+                            action="{{ url_for('admin_utente_rischio_chat_review', user_id=u.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="next" value="{{ request.full_path }}">
+                        <input type="hidden"
+                               name="azione"
+                               value="{{ 'da_controllare' if u.chat_rischio_controllato else 'controllato' }}">
+                        <button type="submit" class="chat-risk-review-button">
+                          {{ 'Riapri controllo' if u.chat_rischio_controllato else 'Segna controllato' }}
+                        </button>
+                      </form>
                     </div>
                   {% endif %}
 
@@ -1482,7 +1614,9 @@
                     {% endif %}
 
                     {% if u.chat_rischio %}
-                        <span class="badge badge-red mt-1">Rischio chat</span>
+                        <span class="badge {{ 'badge-green' if u.chat_rischio_controllato else 'badge-red' }} mt-1">
+                          {{ 'Controllato' if u.chat_rischio_controllato else 'Rischio chat' }}
+                        </span>
                     {% endif %}
                 </td>
 
@@ -1726,6 +1860,23 @@
          class="hidden mx-5 mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
       <div class="font-bold">🚨 Attività chat da verificare</div>
       <div id="modal-user-chat-risk-reason" class="mt-1 text-red-800"></div>
+      <div class="chat-risk-review-inline">
+        <span id="modal-user-chat-risk-status"
+              class="chat-risk-review-status pending">Da controllare</span>
+        <form id="modal-user-chat-risk-form" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <input id="modal-user-chat-risk-action"
+                 type="hidden"
+                 name="azione"
+                 value="controllato">
+          <button id="modal-user-chat-risk-button"
+                  type="submit"
+                  class="chat-risk-review-button">
+            Segna controllato
+          </button>
+        </form>
+      </div>
     </div>
 
     <div id="modal-user-actions" class="user-modal-actions">
@@ -2451,7 +2602,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const chatRiskBox = document.getElementById("modal-user-chat-risk");
     const chatRiskReason = document.getElementById("modal-user-chat-risk-reason");
+    const chatRiskStatus = document.getElementById("modal-user-chat-risk-status");
+    const chatRiskForm = document.getElementById("modal-user-chat-risk-form");
+    const chatRiskAction = document.getElementById("modal-user-chat-risk-action");
+    const chatRiskButton = document.getElementById("modal-user-chat-risk-button");
     const hasChatRisk = d.userChatRisk === "1";
+    const chatRiskReviewed = d.userChatRiskReviewed === "1";
 
     if (chatRiskBox) {
       chatRiskBox.classList.toggle("hidden", !hasChatRisk);
@@ -2461,6 +2617,23 @@ document.addEventListener("DOMContentLoaded", () => {
       chatRiskReason.textContent = hasChatRisk
         ? (d.userChatRiskReason || "Comportamento anomalo nelle nuove conversazioni.")
         : "";
+    }
+
+    if (chatRiskStatus) {
+      chatRiskStatus.textContent = chatRiskReviewed ? "✓ Controllato" : "Da controllare";
+      chatRiskStatus.className = `chat-risk-review-status ${chatRiskReviewed ? "reviewed" : "pending"}`;
+    }
+
+    if (chatRiskForm) {
+      chatRiskForm.action = d.userChatRiskReviewUrl || "#";
+    }
+
+    if (chatRiskAction) {
+      chatRiskAction.value = chatRiskReviewed ? "da_controllare" : "controllato";
+    }
+
+    if (chatRiskButton) {
+      chatRiskButton.textContent = chatRiskReviewed ? "Riapri controllo" : "Segna controllato";
     }
 
     setText("modal-user-id", d.userId);
@@ -2629,26 +2802,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const toggleBtn = document.getElementById("toggle-extra-filters");
-  const panel = document.getElementById("extra-filters-panel");
+  const rischioChat = document.getElementById("rischio-chat-filter");
+  const statoControllo = document.getElementById("stato-controllo-chat");
 
-  if (!toggleBtn || !panel) return;
+  if (!rischioChat || !statoControllo) return;
 
-  const hasExtraFilters =
-    "{{ request.args.get('nome','')|e }}" ||
-    "{{ request.args.get('email','')|e }}" ||
-    "{{ request.args.get('citta','')|e }}" ||
-    "{{ request.args.get('provincia','')|e }}";
-
-    if (hasExtraFilters) {
-      panel.classList.add("is-open");
-      toggleBtn.textContent = "Nascondi";
-    }
-
-    toggleBtn.addEventListener("click", () => {
-      const isOpen = panel.classList.toggle("is-open");
-      toggleBtn.textContent = isOpen ? "Nascondi" : "Filtri";
-    });
+  rischioChat.addEventListener("change", () => {
+    statoControllo.disabled = !rischioChat.checked;
+  });
 });
 </script>
 

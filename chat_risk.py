@@ -16,6 +16,18 @@ CHAT_RISK_THRESHOLDS = {
 }
 
 
+def segnalazione_chat_controllata(controllato_at, ultima_attivita_rischio):
+    """
+    Una verifica resta chiusa solo finché non arriva una nuova attività
+    sospetta successiva al controllo amministrativo.
+    """
+    return bool(
+        controllato_at
+        and ultima_attivita_rischio
+        and controllato_at >= ultima_attivita_rischio
+    )
+
+
 def valuta_rischio_chat(metriche, soglie=None):
     """
     Valuta le metriche delle sole conversazioni iniziate dall'utente.

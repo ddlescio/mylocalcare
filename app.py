@@ -84,7 +84,11 @@ from socket_registry import (
 from realtime_handlers import register_socket_lifecycle_handlers
 
 from chat_realtime import register_chat_socket_handlers, typing_state, pagina_attiva
-from chat_risk import CHAT_RISK_THRESHOLDS, valuta_rischio_chat
+from chat_risk import (
+    CHAT_RISK_THRESHOLDS,
+    segnalazione_chat_controllata,
+    valuta_rischio_chat,
+)
 from realtime_auth import build_realtime_token
 from image_utils import (
     ErroreImmagine,
@@ -4728,8 +4732,9 @@ def _chat_risk_datetime(value):
 
 def analizza_utenti_chat_sospetti(cur):
     """
-    Restituisce gli account attivi che hanno iniziato nuove conversazioni
-    con un andamento anomalo. Non applica mai blocchi automatici.
+    Restituisce gli account che hanno iniziato nuove conversazioni con un
+    andamento anomalo, compresi quelli già disattivati dopo un provvedimento.
+    Non applica mai blocchi automatici.
     """
     adesso = datetime.now(timezone.utc)
     limite_24h = adesso - timedelta(hours=24)
@@ -4784,10 +4789,8 @@ def analizza_utenti_chat_sospetti(cur):
           ON destinatario.id = prima.destinatario_id
         WHERE prima.posizione_chat = 1
           AND prima.created_at >= ?
-          AND autore.attivo = 1
-          AND COALESCE(autore.sospeso, 0) = 0
-          AND COALESCE(autore.disattivato_admin, 0) = 0
           AND COALESCE(autore.ruolo, 'user') <> 'admin'
+          AND LOWER(COALESCE(autore.username, '')) NOT LIKE 'utente_eliminato_%'
         ORDER BY prima.created_at DESC, prima.id DESC
     """), (limite_30g.strftime("%Y-%m-%d %H:%M:%S"),))
 
@@ -4807,6 +4810,7 @@ def analizza_utenti_chat_sospetti(cur):
             "fuori_regione_7g": 0,
             "senza_risposta_7g": 0,
             "blocchi_ricevuti_30g": 0,
+            "ultima_attivita_rischio": None,
         }
 
     for row in cur.fetchall():
@@ -4821,6 +4825,9 @@ def analizza_utenti_chat_sospetti(cur):
         )
 
         metriche["nuove_chat_30g"] += 1
+        ultima_attivita = metriche["ultima_attivita_rischio"]
+        if not ultima_attivita or data_apertura > ultima_attivita:
+            metriche["ultima_attivita_rischio"] = data_apertura
 
         if data_apertura >= limite_24h:
             metriche["nuove_chat_24h"] += 1
@@ -4863,15 +4870,14 @@ def analizza_utenti_chat_sospetti(cur):
         SELECT
             blocco.bloccato_id AS utente_id,
             utente.username,
-            COUNT(DISTINCT blocco.bloccante_id) AS blocchi_ricevuti_30g
+            COUNT(DISTINCT blocco.bloccante_id) AS blocchi_ricevuti_30g,
+            MAX(blocco.created_at) AS ultimo_blocco_at
         FROM chat_blocchi blocco
         JOIN utenti utente
           ON utente.id = blocco.bloccato_id
         WHERE blocco.created_at >= ?
-          AND utente.attivo = 1
-          AND COALESCE(utente.sospeso, 0) = 0
-          AND COALESCE(utente.disattivato_admin, 0) = 0
           AND COALESCE(utente.ruolo, 'user') <> 'admin'
+          AND LOWER(COALESCE(utente.username, '')) NOT LIKE 'utente_eliminato_%'
         GROUP BY blocco.bloccato_id, utente.username
     """), (limite_30g.strftime("%Y-%m-%d %H:%M:%S"),))
 
@@ -4884,6 +4890,12 @@ def analizza_utenti_chat_sospetti(cur):
         metriche["blocchi_ricevuti_30g"] = int(
             row["blocchi_ricevuti_30g"] or 0
         )
+        ultimo_blocco = _chat_risk_datetime(row["ultimo_blocco_at"])
+        ultima_attivita = metriche["ultima_attivita_rischio"]
+        if ultimo_blocco and (
+            not ultima_attivita or ultimo_blocco > ultima_attivita
+        ):
+            metriche["ultima_attivita_rischio"] = ultimo_blocco
 
     sospetti = {}
 
@@ -4906,6 +4918,37 @@ def analizza_utenti_chat_sospetti(cur):
                 **metriche_finali,
                 **valutazione,
             }
+
+    if not sospetti:
+        return sospetti
+
+    placeholders = ", ".join("?" for _ in sospetti)
+    cur.execute(sql(f"""
+        SELECT utente_id, controllato_at, controllato_da_admin_id
+        FROM chat_risk_reviews
+        WHERE utente_id IN ({placeholders})
+    """), tuple(sospetti.keys()))
+
+    controlli = {
+        int(row["utente_id"]): row
+        for row in cur.fetchall()
+    }
+
+    for utente_id, rischio in sospetti.items():
+        controllo = controlli.get(utente_id)
+        controllato_at = _chat_risk_datetime(
+            controllo["controllato_at"] if controllo else None
+        )
+        ultima_attivita = rischio.get("ultima_attivita_rischio")
+        controllato = segnalazione_chat_controllata(
+            controllato_at,
+            ultima_attivita,
+        )
+        rischio["controllato"] = controllato
+        rischio["controllato_at"] = controllato_at
+        rischio["controllato_da_admin_id"] = (
+            controllo["controllato_da_admin_id"] if controllo else None
+        )
 
     return sospetti
 
@@ -5056,7 +5099,12 @@ def admin_counters():
 
         step = "utenti_chat_sospetti"
         try:
-            utenti_chat_sospetti = len(analizza_utenti_chat_sospetti(cur))
+            rischi_chat = analizza_utenti_chat_sospetti(cur)
+            utenti_chat_sospetti = sum(
+                1
+                for rischio in rischi_chat.values()
+                if not rischio.get("controllato")
+            )
         except Exception as e:
             utenti_chat_sospetti = 0
             log_exception_safe(
@@ -9420,6 +9468,23 @@ def _toggle_stato_utente_admin(user_id, redirect_endpoint, azione_richiesta):
                 WHERE utente_id = ?
             """), (user_id,))
 
+            # Il provvedimento amministrativo chiude anche la segnalazione.
+            # Una successiva attività anomala, se più recente di questo controllo,
+            # farà riapparire automaticamente l'utente tra i casi da verificare.
+            cur.execute(sql("""
+                INSERT INTO chat_risk_reviews (
+                    utente_id,
+                    controllato_at,
+                    controllato_da_admin_id,
+                    updated_at
+                )
+                VALUES (?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT (utente_id) DO UPDATE SET
+                    controllato_at = CURRENT_TIMESTAMP,
+                    controllato_da_admin_id = EXCLUDED.controllato_da_admin_id,
+                    updated_at = CURRENT_TIMESTAMP
+            """), (user_id, int(g.utente["id"])))
+
             conn.commit()
             azione = "disattivato"
 
@@ -9451,6 +9516,10 @@ def _toggle_stato_utente_admin(user_id, redirect_endpoint, azione_richiesta):
     finally:
         try:
             cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
         except Exception:
             pass
 
@@ -9503,6 +9572,8 @@ def _toggle_stato_utente_admin(user_id, redirect_endpoint, azione_richiesta):
             production=True
         )
         flash("Utente riattivato correttamente.", "success")
+
+    invalidate_admin_counters()
 
     return redirect(url_for(redirect_endpoint))
 
@@ -9629,6 +9700,13 @@ def admin_utenti():
     provincia = request.args.get("provincia", "").strip() or ""
     stato = request.args.get("stato", "").strip() or ""
     rischio_chat = request.args.get("rischio_chat", "").strip() == "1"
+    stato_controllo_chat = (
+        request.args.get("stato_controllo_chat", "da_controllare").strip()
+        or "da_controllare"
+    )
+
+    if stato_controllo_chat not in {"da_controllare", "controllati", "tutti"}:
+        stato_controllo_chat = "da_controllare"
 
     has_filters = any([nome, email, citta, provincia, stato, rischio_chat])
 
@@ -9784,11 +9862,15 @@ def admin_utenti():
         params.append(f"%{provincia.lower()}%")
 
     if stato == "attivo":
-        query += " AND u.attivo = 1 AND u.sospeso = 0"
+        query += (
+            " AND u.attivo = 1"
+            " AND u.sospeso = 0"
+            " AND COALESCE(u.disattivato_admin, 0) = 0"
+        )
     elif stato == "sospeso":
         query += " AND u.sospeso = 1"
     elif stato == "non_attivo":
-        query += " AND u.attivo = 0"
+        query += " AND (u.attivo = 0 OR COALESCE(u.disattivato_admin, 0) = 1)"
     elif stato == "eliminato":
         pass
 
@@ -9815,12 +9897,34 @@ def admin_utenti():
         utente["chat_rischio_motivo"] = rischio["motivo"] if rischio else ""
         utente["chat_rischio_punteggio"] = rischio["punteggio"] if rischio else 0
         utente["chat_rischio_metriche"] = rischio or {}
+        utente["chat_rischio_controllato"] = bool(
+            rischio and rischio.get("controllato")
+        )
+        utente["chat_rischio_controllato_at"] = (
+            rischio.get("controllato_at") if rischio else None
+        )
 
     if rischio_chat:
         utenti = [utente for utente in utenti if utente["chat_rischio"]]
+
+        if stato_controllo_chat == "da_controllare":
+            utenti = [
+                utente
+                for utente in utenti
+                if not utente["chat_rischio_controllato"]
+            ]
+        elif stato_controllo_chat == "controllati":
+            utenti = [
+                utente
+                for utente in utenti
+                if utente["chat_rischio_controllato"]
+            ]
+
         utenti.sort(
-            key=lambda utente: utente["chat_rischio_punteggio"],
-            reverse=True
+            key=lambda utente: (
+                utente["chat_rischio_controllato"],
+                -utente["chat_rischio_punteggio"]
+            )
         )
 
     totale_filtrati = len(utenti)
@@ -9994,11 +10098,86 @@ def admin_utenti():
         provincia=provincia,
         stato=stato,
         rischio_chat=rischio_chat,
+        stato_controllo_chat=stato_controllo_chat,
         chat_risk_thresholds=CHAT_RISK_THRESHOLDS,
         totale_utenti=totale_utenti,
         totale_filtrati=totale_filtrati,
         has_filters=has_filters
     )
+
+
+@app.route("/admin/utenti/<int:user_id>/rischio-chat", methods=["POST"])
+@admin_required
+def admin_utente_rischio_chat_review(user_id):
+    """Archivia o riapre manualmente una segnalazione di attività chat."""
+    verify_csrf()
+
+    azione = (request.form.get("azione") or "").strip().lower()
+    if azione not in {"controllato", "da_controllare"}:
+        abort(400)
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT id
+            FROM utenti
+            WHERE id = ?
+            LIMIT 1
+        """), (int(user_id),))
+
+        if not cur.fetchone():
+            flash("Utente non trovato.", "error")
+        elif azione == "controllato":
+            cur.execute(sql("""
+                INSERT INTO chat_risk_reviews (
+                    utente_id,
+                    controllato_at,
+                    controllato_da_admin_id,
+                    updated_at
+                )
+                VALUES (?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT (utente_id) DO UPDATE SET
+                    controllato_at = CURRENT_TIMESTAMP,
+                    controllato_da_admin_id = EXCLUDED.controllato_da_admin_id,
+                    updated_at = CURRENT_TIMESTAMP
+            """), (int(user_id), int(g.utente["id"])))
+            flash("Segnalazione contrassegnata come controllata.", "success")
+        else:
+            cur.execute(sql("""
+                DELETE FROM chat_risk_reviews
+                WHERE utente_id = ?
+            """), (int(user_id),))
+            flash("Segnalazione riaperta e riportata tra i casi da controllare.", "success")
+
+        conn.commit()
+        invalidate_admin_counters()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    next_url = (request.form.get("next") or "").strip()
+    if not next_url.startswith("/admin/utenti") or next_url.startswith("//"):
+        next_url = url_for(
+            "admin_utenti",
+            rischio_chat=1,
+            stato_controllo_chat="da_controllare"
+        )
+
+    return redirect(next_url)
 
 # ==========================================================
 # ADMIN – REPORT TERRITORIALE UTENTI / ANNUNCI
