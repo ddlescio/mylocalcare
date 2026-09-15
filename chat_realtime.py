@@ -50,9 +50,41 @@ def register_chat_socket_handlers(
     clear_open_chat,
     invia_push,
     recently_read_timers,
+    account_is_enabled,
     chat_modifica=None,
     chat_elimina=None,
 ):
+    def _account_enabled(user_id):
+        try:
+            return bool(account_is_enabled(user_id))
+        except Exception:
+            traceback.print_exc()
+            return False
+
+    def _disabled_account_response():
+        sid = getattr(request, "sid", None)
+
+        if sid:
+            try:
+                socketio.emit(
+                    "account_disabled",
+                    {
+                        "message": "Il tuo account è stato disattivato dall'amministrazione.",
+                        "redirect": "/logout?reason=account_disabled"
+                    },
+                    to=sid,
+                    namespace="/"
+                )
+                socketio.server.disconnect(sid, namespace="/")
+            except Exception:
+                traceback.print_exc()
+
+        return {
+            "ok": False,
+            "code": "account_disabled",
+            "error": "Account non abilitato."
+        }
+
     def clear_recently_read(user_id, delay=None):
         if delay is None:
             delay = app.config.get("CHAT_RECENTLY_READ_TTL", 5)
@@ -163,6 +195,9 @@ def register_chat_socket_handlers(
             print(f"❌ [send_message] dati mancanti mittente={mittente_id} destinatario={destinatario_id} testo='{testo}'")
             return {"ok": False, "error": "Dati mancanti o sessione non valida"}
 
+        if not _account_enabled(mittente_id):
+            return _disabled_account_response()
+
         try:
             stato_blocco = chat_stato_blocco(
                 mittente_id,
@@ -212,7 +247,8 @@ def register_chat_socket_handlers(
             )
 
             c.execute(sql("""
-                SELECT id, ruolo, foto_profilo
+                SELECT id, ruolo, foto_profilo,
+                       attivo, sospeso, disattivato_admin, eliminato
                 FROM utenti
                 WHERE id IN (?, ?)
             """), (
@@ -236,6 +272,24 @@ def register_chat_socket_handlers(
                 )
                 return {
                     "ok": False,
+                    "error": "Utente non disponibile."
+                }
+
+            def partecipante_abilitato(partecipante):
+                return (
+                    int(partecipante["attivo"] or 0) == 1
+                    and int(partecipante["sospeso"] or 0) == 0
+                    and int(partecipante["disattivato_admin"] or 0) == 0
+                    and int(partecipante["eliminato"] or 0) == 0
+                )
+
+            if not partecipante_abilitato(mittente):
+                return _disabled_account_response()
+
+            if not partecipante_abilitato(destinatario):
+                return {
+                    "ok": False,
+                    "code": "recipient_unavailable",
                     "error": "Utente non disponibile."
                 }
 
@@ -418,6 +472,9 @@ def register_chat_socket_handlers(
                 "error": "Sessione non valida"
             }
 
+        if not _account_enabled(user_id):
+            return _disabled_account_response()
+
         if not callable(chat_modifica):
             return {
                 "ok": False,
@@ -541,6 +598,9 @@ def register_chat_socket_handlers(
                 "ok": False,
                 "error": "Sessione non valida"
             }
+
+        if not _account_enabled(user_id):
+            return _disabled_account_response()
 
         if not callable(chat_elimina):
             return {

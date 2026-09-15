@@ -126,7 +126,9 @@
                 <td>{{ u.citta or "-" }}</td>
 
                 <td>
-                    {% if u.sospeso == 1 %}
+                    {% if u.disattivato_admin == 1 %}
+                        <span class="badge badge-red">Disattivato admin</span>
+                    {% elif u.sospeso == 1 %}
                         <span class="badge badge-yellow">Sospeso</span>
                     {% elif u.attivo == 1 %}
                         <span class="badge badge-green">Attivo</span>
@@ -150,10 +152,17 @@
                     </a>
 
                     <!-- ⚙️ AZIONI STANDARD -->
-                    <a href="{{ url_for('toggle_utente_admin', id=u.id) }}"
-                       class="text-blue-600 hover:underline">
-                        {{ 'Disattiva' if u.attivo else 'Attiva' }}
-                    </a>
+                    <form method="POST"
+                          action="{{ url_for('toggle_utente_admin', id=u.id) }}"
+                          class="inline"
+                          data-confirm-message="{% if u.attivo and not u.disattivato_admin %}Disattivare questo account per attività sospetta? Le sessioni verranno chiuse e l'utente riceverà un'email.{% else %}Riattivare questo account?{% endif %}"
+                          onsubmit="return confirm(this.dataset.confirmMessage);">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="azione" value="{{ 'disattiva' if u.attivo and not u.disattivato_admin else 'attiva' }}">
+                        <button type="submit" class="text-blue-600 hover:underline">
+                            {{ 'Disattiva' if u.attivo and not u.disattivato_admin else 'Attiva' }}
+                        </button>
+                    </form>
 
                     <a href="{{ url_for('elimina_utente_route', id=u.id) }}"
                        onclick="return confirm('Eliminare questo utente?');"

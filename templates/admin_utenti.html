@@ -1391,9 +1391,9 @@
                 data-user-citta="{{ u.citta or '-' }}"
                 data-user-provincia="{{ u.provincia or '-' }}"
                 data-user-created="{% if u.data_creazione %}{{ u.data_creazione|fmt_it }}{% else %}-{% endif %}"
-                data-user-stato="{% if u.eliminato == 1 %}Eliminato{% elif u.sospeso == 1 %}Sospeso{% elif u.attivo == 1 %}Attivo{% else %}Non attivo{% endif %}"
+                data-user-stato="{% if u.eliminato == 1 %}Eliminato{% elif u.disattivato_admin == 1 %}Disattivato admin{% elif u.sospeso == 1 %}Sospeso{% elif u.attivo == 1 %}Attivo{% else %}Non attivo{% endif %}"
                 data-user-eliminato="{{ u.eliminato }}"
-                data-user-attivo="{{ u.attivo }}"
+                data-user-attivo="{{ 1 if u.attivo and not u.disattivato_admin else 0 }}"
                 data-user-chat-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('chat_conversazione_view', other_id=u.id) }}{% endif %}"
                 data-user-mail-url="{% if u.eliminato == 1 %}#{% else %}mailto:{{ u.email }}{% endif %}"
                 data-user-profile-url="{% if u.eliminato == 1 %}#{% else %}{{ url_for('profilo_pubblico', id=u.id) }}{% endif %}"
@@ -1403,6 +1403,7 @@
                 data-user-affidabilita="{{ 1 if u.affidabilita_attiva else 0 }}"
                 data-admin-annunci='{{ u.admin_annunci_attivi_json|default("[]")|e }}'
                 data-admin-chat='{{ u.admin_chat_aperte_json|default("[]")|e }}'
+                data-admin-chat-count="{{ u.admin_chat_aperte_count|default(0) }}"
                 data-admin-recensioni-scritte='{{ u.admin_recensioni_scritte_json|default("[]")|e }}'
                 data-admin-recensioni-ricevute='{{ u.admin_recensioni_ricevute_json|default("[]")|e }}'>
 
@@ -1437,6 +1438,8 @@
                 <td class="admin-user-status-cell">
                     {% if u.eliminato == 1 %}
                         <span class="badge badge-red">Eliminato</span>
+                    {% elif u.disattivato_admin == 1 %}
+                        <span class="badge badge-red">Disattivato admin</span>
                     {% elif u.sospeso == 1 %}
                         <span class="badge badge-yellow">Sospeso</span>
                     {% elif u.attivo == 1 %}
@@ -1464,10 +1467,17 @@
                         <span class="admin-user-details-count">0</span>
                       </button>
 
-                      <a href="{{ url_for('toggle_utente_admin', id=u.id) }}"
-                         class="text-blue-600 hover:underline">
-                        {{ 'Disattiva' if u.attivo else 'Attiva' }}
-                      </a>
+                      <form method="POST"
+                            action="{{ url_for('toggle_utente_admin', id=u.id) }}"
+                            class="inline"
+                            data-confirm-message="{% if u.attivo and not u.disattivato_admin %}Disattivare questo account per attività sospetta? Le sessioni verranno chiuse e l'utente riceverà un'email.{% else %}Riattivare questo account?{% endif %}"
+                            onsubmit="return confirm(this.dataset.confirmMessage);">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="azione" value="{{ 'disattiva' if u.attivo and not u.disattivato_admin else 'attiva' }}">
+                        <button type="submit" class="text-blue-600 hover:underline">
+                          {{ 'Disattiva' if u.attivo and not u.disattivato_admin else 'Attiva' }}
+                        </button>
+                      </form>
 
                       <a href="{{ url_for('elimina_utente_route', id=u.id) }}"
                          onclick="return confirm('Eliminare questo utente?');"
@@ -1684,9 +1694,13 @@
         ✉️ Email
       </a>
 
-      <a id="modal-user-toggle" href="#" class="user-modal-action secondary">
-        Stato
-      </a>
+      <form id="modal-user-toggle-form" method="POST" style="display:contents;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input id="modal-user-toggle-action" type="hidden" name="azione" value="">
+        <button id="modal-user-toggle" type="submit" class="user-modal-action secondary">
+          Stato
+        </button>
+      </form>
 
       <a id="modal-user-delete"
          href="#"
@@ -1731,11 +1745,12 @@
 
         <details class="user-modal-detail-block">
           <summary class="user-modal-detail-title">
-            <span class="user-modal-detail-title-left">💬 Chat aperte</span>
+            <span class="user-modal-detail-title-left">💬 Conversazioni totali</span>
             <span id="modal-count-chat" class="user-modal-detail-title-count">0</span>
           </summary>
 
           <div class="user-modal-detail-content">
+            <div class="text-xs text-slate-500 mb-2">Sono mostrate le 10 conversazioni più recenti.</div>
             <div id="modal-user-chat-aperte" class="user-modal-detail-list"></div>
           </div>
         </details>
@@ -2316,7 +2331,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const recensioniRicevute = safeJsonParse(row.dataset.adminRecensioniRicevute);
 
     setCount("modal-count-annunci", annunci.length);
-    setCount("modal-count-chat", chat.length);
+    setCount(
+      "modal-count-chat",
+      Number.parseInt(row.dataset.adminChatCount || "0", 10) || 0
+    );
     setCount("modal-count-recensioni-scritte", recensioniScritte.length);
     setCount("modal-count-recensioni-ricevute", recensioniRicevute.length);
 
@@ -2400,6 +2418,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const chat = document.getElementById("modal-user-chat");
     const mail = document.getElementById("modal-user-mail");
     const toggle = document.getElementById("modal-user-toggle");
+    const toggleForm = document.getElementById("modal-user-toggle-form");
+    const toggleAction = document.getElementById("modal-user-toggle-action");
     const del = document.getElementById("modal-user-delete");
     const contatti = document.getElementById("modal-user-contatti");
     const affidabilita = document.getElementById("modal-user-affidabilita");
@@ -2408,8 +2428,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (mail) mail.href = d.userMailUrl || "#";
 
     if (toggle) {
-      toggle.href = d.userToggleUrl || "#";
+      if (toggleForm) {
+        toggleForm.action = d.userToggleUrl || "#";
+      }
+      if (toggleAction) {
+        toggleAction.value = d.userAttivo === "1" ? "disattiva" : "attiva";
+      }
       toggle.textContent = d.userAttivo === "1" ? "Disattiva" : "Attiva";
+      toggle.onclick = () => confirm(
+        d.userAttivo === "1"
+          ? "Disattivare questo account per attività sospetta? Le sessioni verranno chiuse e l'utente riceverà un'email."
+          : "Riattivare questo account?"
+      );
     }
 
     if (del) {

@@ -120,6 +120,42 @@ def _chat_stato_blocco_cursor(c, user_id: int, other_id: int):
     }
 
 
+def _chat_verifica_partecipanti_abilitati_cursor(
+    c,
+    mittente_id: int,
+    destinatario_id: int,
+):
+    """Ultima barriera DB contro messaggi da/verso account disattivati."""
+    c.execute(sql("""
+        SELECT id, attivo, sospeso, disattivato_admin, eliminato
+        FROM utenti
+        WHERE id IN (?, ?)
+    """), (
+        int(mittente_id),
+        int(destinatario_id)
+    ))
+
+    partecipanti = {
+        int(row["id"]): row
+        for row in c.fetchall()
+    }
+
+    def abilitato(row):
+        return (
+            row is not None
+            and int(row["attivo"] or 0) == 1
+            and int(row["sospeso"] or 0) == 0
+            and int(row["disattivato_admin"] or 0) == 0
+            and int(row["eliminato"] or 0) == 0
+        )
+
+    if not abilitato(partecipanti.get(int(mittente_id))):
+        raise PermissionError("Account mittente non abilitato.")
+
+    if not abilitato(partecipanti.get(int(destinatario_id))):
+        raise PermissionError("Utente destinatario non disponibile.")
+
+
 def chat_stato_blocco(user_id: int, other_id: int):
     """
     Restituisce lo stato del blocco tra due utenti,
@@ -307,6 +343,25 @@ def chat_invia(mittente_id: int, destinatario_id: int, testo: str):
 
     conn = get_db_connection()
     c = get_cursor(conn)
+
+    try:
+        _chat_verifica_partecipanti_abilitati_cursor(
+            c,
+            mittente_id,
+            destinatario_id
+        )
+    except Exception:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+        raise
 
     # Il controllo è eseguito anche nel modello:
     # non deve essere possibile aggirare il blocco dal client.

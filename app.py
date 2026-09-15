@@ -73,6 +73,7 @@ from socket_registry import (
     _touch_socket_sid,
     _remove_socket_sid,
     _cleanup_user_socket_set,
+    _get_live_user_sids,
     emit_to_user_sids,
     emit_to_user_room,
     _socket_user_set_key,
@@ -710,6 +711,8 @@ def sincronizza_cicli_email_chat(dry_run=True):
                 JOIN messaggi_chat mc
                   ON mc.destinatario_id = u.id
                  AND mc.letto = 0
+                JOIN utenti mittente
+                  ON mittente.id = mc.mittente_id
                 LEFT JOIN chat_unread_email_cycles ciclo
                   ON ciclo.user_id = u.id
                 WHERE u.attivo = 1
@@ -728,6 +731,10 @@ def sincronizza_cicli_email_chat(dry_run=True):
                   AND COALESCE(u.sospeso, 0) = 0
                   AND COALESCE(u.disattivato_admin, 0) = 0
                   AND COALESCE(u.eliminato, 0) = 0
+                  AND mittente.attivo = 1
+                  AND COALESCE(mittente.sospeso, 0) = 0
+                  AND COALESCE(mittente.disattivato_admin, 0) = 0
+                  AND COALESCE(mittente.eliminato, 0) = 0
                   AND COALESCE(u.email_notifiche, 0) = 1
                   AND u.email IS NOT NULL
                   AND BTRIM(u.email) <> ''
@@ -753,6 +760,8 @@ def sincronizza_cicli_email_chat(dry_run=True):
                 JOIN messaggi_chat mc
                   ON mc.destinatario_id = u.id
                  AND mc.letto = 0
+                JOIN utenti mittente
+                  ON mittente.id = mc.mittente_id
                 WHERE u.id = ciclo.user_id
                   AND NOT EXISTS (
                       SELECT 1
@@ -770,6 +779,10 @@ def sincronizza_cicli_email_chat(dry_run=True):
                   AND COALESCE(u.sospeso, 0) = 0
                   AND COALESCE(u.disattivato_admin, 0) = 0
                   AND COALESCE(u.eliminato, 0) = 0
+                  AND mittente.attivo = 1
+                  AND COALESCE(mittente.sospeso, 0) = 0
+                  AND COALESCE(mittente.disattivato_admin, 0) = 0
+                  AND COALESCE(mittente.eliminato, 0) = 0
                   AND COALESCE(u.email_notifiche, 0) = 1
                   AND u.email IS NOT NULL
                   AND BTRIM(u.email) <> ''
@@ -794,6 +807,8 @@ def sincronizza_cicli_email_chat(dry_run=True):
                     JOIN messaggi_chat mc
                       ON mc.destinatario_id = u.id
                      AND mc.letto = 0
+                    JOIN utenti mittente
+                      ON mittente.id = mc.mittente_id
                     WHERE u.id = ciclo.user_id
                       AND NOT EXISTS (
                           SELECT 1
@@ -811,6 +826,10 @@ def sincronizza_cicli_email_chat(dry_run=True):
                       AND COALESCE(u.sospeso, 0) = 0
                       AND COALESCE(u.disattivato_admin, 0) = 0
                       AND COALESCE(u.eliminato, 0) = 0
+                      AND mittente.attivo = 1
+                      AND COALESCE(mittente.sospeso, 0) = 0
+                      AND COALESCE(mittente.disattivato_admin, 0) = 0
+                      AND COALESCE(mittente.eliminato, 0) = 0
                       AND COALESCE(u.email_notifiche, 0) = 1
                       AND u.email IS NOT NULL
                       AND BTRIM(u.email) <> ''
@@ -838,6 +857,8 @@ def sincronizza_cicli_email_chat(dry_run=True):
                 JOIN messaggi_chat mc
                   ON mc.destinatario_id = u.id
                  AND mc.letto = 0
+                JOIN utenti mittente
+                  ON mittente.id = mc.mittente_id
                 WHERE u.attivo = 1
                   AND NOT EXISTS (
                       SELECT 1
@@ -854,6 +875,10 @@ def sincronizza_cicli_email_chat(dry_run=True):
                   AND COALESCE(u.sospeso, 0) = 0
                   AND COALESCE(u.disattivato_admin, 0) = 0
                   AND COALESCE(u.eliminato, 0) = 0
+                  AND mittente.attivo = 1
+                  AND COALESCE(mittente.sospeso, 0) = 0
+                  AND COALESCE(mittente.disattivato_admin, 0) = 0
+                  AND COALESCE(mittente.eliminato, 0) = 0
                   AND COALESCE(u.email_notifiche, 0) = 1
                   AND u.email IS NOT NULL
                   AND BTRIM(u.email) <> ''
@@ -992,6 +1017,8 @@ def analizza_candidati_promemoria_chat():
                 JOIN messaggi_chat mc
                   ON mc.destinatario_id = ciclo.user_id
                  AND mc.letto = 0
+                JOIN utenti mittente
+                  ON mittente.id = mc.mittente_id
                 WHERE ciclo.reminders_sent < 3
                   AND NOT EXISTS (
                       SELECT 1
@@ -1010,6 +1037,10 @@ def analizza_candidati_promemoria_chat():
                   AND COALESCE(u.sospeso, 0) = 0
                   AND COALESCE(u.disattivato_admin, 0) = 0
                   AND COALESCE(u.eliminato, 0) = 0
+                  AND mittente.attivo = 1
+                  AND COALESCE(mittente.sospeso, 0) = 0
+                  AND COALESCE(mittente.disattivato_admin, 0) = 0
+                  AND COALESCE(mittente.eliminato, 0) = 0
                   AND COALESCE(u.email_notifiche, 0) = 1
                   AND u.email IS NOT NULL
                   AND BTRIM(u.email) <> ''
@@ -2037,6 +2068,44 @@ def invia_email_sospensione(email, nome):
             production=True
         )
         return False
+
+
+def invia_email_disattivazione_admin(email, nome):
+    """
+    Informa l'utente che l'amministrazione ha disattivato il suo account.
+
+    L'email non consente la riattivazione autonoma: l'utente può soltanto
+    contattare l'assistenza se ritiene che il provvedimento sia un errore.
+    """
+    nome_visualizzato = (nome or "").strip() or "utente"
+
+    try:
+        return _invia_email(
+            destinazione=email,
+            oggetto="Account MyLocalCare disattivato",
+            corpo=(
+                f"Ciao {nome_visualizzato},\n\n"
+                "il tuo account MyLocalCare è stato temporaneamente "
+                "disattivato dall'amministrazione a seguito di attività "
+                "considerata sospetta o potenzialmente non conforme alle "
+                "Condizioni di utilizzo.\n\n"
+                "Da questo momento non puoi accedere al tuo account, il "
+                "profilo e gli eventuali annunci non sono visibili e la "
+                "chat non è disponibile.\n\n"
+                "Se ritieni che si tratti di un errore, rispondi a questa "
+                "email per richiedere una verifica.\n\n"
+                "MyLocalCare"
+            )
+        )
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore invio email disattivazione amministrativa",
+            e,
+            {"email": email},
+            production=True
+        )
+        return False
 # ==========================================================
 # 2️⃣ FUNZIONE CONNESSIONE DB E MODELS
 # ==========================================================
@@ -2196,6 +2265,49 @@ def close_db_connection(conn):
 
 app.config["DB_CONN_FACTORY"] = get_db_connection
 app.config["IS_POSTGRES"] = bool(os.getenv("DATABASE_URL"))
+
+
+def utente_account_abilitato(user_id) -> bool:
+    """Controllo fail-closed usato anche dagli handler realtime."""
+    if user_id in (None, ""):
+        return False
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT attivo, sospeso, disattivato_admin, eliminato
+            FROM utenti
+            WHERE id = ?
+            LIMIT 1
+        """), (int(user_id),))
+        utente = cur.fetchone()
+
+        if not utente:
+            return False
+
+        return (
+            int(utente["attivo"] or 0) == 1
+            and int(utente["sospeso"] or 0) == 0
+            and int(utente["disattivato_admin"] or 0) == 0
+            and int(utente["eliminato"] or 0) == 0
+        )
+
+    except Exception as e:
+        log_exception_safe(
+            "❌ Impossibile verificare lo stato dell'account",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
+        return False
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
 
 
 # --- Middleware di protezione per login richiesto ---
@@ -8905,20 +9017,255 @@ def admin_elimina_quartiere(id):
 # ==========================================================
 # GESTIONE UTENTI
 # ==========================================================
-@app.route('/admin/toggle_utente/<int:id>')
-@admin_required
-def toggle_utente(id):
+def _disconnetti_account_disattivato(user_id):
+    """Avvisa e disconnette tutte le socket note dell'account."""
+    user_id = int(user_id)
+
+    try:
+        live_sids = list(_get_live_user_sids(user_id))
+    except Exception as e:
+        live_sids = []
+        log_exception_safe(
+            "⚠️ Impossibile recuperare le socket dell'account disattivato",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
+
+    for sid in live_sids:
+        try:
+            socketio.emit(
+                "account_disabled",
+                {
+                    "message": "Il tuo account è stato disattivato dall'amministrazione.",
+                    "redirect": "/logout?reason=account_disabled"
+                },
+                to=sid,
+                namespace="/"
+            )
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Impossibile notificare la disattivazione alla socket",
+                e,
+                {"user_id": user_id, "sid": sid},
+                production=True
+            )
+
+    # Il RedisManager inoltra il comando anche al servizio realtime separato.
+    for sid in live_sids:
+        try:
+            socketio.server.disconnect(sid, namespace="/")
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Impossibile disconnettere la socket dell'account",
+                e,
+                {"user_id": user_id, "sid": sid},
+                production=True
+            )
+
+    try:
+        clear_open_chat(user_id)
+        redis_client.srem("online_users", str(user_id))
+    except Exception as e:
+        log_exception_safe(
+            "⚠️ Impossibile ripulire lo stato realtime dell'account",
+            e,
+            {"user_id": user_id},
+            production=True
+        )
+
+
+def _aggiorna_chat_controparti(user_id, controparti, account_abilitato):
+    """Fa sparire/riapparire subito il thread dopo il cambio di stato."""
+    for altro_id in controparti:
+        try:
+            emit_to_user_sids(
+                int(altro_id),
+                "chat_participant_status_changed",
+                {
+                    "user_id": int(user_id),
+                    "enabled": bool(account_abilitato)
+                }
+            )
+        except Exception as e:
+            log_exception_safe(
+                "⚠️ Impossibile aggiornare la chat dopo il cambio stato account",
+                e,
+                {"user_id": user_id, "counterparty_id": altro_id},
+                production=True
+            )
+
+
+def _toggle_stato_utente_admin(user_id, redirect_endpoint, azione_richiesta):
+    """Attiva o applica una vera disattivazione amministrativa."""
+    user_id = int(user_id)
+    azione_richiesta = (azione_richiesta or "").strip().lower()
+
+    if azione_richiesta not in {"attiva", "disattiva"}:
+        abort(400)
+
     conn = get_db_connection()
     cur = get_cursor(conn)
-    cur.execute(sql("SELECT attivo FROM utenti WHERE id = ?"), (id,))
-    user = cur.fetchone()
-    if user:
-        nuovo_stato = 0 if user['attivo'] else 1
-        conn.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?"), (nuovo_stato, id))
-        conn.commit()
-        flash("Utente {} correttamente.".format("disattivato" if nuovo_stato == 0 else "attivato"))
 
-    return redirect(url_for('admin'))
+    try:
+        cur.execute(sql("""
+            SELECT id, nome, username, email, ruolo,
+                   attivo, sospeso, disattivato_admin, eliminato
+            FROM utenti
+            WHERE id = ?
+            LIMIT 1
+        """), (user_id,))
+        utente = cur.fetchone()
+
+        if not utente:
+            flash("Utente non trovato.", "error")
+            return redirect(url_for(redirect_endpoint))
+
+        if int(utente["eliminato"] or 0) == 1:
+            flash("Un account eliminato non può essere riattivato.", "error")
+            return redirect(url_for(redirect_endpoint))
+
+        cur.execute(sql("""
+            SELECT DISTINCT
+                CASE
+                    WHEN mittente_id = ? THEN destinatario_id
+                    ELSE mittente_id
+                END AS altro_id
+            FROM messaggi_chat
+            WHERE mittente_id = ? OR destinatario_id = ?
+        """), (user_id, user_id, user_id))
+        controparti_chat = [
+            int(row["altro_id"])
+            for row in cur.fetchall()
+            if row["altro_id"] is not None
+        ]
+
+        account_abilitato = (
+            int(utente["attivo"] or 0) == 1
+            and int(utente["disattivato_admin"] or 0) == 0
+        )
+
+        if azione_richiesta == "disattiva":
+            if not account_abilitato:
+                flash("L'account risulta già non attivo.", "info")
+                return redirect(url_for(redirect_endpoint))
+
+            if int(g.utente["id"]) == user_id:
+                flash(
+                    "Non puoi disattivare l'account amministratore con cui sei collegato.",
+                    "error"
+                )
+                return redirect(url_for(redirect_endpoint))
+
+            cur.execute(sql("""
+                UPDATE utenti
+                SET attivo = 0,
+                    disattivato_admin = 1
+                WHERE id = ?
+            """), (user_id,))
+
+            # Evita che il dispositivo continui a ricevere push dopo il blocco.
+            cur.execute(sql("""
+                DELETE FROM push_subscriptions
+                WHERE utente_id = ?
+            """), (user_id,))
+
+            conn.commit()
+            azione = "disattivato"
+
+        else:
+            if account_abilitato:
+                flash("L'account risulta già attivo.", "info")
+                return redirect(url_for(redirect_endpoint))
+
+            if int(utente["sospeso"] or 0) == 1:
+                flash("Impossibile attivare un utente sospeso.", "error")
+                return redirect(url_for(redirect_endpoint))
+
+            cur.execute(sql("""
+                UPDATE utenti
+                SET attivo = 1,
+                    disattivato_admin = 0
+                WHERE id = ?
+            """), (user_id,))
+            conn.commit()
+            azione = "riattivato"
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+    if azione == "disattivato":
+        _disconnetti_account_disattivato(user_id)
+        _aggiorna_chat_controparti(
+            user_id,
+            controparti_chat,
+            account_abilitato=False
+        )
+
+        nome = utente["nome"] or utente["username"] or "utente"
+        email_inviata = invia_email_disattivazione_admin(
+            utente["email"],
+            nome
+        )
+
+        security_log(
+            "🚫 Account disattivato dall'amministrazione",
+            {
+                "user_id": user_id,
+                "admin_id": int(g.utente["id"]),
+                "email_inviata": bool(email_inviata)
+            },
+            production=True
+        )
+
+        if email_inviata:
+            flash(
+                "Utente disattivato, sessioni chiuse ed email informativa inviata.",
+                "success"
+            )
+        else:
+            flash(
+                "Utente disattivato e sessioni chiuse, ma l'email non è stata inviata.",
+                "warning"
+            )
+    else:
+        _aggiorna_chat_controparti(
+            user_id,
+            controparti_chat,
+            account_abilitato=True
+        )
+        security_log(
+            "✅ Account riattivato dall'amministrazione",
+            {
+                "user_id": user_id,
+                "admin_id": int(g.utente["id"])
+            },
+            production=True
+        )
+        flash("Utente riattivato correttamente.", "success")
+
+    return redirect(url_for(redirect_endpoint))
+
+
+@app.route('/admin/toggle_utente/<int:id>', methods=["POST"])
+@admin_required
+def toggle_utente(id):
+    verify_csrf()
+    return _toggle_stato_utente_admin(
+        id,
+        "admin",
+        request.form.get("azione")
+    )
 
 
 @app.route('/admin/elimina_utente/<int:id>')
@@ -9077,6 +9424,7 @@ def admin_utenti():
             u.foto_profilo,
             u.attivo,
             u.sospeso,
+            u.disattivato_admin,
             u.data_creazione,
 
             CASE
@@ -9277,7 +9625,8 @@ def admin_utenti():
                         ELSE 0
                     END
                 ) AS messaggi_non_letti,
-                MAX(m.id) AS ultimo_messaggio_id
+                MAX(m.id) AS ultimo_messaggio_id,
+                COUNT(*) OVER() AS totale_conversazioni
             FROM messaggi_chat m
             JOIN utenti altro
               ON altro.id = CASE
@@ -9292,6 +9641,14 @@ def admin_utenti():
         """), (utente_id, utente_id, utente_id, utente_id))
 
         chat_aperte = c.fetchall()
+
+        # Il dettaglio carica soltanto le 10 conversazioni più recenti,
+        # ma il contatore deve rappresentare il totale reale.
+        totale_chat = int(
+            chat_aperte[0]["totale_conversazioni"]
+            if chat_aperte
+            else 0
+        )
 
         # =====================================================
         # RECENSIONI SCRITTE DALL'UTENTE
@@ -9343,7 +9700,7 @@ def admin_utenti():
         # DATI PRONTI PER IL TEMPLATE
         # =====================================================
         u["admin_annunci_attivi_count"] = len(annunci_attivi)
-        u["admin_chat_aperte_count"] = len(chat_aperte)
+        u["admin_chat_aperte_count"] = totale_chat
         u["admin_recensioni_scritte_count"] = len(recensioni_scritte)
         u["admin_recensioni_ricevute_count"] = len(recensioni_ricevute)
 
@@ -9642,37 +9999,15 @@ def admin_utenti_report_excel():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-@app.route("/admin/utenti/toggle/<int:id>")
+@app.route("/admin/utenti/toggle/<int:id>", methods=["POST"])
 @admin_required
 def toggle_utente_admin(id):
-    conn = get_db_connection()
-    c = get_cursor(conn)
-
-    c.execute(sql("SELECT attivo, sospeso FROM utenti WHERE id = ?"), (id,))
-    row = c.fetchone()
-
-    if not row:
-
-        flash("Utente non trovato.", "error")
-        return redirect(url_for('admin_utenti'))
-
-    attivo, sospeso = row["attivo"], row["sospeso"]
-
-    # 🔄 LOGICA DI ATTIVAZIONE:
-    # • Se sospeso → NON può essere attivato
-    # • Se attivo → disattiva
-    # • Se non attivo → attiva
-    if sospeso == 1:
-        flash("Impossibile attivare un utente sospeso.", "error")
-    else:
-        nuovo_stato = 0 if attivo == 1 else 1
-        c.execute(sql("UPDATE utenti SET attivo = ? WHERE id = ?"), (nuovo_stato, id))
-        conn.commit()
-
-        flash("Stato utente aggiornato.", "success")
-
-
-    return redirect(url_for("admin_utenti"))
+    verify_csrf()
+    return _toggle_stato_utente_admin(
+        id,
+        "admin_utenti",
+        request.form.get("azione")
+    )
 
 # ==========================================================
 # ADMIN – RECENSIONI E RISPOSTE
@@ -12628,8 +12963,14 @@ def processa_promemoria_email_chat(
                                OR mc.id > ciclo.last_emailed_message_id
                         ) AS nuovi_dopo_ultima_email
                     FROM messaggi_chat mc
+                    JOIN utenti mittente
+                      ON mittente.id = mc.mittente_id
                     WHERE mc.destinatario_id = ciclo.user_id
                       AND mc.letto = 0
+                      AND mittente.attivo = 1
+                      AND COALESCE(mittente.sospeso, 0) = 0
+                      AND COALESCE(mittente.disattivato_admin, 0) = 0
+                      AND COALESCE(mittente.eliminato, 0) = 0
                       AND NOT EXISTS (
                           SELECT 1
                           FROM chat_blocchi cb
@@ -12751,6 +13092,12 @@ def processa_promemoria_email_chat(
                 JOIN messaggi_chat mc
                   ON mc.destinatario_id = ciclo.user_id
                  AND mc.letto = 0
+                JOIN utenti mittente
+                  ON mittente.id = mc.mittente_id
+                 AND mittente.attivo = 1
+                 AND COALESCE(mittente.sospeso, 0) = 0
+                 AND COALESCE(mittente.disattivato_admin, 0) = 0
+                 AND COALESCE(mittente.eliminato, 0) = 0
                  AND NOT EXISTS (
                       SELECT 1
                       FROM chat_blocchi cb
@@ -17349,8 +17696,14 @@ def invia_push(user_id, title, body, url=None):
             cur.execute("""
                 SELECT COUNT(*) AS count
                 FROM messaggi_chat mc
+                JOIN utenti mittente
+                  ON mittente.id = mc.mittente_id
                 WHERE mc.destinatario_id = %s
                   AND mc.letto = 0
+                  AND mittente.attivo = 1
+                  AND COALESCE(mittente.sospeso, 0) = 0
+                  AND COALESCE(mittente.disattivato_admin, 0) = 0
+                  AND COALESCE(mittente.eliminato, 0) = 0
                   AND NOT EXISTS (
                       SELECT 1
                       FROM chat_blocchi cb
@@ -19091,11 +19444,6 @@ def login():
             flash(f"Troppi tentativi falliti. Riprova tra {minuti} minuti.", "error")
             return redirect(url_for('login'))
 
-        # Email non confermata
-        if int(utente['attivo']) != 1:
-            flash("Devi confermare l'email prima di accedere.", "warning")
-            return redirect(url_for('login'))
-
         # ---------------------------------------------------------
         # PASSWORD CHECK
         # ---------------------------------------------------------
@@ -19120,9 +19468,15 @@ def login():
         # ---------------------------------------------------------
         # STATUS CHECK
         # ---------------------------------------------------------
+        # Solo dopo la password corretta comunichiamo lo stato specifico
+        # dell'account, evitando di esporlo a chi conosce soltanto l'email.
         disattivato_admin = utente['disattivato_admin'] if 'disattivato_admin' in utente.keys() else 0
-        if disattivato_admin == 1:
-            flash("Account disattivato.", "error")
+        if int(disattivato_admin or 0) == 1:
+            flash("Account disattivato dall'amministrazione.", "error")
+            return redirect(url_for('login'))
+
+        if int(utente['attivo']) != 1:
+            flash("Devi confermare l'email prima di accedere.", "warning")
             return redirect(url_for('login'))
 
         sospeso = utente['sospeso'] if 'sospeso' in utente.keys() else 0
@@ -19459,6 +19813,15 @@ def debug_chiavi_x25519():
 
 @app.route('/logout')
 def logout():
+    # Logout forzato ricevuto in tempo reale dopo un blocco amministrativo.
+    if request.args.get("reason") == "account_disabled":
+        session.clear()
+        flash(
+            "Il tuo account è stato disattivato dall’amministrazione.",
+            "error"
+        )
+        return redirect(url_for("login"))
+
     # 🔥 Caso: logout dopo sospensione → messaggio speciale
     if session.get("sospensione_logout"):
         session.clear()
@@ -23399,19 +23762,28 @@ def controllo_sospensione():
     conn = get_db_connection()
 
     c = get_cursor(conn)
-    c.execute(sql("SELECT sospeso, disattivato_admin FROM utenti WHERE id=?"), (session["utente_id"],))
+    c.execute(sql("SELECT attivo, sospeso, disattivato_admin FROM utenti WHERE id=?"), (session["utente_id"],))
     stato = c.fetchone()
 
-
-    # 🔒 Utente sospeso → attiva pagina riattivazione
-    if stato and stato["sospeso"] == 1:
-        session["sospeso"] = True
-        return redirect(url_for("riattivazione_account"))
 
     # 🚫 Account disattivato dall’admin → blocco totale
     if stato and stato["disattivato_admin"] == 1:
         session.clear()
         flash("Il tuo account è stato disattivato dall’amministrazione.", "error")
+        return redirect(url_for("login"))
+
+    # 🔒 Utente sospeso autonomamente → pagina di riattivazione.
+    # Questo controllo viene dopo il blocco admin, che non può essere
+    # rimosso direttamente dall'utente.
+    if stato and stato["sospeso"] == 1:
+        session["sospeso"] = True
+        return redirect(url_for("riattivazione_account"))
+
+    # Difesa aggiuntiva per eventuali vecchie disattivazioni che avevano
+    # aggiornato soltanto il campo `attivo`.
+    if stato and int(stato["attivo"] or 0) != 1:
+        session.clear()
+        flash("Il tuo account non è attivo.", "error")
         return redirect(url_for("login"))
 
 # ---------------------------
@@ -24642,6 +25014,12 @@ def chat_conversazione_json(other_id):
     user_id = g.utente["id"]
     after_id = request.args.get("after_id", type=int)
 
+    if not utente_account_abilitato(other_id):
+        return jsonify({
+            "ok": False,
+            "error": "Utente non disponibile."
+        }), 404
+
     # 🔹 Messaggi
     messaggi = chat_conversazione(user_id, other_id, after_id=after_id)
     chat_segna_letti(user_id, other_id)
@@ -24723,6 +25101,12 @@ def chat_load_older(other_id):
     user_id = g.utente["id"]
     before_id = request.args.get("before_id", type=int)
 
+    if not utente_account_abilitato(other_id):
+        return jsonify({
+            "ok": False,
+            "error": "Utente non disponibile."
+        }), 404
+
     if not before_id:
         return jsonify([])
 
@@ -24760,6 +25144,12 @@ def chat_message_changes(other_id):
     lettura, così nessun cambiamento successivo viene perso.
     """
     user_id = int(g.utente["id"])
+
+    if not utente_account_abilitato(other_id):
+        return jsonify({
+            "ok": False,
+            "error": "Utente non disponibile."
+        }), 404
 
     changed_after = (
         request.args.get("after", type=str)
@@ -25390,6 +25780,11 @@ def video_start():
             "error": "Utente non valido"
         }), 400
 
+    if not utente_account_abilitato(altro_id):
+        return jsonify({
+            "error": "Utente non disponibile"
+        }), 404
+
     try:
         stato_blocco = chat_stato_blocco(
             g.utente["id"],
@@ -25855,8 +26250,14 @@ def chat_count_unread(user_id):
     cur.execute(sql("""
         SELECT COUNT(*) AS count
         FROM messaggi_chat mc
+        JOIN utenti mittente
+          ON mittente.id = mc.mittente_id
         WHERE mc.destinatario_id = ?
           AND mc.letto = 0
+          AND mittente.attivo = 1
+          AND mittente.sospeso = 0
+          AND COALESCE(mittente.disattivato_admin, 0) = 0
+          AND COALESCE(mittente.eliminato, 0) = 0
           AND NOT EXISTS (
               SELECT 1
               FROM chat_blocchi cb
@@ -25897,7 +26298,12 @@ def chat_count_unread(user_id):
 # ma non vengono più chiamate automaticamente dal runtime web.
 
 if app.config["IS_REALTIME_SERVER"]:
-    register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread)
+    register_socket_lifecycle_handlers(
+        socketio,
+        redis_client,
+        chat_count_unread,
+        utente_account_abilitato,
+    )
 
     register_chat_socket_handlers(
         socketio,
@@ -25917,6 +26323,7 @@ if app.config["IS_REALTIME_SERVER"]:
         clear_open_chat=clear_open_chat,
         invia_push=invia_push,
         recently_read_timers=recently_read_timers,
+        account_is_enabled=utente_account_abilitato,
     )
 
     print("✅ Realtime handlers registrati (runtime=realtime)")

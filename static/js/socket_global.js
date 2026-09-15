@@ -407,6 +407,37 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
     console.warn("⚠️ socket connect_error:", err?.message || err);
   });
 
+  socket.on("account_disabled", (data) => {
+    try {
+      socket.io.opts.reconnection = false;
+      socket.disconnect();
+    } catch (_) {}
+
+    const target = data?.redirect || "/logout?reason=account_disabled";
+    window.location.replace(target);
+  });
+
+  socket.on("chat_participant_status_changed", (data) => {
+    const changedUserId = parseInt(data?.user_id || 0, 10);
+    if (!changedUserId) return;
+
+    const currentPath = window.location.pathname;
+    const openChatMatch = currentPath.match(/^\/chat\/(\d+)\/?$/);
+
+    if (
+      data?.enabled === false &&
+      openChatMatch &&
+      parseInt(openChatMatch[1], 10) === changedUserId
+    ) {
+      window.location.replace("/utente/messaggi");
+      return;
+    }
+
+    if (currentPath === "/utente/messaggi" || currentPath === "/chat") {
+      window.location.reload();
+    }
+  });
+
   // ===============================
   // EVENTI CHE AGGIORNANO SOLO ICONA PWA
   // ===============================

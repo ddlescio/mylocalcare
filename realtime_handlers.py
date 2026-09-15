@@ -17,7 +17,12 @@ offline_watchdogs = {}
 
 from realtime_auth import parse_realtime_token
 
-def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread):
+def register_socket_lifecycle_handlers(
+    socketio,
+    redis_client,
+    chat_count_unread,
+    account_is_enabled,
+):
     @socketio.on("connect")
     def handle_connect(auth=None):
         user_id = session.get("utente_id")
@@ -50,6 +55,24 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
 
         if not user_id:
             print("❌ [SOCKET CONNECT DEBUG] connect rifiutato: nessuna auth valida")
+            return False
+
+        try:
+            account_enabled = bool(account_is_enabled(user_id))
+        except Exception as e:
+            account_enabled = False
+            print(
+                f"❌ [SOCKET CONNECT DEBUG] verifica account fallita "
+                f"user={user_id}: {e}",
+                flush=True
+            )
+
+        if not account_enabled:
+            print(
+                f"❌ [SOCKET CONNECT DEBUG] connect rifiutato: "
+                f"account non abilitato user={user_id}",
+                flush=True
+            )
             return False
 
         sid = request.sid
@@ -105,6 +128,24 @@ def register_socket_lifecycle_handlers(socketio, redis_client, chat_count_unread
 
         if not user_id:
             print(f"⚠️ heartbeat ignorato: user_id assente per sid={sid}")
+            return
+
+        try:
+            account_enabled = bool(account_is_enabled(user_id))
+        except Exception:
+            account_enabled = False
+
+        if not account_enabled:
+            socketio.emit(
+                "account_disabled",
+                {
+                    "message": "Il tuo account è stato disattivato dall'amministrazione.",
+                    "redirect": "/logout?reason=account_disabled"
+                },
+                to=sid,
+                namespace="/"
+            )
+            socketio.server.disconnect(sid, namespace="/")
             return
 
         now_ts = int(__import__("time").time())
