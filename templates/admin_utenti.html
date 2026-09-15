@@ -630,6 +630,314 @@
     background: #f8fafc;
 }
 
+/* ====== RISULTATI CONTROLLO CHAT: CARD MOBILE FIRST ====== */
+.chat-risk-results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 2px 2px 12px;
+}
+
+.chat-risk-results-title {
+    color: #0f172a;
+    font-size: 0.96rem;
+    font-weight: 850;
+}
+
+.chat-risk-results-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 9999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.chat-risk-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+}
+
+.chat-risk-card {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    padding: 15px;
+    border: 1px solid rgba(191, 219, 254, 0.95);
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(219, 234, 254, 0.65), transparent 42%),
+        rgba(255, 255, 255, 0.96);
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 10px 30px rgba(15, 23, 42, 0.07);
+    cursor: pointer;
+    transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.chat-risk-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(180deg, #ef4444, #f97316);
+}
+
+.chat-risk-card[data-risk-reviewed="1"]::before {
+    background: linear-gradient(180deg, #10b981, #22c55e);
+}
+
+.chat-risk-card:hover,
+.chat-risk-card:focus-visible {
+    outline: none;
+    border-color: #93c5fd;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 14px 36px rgba(37, 99, 235, 0.12);
+    transform: translateY(-1px);
+}
+
+.chat-risk-card-header {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+}
+
+.chat-risk-card-avatar,
+.chat-risk-card-avatar-fallback {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border-radius: 15px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #dbe3ee, 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+
+.chat-risk-card-avatar {
+    object-fit: cover;
+    background: #f1f5f9;
+}
+
+.chat-risk-card-avatar-fallback {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(145deg, #eff6ff, #e0e7ff);
+    color: #2563eb;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.chat-risk-card-identity {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-risk-card-username {
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 0.98rem;
+    font-weight: 900;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-risk-card-meta {
+    margin-top: 4px;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-risk-account-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 25px;
+    padding: 0 9px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.66rem;
+    font-weight: 850;
+}
+
+.chat-risk-account-badge.attivo {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.chat-risk-account-badge.sospeso {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.chat-risk-account-badge.non-attivo,
+.chat-risk-account-badge.eliminato {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.chat-risk-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.chat-risk-metric {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 15px;
+    background: rgba(248, 250, 252, 0.88);
+}
+
+.chat-risk-metric-value {
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.chat-risk-metric-label {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 0.64rem;
+    font-weight: 750;
+    line-height: 1.15;
+}
+
+.chat-risk-card-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 9px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.chat-risk-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: #b91c1c;
+    font-size: 0.72rem;
+    font-weight: 850;
+}
+
+.chat-risk-state::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 9999px;
+    background: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.11);
+}
+
+.chat-risk-state.reviewed {
+    color: #166534;
+}
+
+.chat-risk-state.reviewed::before {
+    background: #22c55e;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+}
+
+.chat-risk-control-button {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 9999px;
+    background: #fff;
+    color: #1d4ed8;
+    font-size: 0.7rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.chat-risk-control-button:hover {
+    background: #eff6ff;
+}
+
+.chat-risk-card-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.chat-risk-card-action {
+    min-width: 0;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    color: #334155;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.chat-risk-card-action:hover {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.chat-risk-card-hint {
+    margin-top: 9px;
+    color: #94a3b8;
+    font-size: 0.62rem;
+    font-weight: 650;
+    text-align: center;
+}
+
+.chat-risk-empty {
+    padding: 28px 18px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.78);
+    color: #64748b;
+    text-align: center;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.chat-risk-source-table {
+    display: none;
+}
+
+@media (min-width: 720px) {
+    .chat-risk-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chat-risk-metrics {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
 .filter-actions {
     display: flex;
     flex-wrap: wrap;
@@ -1061,6 +1369,154 @@
       font-weight: 650;
       color: #0f172a;
       word-break: break-word;
+  }
+
+  .user-risk-panel {
+      margin-top: 14px;
+      overflow: hidden;
+      border: 1px solid #dbeafe;
+      border-radius: 20px;
+      background:
+          radial-gradient(circle at 100% 0, rgba(219, 234, 254, 0.7), transparent 44%),
+          #ffffff;
+  }
+
+  .user-risk-panel.hidden {
+      display: none;
+  }
+
+  .user-risk-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 14px 10px;
+  }
+
+  .user-risk-panel-heading {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+  }
+
+  .user-risk-panel-icon {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: linear-gradient(145deg, #eff6ff, #dbeafe);
+      color: #1d4ed8;
+      font-size: 0.88rem;
+  }
+
+  .user-risk-panel-kicker {
+      color: #64748b;
+      font-size: 0.61rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+  }
+
+  .user-risk-panel-title {
+      margin-top: 2px;
+      color: #0f172a;
+      font-size: 0.86rem;
+      font-weight: 900;
+  }
+
+  .user-risk-reason {
+      margin: 0 14px 11px;
+      padding: 10px 11px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: rgba(248, 250, 252, 0.9);
+  }
+
+  .user-risk-reason-label {
+      color: #64748b;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+  }
+
+  .user-risk-reason-text {
+      margin-top: 4px;
+      color: #334155;
+      font-size: 0.76rem;
+      font-weight: 650;
+      line-height: 1.38;
+  }
+
+  .user-risk-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      padding: 0 14px 12px;
+  }
+
+  .user-risk-metric {
+      min-width: 0;
+      padding: 9px 10px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.9);
+  }
+
+  .user-risk-metric strong {
+      display: block;
+      color: #0f172a;
+      font-size: 0.95rem;
+      font-weight: 900;
+      line-height: 1;
+  }
+
+  .user-risk-metric span {
+      display: block;
+      margin-top: 4px;
+      color: #64748b;
+      font-size: 0.61rem;
+      font-weight: 720;
+      line-height: 1.15;
+  }
+
+  .user-risk-dates {
+      display: grid;
+      gap: 4px;
+      padding: 0 14px 12px;
+      color: #64748b;
+      font-size: 0.67rem;
+      line-height: 1.3;
+  }
+
+  .user-risk-dates strong {
+      color: #334155;
+      font-weight: 800;
+  }
+
+  .user-risk-review {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 14px;
+      border-top: 1px solid #dbeafe;
+      background: rgba(248, 250, 252, 0.75);
+  }
+
+  .user-risk-review .chat-risk-review-status,
+  .user-risk-review .chat-risk-review-button {
+      min-height: 30px;
+      margin: 0;
+  }
+
+  @media (min-width: 560px) {
+      .user-risk-metrics {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
   }
 
   .user-modal-actions {
@@ -1497,8 +1953,132 @@
   </details>
 {% endif %}
 
+{% if rischio_chat %}
+  <div class="chat-risk-results-head">
+    <div class="chat-risk-results-title">Account da verificare</div>
+    <div class="chat-risk-results-count">{{ totale_filtrati }}</div>
+  </div>
+
+  {% if utenti %}
+    <div class="chat-risk-cards">
+      {% for u in utenti %}
+        {% set metriche = u.chat_rischio_metriche %}
+        {% if u.eliminato == 1 %}
+          {% set account_label = 'Eliminato' %}
+          {% set account_class = 'eliminato' %}
+        {% elif u.disattivato_admin == 1 %}
+          {% set account_label = 'Disattivato' %}
+          {% set account_class = 'non-attivo' %}
+        {% elif u.sospeso == 1 %}
+          {% set account_label = 'Sospeso' %}
+          {% set account_class = 'sospeso' %}
+        {% elif u.attivo == 1 %}
+          {% set account_label = 'Attivo' %}
+          {% set account_class = 'attivo' %}
+        {% else %}
+          {% set account_label = 'Non attivo' %}
+          {% set account_class = 'non-attivo' %}
+        {% endif %}
+
+        <article class="chat-risk-card"
+                 tabindex="0"
+                 role="button"
+                 aria-label="Apri il controllo completo di {{ u.username }}"
+                 data-risk-card-user-id="{{ u.id }}"
+                 data-risk-reviewed="{{ 1 if u.chat_rischio_controllato else 0 }}">
+          <div class="chat-risk-card-header">
+            {% if u.foto_profilo %}
+              <img class="chat-risk-card-avatar"
+                   src="{{ url_for('static', filename=u.foto_profilo) }}"
+                   alt="Foto di {{ u.username }}">
+            {% else %}
+              <div class="chat-risk-card-avatar-fallback" aria-hidden="true">
+                {{ (u.username or '?')[:1]|upper }}
+              </div>
+            {% endif %}
+
+            <div class="chat-risk-card-identity">
+              <div class="chat-risk-card-username">@{{ u.username }}</div>
+              <div class="chat-risk-card-meta">
+                ID {{ u.id }} · {{ u.citta or u.provincia or 'Zona non indicata' }}
+              </div>
+            </div>
+
+            <span class="chat-risk-account-badge {{ account_class }}">
+              {{ account_label }}
+            </span>
+          </div>
+
+          <div class="chat-risk-metrics" aria-label="Riepilogo attività chat">
+            <div class="chat-risk-metric">
+              <div class="chat-risk-metric-value">{{ metriche.nuove_chat_24h }}</div>
+              <div class="chat-risk-metric-label">Nuove chat · 24 ore</div>
+            </div>
+            <div class="chat-risk-metric">
+              <div class="chat-risk-metric-value">{{ metriche.nuove_chat_7g }}</div>
+              <div class="chat-risk-metric-label">Nuove chat · 7 giorni</div>
+            </div>
+            <div class="chat-risk-metric">
+              <div class="chat-risk-metric-value">{{ metriche.nuove_chat_30g }}</div>
+              <div class="chat-risk-metric-label">Nuove chat · 30 giorni</div>
+            </div>
+            <div class="chat-risk-metric">
+              <div class="chat-risk-metric-value">{{ metriche.blocchi_ricevuti_30g }}</div>
+              <div class="chat-risk-metric-label">Blocchi ricevuti · 30 giorni</div>
+            </div>
+          </div>
+
+          <div class="chat-risk-card-control">
+            <span class="chat-risk-state {{ 'reviewed' if u.chat_rischio_controllato else '' }}">
+              {{ 'Controllato' if u.chat_rischio_controllato else 'Da controllare' }}
+            </span>
+
+            <form method="POST"
+                  action="{{ url_for('admin_utente_rischio_chat_review', user_id=u.id) }}"
+                  data-preserve-user-scroll="1"
+                  data-scroll-user-id="{{ u.id }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <input type="hidden"
+                     name="azione"
+                     value="{{ 'da_controllare' if u.chat_rischio_controllato else 'controllato' }}">
+              <button type="submit" class="chat-risk-control-button">
+                {{ 'Riapri controllo' if u.chat_rischio_controllato else 'Segna controllato' }}
+              </button>
+            </form>
+          </div>
+
+          <div class="chat-risk-card-actions" aria-label="Azioni rapide">
+            <a href="{{ url_for('chat_conversazione_view', other_id=u.id) }}"
+               class="chat-risk-card-action"
+               title="Apri chat con {{ u.username }}">
+              <span aria-hidden="true">💬</span><span>Chat</span>
+            </a>
+            <a href="mailto:{{ u.email }}"
+               class="chat-risk-card-action"
+               title="Scrivi una email a {{ u.username }}">
+              <span aria-hidden="true">✉️</span><span>Mail</span>
+            </a>
+            <a href="{{ url_for('profilo_pubblico', id=u.id) }}"
+               class="chat-risk-card-action"
+               title="Apri il profilo di {{ u.username }}">
+              <span aria-hidden="true">👤</span><span>Profilo</span>
+            </a>
+          </div>
+
+          <div class="chat-risk-card-hint">Tocca la card per il dettaglio completo</div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="chat-risk-empty">
+      Nessun account corrisponde ai filtri selezionati.
+    </div>
+  {% endif %}
+{% endif %}
+
 <!-- TABELLA UTENTI -->
-<div class="table-wrapper">
+<div class="table-wrapper{% if rischio_chat %} chat-risk-source-table{% endif %}">
 
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
@@ -1544,6 +2124,18 @@
                 data-user-chat-risk="{{ 1 if u.chat_rischio else 0 }}"
                 data-user-chat-risk-reason="{{ u.chat_rischio_motivo|default('')|e }}"
                 data-user-chat-risk-reviewed="{{ 1 if u.chat_rischio_controllato else 0 }}"
+                data-user-chat-risk-reviewed-at="{% if u.chat_rischio_controllato_at %}{{ u.chat_rischio_controllato_at|fmt_it }}{% endif %}"
+                data-user-chat-risk-last-activity="{% if u.chat_rischio_metriche.ultima_attivita_rischio %}{{ u.chat_rischio_metriche.ultima_attivita_rischio|fmt_it }}{% endif %}"
+                data-user-chat-risk-score="{{ u.chat_rischio_metriche.punteggio|default(0) }}"
+                data-user-chat-risk-24h="{{ u.chat_rischio_metriche.nuove_chat_24h|default(0) }}"
+                data-user-chat-risk-7d="{{ u.chat_rischio_metriche.nuove_chat_7g|default(0) }}"
+                data-user-chat-risk-30d="{{ u.chat_rischio_metriche.nuove_chat_30g|default(0) }}"
+                data-user-chat-risk-active-days="{{ u.chat_rischio_metriche.giorni_attivi_7g|default(0) }}"
+                data-user-chat-risk-provinces="{{ u.chat_rischio_metriche.province_contattate_7g|default(0) }}"
+                data-user-chat-risk-regions="{{ u.chat_rischio_metriche.regioni_contattate_7g|default(0) }}"
+                data-user-chat-risk-outside-region="{{ u.chat_rischio_metriche.fuori_regione_7g|default(0) }}"
+                data-user-chat-risk-no-reply="{{ u.chat_rischio_metriche.senza_risposta_7g|default(0) }}"
+                data-user-chat-risk-blocks="{{ u.chat_rischio_metriche.blocchi_ricevuti_30g|default(0) }}"
                 data-user-chat-risk-review-url="{{ url_for('admin_utente_rischio_chat_review', user_id=u.id) }}"
                 data-admin-recensioni-scritte='{{ u.admin_recensioni_scritte_json|default("[]")|e }}'
                 data-admin-recensioni-ricevute='{{ u.admin_recensioni_ricevute_json|default("[]")|e }}'>
@@ -1566,7 +2158,9 @@
                       </span>
 
                       <form method="POST"
-                            action="{{ url_for('admin_utente_rischio_chat_review', user_id=u.id) }}">
+                            action="{{ url_for('admin_utente_rischio_chat_review', user_id=u.id) }}"
+                            data-preserve-user-scroll="1"
+                            data-scroll-user-id="{{ u.id }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="next" value="{{ request.full_path }}">
                         <input type="hidden"
@@ -1856,14 +2450,81 @@
       </div>
     </div>
 
-    <div id="modal-user-chat-risk"
-         class="hidden mx-5 mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-      <div class="font-bold">🚨 Attività chat da verificare</div>
-      <div id="modal-user-chat-risk-reason" class="mt-1 text-red-800"></div>
-      <div class="chat-risk-review-inline">
+    <section id="modal-user-chat-risk" class="user-risk-panel hidden">
+      <div class="user-risk-panel-header">
+        <div class="user-risk-panel-heading">
+          <div class="user-risk-panel-icon" aria-hidden="true">◇</div>
+          <div>
+            <div class="user-risk-panel-kicker">Controllo preventivo</div>
+            <div class="user-risk-panel-title">Attività chat</div>
+          </div>
+        </div>
+
         <span id="modal-user-chat-risk-status"
               class="chat-risk-review-status pending">Da controllare</span>
-        <form id="modal-user-chat-risk-form" method="POST">
+      </div>
+
+      <div class="user-risk-reason">
+        <div class="user-risk-reason-label">Perché è stato segnalato</div>
+        <div id="modal-user-chat-risk-reason" class="user-risk-reason-text"></div>
+      </div>
+
+      <div class="user-risk-metrics">
+        <div class="user-risk-metric">
+          <strong id="modal-risk-chat-24h">0</strong>
+          <span>Nuove chat · 24 ore</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-chat-7d">0</strong>
+          <span>Nuove chat · 7 giorni</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-chat-30d">0</strong>
+          <span>Nuove chat · 30 giorni</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-active-days">0</strong>
+          <span>Giorni attivi · ultimi 7</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-provinces">0</strong>
+          <span>Province contattate</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-regions">0</strong>
+          <span>Regioni contattate</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-outside-region">0</strong>
+          <span>Chat fuori regione</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-no-reply">0</strong>
+          <span>Chat senza risposta</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-blocks">0</strong>
+          <span>Blocchi ricevuti · 30 giorni</span>
+        </div>
+        <div class="user-risk-metric">
+          <strong id="modal-risk-score">0</strong>
+          <span>Priorità controllo</span>
+        </div>
+      </div>
+
+      <div class="user-risk-dates">
+        <div>Ultima attività rilevante: <strong id="modal-risk-last-activity">—</strong></div>
+        <div id="modal-risk-reviewed-row" class="hidden">
+          Controllato il: <strong id="modal-risk-reviewed-at">—</strong>
+        </div>
+      </div>
+
+      <div class="user-risk-review">
+        <span class="text-xs font-semibold text-slate-500">Verifica amministrativa</span>
+        <form id="modal-user-chat-risk-form"
+              method="POST"
+              data-preserve-user-scroll="1"
+              data-reopen-user-modal="1">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="next" value="{{ request.full_path }}">
           <input id="modal-user-chat-risk-action"
@@ -1877,7 +2538,7 @@
           </button>
         </form>
       </div>
-    </div>
+    </section>
 
     <div id="modal-user-actions" class="user-modal-actions">
       <a id="modal-user-chat" href="#" class="user-modal-action primary">
@@ -1885,10 +2546,14 @@
       </a>
 
       <a id="modal-user-mail" href="#" class="user-modal-action secondary">
-        ✉️ Email
+        ✉️ Mail
       </a>
 
-      <form id="modal-user-toggle-form" method="POST" style="display:contents;">
+      <form id="modal-user-toggle-form"
+            method="POST"
+            style="display:contents;"
+            data-preserve-user-scroll="1"
+            data-reopen-user-modal="1">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input id="modal-user-toggle-action" type="hidden" name="azione" value="">
         <button id="modal-user-toggle" type="submit" class="user-modal-action secondary">
@@ -2310,6 +2975,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let userModalScrollY = 0;
   let userTouchStartY = 0;
+  const userViewStateKey = "admin-utenti-view-state-v1";
 
   function lockUserPageScroll() {
     if (document.body.classList.contains("user-modal-page-locked")) {
@@ -2350,6 +3016,53 @@ document.addEventListener("DOMContentLoaded", () => {
     delete document.body.dataset.userModalScrollY;
 
     window.scrollTo(0, savedScrollY);
+    requestAnimationFrame(() => window.scrollTo(0, savedScrollY));
+  }
+
+  function saveUserViewState(form) {
+    const pageScrollY = Number(
+      document.body.dataset.userModalScrollY
+      || userModalScrollY
+      || window.scrollY
+      || document.documentElement.scrollTop
+      || 0
+    );
+    const scrollBox = backdrop.querySelector(".user-modal-card");
+
+    const state = {
+      page: `${window.location.pathname}${window.location.search}`,
+      pageScrollY,
+      modalScrollY: backdrop.classList.contains("is-open") && scrollBox
+        ? scrollBox.scrollTop
+        : 0,
+      userId: form.dataset.scrollUserId || "",
+      reopenModal: form.dataset.reopenUserModal === "1",
+      savedAt: Date.now()
+    };
+
+    try {
+      sessionStorage.setItem(userViewStateKey, JSON.stringify(state));
+    } catch (e) {
+      console.warn("Impossibile memorizzare la posizione della lista utenti:", e);
+    }
+  }
+
+  function readUserViewState() {
+    try {
+      const raw = sessionStorage.getItem(userViewStateKey);
+      sessionStorage.removeItem(userViewStateKey);
+
+      if (!raw) return null;
+
+      const state = JSON.parse(raw);
+      const samePage = state.page === `${window.location.pathname}${window.location.search}`;
+      const isRecent = Date.now() - Number(state.savedAt || 0) < 120000;
+
+      return samePage && isRecent ? state : null;
+    } catch (e) {
+      console.warn("Impossibile ripristinare la posizione della lista utenti:", e);
+      return null;
+    }
   }
 
   function bloccaScrollChainingUserModal() {
@@ -2626,6 +3339,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (chatRiskForm) {
       chatRiskForm.action = d.userChatRiskReviewUrl || "#";
+      chatRiskForm.dataset.scrollUserId = d.userId || "";
     }
 
     if (chatRiskAction) {
@@ -2634,6 +3348,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (chatRiskButton) {
       chatRiskButton.textContent = chatRiskReviewed ? "Riapri controllo" : "Segna controllato";
+    }
+
+    setText("modal-risk-chat-24h", d.userChatRisk24h || "0");
+    setText("modal-risk-chat-7d", d.userChatRisk7d || "0");
+    setText("modal-risk-chat-30d", d.userChatRisk30d || "0");
+    setText("modal-risk-active-days", d.userChatRiskActiveDays || "0");
+    setText("modal-risk-provinces", d.userChatRiskProvinces || "0");
+    setText("modal-risk-regions", d.userChatRiskRegions || "0");
+    setText("modal-risk-outside-region", d.userChatRiskOutsideRegion || "0");
+    setText("modal-risk-no-reply", d.userChatRiskNoReply || "0");
+    setText("modal-risk-blocks", d.userChatRiskBlocks || "0");
+    setText("modal-risk-score", d.userChatRiskScore || "0");
+    setText("modal-risk-last-activity", d.userChatRiskLastActivity || "—");
+    setText("modal-risk-reviewed-at", d.userChatRiskReviewedAt || "—");
+
+    const reviewedAtRow = document.getElementById("modal-risk-reviewed-row");
+    if (reviewedAtRow) {
+      reviewedAtRow.classList.toggle(
+        "hidden",
+        !hasChatRisk || !chatRiskReviewed || !d.userChatRiskReviewedAt
+      );
     }
 
     setText("modal-user-id", d.userId);
@@ -2660,6 +3395,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (toggle) {
       if (toggleForm) {
         toggleForm.action = d.userToggleUrl || "#";
+        toggleForm.dataset.scrollUserId = d.userId || "";
       }
       if (toggleAction) {
         toggleAction.value = d.userAttivo === "1" ? "disattiva" : "attiva";
@@ -2735,6 +3471,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  document.querySelectorAll(".chat-risk-card").forEach(card => {
+    const openRiskCard = () => {
+      const userId = card.dataset.riskCardUserId;
+      const row = document.querySelector(`.admin-user-row[data-user-id="${userId}"]`);
+      openModal(row);
+    };
+
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("a, button, form, input, select")) return;
+      openRiskCard();
+    });
+
+    card.addEventListener("keydown", (e) => {
+      if (e.target !== card || !["Enter", " "].includes(e.key)) return;
+      e.preventDefault();
+      openRiskCard();
+    });
+  });
+
   document.querySelectorAll(".admin-user-details-toggle").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -2797,6 +3552,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
     closeModal();
   });
+
+  document.querySelectorAll("form[data-preserve-user-scroll='1']").forEach(form => {
+    form.addEventListener("submit", () => saveUserViewState(form));
+  });
+
+  const savedViewState = readUserViewState();
+
+  if (savedViewState) {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, Number(savedViewState.pageScrollY || 0));
+
+      requestAnimationFrame(() => {
+        window.scrollTo(0, Number(savedViewState.pageScrollY || 0));
+
+        if (!savedViewState.reopenModal || !savedViewState.userId) return;
+
+        const row = document.querySelector(
+          `.admin-user-row[data-user-id="${savedViewState.userId}"]`
+        );
+
+        if (!row) return;
+
+        openModal(row);
+
+        const scrollBox = backdrop.querySelector(".user-modal-card");
+        if (scrollBox) {
+          requestAnimationFrame(() => {
+            scrollBox.scrollTop = Number(savedViewState.modalScrollY || 0);
+          });
+        }
+      });
+    });
+  }
 });
 </script>
 
