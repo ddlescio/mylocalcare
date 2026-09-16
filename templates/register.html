@@ -19,20 +19,20 @@
   .register-language-button {
     display: inline-flex;
     align-items: center;
-    gap: .55rem;
-    min-height: 44px;
-    padding: .5rem .75rem;
+    justify-content: center;
+    gap: .18rem;
+    width: 3.15rem;
+    min-height: 2.2rem;
+    padding: .34rem .42rem;
     border: 1px solid #dbeafe;
     border-radius: 999px;
     background: rgba(255,255,255,.96);
     color: #1e3a8a;
     box-shadow: 0 10px 28px rgba(37,99,235,.1);
-    font-size: .82rem;
-    font-weight: 800;
   }
 
-  .register-language-button .flag { font-size: 1.25rem; }
-  .register-language-button .arrow { color: #3b82f6; font-size: 1rem; }
+  .register-language-button .flag { font-size: 1.08rem; line-height: 1; }
+  .register-language-button .arrow { color: #64748b; font-size: .62rem; line-height: 1; }
 
   .register-card {
     border: 1px solid #e2e8f0;
@@ -71,9 +71,7 @@
             data-language-open
             aria-label="{{ tr('language.open') }}">
       <span class="flag" aria-hidden="true">{{ current_language.flag }}</span>
-      <span>{{ tr('register.language_hint') }}</span>
-      <span>{{ current_language.short }}</span>
-      <span class="arrow" aria-hidden="true">⌄</span>
+      <span class="arrow" aria-hidden="true">▾</span>
     </button>
   </div>
 

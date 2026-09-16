@@ -4,6 +4,7 @@ import base64
 import html
 import json
 import re
+from pathlib import Path
 
 from i18n_catalog import PATTERN_ROWS, PHRASE_ROWS
 
@@ -13,16 +14,19 @@ SUPPORTED_LANGUAGES = {
     "fr": {"label": "Français", "flag": "🇫🇷", "short": "FR"},
     "es": {"label": "Español", "flag": "🇪🇸", "short": "ES"},
     "de": {"label": "Deutsch", "flag": "🇩🇪", "short": "DE"},
+    "ro": {"label": "Română", "flag": "🇷🇴", "short": "RO"},
+    "uk": {"label": "Українська", "flag": "🇺🇦", "short": "UA"},
+    "fil": {"label": "Filipino", "flag": "🇵🇭", "short": "FIL"},
 }
 
 
 TRANSLATIONS = {
     "legal.official_language_notice": {
-        "it": "Il testo legale ufficiale è disponibile in italiano.",
-        "en": "The official legal text is provided in Italian.",
-        "fr": "Le texte juridique officiel est fourni en italien.",
-        "es": "El texto legal oficial se proporciona en italiano.",
-        "de": "Der verbindliche Rechtstext ist auf Italienisch verfügbar.",
+        "it": "Il testo legale ufficiale è quello in italiano.",
+        "en": "Courtesy translation. In case of discrepancies, the official Italian text prevails.",
+        "fr": "Traduction de courtoisie. En cas de divergence, le texte officiel italien prévaut.",
+        "es": "Traducción de cortesía. En caso de discrepancia, prevalece el texto oficial en italiano.",
+        "de": "Unverbindliche Übersetzung. Bei Abweichungen ist der offizielle italienische Text maßgeblich.",
     },
     "language.open": {
         "it": "Cambia lingua", "en": "Change language", "fr": "Changer de langue",
@@ -480,11 +484,14 @@ TRANSLATIONS = {
     "register.cookie": {"it": "Cookie Policy", "en": "Cookie Policy", "fr": "Politique relative aux cookies", "es": "Política de cookies", "de": "Cookie-Richtlinie"},
     "register.terms": {"it": "Termini e Condizioni", "en": "Terms and Conditions", "fr": "Conditions générales", "es": "Términos y condiciones", "de": "Allgemeine Geschäftsbedingungen"},
     "register.legal_note": {
-        "it": "I documenti legali ufficiali sono disponibili in italiano.",
-        "en": "The official legal documents are provided in Italian.",
-        "fr": "Les documents juridiques officiels sont fournis en italien.",
-        "es": "Los documentos legales oficiales se proporcionan en italiano.",
-        "de": "Die verbindlichen Rechtsdokumente sind auf Italienisch verfügbar.",
+        "it": "Le traduzioni sono di cortesia. In caso di discrepanze prevale il testo ufficiale italiano.",
+        "en": "Courtesy translations are provided. In case of discrepancies, the official Italian text prevails.",
+        "fr": "Des traductions de courtoisie sont fournies. En cas de divergence, le texte officiel italien prévaut.",
+        "es": "Se ofrecen traducciones de cortesía. En caso de discrepancia, prevalece el texto oficial italiano.",
+        "de": "Es werden unverbindliche Übersetzungen bereitgestellt. Bei Abweichungen ist der offizielle italienische Text maßgeblich.",
+        "ro": "Sunt oferite traduceri de curtoazie. În caz de neconcordanțe, prevalează textul oficial în limba italiană.",
+        "uk": "Надано неофіційні переклади. У разі розбіжностей переважну силу має офіційний текст італійською мовою.",
+        "fil": "May mga pagsasalin para sa kaginhawaan. Kung may pagkakaiba, mananaig ang opisyal na tekstong Italyano.",
     },
     "register.submit": {"it": "Registrati", "en": "Sign up", "fr": "S’inscrire", "es": "Registrarse", "de": "Registrieren"},
     "register.show_password": {"it": "Mostra password", "en": "Show password", "fr": "Afficher le mot de passe", "es": "Mostrar contraseña", "de": "Passwort anzeigen"},
@@ -511,8 +518,123 @@ TRANSLATIONS = {
 }
 
 
-LANGUAGE_ORDER = ("it", "en", "fr", "es", "de")
-PATTERN_LANGUAGE_ORDER = ("en", "fr", "es", "de")
+BASE_LANGUAGE_ORDER = ("it", "en", "fr", "es", "de")
+EXTRA_LANGUAGE_ORDER = ("ro", "uk", "fil")
+LANGUAGE_ORDER = BASE_LANGUAGE_ORDER + EXTRA_LANGUAGE_ORDER
+PATTERN_BASE_LANGUAGE_ORDER = ("en", "fr", "es", "de")
+
+
+def _load_extra_translation_catalog():
+    """Carica le lingue aggiuntive mantenendo compatto il catalogo Python."""
+    path = Path(__file__).with_name("extra_translations.json")
+    if not path.exists():
+        return {}, {}
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    sources = payload.get("sources", {})
+    patterns = payload.get("patterns", {})
+    expected = set(EXTRA_LANGUAGE_ORDER)
+
+    for source, variants in sources.items():
+        if set(variants) != expected:
+            raise ValueError(f"Traduzione aggiuntiva incompleta per {source!r}")
+
+    for pattern, variants in patterns.items():
+        if set(variants) != expected:
+            raise ValueError(f"Pattern aggiuntivo incompleto per {pattern!r}")
+
+    return sources, patterns
+
+
+EXTRA_SOURCE_TRANSLATIONS, EXTRA_PATTERN_TRANSLATIONS = (
+    _load_extra_translation_catalog()
+)
+
+# Revisione manuale delle frasi più visibili e sensibili. Il catalogo completo
+# resta generato offline; queste correzioni evitano ambiguità nei comandi
+# principali, nella registrazione e negli avvisi legali.
+EXTRA_SOURCE_TRANSLATION_OVERRIDES = {
+    "Il testo legale ufficiale è quello in italiano.": {
+        "ro": "Traducere de curtoazie. În caz de neconcordanțe, prevalează textul oficial în limba italiană.",
+        "uk": "Неофіційний переклад. У разі розбіжностей переважну силу має офіційний текст італійською мовою.",
+        "fil": "Pagsasalin para sa kaginhawaan. Kung may pagkakaiba, mananaig ang opisyal na tekstong Italyano.",
+    },
+    "Cambia lingua": {
+        "ro": "Schimbă limba",
+        "uk": "Змінити мову",
+        "fil": "Baguhin ang wika",
+    },
+    "Chiudi": {"ro": "Închide", "uk": "Закрити", "fil": "Isara"},
+    "Accedi": {"ro": "Conectează-te", "uk": "Увійти", "fil": "Mag-sign in"},
+    "Registrati": {"ro": "Înregistrează-te", "uk": "Зареєструватися", "fil": "Magrehistro"},
+    "Esci": {"ro": "Deconectează-te", "uk": "Вийти", "fil": "Mag-sign out"},
+    "Il passaparola di una volta, a portata di mano!": {
+        "ro": "Recomandările de altădată, acum la îndemâna ta!",
+        "uk": "Сарафанне радіо, як колись, тепер у вас під рукою!",
+        "fil": "Ang tradisyonal na rekomendasyon ng komunidad, abot-kamay mo na!",
+    },
+    "Scegli la tua zona per entrare nella rete locale di persone vicino a te.": {
+        "ro": "Alege zona ta pentru a intra în rețeaua locală a persoanelor din apropiere.",
+        "uk": "Виберіть свій район, щоб долучитися до місцевої мережі людей поруч із вами.",
+        "fil": "Piliin ang iyong lugar para makasali sa lokal na network ng mga taong malapit sa iyo.",
+    },
+    "Cognome": {"ro": "Nume de familie", "uk": "Прізвище", "fil": "Apelyido"},
+    "Email": {"ro": "E-mail", "uk": "Електронна пошта", "fil": "Email"},
+    "Password": {"ro": "Parolă", "uk": "Пароль", "fil": "Password"},
+    "Conferma password": {
+        "ro": "Confirmă parola",
+        "uk": "Підтвердіть пароль",
+        "fil": "Kumpirmahin ang password",
+    },
+    "Informativa sulla Privacy": {
+        "ro": "Politica de confidențialitate",
+        "uk": "Політика конфіденційності",
+        "fil": "Patakaran sa Privacy",
+    },
+    "Cookie Policy": {
+        "ro": "Politica privind modulele cookie",
+        "uk": "Політика файлів cookie",
+        "fil": "Patakaran sa Cookie",
+    },
+    "Termini e Condizioni": {
+        "ro": "Termeni și condiții",
+        "uk": "Умови використання",
+        "fil": "Mga Tuntunin at Kundisyon",
+    },
+    "Mostra password": {
+        "ro": "Afișează parola",
+        "uk": "Показати пароль",
+        "fil": "Ipakita ang password",
+    },
+    "Nascondi password": {
+        "ro": "Ascunde parola",
+        "uk": "Приховати пароль",
+        "fil": "Itago ang password",
+    },
+    "Le password non coincidono.": {
+        "ro": "Parolele nu coincid.",
+        "uk": "Паролі не збігаються.",
+        "fil": "Hindi magkatugma ang mga password.",
+    },
+    "Caricamento stato visibilità…": {
+        "ro": "Se încarcă starea vizibilității…",
+        "uk": "Завантаження стану видимості…",
+        "fil": "Nilo-load ang status ng visibility…",
+    },
+    "Caricamento foto... Attendi senza chiudere la pagina.": {
+        "ro": "Se încarcă fotografia... Așteaptă fără să închizi pagina.",
+        "uk": "Завантаження фото... Зачекайте, не закриваючи сторінку.",
+        "fil": "Ina-upload ang larawan... Maghintay nang hindi isinasara ang pahina.",
+    },
+    "Elimina una foto prima di aggiungerne una nuova.": {
+        "ro": "Șterge o fotografie înainte de a adăuga una nouă.",
+        "uk": "Видаліть фото, перш ніж додати нове.",
+        "fil": "Mag-delete muna ng larawan bago magdagdag ng bago.",
+    },
+}
+
+for source, variants in EXTRA_SOURCE_TRANSLATION_OVERRIDES.items():
+    EXTRA_SOURCE_TRANSLATIONS.setdefault(source, {}).update(variants)
 
 
 def _build_source_translations():
@@ -524,14 +646,21 @@ def _build_source_translations():
         if italian:
             catalog[italian] = {
                 code: variants.get(code) or variants.get("en") or italian
-                for code in LANGUAGE_ORDER
+                for code in BASE_LANGUAGE_ORDER
             }
+            catalog[italian].update(EXTRA_SOURCE_TRANSLATIONS.get(italian, {}))
+            catalog[italian].update({
+                code: variants[code]
+                for code in EXTRA_LANGUAGE_ORDER
+                if variants.get(code)
+            })
 
     for row in PHRASE_ROWS:
-        if len(row) != len(LANGUAGE_ORDER):
+        if len(row) != len(BASE_LANGUAGE_ORDER):
             raise ValueError(f"Riga traduzione non valida: {row!r}")
         italian = row[0]
-        catalog[italian] = dict(zip(LANGUAGE_ORDER, row))
+        catalog[italian] = dict(zip(BASE_LANGUAGE_ORDER, row))
+        catalog[italian].update(EXTRA_SOURCE_TRANSLATIONS.get(italian, {}))
 
     return catalog
 
@@ -539,13 +668,33 @@ def _build_source_translations():
 SOURCE_TRANSLATIONS = _build_source_translations()
 
 
-PATTERN_TRANSLATIONS = [
-    (
-        re.compile(row[0], re.I),
-        dict(zip(PATTERN_LANGUAGE_ORDER, row[1:])),
-    )
-    for row in PATTERN_ROWS
-]
+def _load_legal_source_translations():
+    """Carica le traduzioni legali complete senza appesantire il catalogo JS."""
+    path = Path(__file__).with_name("legal_translations.json")
+    if not path.exists():
+        return {}
+
+    catalog = json.loads(path.read_text(encoding="utf-8"))
+    expected = set(BASE_LANGUAGE_ORDER)
+
+    for source, variants in catalog.items():
+        if set(variants) != expected:
+            raise ValueError(f"Traduzione legale incompleta per {source!r}")
+        variants.update(EXTRA_SOURCE_TRANSLATIONS.get(source, {}))
+        if EXTRA_SOURCE_TRANSLATIONS and set(variants) != set(LANGUAGE_ORDER):
+            raise ValueError(f"Traduzione legale aggiuntiva incompleta per {source!r}")
+
+    return catalog
+
+
+LEGAL_SOURCE_TRANSLATIONS = _load_legal_source_translations()
+
+
+PATTERN_TRANSLATIONS = []
+for row in PATTERN_ROWS:
+    variants = dict(zip(PATTERN_BASE_LANGUAGE_ORDER, row[1:]))
+    variants.update(EXTRA_PATTERN_TRANSLATIONS.get(row[0], {}))
+    PATTERN_TRANSLATIONS.append((re.compile(row[0], re.I), variants))
 
 
 _SPACE_RE = re.compile(r"\s+")
@@ -559,7 +708,7 @@ def _normalize_source_text(value):
 
 
 def _translate_source_core(source, language):
-    variants = SOURCE_TRANSLATIONS.get(source)
+    variants = SOURCE_TRANSLATIONS.get(source) or LEGAL_SOURCE_TRANSLATIONS.get(source)
     if variants:
         return variants.get(language) or variants.get("en") or source
 
@@ -702,11 +851,9 @@ def frontend_pattern_catalog(language="it"):
     if language == "it":
         return []
     return [
-        {
-            "source": row[0],
-            "target": row[LANGUAGE_ORDER.index(language)],
-        }
-        for row in PATTERN_ROWS
+        {"source": pattern.pattern, "target": variants[language]}
+        for pattern, variants in PATTERN_TRANSLATIONS
+        if variants.get(language)
     ]
 
 
@@ -727,7 +874,11 @@ def normalize_language(value):
 def translate(key, language="it", **values):
     language = normalize_language(language)
     variants = TRANSLATIONS.get(key, {})
-    text = variants.get(language) or variants.get("it") or key
+    italian = variants.get("it")
+    text = variants.get(language)
+    if not text and italian:
+        text = EXTRA_SOURCE_TRANSLATIONS.get(italian, {}).get(language)
+    text = text or italian or key
 
     if values:
         try:

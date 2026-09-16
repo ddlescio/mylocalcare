@@ -3,6 +3,8 @@
 {% block content %}
 <div class="max-w-3xl mx-auto mt-12 bg-white shadow rounded-lg p-8">
 
+  {% include "partials/legal_language_control.html" %}
+
   {% if current_language_code != 'it' %}
   <p class="mb-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
     {{ tr('legal.official_language_notice') }}

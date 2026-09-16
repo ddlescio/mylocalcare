@@ -10,12 +10,10 @@
   <div class="flex justify-end mb-4">
     <button type="button"
             data-language-open
-            class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/90 px-3 py-2 text-sm font-extrabold text-slate-700 shadow-md backdrop-blur-md hover:border-blue-300 hover:text-blue-700 transition"
+            class="inline-flex min-h-[2.2rem] w-[3.15rem] items-center justify-center gap-1 rounded-full border border-blue-100 bg-white/90 px-2 py-1.5 text-slate-700 shadow-md backdrop-blur-md hover:border-blue-300 hover:text-blue-700 transition"
             aria-label="{{ tr('language.open') }}">
-      <span class="text-lg" aria-hidden="true">{{ current_language.flag }}</span>
-      <span>{{ tr('language.open') }}</span>
-      <span class="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-black text-blue-700">{{ current_language.short }}</span>
-      <span class="text-[10px] text-slate-400" aria-hidden="true">▾</span>
+      <span class="text-[1.08rem] leading-none" aria-hidden="true">{{ current_language.flag }}</span>
+      <span class="text-[10px] leading-none text-slate-500" aria-hidden="true">▾</span>
     </button>
   </div>
 

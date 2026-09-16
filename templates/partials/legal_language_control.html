@@ -1,0 +1,38 @@
+<div class="legal-language-row">
+  <button type="button"
+          class="legal-language-button"
+          data-language-open
+          aria-label="{{ tr('language.open') }}"
+          title="{{ tr('language.open') }}">
+    <span class="legal-language-flag" aria-hidden="true">{{ current_language.flag }}</span>
+    <span class="legal-language-arrow" aria-hidden="true">▾</span>
+  </button>
+</div>
+
+<style>
+  .legal-language-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: -0.2rem 0 0.65rem;
+  }
+
+  .legal-language-button {
+    width: 3.15rem;
+    min-height: 2.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.18rem;
+    padding: 0.34rem 0.42rem;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: rgba(255,255,255,.96);
+    color: #475569;
+    box-shadow: 0 8px 22px rgba(37,99,235,.09);
+  }
+
+  .legal-language-flag { font-size: 1.08rem; line-height: 1; }
+  .legal-language-arrow { font-size: 0.62rem; line-height: 1; }
+</style>
+
+{% include "partials/language_selector.html" %}

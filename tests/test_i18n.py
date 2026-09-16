@@ -2,6 +2,10 @@ import unittest
 from pathlib import Path
 
 from i18n import (
+    EXTRA_LANGUAGE_ORDER,
+    EXTRA_PATTERN_TRANSLATIONS,
+    EXTRA_SOURCE_TRANSLATIONS,
+    LEGAL_SOURCE_TRANSLATIONS,
     SOURCE_TRANSLATIONS,
     SUPPORTED_LANGUAGES,
     TRANSLATIONS,
@@ -19,18 +23,28 @@ class InterfaceTranslationsTest(unittest.TestCase):
     ROOT = Path(__file__).resolve().parents[1]
 
     def test_all_registered_keys_have_every_supported_language(self):
-        expected = set(SUPPORTED_LANGUAGES)
-
         for key, variants in TRANSLATIONS.items():
-            self.assertEqual(
-                set(variants),
-                expected,
-                f"Traduzioni incomplete per {key}",
-            )
+            for language in SUPPORTED_LANGUAGES:
+                self.assertTrue(
+                    translate(key, language).strip(),
+                    f"Traduzione vuota per {key} in {language}",
+                )
+
+    def test_extra_language_catalogs_are_complete(self):
+        expected = set(EXTRA_LANGUAGE_ORDER)
+        self.assertGreaterEqual(len(EXTRA_SOURCE_TRANSLATIONS), 1300)
+        self.assertGreaterEqual(len(EXTRA_PATTERN_TRANSLATIONS), 50)
+
+        for source, variants in EXTRA_SOURCE_TRANSLATIONS.items():
+            self.assertEqual(set(variants), expected, source)
+        for pattern, variants in EXTRA_PATTERN_TRANSLATIONS.items():
+            self.assertEqual(set(variants), expected, pattern)
 
     def test_language_codes_are_normalized(self):
         self.assertEqual(normalize_language("en-US"), "en")
         self.assertEqual(normalize_language("FR_fr"), "fr")
+        self.assertEqual(normalize_language("uk-UA"), "uk")
+        self.assertEqual(normalize_language("fil-PH"), "fil")
         self.assertEqual(normalize_language("unsupported"), "it")
 
     def test_unknown_key_has_safe_fallback(self):
@@ -88,6 +102,23 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertEqual(frontend_source_catalog("it"), {})
         self.assertTrue(frontend_source_catalog("es"))
         self.assertTrue(frontend_pattern_catalog("de"))
+        for language in EXTRA_LANGUAGE_ORDER:
+            self.assertTrue(frontend_source_catalog(language))
+            self.assertTrue(frontend_pattern_catalog(language))
+
+    def test_legal_documents_have_complete_server_side_translations(self):
+        expected = set(SUPPORTED_LANGUAGES)
+        self.assertGreaterEqual(len(LEGAL_SOURCE_TRANSLATIONS), 160)
+
+        for source, variants in LEGAL_SOURCE_TRANSLATIONS.items():
+            self.assertEqual(set(variants), expected, source)
+
+        privacy_source = (
+            "La presente informativa descrive come MyLocalCare raccoglie, utilizza e "
+            "protegge i dati personali degli utenti che si registrano e utilizzano la piattaforma."
+        )
+        self.assertNotEqual(translate_source(privacy_source, "en"), privacy_source)
+        self.assertNotIn(privacy_source, frontend_source_catalog("en"))
 
     def test_language_selector_is_visible_on_both_public_entry_pages(self):
         landing = (self.ROOT / "templates" / "landing.html").read_text(encoding="utf-8")
@@ -108,6 +139,22 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn("register.cookie", register)
         self.assertIn("register.terms", register)
         self.assertIn("REGISTER_COPY.emailConfirmationWarning", register)
+
+    def test_language_controls_are_compact_flag_buttons(self):
+        for template_name in ("home.html", "landing.html", "register.html"):
+            source = (self.ROOT / "templates" / template_name).read_text(encoding="utf-8")
+            self.assertIn("data-language-open", source)
+            self.assertNotIn("<span>{{ tr('language.open') }}</span>", source)
+
+        home = (self.ROOT / "templates" / "home.html").read_text(encoding="utf-8")
+        register = (self.ROOT / "templates" / "register.html").read_text(encoding="utf-8")
+        self.assertNotIn("home-language-code", home)
+        self.assertNotIn("{{ current_language.short }}", register)
+
+    def test_legal_pages_offer_language_switching(self):
+        for template_name in ("privacy.html", "termini.html", "cookie_policy.html"):
+            source = (self.ROOT / "templates" / template_name).read_text(encoding="utf-8")
+            self.assertIn("partials/legal_language_control.html", source)
 
     def test_private_gallery_warnings_use_complete_translation_keys(self):
         gallery = (self.ROOT / "templates" / "partials" / "tab_foto_privato.html").read_text(encoding="utf-8")
@@ -137,6 +184,9 @@ class InterfaceTranslationsTest(unittest.TestCase):
             self.assertIn("VISIBILITA_LOAD_TOKEN", source)
             self.assertIn("controller.abort(), 8000", source)
             self.assertIn("mostraErroreStatoVisibilita", source)
+            self.assertIn("aggiornaRiepilogoVisibilita(loadToken)", source)
+            self.assertIn("box.dataset.visibilityLoading", source)
+            self.assertIn("}, 4000);", source)
 
     def test_profile_photo_viewers_have_visible_close_controls(self):
         dashboard = (self.ROOT / "templates" / "dashboard.html").read_text(encoding="utf-8")

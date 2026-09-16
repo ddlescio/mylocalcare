@@ -1,0 +1,1178 @@
+{
+  "1. Cosa sono i cookie": {
+    "de": "1. Was sind Cookies?",
+    "en": "1. What are cookies",
+    "es": "1. ¿Qué son las cookies?",
+    "fr": "1. Que sont les cookies",
+    "it": "1. Cosa sono i cookie"
+  },
+  "1. Natura della piattaforma": {
+    "de": "1. Art der Plattform",
+    "en": "1. Nature of the platform",
+    "es": "1. Naturaleza de la plataforma",
+    "fr": "1. Nature de la plateforme",
+    "it": "1. Natura della piattaforma"
+  },
+  "1. Titolare del trattamento": {
+    "de": "1. Datenverantwortlicher",
+    "en": "1. Data controller",
+    "es": "1. Responsable del tratamiento",
+    "fr": "1. Responsable du traitement des données",
+    "it": "1. Titolare del trattamento"
+  },
+  "10. Notifiche, PWA e funzionalità in tempo reale": {
+    "de": "10. Benachrichtigungen, PWA und Echtzeitfunktionen",
+    "en": "10. Notifications, PWA and real-time features",
+    "es": "10. Notificaciones, PWA y funciones en tiempo real",
+    "fr": "10. Notifications, PWA et fonctionnalités en temps réel",
+    "it": "10. Notifiche, PWA e funzionalità in tempo reale"
+  },
+  "10. Servizi a pagamento": {
+    "de": "10. Kostenpflichtige Dienste",
+    "en": "10. Paid Services",
+    "es": "10. Servicios pagos",
+    "fr": "10. Services payants",
+    "it": "10. Servizi a pagamento"
+  },
+  "11. Dati tecnici, log e sicurezza applicativa": {
+    "de": "11. Technische Daten, Protokolle und Anwendungssicherheit",
+    "en": "11. Technical data, logs and application security",
+    "es": "11. Datos técnicos, registros y seguridad de la aplicación.",
+    "fr": "11. Données techniques, journaux et sécurité des applications",
+    "it": "11. Dati tecnici, log e sicurezza applicativa"
+  },
+  "11. Prezzi, durata e attivazione dei servizi": {
+    "de": "11. Preise, Dauer und Aktivierung der Dienste",
+    "en": "11. Prices, duration and activation of services",
+    "es": "11. Precios, duración y activación de servicios",
+    "fr": "11. Tarifs, durée et activation des services",
+    "it": "11. Prezzi, durata e attivazione dei servizi"
+  },
+  "12. Condivisione dei dati con fornitori tecnici": {
+    "de": "12. Weitergabe von Daten an technische Lieferanten",
+    "en": "12. Sharing data with technical suppliers",
+    "es": "12. Compartir datos con proveedores técnicos",
+    "fr": "12. Partage de données avec les fournisseurs techniques",
+    "it": "12. Condivisione dei dati con fornitori tecnici"
+  },
+  "12. Rimborsi e malfunzionamenti": {
+    "de": "12. Rückerstattungen und Störungen",
+    "en": "12. Refunds and malfunctions",
+    "es": "12. Reembolsos y averías",
+    "fr": "12. Remboursements et dysfonctionnements",
+    "it": "12. Rimborsi e malfunzionamenti"
+  },
+  "13. Conservazione dei dati": {
+    "de": "13. Datenaufbewahrung",
+    "en": "13. Data retention",
+    "es": "13. Retención de datos",
+    "fr": "13. Conservation des données",
+    "it": "13. Conservazione dei dati"
+  },
+  "13. Sospensione, limitazione o eliminazione dell’account": {
+    "de": "13. Sperrung, Einschränkung oder Löschung Ihres Kontos",
+    "en": "13. Suspension, limitation or deletion of your account",
+    "es": "13. Suspensión, limitación o eliminación de su cuenta",
+    "fr": "13. Suspension, limitation ou suppression de votre compte",
+    "it": "13. Sospensione, limitazione o eliminazione dell’account"
+  },
+  "14. Disponibilità della piattaforma": {
+    "de": "14. Plattformverfügbarkeit",
+    "en": "14. Platform Availability",
+    "es": "14. Disponibilidad de la plataforma",
+    "fr": "14. Disponibilité de la plateforme",
+    "it": "14. Disponibilità della piattaforma"
+  },
+  "14. Eliminazione dell’account": {
+    "de": "14. Kontolöschung",
+    "en": "14. Account Deletion",
+    "es": "14. Eliminación de cuenta",
+    "fr": "14. Suppression de compte",
+    "it": "14. Eliminazione dell’account"
+  },
+  "15. Diritti dell’utente": {
+    "de": "15. Benutzerrechte",
+    "en": "15. User rights",
+    "es": "15. Derechos del usuario",
+    "fr": "15. Droits des utilisateurs",
+    "it": "15. Diritti dell’utente"
+  },
+  "15. Limitazione di responsabilità": {
+    "de": "15. Haftungsbeschränkung",
+    "en": "15. Limitation of Liability",
+    "es": "15. Limitación de responsabilidad",
+    "fr": "15. Limitation de responsabilité",
+    "it": "15. Limitazione di responsabilità"
+  },
+  "16. Sicurezza": {
+    "de": "16. Sicherheit",
+    "en": "16. Security",
+    "es": "16. Seguridad",
+    "fr": "16. Sécurité",
+    "it": "16. Sicurezza"
+  },
+  "16. Uso vietato della piattaforma": {
+    "de": "16. Verbotene Nutzung der Plattform",
+    "en": "16. Prohibited use of the platform",
+    "es": "16. Uso prohibido de la plataforma",
+    "fr": "16. Utilisation interdite de la plateforme",
+    "it": "16. Uso vietato della piattaforma"
+  },
+  "17. Aggiornamenti dell’informativa": {
+    "de": "17. Aktualisierungen der Informationen",
+    "en": "17. Updates to the information",
+    "es": "17. Actualizaciones de la información",
+    "fr": "17. Mises à jour des informations",
+    "it": "17. Aggiornamenti dell’informativa"
+  },
+  "17. Modifiche ai termini": {
+    "de": "17. Änderungen der Bedingungen",
+    "en": "17. Changes to Terms",
+    "es": "17. Cambios a los términos",
+    "fr": "17. Modifications des conditions",
+    "it": "17. Modifiche ai termini"
+  },
+  "18. Contatti": {
+    "de": "18. Kontakte",
+    "en": "18. Contacts",
+    "es": "18. Contactos",
+    "fr": "18. Contacts",
+    "it": "18. Contatti"
+  },
+  "2. Cookie tecnici e necessari": {
+    "de": "2. Technische und notwendige Cookies",
+    "en": "2. Technical and necessary cookies",
+    "es": "2. Cookies técnicas y necesarias",
+    "fr": "2. Cookies techniques et nécessaires",
+    "it": "2. Cookie tecnici e necessari"
+  },
+  "2. Dati raccolti in fase di registrazione": {
+    "de": "2. Bei der Registrierung erhobene Daten",
+    "en": "2. Data collected during registration",
+    "es": "2. Datos recopilados durante el registro",
+    "fr": "2. Données collectées lors de l'inscription",
+    "it": "2. Dati raccolti in fase di registrazione"
+  },
+  "2. Registrazione e account": {
+    "de": "2. Registrierung und Konto",
+    "en": "2. Registration and account",
+    "es": "2. Registro y cuenta",
+    "fr": "2. Inscription et compte",
+    "it": "2. Registrazione e account"
+  },
+  "3. Cookie di profilazione, marketing o pubblicità": {
+    "de": "3. Profilierungs-, Marketing- oder Werbe-Cookies",
+    "en": "3. Profiling, marketing or advertising cookies",
+    "es": "3. Cookies de elaboración de perfiles, marketing o publicidad",
+    "fr": "3. Cookies de profilage, de marketing ou publicitaires",
+    "it": "3. Cookie di profilazione, marketing o pubblicità"
+  },
+  "3. Dati inseriti volontariamente nel profilo, negli annunci e nei contenuti pubblici": {
+    "de": "3. Daten, die freiwillig in das Profil, Anzeigen und öffentliche Inhalte eingegeben werden",
+    "en": "3. Data voluntarily entered into the profile, advertisements and public content",
+    "es": "3. Datos introducidos voluntariamente en el perfil, anuncios y contenidos públicos.",
+    "fr": "3. Données volontairement saisies dans le profil, publicités et contenus publics",
+    "it": "3. Dati inseriti volontariamente nel profilo, negli annunci e nei contenuti pubblici"
+  },
+  "3. Età minima e responsabilità dell’utente": {
+    "de": "3. Mindestalter und Benutzerpflichten",
+    "en": "3. Minimum age and user responsibilities",
+    "es": "3. Edad mínima y responsabilidades del usuario",
+    "fr": "3. Âge minimum et responsabilités de l'utilisateur",
+    "it": "3. Età minima e responsabilità dell’utente"
+  },
+  "4. Contenuti inseriti dagli utenti": {
+    "de": "4. Von Benutzern gepostete Inhalte",
+    "en": "4. Content posted by users",
+    "es": "4. Contenido publicado por los usuarios",
+    "fr": "4. Contenu publié par les utilisateurs",
+    "it": "4. Contenuti inseriti dagli utenti"
+  },
+  "4. Dati relativi ai pagamenti e ai servizi attivati": {
+    "de": "4. Daten zu Zahlungen und aktivierten Diensten",
+    "en": "4. Data relating to payments and activated services",
+    "es": "4. Datos relativos a pagos y servicios activados",
+    "fr": "4. Données relatives aux paiements et services activés",
+    "it": "4. Dati relativi ai pagamenti e ai servizi attivati"
+  },
+  "4. Strumenti tecnici collegati alla PWA e al service worker": {
+    "de": "4. Technische Tools, die mit der PWA und dem Servicemitarbeiter verknüpft sind",
+    "en": "4. Technical tools linked to the PWA and the service worker",
+    "es": "4. Herramientas técnicas vinculadas a la PWA y al trabajador del servicio.",
+    "fr": "4. Outils techniques liés à la PWA et au service worker",
+    "it": "4. Strumenti tecnici collegati alla PWA e al service worker"
+  },
+  "5. Finalità del trattamento": {
+    "de": "5. Zweck der Verarbeitung",
+    "en": "5. Purpose of the processing",
+    "es": "5. Finalidad del tratamiento",
+    "fr": "5. Finalité du traitement",
+    "it": "5. Finalità del trattamento"
+  },
+  "5. Notifiche e push subscription": {
+    "de": "5. Benachrichtigungen und Push-Abonnements",
+    "en": "5. Notifications and push subscriptions",
+    "es": "5. Notificaciones y suscripciones push",
+    "fr": "5. Notifications et abonnements push",
+    "it": "5. Notifiche e push subscription"
+  },
+  "5. Profili pubblici, annunci e informazioni visibili": {
+    "de": "5. Öffentliche Profile, Ankündigungen und sichtbare Informationen",
+    "en": "5. Public profiles, announcements and visible information",
+    "es": "5. Perfiles públicos, anuncios e información visible",
+    "fr": "5. Profils publics, annonces et informations visibles",
+    "it": "5. Profili pubblici, annunci e informazioni visibili"
+  },
+  "6. Basi giuridiche del trattamento": {
+    "de": "6. Rechtsgrundlagen der Verarbeitung",
+    "en": "6. Legal bases of processing",
+    "es": "6. Bases jurídicas del tratamiento",
+    "fr": "6. Bases juridiques du traitement",
+    "it": "6. Basi giuridiche del trattamento"
+  },
+  "6. Servizi di terze parti necessari al funzionamento": {
+    "de": "6. Für den Betrieb notwendige Leistungen Dritter",
+    "en": "6. Third party services necessary for operation",
+    "es": "6. Servicios de terceros necesarios para el funcionamiento",
+    "fr": "6. Services tiers nécessaires à l'exploitation",
+    "it": "6. Servizi di terze parti necessari al funzionamento"
+  },
+  "6. Servizi, attività e rapporti tra utenti": {
+    "de": "6. Dienste, Aktivitäten und Beziehungen zwischen Benutzern",
+    "en": "6. Services, activities and relationships between users",
+    "es": "6. Servicios, actividades y relaciones entre usuarios",
+    "fr": "6. Services, activités et relations entre utilisateurs",
+    "it": "6. Servizi, attività e rapporti tra utenti"
+  },
+  "7. Categorie delicate e servizi alla persona": {
+    "de": "7. Sensible Kategorien und persönliche Dienstleistungen",
+    "en": "7. Sensitive categories and personal services",
+    "es": "7. Categorías sensibles y servicios personales.",
+    "fr": "7. Catégories sensibles et services à la personne",
+    "it": "7. Categorie delicate e servizi alla persona"
+  },
+  "7. Email e comunicazioni di servizio": {
+    "de": "7. E-Mails und Servicekommunikation",
+    "en": "7. Emails and service communications",
+    "es": "7. Correos electrónicos y comunicaciones de servicio.",
+    "fr": "7. E-mails et communications de service",
+    "it": "7. Email e comunicazioni di servizio"
+  },
+  "7. Gestione dei cookie dal browser": {
+    "de": "7. Verwaltung von Cookies über den Browser",
+    "en": "7. Management of cookies from the browser",
+    "es": "7. Gestión de cookies desde el navegador",
+    "fr": "7. Gestion des cookies depuis le navigateur",
+    "it": "7. Gestione dei cookie dal browser"
+  },
+  "8. Aggiornamenti della Cookie Policy": {
+    "de": "8. Aktualisierungen der Cookie-Richtlinie",
+    "en": "8. Updates to the Cookie Policy",
+    "es": "8. Actualizaciones de la Política de Cookies",
+    "fr": "8. Mises à jour de la politique en matière de cookies",
+    "it": "8. Aggiornamenti della Cookie Policy"
+  },
+  "8. Messaggi, chat e comunicazioni interne": {
+    "de": "8. Nachrichten, Chats und interne Kommunikation",
+    "en": "8. Messages, chats and internal communications",
+    "es": "8. Mensajes, chats y comunicaciones internas",
+    "fr": "8. Messages, chats et communications internes",
+    "it": "8. Messaggi, chat e comunicazioni interne"
+  },
+  "8. Messaggi, chat e contatti": {
+    "de": "8. Nachrichten, Chats und Kontakte",
+    "en": "8. Messages, chats and contacts",
+    "es": "8. Mensajes, chats y contactos",
+    "fr": "8. Messages, discussions et contacts",
+    "it": "8. Messaggi, chat e contatti"
+  },
+  "9. Recensioni e risposte": {
+    "de": "9. Bewertungen und Antworten",
+    "en": "9. Reviews and responses",
+    "es": "9. Reseñas y respuestas",
+    "fr": "9. Commentaires et réponses",
+    "it": "9. Recensioni e risposte"
+  },
+  "9. Recensioni, risposte e moderazione": {
+    "de": "9. Bewertungen, Antworten und Moderation",
+    "en": "9. Reviews, responses and moderation",
+    "es": "9. Reseñas, respuestas y moderación",
+    "fr": "9. Avis, réponses et modération",
+    "it": "9. Recensioni, risposte e moderazione"
+  },
+  "Al momento MyLocalCare non utilizza cookie di profilazione pubblicitaria, strumenti di tracciamento marketing o sistemi finalizzati a seguire l’utente per mostrargli pubblicità personalizzata.": {
+    "de": "Derzeit verwendet MyLocalCare keine Werbeprofilierungs-Cookies, Marketing-Tracking-Tools oder Systeme, die darauf abzielen, dem Benutzer zu folgen, um ihm personalisierte Werbung anzuzeigen.",
+    "en": "At the moment MyLocalCare does not use advertising profiling cookies, marketing tracking tools or systems aimed at following the user to show him personalized advertising.",
+    "es": "Por el momento MyLocalCare no utiliza cookies de perfiles publicitarios, herramientas de seguimiento de marketing ni sistemas destinados a seguir al usuario para mostrarle publicidad personalizada.",
+    "fr": "Pour le moment, MyLocalCare n'utilise pas de cookies de profilage publicitaire, d'outils de suivi marketing ou de systèmes destinés à suivre l'utilisateur pour lui montrer des publicités personnalisées.",
+    "it": "Al momento MyLocalCare non utilizza cookie di profilazione pubblicitaria, strumenti di tracciamento marketing o sistemi finalizzati a seguire l’utente per mostrargli pubblicità personalizzata."
+  },
+  "Alcune categorie presenti sulla piattaforma possono riguardare servizi alla persona, assistenza, cura, accompagnamento, babysitting, caregiver, aiuto in casa, animali, ripetizioni o attività simili.": {
+    "de": "Einige Kategorien auf der Plattform können persönliche Dienstleistungen, Assistenz, Pflege, Begleitung, Babysitting, Betreuer, Hilfe im Haushalt, Tiere, Nachhilfe oder ähnliche Aktivitäten betreffen.",
+    "en": "Some categories on the platform may concern personal services, assistance, care, accompaniment, babysitting, caregivers, help at home, animals, tutoring or similar activities.",
+    "es": "Algunas categorías de la plataforma pueden referirse a servicios personales, asistencia, cuidados, acompañamiento, niñera, cuidadores, ayuda en el hogar, animales, tutorías o actividades similares.",
+    "fr": "Certaines catégories de la plateforme peuvent concerner les services à la personne, l'assistance, les soins, l'accompagnement, le babysitting, les soignants, l'aide à domicile, les animaux, le soutien scolaire ou des activités similaires.",
+    "it": "Alcune categorie presenti sulla piattaforma possono riguardare servizi alla persona, assistenza, cura, accompagnamento, babysitting, caregiver, aiuto in casa, animali, ripetizioni o attività simili."
+  },
+  "Alcune funzionalità della piattaforma possono dipendere da fornitori tecnici esterni necessari al funzionamento del servizio, come hosting, invio email, sistemi di pagamento, sicurezza applicativa o infrastruttura tecnica.": {
+    "de": "Einige Funktionen der Plattform können von externen technischen Anbietern abhängen, die für den Betrieb des Dienstes erforderlich sind, wie z. B. Hosting, E-Mail-Versand, Zahlungssysteme, Anwendungssicherheit oder technische Infrastruktur.",
+    "en": "Some features of the platform may depend on external technical suppliers necessary for the operation of the service, such as hosting, email sending, payment systems, application security or technical infrastructure.",
+    "es": "Algunas características de la plataforma pueden depender de proveedores técnicos externos necesarios para el funcionamiento del servicio, como hosting, envío de correo electrónico, sistemas de pago, seguridad de aplicaciones o infraestructura técnica.",
+    "fr": "Certaines fonctionnalités de la plateforme peuvent dépendre de fournisseurs techniques externes nécessaires au fonctionnement du service, tels que l'hébergement, l'envoi d'emails, les systèmes de paiement, la sécurité des applications ou l'infrastructure technique.",
+    "it": "Alcune funzionalità della piattaforma possono dipendere da fornitori tecnici esterni necessari al funzionamento del servizio, come hosting, invio email, sistemi di pagamento, sicurezza applicativa o infrastruttura tecnica."
+  },
+  "Cookie Policy": {
+    "de": "Cookie-Richtlinie",
+    "en": "Cookie Policy",
+    "es": "Política de cookies",
+    "fr": "Politique en matière de cookies",
+    "it": "Cookie Policy"
+  },
+  "Durante l’utilizzo della piattaforma possono essere raccolti dati tecnici necessari al funzionamento del servizio, come indirizzo IP, informazioni sul browser o dispositivo, log di accesso, richieste al server, errori applicativi, eventi di sicurezza, token di sessione, token CSRF e dati tecnici necessari alla protezione degli account.": {
+    "de": "Während der Nutzung der Plattform können technische Daten erhoben werden, die für den Betrieb des Dienstes erforderlich sind, wie z. B. IP-Adresse, Browser- oder Geräteinformationen, Zugriffsprotokolle, Serveranfragen, Anwendungsfehler, Sicherheitsereignisse, Sitzungstoken, CSRF-Tokens und technische Daten, die zum Schutz des Kontos erforderlich sind.",
+    "en": "While using the platform, technical data necessary for the operation of the service may be collected, such as IP address, browser or device information, access logs, server requests, application errors, security events, session tokens, CSRF tokens and technical data necessary for account protection.",
+    "es": "Mientras se utiliza la plataforma, se pueden recopilar datos técnicos necesarios para el funcionamiento del servicio, como dirección IP, información del navegador o del dispositivo, registros de acceso, solicitudes del servidor, errores de aplicación, eventos de seguridad, tokens de sesión, tokens CSRF y datos técnicos necesarios para la protección de la cuenta.",
+    "fr": "Lors de l'utilisation de la plateforme, des données techniques nécessaires au fonctionnement du service peuvent être collectées, telles que l'adresse IP, les informations sur le navigateur ou l'appareil, les journaux d'accès, les requêtes du serveur, les erreurs d'application, les événements de sécurité, les jetons de session, les jetons CSRF et les données techniques nécessaires à la protection du compte.",
+    "it": "Durante l’utilizzo della piattaforma possono essere raccolti dati tecnici necessari al funzionamento del servizio, come indirizzo IP, informazioni sul browser o dispositivo, log di accesso, richieste al server, errori applicativi, eventi di sicurezza, token di sessione, token CSRF e dati tecnici necessari alla protezione degli account."
+  },
+  "Email di contatto per richieste relative alla privacy, alla gestione dei dati personali e all’esercizio dei diritti dell’utente:": {
+    "de": "Kontakt-E-Mail für Anfragen zum Datenschutz, zur Verwaltung personenbezogener Daten und zur Ausübung von Benutzerrechten:",
+    "en": "Contact email for requests relating to privacy, management of personal data and exercise of user rights:",
+    "es": "Correo electrónico de contacto para solicitudes relativas a privacidad, gestión de datos personales y ejercicio de derechos de los usuarios:",
+    "fr": "E-mail de contact pour les demandes relatives à la confidentialité, à la gestion des données personnelles et à l'exercice des droits d'utilisation :",
+    "it": "Email di contatto per richieste relative alla privacy, alla gestione dei dati personali e all’esercizio dei diritti dell’utente:"
+  },
+  "Eventuali richieste relative a pagamenti, servizi non attivati correttamente, errori tecnici o contestazioni possono essere inviate tramite i contatti disponibili sul sito.": {
+    "de": "Alle Anfragen im Zusammenhang mit Zahlungen, nicht ordnungsgemäß aktivierten Diensten, technischen Fehlern oder Streitigkeiten können über die auf der Website verfügbaren Kontakte gesendet werden.",
+    "en": "Any requests relating to payments, services not activated correctly, technical errors or disputes can be sent via the contacts available on the site.",
+    "es": "Cualquier solicitud relacionada con pagos, servicios no activados correctamente, errores técnicos o disputas puede enviarse a través de los contactos disponibles en el sitio.",
+    "fr": "Toutes demandes relatives aux paiements, aux services mal activés, aux erreurs techniques ou aux litiges peuvent être adressées via les contacts disponibles sur le site.",
+    "it": "Eventuali richieste relative a pagamenti, servizi non attivati correttamente, errori tecnici o contestazioni possono essere inviate tramite i contatti disponibili sul sito."
+  },
+  "Gli utenti possono lasciare recensioni o risposte secondo le funzionalità disponibili. Le recensioni devono essere veritiere, pertinenti, rispettose e basate su esperienze reali.": {
+    "de": "Benutzer können je nach den verfügbaren Funktionen Bewertungen oder Antworten hinterlassen. Bewertungen müssen wahrheitsgemäß, relevant, respektvoll sein und auf echten Erfahrungen basieren.",
+    "en": "Users can leave reviews or replies according to the available features. Reviews must be truthful, relevant, respectful and based on real experiences.",
+    "es": "Los usuarios pueden dejar reseñas o respuestas según las funciones disponibles. Las reseñas deben ser veraces, relevantes, respetuosas y basadas en experiencias reales.",
+    "fr": "Les utilisateurs peuvent laisser des avis ou des réponses en fonction des fonctionnalités disponibles. Les avis doivent être véridiques, pertinents, respectueux et basés sur des expériences réelles.",
+    "it": "Gli utenti possono lasciare recensioni o risposte secondo le funzionalità disponibili. Le recensioni devono essere veritiere, pertinenti, rispettose e basate su esperienze reali."
+  },
+  "Gli utenti possono pubblicare recensioni, risposte o altri contenuti secondo le funzionalità previste dalla piattaforma. Tali contenuti possono essere visibili agli altri utenti e possono essere sottoposti a controlli o moderazione.": {
+    "de": "Benutzer können Bewertungen, Antworten oder andere Inhalte entsprechend der von der Plattform bereitgestellten Funktionalität veröffentlichen. Solche Inhalte können für andere Benutzer sichtbar sein und unterliegen möglicherweise Kontrollen oder Moderation.",
+    "en": "Users can publish reviews, responses or other content according to the functionality provided by the platform. Such content may be visible to other users and may be subject to controls or moderation.",
+    "es": "Los usuarios pueden publicar reseñas, respuestas u otro contenido de acuerdo con la funcionalidad proporcionada por la plataforma. Dicho contenido puede ser visible para otros usuarios y puede estar sujeto a controles o moderación.",
+    "fr": "Les utilisateurs peuvent publier des avis, des réponses ou d'autres contenus selon les fonctionnalités fournies par la plateforme. Ce contenu peut être visible par d'autres utilisateurs et peut être soumis à des contrôles ou à une modération.",
+    "it": "Gli utenti possono pubblicare recensioni, risposte o altri contenuti secondo le funzionalità previste dalla piattaforma. Tali contenuti possono essere visibili agli altri utenti e possono essere sottoposti a controlli o moderazione."
+  },
+  "Gli utenti sono direttamente responsabili della valutazione reciproca, della verifica di competenze, requisiti, disponibilità, prezzi, condizioni, referenze, autorizzazioni, coperture assicurative o altri elementi rilevanti prima di concludere accordi o avviare collaborazioni.": {
+    "de": "Die Nutzer sind direkt dafür verantwortlich, sich gegenseitig zu bewerten und Fähigkeiten, Anforderungen, Verfügbarkeit, Preise, Konditionen, Referenzen, Genehmigungen, Versicherungsschutz oder andere relevante Elemente zu überprüfen, bevor sie Vereinbarungen oder Kooperationen eingehen.",
+    "en": "Users are directly responsible for evaluating each other, verifying skills, requirements, availability, prices, conditions, references, authorizations, insurance coverage or other relevant elements before entering into agreements or collaborations.",
+    "es": "Los usuarios son directamente responsables de evaluarse entre sí, verificar habilidades, requisitos, disponibilidad, precios, condiciones, referencias, autorizaciones, coberturas de seguros u otros elementos relevantes antes de celebrar acuerdos o colaboraciones.",
+    "fr": "Les utilisateurs sont directement responsables de s'évaluer mutuellement, de vérifier les compétences, les exigences, la disponibilité, les prix, les conditions, les références, les autorisations, la couverture d'assurance ou d'autres éléments pertinents avant de conclure des accords ou des collaborations.",
+    "it": "Gli utenti sono direttamente responsabili della valutazione reciproca, della verifica di competenze, requisiti, disponibilità, prezzi, condizioni, referenze, autorizzazioni, coperture assicurative o altri elementi rilevanti prima di concludere accordi o avviare collaborazioni."
+  },
+  "I cookie sono piccoli file di testo che un sito può salvare sul dispositivo dell’utente per consentire il funzionamento della piattaforma, mantenere una sessione attiva, ricordare alcune impostazioni o migliorare l’esperienza di utilizzo.": {
+    "de": "Cookies sind kleine Textdateien, die eine Website auf dem Gerät des Benutzers speichern kann, um die Funktion der Plattform zu ermöglichen, eine aktive Sitzung aufrechtzuerhalten, einige Einstellungen zu speichern oder das Benutzererlebnis zu verbessern.",
+    "en": "Cookies are small text files that a site can save on the user's device to allow the platform to function, maintain an active session, remember some settings or improve the user experience.",
+    "es": "Las cookies son pequeños archivos de texto que un sitio puede guardar en el dispositivo del usuario para permitir que la plataforma funcione, mantener una sesión activa, recordar algunas configuraciones o mejorar la experiencia del usuario.",
+    "fr": "Les cookies sont de petits fichiers texte qu'un site peut enregistrer sur l'appareil de l'utilisateur pour permettre à la plateforme de fonctionner, maintenir une session active, mémoriser certains paramètres ou améliorer l'expérience utilisateur.",
+    "it": "I cookie sono piccoli file di testo che un sito può salvare sul dispositivo dell’utente per consentire il funzionamento della piattaforma, mantenere una sessione attiva, ricordare alcune impostazioni o migliorare l’esperienza di utilizzo."
+  },
+  "I cookie tecnici e necessari non richiedono il consenso preventivo dell’utente, perché servono a fornire il servizio richiesto e a garantire il funzionamento della piattaforma.": {
+    "de": "Technische und notwendige Cookies erfordern keine vorherige Zustimmung des Nutzers, da sie zur Bereitstellung des angeforderten Dienstes und zur Gewährleistung des Funktionierens der Plattform verwendet werden.",
+    "en": "Technical and necessary cookies do not require the user's prior consent, because they are used to provide the requested service and to guarantee the functioning of the platform.",
+    "es": "Las cookies técnicas y necesarias no requieren el consentimiento previo del usuario, porque se utilizan para prestar el servicio solicitado y garantizar el funcionamiento de la plataforma.",
+    "fr": "Les cookies techniques et nécessaires ne nécessitent pas le consentement préalable de l'utilisateur, car ils sont utilisés pour fournir le service demandé et garantir le fonctionnement de la plateforme.",
+    "it": "I cookie tecnici e necessari non richiedono il consenso preventivo dell’utente, perché servono a fornire il servizio richiesto e a garantire il funzionamento della piattaforma."
+  },
+  "I dati personali vengono conservati per il tempo necessario alla gestione dell’account, all’erogazione dei servizi, alla sicurezza della piattaforma e agli eventuali obblighi amministrativi, contabili o legali.": {
+    "de": "Personenbezogene Daten werden so lange aufbewahrt, wie es für die Verwaltung des Kontos, die Bereitstellung der Dienste, die Sicherung der Plattform und die Erfüllung etwaiger administrativer, buchhalterischer oder rechtlicher Verpflichtungen erforderlich ist.",
+    "en": "Personal data is retained for the time necessary to manage the account, provide the services, secure the platform and fulfill any administrative, accounting or legal obligations.",
+    "es": "Los datos personales se conservan durante el tiempo necesario para gestionar la cuenta, proporcionar los servicios, proteger la plataforma y cumplir con cualquier obligación administrativa, contable o legal.",
+    "fr": "Les données personnelles sont conservées pendant la durée nécessaire à la gestion du compte, à la fourniture des services, à la sécurisation de la plateforme et à l'accomplissement de toutes obligations administratives, comptables ou légales.",
+    "it": "I dati personali vengono conservati per il tempo necessario alla gestione dell’account, all’erogazione dei servizi, alla sicurezza della piattaforma e agli eventuali obblighi amministrativi, contabili o legali."
+  },
+  "I dati personali vengono utilizzati per:": {
+    "de": "Personenbezogene Daten werden verwendet für:",
+    "en": "Personal data is used for:",
+    "es": "Los datos personales se utilizan para:",
+    "fr": "Les données personnelles sont utilisées pour :",
+    "it": "I dati personali vengono utilizzati per:"
+  },
+  "I fornitori trattano i dati secondo le rispettive condizioni, policy e accordi applicabili, nei limiti necessari all’erogazione dei servizi tecnici utilizzati da MyLocalCare.": {
+    "de": "Die Lieferanten verarbeiten die Daten gemäß ihren jeweiligen Bedingungen, Richtlinien und geltenden Vereinbarungen, in dem Rahmen, der für die Bereitstellung der von MyLocalCare genutzten technischen Dienste erforderlich ist.",
+    "en": "The suppliers process the data according to their respective conditions, policies and applicable agreements, within the limits necessary for the provision of the technical services used by MyLocalCare.",
+    "es": "Los proveedores procesan los datos de acuerdo con sus respectivas condiciones, políticas y acuerdos aplicables, dentro de los límites necesarios para la prestación de los servicios técnicos utilizados por MyLocalCare.",
+    "fr": "Les fournisseurs traitent les données selon leurs conditions, politiques et accords applicables respectifs, dans les limites nécessaires à la fourniture des services techniques utilisés par MyLocalCare.",
+    "it": "I fornitori trattano i dati secondo le rispettive condizioni, policy e accordi applicabili, nei limiti necessari all’erogazione dei servizi tecnici utilizzati da MyLocalCare."
+  },
+  "I messaggi e le informazioni scambiate tramite la chat vengono trattati per consentire il funzionamento della comunicazione, mostrare le conversazioni agli utenti coinvolti, gestire notifiche interne, prevenire abusi, risolvere problemi tecnici e consentire eventuali interventi di sicurezza o moderazione quando necessari.": {
+    "de": "Die über den Chat ausgetauschten Nachrichten und Informationen werden verarbeitet, um das Funktionieren der Kommunikation zu ermöglichen, die Konversationen den beteiligten Benutzern anzuzeigen, interne Benachrichtigungen zu verwalten, Missbrauch zu verhindern, technische Probleme zu lösen und bei Bedarf Sicherheits- oder Moderationseingriffe zu ermöglichen.",
+    "en": "The messages and information exchanged via the chat are processed to allow the communication to function, show the conversations to the users involved, manage internal notifications, prevent abuse, resolve technical problems and allow any security or moderation interventions when necessary.",
+    "es": "Los mensajes y la información intercambiados a través del chat se procesan para permitir el funcionamiento de la comunicación, mostrar las conversaciones a los usuarios involucrados, gestionar las notificaciones internas, prevenir abusos, resolver problemas técnicos y permitir cualquier intervención de seguridad o moderación cuando sea necesario.",
+    "fr": "Les messages et informations échangés via le chat sont traités pour permettre le fonctionnement de la communication, montrer les conversations aux utilisateurs concernés, gérer les notifications internes, prévenir les abus, résoudre les problèmes techniques et permettre toute intervention de sécurité ou de modération si nécessaire.",
+    "it": "I messaggi e le informazioni scambiate tramite la chat vengono trattati per consentire il funzionamento della comunicazione, mostrare le conversazioni agli utenti coinvolti, gestire notifiche interne, prevenire abusi, risolvere problemi tecnici e consentire eventuali interventi di sicurezza o moderazione quando necessari."
+  },
+  "I pagamenti dei servizi eventualmente acquistati sulla piattaforma sono gestiti tramite Stripe. MyLocalCare non raccoglie né conserva i dati completi delle carte di pagamento.": {
+    "de": "Zahlungen für auf der Plattform erworbene Dienste werden über Stripe verwaltet. MyLocalCare erfasst oder speichert keine vollständigen Zahlungskarteninformationen.",
+    "en": "Payments for services purchased on the platform are managed via Stripe. MyLocalCare does not collect or store complete payment card information.",
+    "es": "Los pagos por los servicios adquiridos en la plataforma se gestionan a través de Stripe. MyLocalCare no recopila ni almacena información completa de la tarjeta de pago.",
+    "fr": "Les paiements des services achetés sur la plateforme sont gérés via Stripe. MyLocalCare ne collecte ni ne stocke les informations complètes des cartes de paiement.",
+    "it": "I pagamenti dei servizi eventualmente acquistati sulla piattaforma sono gestiti tramite Stripe. MyLocalCare non raccoglie né conserva i dati completi delle carte di pagamento."
+  },
+  "I pagamenti sono gestiti tramite Stripe. MyLocalCare non conserva i dati completi delle carte di pagamento.": {
+    "de": "Die Zahlungsabwicklung erfolgt über Stripe. MyLocalCare speichert keine vollständigen Zahlungskartendaten.",
+    "en": "Payments are handled via Stripe. MyLocalCare does not store complete payment card data.",
+    "es": "Los pagos se manejan a través de Stripe. MyLocalCare no almacena datos completos de la tarjeta de pago.",
+    "fr": "Les paiements sont traités via Stripe. MyLocalCare ne stocke pas les données complètes des cartes de paiement.",
+    "it": "I pagamenti sono gestiti tramite Stripe. MyLocalCare non conserva i dati completi delle carte di pagamento."
+  },
+  "Il titolare del trattamento è Davide Lescio, gestore della piattaforma MyLocalCare.": {
+    "de": "Der Datenverantwortliche ist Davide Lescio, Manager der MyLocalCare-Plattform.",
+    "en": "The data controller is Davide Lescio, manager of the MyLocalCare platform.",
+    "es": "El responsable del tratamiento es Davide Lescio, responsable de la plataforma MyLocalCare.",
+    "fr": "Le responsable du traitement est Davide Lescio, responsable de la plateforme MyLocalCare.",
+    "it": "Il titolare del trattamento è Davide Lescio, gestore della piattaforma MyLocalCare."
+  },
+  "Il trattamento dei dati personali avviene, a seconda dei casi, sulla base delle seguenti condizioni:": {
+    "de": "Die Verarbeitung personenbezogener Daten erfolgt je nach Einzelfall auf Grundlage der folgenden Voraussetzungen:",
+    "en": "The processing of personal data takes place, depending on the case, on the basis of the following conditions:",
+    "es": "El tratamiento de datos personales se realiza, según los casos, sobre la base de las siguientes condiciones:",
+    "fr": "Le traitement des données personnelles a lieu, selon les cas, sur la base des conditions suivantes :",
+    "it": "Il trattamento dei dati personali avviene, a seconda dei casi, sulla base delle seguenti condizioni:"
+  },
+  "In caso di eliminazione, MyLocalCare può rimuovere, scollegare o anonimizzare i dati non più necessari. Alcune informazioni tecniche, amministrative, contabili, di sicurezza o collegate a servizi già acquistati possono essere conservate quando necessario per obblighi di legge, tutela della piattaforma, prevenzione abusi o corretta conservazione dello storico tecnico e contabile.": {
+    "de": "Nach der Löschung kann MyLocalCare nicht mehr benötigte Daten entfernen, trennen oder anonymisieren. Einige technische, administrative, buchhalterische, sicherheitsbezogene Informationen oder Informationen im Zusammenhang mit bereits erworbenen Diensten können aufbewahrt werden, wenn dies für gesetzliche Verpflichtungen, den Schutz der Plattform, die Verhinderung von Missbrauch oder die ordnungsgemäße Aufbewahrung des technischen und buchhalterischen Verlaufs erforderlich ist.",
+    "en": "Upon deletion, MyLocalCare may remove, disconnect, or anonymize data that is no longer needed. Some technical, administrative, accounting, security information or information connected to services already purchased may be retained when necessary for legal obligations, protection of the platform, prevention of abuse or correct conservation of the technical and accounting history.",
+    "es": "Tras la eliminación, MyLocalCare puede eliminar, desconectar o anonimizar los datos que ya no sean necesarios. Algunas informaciones técnicas, administrativas, contables, de seguridad o relacionadas con servicios ya adquiridos podrán conservarse cuando sea necesario para cumplir con las obligaciones legales, la protección de la plataforma, la prevención de abusos o la correcta conservación del historial técnico y contable.",
+    "fr": "Lors de la suppression, MyLocalCare peut supprimer, déconnecter ou anonymiser les données qui ne sont plus nécessaires. Certaines informations techniques, administratives, comptables, de sécurité ou liées aux services déjà achetés pourront être conservées lorsque cela est nécessaire pour des obligations légales, la protection de la plateforme, la prévention d'abus ou la bonne conservation de l'historique technique et comptable.",
+    "it": "In caso di eliminazione, MyLocalCare può rimuovere, scollegare o anonimizzare i dati non più necessari. Alcune informazioni tecniche, amministrative, contabili, di sicurezza o collegate a servizi già acquistati possono essere conservate quando necessario per obblighi di legge, tutela della piattaforma, prevenzione abusi o corretta conservazione dello storico tecnico e contabile."
+  },
+  "In caso di modifiche rilevanti, MyLocalCare potrà aggiornare la versione del documento e, se necessario, richiedere una nuova accettazione o un consenso specifico.": {
+    "de": "Bei wesentlichen Änderungen kann MyLocalCare die Version des Dokuments aktualisieren und gegebenenfalls eine neue Annahme oder spezifische Zustimmung einholen.",
+    "en": "In case of significant changes, MyLocalCare may update the version of the document and, if necessary, request a new acceptance or specific consent.",
+    "es": "En caso de cambios significativos, MyLocalCare podrá actualizar la versión del documento y, de ser necesario, solicitar una nueva aceptación o consentimiento específico.",
+    "fr": "En cas de modifications significatives, MyLocalCare pourra mettre à jour la version du document et, le cas échéant, demander une nouvelle acceptation ou un consentement spécifique.",
+    "it": "In caso di modifiche rilevanti, MyLocalCare potrà aggiornare la versione del documento e, se necessario, richiedere una nuova accettazione o un consenso specifico."
+  },
+  "In particolare, i pagamenti sono gestiti tramite Stripe. MyLocalCare non conserva i dati completi delle carte di pagamento.": {
+    "de": "Insbesondere werden Zahlungen über Stripe abgewickelt. MyLocalCare speichert keine vollständigen Zahlungskartendaten.",
+    "en": "In particular, payments are managed via Stripe. MyLocalCare does not store complete payment card data.",
+    "es": "En particular, los pagos se gestionan a través de Stripe. MyLocalCare no almacena datos completos de la tarjeta de pago.",
+    "fr": "Les paiements sont notamment gérés via Stripe. MyLocalCare ne stocke pas les données complètes des cartes de paiement.",
+    "it": "In particolare, i pagamenti sono gestiti tramite Stripe. MyLocalCare non conserva i dati completi delle carte di pagamento."
+  },
+  "In questi casi gli utenti devono prestare particolare attenzione, effettuare verifiche adeguate, valutare l’affidabilità della persona contattata, concordare condizioni chiare e rispettare le norme applicabili. MyLocalCare non sostituisce verifiche professionali, colloqui, controlli documentali, referenze, contratti, autorizzazioni o valutazioni personali.": {
+    "de": "In diesen Fällen müssen Nutzer besondere Aufmerksamkeit walten lassen, angemessene Kontrollen durchführen, die Zuverlässigkeit der kontaktierten Person bewerten, klare Bedingungen vereinbaren und die geltenden Regeln respektieren. MyLocalCare ersetzt keine professionellen Bewertungen, Interviews, Dokumentenprüfungen, Referenzen, Verträge, Genehmigungen oder persönlichen Beurteilungen.",
+    "en": "In these cases, users must pay particular attention, carry out adequate checks, evaluate the reliability of the person contacted, agree on clear conditions and respect the applicable rules. MyLocalCare does not replace professional reviews, interviews, document checks, references, contracts, authorizations or personal assessments.",
+    "es": "En estos casos, los usuarios deben prestar especial atención, realizar controles adecuados, evaluar la fiabilidad de la persona contactada, acordar condiciones claras y respetar las normas aplicables. MyLocalCare no reemplaza revisiones profesionales, entrevistas, verificación de documentos, referencias, contratos, autorizaciones o evaluaciones personales.",
+    "fr": "Dans ces cas, les utilisateurs doivent porter une attention particulière, effectuer les contrôles adéquats, évaluer la fiabilité de la personne contactée, convenir de conditions claires et respecter les règles applicables. MyLocalCare ne remplace pas les examens professionnels, les entretiens, les vérifications de documents, les références, les contrats, les autorisations ou les évaluations personnelles.",
+    "it": "In questi casi gli utenti devono prestare particolare attenzione, effettuare verifiche adeguate, valutare l’affidabilità della persona contattata, concordare condizioni chiare e rispettare le norme applicabili. MyLocalCare non sostituisce verifiche professionali, colloqui, controlli documentali, referenze, contratti, autorizzazioni o valutazioni personali."
+  },
+  "Informativa resa ai sensi del Regolamento UE 2016/679, in particolare degli articoli 13 e 14 del GDPR, relativa al trattamento dei dati personali degli utenti di MyLocalCare.": {
+    "de": "Informationen gemäß EU-Verordnung 2016/679, insbesondere Artikel 13 und 14 DSGVO, in Bezug auf die Verarbeitung personenbezogener Daten von MyLocalCare-Nutzern.",
+    "en": "Information provided pursuant to EU Regulation 2016/679, in particular articles 13 and 14 of the GDPR, relating to the processing of personal data of MyLocalCare users.",
+    "es": "Información proporcionada de conformidad con el Reglamento UE 2016/679, en particular los artículos 13 y 14 del RGPD, en relación con el procesamiento de datos personales de los usuarios de MyLocalCare.",
+    "fr": "Informations fournies en application du règlement UE 2016/679, notamment des articles 13 et 14 du RGPD, relatif au traitement des données personnelles des utilisateurs de MyLocalCare.",
+    "it": "Informativa resa ai sensi del Regolamento UE 2016/679, in particolare degli articoli 13 e 14 del GDPR, relativa al trattamento dei dati personali degli utenti di MyLocalCare."
+  },
+  "Informativa sulla Privacy": {
+    "de": "Datenschutzrichtlinie",
+    "en": "Privacy Policy",
+    "es": "Política de privacidad",
+    "fr": "Politique de confidentialité",
+    "it": "Informativa sulla Privacy"
+  },
+  "La disattivazione dei cookie tecnici o degli strumenti necessari potrebbe impedire il corretto funzionamento di alcune parti della piattaforma, come login, sessione utente, moduli, sicurezza, dashboard, impostazioni, pagamenti o altre funzionalità riservate.": {
+    "de": "Die Deaktivierung technischer Cookies oder notwendiger Tools könnte die ordnungsgemäße Funktion einiger Teile der Plattform beeinträchtigen, wie z. B. Anmeldung, Benutzersitzung, Formulare, Sicherheit, Dashboard, Einstellungen, Zahlungen oder andere reservierte Funktionen.",
+    "en": "Deactivating technical cookies or necessary tools could prevent the correct functioning of some parts of the platform, such as login, user session, forms, security, dashboard, settings, payments or other reserved functions.",
+    "es": "La desactivación de las cookies técnicas o de las herramientas necesarias podría impedir el correcto funcionamiento de algunas partes de la plataforma, como el inicio de sesión, la sesión del usuario, los formularios, la seguridad, el panel de control, la configuración, los pagos u otras funciones reservadas.",
+    "fr": "La désactivation des cookies techniques ou des outils nécessaires pourrait empêcher le bon fonctionnement de certaines parties de la plateforme, telles que la connexion, la session utilisateur, les formulaires, la sécurité, le tableau de bord, les paramètres, les paiements ou d'autres fonctions réservées.",
+    "it": "La disattivazione dei cookie tecnici o degli strumenti necessari potrebbe impedire il corretto funzionamento di alcune parti della piattaforma, come login, sessione utente, moduli, sicurezza, dashboard, impostazioni, pagamenti o altre funzionalità riservate."
+  },
+  "La piattaforma può utilizzare misure tecniche di protezione e cifratura dei dati della chat, incluse chiavi crittografiche associate agli account e meccanismi di cifratura applicativa. Tali misure hanno lo scopo di aumentare la sicurezza delle conversazioni e ridurre il rischio di accessi non autorizzati ai contenuti.": {
+    "de": "Die Plattform kann technische Maßnahmen zum Schutz und zur Verschlüsselung von Chat-Daten nutzen, einschließlich kryptografischer Schlüssel für Konten und Anwendungsverschlüsselungsmechanismen. Diese Maßnahmen sollen die Sicherheit von Gesprächen erhöhen und das Risiko eines unbefugten Zugriffs auf Inhalte verringern.",
+    "en": "The platform may use technical measures to protect and encrypt chat data, including cryptographic keys associated with accounts and application encryption mechanisms. These measures are intended to increase the security of conversations and reduce the risk of unauthorized access to content.",
+    "es": "La plataforma puede utilizar medidas técnicas para proteger y cifrar los datos del chat, incluidas claves criptográficas asociadas con cuentas y mecanismos de cifrado de aplicaciones. Estas medidas tienen como objetivo aumentar la seguridad de las conversaciones y reducir el riesgo de acceso no autorizado a los contenidos.",
+    "fr": "La plateforme peut utiliser des mesures techniques pour protéger et crypter les données de chat, y compris des clés cryptographiques associées aux comptes et des mécanismes de cryptage des applications. Ces mesures visent à accroître la sécurité des conversations et à réduire le risque d'accès non autorisé au contenu.",
+    "it": "La piattaforma può utilizzare misure tecniche di protezione e cifratura dei dati della chat, incluse chiavi crittografiche associate agli account e meccanismi di cifratura applicativa. Tali misure hanno lo scopo di aumentare la sicurezza delle conversazioni e ridurre il rischio di accessi non autorizzati ai contenuti."
+  },
+  "La presente Cookie Policy descrive l’utilizzo di cookie, sessioni tecniche e strumenti simili da parte di MyLocalCare.": {
+    "de": "Diese Cookie-Richtlinie beschreibt die Verwendung von Cookies, technischen Sitzungen und ähnlichen Tools durch MyLocalCare.",
+    "en": "This Cookie Policy describes the use of cookies, technical sessions and similar tools by MyLocalCare.",
+    "es": "Esta Política de cookies describe el uso de cookies, sesiones técnicas y herramientas similares por parte de MyLocalCare.",
+    "fr": "Cette politique en matière de cookies décrit l'utilisation de cookies, de sessions techniques et d'outils similaires par MyLocalCare.",
+    "it": "La presente Cookie Policy descrive l’utilizzo di cookie, sessioni tecniche e strumenti simili da parte di MyLocalCare."
+  },
+  "La presente Cookie Policy può essere aggiornata nel tempo, soprattutto in caso di introduzione di nuovi servizi, strumenti tecnici, funzionalità, sistemi di analisi, marketing o fornitori esterni.": {
+    "de": "Diese Cookie-Richtlinie kann im Laufe der Zeit aktualisiert werden, insbesondere im Falle der Einführung neuer Dienste, technischer Tools, Funktionen, Analysesysteme, Marketing oder externer Anbieter.",
+    "en": "This Cookie Policy may be updated over time, especially in the event of the introduction of new services, technical tools, features, analysis systems, marketing or external suppliers.",
+    "es": "Esta Política de Cookies podrá actualizarse con el tiempo, especialmente en el caso de introducción de nuevos servicios, herramientas técnicas, funcionalidades, sistemas de análisis, marketing o proveedores externos.",
+    "fr": "Cette Politique Cookies peut être mise à jour au fil du temps, notamment en cas d'introduction de nouveaux services, outils techniques, fonctionnalités, systèmes d'analyse, marketing ou fournisseurs externes.",
+    "it": "La presente Cookie Policy può essere aggiornata nel tempo, soprattutto in caso di introduzione di nuovi servizi, strumenti tecnici, funzionalità, sistemi di analisi, marketing o fornitori esterni."
+  },
+  "La presente informativa descrive come MyLocalCare raccoglie, utilizza e protegge i dati personali degli utenti che si registrano e utilizzano la piattaforma.": {
+    "de": "Diese Richtlinie beschreibt, wie MyLocalCare die personenbezogenen Daten von Benutzern sammelt, verwendet und schützt, die sich registrieren und die Plattform nutzen.",
+    "en": "This policy describes how MyLocalCare collects, uses and protects the personal data of users who register and use the platform.",
+    "es": "Esta política describe cómo MyLocalCare recopila, usa y protege los datos personales de los usuarios que se registran y usan la plataforma.",
+    "fr": "Cette politique décrit comment MyLocalCare collecte, utilise et protège les données personnelles des utilisateurs qui s'inscrivent et utilisent la plateforme.",
+    "it": "La presente informativa descrive come MyLocalCare raccoglie, utilizza e protegge i dati personali degli utenti che si registrano e utilizzano la piattaforma."
+  },
+  "La presente informativa può essere aggiornata nel tempo. In caso di modifiche rilevanti, MyLocalCare potrà aggiornare la versione dell’informativa e, se necessario, richiedere una nuova presa visione o accettazione dei documenti aggiornati.": {
+    "de": "Diese Informationen können im Laufe der Zeit aktualisiert werden. Bei wesentlichen Änderungen kann MyLocalCare die Version der Informationen aktualisieren und gegebenenfalls eine erneute Prüfung oder Annahme der aktualisierten Dokumente verlangen.",
+    "en": "This information may be updated over time. In the event of significant changes, MyLocalCare may update the version of the information and, if necessary, request a new review or acceptance of the updated documents.",
+    "es": "Esta información puede actualizarse con el tiempo. En caso de cambios significativos, MyLocalCare podrá actualizar la versión de la información y, de ser necesario, solicitar una nueva revisión o aceptación de los documentos actualizados.",
+    "fr": "Ces informations peuvent être mises à jour au fil du temps. En cas de changements significatifs, MyLocalCare pourra mettre à jour la version des informations et, si nécessaire, demander une nouvelle révision ou acceptation des documents mis à jour.",
+    "it": "La presente informativa può essere aggiornata nel tempo. In caso di modifiche rilevanti, MyLocalCare potrà aggiornare la versione dell’informativa e, se necessario, richiedere una nuova presa visione o accettazione dei documenti aggiornati."
+  },
+  "La registrazione e l’utilizzo delle funzionalità operative della piattaforma sono consentiti solo a utenti maggiorenni o comunque pienamente autorizzati secondo la normativa applicabile.": {
+    "de": "Die Registrierung und Nutzung der Betriebsfunktionen der Plattform ist nur erwachsenen Nutzern oder anderweitig nach geltendem Recht vollberechtigten Nutzern gestattet.",
+    "en": "Registration and use of the operational functions of the platform are permitted only to adult users or otherwise fully authorized users according to applicable legislation.",
+    "es": "El registro y el uso de las funciones operativas de la plataforma están permitidos únicamente a usuarios adultos o usuarios totalmente autorizados de acuerdo con la legislación aplicable.",
+    "fr": "L'enregistrement et l'utilisation des fonctions opérationnelles de la plateforme ne sont autorisés qu'aux utilisateurs adultes ou aux utilisateurs autrement pleinement autorisés conformément à la législation applicable.",
+    "it": "La registrazione e l’utilizzo delle funzionalità operative della piattaforma sono consentiti solo a utenti maggiorenni o comunque pienamente autorizzati secondo la normativa applicabile."
+  },
+  "Le informazioni inserite volontariamente nei profili pubblici o negli annunci possono essere rese visibili agli altri utenti secondo le funzionalità disponibili. L’utente deve pubblicare solo informazioni che intende effettivamente rendere visibili.": {
+    "de": "Freiwillig in öffentliche Profile oder Anzeigen eingegebene Informationen können im Rahmen der verfügbaren Funktionen für andere Nutzer sichtbar gemacht werden. Der Nutzer darf nur Informationen veröffentlichen, die er tatsächlich sichtbar machen möchte.",
+    "en": "Information entered voluntarily into public profiles or advertisements may be made visible to other users according to the available features. The user must only publish information that he actually intends to make visible.",
+    "es": "La información ingresada voluntariamente en perfiles públicos o anuncios puede hacerse visible para otros usuarios de acuerdo con las funciones disponibles. El usuario sólo deberá publicar información que realmente pretenda hacer visible.",
+    "fr": "Les informations saisies volontairement dans les profils publics ou les publicités peuvent être rendues visibles aux autres utilisateurs en fonction des fonctionnalités disponibles. L'utilisateur ne doit publier que les informations qu'il entend effectivement rendre visibles.",
+    "it": "Le informazioni inserite volontariamente nei profili pubblici o negli annunci possono essere rese visibili agli altri utenti secondo le funzionalità disponibili. L’utente deve pubblicare solo informazioni che intende effettivamente rendere visibili."
+  },
+  "Le informazioni inserite volontariamente nel profilo pubblico o negli annunci sono destinate alla pubblicazione sulla piattaforma e possono essere visibili agli altri utenti secondo le impostazioni e le funzionalità previste dal sito. L’utente deve quindi inserire solo informazioni che intende effettivamente rendere visibili.": {
+    "de": "Die freiwillig im öffentlichen Profil oder in den Anzeigen eingegebenen Informationen sind zur Veröffentlichung auf der Plattform bestimmt und können je nach den auf der Website bereitgestellten Einstellungen und Funktionen für andere Benutzer sichtbar sein. Der Benutzer muss daher nur Informationen eingeben, die er tatsächlich sichtbar machen möchte.",
+    "en": "The information voluntarily entered in the public profile or in the advertisements is intended for publication on the platform and may be visible to other users according to the settings and functions provided by the site. The user must therefore only enter information that he actually intends to make visible.",
+    "es": "La información ingresada voluntariamente en el perfil público o en los anuncios está destinada a ser publicada en la plataforma y puede ser visible para otros usuarios de acuerdo con las configuraciones y funciones proporcionadas por el sitio. Por lo tanto, el usuario sólo debe introducir la información que realmente desea hacer visible.",
+    "fr": "Les informations volontairement saisies dans le profil public ou dans les annonces sont destinées à être publiées sur la plateforme et peuvent être visibles par les autres utilisateurs selon les paramétrages et fonctionnalités proposées par le site. L'utilisateur ne doit donc saisir que les informations qu'il entend réellement rendre visibles.",
+    "it": "Le informazioni inserite volontariamente nel profilo pubblico o negli annunci sono destinate alla pubblicazione sulla piattaforma e possono essere visibili agli altri utenti secondo le impostazioni e le funzionalità previste dal sito. L’utente deve quindi inserire solo informazioni che intende effettivamente rendere visibili."
+  },
+  "Le richieste possono essere inviate utilizzando i contatti indicati sul sito. L’utente ha inoltre il diritto di proporre reclamo all’autorità di controllo competente, in particolare al Garante per la protezione dei dati personali.": {
+    "de": "Anfragen können über die auf der Website angegebenen Kontakte gesendet werden. Der Nutzer hat außerdem das Recht, eine Beschwerde bei der zuständigen Aufsichtsbehörde, insbesondere dem Garanten für den Schutz personenbezogener Daten, einzureichen.",
+    "en": "Requests can be sent using the contacts indicated on the site. The user also has the right to lodge a complaint with the competent supervisory authority, in particular the Guarantor for the protection of personal data.",
+    "es": "Las solicitudes pueden enviarse utilizando los contactos indicados en el sitio. El usuario también tiene derecho a presentar una reclamación ante la autoridad de control competente, en particular el Garante para la protección de datos personales.",
+    "fr": "Les demandes peuvent être envoyées via les contacts indiqués sur le site. L'utilisateur a également le droit d'introduire une réclamation auprès de l'autorité de contrôle compétente, notamment le Garant de la protection des données personnelles.",
+    "it": "Le richieste possono essere inviate utilizzando i contatti indicati sul sito. L’utente ha inoltre il diritto di proporre reclamo all’autorità di controllo competente, in particolare al Garante per la protezione dei dati personali."
+  },
+  "L’account è personale. L’utente è responsabile della custodia delle proprie credenziali e delle attività svolte tramite il proprio account. In caso di uso non autorizzato, sospetto accesso abusivo o problemi di sicurezza, l’utente è invitato a contattare il gestore della piattaforma.": {
+    "de": "Das Konto ist persönlich. Der Benutzer ist für den Schutz seiner Zugangsdaten und der über sein Konto ausgeführten Aktivitäten verantwortlich. Bei unbefugter Nutzung, Verdacht auf missbräuchlichen Zugriff oder Sicherheitsproblemen wird der Nutzer gebeten, sich an den Plattformbetreiber zu wenden.",
+    "en": "The account is personal. The user is responsible for safeguarding their credentials and the activities carried out through their account. In case of unauthorized use, suspected abusive access or security problems, the user is invited to contact the platform manager.",
+    "es": "La cuenta es personal. El usuario es responsable de salvaguardar sus credenciales y las actividades realizadas a través de su cuenta. En caso de uso no autorizado, sospecha de acceso abusivo o problemas de seguridad, se invita al usuario a ponerse en contacto con el administrador de la plataforma.",
+    "fr": "Le compte est personnel. L'utilisateur est responsable de la protection de ses informations d'identification et des activités effectuées via son compte. En cas d'utilisation non autorisée, de suspicion d'accès abusif ou de problèmes de sécurité, l'utilisateur est invité à contacter le gestionnaire de la plateforme.",
+    "it": "L’account è personale. L’utente è responsabile della custodia delle proprie credenziali e delle attività svolte tramite il proprio account. In caso di uso non autorizzato, sospetto accesso abusivo o problemi di sicurezza, l’utente è invitato a contattare il gestore della piattaforma."
+  },
+  "L’attivazione di un servizio a pagamento riguarda esclusivamente le funzionalità indicate al momento dell’acquisto. I servizi a pagamento non garantiscono risultati specifici, contatti, visualizzazioni, richieste, guadagni, recensioni positive o conclusione di accordi con altri utenti.": {
+    "de": "Die Aktivierung eines kostenpflichtigen Dienstes betrifft ausschließlich die zum Zeitpunkt des Kaufs angegebenen Funktionen. Bezahlte Dienste garantieren keine bestimmten Ergebnisse, Kontakte, Ansichten, Anfragen, Einnahmen, positiven Bewertungen oder den Abschluss von Vereinbarungen mit anderen Benutzern.",
+    "en": "The activation of a paid service exclusively concerns the functions indicated at the time of purchase. Paid services do not guarantee specific results, contacts, views, requests, earnings, positive reviews or closing agreements with other users.",
+    "es": "La activación de un servicio de pago se refiere exclusivamente a las funciones indicadas en el momento de la compra. Los servicios pagos no garantizan resultados específicos, contactos, vistas, solicitudes, ganancias, críticas positivas o cierre de acuerdos con otros usuarios.",
+    "fr": "L'activation d'un service payant concerne exclusivement les fonctions indiquées au moment de l'achat. Les services payants ne garantissent pas des résultats spécifiques, des contacts, des vues, des demandes, des revenus, des avis positifs ou la conclusion d'accords avec d'autres utilisateurs.",
+    "it": "L’attivazione di un servizio a pagamento riguarda esclusivamente le funzionalità indicate al momento dell’acquisto. I servizi a pagamento non garantiscono risultati specifici, contatti, visualizzazioni, richieste, guadagni, recensioni positive o conclusione di accordi con altri utenti."
+  },
+  "L’indirizzo email viene utilizzato per creare l’account, inviare comunicazioni tecniche e confermare la registrazione tramite link o token di verifica. La password non viene conservata in chiaro, ma viene protetta mediante sistemi di hashing.": {
+    "de": "Die E-Mail-Adresse wird zum Erstellen des Kontos, zum Versenden technischer Mitteilungen und zur Bestätigung der Registrierung über einen Verifizierungslink oder ein Token verwendet. Das Passwort wird nicht im Klartext gespeichert, sondern durch Hashing-Systeme geschützt.",
+    "en": "The email address is used to create the account, send technical communications and confirm registration via verification link or token. The password is not stored in clear text, but is protected using hashing systems.",
+    "es": "La dirección de correo electrónico se utiliza para crear la cuenta, enviar comunicaciones técnicas y confirmar el registro mediante un enlace o token de verificación. La contraseña no se almacena en texto claro, sino que está protegida mediante sistemas hash.",
+    "fr": "L'adresse e-mail est utilisée pour créer le compte, envoyer des communications techniques et confirmer l'inscription via un lien de vérification ou un token. Le mot de passe n'est pas stocké en texte clair, mais est protégé par des systèmes de hachage.",
+    "it": "L’indirizzo email viene utilizzato per creare l’account, inviare comunicazioni tecniche e confermare la registrazione tramite link o token di verifica. La password non viene conservata in chiaro, ma viene protetta mediante sistemi di hashing."
+  },
+  "L’invio di email tecniche o transazionali, come conferma account, recupero password o comunicazioni di servizio, può essere gestito tramite fornitori esterni specializzati.": {
+    "de": "Der Versand technischer oder transaktionaler E-Mails wie Kontobestätigung, Passwortwiederherstellung oder Servicemitteilungen kann über spezialisierte externe Anbieter verwaltet werden.",
+    "en": "Sending technical or transactional emails, such as account confirmation, password recovery or service communications, can be managed through specialized external providers.",
+    "es": "El envío de correos electrónicos técnicos o transaccionales, como confirmación de cuenta, recuperación de contraseña o comunicaciones de servicios, se puede gestionar a través de proveedores externos especializados.",
+    "fr": "L'envoi d'e-mails techniques ou transactionnels, tels que la confirmation de compte, la récupération de mot de passe ou les communications de service, peut être géré par des prestataires externes spécialisés.",
+    "it": "L’invio di email tecniche o transazionali, come conferma account, recupero password o comunicazioni di servizio, può essere gestito tramite fornitori esterni specializzati."
+  },
+  "L’utente dichiara di avere la capacità di utilizzare la piattaforma, pubblicare contenuti, prendere contatti e assumersi la responsabilità delle proprie azioni. MyLocalCare può limitare, sospendere o rimuovere account o contenuti quando emergano dubbi sull’identità, sull’età, sull’uso corretto della piattaforma o sulla sicurezza degli altri utenti.": {
+    "de": "Der Nutzer erklärt, dass er die Möglichkeit hat, die Plattform zu nutzen, Inhalte zu veröffentlichen, Kontakte zu knüpfen und die Verantwortung für sein Handeln zu übernehmen. MyLocalCare kann Konten oder Inhalte einschränken, sperren oder entfernen, wenn Bedenken hinsichtlich der Identität, des Alters, der korrekten Nutzung der Plattform oder der Sicherheit anderer Benutzer bestehen.",
+    "en": "The user declares to have the ability to use the platform, publish content, make contacts and take responsibility for their actions. MyLocalCare may limit, suspend or remove accounts or content when there are concerns about the identity, age, correct use of the platform or the safety of other users.",
+    "es": "El usuario declara tener la capacidad de utilizar la plataforma, publicar contenidos, realizar contactos y asumir responsabilidad por sus acciones. MyLocalCare podrá limitar, suspender o eliminar cuentas o contenidos cuando existan dudas sobre la identidad, edad, uso correcto de la plataforma o la seguridad de otros usuarios.",
+    "fr": "L'utilisateur déclare avoir la possibilité d'utiliser la plateforme, de publier du contenu, d'établir des contacts et d'assumer la responsabilité de ses actes. MyLocalCare peut limiter, suspendre ou supprimer des comptes ou du contenu en cas de doute sur l'identité, l'âge, l'utilisation correcte de la plateforme ou la sécurité des autres utilisateurs.",
+    "it": "L’utente dichiara di avere la capacità di utilizzare la piattaforma, pubblicare contenuti, prendere contatti e assumersi la responsabilità delle proprie azioni. MyLocalCare può limitare, sospendere o rimuovere account o contenuti quando emergano dubbi sull’identità, sull’età, sull’uso corretto della piattaforma o sulla sicurezza degli altri utenti."
+  },
+  "L’utente può eliminare il proprio account tramite le funzionalità disponibili. A seguito dell’eliminazione, alcune informazioni possono essere rimosse, scollegate o anonimizzate, mentre eventuali dati tecnici, amministrativi, contabili o di sicurezza possono essere conservati quando necessario.": {
+    "de": "Der Benutzer kann sein Konto über die verfügbaren Funktionen löschen. Nach der Löschung können einige Informationen entfernt, getrennt oder anonymisiert werden, während technische, administrative, buchhalterische oder Sicherheitsdaten bei Bedarf aufbewahrt werden können.",
+    "en": "The user can delete their account through the available features. Following deletion, some information may be removed, disconnected or anonymized, while any technical, administrative, accounting or security data may be retained when necessary.",
+    "es": "El usuario puede eliminar su cuenta a través de las funciones disponibles. Después de la eliminación, cierta información puede eliminarse, desconectarse o anonimizarse, mientras que cualquier dato técnico, administrativo, contable o de seguridad puede conservarse cuando sea necesario.",
+    "fr": "L'utilisateur peut supprimer son compte grâce aux fonctionnalités disponibles. Suite à la suppression, certaines informations pourront être supprimées, déconnectées ou anonymisées, tandis que d'éventuelles données techniques, administratives, comptables ou de sécurité pourront être conservées lorsque cela sera nécessaire.",
+    "it": "L’utente può eliminare il proprio account tramite le funzionalità disponibili. A seguito dell’eliminazione, alcune informazioni possono essere rimosse, scollegate o anonimizzate, mentre eventuali dati tecnici, amministrativi, contabili o di sicurezza possono essere conservati quando necessario."
+  },
+  "L’utente può esercitare i diritti previsti dalla normativa privacy applicabile, tra cui accesso, rettifica, aggiornamento, cancellazione, limitazione del trattamento, opposizione al trattamento e portabilità dei dati, nei limiti consentiti dalla legge e dalle esigenze tecniche, amministrative o di sicurezza della piattaforma.": {
+    "de": "Der Nutzer kann die durch die geltenden Datenschutzgesetze vorgesehenen Rechte ausüben, einschließlich Zugriff, Berichtigung, Aktualisierung, Löschung, Einschränkung der Verarbeitung, Widerspruch gegen die Verarbeitung und Übertragbarkeit von Daten, im Rahmen der gesetzlich zulässigen Grenzen und der technischen, administrativen oder Sicherheitsanforderungen der Plattform.",
+    "en": "The user can exercise the rights provided by the applicable privacy legislation, including access, rectification, updating, cancellation, limitation of processing, opposition to processing and portability of data, within the limits permitted by law and the technical, administrative or security needs of the platform.",
+    "es": "El usuario puede ejercitar los derechos previstos en la legislación sobre privacidad aplicable, incluidos el acceso, rectificación, actualización, cancelación, limitación del tratamiento, oposición al tratamiento y portabilidad de los datos, dentro de los límites permitidos por la ley y las necesidades técnicas, administrativas o de seguridad de la plataforma.",
+    "fr": "L'utilisateur peut exercer les droits prévus par la législation applicable en matière de confidentialité, notamment l'accès, la rectification, la mise à jour, l'annulation, la limitation du traitement, l'opposition au traitement et la portabilité des données, dans les limites permises par la loi et les besoins techniques, administratifs ou de sécurité de la plateforme.",
+    "it": "L’utente può esercitare i diritti previsti dalla normativa privacy applicabile, tra cui accesso, rettifica, aggiornamento, cancellazione, limitazione del trattamento, opposizione al trattamento e portabilità dei dati, nei limiti consentiti dalla legge e dalle esigenze tecniche, amministrative o di sicurezza della piattaforma."
+  },
+  "L’utente può gestire o revocare le autorizzazioni alle notifiche tramite le impostazioni del browser o del dispositivo.": {
+    "de": "Sie können Benachrichtigungsberechtigungen über Ihren Browser oder Ihre Geräteeinstellungen verwalten oder widerrufen.",
+    "en": "You can manage or revoke notification permissions through your browser or device settings.",
+    "es": "Puede administrar o revocar los permisos de notificación a través de la configuración de su navegador o dispositivo.",
+    "fr": "Vous pouvez gérer ou révoquer les autorisations de notification via les paramètres de votre navigateur ou de votre appareil.",
+    "it": "L’utente può gestire o revocare le autorizzazioni alle notifiche tramite le impostazioni del browser o del dispositivo."
+  },
+  "L’utente può gestire, bloccare o cancellare i cookie tramite le impostazioni del proprio browser.": {
+    "de": "Der Benutzer kann Cookies über seine Browsereinstellungen verwalten, blockieren oder löschen.",
+    "en": "The user can manage, block or delete cookies through their browser settings.",
+    "es": "El usuario puede gestionar, bloquear o eliminar las cookies a través de la configuración de su navegador.",
+    "fr": "L'utilisateur peut gérer, bloquer ou supprimer les cookies via les paramètres de son navigateur.",
+    "it": "L’utente può gestire, bloccare o cancellare i cookie tramite le impostazioni del proprio browser."
+  },
+  "L’utente può inserire volontariamente ulteriori informazioni nel proprio profilo o nei propri annunci, come descrizione personale, servizi offerti, categoria, zona, immagini, recapiti pubblici, sito web, social, preferenze di contatto, orari, lingue, competenze o altre informazioni utili alla propria presentazione.": {
+    "de": "Der Nutzer kann in seinem Profil oder in seinen Anzeigen freiwillig weitere Informationen eingeben, wie z. B. persönliche Beschreibung, angebotene Dienstleistungen, Kategorie, Region, Bilder, öffentliche Kontaktdaten, Website, soziale Netzwerke, Kontaktpräferenzen, Öffnungszeiten, Sprachen, Fähigkeiten oder andere für seine Präsentation nützliche Informationen.",
+    "en": "The user can voluntarily enter further information in their profile or in their ads, such as personal description, services offered, category, area, images, public contact details, website, social networks, contact preferences, opening hours, languages, skills or other information useful for their presentation.",
+    "es": "El usuario puede introducir voluntariamente más información en su perfil o en sus anuncios, como descripción personal, servicios ofrecidos, categoría, área, imágenes, datos de contacto públicos, sitio web, redes sociales, preferencias de contacto, horarios de atención, idiomas, habilidades u otra información útil para su presentación.",
+    "fr": "L'utilisateur peut volontairement saisir des informations complémentaires dans son profil ou dans ses annonces, telles que sa description personnelle, les services proposés, la catégorie, la zone, les images, les coordonnées publiques, le site Internet, les réseaux sociaux, les préférences de contact, les horaires d'ouverture, les langues, les compétences ou d'autres informations utiles à leur présentation.",
+    "it": "L’utente può inserire volontariamente ulteriori informazioni nel proprio profilo o nei propri annunci, come descrizione personale, servizi offerti, categoria, zona, immagini, recapiti pubblici, sito web, social, preferenze di contatto, orari, lingue, competenze o altre informazioni utili alla propria presentazione."
+  },
+  "L’utente può richiedere o effettuare l’eliminazione del proprio account secondo le funzionalità disponibili sulla piattaforma.": {
+    "de": "Der Benutzer kann sein Konto entsprechend den auf der Plattform verfügbaren Funktionen anfordern oder löschen.",
+    "en": "The user can request or delete their account according to the features available on the platform.",
+    "es": "El usuario puede solicitar o eliminar su cuenta según las funciones disponibles en la plataforma.",
+    "fr": "L'utilisateur peut demander ou supprimer son compte selon les fonctionnalités disponibles sur la plateforme.",
+    "it": "L’utente può richiedere o effettuare l’eliminazione del proprio account secondo le funzionalità disponibili sulla piattaforma."
+  },
+  "L’utente è responsabile dei contenuti, delle immagini, delle descrizioni, degli annunci, dei recapiti, dei messaggi, delle recensioni e delle informazioni che decide di inserire o pubblicare sulla piattaforma.": {
+    "de": "Der Nutzer ist für die Inhalte, Bilder, Beschreibungen, Anzeigen, Kontaktdaten, Nachrichten, Bewertungen und Informationen verantwortlich, die er auf der Plattform einfügt oder veröffentlicht.",
+    "en": "The user is responsible for the contents, images, descriptions, advertisements, contact details, messages, reviews and information that he decides to insert or publish on the platform.",
+    "es": "El usuario es responsable de los contenidos, imágenes, descripciones, anuncios, datos de contacto, mensajes, reseñas e información que decida insertar o publicar en la plataforma.",
+    "fr": "L'utilisateur est responsable des contenus, images, descriptions, publicités, coordonnées, messages, avis et informations qu'il décide d'insérer ou de publier sur la plateforme.",
+    "it": "L’utente è responsabile dei contenuti, delle immagini, delle descrizioni, degli annunci, dei recapiti, dei messaggi, delle recensioni e delle informazioni che decide di inserire o pubblicare sulla piattaforma."
+  },
+  "MyLocalCare adotta misure tecniche e organizzative ragionevoli per proteggere gli account e i dati trattati, tra cui password cifrate, conferma email, token di sicurezza, controlli applicativi, protezioni contro richieste non autorizzate, misure di sicurezza lato applicazione e sistemi tecnici di protezione dei dati.": {
+    "de": "MyLocalCare ergreift angemessene technische und organisatorische Maßnahmen zum Schutz von Konten und verarbeiteten Daten, einschließlich verschlüsselter Passwörter, E-Mail-Bestätigungen, Sicherheitstokens, Anwendungskontrollen, Schutzmaßnahmen gegen unbefugte Anfragen, anwendungsseitige Sicherheitsmaßnahmen und technische Datenschutzsysteme.",
+    "en": "MyLocalCare takes reasonable technical and organizational measures to protect accounts and processed data, including encrypted passwords, email confirmations, security tokens, application controls, protections against unauthorized requests, application-side security measures and technical data protection systems.",
+    "es": "MyLocalCare toma medidas técnicas y organizativas razonables para proteger las cuentas y los datos procesados, incluidas contraseñas cifradas, confirmaciones por correo electrónico, tokens de seguridad, controles de aplicaciones, protecciones contra solicitudes no autorizadas, medidas de seguridad del lado de las aplicaciones y sistemas técnicos de protección de datos.",
+    "fr": "MyLocalCare prend des mesures techniques et organisationnelles raisonnables pour protéger les comptes et les données traitées, y compris les mots de passe cryptés, les confirmations par courrier électronique, les jetons de sécurité, les contrôles d'application, les protections contre les demandes non autorisées, les mesures de sécurité côté application et les systèmes techniques de protection des données.",
+    "it": "MyLocalCare adotta misure tecniche e organizzative ragionevoli per proteggere gli account e i dati trattati, tra cui password cifrate, conferma email, token di sicurezza, controlli applicativi, protezioni contro richieste non autorizzate, misure di sicurezza lato applicazione e sistemi tecnici di protezione dei dati."
+  },
+  "MyLocalCare conserva soltanto le informazioni necessarie a registrare i servizi attivati, lo stato dell’acquisto, l’importo, la data, l’eventuale annuncio o profilo collegato al servizio e i riferimenti tecnici del pagamento forniti dal sistema di pagamento.": {
+    "de": "MyLocalCare speichert nur die Informationen, die zur Aufzeichnung der aktivierten Dienste, des Kaufstatus, des Betrags, des Datums, aller mit dem Dienst verbundenen Anzeigen oder Profile und der vom Zahlungssystem bereitgestellten technischen Zahlungsreferenzen erforderlich sind.",
+    "en": "MyLocalCare only retains the information necessary to record the activated services, the purchase status, the amount, the date, any advertisement or profile connected to the service and the technical payment references provided by the payment system.",
+    "es": "MyLocalCare solo conserva la información necesaria para registrar los servicios activados, el estado de la compra, el monto, la fecha, cualquier anuncio o perfil relacionado con el servicio y las referencias técnicas de pago proporcionadas por el sistema de pago.",
+    "fr": "MyLocalCare conserve uniquement les informations nécessaires à l'enregistrement des services activés, le statut d'achat, le montant, la date, toute publicité ou profil lié au service et les références techniques de paiement fournies par le système de paiement.",
+    "it": "MyLocalCare conserva soltanto le informazioni necessarie a registrare i servizi attivati, lo stato dell’acquisto, l’importo, la data, l’eventuale annuncio o profilo collegato al servizio e i riferimenti tecnici del pagamento forniti dal sistema di pagamento."
+  },
+  "MyLocalCare non effettua automaticamente verifiche professionali, documentali, assicurative, penali, fiscali o amministrative sugli utenti, salvo eventuali funzionalità specifiche chiaramente indicate come tali.": {
+    "de": "MyLocalCare führt keine automatischen beruflichen, dokumentarischen, versicherungsrechtlichen, strafrechtlichen, steuerlichen oder verwaltungstechnischen Kontrollen der Benutzer durch, mit Ausnahme spezifischer Funktionen, die klar als solche gekennzeichnet sind.",
+    "en": "MyLocalCare does not automatically carry out professional, documentary, insurance, criminal, fiscal or administrative checks on users, except for any specific functions clearly indicated as such.",
+    "es": "MyLocalCare no realiza automáticamente controles profesionales, documentales, de seguros, penales, fiscales o administrativos de los usuarios, salvo funciones específicas claramente indicadas como tales.",
+    "fr": "MyLocalCare n'effectue pas automatiquement de contrôle professionnel, documentaire, d'assurance, pénal, fiscal ou administratif des utilisateurs, sauf pour certaines fonctions spécifiques clairement indiquées comme telles.",
+    "it": "MyLocalCare non effettua automaticamente verifiche professionali, documentali, assicurative, penali, fiscali o amministrative sugli utenti, salvo eventuali funzionalità specifiche chiaramente indicate come tali."
+  },
+  "MyLocalCare non garantisce la qualità, disponibilità, sicurezza, idoneità, professionalità, continuità o risultato dei servizi offerti, richiesti o pubblicizzati dagli utenti.": {
+    "de": "MyLocalCare übernimmt keine Gewähr für die Qualität, Verfügbarkeit, Sicherheit, Eignung, Professionalität, Kontinuität oder das Ergebnis der von Benutzern angebotenen, angeforderten oder beworbenen Dienste.",
+    "en": "MyLocalCare does not guarantee the quality, availability, safety, suitability, professionalism, continuity or result of the services offered, requested or advertised by users.",
+    "es": "MyLocalCare no garantiza la calidad, disponibilidad, seguridad, idoneidad, profesionalidad, continuidad o resultado de los servicios ofrecidos, solicitados o publicitados por los usuarios.",
+    "fr": "MyLocalCare ne garantit pas la qualité, la disponibilité, la sécurité, l'adéquation, le professionnalisme, la continuité ou le résultat des services proposés, demandés ou annoncés par les utilisateurs.",
+    "it": "MyLocalCare non garantisce la qualità, disponibilità, sicurezza, idoneità, professionalità, continuità o risultato dei servizi offerti, richiesti o pubblicizzati dagli utenti."
+  },
+  "MyLocalCare non garantisce la veridicità, completezza, aggiornamento o affidabilità delle informazioni pubblicate dagli utenti. Ogni utente è tenuto a valutare autonomamente le informazioni visualizzate e a effettuare le opportune verifiche prima di prendere accordi con altri utenti.": {
+    "de": "MyLocalCare übernimmt keine Gewähr für die Richtigkeit, Vollständigkeit, Aktualität oder Zuverlässigkeit der von Nutzern veröffentlichten Informationen. Jeder Nutzer ist verpflichtet, vor Abschluss von Vereinbarungen mit anderen Nutzern die angezeigten Informationen selbstständig auszuwerten und entsprechende Kontrollen durchzuführen.",
+    "en": "MyLocalCare does not guarantee the truthfulness, completeness, currency or reliability of the information published by users. Each user is required to independently evaluate the information displayed and carry out appropriate checks before making agreements with other users.",
+    "es": "MyLocalCare no garantiza la veracidad, integridad, vigencia o confiabilidad de la información publicada por los usuarios. Cada usuario debe evaluar de forma independiente la información mostrada y realizar las comprobaciones adecuadas antes de llegar a acuerdos con otros usuarios.",
+    "fr": "MyLocalCare ne garantit pas la véracité, l'exhaustivité, l'actualité ou la fiabilité des informations publiées par les utilisateurs. Chaque utilisateur est tenu d'évaluer de manière indépendante les informations affichées et d'effectuer les contrôles appropriés avant de conclure des accords avec d'autres utilisateurs.",
+    "it": "MyLocalCare non garantisce la veridicità, completezza, aggiornamento o affidabilità delle informazioni pubblicate dagli utenti. Ogni utente è tenuto a valutare autonomamente le informazioni visualizzate e a effettuare le opportune verifiche prima di prendere accordi con altri utenti."
+  },
+  "MyLocalCare non vende i dati personali degli utenti. Alcuni dati possono essere trattati tramite fornitori tecnici necessari al funzionamento del servizio, ad esempio hosting, database, invio email, sistemi di pagamento, infrastrutture di rete, servizi di sicurezza, notifiche push o altri strumenti tecnici collegati alla piattaforma.": {
+    "de": "MyLocalCare verkauft Ihre persönlichen Daten nicht. Einige Daten können durch technische Anbieter verarbeitet werden, die für den Betrieb des Dienstes erforderlich sind, beispielsweise Hosting, Datenbanken, E-Mail-Versand, Zahlungssysteme, Netzwerkinfrastrukturen, Sicherheitsdienste, Push-Benachrichtigungen oder andere mit der Plattform verbundene technische Tools.",
+    "en": "MyLocalCare does not sell your personal data. Some data may be processed through technical providers necessary for the operation of the service, for example hosting, databases, email sending, payment systems, network infrastructures, security services, push notifications or other technical tools connected to the platform.",
+    "es": "MyLocalCare no vende sus datos personales. Algunos datos pueden ser procesados ​​a través de proveedores técnicos necesarios para el funcionamiento del servicio, por ejemplo hosting, bases de datos, envío de correo electrónico, sistemas de pago, infraestructuras de red, servicios de seguridad, notificaciones push u otras herramientas técnicas conectadas a la plataforma.",
+    "fr": "MyLocalCare ne vend pas vos données personnelles. Certaines données peuvent être traitées par l'intermédiaire de prestataires techniques nécessaires au fonctionnement du service, par exemple l'hébergement, les bases de données, l'envoi d'emails, les systèmes de paiement, les infrastructures réseaux, les services de sécurité, les notifications push ou autres outils techniques connectés à la plateforme.",
+    "it": "MyLocalCare non vende i dati personali degli utenti. Alcuni dati possono essere trattati tramite fornitori tecnici necessari al funzionamento del servizio, ad esempio hosting, database, invio email, sistemi di pagamento, infrastrutture di rete, servizi di sicurezza, notifiche push o altri strumenti tecnici collegati alla piattaforma."
+  },
+  "MyLocalCare non è responsabile per controversie, danni, disservizi, ritardi, incomprensioni, mancati pagamenti, comportamenti scorretti, prestazioni non soddisfacenti o qualsiasi altro evento derivante da rapporti diretti tra utenti.": {
+    "de": "MyLocalCare ist nicht verantwortlich für Streitigkeiten, Schäden, schlechte Leistungen, Verzögerungen, Missverständnisse, versäumte Zahlungen, fehlerhaftes Verhalten, unbefriedigende Leistung oder andere Ereignisse, die sich aus direkten Beziehungen zwischen Benutzern ergeben.",
+    "en": "MyLocalCare is not responsible for disputes, damages, disservices, delays, misunderstandings, missed payments, incorrect behavior, unsatisfactory performance or any other event arising from direct relationships between users.",
+    "es": "MyLocalCare no es responsable de disputas, daños, perjuicios, retrasos, malentendidos, pagos atrasados, comportamiento incorrecto, desempeño insatisfactorio o cualquier otro evento que surja de relaciones directas entre usuarios.",
+    "fr": "MyLocalCare n'est pas responsable des litiges, dommages, mauvais services, retards, malentendus, paiements manqués, comportement incorrect, performances insatisfaisantes ou tout autre événement découlant des relations directes entre les utilisateurs.",
+    "it": "MyLocalCare non è responsabile per controversie, danni, disservizi, ritardi, incomprensioni, mancati pagamenti, comportamenti scorretti, prestazioni non soddisfacenti o qualsiasi altro evento derivante da rapporti diretti tra utenti."
+  },
+  "MyLocalCare non è responsabile per danni o perdite derivanti da interruzioni temporanee, problemi tecnici, indisponibilità del servizio, perdita di connessione, errori di terze parti o cause non direttamente controllabili.": {
+    "de": "MyLocalCare ist nicht verantwortlich für Schäden oder Verluste, die durch vorübergehende Unterbrechungen, technische Probleme, Nichtverfügbarkeit des Dienstes, Verbindungsverlust, Fehler Dritter oder Ursachen entstehen, die außerhalb unserer direkten Kontrolle liegen.",
+    "en": "MyLocalCare is not responsible for damages or losses resulting from temporary interruptions, technical problems, unavailability of service, loss of connection, third party errors or causes beyond our direct control.",
+    "es": "MyLocalCare no es responsable de daños o pérdidas resultantes de interrupciones temporales, problemas técnicos, indisponibilidad del servicio, pérdida de conexión, errores de terceros o causas fuera de nuestro control directo.",
+    "fr": "MyLocalCare n'est pas responsable des dommages ou pertes résultant d'interruptions temporaires, de problèmes techniques, d'indisponibilité du service, de perte de connexion, d'erreurs de tiers ou de causes indépendantes de notre volonté directe.",
+    "it": "MyLocalCare non è responsabile per danni o perdite derivanti da interruzioni temporanee, problemi tecnici, indisponibilità del servizio, perdita di connessione, errori di terze parti o cause non direttamente controllabili."
+  },
+  "MyLocalCare può aggiornare i presenti termini nel tempo. In caso di modifiche rilevanti, la piattaforma potrà aggiornare la versione dei termini e, se necessario, richiedere una nuova accettazione.": {
+    "de": "MyLocalCare kann diese Bedingungen von Zeit zu Zeit aktualisieren. Bei wesentlichen Änderungen kann die Plattform die Fassung der AGB aktualisieren und ggf. eine erneute Annahme verlangen.",
+    "en": "MyLocalCare may update these terms from time to time. In case of significant changes, the platform may update the version of the terms and, if necessary, request a new acceptance.",
+    "es": "MyLocalCare puede actualizar estos términos de vez en cuando. En caso de cambios significativos, la plataforma podrá actualizar la versión de los términos y, de ser necesario, solicitar una nueva aceptación.",
+    "fr": "MyLocalCare peut mettre à jour ces conditions de temps à autre. En cas de modifications significatives, la plateforme pourra mettre à jour la version des conditions et, le cas échéant, demander une nouvelle acceptation.",
+    "it": "MyLocalCare può aggiornare i presenti termini nel tempo. In caso di modifiche rilevanti, la piattaforma potrà aggiornare la versione dei termini e, se necessario, richiedere una nuova accettazione."
+  },
+  "MyLocalCare può approvare, rifiutare, rimuovere o limitare contenuti non conformi ai termini di utilizzo, offensivi, illeciti, ingannevoli, non pertinenti o potenzialmente dannosi per altri utenti o per la piattaforma.": {
+    "de": "MyLocalCare kann Inhalte genehmigen, ablehnen, entfernen oder einschränken, die nicht den Nutzungsbedingungen entsprechen, anstößig, illegal, irreführend, irrelevant oder potenziell schädlich für andere Benutzer oder die Plattform sind.",
+    "en": "MyLocalCare may approve, reject, remove or restrict content that does not comply with the terms of use, is offensive, illegal, deceptive, irrelevant or potentially harmful to other users or the platform.",
+    "es": "MyLocalCare puede aprobar, rechazar, eliminar o restringir contenido que no cumpla con los términos de uso, sea ofensivo, ilegal, engañoso, irrelevante o potencialmente dañino para otros usuarios o la plataforma.",
+    "fr": "MyLocalCare peut approuver, rejeter, supprimer ou restreindre le contenu qui n'est pas conforme aux conditions d'utilisation, qui est offensant, illégal, trompeur, non pertinent ou potentiellement dangereux pour les autres utilisateurs ou la plateforme.",
+    "it": "MyLocalCare può approvare, rifiutare, rimuovere o limitare contenuti non conformi ai termini di utilizzo, offensivi, illeciti, ingannevoli, non pertinenti o potenzialmente dannosi per altri utenti o per la piattaforma."
+  },
+  "MyLocalCare può intervenire, nei limiti tecnici e organizzativi disponibili, in caso di segnalazioni, abusi, problemi di sicurezza o violazioni dei presenti termini.": {
+    "de": "MyLocalCare kann im Rahmen der technischen und organisatorischen Möglichkeiten bei Meldungen, Missbrauch, Sicherheitsproblemen oder Verstößen gegen diese Bedingungen eingreifen.",
+    "en": "MyLocalCare may intervene, within the technical and organizational limits available, in the event of reports, abuses, security problems or violations of these terms.",
+    "es": "MyLocalCare podrá intervenir, dentro de los límites técnicos y organizativos disponibles, en caso de denuncias, abusos, problemas de seguridad o violaciones de estos términos.",
+    "fr": "MyLocalCare pourra intervenir, dans les limites techniques et organisationnelles disponibles, en cas de signalements, d'abus, de problèmes de sécurité ou de violations des présentes conditions.",
+    "it": "MyLocalCare può intervenire, nei limiti tecnici e organizzativi disponibili, in caso di segnalazioni, abusi, problemi di sicurezza o violazioni dei presenti termini."
+  },
+  "MyLocalCare può inviare email tecniche o di servizio, ad esempio per confermare l’account, recuperare la password, notificare attività importanti, segnalare aggiornamenti dell’account o comunicare informazioni legate all’utilizzo della piattaforma.": {
+    "de": "MyLocalCare kann technische E-Mails oder Service-E-Mails senden, um beispielsweise Ihr Konto zu bestätigen, Ihr Passwort wiederherzustellen, Sie über wichtige Aktivitäten zu informieren, Kontoaktualisierungen zu melden oder Informationen im Zusammenhang mit Ihrer Nutzung der Plattform zu übermitteln.",
+    "en": "MyLocalCare may send technical or service emails, for example to confirm your account, recover your password, notify you of important activities, report account updates or communicate information related to your use of the platform.",
+    "es": "MyLocalCare puede enviar correos electrónicos técnicos o de servicio, por ejemplo, para confirmar su cuenta, recuperar su contraseña, notificarle sobre actividades importantes, informar actualizaciones de su cuenta o comunicarle información relacionada con su uso de la plataforma.",
+    "fr": "MyLocalCare peut envoyer des e-mails techniques ou de service, par exemple pour confirmer votre compte, récupérer votre mot de passe, vous informer d'activités importantes, signaler des mises à jour de compte ou communiquer des informations liées à votre utilisation de la plateforme.",
+    "it": "MyLocalCare può inviare email tecniche o di servizio, ad esempio per confermare l’account, recuperare la password, notificare attività importanti, segnalare aggiornamenti dell’account o comunicare informazioni legate all’utilizzo della piattaforma."
+  },
+  "MyLocalCare può mettere a disposizione degli utenti un sistema di messaggistica interna per consentire il contatto tra utenti registrati, operatori, inserzionisti o amministratori della piattaforma.": {
+    "de": "MyLocalCare stellt Benutzern möglicherweise ein internes Nachrichtensystem zur Verfügung, um den Kontakt zwischen registrierten Benutzern, Betreibern, Werbetreibenden oder Plattformadministratoren zu ermöglichen.",
+    "en": "MyLocalCare may provide users with an internal messaging system to allow contact between registered users, operators, advertisers or platform administrators.",
+    "es": "MyLocalCare podrá proporcionar a los usuarios un sistema de mensajería interna para permitir el contacto entre usuarios registrados, operadores, anunciantes o administradores de plataforma.",
+    "fr": "MyLocalCare peut mettre à disposition des utilisateurs un système de messagerie interne pour permettre le contact entre utilisateurs enregistrés, opérateurs, annonceurs ou administrateurs de plateforme.",
+    "it": "MyLocalCare può mettere a disposizione degli utenti un sistema di messaggistica interna per consentire il contatto tra utenti registrati, operatori, inserzionisti o amministratori della piattaforma."
+  },
+  "MyLocalCare può mettere a disposizione strumenti di contatto, messaggistica interna, notifiche o collegamenti tra utenti. Gli utenti sono tenuti a utilizzare questi strumenti in modo corretto, rispettoso e conforme alla legge.": {
+    "de": "MyLocalCare stellt möglicherweise Kontakttools, interne Nachrichten, Benachrichtigungen oder Verbindungen zwischen Benutzern bereit. Der Nutzer ist für die korrekte, respektvolle und gesetzeskonforme Nutzung dieser Tools verantwortlich.",
+    "en": "MyLocalCare may provide contact tools, internal messaging, notifications or connections between users. Users are responsible for using these tools correctly, respectfully and in accordance with the law.",
+    "es": "MyLocalCare puede proporcionar herramientas de contacto, mensajería interna, notificaciones o conexiones entre usuarios. Los usuarios son responsables de utilizar estas herramientas de forma correcta, respetuosa y conforme a la ley.",
+    "fr": "MyLocalCare peut fournir des outils de contact, une messagerie interne, des notifications ou des connexions entre utilisateurs. Les utilisateurs sont responsables d’utiliser ces outils correctement, respectueusement et conformément à la loi.",
+    "it": "MyLocalCare può mettere a disposizione strumenti di contatto, messaggistica interna, notifiche o collegamenti tra utenti. Gli utenti sono tenuti a utilizzare questi strumenti in modo corretto, rispettoso e conforme alla legge."
+  },
+  "MyLocalCare può modificare nel tempo prezzi, funzionalità, pacchetti, promozioni o modalità di erogazione dei servizi, senza pregiudicare i servizi già acquistati per il periodo eventualmente già attivato, salvo necessità tecniche, legali o di sicurezza.": {
+    "de": "MyLocalCare kann Preise, Funktionen, Pakete, Werbeaktionen oder Methoden zur Bereitstellung von Diensten im Laufe der Zeit ändern, unbeschadet der bereits erworbenen Dienste für einen bereits aktivierten Zeitraum, außer aus technischen, rechtlichen oder Sicherheitsgründen.",
+    "en": "MyLocalCare may change prices, features, packages, promotions or methods of providing services over time, without prejudice to the services already purchased for any period already activated, except for technical, legal or security needs.",
+    "es": "MyLocalCare puede cambiar precios, características, paquetes, promociones o métodos de prestación de servicios a lo largo del tiempo, sin perjuicio de los servicios ya adquiridos por cualquier período ya activado, excepto por necesidades técnicas, legales o de seguridad.",
+    "fr": "MyLocalCare peut modifier les prix, les fonctionnalités, les forfaits, les promotions ou les modalités de fourniture des services au fil du temps, sans préjudice des services déjà achetés pour toute période déjà activée, sauf pour des raisons techniques, juridiques ou de sécurité.",
+    "it": "MyLocalCare può modificare nel tempo prezzi, funzionalità, pacchetti, promozioni o modalità di erogazione dei servizi, senza pregiudicare i servizi già acquistati per il periodo eventualmente già attivato, salvo necessità tecniche, legali o di sicurezza."
+  },
+  "MyLocalCare può offrire servizi a pagamento per aumentare la visibilità, attivare funzionalità aggiuntive, evidenziare annunci, rendere disponibili contatti o migliorare la presentazione di un profilo o di un annuncio.": {
+    "de": "MyLocalCare bietet möglicherweise kostenpflichtige Dienste an, um die Sichtbarkeit zu erhöhen, zusätzliche Funktionen zu aktivieren, Einträge hervorzuheben, Kontakte verfügbar zu machen oder die Darstellung eines Profils oder Eintrags zu verbessern.",
+    "en": "MyLocalCare may offer paid services to increase visibility, activate additional features, highlight listings, make contacts available, or improve the presentation of a profile or listing.",
+    "es": "MyLocalCare puede ofrecer servicios pagos para aumentar la visibilidad, activar funciones adicionales, resaltar listados, hacer contactos disponibles o mejorar la presentación de un perfil o listado.",
+    "fr": "MyLocalCare peut proposer des services payants pour augmenter la visibilité, activer des fonctionnalités supplémentaires, mettre en avant des fiches, rendre des contacts disponibles ou encore améliorer la présentation d'un profil ou d'une fiche.",
+    "it": "MyLocalCare può offrire servizi a pagamento per aumentare la visibilità, attivare funzionalità aggiuntive, evidenziare annunci, rendere disponibili contatti o migliorare la presentazione di un profilo o di un annuncio."
+  },
+  "MyLocalCare può rimuovere, oscurare, modificare, rifiutare o limitare contenuti che risultino non conformi ai presenti termini, segnalati da altri utenti, potenzialmente dannosi o non coerenti con le finalità della piattaforma.": {
+    "de": "MyLocalCare kann Inhalte entfernen, unkenntlich machen, ändern, ablehnen oder einschränken, die diesen Bedingungen nicht entsprechen, von anderen Benutzern gemeldet wurden, möglicherweise schädlich sind oder nicht mit den Zwecken der Plattform vereinbar sind.",
+    "en": "MyLocalCare may remove, obscure, modify, refuse or limit content that does not comply with these terms, reported by other users, potentially harmful or inconsistent with the purposes of the platform.",
+    "es": "MyLocalCare podrá eliminar, ocultar, modificar, rechazar o limitar contenidos que no cumplan con estos términos, reportados por otros usuarios, potencialmente dañinos o inconsistentes con los propósitos de la plataforma.",
+    "fr": "MyLocalCare peut supprimer, obscurcir, modifier, refuser ou limiter les contenus non conformes aux présentes conditions, signalés par d'autres utilisateurs, potentiellement nuisibles ou incompatibles avec les finalités de la plateforme.",
+    "it": "MyLocalCare può rimuovere, oscurare, modificare, rifiutare o limitare contenuti che risultino non conformi ai presenti termini, segnalati da altri utenti, potenzialmente dannosi o non coerenti con le finalità della piattaforma."
+  },
+  "MyLocalCare può sospendere, limitare, disattivare o eliminare un account in caso di uso improprio della piattaforma, violazione dei presenti termini, comportamenti scorretti, segnalazioni gravi, rischi per altri utenti, tentativi di frode, problemi di sicurezza o necessità tecniche.": {
+    "de": "MyLocalCare kann ein Konto sperren, einschränken, deaktivieren oder löschen, wenn die Plattform missbraucht wird, gegen diese Bedingungen verstoßen wird, Fehlverhalten vorliegt, schwerwiegende Meldungen vorliegen, andere Benutzer gefährdet werden, Betrugsversuche vorliegen, Sicherheitsprobleme auftreten oder technische Notwendigkeiten vorliegen.",
+    "en": "MyLocalCare may suspend, limit, deactivate or delete an account in the event of misuse of the platform, violation of these terms, misconduct, serious reporting, risk to other users, attempted fraud, security issues or technical necessity.",
+    "es": "MyLocalCare puede suspender, limitar, desactivar o eliminar una cuenta en caso de uso indebido de la plataforma, violación de estos términos, mala conducta, denuncias graves, riesgo para otros usuarios, intento de fraude, problemas de seguridad o necesidad técnica.",
+    "fr": "MyLocalCare peut suspendre, limiter, désactiver ou supprimer un compte en cas d'utilisation abusive de la plateforme, de violation des présentes conditions, de faute, de signalement grave, de risque pour les autres utilisateurs, de tentative de fraude, de problèmes de sécurité ou de nécessité technique.",
+    "it": "MyLocalCare può sospendere, limitare, disattivare o eliminare un account in caso di uso improprio della piattaforma, violazione dei presenti termini, comportamenti scorretti, segnalazioni gravi, rischi per altri utenti, tentativi di frode, problemi di sicurezza o necessità tecniche."
+  },
+  "MyLocalCare può utilizzare funzionalità tecniche legate alla Progressive Web App, al service worker o alla gestione di risorse locali del browser.": {
+    "de": "MyLocalCare kann technische Funktionen im Zusammenhang mit der Progressive Web App, dem Service Worker oder der Verwaltung lokaler Browserressourcen nutzen.",
+    "en": "MyLocalCare can use technical features related to the Progressive Web App, the service worker or the management of local browser resources.",
+    "es": "MyLocalCare puede utilizar funciones técnicas relacionadas con la aplicación web progresiva, el trabajador del servicio o la gestión de los recursos del navegador local.",
+    "fr": "MyLocalCare peut utiliser des fonctionnalités techniques liées à la Progressive Web App, au service worker ou à la gestion des ressources du navigateur local.",
+    "it": "MyLocalCare può utilizzare funzionalità tecniche legate alla Progressive Web App, al service worker o alla gestione di risorse locali del browser."
+  },
+  "MyLocalCare può utilizzare notifiche interne, notifiche push, funzionalità PWA, service worker e sistemi in tempo reale per aggiornare l’utente su messaggi, recensioni, annunci, attività dell’account o comunicazioni importanti relative al servizio.": {
+    "de": "MyLocalCare kann interne Benachrichtigungen, Push-Benachrichtigungen, PWA-Funktionen, Servicemitarbeiter und Echtzeitsysteme nutzen, um Sie über wichtige dienstbezogene Nachrichten, Bewertungen, Ankündigungen, Kontoaktivitäten oder wichtige Mitteilungen auf dem Laufenden zu halten.",
+    "en": "MyLocalCare may use internal notifications, push notifications, PWA capabilities, service workers, and real-time systems to update you on important service-related messages, reviews, announcements, account activity, or important communications.",
+    "es": "MyLocalCare puede utilizar notificaciones internas, notificaciones automáticas, capacidades de PWA, trabajadores de servicio y sistemas en tiempo real para actualizarlo sobre mensajes importantes relacionados con el servicio, reseñas, anuncios, actividad de la cuenta o comunicaciones importantes.",
+    "fr": "MyLocalCare peut utiliser des notifications internes, des notifications push, des capacités PWA, des techniciens de service et des systèmes en temps réel pour vous informer des messages, avis, annonces, activités de compte ou communications importantes liés au service.",
+    "it": "MyLocalCare può utilizzare notifiche interne, notifiche push, funzionalità PWA, service worker e sistemi in tempo reale per aggiornare l’utente su messaggi, recensioni, annunci, attività dell’account o comunicazioni importanti relative al servizio."
+  },
+  "MyLocalCare si impegna a mantenere la piattaforma funzionante e accessibile, ma non garantisce continuità assoluta del servizio. La piattaforma può subire interruzioni, manutenzioni, aggiornamenti, errori tecnici, modifiche o sospensioni temporanee.": {
+    "de": "MyLocalCare verpflichtet sich, die Plattform funktionsfähig und zugänglich zu halten, garantiert jedoch keine absolute Kontinuität des Dienstes. Die Plattform kann Unterbrechungen, Wartungsarbeiten, Aktualisierungen, technischen Fehlern, Änderungen oder vorübergehenden Aussetzungen unterliegen.",
+    "en": "MyLocalCare undertakes to keep the platform functioning and accessible, but does not guarantee absolute continuity of the service. The platform may undergo interruptions, maintenance, updates, technical errors, modifications or temporary suspensions.",
+    "es": "MyLocalCare se compromete a mantener la plataforma operativa y accesible, pero no garantiza la continuidad absoluta del servicio. La plataforma podrá sufrir interrupciones, mantenimientos, actualizaciones, errores técnicos, modificaciones o suspensiones temporales.",
+    "fr": "MyLocalCare s'engage à maintenir la plateforme fonctionnelle et accessible, mais ne garantit pas une continuité absolue du service. La plateforme peut subir des interruptions, des maintenances, des mises à jour, des erreurs techniques, des modifications ou des suspensions temporaires.",
+    "it": "MyLocalCare si impegna a mantenere la piattaforma funzionante e accessibile, ma non garantisce continuità assoluta del servizio. La piattaforma può subire interruzioni, manutenzioni, aggiornamenti, errori tecnici, modifiche o sospensioni temporanee."
+  },
+  "MyLocalCare svolge un ruolo di piattaforma di contatto, visibilità e organizzazione delle informazioni. MyLocalCare non è parte dei rapporti, degli accordi, delle comunicazioni, delle trattative o delle prestazioni eventualmente concluse tra gli utenti.": {
+    "de": "MyLocalCare fungiert als Kontakt-, Sichtbarkeits- und Informationsorganisationsplattform. MyLocalCare ist nicht Teil von zwischen Nutzern geschlossenen Beziehungen, Vereinbarungen, Mitteilungen, Verhandlungen oder Dienstleistungen.",
+    "en": "MyLocalCare plays a role as a contact, visibility and information organization platform. MyLocalCare is not part of any relationships, agreements, communications, negotiations or services concluded between users.",
+    "es": "MyLocalCare desempeña un papel de plataforma de contacto, visibilidad y organización de la información. MyLocalCare no forma parte de ninguna relación, acuerdo, comunicación, negociación o servicio celebrado entre usuarios.",
+    "fr": "MyLocalCare joue un rôle de plateforme d'organisation de contacts, de visibilité et d'informations. MyLocalCare ne fait partie d’aucune relation, accord, communication, négociation ou service conclu entre utilisateurs.",
+    "it": "MyLocalCare svolge un ruolo di piattaforma di contatto, visibilità e organizzazione delle informazioni. MyLocalCare non è parte dei rapporti, degli accordi, delle comunicazioni, delle trattative o delle prestazioni eventualmente concluse tra gli utenti."
+  },
+  "MyLocalCare utilizza cookie tecnici o strumenti equivalenti necessari al corretto funzionamento della piattaforma.": {
+    "de": "MyLocalCare verwendet technische Cookies oder gleichwertige Tools, die für das ordnungsgemäße Funktionieren der Plattform erforderlich sind.",
+    "en": "MyLocalCare uses technical cookies or equivalent tools necessary for the correct functioning of the platform.",
+    "es": "MyLocalCare utiliza cookies técnicas o herramientas equivalentes necesarias para el correcto funcionamiento de la plataforma.",
+    "fr": "MyLocalCare utilise des cookies techniques ou des outils équivalents nécessaires au bon fonctionnement de la plateforme.",
+    "it": "MyLocalCare utilizza cookie tecnici o strumenti equivalenti necessari al corretto funzionamento della piattaforma."
+  },
+  "MyLocalCare valuterà le richieste caso per caso, tenendo conto del servizio acquistato, dello stato di attivazione, di eventuali malfunzionamenti tecnici e degli obblighi applicabili.": {
+    "de": "MyLocalCare wird Anfragen im Einzelfall unter Berücksichtigung des erworbenen Dienstes, des Aktivierungsstatus, etwaiger technischer Störungen und geltender Verpflichtungen bewerten.",
+    "en": "MyLocalCare will evaluate requests on a case-by-case basis, taking into account the service purchased, the activation status, any technical malfunctions and applicable obligations.",
+    "es": "MyLocalCare evaluará las solicitudes caso por caso, teniendo en cuenta el servicio adquirido, el estado de activación, cualquier mal funcionamiento técnico y las obligaciones aplicables.",
+    "fr": "MyLocalCare évaluera les demandes au cas par cas, en tenant compte du service acheté, du statut d'activation, des éventuels dysfonctionnements techniques et des obligations applicables.",
+    "it": "MyLocalCare valuterà le richieste caso per caso, tenendo conto del servizio acquistato, dello stato di attivazione, di eventuali malfunzionamenti tecnici e degli obblighi applicabili."
+  },
+  "MyLocalCare è una piattaforma online pensata per facilitare il contatto tra utenti, operatori, inserzionisti e persone interessate a servizi, attività, annunci o collaborazioni locali. Utilizzando la piattaforma, registrandosi o pubblicando contenuti, l’utente accetta i presenti Termini di utilizzo.": {
+    "de": "MyLocalCare ist eine Online-Plattform, die den Kontakt zwischen Benutzern, Betreibern, Werbetreibenden und Personen erleichtern soll, die an lokalen Diensten, Aktivitäten, Ankündigungen oder Kooperationen interessiert sind. Durch die Nutzung der Plattform, die Registrierung oder das Posten von Inhalten stimmen Sie diesen Nutzungsbedingungen zu.",
+    "en": "MyLocalCare is an online platform designed to facilitate contact between users, operators, advertisers and people interested in local services, activities, announcements or collaborations. By using the platform, registering or posting content, you agree to these Terms of Use.",
+    "es": "MyLocalCare es una plataforma online diseñada para facilitar el contacto entre usuarios, operadores, anunciantes y personas interesadas en servicios, actividades, anuncios o colaboraciones locales. Al utilizar la plataforma, registrarse o publicar contenido, acepta estos Términos de uso.",
+    "fr": "MyLocalCare est une plateforme en ligne conçue pour faciliter le contact entre les utilisateurs, les opérateurs, les annonceurs et les personnes intéressées par des services, activités, annonces ou collaborations locales. En utilisant la plateforme, en vous inscrivant ou en publiant du contenu, vous acceptez les présentes conditions d'utilisation.",
+    "it": "MyLocalCare è una piattaforma online pensata per facilitare il contatto tra utenti, operatori, inserzionisti e persone interessate a servizi, attività, annunci o collaborazioni locali. Utilizzando la piattaforma, registrandosi o pubblicando contenuti, l’utente accetta i presenti Termini di utilizzo."
+  },
+  "Nei limiti consentiti dalla legge, MyLocalCare non risponde dei comportamenti degli utenti, dei contenuti pubblicati dagli utenti, dei servizi offerti da terzi, degli accordi conclusi tra utenti, delle informazioni inserite nei profili o annunci, delle comunicazioni tra utenti o di eventuali controversie nate fuori dalla piattaforma.": {
+    "de": "Soweit gesetzlich zulässig, ist MyLocalCare nicht verantwortlich für das Nutzerverhalten, die von Nutzern veröffentlichten Inhalte, die von Dritten angebotenen Dienste, zwischen Nutzern geschlossene Vereinbarungen, in Profilen oder Anzeigen enthaltene Informationen, für die Kommunikation zwischen Nutzern oder etwaige Streitigkeiten, die außerhalb der Plattform entstehen.",
+    "en": "To the extent permitted by law, MyLocalCare is not responsible for user behavior, content published by users, services offered by third parties, agreements concluded between users, information included in profiles or advertisements, communications between users or any disputes arising outside the platform.",
+    "es": "En la medida en que lo permita la ley, MyLocalCare no es responsable del comportamiento de los usuarios, el contenido publicado por los usuarios, los servicios ofrecidos por terceros, los acuerdos celebrados entre usuarios, la información incluida en perfiles o anuncios, las comunicaciones entre usuarios o cualquier disputa que surja fuera de la plataforma.",
+    "fr": "Dans la mesure permise par la loi, MyLocalCare n'est pas responsable du comportement des utilisateurs, des contenus publiés par les utilisateurs, des services proposés par des tiers, des accords conclus entre utilisateurs, des informations incluses dans les profils ou publicités, des communications entre utilisateurs ou de tout litige survenant en dehors de la plateforme.",
+    "it": "Nei limiti consentiti dalla legge, MyLocalCare non risponde dei comportamenti degli utenti, dei contenuti pubblicati dagli utenti, dei servizi offerti da terzi, degli accordi conclusi tra utenti, delle informazioni inserite nei profili o annunci, delle comunicazioni tra utenti o di eventuali controversie nate fuori dalla piattaforma."
+  },
+  "Nessun sistema informatico può garantire sicurezza assoluta, ma MyLocalCare limita la raccolta dei dati a quanto necessario per il funzionamento della piattaforma e applica misure proporzionate alla natura del servizio.": {
+    "de": "Kein IT-System kann absolute Sicherheit garantieren, aber MyLocalCare beschränkt die Datenerfassung auf das, was für das Funktionieren der Plattform erforderlich ist, und ergreift Maßnahmen, die der Art des Dienstes angemessen sind.",
+    "en": "No IT system can guarantee absolute security, but MyLocalCare limits data collection to what is necessary for the functioning of the platform and applies measures proportionate to the nature of the service.",
+    "es": "Ningún sistema informático puede garantizar una seguridad absoluta, pero MyLocalCare limita la recopilación de datos a lo necesario para el funcionamiento de la plataforma y aplica medidas proporcionadas a la naturaleza del servicio.",
+    "fr": "Aucun système informatique ne peut garantir une sécurité absolue, mais MyLocalCare limite la collecte des données à ce qui est nécessaire au fonctionnement de la plateforme et applique des mesures proportionnées à la nature du service.",
+    "it": "Nessun sistema informatico può garantire sicurezza assoluta, ma MyLocalCare limita la raccolta dei dati a quanto necessario per il funzionamento della piattaforma e applica misure proporzionate alla natura del servizio."
+  },
+  "Non sono consentite recensioni false, offensive, manipolatorie, diffamatorie, ricattatorie, discriminatorie o pubblicate con finalità scorrette. MyLocalCare può moderare, approvare, rifiutare, rimuovere o limitare recensioni e risposte non conformi.": {
+    "de": "Bewertungen, die falsch, beleidigend, manipulativ, verleumderisch, erpressend oder diskriminierend sind oder zu einem unlauteren Zweck veröffentlicht werden, sind nicht gestattet. MyLocalCare kann nicht konforme Bewertungen und Antworten moderieren, genehmigen, ablehnen, entfernen oder einschränken.",
+    "en": "Reviews that are false, offensive, manipulative, defamatory, blackmailing, discriminatory or published for an unfair purpose are not permitted. MyLocalCare may moderate, approve, reject, remove or limit non-compliant reviews and responses.",
+    "es": "No se permiten reseñas falsas, ofensivas, manipuladoras, difamatorias, chantajistas, discriminatorias o publicadas con un fin injusto. MyLocalCare puede moderar, aprobar, rechazar, eliminar o limitar revisiones y respuestas que no cumplan con las normas.",
+    "fr": "Les avis faux, offensants, manipulateurs, diffamatoires, de chantage, discriminatoires ou publiés dans un but déloyal ne sont pas autorisés. MyLocalCare peut modérer, approuver, rejeter, supprimer ou limiter les avis et réponses non conformes.",
+    "it": "Non sono consentite recensioni false, offensive, manipolatorie, diffamatorie, ricattatorie, discriminatorie o pubblicate con finalità scorrette. MyLocalCare può moderare, approvare, rifiutare, rimuovere o limitare recensioni e risposte non conformi."
+  },
+  "Non sono consentiti spam, molestie, minacce, contenuti offensivi, richieste illecite, tentativi di truffa, raccolta abusiva di dati, invio di contenuti pericolosi o utilizzi contrari alla finalità della piattaforma.": {
+    "de": "Spam, Belästigung, Drohungen, anstößige Inhalte, unerlaubte Anfragen, Betrugsversuche, missbräuchliche Datenerfassung, das Versenden gefährlicher Inhalte oder eine dem Zweck der Plattform zuwiderlaufende Nutzung sind nicht gestattet.",
+    "en": "Spam, harassment, threats, offensive content, illicit requests, scam attempts, abusive data collection, sending of dangerous content or uses contrary to the purpose of the platform are not permitted.",
+    "es": "No se permiten spam, acoso, amenazas, contenidos ofensivos, solicitudes ilícitas, intentos de estafa, recogida abusiva de datos, envío de contenidos peligrosos o usos contrarios a la finalidad de la plataforma.",
+    "fr": "Le spam, le harcèlement, les menaces, les contenus offensants, les demandes illicites, les tentatives d'escroquerie, la collecte abusive de données, l'envoi de contenus dangereux ou les utilisations contraires à l'objet de la plateforme ne sont pas autorisés.",
+    "it": "Non sono consentiti spam, molestie, minacce, contenuti offensivi, richieste illecite, tentativi di truffa, raccolta abusiva di dati, invio di contenuti pericolosi o utilizzi contrari alla finalità della piattaforma."
+  },
+  "Non è consentito pubblicare contenuti falsi, offensivi, discriminatori, diffamatori, illeciti, ingannevoli, pericolosi, lesivi di diritti di terzi, contrari alla legge o contrari allo spirito della piattaforma.": {
+    "de": "Es ist nicht gestattet, Inhalte zu veröffentlichen, die falsch, beleidigend, diskriminierend, verleumderisch, rechtswidrig, irreführend, gefährlich, die Rechte Dritter verletzend, gegen das Gesetz oder den Geist der Plattform verstoßen.",
+    "en": "It is not permitted to publish content that is false, offensive, discriminatory, defamatory, illicit, deceptive, dangerous, harmful to the rights of third parties, contrary to the law or contrary to the spirit of the platform.",
+    "es": "No está permitido publicar contenidos falsos, ofensivos, discriminatorios, difamatorios, ilícitos, engañosos, peligrosos, lesivos de derechos de terceros, contrarios a la ley o contrarios al espíritu de la plataforma.",
+    "fr": "Il est interdit de publier des contenus faux, offensants, discriminatoires, diffamatoires, illicites, trompeurs, dangereux, préjudiciables aux droits des tiers, contraires à la loi ou contraires à l'esprit de la plateforme.",
+    "it": "Non è consentito pubblicare contenuti falsi, offensivi, discriminatori, diffamatori, illeciti, ingannevoli, pericolosi, lesivi di diritti di terzi, contrari alla legge o contrari allo spirito della piattaforma."
+  },
+  "Ogni rapporto tra utenti, compresi eventuali accordi economici, appuntamenti, prestazioni, collaborazioni, verifiche, responsabilità, pagamenti esterni o modalità operative, resta sotto la responsabilità diretta degli utenti coinvolti.": {
+    "de": "Jegliche Beziehung zwischen Benutzern, einschließlich aller wirtschaftlichen Vereinbarungen, Termine, Dienstleistungen, Kooperationen, Schecks, Verantwortlichkeiten, externen Zahlungen oder Betriebsmethoden, unterliegt der direkten Verantwortung der beteiligten Benutzer.",
+    "en": "Any relationship between users, including any economic agreements, appointments, services, collaborations, checks, responsibilities, external payments or operating methods, remains under the direct responsibility of the users involved.",
+    "es": "Cualquier relación entre usuarios, incluidos acuerdos económicos, nombramientos, servicios, colaboraciones, controles, responsabilidades, pagos externos o métodos operativos, queda bajo la responsabilidad directa de los usuarios involucrados.",
+    "fr": "Toute relation entre utilisateurs, y compris les éventuels accords économiques, rendez-vous, prestations, collaborations, chèques, responsabilités, paiements externes ou modes de fonctionnement, reste sous la responsabilité directe des utilisateurs concernés.",
+    "it": "Ogni rapporto tra utenti, compresi eventuali accordi economici, appuntamenti, prestazioni, collaborazioni, verifiche, responsabilità, pagamenti esterni o modalità operative, resta sotto la responsabilità diretta degli utenti coinvolti."
+  },
+  "Per creare un account MyLocalCare vengono richiesti dati essenziali come nome, cognome, indirizzo email, username, città/comune, provincia e password.": {
+    "de": "Um ein MyLocalCare-Konto zu erstellen, sind wesentliche Daten wie Vor- und Nachname, E-Mail-Adresse, Benutzername, Stadt/Gemeinde, Provinz und Passwort erforderlich.",
+    "en": "To create a MyLocalCare account, essential data such as name, surname, email address, username, city/municipality, province and password are required.",
+    "es": "Para crear una cuenta MyLocalCare se requieren datos imprescindibles como nombre, apellido, dirección de correo electrónico, nombre de usuario, ciudad/municipio, provincia y contraseña.",
+    "fr": "Pour créer un compte MyLocalCare, des données essentielles telles que nom, prénom, adresse e-mail, nom d'utilisateur, ville/municipalité, province et mot de passe sont requises.",
+    "it": "Per creare un account MyLocalCare vengono richiesti dati essenziali come nome, cognome, indirizzo email, username, città/comune, provincia e password."
+  },
+  "Per fornire queste funzionalità possono essere trattati identificativi tecnici del dispositivo o del browser, subscription push, token temporanei, informazioni di sessione e dati necessari alla consegna delle notifiche o alla sincronizzazione degli aggiornamenti.": {
+    "de": "Zur Bereitstellung dieser Funktionen können technische Kennungen des Geräts oder Browsers, Abonnement-Push, temporäre Token, Sitzungsinformationen und Daten verarbeitet werden, die für die Zustellung von Benachrichtigungen oder die Synchronisierung von Updates erforderlich sind.",
+    "en": "To provide these functions, technical identifiers of the device or browser, subscription push, temporary tokens, session information and data necessary for the delivery of notifications or the synchronization of updates may be processed.",
+    "es": "Para proporcionar estas funciones, se pueden procesar identificadores técnicos del dispositivo o navegador, push de suscripción, tokens temporales, información de sesión y datos necesarios para la entrega de notificaciones o la sincronización de actualizaciones.",
+    "fr": "Pour fournir ces fonctions, des identifiants techniques de l'appareil ou du navigateur, des push d'abonnement, des jetons temporaires, des informations de session et des données nécessaires à l'envoi de notifications ou à la synchronisation des mises à jour peuvent être traités.",
+    "it": "Per fornire queste funzionalità possono essere trattati identificativi tecnici del dispositivo o del browser, subscription push, token temporanei, informazioni di sessione e dati necessari alla consegna delle notifiche o alla sincronizzazione degli aggiornamenti."
+  },
+  "Per motivi tecnici, di sicurezza, prevenzione abusi, gestione segnalazioni o obblighi di legge, MyLocalCare può conservare dati collegati alle conversazioni, come identificativi degli utenti coinvolti, stato di lettura, notifiche, date, riferimenti tecnici e informazioni necessarie al corretto funzionamento della chat.": {
+    "de": "Aus technischen Gründen, zur Sicherheit, zur Verhinderung von Missbrauch, zur Verwaltung von Berichten oder aufgrund gesetzlicher Verpflichtungen kann MyLocalCare mit den Gesprächen verknüpfte Daten speichern, wie z. B. Kennungen der beteiligten Benutzer, Lesestatus, Benachrichtigungen, Daten, technische Referenzen und Informationen, die für das ordnungsgemäße Funktionieren des Chats erforderlich sind.",
+    "en": "For technical reasons, security, abuse prevention, management of reports or legal obligations, MyLocalCare may retain data linked to the conversations, such as identifiers of the users involved, reading status, notifications, dates, technical references and information necessary for the correct functioning of the chat.",
+    "es": "Por motivos técnicos, de seguridad, prevención de abusos, gestión de informes u obligaciones legales, MyLocalCare podrá conservar datos vinculados a las conversaciones, como identificadores de los usuarios involucrados, estados de lectura, notificaciones, fechas, referencias técnicas e información necesaria para el correcto funcionamiento del chat.",
+    "fr": "Pour des raisons techniques, de sécurité, de prévention des abus, de gestion des signalements ou d'obligations légales, MyLocalCare peut conserver des données liées aux conversations, telles que les identifiants des utilisateurs impliqués, l'état de lecture, les notifications, les dates, les références techniques et les informations nécessaires au bon fonctionnement du chat.",
+    "it": "Per motivi tecnici, di sicurezza, prevenzione abusi, gestione segnalazioni o obblighi di legge, MyLocalCare può conservare dati collegati alle conversazioni, come identificativi degli utenti coinvolti, stato di lettura, notifiche, date, riferimenti tecnici e informazioni necessarie al corretto funzionamento della chat."
+  },
+  "Per richieste relative ai presenti termini, alla gestione dell’account, ai servizi attivati o al funzionamento della piattaforma, l’utente può contattare MyLocalCare all’indirizzo email:": {
+    "de": "Für Anfragen im Zusammenhang mit diesen Bedingungen, der Kontoverwaltung, aktivierten Diensten oder dem Betrieb der Plattform kann sich der Nutzer an MyLocalCare unter der E-Mail-Adresse wenden:",
+    "en": "For requests relating to these terms, account management, activated services or the operation of the platform, the user can contact MyLocalCare at the email address:",
+    "es": "Para solicitudes relacionadas con estos términos, administración de cuentas, servicios activados o el funcionamiento de la plataforma, el usuario puede comunicarse con MyLocalCare a la dirección de correo electrónico:",
+    "fr": "Pour les demandes relatives aux présentes conditions, à la gestion du compte, aux services activés ou au fonctionnement de la plateforme, l'utilisateur peut contacter MyLocalCare à l'adresse email :",
+    "it": "Per richieste relative ai presenti termini, alla gestione dell’account, ai servizi attivati o al funzionamento della piattaforma, l’utente può contattare MyLocalCare all’indirizzo email:"
+  },
+  "Per utilizzare alcune funzionalità della piattaforma è necessario creare un account. L’utente si impegna a fornire informazioni corrette, aggiornate e non ingannevoli.": {
+    "de": "Um einige Funktionen der Plattform nutzen zu können, müssen Sie ein Konto erstellen. Der Nutzer verpflichtet sich, korrekte, aktuelle und nicht irreführende Informationen bereitzustellen.",
+    "en": "To use some features of the platform you need to create an account. The user undertakes to provide correct, updated and non-misleading information.",
+    "es": "Para utilizar algunas funciones de la plataforma es necesario crear una cuenta. El usuario se compromete a facilitar información correcta, actualizada y no engañosa.",
+    "fr": "Pour utiliser certaines fonctionnalités de la plateforme, vous devez créer un compte. L'utilisateur s'engage à fournir des informations correctes, mises à jour et non trompeuses.",
+    "it": "Per utilizzare alcune funzionalità della piattaforma è necessario creare un account. L’utente si impegna a fornire informazioni corrette, aggiornate e non ingannevoli."
+  },
+  "Prezzi, durata, condizioni e caratteristiche dei servizi a pagamento sono indicati nelle relative schermate della piattaforma al momento dell’acquisto o dell’attivazione.": {
+    "de": "Preise, Dauer, Bedingungen und Merkmale der kostenpflichtigen Dienste werden zum Zeitpunkt des Kaufs oder der Aktivierung auf den entsprechenden Bildschirmen der Plattform angezeigt.",
+    "en": "Prices, duration, conditions and characteristics of paid services are indicated in the relevant screens of the platform at the time of purchase or activation.",
+    "es": "Los precios, duración, condiciones y características de los servicios pagos se indican en las pantallas correspondientes de la plataforma en el momento de la compra o activación.",
+    "fr": "Les prix, la durée, les conditions et les caractéristiques des services payants sont indiqués dans les écrans concernés de la plateforme au moment de l'achat ou de l'activation.",
+    "it": "Prezzi, durata, condizioni e caratteristiche dei servizi a pagamento sono indicati nelle relative schermate della piattaforma al momento dell’acquisto o dell’attivazione."
+  },
+  "Queste comunicazioni sono necessarie per il funzionamento del servizio e non costituiscono comunicazioni promozionali o newsletter marketing.": {
+    "de": "Diese Mitteilungen sind für den Betrieb des Dienstes erforderlich und stellen keine Werbemitteilungen oder Newsletter-Marketing dar.",
+    "en": "These communications are necessary for the operation of the service and do not constitute promotional communications or newsletter marketing.",
+    "es": "Estas comunicaciones son necesarias para el funcionamiento del servicio y no constituyen comunicaciones promocionales ni marketing de boletines.",
+    "fr": "Ces communications sont nécessaires au fonctionnement du service et ne constituent pas des communications promotionnelles ou une newsletter marketing.",
+    "it": "Queste comunicazioni sono necessarie per il funzionamento del servizio e non costituiscono comunicazioni promozionali o newsletter marketing."
+  },
+  "Questi dati vengono utilizzati per mantenere sicura e funzionante la piattaforma, prevenire accessi non autorizzati, proteggere i moduli, diagnosticare errori, gestire malfunzionamenti, migliorare la stabilità del servizio e prevenire usi impropri.": {
+    "de": "Diese Daten werden verwendet, um die Sicherheit und Funktionsfähigkeit der Plattform zu gewährleisten, unbefugten Zugriff zu verhindern, Formulare zu schützen, Fehler zu diagnostizieren, Störungen zu verwalten, die Stabilität des Dienstes zu verbessern und eine missbräuchliche Nutzung zu verhindern.",
+    "en": "This data is used to keep the platform safe and functioning, prevent unauthorized access, protect forms, diagnose errors, manage malfunctions, improve the stability of the service and prevent improper use.",
+    "es": "Estos datos se utilizan para mantener la plataforma segura y en funcionamiento, evitar el acceso no autorizado, proteger formularios, diagnosticar errores, gestionar fallos, mejorar la estabilidad del servicio y evitar un uso inadecuado.",
+    "fr": "Ces données sont utilisées pour assurer la sécurité et le fonctionnement de la plateforme, empêcher tout accès non autorisé, protéger les formulaires, diagnostiquer les erreurs, gérer les dysfonctionnements, améliorer la stabilité du service et prévenir toute utilisation inappropriée.",
+    "it": "Questi dati vengono utilizzati per mantenere sicura e funzionante la piattaforma, prevenire accessi non autorizzati, proteggere i moduli, diagnosticare errori, gestire malfunzionamenti, migliorare la stabilità del servizio e prevenire usi impropri."
+  },
+  "Questi strumenti possono essere utilizzati, ad esempio, per:": {
+    "de": "Diese Tools können beispielsweise verwendet werden, um:",
+    "en": "These tools can be used, for example, to:",
+    "es": "Estas herramientas se pueden utilizar, por ejemplo, para:",
+    "fr": "Ces outils peuvent être utilisés, par exemple, pour :",
+    "it": "Questi strumenti possono essere utilizzati, ad esempio, per:"
+  },
+  "Questi strumenti possono servire a migliorare il caricamento delle pagine, gestire alcune risorse tecniche, supportare funzionalità dell’app installabile e consentire una migliore esperienza d’uso.": {
+    "de": "Diese Tools können dazu beitragen, das Laden von Seiten zu verbessern, einige technische Ressourcen zu verwalten, installierbare App-Funktionen zu unterstützen und eine bessere Benutzererfahrung zu ermöglichen.",
+    "en": "These tools can help improve page loading, manage some technical resources, support installable app features, and enable a better user experience.",
+    "es": "Estas herramientas pueden ayudar a mejorar la carga de páginas, administrar algunos recursos técnicos, admitir funciones instalables de aplicaciones y permitir una mejor experiencia de usuario.",
+    "fr": "Ces outils peuvent aider à améliorer le chargement des pages, à gérer certaines ressources techniques, à prendre en charge les fonctionnalités d'applications installables et à permettre une meilleure expérience utilisateur.",
+    "it": "Questi strumenti possono servire a migliorare il caricamento delle pagine, gestire alcune risorse tecniche, supportare funzionalità dell’app installabile e consentire una migliore esperienza d’uso."
+  },
+  "Se in futuro dovessero essere introdotti strumenti di marketing, profilazione, statistiche avanzate non tecniche o servizi analoghi, la presente Cookie Policy sarà aggiornata e, se necessario, verrà richiesto il consenso dell’utente tramite apposito banner o pannello di preferenze.": {
+    "de": "Wenn in Zukunft Marketingtools, Profilerstellung, erweiterte nichttechnische Statistiken oder ähnliche Dienste eingeführt werden, wird diese Cookie-Richtlinie aktualisiert und gegebenenfalls die Zustimmung des Benutzers über ein bestimmtes Banner oder Einstellungsfeld eingeholt.",
+    "en": "If marketing tools, profiling, advanced non-technical statistics or similar services are introduced in the future, this Cookie Policy will be updated and, if necessary, the user's consent will be requested via a specific banner or preferences panel.",
+    "es": "Si en el futuro se introducen herramientas de marketing, elaboración de perfiles, estadísticas avanzadas no técnicas o servicios similares, esta Política de Cookies se actualizará y, si es necesario, se solicitará el consentimiento del usuario a través de un banner o panel de preferencias específico.",
+    "fr": "Si des outils de marketing, de profilage, de statistiques non techniques avancées ou des services similaires sont introduits à l'avenir, cette politique en matière de cookies sera mise à jour et, si nécessaire, le consentement de l'utilisateur sera demandé via une bannière spécifique ou un panneau de préférences.",
+    "it": "Se in futuro dovessero essere introdotti strumenti di marketing, profilazione, statistiche avanzate non tecniche o servizi analoghi, la presente Cookie Policy sarà aggiornata e, se necessario, verrà richiesto il consenso dell’utente tramite apposito banner o pannello di preferenze."
+  },
+  "Se l’utente sceglie di attivare notifiche push o funzionalità simili, il browser o il dispositivo possono generare dati tecnici necessari all’invio delle notifiche.": {
+    "de": "Wenn Sie Push-Benachrichtigungen oder ähnliche Funktionen aktivieren, generiert Ihr Browser oder Gerät möglicherweise technische Daten, die zum Versenden von Benachrichtigungen erforderlich sind.",
+    "en": "If you choose to enable push notifications or similar features, your browser or device may generate technical data necessary to send notifications.",
+    "es": "Si elige habilitar notificaciones automáticas o funciones similares, su navegador o dispositivo puede generar datos técnicos necesarios para enviar notificaciones.",
+    "fr": "Si vous choisissez d'activer les notifications push ou des fonctionnalités similaires, votre navigateur ou appareil peut générer des données techniques nécessaires à l'envoi de notifications.",
+    "it": "Se l’utente sceglie di attivare notifiche push o funzionalità simili, il browser o il dispositivo possono generare dati tecnici necessari all’invio delle notifiche."
+  },
+  "Sede operativa: Abbiategrasso (MI), Italia.": {
+    "de": "Operativer Hauptsitz: Abbiategrasso (MI), Italien.",
+    "en": "Operational headquarters: Abbiategrasso (MI), Italy.",
+    "es": "Sede operativa: Abbiategrasso (MI), Italia.",
+    "fr": "Siège opérationnel : Abbiategrasso (MI), Italie.",
+    "it": "Sede operativa: Abbiategrasso (MI), Italia."
+  },
+  "Strumenti simili possono essere utilizzati anche per memorizzare informazioni tecniche nel browser o nel dispositivo dell’utente, sempre nei limiti necessari al funzionamento del servizio.": {
+    "de": "Mit ähnlichen Tools können auch technische Informationen im Browser oder Gerät des Nutzers gespeichert werden, immer im Rahmen der für den Betrieb des Dienstes erforderlichen Grenzen.",
+    "en": "Similar tools can also be used to store technical information in the user's browser or device, always within the limits necessary for the operation of the service.",
+    "es": "También se pueden utilizar herramientas similares para almacenar información técnica en el navegador o dispositivo del usuario, siempre dentro de los límites necesarios para el funcionamiento del servicio.",
+    "fr": "Des outils similaires peuvent également être utilisés pour stocker des informations techniques dans le navigateur ou l'appareil de l'utilisateur, toujours dans les limites nécessaires au fonctionnement du service.",
+    "it": "Strumenti simili possono essere utilizzati anche per memorizzare informazioni tecniche nel browser o nel dispositivo dell’utente, sempre nei limiti necessari al funzionamento del servizio."
+  },
+  "Tali strumenti non sono utilizzati per finalità di profilazione pubblicitaria.": {
+    "de": "Diese Tools werden nicht für Werbeprofilierungszwecke verwendet.",
+    "en": "These tools are not used for advertising profiling purposes.",
+    "es": "Estas herramientas no se utilizan con fines de elaboración de perfiles publicitarios.",
+    "fr": "Ces outils ne sont pas utilisés à des fins de profilage publicitaire.",
+    "it": "Tali strumenti non sono utilizzati per finalità di profilazione pubblicitaria."
+  },
+  "Termini di utilizzo": {
+    "de": "Nutzungsbedingungen",
+    "en": "Terms of Use",
+    "es": "Términos de uso",
+    "fr": "Conditions d'utilisation",
+    "it": "Termini di utilizzo"
+  },
+  "Tra i fornitori tecnici possono rientrare, a titolo esemplificativo, servizi di hosting e database, servizi per l’invio di email transazionali, sistemi di pagamento come Stripe e altri servizi necessari al funzionamento tecnico della piattaforma.": {
+    "de": "Zu den technischen Anbietern zählen beispielsweise Hosting- und Datenbankdienste, Dienste zum Versand von Transaktions-E-Mails, Zahlungssysteme wie Stripe und weitere Dienste, die für den technischen Betrieb der Plattform erforderlich sind.",
+    "en": "Technical suppliers may include, by way of example, hosting and database services, services for sending transactional emails, payment systems such as Stripe and other services necessary for the technical functioning of the platform.",
+    "es": "Los proveedores técnicos pueden incluir, a modo de ejemplo, servicios de hosting y bases de datos, servicios de envío de correos electrónicos transaccionales, sistemas de pago como Stripe y otros servicios necesarios para el funcionamiento técnico de la plataforma.",
+    "fr": "Les fournisseurs techniques peuvent inclure, à titre d'exemple, des services d'hébergement et de base de données, des services d'envoi d'e-mails transactionnels, des systèmes de paiement tels que Stripe et d'autres services nécessaires au fonctionnement technique de la plateforme.",
+    "it": "Tra i fornitori tecnici possono rientrare, a titolo esemplificativo, servizi di hosting e database, servizi per l’invio di email transazionali, sistemi di pagamento come Stripe e altri servizi necessari al funzionamento tecnico della piattaforma."
+  },
+  "Versione: mylocalcare_privacy_termini_2026_v1": {
+    "de": "Version: mylocalcare_privacy_termini_2026_v1",
+    "en": "Version: mylocalcare_privacy_termini_2026_v1",
+    "es": "Versión: mylocalcare_privacy_termini_2026_v1",
+    "fr": "Version : mylocalcare_privacy_termini_2026_v1",
+    "it": "Versione: mylocalcare_privacy_termini_2026_v1"
+  },
+  "adempiere a eventuali obblighi di legge, amministrativi o contabili.": {
+    "de": "Erfüllung gesetzlicher, administrativer oder buchhalterischer Verpflichtungen.",
+    "en": "fulfill any legal, administrative or accounting obligations.",
+    "es": "cumplir con cualquier obligación legal, administrativa o contable.",
+    "fr": "remplir toutes obligations légales, administratives ou comptables.",
+    "it": "adempiere a eventuali obblighi di legge, amministrativi o contabili."
+  },
+  "adempimento di obblighi legali, fiscali, amministrativi o contabili, quando applicabile;": {
+    "de": "gegebenenfalls Erfüllung gesetzlicher, steuerlicher, administrativer oder buchhalterischer Verpflichtungen;",
+    "en": "fulfillment of legal, fiscal, administrative or accounting obligations, when applicable;",
+    "es": "cumplimiento de obligaciones legales, fiscales, administrativas o contables, cuando corresponda;",
+    "fr": "le respect d’obligations légales, fiscales, administratives ou comptables, le cas échéant ;",
+    "it": "adempimento di obblighi legali, fiscali, amministrativi o contabili, quando applicabile;"
+  },
+  "alcuni dati possono essere conservati più a lungo se necessario per obblighi di legge, tutela dei diritti, prevenzione abusi o gestione di controversie.": {
+    "de": "Einige Daten können länger aufbewahrt werden, wenn dies für gesetzliche Verpflichtungen, den Schutz von Rechten, die Verhinderung von Missbrauch oder die Beilegung von Streitigkeiten erforderlich ist.",
+    "en": "some data may be retained for longer if necessary for legal obligations, protection of rights, prevention of abuse or management of disputes.",
+    "es": "Algunos datos pueden conservarse durante más tiempo si es necesario para cumplir con obligaciones legales, protección de derechos, prevención de abusos o gestión de disputas.",
+    "fr": "certaines données pourront être conservées plus longtemps si cela est nécessaire pour des obligations légales, la protection des droits, la prévention d'abus ou la gestion des litiges.",
+    "it": "alcuni dati possono essere conservati più a lungo se necessario per obblighi di legge, tutela dei diritti, prevenzione abusi o gestione di controversie."
+  },
+  "consenso o autorizzazione dell’utente, quando necessario, ad esempio per eventuali notifiche push o funzionalità facoltative attivate dall’utente.": {
+    "de": "Zustimmung oder Autorisierung des Benutzers, sofern erforderlich, zum Beispiel für vom Benutzer aktivierte Push-Benachrichtigungen oder optionale Funktionen.",
+    "en": "user consent or authorization, when necessary, for example for any push notifications or optional features activated by the user.",
+    "es": "consentimiento o autorización del usuario, cuando sea necesario, por ejemplo, para cualquier notificación push o función opcional activada por el usuario.",
+    "fr": "le consentement ou l'autorisation de l'utilisateur, lorsque cela est nécessaire, par exemple pour toute notification push ou fonctionnalité facultative activée par l'utilisateur.",
+    "it": "consenso o autorizzazione dell’utente, quando necessario, ad esempio per eventuali notifiche push o funzionalità facoltative attivate dall’utente."
+  },
+  "consentire il corretto funzionamento della PWA e del service worker, ove presenti.": {
+    "de": "Ermöglichen Sie die ordnungsgemäße Funktion der PWA und des Servicemitarbeiters, sofern vorhanden.",
+    "en": "allow the correct functioning of the PWA and the service worker, where present.",
+    "es": "Permitir el correcto funcionamiento de la PWA y del trabajador de servicio, cuando esté presente.",
+    "fr": "permettre le bon fonctionnement de la PWA et du technicien de service, le cas échéant.",
+    "it": "consentire il corretto funzionamento della PWA e del service worker, ove presenti."
+  },
+  "consentire la registrazione, l’accesso e la gestione dell’account;": {
+    "de": "Registrierung, Zugriff und Kontoverwaltung ermöglichen;",
+    "en": "allow registration, access and account management;",
+    "es": "permitir el registro, acceso y gestión de cuentas;",
+    "fr": "permettre l'inscription, l'accès et la gestion des comptes ;",
+    "it": "consentire la registrazione, l’accesso e la gestione dell’account;"
+  },
+  "consentire l’accesso alla piattaforma;": {
+    "de": "den Zugriff auf die Plattform ermöglichen;",
+    "en": "allow access to the platform;",
+    "es": "permitir el acceso a la plataforma;",
+    "fr": "permettre l'accès à la plateforme ;",
+    "it": "consentire l’accesso alla piattaforma;"
+  },
+  "creare e gestire l’account utente;": {
+    "de": "das Benutzerkonto erstellen und verwalten;",
+    "en": "create and manage the user account;",
+    "es": "crear y administrar la cuenta de usuario;",
+    "fr": "créer et gérer le compte utilisateur ;",
+    "it": "creare e gestire l’account utente;"
+  },
+  "esecuzione del servizio richiesto dall’utente, per registrazione, accesso, profilo, annunci, chat, recensioni e funzionalità della piattaforma;": {
+    "de": "Ausführung des vom Benutzer angeforderten Dienstes für Registrierung, Zugriff, Profil, Ankündigungen, Chat, Bewertungen und Plattformfunktionalität;",
+    "en": "execution of the service requested by the user, for registration, access, profile, announcements, chat, reviews and platform functionality;",
+    "es": "ejecución del servicio solicitado por el usuario, para registro, acceso, perfil, anuncios, chat, reseñas y funcionalidad de la plataforma;",
+    "fr": "exécution du service demandé par l'utilisateur, pour l'inscription, l'accès, le profil, les annonces, le chat, les avis et les fonctionnalités de la plateforme ;",
+    "it": "esecuzione del servizio richiesto dall’utente, per registrazione, accesso, profilo, annunci, chat, recensioni e funzionalità della piattaforma;"
+  },
+  "gestire aree riservate, dashboard, impostazioni e funzionalità interne;": {
+    "de": "reservierte Bereiche, Dashboards, Einstellungen und interne Funktionen verwalten;",
+    "en": "manage reserved areas, dashboards, settings and internal features;",
+    "es": "gestionar áreas reservadas, paneles de control, configuraciones y funciones internas;",
+    "fr": "gérer les zones réservées, les tableaux de bord, les paramètres et les fonctionnalités internes ;",
+    "it": "gestire aree riservate, dashboard, impostazioni e funzionalità interne;"
+  },
+  "gestire messaggi, chat, notifiche, recensioni e interazioni interne alla piattaforma;": {
+    "de": "Nachrichten, Chats, Benachrichtigungen, Bewertungen und Interaktionen innerhalb der Plattform verwalten;",
+    "en": "manage messages, chats, notifications, reviews and interactions within the platform;",
+    "es": "gestionar mensajes, chats, notificaciones, reseñas e interacciones dentro de la plataforma;",
+    "fr": "gérer les messages, les chats, les notifications, les avis et les interactions au sein de la plateforme ;",
+    "it": "gestire messaggi, chat, notifiche, recensioni e interazioni interne alla piattaforma;"
+  },
+  "gestire servizi attivati, acquisti e pagamenti effettuati tramite Stripe;": {
+    "de": "Verwalten Sie aktivierte Dienste, Käufe und Zahlungen über Stripe.",
+    "en": "manage activated services, purchases and payments made via Stripe;",
+    "es": "gestionar servicios activados, compras y pagos realizados a través de Stripe;",
+    "fr": "gérer les services activés, les achats et les paiements effectués via Stripe ;",
+    "it": "gestire servizi attivati, acquisti e pagamenti effettuati tramite Stripe;"
+  },
+  "i dati dell’account vengono conservati finché l’account resta attivo o necessario alla gestione del servizio;": {
+    "de": "Die Kontodaten werden so lange aufbewahrt, wie das Konto aktiv oder für die Verwaltung des Dienstes erforderlich bleibt.",
+    "en": "the account data is retained as long as the account remains active or necessary for the management of the service;",
+    "es": "los datos de la cuenta se conservan mientras la cuenta permanezca activa o sea necesaria para la gestión del servicio;",
+    "fr": "les données du compte sont conservées aussi longtemps que le compte reste actif ou nécessaire à la gestion du service ;",
+    "it": "i dati dell’account vengono conservati finché l’account resta attivo o necessario alla gestione del servizio;"
+  },
+  "i dati pubblicati volontariamente in profili e annunci restano visibili finché l’utente li mantiene pubblicati o finché l’account/annuncio resta attivo;": {
+    "de": "Die freiwillig in Profilen und Anzeigen veröffentlichten Daten bleiben sichtbar, solange der Nutzer sie veröffentlicht oder das Konto/die Anzeige aktiv bleibt;",
+    "en": "the data voluntarily published in profiles and advertisements remain visible as long as the user keeps them published or as long as the account/advertisement remains active;",
+    "es": "los datos publicados voluntariamente en perfiles y anuncios permanecen visibles mientras el usuario los mantenga publicados o mientras la cuenta/anuncio permanezca activo;",
+    "fr": "les données volontairement publiées dans les profils et les annonces restent visibles tant que l'utilisateur les maintient publiées ou tant que le compte/l'annonce reste actif ;",
+    "it": "i dati pubblicati volontariamente in profili e annunci restano visibili finché l’utente li mantiene pubblicati o finché l’account/annuncio resta attivo;"
+  },
+  "i dati relativi ad acquisti, pagamenti e servizi attivati possono essere conservati per obblighi amministrativi, contabili o fiscali;": {
+    "de": "Daten zu Käufen, Zahlungen und aktivierten Diensten können für administrative, buchhalterische oder steuerliche Zwecke gespeichert werden;",
+    "en": "data relating to purchases, payments and activated services may be retained for administrative, accounting or tax obligations;",
+    "es": "los datos relativos a compras, pagos y servicios activados podrán conservarse para obligaciones administrativas, contables o fiscales;",
+    "fr": "les données relatives aux achats, aux paiements et aux services activés pourront être conservées pour des obligations administratives, comptables ou fiscales ;",
+    "it": "i dati relativi ad acquisti, pagamenti e servizi attivati possono essere conservati per obblighi amministrativi, contabili o fiscali;"
+  },
+  "i log tecnici e di sicurezza vengono conservati per il tempo necessario alla sicurezza, manutenzione e protezione della piattaforma;": {
+    "de": "Die technischen Protokolle und Sicherheitsprotokolle werden so lange aufbewahrt, wie es für die Sicherheit, Wartung und den Schutz der Plattform erforderlich ist.",
+    "en": "the technical and security logs are kept for the time necessary for the safety, maintenance and protection of the platform;",
+    "es": "los registros técnicos y de seguridad se conservan durante el tiempo necesario para la seguridad, mantenimiento y protección de la plataforma;",
+    "fr": "les journaux techniques et de sécurité sont conservés pendant la durée nécessaire à la sécurité, à l'entretien et à la protection de la plateforme ;",
+    "it": "i log tecnici e di sicurezza vengono conservati per il tempo necessario alla sicurezza, manutenzione e protezione della piattaforma;"
+  },
+  "inviare comunicazioni tecniche o di servizio;": {
+    "de": "technische Mitteilungen oder Servicemitteilungen versenden;",
+    "en": "send technical or service communications;",
+    "es": "enviar comunicaciones técnicas o de servicio;",
+    "fr": "envoyer des communications techniques ou de service ;",
+    "it": "inviare comunicazioni tecniche o di servizio;"
+  },
+  "legittimo interesse del titolare, per sicurezza, prevenzione abusi, protezione della piattaforma, gestione tecnica, log e difesa da utilizzi impropri;": {
+    "de": "berechtigtes Interesse des Eigentümers an Sicherheit, Missbrauchsprävention, Schutz der Plattform, technischer Verwaltung, Protokollen und Abwehr missbräuchlicher Nutzung;",
+    "en": "legitimate interest of the owner, for security, prevention of abuse, protection of the platform, technical management, logs and defense against improper use;",
+    "es": "interés legítimo del titular, por seguridad, prevención de abusos, protección de la plataforma, gestión técnica, registros y defensa contra usos indebidos;",
+    "fr": "intérêt légitime du propriétaire, pour la sécurité, la prévention des abus, la protection de la plateforme, la gestion technique, les journaux et la défense contre une utilisation inappropriée ;",
+    "it": "legittimo interesse del titolare, per sicurezza, prevenzione abusi, protezione della piattaforma, gestione tecnica, log e difesa da utilizzi impropri;"
+  },
+  "mantenere attiva la sessione di login dell’utente;": {
+    "de": "die Anmeldesitzung des Benutzers aktiv halten;",
+    "en": "keep the user's login session active;",
+    "es": "mantener activa la sesión de inicio de sesión del usuario;",
+    "fr": "garder la session de connexion de l'utilisateur active ;",
+    "it": "mantenere attiva la sessione di login dell’utente;"
+  },
+  "mantenere preferenze tecniche o stati temporanei necessari al funzionamento del sito;": {
+    "de": "Aufrechterhaltung technischer Einstellungen oder vorübergehender Zustände, die für das Funktionieren der Website erforderlich sind;",
+    "en": "maintain technical preferences or temporary states necessary for the functioning of the site;",
+    "es": "mantener preferencias técnicas o estados temporales necesarios para el funcionamiento del sitio;",
+    "fr": "maintenir les préférences techniques ou les états temporaires nécessaires au fonctionnement du site ;",
+    "it": "mantenere preferenze tecniche o stati temporanei necessari al funzionamento del sito;"
+  },
+  "mantenere sicura e funzionante la piattaforma;": {
+    "de": "die Plattform sicher und funktionsfähig halten;",
+    "en": "keep the platform safe and functioning;",
+    "es": "mantener la plataforma segura y en funcionamiento;",
+    "fr": "assurer la sécurité et le bon fonctionnement de la plateforme ;",
+    "it": "mantenere sicura e funzionante la piattaforma;"
+  },
+  "mostrare profili, annunci e informazioni pubblicate volontariamente dagli utenti;": {
+    "de": "Profile, Anzeigen und Informationen anzeigen, die Benutzer freiwillig veröffentlichen;",
+    "en": "show profiles, advertisements and information voluntarily published by users;",
+    "es": "mostrar perfiles, anuncios e información publicada voluntariamente por los usuarios;",
+    "fr": "afficher des profils, des publicités et des informations volontairement publiées par les utilisateurs ;",
+    "it": "mostrare profili, annunci e informazioni pubblicate volontariamente dagli utenti;"
+  },
+  "prevenire abusi, usi impropri, frodi, accessi non autorizzati o violazioni dei termini di utilizzo;": {
+    "de": "Missbrauch, Missbrauch, Betrug, unbefugten Zugriff oder Verstöße gegen die Nutzungsbedingungen verhindern;",
+    "en": "prevent abuse, misuse, fraud, unauthorized access or violations of the terms of use;",
+    "es": "prevenir abuso, mal uso, fraude, acceso no autorizado o violaciones de los términos de uso;",
+    "fr": "prévenir les abus, les utilisations abusives, les fraudes, les accès non autorisés ou les violations des conditions d'utilisation ;",
+    "it": "prevenire abusi, usi impropri, frodi, accessi non autorizzati o violazioni dei termini di utilizzo;"
+  },
+  "proteggere i moduli tramite token di sicurezza CSRF;": {
+    "de": "Formulare mit CSRF-Sicherheitstoken schützen;",
+    "en": "protect forms using CSRF security tokens;",
+    "es": "proteger formularios utilizando tokens de seguridad CSRF;",
+    "fr": "protéger les formulaires à l'aide de jetons de sécurité CSRF ;",
+    "it": "proteggere i moduli tramite token di sicurezza CSRF;"
+  },
+  "proteggere la piattaforma da abusi, accessi non autorizzati o utilizzi impropri;": {
+    "de": "die Plattform vor Missbrauch, unbefugtem Zugriff oder unsachgemäßer Nutzung schützen;",
+    "en": "protect the platform from abuse, unauthorized access or improper use;",
+    "es": "proteger la plataforma contra abuso, acceso no autorizado o uso indebido;",
+    "fr": "protéger la plateforme contre les abus, les accès non autorisés ou les utilisations inappropriées ;",
+    "it": "proteggere la piattaforma da abusi, accessi non autorizzati o utilizzi impropri;"
+  },
+  "verificare l’indirizzo email;": {
+    "de": "Verifizieren Sie Ihre E-Mail-Adresse.",
+    "en": "verify your email address;",
+    "es": "verificar su dirección de correo electrónico;",
+    "fr": "vérifiez votre adresse e-mail ;",
+    "it": "verificare l’indirizzo email;"
+  },
+  "È inoltre vietato tentare di accedere senza autorizzazione ad account, dati, sistemi, chat, aree riservate, funzionalità amministrative o infrastrutture tecniche della piattaforma.": {
+    "de": "Es ist auch verboten, unbefugt auf Konten, Daten, Systeme, Chats, reservierte Bereiche, Verwaltungsfunktionen oder technische Infrastrukturen der Plattform zuzugreifen.",
+    "en": "It is also forbidden to attempt to access without authorization the accounts, data, systems, chats, reserved areas, administrative functions or technical infrastructures of the platform.",
+    "es": "También está prohibido intentar acceder sin autorización a cuentas, datos, sistemas, chats, áreas reservadas, funciones administrativas o infraestructuras técnicas de la plataforma.",
+    "fr": "Il est également interdit de tenter d'accéder sans autorisation aux comptes, données, systèmes, chats, espaces réservés, fonctions administratives ou infrastructures techniques de la plateforme.",
+    "it": "È inoltre vietato tentare di accedere senza autorizzazione ad account, dati, sistemi, chat, aree riservate, funzionalità amministrative o infrastrutture tecniche della piattaforma."
+  },
+  "È vietato utilizzare MyLocalCare per finalità illecite, truffaldine, offensive, discriminatorie, moleste, pericolose, ingannevoli o non coerenti con lo scopo della piattaforma.": {
+    "de": "Es ist verboten, MyLocalCare für rechtswidrige, betrügerische, beleidigende, diskriminierende, belästigende, gefährliche, irreführende oder mit dem Zweck der Plattform unvereinbare Zwecke zu nutzen.",
+    "en": "It is prohibited to use MyLocalCare for illicit, fraudulent, offensive, discriminatory, harassing, dangerous, deceptive or inconsistent purposes with the purpose of the platform.",
+    "es": "Está prohibido utilizar MyLocalCare con fines ilícitos, fraudulentos, ofensivos, discriminatorios, acosadores, peligrosos, engañosos o inconsistentes con el propósito de la plataforma.",
+    "fr": "Il est interdit d'utiliser MyLocalCare à des fins illicites, frauduleuses, offensantes, discriminatoires, harcelantes, dangereuses, trompeuses ou incompatibles avec l'objet de la plateforme.",
+    "it": "È vietato utilizzare MyLocalCare per finalità illecite, truffaldine, offensive, discriminatorie, moleste, pericolose, ingannevoli o non coerenti con lo scopo della piattaforma."
+  }
+}

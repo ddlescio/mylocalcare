@@ -102,22 +102,22 @@
     width: min(100% - 2rem, 78rem);
     display: flex;
     justify-content: flex-end;
-    margin: 0 auto 0.8rem;
+    margin: 0 auto 0.42rem;
   }
 
   .home-language-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.52rem;
-    min-height: 2.65rem;
-    padding: 0.5rem 0.82rem;
+    justify-content: center;
+    gap: 0.18rem;
+    width: 3.15rem;
+    min-height: 2.2rem;
+    padding: 0.34rem 0.42rem;
     border: 1px solid rgba(147, 197, 253, 0.55);
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.94);
     box-shadow: 0 12px 30px rgba(37, 99, 235, 0.11);
     color: #334155;
-    font-size: 0.82rem;
-    font-weight: 850;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
@@ -129,17 +129,8 @@
     box-shadow: 0 14px 34px rgba(37, 99, 235, 0.16);
   }
 
-  .home-language-flag { font-size: 1.12rem; line-height: 1; }
-
-  .home-language-code {
-    padding: 0.18rem 0.46rem;
-    border-radius: 999px;
-    background: #eff6ff;
-    color: #1d4ed8;
-    font-size: 0.68rem;
-    font-weight: 900;
-    letter-spacing: 0.035em;
-  }
+  .home-language-flag { font-size: 1.08rem; line-height: 1; }
+  .home-language-arrow { color: #64748b; font-size: 0.62rem; line-height: 1; }
 
   .home-hero-premium,
   .home-grid-premium {
@@ -735,9 +726,7 @@
             data-language-open
             aria-label="{{ tr('language.open') }}">
       <span class="home-language-flag" aria-hidden="true">{{ current_language.flag }}</span>
-      <span>{{ tr('language.open') }}</span>
-      <span class="home-language-code">{{ current_language.short }}</span>
-      <span aria-hidden="true">⌄</span>
+      <span class="home-language-arrow" aria-hidden="true">▾</span>
     </button>
   </div>
 

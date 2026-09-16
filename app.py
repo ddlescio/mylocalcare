@@ -1354,11 +1354,7 @@ def localize_interface_response(response):
 
     # L'area amministrativa resta intenzionalmente in italiano: il selettore
     # lingua riguarda l'esperienza pubblica e quella degli utenti.
-    if request.path.startswith("/admin") or request.path in {
-        "/privacy",
-        "/termini",
-        "/cookie-policy",
-    }:
+    if request.path.startswith("/admin"):
         return response
 
     language = get_interface_language()

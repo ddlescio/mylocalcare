@@ -3809,6 +3809,7 @@ function mostraCaricamentoVisibilita(servizi) {
   if (box) {
     box.className = "relative bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600";
     box.textContent = testoVisibilita("Caricamento stato visibilità…");
+    box.dataset.visibilityLoading = "1";
   }
 
   servizi.forEach(codice => {
@@ -3827,8 +3828,20 @@ function mostraCaricamentoVisibilita(servizi) {
 function mostraErroreStatoVisibilita() {
   const box = document.getElementById("box-visibilita-stato");
   if (!box) return;
+  delete box.dataset.visibilityLoading;
   box.className = "relative bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800";
   box.textContent = testoVisibilita("Impossibile caricare lo stato dei servizi. Riprova tra poco.");
+}
+
+function aggiornaRiepilogoVisibilita(loadToken = VISIBILITA_LOAD_TOKEN) {
+  if (loadToken !== VISIBILITA_LOAD_TOKEN) return;
+
+  try {
+    aggiornaStatoPacchetti();
+    aggiornaStatoVisibilita();
+  } catch (errore) {
+    console.error("Errore aggiornamento riepilogo visibilità", errore);
+  }
 }
 </script>
 
@@ -3852,7 +3865,25 @@ function mostraErroreStatoVisibilita() {
       "visibilita_premium"
     ];
 
+    servizi.forEach(codice => {
+      statoServizi[codice] = {
+        attivo: false,
+        stato: "non_attivo",
+        data_inizio: null,
+        data_fine: null,
+        permanente: false
+      };
+    });
+
     mostraCaricamentoVisibilita(servizi);
+
+    const watchdogId = window.setTimeout(() => {
+      if (loadToken !== VISIBILITA_LOAD_TOKEN) return;
+      const box = document.getElementById("box-visibilita-stato");
+      if (box?.dataset.visibilityLoading === "1") {
+        mostraErroreStatoVisibilita();
+      }
+    }, 4000);
 
     const risultati = await Promise.allSettled(
       servizi.map(codice =>
@@ -3860,13 +3891,11 @@ function mostraErroreStatoVisibilita() {
       )
     );
 
+    window.clearTimeout(watchdogId);
+
     if (loadToken !== VISIBILITA_LOAD_TOKEN) return;
 
-    try {
-      aggiornaStatoPacchetti();
-    } catch (errore) {
-      console.error("Errore aggiornamento pacchetti", errore);
-    }
+    aggiornaRiepilogoVisibilita(loadToken);
 
     const almenoUnoCaricato = risultati.some(
       risultato => risultato.status === "fulfilled" && risultato.value === true
@@ -4238,11 +4267,14 @@ async function caricaStatoServizio(annuncioId, codice, loadToken = VISIBILITA_LO
       }
     }
 
+    aggiornaRiepilogoVisibilita(loadToken);
+
     return res.ok;
   } catch (e) {
     console.error("Errore stato servizio", codice, e);
     if (loadToken === VISIBILITA_LOAD_TOKEN) {
       statoServizi[codice] = { attivo: false };
+      aggiornaRiepilogoVisibilita(loadToken);
     }
     return false;
   } finally {
@@ -4369,6 +4401,7 @@ function aggiornaStatoPacchetti() {
 function aggiornaStatoVisibilita() {
   const box = document.getElementById("box-visibilita-stato");
   if (!box) return;
+  delete box.dataset.visibilityLoading;
 
   const attivo = c => statoServizi[c]?.attivo === true;
 
