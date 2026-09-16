@@ -11,26 +11,23 @@
 
         <div class="min-w-0">
           <div class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-blue-700 border border-blue-100 mb-2">
-            Foto profilo sicure
+            {{ tr('gallery.safe_photos') }}
           </div>
 
           <h4 class="text-sm sm:text-base font-extrabold text-slate-900 leading-snug">
-            Non inserire contatti nelle immagini
+            {{ tr('gallery.no_contacts_title') }}
           </h4>
 
           <p class="mt-1.5 text-sm text-slate-600 leading-relaxed">
-            Le foto della galleria servono per presentarti meglio, ma non devono contenere
-            <strong>numeri di telefono</strong>, <strong>email</strong>, <strong>WhatsApp</strong>,
-            profili social, QR code o altri recapiti diretti.
+            {{ tr('gallery.no_contacts_body') }}
           </p>
 
           <p class="mt-2 text-sm text-slate-600 leading-relaxed">
-            Per i contatti esiste una sezione dedicata del profilo.
+            {{ tr('gallery.contacts_section') }}
           </p>
 
           <div class="mt-3 rounded-xl bg-white/80 border border-blue-100 px-3 py-2 text-xs text-slate-500 leading-relaxed">
-            Le immagini caricate vengono verificate prima della pubblicazione. Se contengono recapiti o informazioni non adatte,
-            potrebbero non essere approvate.
+            {{ tr('gallery.review_notice') }}
           </div>
         </div>
       </div>
@@ -131,24 +128,24 @@
 
           <div id="upload-status-galleria"
                class="hidden rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm px-3 py-2">
-            ⏳ Caricamento foto in corso... Attendi senza chiudere la pagina.
+            ⏳ {{ tr('gallery.uploading') }}
           </div>
 
         </div>
 
         <p class="text-xs text-gray-500 mt-2">
-          Per eliminare una foto, premi <b>Elimina</b> sulla foto interessata.
+          {{ tr('gallery.delete_hint') }}
         </p>
       {% endif %}
     </form>
 
   {% else %}
   {% if not pubblico %}
-    <p class="text-gray-500 mb-4">Nessuna foto in galleria.</p>
+    <p class="text-gray-500 mb-4">{{ tr('gallery.empty') }}</p>
     <form id="form-galleria-empty" method="post" action="{{ url_for('utente_update_galleria') }}" enctype="multipart/form-data"
           class="flex flex-col gap-3">
       <label class="text-sm text-gray-700">
-        📸 Aggiungi foto (massimo {{ max_foto }}):
+        📸 {{ tr('gallery.add_photos') }}:
         <input
           type="file"
           name="foto_galleria"
@@ -162,7 +159,7 @@
 
       <div id="upload-status-galleria"
            class="hidden rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm px-3 py-2">
-        ⏳ Caricamento foto in corso... Attendi senza chiudere la pagina.
+        ⏳ {{ tr('gallery.uploading') }}
       </div>
     </form>
   {% else %}
@@ -247,6 +244,17 @@
 <!-- 🧠 SCRIPT DI CONTROLLO -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  const copy = {
+    operationRunning: {{ tr('gallery.operation_running')|tojson }},
+    operationAlreadyRunning: {{ tr('gallery.operation_already_running')|tojson }},
+    deleteConfirm: {{ tr('gallery.delete_confirm')|tojson }},
+    uploadRunningShort: {{ tr('gallery.upload_running_short')|tojson }},
+    uploadRunning: {{ tr('gallery.upload_running')|tojson }},
+    limitReached: {{ tr('gallery.limit_reached')|tojson }},
+    deleteBeforeAdding: {{ tr('gallery.delete_before_adding')|tojson }},
+    maximumFour: {{ tr('gallery.maximum_four')|tojson }},
+    currentCount: {{ tr('gallery.current_count', count='__COUNT__')|tojson }}
+  };
   const inputFoto = document.getElementById("input-foto");
   const alertBox = document.getElementById("alert-galleria");
   const alertText = document.getElementById("alert-galleria-text");
@@ -314,20 +322,20 @@ document.addEventListener("DOMContentLoaded", () => {
       uploadStatus.classList.remove("hidden");
     }
 
-    mostraAlert("info", "⏳ Operazione in corso... Attendi senza chiudere la pagina.");
+    mostraAlert("info", `⏳ ${copy.operationRunning}`);
   }
 
   removeButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       if (uploadInCorso) {
-        mostraAlert("info", "⏳ È già in corso un'operazione. Attendi il completamento.");
+        mostraAlert("info", `⏳ ${copy.operationAlreadyRunning}`);
         return;
       }
 
       const foto = btn.dataset.foto;
       if (!foto) return;
 
-      const conferma = confirm("Vuoi eliminare questa foto dalla galleria?");
+      const conferma = confirm(copy.deleteConfirm);
       if (!conferma) return;
 
       formGalleria.querySelectorAll('input[name="remove"][data-auto-remove="1"]').forEach(el => el.remove());
@@ -355,7 +363,7 @@ document.addEventListener("DOMContentLoaded", () => {
   inputFoto.addEventListener("click", (e) => {
     if (uploadInCorso) {
       e.preventDefault();
-      mostraAlert("info", "⏳ È già in corso un caricamento. Attendi qualche secondo.");
+      mostraAlert("info", `⏳ ${copy.uploadRunningShort}`);
       return;
     }
 
@@ -363,7 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       mostraAlert(
         "warning",
-        "📸 Hai raggiunto il limite massimo di 4 foto.<br>Per aggiungerne di nuove, elimina prima una foto."
+        `📸 ${copy.limitReached}<br>${copy.deleteBeforeAdding}`
       );
     }
   });
@@ -371,7 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
   inputFoto.addEventListener("change", (e) => {
     if (uploadInCorso) {
       inputFoto.value = "";
-      mostraAlert("info", "⏳ È già in corso un caricamento. Attendi il completamento.");
+      mostraAlert("info", `⏳ ${copy.uploadRunning}`);
       return;
     }
 
@@ -385,7 +393,7 @@ document.addEventListener("DOMContentLoaded", () => {
       inputFoto.value = "";
       mostraAlert(
         "warning",
-        `📸 Puoi avere massimo ${maxFoto} foto in galleria.<br>Quelle attuali: ${fotoEsistenti}. Elimina prima una foto.`
+        `📸 ${copy.maximumFour}<br>${copy.currentCount.replace("__COUNT__", String(fotoEsistenti))} ${copy.deleteBeforeAdding}`
       );
       return;
     }

@@ -249,14 +249,16 @@
   <!-- 🖼️ MODALE FOTO PROFILO PUBBLICA OTTIMIZZATA PER MOBILE -->
   <div id="modaleFotoProfilo" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center hidden"
        role="dialog" aria-modal="true" aria-label="Foto profilo ingrandita">
-    <div class="relative flex items-center justify-center w-full h-full px-3 pt-24 pb-5 sm:p-8">
+    <div class="relative flex items-center justify-center w-full h-full px-3 pt-24 pb-5 sm:p-8"
+         data-profile-photo-stage>
       <img id="fotoProfiloGrande" src="" alt="Foto profilo ingrandita"
            class="max-w-full max-h-full object-contain rounded-2xl shadow-2xl transition-all duration-300 scale-95 opacity-0" />
       <button id="chiudiModaleFoto"
               type="button"
               aria-label="Chiudi foto profilo"
-              class="w-11 h-11 bg-slate-900/70 hover:bg-slate-900 text-white border border-white/25 rounded-full shadow-lg text-lg font-semibold transition">
-        ✕
+              class="transition">
+        <span aria-hidden="true">✕</span>
+        <span>Chiudi</span>
       </button>
     </div>
   </div>
@@ -2199,10 +2201,37 @@ nav::before {
 }
 
 #chiudiModaleFoto {
-  position: absolute;
-  z-index: 2;
-  top: calc(.75rem + env(safe-area-inset-top, 0px));
+  position: fixed;
+  z-index: 10002;
+  top: calc(4.7rem + env(safe-area-inset-top, 0px));
   right: max(.85rem, env(safe-area-inset-right, 0px));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-width: 6.4rem;
+  min-height: 2.75rem;
+  padding: .58rem .9rem;
+  border: 1px solid rgba(255,255,255,.68);
+  border-radius: 999px;
+  background: rgba(255,255,255,.95);
+  color: #0f172a;
+  box-shadow: 0 16px 38px rgba(0,0,0,.34);
+  font-size: .82rem;
+  font-weight: 900;
+  line-height: 1;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  cursor: pointer;
+}
+
+#chiudiModaleFoto:hover,
+#chiudiModaleFoto:focus-visible {
+  background: #fff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  outline: none;
+  transform: translateY(-1px);
 }
 
 @keyframes fadeInModal {
@@ -5862,8 +5891,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const modal = document.getElementById("modaleFotoProfilo");
   const imgGrande = document.getElementById("fotoProfiloGrande");
   const chiudi = document.getElementById("chiudiModaleFoto");
+  const stage = modal?.querySelector("[data-profile-photo-stage]");
+
+  const chiudiFotoProfilo = () => {
+    if (!modal || modal.classList.contains("hidden")) return;
+    imgGrande?.classList.remove("animate-in");
+    modal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden", "modal-open");
+    imgGrande?.removeAttribute("src");
+    img?.focus?.({ preventScroll: true });
+  };
 
   if (img) {
+    img.setAttribute("tabindex", "0");
+    img.setAttribute("role", "button");
+
     img.addEventListener("click", () => {
       imgGrande.classList.remove("animate-in"); // reset animazione
       imgGrande.src = img.src;
@@ -5875,31 +5917,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Attiva animazione solo dopo apertura effettiva
       setTimeout(() => imgGrande.classList.add("animate-in"), 50);
+      chiudi?.focus({ preventScroll: true });
+    });
+
+    img.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        img.click();
+      }
     });
   }
 
-  if (chiudi) {
-    chiudi.addEventListener("click", () => {
-      imgGrande.classList.remove("animate-in");
-      modal.classList.add("hidden");
-      document.body.classList.remove("overflow-hidden", "modal-open");
-      imgGrande.removeAttribute("src");
-    });
-  }
+  chiudi?.addEventListener("click", chiudiFotoProfilo);
 
   modal?.addEventListener("click", (e) => {
-    if (e.target === modal) chiudi.click();
+    if (e.target === modal || e.target === stage) chiudiFotoProfilo();
   });
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) {
-      chiudi?.click();
+      chiudiFotoProfilo();
     }
   });
 });
 </script>
 <script>
 let ANNUNCIO_ID_CORRENTE = null;
+let VISIBILITA_LOAD_TOKEN = 0;
+
+function testoVisibilita(testo) {
+  return typeof window.mlcTr === "function" ? window.mlcTr(testo) : testo;
+}
+
+function mostraCaricamentoVisibilita(servizi) {
+  const box = document.getElementById("box-visibilita-stato");
+  if (box) {
+    box.className = "relative bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600";
+    box.textContent = testoVisibilita("Caricamento stato visibilità…");
+  }
+
+  servizi.forEach(codice => {
+    const badge = document.getElementById(`badge-${codice}`);
+    const info = document.getElementById(`info-${codice}`);
+    const btn = document.getElementById(`btn-${codice}`);
+    if (badge) {
+      badge.textContent = "…";
+      badge.className = "lc-status-badge";
+    }
+    info?.classList.add("hidden");
+    if (btn) btn.disabled = true;
+  });
+}
+
+function mostraErroreStatoVisibilita() {
+  const box = document.getElementById("box-visibilita-stato");
+  if (!box) return;
+  box.className = "relative bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800";
+  box.textContent = testoVisibilita("Impossibile caricare lo stato dei servizi. Riprova tra poco.");
+}
 </script>
 <script>
   function toggleGuidaDashboard(nascondi) {
@@ -5910,16 +5985,15 @@ let ANNUNCIO_ID_CORRENTE = null;
     });
   }
 
-  function apriVisibilita(id) {
+  async function apriVisibilita(id) {
     ANNUNCIO_ID_CORRENTE = id;
+    const loadToken = ++VISIBILITA_LOAD_TOKEN;
 
     toggleGuidaDashboard(true);
 
     document.getElementById("modale-visibilita").classList.remove("hidden");
     document.body.classList.add("overflow-hidden", "modal-open");
 
-    // reset contatori
-    serviziCaricati = 0;
     Object.keys(statoServizi).forEach(k => delete statoServizi[k]);
 
     const servizi = [
@@ -5932,14 +6006,41 @@ let ANNUNCIO_ID_CORRENTE = null;
       "visibilita_premium"
     ];
 
-    NUM_SERVIZI_ATTESI = servizi.length;
-    servizi.forEach(codice =>
-      caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice)
+    mostraCaricamentoVisibilita(servizi);
+
+    const risultati = await Promise.allSettled(
+      servizi.map(codice =>
+        caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice, loadToken)
+      )
     );
+
+    if (loadToken !== VISIBILITA_LOAD_TOKEN) return;
+
+    try {
+      aggiornaStatoPacchetti();
+    } catch (errore) {
+      console.error("Errore aggiornamento pacchetti", errore);
+    }
+
+    const almenoUnoCaricato = risultati.some(
+      risultato => risultato.status === "fulfilled" && risultato.value === true
+    );
+
+    if (almenoUnoCaricato) {
+      try {
+        aggiornaStatoVisibilita();
+      } catch (errore) {
+        console.error("Errore aggiornamento stato visibilità", errore);
+        mostraErroreStatoVisibilita();
+      }
+    } else {
+      mostraErroreStatoVisibilita();
+    }
   }
 </script>
 <script>
   function chiudiVisibilita() {
+    VISIBILITA_LOAD_TOKEN += 1;
     const modale = document.getElementById("modale-visibilita");
     const card = document.getElementById("modale-visibilita-card");
 
@@ -6101,8 +6202,6 @@ const MIN_GIORNI_RINNOVO = 1;     // mai prima di 1 giorno
    STATO GLOBALE
    ========================================================= */
 const statoServizi = {};
-let serviziCaricati = 0;
-let NUM_SERVIZI_ATTESI = 0;
 
 /* =========================================================
    CARICA STATO SERVIZIO
@@ -6129,11 +6228,13 @@ function setBadgeScaduto(badge) {
   badge.className = "lc-status-badge is-expired";
 }
 
-async function caricaStatoServizio(annuncioId, codice) {
+async function caricaStatoServizio(annuncioId, codice, loadToken = VISIBILITA_LOAD_TOKEN) {
+     const controller = new AbortController();
+     const timeoutId = window.setTimeout(() => controller.abort(), 8000);
      try {
        const res = await fetch(
          `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
-         { cache: "no-store" }
+         { cache: "no-store", signal: controller.signal }
        );
 
        let data = { attivo: false };
@@ -6143,6 +6244,8 @@ async function caricaStatoServizio(annuncioId, codice) {
        } else {
          console.warn("API non ok:", codice);
        }
+
+       if (loadToken !== VISIBILITA_LOAD_TOKEN) return false;
 
        // salva stato globale SEMPRE
        statoServizi[codice] = data;
@@ -6251,16 +6354,15 @@ async function caricaStatoServizio(annuncioId, codice) {
            }
        }
 
+       return res.ok;
      } catch (e) {
        console.error("Errore stato servizio", codice, e);
-       statoServizi[codice] = { attivo: false };
-     }
-
-     // QUESTO DEVE SEMPRE PARTIRE
-     serviziCaricati++;
-     if (serviziCaricati === NUM_SERVIZI_ATTESI) {
-       aggiornaStatoPacchetti();
-       aggiornaStatoVisibilita();
+       if (loadToken === VISIBILITA_LOAD_TOKEN) {
+         statoServizi[codice] = { attivo: false };
+       }
+       return false;
+     } finally {
+       window.clearTimeout(timeoutId);
      }
    }
 </script>

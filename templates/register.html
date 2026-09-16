@@ -1,10 +1,85 @@
 {% extends 'base.html' %}
+{% set body_class = "offset-navbar register-page" %}
 
 {% block content %}
 
-<div class="max-w-md mx-auto mt-10 bg-white shadow-lg rounded-lg p-8">
+<style>
+  .register-shell {
+    width: min(100% - 1.25rem, 500px);
+    margin: 0 auto;
+    padding: 1rem 0 max(2rem, env(safe-area-inset-bottom, 0px));
+  }
 
-  <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Crea un account</h2>
+  .register-language-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: .75rem;
+  }
+
+  .register-language-button {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    min-height: 44px;
+    padding: .5rem .75rem;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: rgba(255,255,255,.96);
+    color: #1e3a8a;
+    box-shadow: 0 10px 28px rgba(37,99,235,.1);
+    font-size: .82rem;
+    font-weight: 800;
+  }
+
+  .register-language-button .flag { font-size: 1.25rem; }
+  .register-language-button .arrow { color: #3b82f6; font-size: 1rem; }
+
+  .register-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 1.4rem;
+    background: rgba(255,255,255,.98);
+    box-shadow: 0 22px 60px rgba(15,23,42,.12);
+  }
+
+  .register-consent {
+    padding: .85rem;
+    border: 1px solid #dbeafe;
+    border-radius: 1rem;
+    background: #f8fbff;
+  }
+
+  .register-legal-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem .65rem;
+    margin-top: .45rem;
+  }
+
+  .register-legal-note {
+    display: block;
+    margin-top: .55rem;
+    color: #64748b;
+    font-size: .72rem;
+    line-height: 1.4;
+  }
+</style>
+
+<div class="register-shell">
+  <div class="register-language-bar">
+    <button type="button"
+            class="register-language-button"
+            data-language-open
+            aria-label="{{ tr('language.open') }}">
+      <span class="flag" aria-hidden="true">{{ current_language.flag }}</span>
+      <span>{{ tr('register.language_hint') }}</span>
+      <span>{{ current_language.short }}</span>
+      <span class="arrow" aria-hidden="true">⌄</span>
+    </button>
+  </div>
+
+<div class="register-card p-6 sm:p-8">
+
+  <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">{{ tr('register.title') }}</h2>
 
 
   {% with messages = get_flashed_messages() %}
@@ -35,7 +110,7 @@
 
       <label for="nome" class="block text-gray-700 font-semibold mb-1">
 
-        Nome <span class="text-red-600">*</span>
+        {{ tr('register.first_name') }} <span class="text-red-600">*</span>
 
       </label>
 
@@ -51,7 +126,7 @@
 
       <label for="cognome" class="block text-gray-700 font-semibold mb-1">
 
-        Cognome <span class="text-red-600">*</span>
+        {{ tr('register.last_name') }} <span class="text-red-600">*</span>
 
       </label>
 
@@ -67,7 +142,7 @@
 
       <label for="citta-autocomplete" class="block text-sm font-medium text-gray-700 mb-1">
 
-        Città / Comune <span class="text-red-600">*</span>
+        {{ tr('register.city') }} <span class="text-red-600">*</span>
 
       </label>
 
@@ -81,7 +156,7 @@
 
         required
 
-        placeholder="Es. Milano"
+        placeholder="{{ tr('register.city_placeholder') }}"
 
         class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400"
 
@@ -111,7 +186,7 @@
 
       <label for="email" class="block text-gray-700 font-semibold mb-1">
 
-        Email <span class="text-red-600">*</span>
+        {{ tr('register.email') }} <span class="text-red-600">*</span>
 
       </label>
 
@@ -136,7 +211,7 @@
 
       <label for="username" class="block text-gray-700 font-semibold mb-1">
 
-        ID utente (nome pubblico) <span class="text-red-600">*</span>
+        {{ tr('register.user_id') }} <span class="text-red-600">*</span>
 
       </label>
 
@@ -152,7 +227,7 @@
 
       <label for="password" class="block text-gray-700 font-semibold mb-1">
 
-        Password <span class="text-red-600">*</span>
+        {{ tr('register.password') }} <span class="text-red-600">*</span>
 
       </label>
 
@@ -163,18 +238,19 @@
                required
                minlength="8"
                pattern="(?=.*[A-Za-z])(?=.*\d).{8,}"
-               title="La password deve avere almeno 8 caratteri, almeno una lettera e almeno un numero."
+               title="{{ tr('register.password_title') }}"
                class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring focus:border-blue-400">
 
         <button type="button"
                 onclick="togglePasswordVisibility('password', this)"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-semibold">
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-semibold"
+                aria-label="{{ tr('register.show_password') }}">
           👁
         </button>
       </div>
 
       <p class="text-xs text-gray-500 mt-1">
-        Minimo 8 caratteri, almeno una lettera e un numero.
+        {{ tr('register.password_hint') }}
       </p>
 
     </div>
@@ -185,7 +261,7 @@
 
       <label for="conferma_password" class="block text-gray-700 font-semibold mb-1">
 
-        Conferma password <span class="text-red-600">*</span>
+        {{ tr('register.confirm_password') }} <span class="text-red-600">*</span>
 
       </label>
 
@@ -199,7 +275,8 @@
 
         <button type="button"
                 onclick="togglePasswordVisibility('conferma_password', this)"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-semibold">
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-semibold"
+                aria-label="{{ tr('register.show_password') }}">
           👁
         </button>
       </div>
@@ -207,7 +284,7 @@
 
     <!-- Termini, privacy e cookie -->
 
-    <div class="flex items-start space-x-2">
+    <div class="register-consent flex items-start space-x-2">
 
       <input type="checkbox" id="accetto" name="accetto" required class="mt-1 accent-blue-600">
 
@@ -215,32 +292,32 @@
 
         <span class="text-red-600">*</span>
 
-        Dichiaro di aver letto l’
+        {{ tr('register.consent_intro') }}
 
-        <a href="{{ url_for('privacy') }}"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="text-blue-600 underline hover:text-blue-800">
-          Informativa sulla Privacy
-        </a>,
+        <span class="register-legal-links">
+          <a href="{{ url_for('privacy') }}"
+             target="_blank"
+             rel="noopener noreferrer"
+             class="text-blue-600 underline hover:text-blue-800">
+            {{ tr('register.privacy') }}
+          </a>
 
-        la
+          <a href="{{ url_for('cookie_policy') }}"
+             target="_blank"
+             rel="noopener noreferrer"
+             class="text-blue-600 underline hover:text-blue-800">
+            {{ tr('register.cookie') }}
+          </a>
 
-        <a href="{{ url_for('cookie_policy') }}"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="text-blue-600 underline hover:text-blue-800">
-          Cookie Policy
-        </a>
+          <a href="{{ url_for('termini') }}"
+             target="_blank"
+             rel="noopener noreferrer"
+             class="text-blue-600 underline hover:text-blue-800">
+            {{ tr('register.terms') }}
+          </a>
+        </span>
 
-        e di accettare i
-
-        <a href="{{ url_for('termini') }}"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="text-blue-600 underline hover:text-blue-800">
-          Termini e Condizioni
-        </a>.
+        <span class="register-legal-note">{{ tr('register.legal_note') }}</span>
       </label>
 
     </div>
@@ -249,15 +326,37 @@
 
             class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
 
-      Registrati
+      {{ tr('register.submit') }}
 
     </button>
 
   </form>
 
 </div>
+</div>
+
+{% include 'partials/language_selector.html' %}
 
   <script>
+  const REGISTER_COPY = {
+    emailBadFormat: {{ tr('register.email_bad_format')|tojson }},
+    emailMissingDomain: {{ tr('register.email_missing_domain')|tojson }},
+    emailUnusualDomain: {{ tr('register.email_unusual_domain')|tojson }},
+    emailPossibleError: {{ tr('register.email_possible_error')|tojson }},
+    maybeMeant: {{ tr('register.maybe_meant')|tojson }},
+    emailConfirmationWarning: {{ tr('register.email_confirmation_warning')|tojson }},
+    checkEmail: {{ tr('register.check_email')|tojson }},
+    passwordMismatch: {{ tr('register.password_mismatch')|tojson }},
+    emailEnteredMayError: {{ tr('register.email_entered_may_error')|tojson }},
+    youEntered: {{ tr('register.you_entered')|tojson }},
+    maybeMeantLabel: {{ tr('register.maybe_meant_label')|tojson }},
+    continueWithEmail: {{ tr('register.continue_with_email')|tojson }},
+    checkEmailLabel: {{ tr('register.check_email_label')|tojson }},
+    emailWrongShort: {{ tr('register.email_wrong_short')|tojson }},
+    continueAnyway: {{ tr('register.continue_anyway')|tojson }},
+    showPassword: {{ tr('register.show_password')|tojson }},
+    hidePassword: {{ tr('register.hide_password')|tojson }}
+  };
   document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("register-form");
     const emailInput = document.getElementById("email");
@@ -420,7 +519,7 @@
       if (parti.length !== 2) {
         return {
           tipo: "formato",
-          messaggio: "L’indirizzo email sembra avere un formato non corretto."
+          messaggio: REGISTER_COPY.emailBadFormat
         };
       }
 
@@ -430,7 +529,7 @@
       if (!nome || !dominio || !dominio.includes(".")) {
         return {
           tipo: "formato",
-          messaggio: "Controlla bene l’indirizzo email: sembra mancare una parte del dominio."
+          messaggio: REGISTER_COPY.emailMissingDomain
         };
       }
 
@@ -464,7 +563,7 @@
         if (dominio.endsWith(tld)) {
           return {
             tipo: "tld_sospetto",
-            messaggio: "Il dominio dell’email sembra insolito. Controlla bene prima di continuare."
+            messaggio: REGISTER_COPY.emailUnusualDomain
           };
         }
       }
@@ -494,8 +593,8 @@
 
       if (analisi.tipo === "suggerimento") {
         emailWarning.innerHTML = `
-          ⚠️ L’indirizzo email potrebbe contenere un errore.<br>
-          Forse intendevi
+          ⚠️ ${REGISTER_COPY.emailPossibleError}<br>
+          ${REGISTER_COPY.maybeMeant}
           <button type="button"
                   id="usa-email-suggerita"
                   class="font-bold underline text-amber-900">
@@ -504,7 +603,7 @@
           ?
           <br>
           <span class="text-xs">
-            Se l’email è sbagliata non riceverai il link di conferma.
+            ${REGISTER_COPY.emailConfirmationWarning}
           </span>
         `;
 
@@ -529,10 +628,10 @@
       }
 
       emailWarning.innerHTML = `
-        ⚠️ ${analisi.messaggio || "Controlla bene l’indirizzo email."}
+        ⚠️ ${analisi.messaggio || REGISTER_COPY.checkEmail}
         <br>
         <span class="text-xs">
-          Se l’email è sbagliata non riceverai il link di conferma.
+          ${REGISTER_COPY.emailConfirmationWarning}
         </span>
       `;
 
@@ -551,14 +650,14 @@
 
         if (password && confermaPassword && password.value !== confermaPassword.value) {
           e.preventDefault();
-          alert("Le password non coincidono.");
+          alert(REGISTER_COPY.passwordMismatch);
           confermaPassword.focus();
           return;
         }
 
         if (analisi && analisi.tipo === "suggerimento") {
           const conferma = confirm(
-            `L’indirizzo email inserito potrebbe contenere un errore.\n\nHai scritto: ${emailInput.value}\nForse intendevi: ${analisi.suggerimento}\n\nSe l’email è sbagliata non riceverai il link di conferma.\n\nVuoi continuare comunque con l’email inserita?`
+            `${REGISTER_COPY.emailEnteredMayError}\n\n${REGISTER_COPY.youEntered} ${emailInput.value}\n${REGISTER_COPY.maybeMeantLabel} ${analisi.suggerimento}\n\n${REGISTER_COPY.emailConfirmationWarning}\n\n${REGISTER_COPY.continueWithEmail}`
           );
 
           if (!conferma) {
@@ -574,7 +673,7 @@
 
         if (analisi && analisi.tipo !== "suggerimento") {
           const conferma = confirm(
-            `Controlla bene l’indirizzo email:\n\n${emailInput.value}\n\nSe è sbagliato non riceverai il link di conferma.\n\nVuoi continuare comunque?`
+            `${REGISTER_COPY.checkEmailLabel}\n\n${emailInput.value}\n\n${REGISTER_COPY.emailWrongShort}\n\n${REGISTER_COPY.continueAnyway}`
           );
 
           if (!conferma) {
@@ -599,11 +698,11 @@
     if (input.type === "password") {
       input.type = "text";
       button.textContent = "🙈";
-      button.setAttribute("aria-label", "Nascondi password");
+      button.setAttribute("aria-label", REGISTER_COPY.hidePassword);
     } else {
       input.type = "password";
       button.textContent = "👁";
-      button.setAttribute("aria-label", "Mostra password");
+      button.setAttribute("aria-label", REGISTER_COPY.showPassword);
     }
   }
   </script>

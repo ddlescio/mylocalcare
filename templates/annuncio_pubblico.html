@@ -472,7 +472,10 @@
   <button type="button"
           id="zoom-close"
           class="zoom-round-control zoom-close-control"
-          aria-label="Chiudi galleria">✕</button>
+          aria-label="Chiudi galleria">
+    <span aria-hidden="true">✕</span>
+    <span class="zoom-close-label">Chiudi</span>
+  </button>
 
   <button type="button"
           id="zoom-prev"
@@ -553,7 +556,19 @@
   .zoom-close-control {
     top: calc(4.55rem + env(safe-area-inset-top, 0px));
     right: max(0.85rem, env(safe-area-inset-right, 0px));
+    width: auto;
+    min-width: 6.25rem;
+    padding: 0 .9rem;
+    gap: .42rem;
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(255, 255, 255, 0.74);
+    color: #0f172a;
     font-size: 1.05rem;
+  }
+
+  .zoom-close-label {
+    font-size: .78rem;
+    font-weight: 900;
   }
 
   .zoom-side-control {
@@ -3783,17 +3798,48 @@
 </script>
 <script>
 let ANNUNCIO_ID_CORRENTE = null;
+let VISIBILITA_LOAD_TOKEN = 0;
+
+function testoVisibilita(testo) {
+  return typeof window.mlcTr === "function" ? window.mlcTr(testo) : testo;
+}
+
+function mostraCaricamentoVisibilita(servizi) {
+  const box = document.getElementById("box-visibilita-stato");
+  if (box) {
+    box.className = "relative bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600";
+    box.textContent = testoVisibilita("Caricamento stato visibilità…");
+  }
+
+  servizi.forEach(codice => {
+    const badge = document.getElementById(`badge-${codice}`);
+    const info = document.getElementById(`info-${codice}`);
+    const btn = document.getElementById(`btn-${codice}`);
+    if (badge) {
+      badge.textContent = "…";
+      badge.className = "lc-status-badge";
+    }
+    info?.classList.add("hidden");
+    if (btn) btn.disabled = true;
+  });
+}
+
+function mostraErroreStatoVisibilita() {
+  const box = document.getElementById("box-visibilita-stato");
+  if (!box) return;
+  box.className = "relative bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800";
+  box.textContent = testoVisibilita("Impossibile caricare lo stato dei servizi. Riprova tra poco.");
+}
 </script>
 
 <script>
-  function apriVisibilita(id) {
+  async function apriVisibilita(id) {
     ANNUNCIO_ID_CORRENTE = id || {{ annuncio['id'] }};
+    const loadToken = ++VISIBILITA_LOAD_TOKEN;
 
     document.getElementById("modale-visibilita").classList.remove("hidden");
     document.body.classList.add("overflow-hidden", "modal-open");
 
-    // reset contatori
-    serviziCaricati = 0;
     Object.keys(statoServizi).forEach(k => delete statoServizi[k]);
 
     const servizi = [
@@ -3806,15 +3852,42 @@ let ANNUNCIO_ID_CORRENTE = null;
       "visibilita_premium"
     ];
 
-    NUM_SERVIZI_ATTESI = servizi.length;
-    servizi.forEach(codice =>
-      caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice)
+    mostraCaricamentoVisibilita(servizi);
+
+    const risultati = await Promise.allSettled(
+      servizi.map(codice =>
+        caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice, loadToken)
+      )
     );
+
+    if (loadToken !== VISIBILITA_LOAD_TOKEN) return;
+
+    try {
+      aggiornaStatoPacchetti();
+    } catch (errore) {
+      console.error("Errore aggiornamento pacchetti", errore);
+    }
+
+    const almenoUnoCaricato = risultati.some(
+      risultato => risultato.status === "fulfilled" && risultato.value === true
+    );
+
+    if (almenoUnoCaricato) {
+      try {
+        aggiornaStatoVisibilita();
+      } catch (errore) {
+        console.error("Errore aggiornamento stato visibilità", errore);
+        mostraErroreStatoVisibilita();
+      }
+    } else {
+      mostraErroreStatoVisibilita();
+    }
   }
 </script>
 
 <script>
   function chiudiVisibilita() {
+    VISIBILITA_LOAD_TOKEN += 1;
     const modale = document.getElementById("modale-visibilita");
     const card = document.getElementById("modale-visibilita-card");
 
@@ -3989,8 +4062,6 @@ const MIN_GIORNI_RINNOVO = 1;     // mai prima di 1 giorno
    STATO GLOBALE MODALE VISIBILITÀ
    ========================================================= */
 const statoServizi = {};
-let serviziCaricati = 0;
-let NUM_SERVIZI_ATTESI = 0;
 
 /* =========================================================
    CARICA STATO SERVIZIO / PACCHETTO
@@ -4015,11 +4086,13 @@ let NUM_SERVIZI_ATTESI = 0;
      badge.textContent = "Scaduto";
      badge.className = "lc-status-badge is-expired";
    }
-async function caricaStatoServizio(annuncioId, codice) {
+async function caricaStatoServizio(annuncioId, codice, loadToken = VISIBILITA_LOAD_TOKEN) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(
       `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
-      { cache: "no-store" }
+      { cache: "no-store", signal: controller.signal }
     );
 
     let data = { attivo: false };
@@ -4029,6 +4102,8 @@ async function caricaStatoServizio(annuncioId, codice) {
     } else {
       console.warn("API stato servizio non ok:", codice, res.status);
     }
+
+    if (loadToken !== VISIBILITA_LOAD_TOKEN) return false;
 
     statoServizi[codice] = data;
 
@@ -4163,16 +4238,15 @@ async function caricaStatoServizio(annuncioId, codice) {
       }
     }
 
+    return res.ok;
   } catch (e) {
     console.error("Errore stato servizio", codice, e);
-    statoServizi[codice] = { attivo: false };
-  }
-
-  serviziCaricati++;
-
-  if (serviziCaricati === NUM_SERVIZI_ATTESI) {
-    aggiornaStatoPacchetti();
-    aggiornaStatoVisibilita();
+    if (loadToken === VISIBILITA_LOAD_TOKEN) {
+      statoServizi[codice] = { attivo: false };
+    }
+    return false;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
 </script>
