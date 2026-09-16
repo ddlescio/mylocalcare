@@ -15,9 +15,9 @@
         <h2>Persone interessate</h2>
         <p>
           {% if interessati_annuncio %}
-            Apri per vedere e contattare le persone interessate
+            {{ tr('interests.owner_open_hint') }}
           {% else %}
-            Qui compariranno le persone interessate al tuo annuncio
+            {{ tr('interests.owner_empty_hint') }}
           {% endif %}
         </p>
       </div>

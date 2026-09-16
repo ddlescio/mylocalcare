@@ -42,7 +42,7 @@
             </p>
           {% else %}
             <p class="public-reviews-count public-reviews-count-empty">
-              Questo profilo non ha ancora ricevuto recensioni.
+              {{ tr('reviews.public_none') }}
             </p>
           {% endif %}
         </div>
@@ -128,7 +128,7 @@
         <div class="public-reviews-empty-icon">☆</div>
         <p class="public-reviews-empty-title">Nessuna recensione pubblica</p>
         <p class="public-reviews-empty-text">
-          Quando questo utente riceverà recensioni approvate, verranno mostrate qui.
+          {{ tr('reviews.public_empty_body') }}
         </p>
       </div>
     {% endif %}

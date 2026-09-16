@@ -22,15 +22,11 @@
 
         {% if ha_recensioni %}
           <p class="private-reviews-subtitle">
-            Hai ricevuto
-            <strong>{{ tot_ricevute }}</strong>
-            recension{{ 'e' if tot_ricevute == 1 else 'i' }}
-            e ne hai scritt{{ 'a' if tot_scritte == 1 else 'e' }}
-            <strong>{{ tot_scritte }}</strong>.
+            {{ tr('reviews.private_summary', received=tot_ricevute, written=tot_scritte) }}
           </p>
         {% else %}
           <p class="private-reviews-subtitle">
-            Qui troverai le recensioni ricevute e quelle che hai lasciato ad altri utenti.
+            {{ tr('reviews.private_intro') }}
           </p>
         {% endif %}
       </div>
@@ -91,7 +87,7 @@
         <div>
           <p class="private-reviews-info-title">Gestisci i tuoi feedback</p>
           <p class="private-reviews-info-text">
-            Puoi leggere le recensioni ricevute, rispondere agli utenti e controllare lo stato delle recensioni che hai scritto.
+            {{ tr('reviews.manage_body') }}
           </p>
         </div>
       </div>
@@ -105,7 +101,7 @@
 
         <p class="private-reviews-empty-title">Ancora nessun feedback</p>
         <p class="private-reviews-empty-text">
-          Quando riceverai o scriverai recensioni, le troverai organizzate in questa sezione.
+          {{ tr('reviews.empty_body') }}
         </p>
       </div>
     {% endif %}

@@ -319,7 +319,7 @@
                   </div>
 
                   <p class="text-[12px] sm:text-[12.5px] text-slate-400 mt-1 leading-relaxed">
-                    Per saperne di più vai su "Info"
+                    {{ tr('dashboard.intro_hint') }}
                   </p>
                 </div>
 
@@ -728,9 +728,9 @@
 
                 <p>
                   {% if pubblico %}
-                    Questo profilo non ha ancora annunci visibili.
+                    {{ tr('dashboard.public_empty_listings_body') }}
                   {% else %}
-                    Crea il tuo primo annuncio per iniziare a ricevere contatti.
+                    {{ tr('dashboard.empty_listings_body') }}
                   {% endif %}
                 </p>
 

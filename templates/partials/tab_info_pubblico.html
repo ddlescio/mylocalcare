@@ -93,7 +93,7 @@
         {% set formazioni_presenti = formazioni | reject('equalto','') | list %}
 
         {% if (esperienze_presenti|length == 0) and (formazioni_presenti|length == 0) and (not certificazioni) %}
-          <p class="info-empty-block">L’utente non ha ancora inserito esperienze, formazione o certificazioni.</p>
+          <p class="info-empty-block">{{ tr('profile.empty_experience_full') }}</p>
         {% else %}
 
         <div class="info-highlight-grid">
@@ -236,7 +236,7 @@
 
         {% set descrizione = utente.get('descrizione')|default('', true)|trim %}
         {% if not descrizione %}
-          <p class="info-empty-block">L’utente non ha ancora aggiunto una descrizione personale.</p>
+          <p class="info-empty-block">{{ tr('profile.empty_description') }}</p>
         {% else %}
           <div class="info-about-box">
             <div class="info-about-icon">🧾</div>

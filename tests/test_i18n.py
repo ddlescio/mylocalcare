@@ -245,6 +245,47 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn('id="zoom-close"', listing)
         self.assertIn('class="zoom-close-label">Chiudi</span>', listing)
 
+    def test_visible_file_inputs_use_translated_custom_picker(self):
+        base = (self.ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+
+        self.assertIn("mlc-file-picker-button", base)
+        self.assertIn("upload.choose_file", base)
+        self.assertIn("upload.choose_files", base)
+        self.assertIn("upload.no_file", base)
+        self.assertIn("upload.files_selected", base)
+        self.assertIn("input.files", base)
+        self.assertIn("input.click()", base)
+        self.assertIn('input[type="file"]', base)
+        self.assertIn('input.classList.contains("hidden")', base)
+
+    def test_screenshot_translation_gaps_use_explicit_keys(self):
+        home = (self.ROOT / "templates" / "home.html").read_text(encoding="utf-8")
+        dashboard = (self.ROOT / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        private_reviews = (
+            self.ROOT / "templates" / "partials" / "tab_recensioni_privato.html"
+        ).read_text(encoding="utf-8")
+        public_reviews = (
+            self.ROOT / "templates" / "partials" / "tab_recensioni_pubblico.html"
+        ).read_text(encoding="utf-8")
+
+        for key in (
+            "home.category.babysitter_description",
+            "home.category.home_help_description",
+            "home.category.pet_sitter_description",
+            "home.category.caregiver_description",
+            "home.category.tutoring_description",
+            "home.category.family_description",
+        ):
+            self.assertIn(key, home)
+
+        self.assertIn("dashboard.empty_listings_body", dashboard)
+        self.assertIn("reviews.private_intro", private_reviews)
+        self.assertIn("reviews.private_summary", private_reviews)
+        self.assertIn("reviews.manage_body", private_reviews)
+        self.assertIn("reviews.empty_body", private_reviews)
+        self.assertIn("reviews.public_none", public_reviews)
+        self.assertIn("reviews.public_empty_body", public_reviews)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -370,7 +370,7 @@
 
             {% if not esperienze_presenti and not formazioni_presenti and not certificazioni_presenti %}
               <p class="text-gray-500 text-sm italic py-3">
-                L’utente non ha ancora inserito esperienze o formazione.
+                {{ tr('profile.empty_experience') }}
               </p>
             {% else %}
               {% if esperienze_presenti %}
@@ -832,7 +832,7 @@
                     data-min-rows="5"
                     data-autosave="1"
                     {% if current_language_code not in ('it', 'en') %}data-no-translate{% endif %}
-                    placeholder="Es. Mi piace aiutare le persone con serietà, empatia e attenzione. Ho maturato esperienza sul campo e cerco sempre di offrire un servizio affidabile e umano.">{{ descrizione_corrente }}</textarea>
+                    placeholder="{{ tr('profile.description_placeholder') }}">{{ descrizione_corrente }}</textarea>
 
                   {% if current_language_code not in ('it', 'en') %}
                   <p class="ov-help rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
