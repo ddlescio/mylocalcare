@@ -194,6 +194,16 @@ class InterfaceTranslationsTest(unittest.TestCase):
             self.assertIn("mostraErroreStatoVisibilita", source)
             self.assertIn("aggiornaRiepilogoVisibilita(loadToken)", source)
             self.assertIn("box.dataset.visibilityLoading", source)
+            self.assertIn("window.mlcPauseDynamicTranslation", source)
+            self.assertIn("translationRelease?.(", source)
+
+    def test_dynamic_translator_does_not_observe_its_own_changes(self):
+        source = (self.ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+
+        self.assertIn("observer.disconnect();", source)
+        self.assertIn("observer.takeRecords();", source)
+        self.assertIn("window.mlcPauseDynamicTranslation", source)
+        self.assertIn("window.mlcTranslateTree = translateTree", source)
 
     def test_no_translate_blocks_are_preserved_server_side(self):
         source = (

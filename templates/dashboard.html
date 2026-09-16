@@ -5944,6 +5944,7 @@ document.addEventListener("DOMContentLoaded", () => {
 <script>
 let ANNUNCIO_ID_CORRENTE = null;
 let VISIBILITA_LOAD_TOKEN = 0;
+let VISIBILITA_TRANSLATION_RELEASE = null;
 
 function testoVisibilita(testo) {
   return typeof window.mlcTr === "function" ? window.mlcTr(testo) : testo;
@@ -6010,6 +6011,9 @@ function aggiornaRiepilogoVisibilita(loadToken = VISIBILITA_LOAD_TOKEN) {
   async function apriVisibilita(id) {
     ANNUNCIO_ID_CORRENTE = id;
     const loadToken = ++VISIBILITA_LOAD_TOKEN;
+    VISIBILITA_TRANSLATION_RELEASE?.();
+    const translationRelease = window.mlcPauseDynamicTranslation?.() || null;
+    VISIBILITA_TRANSLATION_RELEASE = translationRelease;
 
     toggleGuidaDashboard(true);
 
@@ -6083,6 +6087,10 @@ function aggiornaRiepilogoVisibilita(loadToken = VISIBILITA_LOAD_TOKEN) {
       mostraErroreStatoVisibilita();
     } finally {
       window.clearTimeout(timeoutId);
+      translationRelease?.(document.getElementById("modale-visibilita"));
+      if (VISIBILITA_TRANSLATION_RELEASE === translationRelease) {
+        VISIBILITA_TRANSLATION_RELEASE = null;
+      }
     }
   }
 </script>
@@ -6119,6 +6127,9 @@ function aggiornaRiepilogoVisibilita(loadToken = VISIBILITA_LOAD_TOKEN) {
 
     modale?.classList.add("hidden");
     document.body.classList.remove("overflow-hidden", "modal-open");
+
+    VISIBILITA_TRANSLATION_RELEASE?.(modale);
+    VISIBILITA_TRANSLATION_RELEASE = null;
 
     toggleGuidaDashboard(false);
   }

@@ -170,24 +170,70 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       translateTree(document.body);
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'characterData') {
-            translateTree(mutation.target);
-            return;
-          }
-          mutation.addedNodes.forEach(translateTree);
-          if (mutation.type === 'attributes') translateElement(mutation.target);
-        });
-      });
-      observer.observe(document.body, {
+      const observerOptions = {
         childList: true,
         subtree: true,
         characterData: true,
         attributes: true,
         attributeFilter: ['placeholder', 'title', 'aria-label', 'data-label', 'alt']
+      };
+      let pauseDepth = 0;
+
+      const observe = () => {
+        if (pauseDepth === 0 && document.body) {
+          observer.observe(document.body, observerOptions);
+        }
+      };
+
+      const observer = new MutationObserver((mutations) => {
+        if (pauseDepth > 0) return;
+
+        // Le traduzioni cambiano a loro volta testo e attributi. Smettere di
+        // osservare durante questo passaggio impedisce al traduttore di
+        // rimettere in coda le proprie modifiche e monopolizzare il browser.
+        observer.disconnect();
+        try {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'characterData') {
+              translateTree(mutation.target);
+              return;
+            }
+            mutation.addedNodes.forEach(translateTree);
+            if (mutation.type === 'attributes') translateElement(mutation.target);
+          });
+        } finally {
+          observer.takeRecords();
+          observe();
+        }
       });
+
+      observe();
       window.__mlcI18nObserver = observer;
+      window.mlcTranslateTree = translateTree;
+
+      // Restituisce una funzione di rilascio idempotente: i componenti che
+      // aggiornano molti testi possono sospendere il traduttore, completare il
+      // proprio caricamento e tradurre il risultato una sola volta.
+      window.mlcPauseDynamicTranslation = () => {
+        pauseDepth += 1;
+        observer.disconnect();
+        observer.takeRecords();
+        let released = false;
+
+        return (root = document.body) => {
+          if (released) return;
+          released = true;
+          pauseDepth = Math.max(0, pauseDepth - 1);
+          if (pauseDepth > 0) return;
+
+          try {
+            translateTree(root || document.body);
+          } finally {
+            observer.takeRecords();
+            observe();
+          }
+        };
+      };
     });
   })();
   </script>
