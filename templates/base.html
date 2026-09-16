@@ -36,6 +36,163 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  {% if current_language_code|default('it') != 'it'
+        and not request.path.startswith('/admin')
+        and request.path not in ['/privacy', '/termini', '/cookie-policy'] %}
+  <script>
+  (() => {
+    const decodeUtf8Base64 = (value) => {
+      try {
+        const bytes = Uint8Array.from(atob(value || ''), (char) => char.charCodeAt(0));
+        return new TextDecoder('utf-8').decode(bytes);
+      } catch (_) {
+        return '{}';
+      }
+    };
+
+    const catalog = JSON.parse(decodeUtf8Base64('{{ i18n_catalog_b64|default("") }}'));
+    const patterns = JSON.parse(decodeUtf8Base64('{{ i18n_patterns_b64|default("") }}')).map((entry) => ({
+      expression: new RegExp(`^(?:${entry.source})$`, 'i'),
+      target: entry.target
+    }));
+    const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const leadingSymbols = /^([^0-9A-Za-zÀ-ÖØ-öø-ÿ@]+)(.+)$/s;
+    const trailingPunctuation = /^(.+?)(\s*[:;,.!?…]+)$/s;
+    const trailingSymbols = /^(.+?)(\s*[^0-9A-Za-zÀ-ÖØ-öø-ÿ@\s]+)$/s;
+
+    const translateCore = (source) => {
+      if (Object.prototype.hasOwnProperty.call(catalog, source)) {
+        return catalog[source];
+      }
+
+      for (const pattern of patterns) {
+        const match = source.match(pattern.expression);
+        if (!match) continue;
+        return pattern.target.replace(/\{(\d+)\}/g, (_, index) => {
+          const captured = match[Number(index) + 1] ?? '';
+          return translateCore(captured);
+        });
+      }
+
+      const leading = source.match(leadingSymbols);
+      if (leading) {
+        const translated = translateCore(leading[2].trim());
+        if (translated !== leading[2].trim()) return `${leading[1]}${translated}`;
+      }
+
+      const trailing = source.match(trailingPunctuation);
+      if (trailing) {
+        const translated = translateCore(trailing[1].trim());
+        if (translated !== trailing[1].trim()) return `${translated}${trailing[2]}`;
+      }
+
+      const trailingMark = source.match(trailingSymbols);
+      if (trailingMark) {
+        const translated = translateCore(trailingMark[1].trim());
+        if (translated !== trailingMark[1].trim()) return `${translated}${trailingMark[2]}`;
+      }
+
+      return source;
+    };
+
+    window.mlcTr = (value) => {
+      if (value === null || value === undefined) return value;
+      const original = String(value);
+      const source = normalize(original);
+      if (!source) return original;
+      let translated = translateCore(source);
+      if (translated === source && /[\r\n]/.test(original)) {
+        translated = original
+          .split(/(\r?\n)/)
+          .map((part) => /\r?\n/.test(part) ? part : (() => {
+            const normalizedPart = normalize(part);
+            if (!normalizedPart) return part;
+            const translatedPart = translateCore(normalizedPart);
+            const partLeading = part.match(/^\s*/)?.[0] || '';
+            const partTrailing = part.match(/\s*$/)?.[0] || '';
+            return `${partLeading}${translatedPart}${partTrailing}`;
+          })())
+          .join('');
+        if (translated !== original) return translated;
+      }
+      if (translated === source) return original;
+      const leading = original.match(/^\s*/)?.[0] || '';
+      const trailing = original.match(/\s*$/)?.[0] || '';
+      return `${leading}${translated}${trailing}`;
+    };
+
+    const shouldSkip = (element) => Boolean(element?.closest?.(
+      'script, style, code, pre, [data-no-translate], [contenteditable="true"], ' +
+      '.ugc-text, .message-text, .profile-annuncio-description'
+    ));
+
+    const translateElement = (element) => {
+      if (!element || shouldSkip(element)) return;
+      ['placeholder', 'title', 'aria-label', 'data-label', 'alt'].forEach((attribute) => {
+        if (!element.hasAttribute?.(attribute)) return;
+        const current = element.getAttribute(attribute);
+        const translated = window.mlcTr(current);
+        if (translated !== current) element.setAttribute(attribute, translated);
+      });
+      if (element instanceof HTMLInputElement && ['button', 'submit', 'reset'].includes(element.type)) {
+        const translated = window.mlcTr(element.value);
+        if (translated !== element.value) element.value = translated;
+      }
+    };
+
+    const translateTree = (root) => {
+      if (!root) return;
+      if (root.nodeType === Node.TEXT_NODE) {
+        if (shouldSkip(root.parentElement)) return;
+        const translated = window.mlcTr(root.nodeValue);
+        if (translated !== root.nodeValue) root.nodeValue = translated;
+        return;
+      }
+      if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE && root.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return;
+      if (root.nodeType === Node.ELEMENT_NODE) translateElement(root);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          if (shouldSkip(node.parentElement)) continue;
+          const translated = window.mlcTr(node.nodeValue);
+          if (translated !== node.nodeValue) node.nodeValue = translated;
+        } else {
+          translateElement(node);
+        }
+      }
+    };
+
+    const nativeAlert = window.alert.bind(window);
+    const nativeConfirm = window.confirm.bind(window);
+    window.alert = (message) => nativeAlert(window.mlcTr(message));
+    window.confirm = (message) => nativeConfirm(window.mlcTr(message));
+
+    document.addEventListener('DOMContentLoaded', () => {
+      translateTree(document.body);
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'characterData') {
+            translateTree(mutation.target);
+            return;
+          }
+          mutation.addedNodes.forEach(translateTree);
+          if (mutation.type === 'attributes') translateElement(mutation.target);
+        });
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['placeholder', 'title', 'aria-label', 'data-label', 'alt']
+      });
+      window.__mlcI18nObserver = observer;
+    });
+  })();
+  </script>
+  {% endif %}
+
   <!-- ✅ PWA / iOS standalone -->
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}?v=6">
   <meta name="theme-color" content="#1f2937">

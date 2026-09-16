@@ -89,7 +89,15 @@ from chat_risk import (
     segnalazione_chat_controllata,
     valuta_rischio_chat,
 )
-from i18n import SUPPORTED_LANGUAGES, normalize_language, translate
+from i18n import (
+    SUPPORTED_LANGUAGES,
+    frontend_pattern_catalog_b64,
+    frontend_source_catalog_b64,
+    localize_html_document,
+    normalize_language,
+    translate,
+    translate_source,
+)
 from realtime_auth import build_realtime_token
 from image_utils import (
     ErroreImmagine,
@@ -1328,7 +1336,46 @@ def inject_interface_language():
         "current_language": SUPPORTED_LANGUAGES[language],
         "supported_languages": SUPPORTED_LANGUAGES,
         "tr": lambda key, **values: translate(key, language, **values),
+        "tr_text": lambda value: translate_source(value, language),
+        "i18n_catalog_b64": frontend_source_catalog_b64(language),
+        "i18n_patterns_b64": frontend_pattern_catalog_b64(language),
     }
+
+
+@app.after_request
+def localize_interface_response(response):
+    """Traduce tutto il testo UI statico delle risposte HTML.
+
+    Il catalogo contiene soltanto frasi dell'interfaccia: i campi provenienti
+    dagli utenti non vengono tradotti automaticamente.
+    """
+    if response.direct_passthrough or response.status_code in (204, 304):
+        return response
+
+    # L'area amministrativa resta intenzionalmente in italiano: il selettore
+    # lingua riguarda l'esperienza pubblica e quella degli utenti.
+    if request.path.startswith("/admin") or request.path in {
+        "/privacy",
+        "/termini",
+        "/cookie-policy",
+    }:
+        return response
+
+    language = get_interface_language()
+    if language == "it":
+        return response
+
+    content_type = (response.content_type or "").lower()
+    if "text/html" not in content_type:
+        return response
+
+    try:
+        document = response.get_data(as_text=True)
+        response.set_data(localize_html_document(document, language))
+    except Exception:
+        app.logger.exception("Errore durante la localizzazione della risposta HTML")
+
+    return response
 
 
 class CSRFValidationError(Exception):
@@ -1915,15 +1962,35 @@ def fmt_it_smart(value):
         today = now.date()
         yesterday = (now - timedelta(days=1)).date()
 
+        try:
+            language = get_interface_language()
+        except RuntimeError:
+            language = "it"
+        relative_labels = {
+            "it": ("oggi", "ieri"),
+            "en": ("today", "yesterday"),
+            "fr": ("aujourd’hui", "hier"),
+            "es": ("hoy", "ayer"),
+            "de": ("heute", "gestern"),
+        }
+        weekdays = {
+            "it": ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"],
+            "en": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "fr": ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"],
+            "es": ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"],
+            "de": ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
+        }
+
+        today_label, yesterday_label = relative_labels[language]
+
         if date_it == today:
-            return f"oggi {dt_it.strftime('%H:%M')}"
+            return f"{today_label} {dt_it.strftime('%H:%M')}"
 
         if date_it == yesterday:
-            return f"ieri {dt_it.strftime('%H:%M')}"
+            return f"{yesterday_label} {dt_it.strftime('%H:%M')}"
 
         if dt_it.isocalendar()[1] == now.isocalendar()[1] and dt_it.year == now.year:
-            giorni = ["lunedì","martedì","mercoledì","giovedì","venerdì","sabato","domenica"]
-            return f"{giorni[dt_it.weekday()]} {dt_it.strftime('%H:%M')}"
+            return f"{weekdays[language][dt_it.weekday()]} {dt_it.strftime('%H:%M')}"
 
         return dt_it.strftime("%d-%m-%Y %H:%M")
 
@@ -2004,14 +2071,21 @@ def safe_strip(value):
 
 @app.template_filter('datetimeformat')
 def datetimeformat(value, fmt='%d %B %Y'):
-    """Formatta la data per mostrare solo giorno e mese in italiano."""
+    """Formatta la data con il mese nella lingua dell'interfaccia."""
     try:
         dt = datetime.fromisoformat(value)
-        mesi = [
-            "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
-            "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"
-        ]
-        mese_nome = mesi[dt.month - 1]
+        try:
+            language = get_interface_language()
+        except RuntimeError:
+            language = "it"
+        months = {
+            "it": ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"],
+            "en": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+            "fr": ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
+            "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+            "de": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+        }
+        mese_nome = months[language][dt.month - 1]
         return f"{dt.day} {mese_nome} {dt.year}"
     except Exception:
         return value
@@ -13145,6 +13219,7 @@ def _invia_email(
     html=None,
     action_url=None,
     action_label=None,
+    language=None,
     **kwargs
 ):
 
@@ -13196,6 +13271,62 @@ def _invia_email(
         return False
 
     try:
+        email_language = normalize_language(language)
+
+        if language is None:
+            language_conn = None
+            language_cur = None
+            close_language_conn = False
+
+            try:
+                from flask import has_request_context
+
+                language_conn = get_db_connection()
+                close_language_conn = not (
+                    has_request_context()
+                    and getattr(g, "db_conn", None) is language_conn
+                )
+                language_cur = get_cursor(language_conn)
+                language_cur.execute(sql("""
+                    SELECT lingua_interfaccia
+                    FROM utenti
+                    WHERE LOWER(email) = LOWER(?)
+                    ORDER BY id DESC
+                    LIMIT 1
+                """), (str(destinazione).strip(),))
+                language_row = language_cur.fetchone()
+
+                if language_row:
+                    email_language = normalize_language(
+                        language_row["lingua_interfaccia"]
+                    )
+
+            except Exception:
+                email_language = "it"
+
+            finally:
+                if language_cur is not None:
+                    try:
+                        language_cur.close()
+                    except Exception:
+                        pass
+
+                if close_language_conn and language_conn is not None:
+                    try:
+                        language_conn.close()
+                    except Exception:
+                        pass
+
+        localized_subject = translate_source(oggetto, email_language)
+        localized_action_label = translate_source(action_label, email_language)
+
+        localized_body = corpo
+        if corpo and email_language != "it":
+            localized_body = "\n".join(
+                translate_source(line, email_language)
+                for line in str(corpo).splitlines()
+            )
+
         html_finale = None
 
         # ✅ HTML da template, se presente
@@ -13225,14 +13356,20 @@ def _invia_email(
         # ✅ Se non è stato passato HTML, genera un HTML pulito dal testo
         else:
             html_finale = _costruisci_html_email(
-                oggetto=oggetto,
-                corpo=corpo,
+                oggetto=localized_subject,
+                corpo=localized_body,
                 action_url=action_url,
-                action_label=action_label
+                action_label=localized_action_label
+            )
+
+        if html_finale and email_language != "it":
+            html_finale = localize_html_document(
+                html_finale,
+                email_language,
             )
 
         # ✅ Testo fallback
-        text_finale = (corpo or "").strip()
+        text_finale = (localized_body or "").strip()
 
         if not text_finale and html_finale:
             text_finale = (
@@ -13267,7 +13404,7 @@ def _invia_email(
         payload = {
             "From": mittente,
             "To": str(destinazione).strip(),
-            "Subject": str(oggetto).strip(),
+            "Subject": str(localized_subject).strip(),
             "TextBody": text_finale,
             "MessageStream": message_stream,
             "ReplyTo": from_address,
@@ -18258,9 +18395,14 @@ def invia_push(user_id, title, body, url=None):
         cur = conn.cursor()
 
         cur.execute("""
-            SELECT endpoint, p256dh, auth
-            FROM push_subscriptions
-            WHERE utente_id = %s
+            SELECT
+                ps.endpoint,
+                ps.p256dh,
+                ps.auth,
+                COALESCE(u.lingua_interfaccia, 'it') AS lingua_interfaccia
+            FROM push_subscriptions ps
+            JOIN utenti u ON u.id = ps.utente_id
+            WHERE ps.utente_id = %s
         """, (user_id,))
 
         subs = cur.fetchall()
@@ -18271,6 +18413,10 @@ def invia_push(user_id, title, body, url=None):
                 {"user_id": user_id}
             )
             return
+
+        push_language = normalize_language(subs[0].get("lingua_interfaccia"))
+        localized_title = translate_source(title, push_language)
+        localized_body = translate_source(body, push_language)
 
         security_log(
             "🔔 [invia_push] subscription trovate",
@@ -18347,8 +18493,8 @@ def invia_push(user_id, title, body, url=None):
                         },
                     },
                     data=json.dumps({
-                        "title": title,
-                        "body": body,
+                        "title": localized_title,
+                        "body": localized_body,
                         "url": push_url,
                         "pwa_badge_count": pwa_badge_count
                     }),
@@ -19759,9 +19905,10 @@ def register():
                 key_salt, dek_enc, dek_nonce,
                 dek_mk_enc, dek_mk_nonce,
                 x25519_pub, x25519_priv_enc, x25519_priv_nonce,
-                versione_consenso
+                versione_consenso,
+                lingua_interfaccia
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """), (
             nome, cognome, email, username, hashed_pw,
             citta, provincia, macro_area,
@@ -19769,7 +19916,8 @@ def register():
             salt_b64, dek_enc_b64, dek_nonce_b64,
             None, None,
             x25519_pub_b64, x25519_priv_enc_b64, x25519_priv_nonce_b64,
-            "mylocalcare_privacy_termini_2026_v1"
+            "mylocalcare_privacy_termini_2026_v1",
+            normalize_language(session.get("lingua_interfaccia"))
         ))
 
         conn.commit()

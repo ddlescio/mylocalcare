@@ -2892,7 +2892,7 @@ body {
         dt.getMonth() === oggi.getMonth() &&
         dt.getFullYear() === oggi.getFullYear()
       ) return 'Oggi';
-      return dt.toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+      return dt.toLocaleDateString(document.documentElement.lang || 'it', { day: '2-digit', month: 'long', year: 'numeric' });
     } catch { return ''; }
   }
 

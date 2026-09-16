@@ -6,6 +6,59 @@ self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());
 });
 
+function localcareLanguageCode() {
+  const rawLanguage = String(
+    (self.navigator && self.navigator.language) || "it"
+  ).toLowerCase();
+  const language = rawLanguage.slice(0, 2);
+
+  return ["it", "en", "fr", "es", "de"].includes(language)
+    ? language
+    : "it";
+}
+
+function localcareOfflineCopy() {
+  const language = localcareLanguageCode();
+  const translations = {
+    it: {
+      title: "MyLocalCare si sta aggiornando",
+      description: "Il server potrebbe essere in fase di riavvio o deploy. Riprova tra qualche secondo.",
+      retry: "Riprova",
+      notification: "Nuova notifica"
+    },
+    en: {
+      title: "MyLocalCare is updating",
+      description: "The server may be restarting or deploying an update. Please try again in a few seconds.",
+      retry: "Try again",
+      notification: "New notification"
+    },
+    fr: {
+      title: "MyLocalCare est en cours de mise à jour",
+      description: "Le serveur redémarre peut-être ou déploie une mise à jour. Réessayez dans quelques secondes.",
+      retry: "Réessayer",
+      notification: "Nouvelle notification"
+    },
+    es: {
+      title: "MyLocalCare se está actualizando",
+      description: "Es posible que el servidor se esté reiniciando o instalando una actualización. Inténtalo de nuevo en unos segundos.",
+      retry: "Volver a intentar",
+      notification: "Nueva notificación"
+    },
+    de: {
+      title: "MyLocalCare wird aktualisiert",
+      description: "Der Server wird möglicherweise neu gestartet oder aktualisiert. Versuche es in wenigen Sekunden erneut.",
+      retry: "Erneut versuchen",
+      notification: "Neue Benachrichtigung"
+    }
+  };
+
+  return { language, ...translations[language] };
+}
+
+function localcareNotificationFallback() {
+  return localcareOfflineCopy().notification;
+}
+
 self.addEventListener('fetch', event => {
   const request = event.request;
 
@@ -33,13 +86,15 @@ self.addEventListener('fetch', event => {
 });
 
 function paginaAttesaRender() {
+  const copy = localcareOfflineCopy();
+
   return new Response(`
     <!doctype html>
-    <html lang="it">
+    <html lang="${copy.language}">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>MyLocalCare si sta aggiornando</title>
+        <title>${copy.title}</title>
         <style>
           body {
             margin: 0;
@@ -96,9 +151,9 @@ function paginaAttesaRender() {
       <body>
         <div class="card">
           <img src="/static/img/logo.png" alt="MyLocalCare">
-          <h1>MyLocalCare si sta aggiornando</h1>
-          <p>Il server potrebbe essere in fase di riavvio o deploy. Riprova tra qualche secondo.</p>
-          <button onclick="window.location.reload()">Riprova</button>
+          <h1>${copy.title}</h1>
+          <p>${copy.description}</p>
+          <button onclick="window.location.reload()">${copy.retry}</button>
         </div>
       </body>
     </html>
@@ -120,7 +175,7 @@ self.addEventListener('push', function(event) {
 
   let data = {
     title: "MyLocalCare",
-    body: "Nuova notifica",
+    body: localcareNotificationFallback(),
     url: "/utente/dashboard",
     pwa_badge_count: 1
   };
@@ -141,7 +196,7 @@ self.addEventListener('push', function(event) {
   const badgeCount = Number.isFinite(badgeCountRaw) ? badgeCountRaw : 1;
 
   const showNotificationPromise = self.registration.showNotification(data.title || "MyLocalCare", {
-    body: data.body || "Nuova notifica",
+    body: data.body || localcareNotificationFallback(),
     icon: "/static/icons/icon-192.png",
     badge: "/static/icons/icon-192.png",
     data: {

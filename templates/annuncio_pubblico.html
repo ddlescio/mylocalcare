@@ -4155,7 +4155,7 @@ async function caricaStatoServizio(annuncioId, codice) {
 
           else {
             btn.disabled = true;
-            btn.textContent = `Attivo fino al ${fine.toLocaleDateString("it-IT")}`;
+            btn.textContent = `Attivo fino al ${fine.toLocaleDateString(document.documentElement.lang || "it")}`;
             btn.className =
               "mt-3 w-full py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium cursor-default";
           }

@@ -3,6 +3,12 @@
 {% block content %}
 <div class="max-w-3xl mx-auto mt-12 bg-white shadow rounded-lg p-8">
 
+  {% if current_language_code != 'it' %}
+  <p class="mb-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
+    {{ tr('legal.official_language_notice') }}
+  </p>
+  {% endif %}
+
   <h1 class="text-3xl font-bold mb-4">Informativa sulla Privacy</h1>
 
   <p class="text-sm text-gray-500 mb-8">

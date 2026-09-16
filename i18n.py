@@ -1,5 +1,12 @@
 """Traduzioni dell'interfaccia MyLocalCare, senza contenuti scritti dagli utenti."""
 
+import base64
+import html
+import json
+import re
+
+from i18n_catalog import PATTERN_ROWS, PHRASE_ROWS
+
 SUPPORTED_LANGUAGES = {
     "it": {"label": "Italiano", "flag": "🇮🇹", "short": "IT"},
     "en": {"label": "English", "flag": "🇬🇧", "short": "EN"},
@@ -10,6 +17,13 @@ SUPPORTED_LANGUAGES = {
 
 
 TRANSLATIONS = {
+    "legal.official_language_notice": {
+        "it": "Il testo legale ufficiale è disponibile in italiano.",
+        "en": "The official legal text is provided in Italian.",
+        "fr": "Le texte juridique officiel est fourni en italien.",
+        "es": "El texto legal oficial se proporciona en italiano.",
+        "de": "Der verbindliche Rechtstext ist auf Italienisch verfügbar.",
+    },
     "language.open": {
         "it": "Cambia lingua", "en": "Change language", "fr": "Changer de langue",
         "es": "Cambiar idioma", "de": "Sprache ändern",
@@ -326,6 +340,214 @@ TRANSLATIONS = {
         "es": "Mis intereses", "de": "Meine Interessen",
     },
 }
+
+
+LANGUAGE_ORDER = ("it", "en", "fr", "es", "de")
+PATTERN_LANGUAGE_ORDER = ("en", "fr", "es", "de")
+
+
+def _build_source_translations():
+    """Crea il catalogo basato sui testi italiani già presenti nei template."""
+    catalog = {}
+
+    for variants in TRANSLATIONS.values():
+        italian = variants.get("it")
+        if italian:
+            catalog[italian] = {
+                code: variants.get(code) or variants.get("en") or italian
+                for code in LANGUAGE_ORDER
+            }
+
+    for row in PHRASE_ROWS:
+        if len(row) != len(LANGUAGE_ORDER):
+            raise ValueError(f"Riga traduzione non valida: {row!r}")
+        italian = row[0]
+        catalog[italian] = dict(zip(LANGUAGE_ORDER, row))
+
+    return catalog
+
+
+SOURCE_TRANSLATIONS = _build_source_translations()
+
+
+PATTERN_TRANSLATIONS = [
+    (
+        re.compile(row[0], re.I),
+        dict(zip(PATTERN_LANGUAGE_ORDER, row[1:])),
+    )
+    for row in PATTERN_ROWS
+]
+
+
+_SPACE_RE = re.compile(r"\s+")
+_LEADING_SYMBOLS_RE = re.compile(r"^([^0-9A-Za-zÀ-ÖØ-öø-ÿ@]+)(.+)$", re.S)
+_TRAILING_PUNCTUATION_RE = re.compile(r"^(.+?)(\s*[:;,.!?…]+)$", re.S)
+_TRAILING_SYMBOLS_RE = re.compile(r"^(.+?)(\s*[^0-9A-Za-zÀ-ÖØ-öø-ÿ@\s]+)$", re.S)
+
+
+def _normalize_source_text(value):
+    return _SPACE_RE.sub(" ", html.unescape(str(value or ""))).strip()
+
+
+def _translate_source_core(source, language):
+    variants = SOURCE_TRANSLATIONS.get(source)
+    if variants:
+        return variants.get(language) or variants.get("en") or source
+
+    for pattern, pattern_variants in PATTERN_TRANSLATIONS:
+        match = pattern.fullmatch(source)
+        if not match:
+            continue
+        template = pattern_variants.get(language) or pattern_variants.get("en")
+        try:
+            translated_groups = tuple(
+                _translate_source_core(group, language)
+                for group in match.groups()
+            )
+            return template.format(*translated_groups)
+        except (IndexError, KeyError, ValueError):
+            return source
+
+    leading = _LEADING_SYMBOLS_RE.match(source)
+    if leading:
+        prefix, core = leading.groups()
+        translated = _translate_source_core(core.strip(), language)
+        if translated != core.strip():
+            return f"{prefix}{translated}"
+
+    trailing = _TRAILING_PUNCTUATION_RE.match(source)
+    if trailing:
+        core, suffix = trailing.groups()
+        translated = _translate_source_core(core.strip(), language)
+        if translated != core.strip():
+            return f"{translated}{suffix}"
+
+    trailing_symbols = _TRAILING_SYMBOLS_RE.match(source)
+    if trailing_symbols:
+        core, suffix = trailing_symbols.groups()
+        translated = _translate_source_core(core.strip(), language)
+        if translated != core.strip():
+            return f"{translated}{suffix}"
+
+    return source
+
+
+def translate_source(value, language="it"):
+    """Traduce un testo UI italiano completo preservando gli spazi esterni."""
+    language = normalize_language(language)
+    if language == "it" or value is None:
+        return value
+
+    original = str(value)
+    normalized = _normalize_source_text(original)
+    if not normalized:
+        return original
+
+    translated = _translate_source_core(normalized, language)
+    if translated == normalized:
+        return original
+
+    leading = original[: len(original) - len(original.lstrip())]
+    trailing = original[len(original.rstrip()):]
+    return f"{leading}{translated}{trailing}"
+
+
+_HTML_TEXT_RE = re.compile(r"(?<=>)([^<>]+)(?=<)")
+_TRANSLATABLE_ATTR_RE = re.compile(
+    # Non tradurre mai `value`: nei form contiene spesso codici applicativi
+    # (per esempio "offro", "cerco" o gli slug delle categorie).
+    r"(?P<prefix>\b(?:placeholder|title|aria-label|data-label|alt)\s*=\s*)"
+    r"(?P<quote>['\"])(?P<value>.*?)(?P=quote)",
+    re.I | re.S,
+)
+_SCRIPT_BLOCK_RE = re.compile(r"(<script\b[^>]*>)(.*?)(</script>)", re.I | re.S)
+
+
+def localize_html_document(document, language="it"):
+    """Traduce testo statico e attributi accessibili senza toccare la logica JS."""
+    language = normalize_language(language)
+    if language == "it" or not document:
+        return document
+
+    scripts = []
+
+    def protect_script(match):
+        index = len(scripts)
+        scripts.append(match.groups())
+        return f"<template data-mlc-script-placeholder=\"{index}\"></template>"
+
+    localized = _SCRIPT_BLOCK_RE.sub(protect_script, document)
+    def replace_text(match):
+        original = match.group(1)
+        translated = translate_source(original, language)
+        if translated == original:
+            return original
+        return html.escape(str(translated), quote=False)
+
+    localized = _HTML_TEXT_RE.sub(replace_text, localized)
+
+    def replace_attribute(match):
+        translated = translate_source(match.group("value"), language)
+        escaped = html.escape(str(translated), quote=True)
+        return (
+            f"{match.group('prefix')}{match.group('quote')}"
+            f"{escaped}{match.group('quote')}"
+        )
+
+    localized = _TRANSLATABLE_ATTR_RE.sub(replace_attribute, localized)
+
+    for index, (opening, script, closing) in enumerate(scripts):
+        placeholder = f'<template data-mlc-script-placeholder="{index}"></template>'
+        localized = localized.replace(
+            placeholder,
+            f"{opening}{script}{closing}",
+            1,
+        )
+
+    return localized
+
+
+def frontend_source_catalog(language="it"):
+    """Catalogo compatto per contenuti aggiunti dinamicamente nel browser."""
+    language = normalize_language(language)
+    if language == "it":
+        return {}
+    return {
+        source: variants.get(language) or variants.get("en") or source
+        for source, variants in SOURCE_TRANSLATIONS.items()
+        if (variants.get(language) or source) != source
+    }
+
+
+def frontend_source_catalog_b64(language="it"):
+    payload = json.dumps(
+        frontend_source_catalog(language),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return base64.b64encode(payload).decode("ascii")
+
+
+def frontend_pattern_catalog(language="it"):
+    language = normalize_language(language)
+    if language == "it":
+        return []
+    return [
+        {
+            "source": row[0],
+            "target": row[LANGUAGE_ORDER.index(language)],
+        }
+        for row in PATTERN_ROWS
+    ]
+
+
+def frontend_pattern_catalog_b64(language="it"):
+    payload = json.dumps(
+        frontend_pattern_catalog(language),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return base64.b64encode(payload).decode("ascii")
 
 
 def normalize_language(value):
