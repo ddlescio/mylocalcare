@@ -2080,6 +2080,9 @@ def datetimeformat(value, fmt='%d %B %Y'):
             "fr": ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
             "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
             "de": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+            "ro": ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"],
+            "uk": ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"],
+            "fil": ["Enero", "Pebrero", "Marso", "Abril", "Mayo", "Hunyo", "Hulyo", "Agosto", "Setyembre", "Oktubre", "Nobyembre", "Disyembre"],
         }
         mese_nome = months[language][dt.month - 1]
         return f"{dt.day} {mese_nome} {dt.year}"
@@ -22905,23 +22908,8 @@ def api_servizi_piani(codice):
         "piani": piani
     })
 
-@app.route("/api/annunci/<int:annuncio_id>/servizi/<codice>")
-@login_required
-def api_annuncio_servizio_stato(annuncio_id, codice):
-    conn = get_db_connection()
-    cur = get_cursor(conn)
-
-    # servizio
-    cur.execute(sql("""
-        SELECT id, ambito
-        FROM servizi
-        WHERE codice = ? AND attivo = 1
-    """), (codice,))
-    servizio = cur.fetchone()
-
-    if not servizio:
-        return jsonify({"error": "Servizio non trovato"}), 404
-
+def _stato_servizio_per_annuncio(cur, servizio, annuncio_id, utente_id):
+    """Restituisce lo stato UI di un servizio usando una connessione già aperta."""
     # query dinamica in base all’ambito:
     # prende la MIGLIORE copertura attiva del servizio
     # priorità:
@@ -22947,7 +22935,7 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
                 data_fine DESC,
                 {order_datetime("data_inizio")} DESC
             LIMIT 1
-        """), (servizio["id"], g.utente["id"]))
+        """), (servizio["id"], utente_id))
     else:
         cur.execute(sql(f"""
             SELECT
@@ -22967,32 +22955,135 @@ def api_annuncio_servizio_stato(annuncio_id, codice):
                 data_fine DESC,
                 {order_datetime("data_inizio")} DESC
             LIMIT 1
-        """), (servizio["id"], annuncio_id, g.utente["id"]))
+        """), (servizio["id"], annuncio_id, utente_id))
 
     att = cur.fetchone()
 
     if not att:
-        return jsonify({
+        return {
             "attivo": False,
             "stato": "non_attivo",
             "data_inizio": None,
             "data_fine": None,
             "permanente": False
-        })
+        }
 
     def solo_data(v):
         if not v:
             return None
         return str(v)[:10]
 
-    return jsonify({
+    return {
         "attivo": True,
         "stato": "attivo",
         "data_inizio": solo_data(att["data_inizio"]),
         "data_fine": solo_data(att["data_fine"]),
         "permanente": not att["data_fine"],
         "attivato_da": att["attivato_da"]
-    })
+    }
+
+
+@app.route("/api/annunci/<int:annuncio_id>/servizi-stato")
+@login_required
+def api_annuncio_servizi_stato(annuncio_id):
+    """Carica tutti gli stati del popup visibilità con una sola richiesta HTTP."""
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    codici = (
+        "boost_lista",
+        "badge_evidenza",
+        "vetrina_annuncio",
+        "annuncio_urgente",
+        "contatti",
+    )
+    stato_non_attivo = {
+        "attivo": False,
+        "stato": "non_attivo",
+        "data_inizio": None,
+        "data_fine": None,
+        "permanente": False,
+    }
+
+    try:
+        cur.execute(sql("""
+            SELECT id
+            FROM annunci
+            WHERE id = ? AND utente_id = ?
+        """), (annuncio_id, g.utente["id"]))
+        if not cur.fetchone():
+            return jsonify({"error": "Annuncio non trovato"}), 404
+
+        placeholders = ", ".join("?" for _ in codici)
+        cur.execute(sql(f"""
+            SELECT id, codice, ambito
+            FROM servizi
+            WHERE attivo = 1
+              AND codice IN ({placeholders})
+        """), codici)
+        servizi = {r["codice"]: r for r in cur.fetchall()}
+
+        stati = {}
+        for codice in codici:
+            servizio = servizi.get(codice)
+            stati[codice] = (
+                _stato_servizio_per_annuncio(
+                    cur,
+                    servizio,
+                    annuncio_id,
+                    g.utente["id"],
+                )
+                if servizio
+                else dict(stato_non_attivo)
+            )
+
+        # I pacchetti sono calcolati nel browser in base ai servizi inclusi.
+        stati["pacchetto_visibilita"] = dict(stato_non_attivo)
+        stati["visibilita_premium"] = dict(stato_non_attivo)
+
+        return jsonify({"ok": True, "servizi": stati})
+    except Exception as e:
+        log_exception_safe(
+            "Errore caricamento riepilogo servizi annuncio",
+            e,
+            {"annuncio_id": annuncio_id, "utente_id": g.utente["id"]},
+            production=True,
+        )
+        return jsonify({"ok": False, "error": "Stato servizi non disponibile"}), 500
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+@app.route("/api/annunci/<int:annuncio_id>/servizi/<codice>")
+@login_required
+def api_annuncio_servizio_stato(annuncio_id, codice):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        cur.execute(sql("""
+            SELECT id, ambito
+            FROM servizi
+            WHERE codice = ? AND attivo = 1
+        """), (codice,))
+        servizio = cur.fetchone()
+
+        if not servizio:
+            return jsonify({"error": "Servizio non trovato"}), 404
+
+        return jsonify(_stato_servizio_per_annuncio(
+            cur,
+            servizio,
+            annuncio_id,
+            g.utente["id"],
+        ))
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 @app.route("/api/pacchetti/<codice>/piani")
 @login_required

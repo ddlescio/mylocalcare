@@ -515,6 +515,66 @@ TRANSLATIONS = {
         "it": "I miei interessi", "en": "My interests", "fr": "Mes favoris",
         "es": "Mis intereses", "de": "Meine Interessen",
     },
+    "profile.contacts.title": {
+        "it": "Contatti e presenza online",
+        "en": "Contacts and online presence",
+        "fr": "Contacts et présence en ligne",
+        "es": "Contactos y presencia online",
+        "de": "Kontaktdaten und Online-Präsenz",
+        "ro": "Contacte și prezență online",
+        "uk": "Контакти та присутність онлайн",
+        "fil": "Mga contact at online presence",
+    },
+    "profile.contacts.subtitle": {
+        "it": "Inserisci i riferimenti utili per farti contattare e trovarti online.",
+        "en": "Add useful details so people can contact and find you online.",
+        "fr": "Ajoutez les informations utiles pour être contacté et trouvé en ligne.",
+        "es": "Añade datos útiles para que puedan contactarte y encontrarte online.",
+        "de": "Füge Angaben hinzu, über die man dich kontaktieren und online finden kann.",
+        "ro": "Adaugă informații utile pentru a putea fi contactat și găsit online.",
+        "uk": "Додайте корисні дані, щоб з вами могли зв’язатися та знайти вас онлайн.",
+        "fil": "Magdagdag ng impormasyon para makontak at mahanap ka online.",
+    },
+    "profile.contacts.visibility_note": {
+        "it": "I contatti saranno visibili solo con almeno un annuncio pubblicato e il servizio Contatti attivo in Aumenta visibilità. In alternativa, gli utenti possono scriverti gratis in chat.",
+        "en": "Your contact details are visible only when you have at least one published listing and the Contacts service is active under Boost visibility. Users can always message you in chat for free.",
+        "fr": "Vos coordonnées ne sont visibles qu’avec au moins une annonce publiée et le service Contacts activé dans Booster la visibilité. Les utilisateurs peuvent toujours vous écrire gratuitement dans le chat.",
+        "es": "Tus datos de contacto solo serán visibles si tienes al menos un anuncio publicado y el servicio Contactos está activo en Aumentar visibilidad. Los usuarios siempre pueden escribirte gratis por chat.",
+        "de": "Deine Kontaktdaten sind nur sichtbar, wenn mindestens eine Anzeige veröffentlicht und der Dienst Kontakte unter Sichtbarkeit erhöhen aktiv ist. Nutzer können dir jederzeit kostenlos im Chat schreiben.",
+        "ro": "Datele tale de contact sunt vizibile numai dacă ai cel puțin un anunț publicat și serviciul Contacte este activ în Crește vizibilitatea. Utilizatorii îți pot scrie oricând gratuit în chat.",
+        "uk": "Ваші контактні дані видно лише за наявності щонайменше одного опублікованого оголошення та активної послуги «Контакти» в розділі підвищення видимості. Користувачі завжди можуть безкоштовно написати вам у чаті.",
+        "fil": "Makikita lamang ang iyong contact details kapag may hindi bababa sa isang naka-publish na listing at aktibo ang Contacts service sa Boost visibility. Maaari ka pa ring i-message ng mga user nang libre sa chat.",
+    },
+    "profile.contacts.no_public_references": {
+        "it": "Questo utente non ha ancora inserito riferimenti pubblici.",
+        "en": "This user has not added any public contact details yet.",
+        "fr": "Cet utilisateur n’a pas encore ajouté de coordonnées publiques.",
+        "es": "Este usuario aún no ha añadido datos de contacto públicos.",
+        "de": "Dieser Nutzer hat noch keine öffentlichen Kontaktdaten hinzugefügt.",
+        "ro": "Acest utilizator nu a adăugat încă date de contact publice.",
+        "uk": "Цей користувач ще не додав публічних контактних даних.",
+        "fil": "Wala pang idinagdag na pampublikong contact details ang user na ito.",
+    },
+    "content.write_italian_profile_note": {
+        "it": "Scrivi questo testo in italiano, perché sarà mostrato pubblicamente senza traduzione automatica.",
+        "en": "Write this text in Italian because it will be shown publicly without automatic translation.",
+        "fr": "Écrivez ce texte en italien : il sera affiché publiquement sans traduction automatique.",
+        "es": "Escribe este texto en italiano: se mostrará públicamente sin traducción automática.",
+        "de": "Schreibe diesen Text auf Italienisch. Er wird öffentlich ohne automatische Übersetzung angezeigt.",
+        "ro": "Scrie acest text în italiană: va fi afișat public fără traducere automată.",
+        "uk": "Напишіть цей текст італійською мовою: він буде опублікований без автоматичного перекладу.",
+        "fil": "Isulat ang tekstong ito sa Italian dahil ipapakita ito sa publiko nang walang awtomatikong pagsasalin.",
+    },
+    "content.write_italian_listing_note": {
+        "it": "Scrivi la descrizione in italiano. Se ti serve aiuto, usa Aiuto scrittura per tradurla e migliorarla.",
+        "en": "Write the description in Italian. If you need help, use Writing help to translate and improve it.",
+        "fr": "Rédigez la description en italien. Si nécessaire, utilisez Aide à la rédaction pour la traduire et l’améliorer.",
+        "es": "Escribe la descripción en italiano. Si necesitas ayuda, usa Ayuda de escritura para traducirla y mejorarla.",
+        "de": "Schreibe die Beschreibung auf Italienisch. Nutze bei Bedarf die Schreibhilfe zum Übersetzen und Verbessern.",
+        "ro": "Scrie descrierea în italiană. Dacă ai nevoie de ajutor, folosește Asistență la scriere pentru traducere și îmbunătățire.",
+        "uk": "Напишіть опис італійською мовою. За потреби скористайтеся допомогою з написання, щоб перекласти й покращити текст.",
+        "fil": "Isulat ang paglalarawan sa Italian. Kung kailangan mo ng tulong, gamitin ang Writing help para isalin at pagandahin ito.",
+    },
 }
 
 
@@ -779,6 +839,12 @@ _TRANSLATABLE_ATTR_RE = re.compile(
     re.I | re.S,
 )
 _SCRIPT_BLOCK_RE = re.compile(r"(<script\b[^>]*>)(.*?)(</script>)", re.I | re.S)
+_NO_TRANSLATE_BLOCK_RE = re.compile(
+    r"(<(?P<tag>[a-z][\w:-]*)\b"
+    r"(?=[^>]*\bdata-no-translate(?:\s|=|>))[^>]*>"
+    r".*?</(?P=tag)\s*>)",
+    re.I | re.S,
+)
 
 
 def localize_html_document(document, language="it"):
@@ -787,6 +853,15 @@ def localize_html_document(document, language="it"):
     if language == "it" or not document:
         return document
 
+    protected_blocks = []
+
+    def protect_no_translate(match):
+        index = len(protected_blocks)
+        protected_blocks.append(match.group(1))
+        return f'<template data-mlc-protected-block="{index}"></template>'
+
+    localized = _NO_TRANSLATE_BLOCK_RE.sub(protect_no_translate, document)
+
     scripts = []
 
     def protect_script(match):
@@ -794,7 +869,7 @@ def localize_html_document(document, language="it"):
         scripts.append(match.groups())
         return f"<template data-mlc-script-placeholder=\"{index}\"></template>"
 
-    localized = _SCRIPT_BLOCK_RE.sub(protect_script, document)
+    localized = _SCRIPT_BLOCK_RE.sub(protect_script, localized)
     def replace_text(match):
         original = match.group(1)
         translated = translate_source(original, language)
@@ -821,6 +896,10 @@ def localize_html_document(document, language="it"):
             f"{opening}{script}{closing}",
             1,
         )
+
+    for index, block in enumerate(protected_blocks):
+        placeholder = f'<template data-mlc-protected-block="{index}"></template>'
+        localized = localized.replace(placeholder, block, 1)
 
     return localized
 

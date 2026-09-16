@@ -5975,7 +5975,16 @@ function mostraErroreStatoVisibilita() {
   if (!box) return;
   delete box.dataset.visibilityLoading;
   box.className = "relative bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800";
-  box.textContent = testoVisibilita("Impossibile caricare lo stato dei servizi. Riprova tra poco.");
+  box.innerHTML = "";
+
+  const messaggio = document.createElement("span");
+  messaggio.textContent = testoVisibilita("Impossibile caricare lo stato dei servizi. Riprova tra poco.");
+  box.appendChild(messaggio);
+
+  document.querySelectorAll("#modale-visibilita .lc-status-badge").forEach(badge => {
+    badge.textContent = "—";
+    badge.className = "lc-status-badge is-not-active";
+  });
 }
 
 function aggiornaRiepilogoVisibilita(loadToken = VISIBILITA_LOAD_TOKEN) {
@@ -6031,39 +6040,49 @@ function aggiornaRiepilogoVisibilita(loadToken = VISIBILITA_LOAD_TOKEN) {
 
     mostraCaricamentoVisibilita(servizi);
 
-    const watchdogId = window.setTimeout(() => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 6000);
+
+    try {
+      const response = await fetch(
+        `/api/annunci/${ANNUNCIO_ID_CORRENTE}/servizi-stato?t=${Date.now()}`,
+        {
+          cache: "no-store",
+          headers: { "Accept": "application/json" },
+          signal: controller.signal
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Stato servizi non disponibile (${response.status})`);
+      }
+
+      const payload = await response.json();
       if (loadToken !== VISIBILITA_LOAD_TOKEN) return;
-      const box = document.getElementById("box-visibilita-stato");
-      if (box?.dataset.visibilityLoading === "1") {
-        mostraErroreStatoVisibilita();
-      }
-    }, 4000);
 
-    const risultati = await Promise.allSettled(
-      servizi.map(codice =>
-        caricaStatoServizio(ANNUNCIO_ID_CORRENTE, codice, loadToken)
-      )
-    );
+      const stati = payload?.servizi || {};
+      await Promise.all(servizi.map(codice =>
+        caricaStatoServizio(
+          ANNUNCIO_ID_CORRENTE,
+          codice,
+          loadToken,
+          stati[codice] || {
+            attivo: false,
+            stato: "non_attivo",
+            data_inizio: null,
+            data_fine: null,
+            permanente: false
+          }
+        )
+      ));
 
-    window.clearTimeout(watchdogId);
-
-    if (loadToken !== VISIBILITA_LOAD_TOKEN) return;
-
-    aggiornaRiepilogoVisibilita(loadToken);
-
-    const almenoUnoCaricato = risultati.some(
-      risultato => risultato.status === "fulfilled" && risultato.value === true
-    );
-
-    if (almenoUnoCaricato) {
-      try {
-        aggiornaStatoVisibilita();
-      } catch (errore) {
-        console.error("Errore aggiornamento stato visibilità", errore);
-        mostraErroreStatoVisibilita();
-      }
-    } else {
+      aggiornaRiepilogoVisibilita(loadToken);
+    } catch (errore) {
+      if (loadToken !== VISIBILITA_LOAD_TOKEN) return;
+      console.error("Errore caricamento riepilogo visibilità", errore);
       mostraErroreStatoVisibilita();
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }
 </script>
@@ -6257,21 +6276,33 @@ function setBadgeScaduto(badge) {
   badge.className = "lc-status-badge is-expired";
 }
 
-async function caricaStatoServizio(annuncioId, codice, loadToken = VISIBILITA_LOAD_TOKEN) {
-     const controller = new AbortController();
-     const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+async function caricaStatoServizio(
+  annuncioId,
+  codice,
+  loadToken = VISIBILITA_LOAD_TOKEN,
+  dataPrecaricata = undefined
+) {
+     let controller = null;
+     let timeoutId = null;
+     let richiestaOk = true;
      try {
-       const res = await fetch(
-         `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
-         { cache: "no-store", signal: controller.signal }
-       );
+       let data = dataPrecaricata;
 
-       let data = { attivo: false };
+       if (dataPrecaricata === undefined) {
+         controller = new AbortController();
+         timeoutId = window.setTimeout(() => controller.abort(), 6000);
+         const res = await fetch(
+           `/api/annunci/${annuncioId}/servizi/${codice}?t=${Date.now()}`,
+           { cache: "no-store", signal: controller.signal }
+         );
+         richiestaOk = res.ok;
+         data = res.ok ? await res.json() : { attivo: false };
 
-       if (res.ok) {
-         data = await res.json();
+         if (!res.ok) {
+           console.warn("API non ok:", codice, res.status);
+         }
        } else {
-         console.warn("API non ok:", codice);
+         data = dataPrecaricata || { attivo: false };
        }
 
        if (loadToken !== VISIBILITA_LOAD_TOKEN) return false;
@@ -6385,7 +6416,7 @@ async function caricaStatoServizio(annuncioId, codice, loadToken = VISIBILITA_LO
 
        aggiornaRiepilogoVisibilita(loadToken);
 
-       return res.ok;
+       return richiestaOk;
      } catch (e) {
        console.error("Errore stato servizio", codice, e);
        if (loadToken === VISIBILITA_LOAD_TOKEN) {
@@ -6394,7 +6425,7 @@ async function caricaStatoServizio(annuncioId, codice, loadToken = VISIBILITA_LO
        }
        return false;
      } finally {
-       window.clearTimeout(timeoutId);
+       if (timeoutId !== null) window.clearTimeout(timeoutId);
      }
    }
 </script>

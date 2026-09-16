@@ -316,10 +316,16 @@
                   class="input-modern ov-input ov-textarea"
                   maxlength="120"
                   rows="3"
+                  {% if current_language_code not in ('it', 'en') %}data-no-translate{% endif %}
                   placeholder="{% if not pubblico %}Es. “Mi piace aiutare con il sorriso” oppure “It's only rock and roll but I like it”{% endif %}"
                   {% if pubblico %}disabled{% endif %}>{{ frase_corrente }}</textarea>
 
                 {% if not pubblico %}
+                {% if current_language_code not in ('it', 'en') %}
+                <p class="ov-help rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                  🇮🇹 {{ tr('content.write_italian_profile_note') }}
+                </p>
+                {% endif %}
                 <p class="ov-help">
                   Puoi scrivere una frase che ti racconta, una citazione o qualcosa che ti rappresenta.
                 </p>
@@ -521,7 +527,7 @@
             <div class="pub-card pub-card-muted">
               <div class="pub-empty">
                 <div class="pub-empty-title">Nessun contatto disponibile</div>
-                <div class="pub-empty-sub">Questo utente non ha ancora inserito riferimenti pubblici.</div>
+                <div class="pub-empty-sub">{{ tr('profile.contacts.no_public_references') }}</div>
               </div>
             </div>
 
@@ -629,14 +635,12 @@
               id="form-contacts">
 
               <div class="cp-head">
-                <h4 class="cp-title">📞 Contatti e presenza online</h4>
-                <p class="cp-subtitle">Inserisci i riferimenti utili per farti contattare e trovarti online.</p>
+                <h4 class="cp-title">📞 {{ tr('profile.contacts.title') }}</h4>
+                <p class="cp-subtitle">{{ tr('profile.contacts.subtitle') }}</p>
 
                 <div class="cp-visibility-note">
                   <span class="cp-visibility-note-icon">ℹ️</span>
-                  <span>
-                    I contatti saranno visibili solo con almeno un annuncio pubblicato e il servizio <strong>Contatti</strong> attivo in <strong>Aumenta visibilità</strong>. In alternativa, gli utenti possono scriverti gratis in chat.
-                  </span>
+                  <span>{{ tr('profile.contacts.visibility_note') }}</span>
                 </div>
               </div>
 
@@ -827,7 +831,14 @@
                     rows="5"
                     data-min-rows="5"
                     data-autosave="1"
+                    {% if current_language_code not in ('it', 'en') %}data-no-translate{% endif %}
                     placeholder="Es. Mi piace aiutare le persone con serietà, empatia e attenzione. Ho maturato esperienza sul campo e cerco sempre di offrire un servizio affidabile e umano.">{{ descrizione_corrente }}</textarea>
+
+                  {% if current_language_code not in ('it', 'en') %}
+                  <p class="ov-help rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                    🇮🇹 {{ tr('content.write_italian_profile_note') }}
+                  </p>
+                  {% endif %}
 
                   {% if utente.get('descrizione_stato') == 'in_revisione' and utente.get('descrizione_pending') %}
                   <p class="ov-help text-amber-600 font-semibold">

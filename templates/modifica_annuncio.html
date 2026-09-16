@@ -391,8 +391,15 @@
             <span class="text-blue-600 font-extrabold">*</span>
           </label>
 
+          {% if current_language_code not in ('it', 'en') %}
+          <p class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-800">
+            🇮🇹 {{ tr('content.write_italian_listing_note') }}
+          </p>
+          {% endif %}
+
           <textarea id="descrizione" name="descrizione" rows="5" required
                     class="block w-full border-2 border-blue-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
+                    {% if current_language_code not in ('it', 'en') %}data-no-translate{% endif %}
                     placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ current_descrizione }}</textarea>
         </div>
 

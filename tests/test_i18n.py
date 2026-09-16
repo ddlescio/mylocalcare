@@ -177,16 +177,53 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn("prova@gmai.com", translated)
         self.assertIn("prova@gmail.com", translated)
 
-    def test_visibility_loader_is_bounded_and_language_safe(self):
+    def test_visibility_loader_uses_one_bounded_summary_request(self):
+        app_source = (self.ROOT / "app.py").read_text(encoding="utf-8")
+        self.assertIn(
+            '@app.route("/api/annunci/<int:annuncio_id>/servizi-stato")',
+            app_source,
+        )
+
         for template_name in ("dashboard.html", "annuncio_pubblico.html"):
             source = (self.ROOT / "templates" / template_name).read_text(encoding="utf-8")
-            self.assertIn("Promise.allSettled", source)
+            self.assertIn("/servizi-stato?t=", source)
             self.assertIn("VISIBILITA_LOAD_TOKEN", source)
-            self.assertIn("controller.abort(), 8000", source)
+            self.assertIn("controller.abort(), 6000", source)
+            self.assertIn('headers: { "Accept": "application/json" }', source)
+            self.assertIn("dataPrecaricata = undefined", source)
             self.assertIn("mostraErroreStatoVisibilita", source)
             self.assertIn("aggiornaRiepilogoVisibilita(loadToken)", source)
             self.assertIn("box.dataset.visibilityLoading", source)
-            self.assertIn("}, 4000);", source)
+
+    def test_no_translate_blocks_are_preserved_server_side(self):
+        source = (
+            '<textarea data-no-translate placeholder="Accedi">Accedi</textarea>'
+            '<p>Accedi</p>'
+        )
+        localized = localize_html_document(source, "en")
+        self.assertIn(
+            '<textarea data-no-translate placeholder="Accedi">Accedi</textarea>',
+            localized,
+        )
+        self.assertIn("<p>Sign in</p>", localized)
+
+    def test_italian_content_notes_are_present_on_editable_fields(self):
+        profile = (
+            self.ROOT / "templates" / "partials" / "tab_info_privato.html"
+        ).read_text(encoding="utf-8")
+        new_listing = (self.ROOT / "templates" / "nuovo_annuncio.html").read_text(
+            encoding="utf-8"
+        )
+        edit_listing = (
+            self.ROOT / "templates" / "modifica_annuncio.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertGreaterEqual(profile.count("content.write_italian_profile_note"), 2)
+        self.assertIn("content.write_italian_listing_note", new_listing)
+        self.assertIn("content.write_italian_listing_note", edit_listing)
+        self.assertIn("data-no-translate", profile)
+        self.assertIn("data-no-translate", new_listing)
+        self.assertIn("data-no-translate", edit_listing)
 
     def test_profile_photo_viewers_have_visible_close_controls(self):
         dashboard = (self.ROOT / "templates" / "dashboard.html").read_text(encoding="utf-8")
