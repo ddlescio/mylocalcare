@@ -786,6 +786,40 @@
     word-break: break-word;
 }
 
+.annuncio-modal-tipo-select {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background-color: #fff;
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.annuncio-modal-tipo-select:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.annuncio-modal-tipo-select:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.annuncio-modal-tipo-status {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.annuncio-modal-tipo-status.is-error {
+    color: #b91c1c;
+}
+
 .annuncio-modal-description {
     white-space: pre-line;
     line-height: 1.45;
@@ -1219,6 +1253,7 @@
                     data-annuncio-utente="{{ a.username }}"
                     data-annuncio-categoria="{{ a.categoria or '-' }}"
                     data-annuncio-tipo="{{ a.tipo_annuncio or '-' }}"
+                    data-annuncio-tipo-url="{{ url_for('admin_annuncio_tipo', id=a.id) }}"
                     data-annuncio-zona="{{ a.zona or '-' }}"
                     data-annuncio-provincia="{{ a.provincia or '-' }}"
                     data-annuncio-stato="{{ a.stato or '-' }}"
@@ -1308,7 +1343,7 @@
                     </td>
 
                     <td class="p-2">{{ a.categoria }}</td>
-                    <td class="p-2 text-center">
+                    <td class="p-2 text-center js-annuncio-tipo">
                     {% if a.tipo_annuncio == 'offro' %}
                       <span class="badge bg-blue-100 text-blue-700">Offro</span>
                     {% elif a.tipo_annuncio == 'cerco' %}
@@ -1500,8 +1535,15 @@
           </div>
 
           <div class="annuncio-modal-info modal-third">
-            <div class="annuncio-modal-label">Tipo</div>
-            <div id="modal-annuncio-tipo" class="annuncio-modal-value">-</div>
+            <label for="modal-annuncio-tipo" class="annuncio-modal-label">Tipo</label>
+            <select id="modal-annuncio-tipo" class="annuncio-modal-tipo-select"
+                    aria-describedby="modal-annuncio-tipo-status">
+              <option value="" disabled>Seleziona</option>
+              <option value="offro">Offro</option>
+              <option value="cerco">Cerco</option>
+            </select>
+            <div id="modal-annuncio-tipo-status" class="annuncio-modal-tipo-status"
+                 role="status" aria-live="polite">Salvataggio automatico</div>
           </div>
 
           <!-- Riga 3: Stato / Pubblicato il -->
@@ -2160,6 +2202,66 @@ document.addEventListener("click", async (e) => {
   }
 
   let azioneAnnuncioInCorso = false;
+  let tipoAnnuncioInCorso = false;
+  const tipoSelect = document.getElementById("modal-annuncio-tipo");
+  const tipoStatus = document.getElementById("modal-annuncio-tipo-status");
+
+  tipoSelect.addEventListener("change", async () => {
+    const row = window.__currentAnnuncioModalRow;
+    if (!row || tipoAnnuncioInCorso || azioneAnnuncioInCorso) return;
+
+    const tipoPrecedente = row.dataset.annuncioTipo;
+    const nuovoTipo = tipoSelect.value;
+    if (nuovoTipo === tipoPrecedente) return;
+
+    tipoAnnuncioInCorso = true;
+    tipoSelect.disabled = true;
+    tipoStatus.classList.remove("is-error");
+    tipoStatus.textContent = "Salvataggio…";
+    const actionButtons = document.querySelectorAll(
+      "#modal-annuncio-approva, #modal-annuncio-rifiuta, .js-annuncio-azione"
+    );
+    actionButtons.forEach(button => { button.disabled = true; });
+
+    try {
+      const res = await fetch(row.dataset.annuncioTipoUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRF-Token": window.CSRF_TOKEN,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({ tipo_annuncio: nuovoTipo })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Modifica non salvata. Riprova.");
+      }
+
+      row.dataset.annuncioTipo = data.tipo_annuncio;
+      tipoSelect.value = data.tipo_annuncio;
+      const badge = row.querySelector(".js-annuncio-tipo .badge");
+      if (badge) {
+        const offro = data.tipo_annuncio === "offro";
+        badge.textContent = offro ? "Offro" : "Cerco";
+        badge.className = offro
+          ? "badge bg-blue-100 text-blue-700"
+          : "badge bg-purple-100 text-purple-700";
+      }
+      tipoStatus.textContent = "Salvato";
+    } catch (err) {
+      tipoSelect.value = ["offro", "cerco"].includes(tipoPrecedente) ? tipoPrecedente : "";
+      tipoStatus.classList.add("is-error");
+      tipoStatus.textContent = err instanceof SyntaxError
+        ? "Sessione scaduta. Ricarica la pagina e riprova."
+        : (err.message || "Modifica non salvata. Riprova.");
+    } finally {
+      tipoAnnuncioInCorso = false;
+      tipoSelect.disabled = false;
+      actionButtons.forEach(button => { button.disabled = false; });
+    }
+  });
 
   const setText = (id, value) => {
     const el = document.getElementById(id);
@@ -2373,6 +2475,7 @@ document.addEventListener("click", async (e) => {
   }
 
   const openAnnuncioModal = (row, forzaApertura = false) => {
+    if (tipoAnnuncioInCorso) return;
     if (!forzaApertura && window.innerWidth >= 1280) return;
     if (!row) return;
 
@@ -2404,7 +2507,10 @@ document.addEventListener("click", async (e) => {
     setText("modal-annuncio-titolo", d.annuncioTitolo);
     setText("modal-annuncio-utente", d.annuncioUtente);
     setText("modal-annuncio-categoria", d.annuncioCategoria);
-    setText("modal-annuncio-tipo", d.annuncioTipo);
+    tipoSelect.value = ["offro", "cerco"].includes(d.annuncioTipo) ? d.annuncioTipo : "";
+    tipoSelect.disabled = azioneAnnuncioInCorso;
+    tipoStatus.classList.remove("is-error");
+    tipoStatus.textContent = "Salvataggio automatico";
     setText("modal-annuncio-stato", d.annuncioStato);
     setText("modal-annuncio-data", d.annuncioData);
     setText("modal-annuncio-zona", d.annuncioZona);
@@ -2590,6 +2696,7 @@ document.addEventListener("click", async (e) => {
   };
 
   const closeAnnuncioModal = () => {
+    if (tipoAnnuncioInCorso) return;
     const scrollY = Number(document.body.dataset.annuncioModalScrollY || 0);
 
     backdrop.classList.remove("is-open");
@@ -2625,7 +2732,7 @@ document.addEventListener("click", async (e) => {
   }
 
   async function eseguiAzioneAnnuncioDaModale(btn) {
-    if (azioneAnnuncioInCorso) return;
+    if (azioneAnnuncioInCorso || tipoAnnuncioInCorso) return;
 
     const row = window.__currentAnnuncioModalRow;
     if (!row) return;
@@ -2644,6 +2751,7 @@ document.addEventListener("click", async (e) => {
     console.log("📌 Prossimo calcolato prima dell’azione:", prossimo ? prossimo.dataset.annuncioId : null);
 
     azioneAnnuncioInCorso = true;
+    tipoSelect.disabled = true;
 
     const approvaBtn = document.getElementById("modal-annuncio-approva");
     const rifiutaBtn = document.getElementById("modal-annuncio-rifiuta");
@@ -2682,6 +2790,7 @@ document.addEventListener("click", async (e) => {
       alert("Errore di rete.");
     } finally {
       azioneAnnuncioInCorso = false;
+      tipoSelect.disabled = false;
 
       if (approvaBtn) {
         approvaBtn.style.pointerEvents = "";
@@ -2721,6 +2830,8 @@ document.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
+
+    if (tipoAnnuncioInCorso) return;
 
     const rowDaTabella = actionBtn.closest(".annuncio-row");
 

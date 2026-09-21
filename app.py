@@ -14876,6 +14876,38 @@ def admin_annunci():
         totale_in_attesa=totale_in_attesa
     )
 
+@app.route("/admin/annunci/<int:id>/tipo", methods=["POST"])
+@admin_required
+def admin_annuncio_tipo(id):
+    verify_csrf()
+
+    data = request.get_json(silent=True)
+    tipo_annuncio = data.get("tipo_annuncio") if isinstance(data, dict) else None
+    if tipo_annuncio not in ("offro", "cerco"):
+        return jsonify(ok=False, error="Seleziona Offro oppure Cerco."), 400
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        cur.execute(sql("SELECT id FROM annunci WHERE id = ?"), (id,))
+        if not cur.fetchone():
+            return jsonify(ok=False, error="Annuncio non trovato."), 404
+
+        cur.execute(sql("""
+            UPDATE annunci
+            SET tipo_annuncio = ?
+            WHERE id = ?
+        """), (tipo_annuncio, id))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+
+    return jsonify(ok=True, tipo_annuncio=tipo_annuncio)
+
+
 @app.route("/admin/annunci/approva/<int:id>")
 @admin_required
 def approva_annuncio(id):
