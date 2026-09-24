@@ -1487,9 +1487,9 @@ TRANSLATIONS = {
         "fil": "Hindi maaaring mauna ang petsa ng pagtatapos sa petsa ng simula.",
     },
     "profile_card.category_sport": {
-        "it": "Escursioni & Sport", "en": "Outdoors & Sports", "fr": "Plein air et sport",
-        "es": "Aire libre y deporte", "de": "Outdoor & Sport", "ro": "Activități în aer liber și sport",
-        "uk": "Активний відпочинок і спорт", "fil": "Outdoor at Sports",
+        "it": "Sport", "en": "Sports", "fr": "Sport",
+        "es": "Deporte", "de": "Sport", "ro": "Sport",
+        "uk": "Спорт", "fil": "Sports",
     },
 }
 
