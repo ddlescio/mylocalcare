@@ -1,0 +1,269 @@
+{% extends "layout_admin.html" %}
+{% set admin_container_class = "max-w-7xl" %}
+
+{% block admin_content %}
+<div class="pb-12">
+  <section class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Controlli profilo</p>
+        <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+          Schede esperienze e qualifiche
+        </h1>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+          Le schede sono dichiarate dagli utenti. Registra soltanto il controllo realmente svolto:
+          “Documento visionato” oppure “Riscontro effettuato”.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
+          <div class="text-2xl font-black text-amber-700">{{ conteggi.get('attenzione', 0) }}</div>
+          <div class="text-[11px] font-bold uppercase tracking-wide text-amber-700/75">Da gestire</div>
+        </div>
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+          <div class="text-2xl font-black text-emerald-700">{{ conteggi.get('confermate', 0) }}</div>
+          <div class="text-[11px] font-bold uppercase tracking-wide text-emerald-700/75">Con riscontro</div>
+        </div>
+        <div class="col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center sm:col-span-1">
+          <div class="text-2xl font-black text-slate-700">{{ conteggi.get('totale', 0) }}</div>
+          <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Totali</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <form method="get" class="mt-5 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_210px_210px_auto_auto] lg:items-end">
+      <label class="block">
+        <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Utente o titolo</span>
+        <input type="search" name="q" value="{{ filtri.get('q', '') }}"
+               placeholder="Username, email o titolo…"
+               class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+      </label>
+
+      <label class="block">
+        <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Stato</span>
+        <select name="stato" class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+          {% set stato_attuale = filtri.get('stato', 'attenzione') %}
+          <option value="attenzione" {% if stato_attuale == 'attenzione' %}selected{% endif %}>Da gestire</option>
+          <option value="richiesta" {% if stato_attuale == 'richiesta' %}selected{% endif %}>Da controllare</option>
+          <option value="tutti" {% if stato_attuale == 'tutti' %}selected{% endif %}>Tutti</option>
+          <option value="dichiarata" {% if stato_attuale == 'dichiarata' %}selected{% endif %}>Dichiarati</option>
+          <option value="documento_visionato" {% if stato_attuale == 'documento_visionato' %}selected{% endif %}>Documento visionato</option>
+          <option value="riscontro_effettuato" {% if stato_attuale == 'riscontro_effettuato' %}selected{% endif %}>Riscontro effettuato</option>
+          <option value="non_confermata" {% if stato_attuale == 'non_confermata' %}selected{% endif %}>Non confermati</option>
+          <option value="scaduta" {% if stato_attuale == 'scaduta' %}selected{% endif %}>Scaduti</option>
+          <option value="revocata" {% if stato_attuale == 'revocata' %}selected{% endif %}>Revocati</option>
+        </select>
+      </label>
+
+      <label class="block">
+        <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Tipo</span>
+        {% set tipo_attuale = filtri.get('tipo', 'tutti') %}
+        <select name="tipo" class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+          <option value="tutti" {% if tipo_attuale == 'tutti' %}selected{% endif %}>Tutti</option>
+          <option value="esperienza" {% if tipo_attuale == 'esperienza' %}selected{% endif %}>Esperienze</option>
+          <option value="formazione" {% if tipo_attuale == 'formazione' %}selected{% endif %}>Formazione</option>
+          <option value="certificazione" {% if tipo_attuale == 'certificazione' %}selected{% endif %}>Certificazioni</option>
+        </select>
+      </label>
+
+      <button class="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-sm transition hover:bg-blue-700">
+        Filtra
+      </button>
+      <a href="{{ url_for('admin_schede_profilo') }}"
+         class="flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50">
+        Reset
+      </a>
+    </div>
+  </form>
+
+  {% if not schede %}
+    <div class="mt-5 rounded-[1.75rem] border border-dashed border-slate-300 bg-white px-5 py-14 text-center shadow-sm">
+      <div class="text-4xl">✓</div>
+      <h2 class="mt-3 text-lg font-black text-slate-800">Nessuna scheda per questi filtri</h2>
+      <p class="mt-1 text-sm text-slate-500">Le nuove richieste di controllo compariranno qui.</p>
+    </div>
+  {% else %}
+    <div class="mt-5 grid gap-4 lg:grid-cols-2">
+      {% for scheda in schede %}
+        {% set stato = scheda.get('stato_verifica') or 'dichiarata' %}
+        <article class="overflow-hidden rounded-[1.65rem] border {% if stato == 'richiesta' %}border-amber-300{% else %}border-slate-200{% endif %} bg-white shadow-sm">
+          <div class="p-4 sm:p-5">
+            <div class="flex items-start gap-3">
+              <a href="{{ url_for('profilo_pubblico', id=scheda.get('utente_id')) }}"
+                 class="shrink-0" aria-label="Apri il profilo di {{ scheda.get('username') or 'utente' }}">
+                <img src="{% if scheda.get('foto_profilo') %}{{ url_for('static', filename=scheda.get('foto_profilo')) }}{% else %}{{ url_for('static', filename='img/user_default.png') }}{% endif %}"
+                     alt="" class="h-12 w-12 rounded-full border-2 border-white object-cover shadow ring-1 ring-slate-200">
+              </a>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <a href="{{ url_for('profilo_pubblico', id=scheda.get('utente_id')) }}"
+                     class="truncate font-black text-slate-900 hover:text-blue-600">
+                    @{{ scheda.get('username') or ('utente' ~ scheda.get('utente_id')) }}
+                  </a>
+                  {% if stato == 'richiesta' %}
+                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700">Da controllare</span>
+                  {% elif stato == 'documento_visionato' %}
+                    <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">Documento visionato</span>
+                  {% elif stato == 'riscontro_effettuato' %}
+                    <span class="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-black text-blue-700">Riscontro effettuato</span>
+                  {% else %}
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-600">{{ stato|replace('_', ' ')|title }}</span>
+                  {% endif %}
+                </div>
+                <h2 class="mt-2 text-lg font-black leading-tight text-slate-900" data-no-translate>{{ scheda.get('titolo') }}</h2>
+                <p class="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400">
+                  {{ (scheda.get('tipo_scheda') or '')|capitalize }} · ID {{ scheda.get('id') }}
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <div class="rounded-xl bg-slate-50 p-3">
+                <div class="text-[10px] font-black uppercase tracking-wide text-slate-400">Ente / organizzazione</div>
+                <div class="mt-1 font-semibold text-slate-700" data-no-translate>{{ scheda.get('ente') or '—' }}</div>
+              </div>
+              <div class="rounded-xl bg-slate-50 p-3">
+                <div class="text-[10px] font-black uppercase tracking-wide text-slate-400">Luogo</div>
+                <div class="mt-1 font-semibold text-slate-700" data-no-translate>{{ scheda.get('luogo') or '—' }}</div>
+              </div>
+            </div>
+
+            <details class="group mt-3 rounded-2xl border border-slate-200 bg-slate-50/70">
+              <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-extrabold text-slate-700">
+                <span>Dettagli e decisione</span>
+                <span class="transition group-open:rotate-180">⌄</span>
+              </summary>
+
+              <div class="border-t border-slate-200 px-4 pb-4 pt-3">
+                <dl class="grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt class="text-xs font-bold text-slate-400">Periodo</dt>
+                    <dd class="mt-1 font-semibold text-slate-700">
+                      {{ scheda.get('data_inizio') or scheda.get('data_rilascio') or '—' }}
+                      {% if scheda.get('in_corso') %} · In corso
+                      {% elif scheda.get('data_fine') or scheda.get('data_scadenza') %} → {{ scheda.get('data_fine') or scheda.get('data_scadenza') }}{% endif %}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold text-slate-400">Codice dichiarato</dt>
+                    <dd class="mt-1 font-semibold text-slate-700" data-no-translate>{{ scheda.get('codice_qualifica') or '—' }}</dd>
+                  </div>
+                </dl>
+
+                {% if scheda.get('descrizione') %}
+                  <div class="mt-3 rounded-xl bg-white p-3 text-sm leading-6 text-slate-700 ring-1 ring-slate-200" data-no-translate>
+                    {{ scheda.get('descrizione') }}
+                  </div>
+                {% endif %}
+
+                {% if scheda.get('nota_admin') %}
+                  <div class="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs leading-5 text-violet-900">
+                    <strong>Nota admin precedente:</strong> <span data-no-translate>{{ scheda.get('nota_admin') }}</span>
+                  </div>
+                {% endif %}
+
+                <form method="post" action="{{ url_for('admin_scheda_profilo_verifica', scheda_id=scheda.get('id')) }}"
+                      class="admin-profile-card-action mt-4 space-y-3">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="scheda_versione" value="{{ scheda.get('versione') or 1 }}">
+
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-extrabold text-slate-500">Esito</span>
+                    <select name="stato_verifica" class="admin-card-state min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" required>
+                      <option value="">Scegli…</option>
+                      <option value="documento_visionato">Documento visionato da MyLocalCare</option>
+                      <option value="riscontro_effettuato">Riscontro effettuato da MyLocalCare</option>
+                      <option value="non_confermata">Non confermata</option>
+                      <option value="scaduta">Scaduta</option>
+                      <option value="revocata">Revocata</option>
+                    </select>
+                  </label>
+
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-extrabold text-slate-500">Metodo usato</span>
+                    <select name="metodo_verifica" class="admin-card-method min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+                      <option value="nessuno">Nessuno</option>
+                      <option value="documento">Documento mostrato all’admin</option>
+                      <option value="fonte_pubblica">Fonte pubblica consultata</option>
+                      <option value="ente_contattato">Ente contattato</option>
+                      <option value="altro">Altro riscontro</option>
+                    </select>
+                  </label>
+
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-extrabold text-slate-500">Nota interna</span>
+                    <textarea name="nota_admin" maxlength="2000" rows="2" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm" placeholder="Non sarà visibile all’utente."></textarea>
+                    <span class="mt-1.5 block text-[11px] leading-4 text-slate-400">
+                      Non annotare numeri di documento, dati sanitari o informazioni non necessarie al controllo.
+                    </span>
+                  </label>
+
+                  <button class="min-h-11 w-full rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white hover:bg-blue-700">
+                    Registra controllo
+                  </button>
+                </form>
+              </div>
+            </details>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+
+    {% if paginazione.get('pagine', 1) > 1 %}
+      <nav class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+           aria-label="Paginazione schede profilo">
+        <p class="text-sm font-semibold text-slate-500">
+          Pagina {{ paginazione.get('pagina', 1) }} di {{ paginazione.get('pagine', 1) }}
+          · {{ paginazione.get('totale', 0) }} risultati
+        </p>
+        <div class="flex gap-2">
+          {% if paginazione.get('pagina', 1) > 1 %}
+            <a class="inline-flex min-h-10 items-center rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50"
+               href="{{ url_for('admin_schede_profilo', stato=filtri.get('stato'), tipo=filtri.get('tipo'), q=filtri.get('q'), page=paginazione.get('pagina') - 1) }}">
+              ← Precedente
+            </a>
+          {% endif %}
+          {% if paginazione.get('pagina', 1) < paginazione.get('pagine', 1) %}
+            <a class="inline-flex min-h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-blue-700"
+               href="{{ url_for('admin_schede_profilo', stato=filtri.get('stato'), tipo=filtri.get('tipo'), q=filtri.get('q'), page=paginazione.get('pagina') + 1) }}">
+              Successiva →
+            </a>
+          {% endif %}
+        </div>
+      </nav>
+    {% endif %}
+  {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".admin-profile-card-action").forEach((form) => {
+    const state = form.querySelector(".admin-card-state");
+    const method = form.querySelector(".admin-card-method");
+
+    state?.addEventListener("change", () => {
+      const positive = ["documento_visionato", "riscontro_effettuato"].includes(state.value);
+      if (method) method.required = positive;
+    });
+
+    form.addEventListener("submit", (event) => {
+      const positive = ["documento_visionato", "riscontro_effettuato"].includes(state?.value || "");
+      if (positive && (!method?.value || method.value === "nessuno")) {
+        event.preventDefault();
+        method?.focus();
+        window.alert("Indica il metodo realmente utilizzato per il controllo.");
+        return;
+      }
+
+      if (!window.confirm("Confermi l’esito di questo controllo?")) {
+        event.preventDefault();
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

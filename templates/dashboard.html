@@ -761,6 +761,10 @@
       </div>
     </div>
 
+    {% if schede_profilo_disponibili|default(false) %}
+      {% include 'partials/schede_profilo_dialog.html' %}
+    {% endif %}
+
     <!-- 🟨 TAB: FOTO -->
     <div id="tab-foto" class="tab-pane hidden">
       {% include 'partials/tab_foto_privato.html' %}

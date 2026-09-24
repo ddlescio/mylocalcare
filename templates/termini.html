@@ -14,7 +14,7 @@
   <h1 class="text-3xl font-bold mb-4">Termini di utilizzo</h1>
 
   <p class="text-sm text-gray-500 mb-8">
-    Versione: mylocalcare_privacy_termini_2026_v1
+    {{ tr('legal.version_label') }}: {{ legal_document_version }}
   </p>
 
   <p class="mb-4">
@@ -76,6 +76,10 @@
     MyLocalCare non garantisce la veridicità, completezza, aggiornamento o affidabilità delle informazioni pubblicate dagli utenti.
     Ogni utente è tenuto a valutare autonomamente le informazioni visualizzate e a effettuare le opportune verifiche prima di prendere accordi con altri utenti.
   </p>
+
+  <h2 class="text-xl font-semibold mt-6 mb-2">{{ tr('legal.profile_cards_terms_title') }}</h2>
+  <p class="mb-4">{{ tr('legal.profile_cards_terms_body') }}</p>
+  <p class="mb-4">{{ tr('legal.profile_cards_terms_duty') }}</p>
 
   <h2 class="text-xl font-semibold mt-6 mb-2">6. Servizi, attività e rapporti tra utenti</h2>
   <p class="mb-4">

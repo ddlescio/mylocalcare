@@ -1,0 +1,1451 @@
+{# Popup condiviso per le schede strutturate di esperienza, formazione e certificazioni. #}
+<div
+  id="profile-card-dialog"
+  class="profile-card-dialog hidden"
+  aria-hidden="true">
+
+  <button
+    type="button"
+    id="profile-card-dialog-backdrop"
+    class="profile-card-dialog-backdrop"
+    aria-label="{{ tr('profile_card.close_sheet') }}">
+  </button>
+
+  <section
+    class="profile-card-dialog-sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="profile-card-dialog-title"
+    aria-describedby="profile-card-dialog-subtitle">
+
+    <div class="profile-card-dialog-handle" aria-hidden="true"></div>
+
+    <header class="profile-card-dialog-header">
+      <div class="profile-card-dialog-heading">
+        <span class="profile-card-dialog-icon" aria-hidden="true">🎓</span>
+        <div>
+          <p class="profile-card-dialog-eyebrow" id="profile-card-dialog-eyebrow">
+            {{ tr('profile_card.sheet') }}
+          </p>
+          <h3 class="profile-card-dialog-title" id="profile-card-dialog-title">
+            {{ tr('profile_card.details') }}
+          </h3>
+          <p class="profile-card-dialog-subtitle" id="profile-card-dialog-subtitle">
+            {{ tr('profile_card.declared_information') }}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        id="profile-card-dialog-close"
+        class="profile-card-dialog-close"
+        aria-label="{{ tr('language.close') }}">
+        ×
+      </button>
+    </header>
+
+    {% if not pubblico %}
+    <form id="profile-card-form" class="profile-card-form" novalidate>
+      <div id="profile-card-form-state" class="profile-card-form-state" aria-live="polite"></div>
+
+      <div class="profile-card-field profile-card-field-wide">
+        <label for="profile-card-catalog">{{ tr('profile_card.catalog_title') }}</label>
+        <select id="profile-card-catalog" class="profile-card-control">
+          <option value="">{{ tr('profile_card.custom_title') }}</option>
+        </select>
+        <p class="profile-card-help">{{ tr('profile_card.catalog_help') }}</p>
+      </div>
+
+      <div class="profile-card-field profile-card-field-wide">
+        <label for="profile-card-title">{{ tr('profile_card.card_title') }} <span aria-hidden="true">*</span></label>
+        <input
+          id="profile-card-title"
+          class="profile-card-control"
+          type="text"
+          maxlength="180"
+          required
+          autocomplete="off"
+          data-no-translate>
+      </div>
+
+      <div class="profile-card-field">
+        <label for="profile-card-category">{{ tr('profile_card.scope') }}</label>
+        <select id="profile-card-category" class="profile-card-control">
+          <option value="">{{ tr('profile_card.no_scope') }}</option>
+          <option value="operatori-benessere">Operatori benessere</option>
+          <option value="aiuto-in-casa">Aiuto in casa</option>
+          <option value="ripetizioni">Ripetizioni</option>
+          <option value="babysitter">Babysitter</option>
+          <option value="pet-sitter">Pet-sitter</option>
+          <option value="caregiver">Caregiver</option>
+          <option value="escursioni-sport">{{ tr('profile_card.category_sport') }}</option>
+          <option value="biglietti-spettacoli">Biglietti spettacoli</option>
+          <option value="libri-scuola">Libri scuola</option>
+          <option value="caffe-parole">Caffè &amp; parole</option>
+          <option value="family-kids">Family &amp; Kids</option>
+          <option value="eventi-socialita">Eventi &amp; Socialità</option>
+          <option value="spazi-sale">Spazi &amp; Sale</option>
+        </select>
+      </div>
+
+      <div class="profile-card-field">
+        <label for="profile-card-issuer">
+          {{ tr('profile_card.issuer') }}
+          <span id="profile-card-issuer-required" class="profile-card-required hidden" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="profile-card-issuer"
+          class="profile-card-control"
+          type="text"
+          maxlength="180"
+          autocomplete="organization"
+          data-no-translate>
+      </div>
+
+      <div class="profile-card-field">
+        <label for="profile-card-place">{{ tr('profile_card.place') }}</label>
+        <input
+          id="profile-card-place"
+          class="profile-card-control"
+          type="text"
+          maxlength="160"
+          autocomplete="off"
+          data-no-translate>
+      </div>
+
+      <div class="profile-card-field profile-card-code-field">
+        <label for="profile-card-code">{{ tr('profile_card.code') }} <span class="profile-card-optional">{{ tr('profile_card.optional') }}</span></label>
+        <input
+          id="profile-card-code"
+          class="profile-card-control"
+          type="text"
+          maxlength="120"
+          autocomplete="off"
+          data-no-translate>
+      </div>
+
+      <div id="profile-card-period-fields" class="profile-card-date-group profile-card-field-wide">
+        <div class="profile-card-field">
+          <label for="profile-card-start">{{ tr('profile_card.start_date') }}</label>
+          <input id="profile-card-start" class="profile-card-control" type="date">
+        </div>
+        <div class="profile-card-field">
+          <label for="profile-card-end">{{ tr('profile_card.end_date') }}</label>
+          <input id="profile-card-end" class="profile-card-control" type="date">
+        </div>
+        <label class="profile-card-check profile-card-field-wide">
+          <input id="profile-card-ongoing" type="checkbox">
+          <span>{{ tr('profile_card.ongoing_description') }}</span>
+        </label>
+      </div>
+
+      <div id="profile-card-issue-fields" class="profile-card-date-group profile-card-field-wide hidden">
+        <div class="profile-card-field">
+          <label for="profile-card-issued">{{ tr('profile_card.issue_date') }}</label>
+          <input id="profile-card-issued" class="profile-card-control" type="date">
+        </div>
+        <div class="profile-card-field">
+          <label for="profile-card-expires">{{ tr('profile_card.expiry_date') }}</label>
+          <input id="profile-card-expires" class="profile-card-control" type="date">
+        </div>
+      </div>
+
+      <div class="profile-card-field profile-card-field-wide">
+        <label for="profile-card-description">{{ tr('profile_card.details') }} <span class="profile-card-optional">{{ tr('profile_card.optional_plural') }}</span></label>
+        <textarea
+          id="profile-card-description"
+          class="profile-card-control profile-card-textarea"
+          rows="4"
+          maxlength="1200"
+          data-no-translate></textarea>
+      </div>
+
+      <p class="profile-card-contact-note profile-card-field-wide">
+        <span aria-hidden="true">🛡️</span>
+        <span>
+          {{ tr('profile_card.no_contacts_note') }}<br>
+          {{ tr('profile_card.public_data_notice') }}
+        </span>
+      </p>
+
+      <label id="profile-card-request-row" class="profile-card-request profile-card-field-wide">
+        <input id="profile-card-request" type="checkbox">
+        <span>
+          <strong>{{ tr('profile_card.request_check') }}</strong>
+          <small>{{ tr('profile_card.request_help') }}</small>
+        </span>
+      </label>
+
+      <div id="profile-card-error" class="profile-card-message profile-card-message-error hidden" role="alert"></div>
+      <div id="profile-card-success" class="profile-card-message profile-card-message-success hidden" aria-live="polite"></div>
+
+      <footer class="profile-card-dialog-actions profile-card-field-wide">
+        <button type="button" id="profile-card-delete" class="profile-card-delete hidden">
+          {{ tr('profile_card.delete') }}
+        </button>
+        <button type="submit" id="profile-card-save" class="profile-card-save">
+          {{ tr('profile_card.save') }}
+        </button>
+      </footer>
+    </form>
+    {% else %}
+    <div id="profile-card-public-details" class="profile-card-public-details"></div>
+    {% endif %}
+  </section>
+</div>
+
+<style>
+  .profile-card-dialog{
+    position:fixed;
+    inset:0;
+    z-index:10050;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:0;
+  }
+
+  .profile-card-dialog.hidden{
+    display:none;
+  }
+
+  .profile-card-dialog-backdrop{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    border:0;
+    background:rgba(15,23,42,.58);
+    backdrop-filter:blur(7px);
+  }
+
+  .profile-card-dialog-sheet{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-height:min(92dvh, 860px);
+    overflow:auto;
+    overscroll-behavior:contain;
+    padding:1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border:1px solid rgba(219,234,254,.98);
+    border-radius:1.6rem 1.6rem 0 0;
+    background:
+      radial-gradient(circle at 0 0, rgba(219,234,254,.62), transparent 35%),
+      radial-gradient(circle at 100% 0, rgba(250,232,255,.45), transparent 32%),
+      linear-gradient(180deg, rgba(255,255,255,.99), rgba(248,250,252,.98));
+    box-shadow:0 -18px 60px rgba(15,23,42,.24);
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .profile-card-dialog-handle{
+    width:2.8rem;
+    height:.25rem;
+    margin:0 auto .75rem;
+    border-radius:9999px;
+    background:#cbd5e1;
+  }
+
+  .profile-card-dialog-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.8rem;
+    padding:0 .1rem .9rem;
+    border-bottom:1px solid rgba(226,232,240,.9);
+  }
+
+  .profile-card-dialog-heading{
+    min-width:0;
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    gap:.7rem;
+    align-items:start;
+  }
+
+  .profile-card-dialog-icon{
+    width:2.35rem;
+    height:2.35rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #bfdbfe;
+    border-radius:.92rem;
+    background:linear-gradient(180deg, #fff, #eff6ff);
+    box-shadow:0 6px 14px rgba(37,99,235,.08);
+    font-size:1rem;
+  }
+
+  .profile-card-dialog-eyebrow{
+    margin:0 0 .12rem;
+    color:#2563eb;
+    font-size:.66rem;
+    line-height:1.2;
+    font-weight:900;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+  }
+
+  .profile-card-dialog-title{
+    margin:0;
+    color:#0f172a;
+    font-size:1.12rem;
+    line-height:1.15;
+    font-weight:900;
+    letter-spacing:-.035em;
+  }
+
+  .profile-card-dialog-subtitle{
+    margin:.25rem 0 0;
+    color:#64748b;
+    font-size:.76rem;
+    line-height:1.35;
+  }
+
+  .profile-card-dialog-close{
+    flex:0 0 auto;
+    width:2.4rem;
+    height:2.4rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #dbe3ee;
+    border-radius:9999px;
+    background:rgba(248,250,252,.94);
+    color:#475569;
+    font-size:1.35rem;
+    line-height:1;
+    box-shadow:inset 0 1px 0 #fff;
+  }
+
+  .profile-card-form{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:.86rem;
+    padding-top:1rem;
+  }
+
+  .profile-card-form-state{
+    display:inline-flex;
+    width:fit-content;
+    align-items:center;
+    min-height:1.75rem;
+    padding:.3rem .65rem;
+    border:1px solid #dbeafe;
+    border-radius:9999px;
+    background:#eff6ff;
+    color:#1e40af;
+    font-size:.68rem;
+    line-height:1.2;
+    font-weight:800;
+  }
+
+  .profile-card-field{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:.32rem;
+  }
+
+  .profile-card-field > label,
+  .profile-card-field > .profile-card-label{
+    color:#475569;
+    font-size:.76rem;
+    line-height:1.25;
+    font-weight:760;
+  }
+
+  .profile-card-optional{
+    color:#94a3b8;
+    font-size:.66rem;
+    font-weight:650;
+  }
+
+  .profile-card-required{
+    color:#dc2626;
+  }
+
+  .profile-card-required.hidden{
+    display:none;
+  }
+
+  .profile-card-control{
+    width:100%;
+    min-height:2.8rem;
+    padding:.7rem .78rem;
+    border:1px solid #d7deea;
+    border-radius:.92rem;
+    outline:none;
+    background:rgba(255,255,255,.96);
+    color:#1e293b;
+    font-size:.88rem;
+    line-height:1.3;
+    box-shadow:inset 0 1px 0 #fff;
+  }
+
+  .profile-card-control:focus{
+    border-color:#60a5fa;
+    box-shadow:0 0 0 3px rgba(96,165,250,.2);
+  }
+
+  .profile-card-control[readonly]{
+    background:#f8fafc;
+    color:#334155;
+  }
+
+  .profile-card-textarea{
+    min-height:6.7rem;
+    resize:vertical;
+  }
+
+  .profile-card-help{
+    margin:0;
+    color:#94a3b8;
+    font-size:.65rem;
+    line-height:1.35;
+  }
+
+  .profile-card-contact-note{
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    gap:.45rem;
+    margin:-.2rem 0 0;
+    padding:.58rem .66rem;
+    border:1px solid rgba(191,219,254,.72);
+    border-radius:.86rem;
+    background:rgba(239,246,255,.58);
+    color:#64748b;
+    font-size:.67rem;
+    line-height:1.4;
+  }
+
+  .profile-card-date-group{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:.72rem;
+    padding:.72rem;
+    border:1px solid rgba(226,232,240,.9);
+    border-radius:1rem;
+    background:rgba(248,250,252,.72);
+  }
+
+  .profile-card-date-group.hidden,
+  .profile-card-message.hidden,
+  .profile-card-delete.hidden,
+  .profile-card-request.hidden,
+  .profile-card-code-field.hidden{
+    display:none;
+  }
+
+  .profile-card-check{
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:.55rem;
+    color:#475569;
+    font-size:.74rem;
+    font-weight:700;
+  }
+
+  .profile-card-check input,
+  .profile-card-request input{
+    width:1.15rem;
+    height:1.15rem;
+    flex:0 0 auto;
+    accent-color:#2563eb;
+  }
+
+  .profile-card-request{
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    align-items:flex-start;
+    gap:.65rem;
+    padding:.78rem;
+    border:1px solid #bfdbfe;
+    border-radius:1rem;
+    background:linear-gradient(180deg, #f8fbff, #eff6ff);
+    cursor:pointer;
+  }
+
+  .profile-card-request input{
+    margin-top:.1rem;
+  }
+
+  .profile-card-request strong,
+  .profile-card-request small{
+    display:block;
+  }
+
+  .profile-card-request strong{
+    color:#1e3a8a;
+    font-size:.76rem;
+    line-height:1.25;
+  }
+
+  .profile-card-request small{
+    margin-top:.2rem;
+    color:#64748b;
+    font-size:.66rem;
+    line-height:1.4;
+  }
+
+  .profile-card-message{
+    padding:.7rem .78rem;
+    border-radius:.9rem;
+    font-size:.74rem;
+    line-height:1.4;
+    font-weight:700;
+  }
+
+  .profile-card-message-error{
+    border:1px solid #fecaca;
+    background:#fef2f2;
+    color:#b91c1c;
+  }
+
+  .profile-card-message-success{
+    border:1px solid #bbf7d0;
+    background:#f0fdf4;
+    color:#166534;
+  }
+
+  .profile-card-dialog-actions{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:.62rem;
+    padding-top:.12rem;
+  }
+
+  .profile-card-save,
+  .profile-card-delete{
+    min-height:2.75rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.7rem 1rem;
+    border-radius:9999px;
+    font-size:.78rem;
+    line-height:1;
+    font-weight:850;
+  }
+
+  .profile-card-save{
+    border:1px solid #2563eb;
+    background:linear-gradient(135deg, #2563eb, #4f46e5 58%, #d946ef);
+    color:#fff;
+    box-shadow:0 10px 22px rgba(79,70,229,.2);
+  }
+
+  .profile-card-delete{
+    margin-right:auto;
+    border:1px solid #fecaca;
+    background:#fff7f7;
+    color:#b91c1c;
+  }
+
+  .profile-card-save:disabled,
+  .profile-card-delete:disabled{
+    cursor:wait;
+    opacity:.58;
+  }
+
+  .profile-card-public-details{
+    display:grid;
+    gap:.65rem;
+    padding-top:1rem;
+  }
+
+  .profile-card-public-state{
+    width:fit-content;
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    min-height:1.8rem;
+    padding:.34rem .68rem;
+    border:1px solid #bfdbfe;
+    border-radius:9999px;
+    background:#eff6ff;
+    color:#1e40af;
+    font-size:.68rem;
+    line-height:1.2;
+    font-weight:850;
+  }
+
+  .profile-card-public-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:.58rem;
+  }
+
+  .profile-card-public-row{
+    min-width:0;
+    display:grid;
+    gap:.18rem;
+    padding:.72rem .78rem;
+    border:1px solid rgba(226,232,240,.92);
+    border-radius:.95rem;
+    background:rgba(255,255,255,.84);
+    box-shadow:inset 0 1px 0 #fff;
+  }
+
+  .profile-card-public-row dt{
+    color:#64748b;
+    font-size:.64rem;
+    line-height:1.2;
+    font-weight:850;
+    letter-spacing:.055em;
+    text-transform:uppercase;
+  }
+
+  .profile-card-public-row dd{
+    margin:0;
+    color:#1e293b;
+    font-size:.84rem;
+    line-height:1.45;
+    font-weight:620;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+  }
+
+  body.profile-card-dialog-open{
+    overflow:hidden;
+  }
+
+  @media (min-width:640px){
+    .profile-card-dialog{
+      align-items:center;
+      padding:1.25rem;
+    }
+
+    .profile-card-dialog-sheet{
+      max-width:42rem;
+      padding:1.15rem 1.2rem 1.2rem;
+      border-radius:1.6rem;
+      box-shadow:0 28px 80px rgba(15,23,42,.3);
+    }
+
+    .profile-card-dialog-handle{
+      display:none;
+    }
+
+    .profile-card-form{
+      grid-template-columns:1fr 1fr;
+    }
+
+    .profile-card-field-wide,
+    .profile-card-form-state,
+    .profile-card-message{
+      grid-column:1 / -1;
+    }
+
+    .profile-card-public-grid{
+      grid-template-columns:1fr 1fr;
+    }
+
+    .profile-card-public-row-wide{
+      grid-column:1 / -1;
+    }
+  }
+
+  @media (max-width:380px){
+    .profile-card-date-group{
+      grid-template-columns:1fr;
+    }
+
+    .profile-card-dialog-actions{
+      flex-wrap:wrap;
+    }
+
+    .profile-card-save{
+      flex:1 1 100%;
+      order:1;
+    }
+
+    .profile-card-delete{
+      flex:1 1 100%;
+      order:2;
+      margin-right:0;
+    }
+  }
+</style>
+
+<script>
+(function () {
+  const dialog = document.getElementById("profile-card-dialog");
+  if (!dialog) return;
+
+  const isPublic = {{ pubblico|default(false)|tojson }};
+  const privateCardsData = {{ schede_profilo_private|default([], true)|tojson }};
+  const publicCardsByLegacy = {{ schede_profilo_pubbliche_per_legacy|default({}, true)|tojson }};
+  const catalogData = {{ catalogo_schede_profilo|default([], true)|tojson }};
+  const csrfToken = {{ csrf_token()|tojson }};
+
+  const copy = Object.freeze({
+    sheet: {{ tr('profile_card.sheet')|tojson }},
+    details: {{ tr('profile_card.details')|tojson }},
+    declaredInformation: {{ tr('profile_card.declared_information')|tojson }},
+    customTitle: {{ tr('profile_card.custom_title')|tojson }},
+    typeExperience: {{ tr('profile_card.type_experience')|tojson }},
+    typeEducation: {{ tr('profile_card.type_education')|tojson }},
+    typeCertificate: {{ tr('profile_card.type_certificate')|tojson }},
+    stateDeclared: {{ tr('profile_card.state_declared')|tojson }},
+    stateRequested: {{ tr('profile_card.state_requested')|tojson }},
+    stateDocument: {{ tr('profile_card.state_document')|tojson }},
+    stateFeedback: {{ tr('profile_card.state_feedback')|tojson }},
+    stateUnconfirmed: {{ tr('profile_card.state_unconfirmed')|tojson }},
+    stateExpired: {{ tr('profile_card.state_expired')|tojson }},
+    stateRevoked: {{ tr('profile_card.state_revoked')|tojson }},
+    edit: {{ tr('profile_card.edit')|tojson }},
+    newCard: {{ tr('profile_card.new')|tojson }},
+    editHelp: {{ tr('profile_card.edit_help')|tojson }},
+    newHelp: {{ tr('profile_card.new_help')|tojson }},
+    issuer: {{ tr('profile_card.issuer')|tojson }},
+    place: {{ tr('profile_card.place')|tojson }},
+    startDate: {{ tr('profile_card.start_date')|tojson }},
+    endDate: {{ tr('profile_card.end_date')|tojson }},
+    inProgress: {{ tr('profile_card.in_progress')|tojson }},
+    issueDate: {{ tr('profile_card.issue_date')|tojson }},
+    expiryDate: {{ tr('profile_card.expiry_date')|tojson }},
+    code: {{ tr('profile_card.code')|tojson }},
+    note: {{ tr('profile_card.note')|tojson }},
+    open: {{ tr('profile_card.open')|tojson }},
+    short: {{ tr('profile_card.short')|tojson }},
+    saving: {{ tr('profile_card.saving')|tojson }},
+    deleting: {{ tr('profile_card.deleting')|tojson }},
+    saved: {{ tr('profile_card.saved')|tojson }},
+    savedRequested: {{ tr('profile_card.saved_requested')|tojson }},
+    save: {{ tr('profile_card.save')|tojson }},
+    delete: {{ tr('profile_card.delete')|tojson }},
+    errorSave: {{ tr('profile_card.error_save')|tojson }},
+    errorDelete: {{ tr('profile_card.error_delete')|tojson }},
+    errorOperation: {{ tr('profile_card.error_operation')|tojson }},
+    errorTitle: {{ tr('profile_card.error_title')|tojson }},
+    errorIssuer: {{ tr('profile_card.error_issuer')|tojson }},
+    confirmDelete: {{ tr('profile_card.confirm_delete')|tojson }},
+    errorExisting: {{ tr('profile_card.error_existing')|tojson }},
+    errorNotFound: {{ tr('profile_card.error_not_found')|tojson }},
+    errorChecked: {{ tr('profile_card.error_checked')|tojson }},
+    errorChanged: {{ tr('profile_card.error_changed')|tojson }},
+    errorExpired: {{ tr('profile_card.error_expired')|tojson }},
+    errorAcknowledgement: {{ tr('profile_card.error_acknowledgement')|tojson }},
+    errorUnavailable: {{ tr('profile_card.error_unavailable')|tojson }},
+    errorRequest: {{ tr('profile_card.error_request')|tojson }},
+    errorCertificateLimit: {{ tr('profile_card.error_certificate_limit')|tojson }},
+    errorRequestRateLimit: {{ tr('profile_card.error_request_rate_limit')|tojson }},
+    errorContacts: {{ tr('profile_card.error_contacts')|tojson }},
+    errorInvalidData: {{ tr('profile_card.error_invalid_data')|tojson }},
+    errorInvalidDate: {{ tr('profile_card.error_invalid_date')|tojson }},
+    errorDateOrder: {{ tr('profile_card.error_date_order')|tojson }},
+    categorySport: {{ tr('profile_card.category_sport')|tojson }}
+  });
+
+  const categoryLabels = {
+    "operatori-benessere": "Operatori benessere",
+    "aiuto-in-casa": "Aiuto in casa",
+    "ripetizioni": "Ripetizioni",
+    "babysitter": "Babysitter",
+    "pet-sitter": "Pet-sitter",
+    "caregiver": "Caregiver",
+    "escursioni-sport": copy.categorySport,
+    "biglietti-spettacoli": "Biglietti spettacoli",
+    "libri-scuola": "Libri scuola",
+    "caffe-parole": "Caffè & parole",
+    "family-kids": "Family & Kids",
+    "eventi-socialita": "Eventi & Socialità",
+    "spazi-sale": "Spazi & Sale"
+  };
+
+  const typeLabels = {
+    esperienza: copy.typeExperience,
+    formazione: copy.typeEducation,
+    certificazione: copy.typeCertificate
+  };
+
+  const stateLabels = {
+    dichiarata: copy.stateDeclared,
+    richiesta: copy.stateRequested,
+    documento_visionato: copy.stateDocument,
+    riscontro_effettuato: copy.stateFeedback,
+    non_confermata: copy.stateUnconfirmed,
+    scaduta: copy.stateExpired,
+    revocata: copy.stateRevoked
+  };
+
+  const positiveOrPendingStates = new Set([
+    "richiesta",
+    "documento_visionato",
+    "riscontro_effettuato",
+    "scaduta"
+  ]);
+
+  function asArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
+  function translateSystemText(value) {
+    if (typeof window.mlcTr === "function") return window.mlcTr(value);
+    return value;
+  }
+
+  function normalizeCard(card) {
+    const normalized = Object.assign({}, card || {});
+    normalized.id = Number(normalized.id || 0);
+    normalized.versione = Number(normalized.versione || 1);
+    normalized.catalogo_id = normalized.catalogo_id
+      ? Number(normalized.catalogo_id)
+      : null;
+    normalized.in_corso = Boolean(normalized.in_corso);
+    normalized.stato_verifica = normalized.stato_verifica || "dichiarata";
+    return normalized;
+  }
+
+  let cards = isPublic
+    ? Object.values(publicCardsByLegacy || {}).reduce(
+        (all, group) => all.concat(asArray(group)),
+        []
+      ).map(normalizeCard)
+    : asArray(privateCardsData).map(normalizeCard);
+
+  const catalog = asArray(catalogData);
+  const backdrop = document.getElementById("profile-card-dialog-backdrop");
+  const closeButton = document.getElementById("profile-card-dialog-close");
+  const titleElement = document.getElementById("profile-card-dialog-title");
+  const subtitleElement = document.getElementById("profile-card-dialog-subtitle");
+  const eyebrowElement = document.getElementById("profile-card-dialog-eyebrow");
+  const iconElement = dialog.querySelector(".profile-card-dialog-icon");
+  let previousFocus = null;
+  let activeCardId = 0;
+  let activeLegacyKey = "";
+  let activeCardType = "";
+  let busy = false;
+
+  const form = document.getElementById("profile-card-form");
+  const catalogSelect = document.getElementById("profile-card-catalog");
+  const titleInput = document.getElementById("profile-card-title");
+  const categoryInput = document.getElementById("profile-card-category");
+  const issuerInput = document.getElementById("profile-card-issuer");
+  const issuerRequired = document.getElementById("profile-card-issuer-required");
+  const placeInput = document.getElementById("profile-card-place");
+  const codeInput = document.getElementById("profile-card-code");
+  const startInput = document.getElementById("profile-card-start");
+  const endInput = document.getElementById("profile-card-end");
+  const ongoingInput = document.getElementById("profile-card-ongoing");
+  const issuedInput = document.getElementById("profile-card-issued");
+  const expiresInput = document.getElementById("profile-card-expires");
+  const descriptionInput = document.getElementById("profile-card-description");
+  const periodFields = document.getElementById("profile-card-period-fields");
+  const issueFields = document.getElementById("profile-card-issue-fields");
+  const codeField = dialog.querySelector(".profile-card-code-field");
+  const stateElement = document.getElementById("profile-card-form-state");
+  const requestRow = document.getElementById("profile-card-request-row");
+  const requestInput = document.getElementById("profile-card-request");
+  const errorElement = document.getElementById("profile-card-error");
+  const successElement = document.getElementById("profile-card-success");
+  const saveButton = document.getElementById("profile-card-save");
+  const deleteButton = document.getElementById("profile-card-delete");
+  const publicDetails = document.getElementById("profile-card-public-details");
+
+  function setHidden(element, hidden) {
+    if (element) element.classList.toggle("hidden", hidden);
+  }
+
+  function statusLabel(card) {
+    return stateLabels[(card && card.stato_verifica) || "dichiarata"]
+      || copy.stateDeclared;
+  }
+
+  function iconForType(type) {
+    if (type === "esperienza") return "💼";
+    if (type === "formazione") return "🎓";
+    return "📜";
+  }
+
+  function findCard(id) {
+    const numericId = Number(id || 0);
+    return cards.find(card => Number(card.id) === numericId) || null;
+  }
+
+  function findSingleCard(legacyKey) {
+    return cards.find(card => card.legacy_key === legacyKey) || null;
+  }
+
+  function legacyValue(legacyKey) {
+    const field = document.querySelector(`[name="${legacyKey}"]`);
+    return field && typeof field.value === "string" ? field.value.trim() : "";
+  }
+
+  function clearMessages() {
+    if (errorElement) {
+      errorElement.textContent = "";
+      setHidden(errorElement, true);
+    }
+    if (successElement) {
+      successElement.textContent = "";
+      setHidden(successElement, true);
+    }
+  }
+
+  function showError(message) {
+    if (!errorElement) return;
+    errorElement.textContent = message || copy.errorSave;
+    setHidden(errorElement, false);
+  }
+
+  function setBusy(value) {
+    busy = Boolean(value);
+    if (saveButton) saveButton.disabled = busy;
+    if (deleteButton) deleteButton.disabled = busy;
+  }
+
+  function catalogEntryById(id) {
+    const numericId = Number(id || 0);
+    return catalog.find(entry => Number(entry.id) === numericId) || null;
+  }
+
+  function populateCatalog(type, selectedId, category) {
+    if (!catalogSelect) return;
+    catalogSelect.replaceChildren();
+
+    const customOption = document.createElement("option");
+    customOption.value = "";
+    customOption.textContent = copy.customTitle;
+    catalogSelect.appendChild(customOption);
+
+    catalog
+      .filter(entry => {
+        if (String(entry.tipo_scheda || "") !== type) return false;
+        const allowedCategories = asArray(entry.categorie);
+        return !category
+          || allowedCategories.length === 0
+          || allowedCategories.includes(category);
+      })
+      .sort((a, b) => String(a.titolo || "").localeCompare(String(b.titolo || ""), "it"))
+      .forEach(entry => {
+        const option = document.createElement("option");
+        option.value = String(entry.id);
+        // Le voci del catalogo corrispondono a titoli/qualifiche ufficiali in
+        // italiano. Come i titoli personalizzati, non vanno reinterpretate dal
+        // traduttore automatico dell'interfaccia.
+        option.setAttribute("data-no-translate", "");
+        option.textContent = String(entry.titolo || "");
+        catalogSelect.appendChild(option);
+      });
+
+    catalogSelect.value = selectedId ? String(selectedId) : "";
+  }
+
+  function syncCatalogTitle() {
+    if (!catalogSelect || !titleInput) return;
+    const entry = catalogEntryById(catalogSelect.value);
+    if (entry) {
+      titleInput.value = String(entry.titolo || "");
+      titleInput.readOnly = true;
+      const allowedCategories = asArray(entry.categorie);
+      if (
+        allowedCategories.length
+        && !allowedCategories.includes(categoryInput.value)
+      ) {
+        categoryInput.value = String(allowedCategories[0] || "");
+      }
+      populateCatalog(activeCardType, entry.id, categoryInput.value);
+    } else {
+      titleInput.readOnly = false;
+    }
+
+    const requiresIssuer = Boolean(entry && entry.richiede_ente);
+    issuerInput.required = requiresIssuer;
+    issuerInput.setAttribute("aria-required", requiresIssuer ? "true" : "false");
+    setHidden(issuerRequired, !requiresIssuer);
+  }
+
+  function syncCategoryWithCatalog() {
+    const entry = catalogEntryById(catalogSelect.value);
+    const allowedCategories = entry ? asArray(entry.categorie) : [];
+    const compatible = !entry
+      || !categoryInput.value
+      || allowedCategories.length === 0
+      || allowedCategories.includes(categoryInput.value);
+    const selectedId = compatible && entry ? entry.id : null;
+    populateCatalog(activeCardType, selectedId, categoryInput.value);
+    syncCatalogTitle();
+  }
+
+  function syncOngoing() {
+    if (!ongoingInput || !endInput) return;
+    endInput.disabled = ongoingInput.checked;
+    if (ongoingInput.checked) endInput.value = "";
+  }
+
+  function updateRequestVisibility(card) {
+    if (!requestRow || !requestInput) return;
+    const hidden = positiveOrPendingStates.has(
+      (card && card.stato_verifica) || "dichiarata"
+    );
+    requestInput.checked = false;
+    setHidden(requestRow, hidden);
+  }
+
+  function resetPrivateForm(card, legacyKey, type) {
+    form.reset();
+    clearMessages();
+    activeCardId = card ? Number(card.id) : 0;
+    activeLegacyKey = legacyKey;
+    activeCardType = type;
+
+    titleInput.value = card ? String(card.titolo || "") : legacyValue(legacyKey);
+    categoryInput.value = card ? String(card.categoria_slug || "") : "";
+    populateCatalog(type, card && card.catalogo_id, categoryInput.value);
+    issuerInput.value = card ? String(card.ente || "") : "";
+    placeInput.value = card ? String(card.luogo || "") : "";
+    codeInput.value = card ? String(card.codice_qualifica || "") : "";
+    startInput.value = card ? String(card.data_inizio || "") : "";
+    endInput.value = card ? String(card.data_fine || "") : "";
+    ongoingInput.checked = Boolean(card && card.in_corso);
+    issuedInput.value = card ? String(card.data_rilascio || "") : "";
+    expiresInput.value = card ? String(card.data_scadenza || "") : "";
+    descriptionInput.value = card ? String(card.descrizione || "") : "";
+    syncCatalogTitle();
+    syncOngoing();
+
+    const isCertificate = type === "certificazione";
+    setHidden(periodFields, isCertificate);
+    setHidden(issueFields, !isCertificate);
+    setHidden(codeField, type === "esperienza");
+    setHidden(deleteButton, !card);
+    stateElement.textContent = statusLabel(card);
+    updateRequestVisibility(card);
+
+    eyebrowElement.textContent = card ? copy.edit : copy.newCard;
+    titleElement.textContent = typeLabels[type] || copy.sheet;
+    subtitleElement.textContent = card
+      ? copy.editHelp
+      : copy.newHelp;
+    iconElement.textContent = iconForType(type);
+  }
+
+  function dateLabel(value) {
+    if (!value) return "";
+    const parsed = new Date(`${value}T12:00:00`);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    try {
+      return new Intl.DateTimeFormat(document.documentElement.lang || "it", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      }).format(parsed);
+    } catch (_) {
+      return String(value);
+    }
+  }
+
+  function addPublicRow(grid, label, value, wide) {
+    if (!value) return;
+    const wrapper = document.createElement("div");
+    wrapper.className = `profile-card-public-row${wide ? " profile-card-public-row-wide" : ""}`;
+
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = String(value);
+    detail.setAttribute("data-no-translate", "");
+
+    wrapper.append(term, detail);
+    grid.appendChild(wrapper);
+  }
+
+  function renderPublicDetails(card) {
+    publicDetails.replaceChildren();
+
+    const badge = document.createElement("div");
+    badge.className = "profile-card-public-state";
+    badge.textContent = statusLabel(card);
+
+    const grid = document.createElement("dl");
+    grid.className = "profile-card-public-grid";
+
+    addPublicRow(
+      grid,
+      {{ tr('profile_card.scope')|tojson }},
+      translateSystemText(categoryLabels[card.categoria_slug] || card.categoria_slug)
+    );
+    addPublicRow(grid, copy.issuer, card.ente);
+    addPublicRow(grid, copy.place, card.luogo);
+    addPublicRow(grid, copy.startDate, dateLabel(card.data_inizio));
+    addPublicRow(
+      grid,
+      copy.endDate,
+      card.in_corso ? copy.inProgress : dateLabel(card.data_fine)
+    );
+    addPublicRow(grid, copy.issueDate, dateLabel(card.data_rilascio));
+    addPublicRow(grid, copy.expiryDate, dateLabel(card.data_scadenza));
+    addPublicRow(grid, copy.code, card.codice_qualifica);
+    addPublicRow(grid, copy.details, card.descrizione, true);
+    publicDetails.append(badge, grid);
+    eyebrowElement.textContent = typeLabels[card.tipo_scheda] || copy.sheet;
+    titleElement.textContent = String(card.titolo || copy.details);
+    titleElement.setAttribute("data-no-translate", "");
+    subtitleElement.textContent = copy.declaredInformation;
+    iconElement.textContent = iconForType(card.tipo_scheda);
+  }
+
+  function focusableElements() {
+    return Array.from(dialog.querySelectorAll(
+      "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
+    )).filter(element => element.offsetParent !== null);
+  }
+
+  function openDialog() {
+    previousFocus = document.activeElement;
+    dialog.classList.remove("hidden");
+    dialog.setAttribute("aria-hidden", "false");
+    document.body.classList.add("profile-card-dialog-open");
+    window.requestAnimationFrame(() => {
+      const target = isPublic ? closeButton : (catalogSelect || closeButton);
+      if (target) target.focus({ preventScroll: true });
+    });
+  }
+
+  function closeDialog() {
+    if (busy) return;
+    dialog.classList.add("hidden");
+    dialog.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("profile-card-dialog-open");
+    titleElement.removeAttribute("data-no-translate");
+    if (previousFocus && typeof previousFocus.focus === "function") {
+      previousFocus.focus({ preventScroll: true });
+    }
+  }
+
+  function renderPrivateControls() {
+    if (isPublic) return;
+
+    document.querySelectorAll("[data-profile-card-open]").forEach(button => {
+      const legacyKey = button.dataset.legacyKey || "";
+      if (legacyKey === "certificazioni") return;
+      const card = findSingleCard(legacyKey);
+      const label = button.querySelector("[data-profile-card-button-label]");
+      button.classList.toggle("has-card", Boolean(card));
+      if (label) label.textContent = card ? copy.open : copy.short;
+      button.dataset.cardId = card ? String(card.id) : "";
+    });
+
+    const list = document.getElementById("profile-card-certifications-list");
+    if (!list) return;
+    list.replaceChildren();
+
+    const certificateCards = cards.filter(card => card.legacy_key === "certificazioni");
+    setHidden(list, certificateCards.length === 0);
+
+    certificateCards.forEach(card => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "profile-card-private-item";
+      button.dataset.profileCardEditId = String(card.id);
+
+      const text = document.createElement("span");
+      const title = document.createElement("span");
+      title.className = "profile-card-private-title";
+      title.textContent = String(card.titolo || copy.short);
+      title.setAttribute("data-no-translate", "");
+
+      const state = document.createElement("span");
+      state.className = "profile-card-private-state";
+      state.textContent = statusLabel(card);
+      text.append(title, state);
+
+      const action = document.createElement("span");
+      action.className = "profile-card-private-open";
+      action.textContent = `${copy.open} ›`;
+      button.append(text, action);
+      list.appendChild(button);
+    });
+  }
+
+  function upsertCard(card) {
+    const normalized = normalizeCard(card);
+    cards = cards.filter(item => Number(item.id) !== Number(normalized.id));
+    cards.push(normalized);
+    return normalized;
+  }
+
+  function payloadFromForm() {
+    return {
+      versione: activeCardId
+        ? Number((findCard(activeCardId) || {}).versione || 0)
+        : null,
+      legacy_key: activeLegacyKey,
+      tipo_scheda: activeCardType,
+      catalogo_id: catalogSelect.value ? Number(catalogSelect.value) : null,
+      titolo: titleInput.value.trim(),
+      categoria_slug: categoryInput.value,
+      ente: issuerInput.value.trim(),
+      luogo: placeInput.value.trim(),
+      data_inizio: startInput.value || null,
+      data_fine: endInput.value || null,
+      in_corso: ongoingInput.checked,
+      data_rilascio: issuedInput.value || null,
+      data_scadenza: expiresInput.value || null,
+      codice_qualifica: codeInput.value.trim(),
+      descrizione: descriptionInput.value.trim()
+    };
+  }
+
+  const apiErrorTranslations = new Map([
+    ["Per questo campo esiste già una scheda. Aprila per modificarla.", copy.errorExisting],
+    ["Scheda non trovata.", copy.errorNotFound],
+    ["Operazione non riuscita.", copy.errorOperation],
+    ["Richiesta non riuscita.", copy.errorRequest],
+    ["La scheda è cambiata. Riaprila e riprova.", copy.errorChanged],
+    [
+      "La scheda è scaduta. Aggiorna prima la data di scadenza e poi richiedi un nuovo controllo.",
+      copy.errorExpired
+    ],
+    [
+      "Conferma di aver letto le informazioni sul controllo.",
+      copy.errorAcknowledgement
+    ],
+    ["Puoi avere al massimo 20 certificazioni attive.", copy.errorCertificateLimit],
+    ["Hai inviato troppe richieste di controllo. Riprova tra un'ora.", copy.errorRequestRateLimit],
+    ["Hai inviato troppe richieste di controllo. Riprova tra un’ora.", copy.errorRequestRateLimit],
+    [
+      "La scheda non può contenere telefono, email, WhatsApp, link o altri recapiti. Usa la sezione Contatti.",
+      copy.errorContacts
+    ],
+    ["La funzione non è ancora disponibile o si è verificato un errore.", copy.errorUnavailable],
+    [
+      "Questa scheda è già stata controllata. Se modifichi i dati, il controllo verrà azzerato e potrai richiederlo di nuovo.",
+      copy.errorChecked
+    ]
+  ]);
+
+  function localizeApiError(message) {
+    const source = String(message || "").replace(/\s+/g, " ").trim();
+    if (!source) return copy.errorOperation;
+    if (apiErrorTranslations.has(source)) return apiErrorTranslations.get(source);
+    if (/massimo\s+20\s+certificazioni\s+attive/i.test(source)) {
+      return copy.errorCertificateLimit;
+    }
+    if (/troppe\s+richieste.*controllo|riprova\s+tra\s+un['’]?ora/i.test(source)) {
+      return copy.errorRequestRateLimit;
+    }
+    if (/recapit|telefono|e-?mail|whatsapp|\blink\b/i.test(source)) {
+      return copy.errorContacts;
+    }
+    if (/non è una data valida/i.test(source)) return copy.errorInvalidDate;
+    if (/data di fine precede|scadenza precede/i.test(source)) return copy.errorDateOrder;
+    if (
+      /è obbligatorio|supera \d+ caratteri|non valid[oa]|non disponibile|non coerente/i.test(source)
+    ) {
+      return copy.errorInvalidData;
+    }
+    return translateSystemText(source);
+  }
+
+  async function parseResponse(response) {
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (_) {
+      data = {};
+    }
+    if (!response.ok || data.ok === false) {
+      throw new Error(localizeApiError(data.error || data.message));
+    }
+    return data;
+  }
+
+  async function saveCard(event) {
+    event.preventDefault();
+    if (busy) return;
+    clearMessages();
+
+    if (!titleInput.value.trim()) {
+      showError(copy.errorTitle);
+      titleInput.focus();
+      return;
+    }
+
+    const selectedCatalogEntry = catalogEntryById(catalogSelect.value);
+    if (
+      selectedCatalogEntry
+      && selectedCatalogEntry.richiede_ente
+      && !issuerInput.value.trim()
+    ) {
+      showError(copy.errorIssuer);
+      issuerInput.focus();
+      return;
+    }
+
+    const shouldRequest = requestInput && requestInput.checked;
+    const endpoint = activeCardId
+      ? `/api/utente/schede-profilo/${activeCardId}`
+      : "/api/utente/schede-profilo";
+
+    setBusy(true);
+    saveButton.textContent = copy.saving;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: activeCardId ? "PUT" : "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify(payloadFromForm())
+      });
+      const data = await parseResponse(response);
+      let saved = upsertCard(data.scheda || data.card || data);
+
+      // Il primo salvataggio è già definitivo. Aggiorniamo subito lo stato
+      // locale, così un eventuale errore della successiva richiesta di
+      // controllo non può far creare per errore una seconda scheda.
+      activeCardId = saved.id;
+      renderPrivateControls();
+      stateElement.textContent = statusLabel(saved);
+      updateRequestVisibility(saved);
+      setHidden(deleteButton, false);
+
+      if (shouldRequest && !positiveOrPendingStates.has(saved.stato_verifica)) {
+        const requestResponse = await fetch(
+          `/api/utente/schede-profilo/${saved.id}/richiedi-verifica`,
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken,
+              "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({
+              acknowledged: true,
+              notice_version: "profile_cards_2026_v1",
+              versione: Number(saved.versione || 0)
+            })
+          }
+        );
+        const requestData = await parseResponse(requestResponse);
+        saved = upsertCard(requestData.scheda || requestData.card || saved);
+      }
+
+      renderPrivateControls();
+      stateElement.textContent = statusLabel(saved);
+      updateRequestVisibility(saved);
+      setHidden(deleteButton, false);
+      successElement.textContent = shouldRequest
+        ? copy.savedRequested
+        : copy.saved;
+      setHidden(successElement, false);
+      saveButton.textContent = copy.save;
+      setBusy(false);
+      window.setTimeout(closeDialog, 650);
+    } catch (error) {
+      showError(error.message || copy.errorSave);
+      saveButton.textContent = copy.save;
+      setBusy(false);
+    }
+  }
+
+  async function deleteCard() {
+    if (!activeCardId || busy) return;
+    const confirmed = window.confirm(copy.confirmDelete);
+    if (!confirmed) return;
+
+    clearMessages();
+    setBusy(true);
+    deleteButton.textContent = copy.deleting;
+
+    try {
+      const response = await fetch(`/api/utente/schede-profilo/${activeCardId}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({
+          versione: Number((findCard(activeCardId) || {}).versione || 0)
+        })
+      });
+      await parseResponse(response);
+      cards = cards.filter(card => Number(card.id) !== Number(activeCardId));
+      renderPrivateControls();
+      deleteButton.textContent = copy.delete;
+      setBusy(false);
+      closeDialog();
+    } catch (error) {
+      showError(error.message || copy.errorDelete);
+      deleteButton.textContent = copy.delete;
+      setBusy(false);
+    }
+  }
+
+  document.addEventListener("click", event => {
+    const privateOpen = event.target.closest("[data-profile-card-open]");
+    if (privateOpen && !isPublic) {
+      const legacyKey = privateOpen.dataset.legacyKey || "";
+      const type = privateOpen.dataset.cardType || "";
+      const card = legacyKey === "certificazioni"
+        ? null
+        : findSingleCard(legacyKey);
+      resetPrivateForm(card, legacyKey, type);
+      openDialog();
+      return;
+    }
+
+    const editButton = event.target.closest("[data-profile-card-edit-id]");
+    if (editButton && !isPublic) {
+      const card = findCard(editButton.dataset.profileCardEditId);
+      if (!card) return;
+      resetPrivateForm(card, card.legacy_key, card.tipo_scheda);
+      openDialog();
+      return;
+    }
+
+    const publicOpen = event.target.closest("[data-profile-card-public-open]");
+    if (publicOpen && isPublic) {
+      const card = findCard(publicOpen.dataset.profileCardPublicOpen);
+      if (!card) return;
+      renderPublicDetails(card);
+      openDialog();
+    }
+  });
+
+  if (form) form.addEventListener("submit", saveCard);
+  if (deleteButton) deleteButton.addEventListener("click", deleteCard);
+  if (catalogSelect) catalogSelect.addEventListener("change", syncCatalogTitle);
+  if (categoryInput) categoryInput.addEventListener("change", syncCategoryWithCatalog);
+  if (ongoingInput) ongoingInput.addEventListener("change", syncOngoing);
+  if (backdrop) backdrop.addEventListener("click", closeDialog);
+  if (closeButton) closeButton.addEventListener("click", closeDialog);
+
+  document.addEventListener("keydown", event => {
+    if (dialog.classList.contains("hidden")) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDialog();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = focusableElements();
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  renderPrivateControls();
+})();
+</script>

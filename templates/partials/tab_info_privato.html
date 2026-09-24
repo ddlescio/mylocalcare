@@ -359,6 +359,8 @@
               class="space-y-6"
               id="form-work-education">
 
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
           {% set esperienze = [utente.get('esperienza_1',''), utente.get('esperienza_2',''), utente.get('esperienza_3','')] %}
           {% set formazioni = [utente.get('studio_1',''), utente.get('studio_2',''), utente.get('studio_3','')] %}
           {% set certificazioni = utente.get('certificazioni','') %}
@@ -418,8 +420,22 @@
               <div class="we-fields">
                 {% for i in range(1,4) %}
                   <div class="we-field">
-                    <label class="we-label">Esperienza {{ i }}</label>
+                    <div class="we-label-row">
+                      <label class="we-label" for="esperienza-{{ i }}">Esperienza {{ i }}</label>
+                      {% if schede_profilo_disponibili|default(false) %}
+                        <button
+                          type="button"
+                          class="profile-card-slot-btn"
+                          data-profile-card-open
+                          data-legacy-key="esperienza_{{ i }}"
+                          data-card-type="esperienza">
+                          <span aria-hidden="true">＋</span>
+                          <span data-profile-card-button-label>{{ tr('profile_card.short') }}</span>
+                        </button>
+                      {% endif %}
+                    </div>
                     <input
+                      id="esperienza-{{ i }}"
                       name="esperienza_{{ i }}"
                       class="input-modern we-input"
                       value="{{ utente.get('esperienza_' ~ i) or '' }}"
@@ -446,8 +462,22 @@
               <div class="we-fields">
                 {% for i in range(1,4) %}
                   <div class="we-field">
-                    <label class="we-label">Formazione {{ i }}</label>
+                    <div class="we-label-row">
+                      <label class="we-label" for="studio-{{ i }}">Formazione {{ i }}</label>
+                      {% if schede_profilo_disponibili|default(false) %}
+                        <button
+                          type="button"
+                          class="profile-card-slot-btn"
+                          data-profile-card-open
+                          data-legacy-key="studio_{{ i }}"
+                          data-card-type="formazione">
+                          <span aria-hidden="true">＋</span>
+                          <span data-profile-card-button-label>{{ tr('profile_card.short') }}</span>
+                        </button>
+                      {% endif %}
+                    </div>
                     <input
+                      id="studio-{{ i }}"
                       name="studio_{{ i }}"
                       class="input-modern we-input"
                       value="{{ utente.get('studio_' ~ i) or '' }}"
@@ -467,8 +497,23 @@
             <!-- CERTIFICAZIONI -->
             <div class="we-card">
               <div class="we-card-head">
-                <h5 class="we-card-title">Certificazioni o attestati</h5>
-                <p class="we-card-sub">Aggiungi qualifiche, abilitazioni o corsi certificati.</p>
+                <div class="we-card-heading-row">
+                  <div>
+                    <h5 class="we-card-title">Certificazioni o attestati</h5>
+                    <p class="we-card-sub">Aggiungi qualifiche, abilitazioni o corsi certificati.</p>
+                  </div>
+                  {% if schede_profilo_disponibili|default(false) %}
+                    <button
+                      type="button"
+                      class="profile-card-slot-btn profile-card-slot-btn-add"
+                      data-profile-card-open
+                      data-legacy-key="certificazioni"
+                      data-card-type="certificazione">
+                      <span aria-hidden="true">＋</span>
+                      <span>{{ tr('profile_card.add') }}</span>
+                    </button>
+                  {% endif %}
+                </div>
               </div>
 
               <div class="we-field">
@@ -480,6 +525,14 @@
                   data-autosave="1"
                   placeholder="Es. Primo soccorso • Corso OSS • Certificazione linguistica • Corso professionale">{{ utente.get('certificazioni') or '' }}</textarea>
               </div>
+
+              {% if schede_profilo_disponibili|default(false) %}
+                <div
+                  id="profile-card-certifications-list"
+                  class="profile-card-private-list hidden"
+                  aria-live="polite">
+                </div>
+              {% endif %}
             </div>
 
             <div id="autosave-work-education-status"
@@ -1339,6 +1392,18 @@
     margin-bottom:.9rem;
   }
 
+  .we-card-heading-row,
+  .we-label-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.75rem;
+  }
+
+  .we-card-heading-row{
+    align-items:flex-start;
+  }
+
   .we-card-title{
     margin:0;
     font-size:1rem;
@@ -1371,6 +1436,102 @@
     font-size:.84rem;
     font-weight:650;
     color:#475569;
+  }
+
+  .profile-card-slot-btn{
+    position:relative;
+    z-index:2;
+    flex:0 0 auto;
+    min-height:1.85rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.26rem;
+    padding:.28rem .62rem;
+    border:1px solid rgba(147,197,253,.84);
+    border-radius:9999px;
+    color:#1d4ed8;
+    background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(239,246,255,.92));
+    box-shadow:0 4px 10px rgba(37,99,235,.07), inset 0 1px 0 #fff;
+    font-size:.72rem;
+    line-height:1;
+    font-weight:800;
+    transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+
+  .profile-card-slot-btn:hover{
+    transform:translateY(-1px);
+    border-color:#60a5fa;
+    box-shadow:0 7px 14px rgba(37,99,235,.11), inset 0 1px 0 #fff;
+  }
+
+  .profile-card-slot-btn:focus-visible{
+    outline:3px solid rgba(96,165,250,.28);
+    outline-offset:2px;
+  }
+
+  .profile-card-slot-btn.has-card{
+    color:#4338ca;
+    border-color:rgba(165,180,252,.9);
+    background:linear-gradient(180deg, #fff, #eef2ff);
+  }
+
+  .profile-card-slot-btn-add{
+    margin-top:.05rem;
+  }
+
+  .profile-card-private-list{
+    position:relative;
+    z-index:1;
+    display:grid;
+    gap:.55rem;
+    margin-top:.85rem;
+    padding-top:.8rem;
+    border-top:1px solid rgba(226,232,240,.9);
+  }
+
+  .profile-card-private-list.hidden{
+    display:none;
+  }
+
+  .profile-card-private-item{
+    width:100%;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center;
+    gap:.75rem;
+    padding:.68rem .72rem;
+    border:1px solid rgba(203,213,225,.82);
+    border-radius:.95rem;
+    text-align:left;
+    background:rgba(255,255,255,.86);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.96);
+  }
+
+  .profile-card-private-title{
+    display:block;
+    overflow:hidden;
+    color:#1e293b;
+    font-size:.82rem;
+    line-height:1.25;
+    font-weight:780;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .profile-card-private-state{
+    display:block;
+    margin-top:.18rem;
+    color:#64748b;
+    font-size:.68rem;
+    line-height:1.25;
+    font-weight:650;
+  }
+
+  .profile-card-private-open{
+    color:#2563eb;
+    font-size:.7rem;
+    font-weight:850;
   }
 
   .we-input{
@@ -1441,6 +1602,22 @@
     .we-card{
       border-radius:1.2rem;
       padding:.9rem .9rem .95rem;
+    }
+
+    .we-card-heading-row{
+      gap:.5rem;
+    }
+
+    .profile-card-slot-btn{
+      min-height:1.78rem;
+      padding:.26rem .52rem;
+      font-size:.68rem;
+    }
+
+    .profile-card-slot-btn-add{
+      max-width:8rem;
+      line-height:1.15;
+      white-space:normal;
     }
 
     .we-input{

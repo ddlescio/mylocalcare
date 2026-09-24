@@ -1,6 +1,7 @@
 import os
 import app as app_module
 from app import app
+from profilo_schede import CATALOGO_SCHEDE_SEED
 
 IS_POSTGRES = bool(os.getenv("DATABASE_URL"))
 sql = app_module.sql
@@ -1425,6 +1426,290 @@ def crea_tabella_override_admin():
 
 
 # ---------------------------------------------------------
+# 🪪 SCHEDE STRUTTURATE ESPERIENZE / FORMAZIONE
+# ---------------------------------------------------------
+def crea_tabelle_schede_profilo():
+    """Crea il catalogo, le schede utente e lo storico dei controlli.
+
+    Le schede non sostituiscono né cancellano i campi testuali storici in
+    ``utenti``. L'indice parziale consente una sola scheda attiva per ciascun
+    campo esperienza/studio e più schede attive per ``certificazioni``.
+    """
+
+    conn = get_conn()
+    c = conn.cursor()
+    boolean_type = "BOOLEAN" if IS_POSTGRES else "INTEGER"
+    true_default = "TRUE" if IS_POSTGRES else "1"
+    false_default = "FALSE" if IS_POSTGRES else "0"
+    date_type = "DATE" if IS_POSTGRES else "TEXT"
+
+    try:
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS catalogo_qualifiche (
+                id {pk_col()},
+                codice TEXT NOT NULL UNIQUE,
+                titolo TEXT NOT NULL,
+                tipo_scheda TEXT NOT NULL CHECK (
+                    tipo_scheda IN ('esperienza', 'formazione', 'certificazione')
+                ),
+                natura TEXT NOT NULL,
+                descrizione TEXT,
+                richiede_ente {boolean_type} NOT NULL DEFAULT {false_default},
+                prevede_scadenza {boolean_type} NOT NULL DEFAULT {false_default},
+                professione_regolamentata {boolean_type} NOT NULL DEFAULT {false_default},
+                ordine INTEGER NOT NULL DEFAULT 100,
+                attivo {boolean_type} NOT NULL DEFAULT {true_default},
+                created_at {dt_col(True)},
+                updated_at {dt_col(True)}
+            );
+        """))
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS catalogo_qualifiche_categorie (
+                catalogo_id INTEGER NOT NULL,
+                categoria_slug TEXT NOT NULL,
+                created_at {dt_col(True)},
+                PRIMARY KEY (catalogo_id, categoria_slug),
+                FOREIGN KEY (catalogo_id)
+                    REFERENCES catalogo_qualifiche(id) ON DELETE CASCADE
+            );
+        """))
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS schede_profilo (
+                id {pk_col()},
+                utente_id INTEGER NOT NULL,
+                legacy_key TEXT NOT NULL CHECK (legacy_key IN (
+                    'esperienza_1', 'esperienza_2', 'esperienza_3',
+                    'studio_1', 'studio_2', 'studio_3', 'certificazioni'
+                )),
+                tipo_scheda TEXT NOT NULL CHECK (
+                    tipo_scheda IN ('esperienza', 'formazione', 'certificazione')
+                ),
+                catalogo_id INTEGER,
+                titolo TEXT NOT NULL,
+                categoria_slug TEXT,
+                ente TEXT,
+                luogo TEXT,
+                data_inizio {date_type},
+                data_fine {date_type},
+                in_corso {boolean_type} NOT NULL DEFAULT {false_default},
+                data_rilascio {date_type},
+                data_scadenza {date_type},
+                codice_qualifica TEXT,
+                descrizione TEXT,
+                attiva {boolean_type} NOT NULL DEFAULT {true_default},
+                stato_verifica TEXT NOT NULL DEFAULT 'dichiarata' CHECK (
+                    stato_verifica IN (
+                        'dichiarata', 'richiesta', 'documento_visionato',
+                        'riscontro_effettuato', 'non_confermata', 'scaduta',
+                        'revocata'
+                    )
+                ),
+                richiesta_verifica_at {dt_col()},
+                verificata_at {dt_col()},
+                verificata_da_admin_id INTEGER,
+                metodo_verifica TEXT NOT NULL DEFAULT 'nessuno' CHECK (
+                    metodo_verifica IN (
+                        'nessuno', 'documento', 'fonte_pubblica',
+                        'ente_contattato', 'altro'
+                    )
+                ),
+                nota_pubblica TEXT,
+                versione INTEGER NOT NULL DEFAULT 1,
+                created_at {dt_col(True)},
+                updated_at {dt_col(True)},
+                CHECK (
+                    (legacy_key IN (
+                        'esperienza_1', 'esperienza_2', 'esperienza_3'
+                    ) AND tipo_scheda = 'esperienza')
+                    OR (legacy_key IN (
+                        'studio_1', 'studio_2', 'studio_3'
+                    ) AND tipo_scheda = 'formazione')
+                    OR (legacy_key = 'certificazioni'
+                        AND tipo_scheda = 'certificazione')
+                ),
+                CHECK (
+                    data_fine IS NULL OR data_inizio IS NULL
+                    OR data_fine >= data_inizio
+                ),
+                CHECK (
+                    data_scadenza IS NULL OR data_rilascio IS NULL
+                    OR data_scadenza >= data_rilascio
+                ),
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE,
+                FOREIGN KEY (catalogo_id)
+                    REFERENCES catalogo_qualifiche(id) ON DELETE SET NULL,
+                FOREIGN KEY (verificata_da_admin_id)
+                    REFERENCES utenti(id) ON DELETE SET NULL
+            );
+        """))
+
+        if IS_POSTGRES:
+            c.execute(sql("""
+                ALTER TABLE schede_profilo
+                ADD COLUMN IF NOT EXISTS versione INTEGER NOT NULL DEFAULT 1;
+            """))
+        else:
+            c.execute("PRAGMA table_info(schede_profilo)")
+            profile_card_columns = {row[1] for row in c.fetchall()}
+            if "versione" not in profile_card_columns:
+                c.execute("""
+                    ALTER TABLE schede_profilo
+                    ADD COLUMN versione INTEGER NOT NULL DEFAULT 1;
+                """)
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS schede_profilo_verifiche (
+                id {pk_col()},
+                scheda_id INTEGER NOT NULL,
+                stato TEXT NOT NULL CHECK (stato IN (
+                    'dichiarata', 'richiesta', 'documento_visionato',
+                    'riscontro_effettuato', 'non_confermata', 'scaduta',
+                    'revocata'
+                )),
+                metodo TEXT NOT NULL DEFAULT 'nessuno' CHECK (metodo IN (
+                    'nessuno', 'documento', 'fonte_pubblica',
+                    'ente_contattato', 'altro'
+                )),
+                nota_admin TEXT,
+                nota_pubblica TEXT,
+                scheda_snapshot TEXT,
+                admin_id INTEGER,
+                created_at {dt_col(True)},
+                FOREIGN KEY (scheda_id)
+                    REFERENCES schede_profilo(id) ON DELETE CASCADE,
+                FOREIGN KEY (admin_id)
+                    REFERENCES utenti(id) ON DELETE SET NULL
+            );
+        """))
+
+        if IS_POSTGRES:
+            c.execute(sql("""
+                ALTER TABLE schede_profilo_verifiche
+                ADD COLUMN IF NOT EXISTS scheda_snapshot TEXT;
+            """))
+        else:
+            c.execute("PRAGMA table_info(schede_profilo_verifiche)")
+            verification_columns = {row[1] for row in c.fetchall()}
+            if "scheda_snapshot" not in verification_columns:
+                c.execute("""
+                    ALTER TABLE schede_profilo_verifiche
+                    ADD COLUMN scheda_snapshot TEXT;
+                """)
+
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_catalogo_qualifiche_elenco
+            ON catalogo_qualifiche (attivo, tipo_scheda, ordine, titolo);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_catalogo_qualifiche_categoria
+            ON catalogo_qualifiche_categorie (categoria_slug, catalogo_id);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_schede_profilo_utente
+            ON schede_profilo (utente_id, attiva, legacy_key, created_at);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_schede_profilo_verifica
+            ON schede_profilo (stato_verifica, richiesta_verifica_at);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_schede_profilo_catalogo
+            ON schede_profilo (catalogo_id);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_schede_profilo_verifiche_storico
+            ON schede_profilo_verifiche (scheda_id, created_at DESC);
+        """))
+
+        active_condition = "attiva = TRUE" if IS_POSTGRES else "attiva = 1"
+        c.execute(sql(f"""
+            CREATE UNIQUE INDEX IF NOT EXISTS
+                uq_schede_profilo_slot_singolo_attivo
+            ON schede_profilo (utente_id, legacy_key)
+            WHERE {active_condition} AND legacy_key <> 'certificazioni';
+        """))
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+        conn.close()
+
+    print("✅ Tabelle schede profilo e verifiche pronte.")
+
+
+def semina_catalogo_qualifiche():
+    """Inserisce soltanto le voci mancanti del catalogo iniziale.
+
+    Un elemento già presente non viene sovrascritto: titolo, ordine, stato e
+    associazioni aggiuntive restano quindi gestibili dall'admin.
+    """
+
+    conn = get_conn()
+    c = conn.cursor()
+    try:
+        for entry in CATALOGO_SCHEDE_SEED:
+            c.execute(
+                sql("""
+                    INSERT INTO catalogo_qualifiche (
+                        codice, titolo, tipo_scheda, natura,
+                        richiede_ente, prevede_scadenza,
+                        professione_regolamentata, ordine, attivo
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (codice) DO NOTHING;
+                """),
+                (
+                    entry["codice"],
+                    entry["titolo"],
+                    entry["tipo_scheda"],
+                    entry["natura"],
+                    bool(entry["richiede_ente"]),
+                    bool(entry["prevede_scadenza"]),
+                    bool(entry["professione_regolamentata"]),
+                    int(entry["ordine"]),
+                    True,
+                ),
+            )
+            c.execute(
+                sql("SELECT id FROM catalogo_qualifiche WHERE codice = ?"),
+                (entry["codice"],),
+            )
+            catalog_id = c.fetchone()[0]
+            for category in entry["categorie"]:
+                c.execute(
+                    sql("""
+                        INSERT INTO catalogo_qualifiche_categorie (
+                            catalogo_id, categoria_slug
+                        )
+                        VALUES (?, ?)
+                        ON CONFLICT (catalogo_id, categoria_slug) DO NOTHING;
+                    """),
+                    (catalog_id, category),
+                )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+        conn.close()
+
+    print("✅ Catalogo iniziale delle schede profilo pronto.")
+
+
+# ---------------------------------------------------------
 # 🧱 AGGIORNA COLONNE MANCANTI (no perdita dati)
 # ---------------------------------------------------------
 def aggiorna_colonne_mancanti():
@@ -1879,6 +2164,8 @@ def inizializza_database():
     crea_tabella_utenti()
     aggiorna_colonne_revisione_profilo_postgres()
     crea_tabella_revisioni_profilo()
+    crea_tabelle_schede_profilo()
+    semina_catalogo_qualifiche()
 
     crea_tabella_operatori()
     crea_tabella_annunci()

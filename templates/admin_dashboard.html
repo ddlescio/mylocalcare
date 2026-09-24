@@ -102,6 +102,24 @@
   </a>
 
   <!-- 🎥 Videochiamate -->
+  <a href="{{ url_for('admin_schede_profilo') }}"
+     id="card-schede-profilo-alert"
+     class="admin-alert-card group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
+            flex flex-col items-center justify-center text-center min-h-[120px] sm:min-h-[190px] lg:min-h-[220px]
+            transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+
+    <div class="p-3 rounded-xl bg-sky-100 text-sky-700 text-xl
+                group-hover:bg-sky-200 transition mb-4">
+      🎓
+    </div>
+
+    <div class="flex flex-col items-center text-center">
+      <p class="text-sm font-medium text-slate-500">Schede da controllare</p>
+      <p id="dash-schede-profilo" class="text-2xl font-bold text-slate-800 mt-2">—</p>
+    </div>
+  </a>
+
+  <!-- 🎥 Videochiamate -->
   <a href="{{ url_for('admin_video_calls') }}"
      class="group rounded-2xl bg-white border border-slate-200 shadow-sm p-5
             flex flex-col items-center justify-center text-center min-h-[150px] sm:min-h-[190px] lg:min-h-[220px]
@@ -291,6 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setText("dash-annunci", data.annunci);
         setText("dash-recensioni", data.recensioni);
         setText("dash-revisioni-profilo", data.revisioni_profilo);
+        setText("dash-schede-profilo", data.schede_profilo_da_verificare);
         setText("dash-video-minuti", data.video_minuti);
         setText("dash-acquisti-attivi", data.acquisti_attivi);
         setText("dash-openai-costo", data.openai_costo || "—");
@@ -300,6 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setAlertCard("card-chat-rischio-alert", data.utenti_chat_sospetti);
         setAlertCard("card-recensioni-alert", data.recensioni);
         setAlertCard("card-revisioni-profilo-alert", data.revisioni_profilo);
+        setAlertCard("card-schede-profilo-alert", data.schede_profilo_da_verificare);
       })
       .catch(() => {});
   }

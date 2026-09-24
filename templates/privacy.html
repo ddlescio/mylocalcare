@@ -14,7 +14,7 @@
   <h1 class="text-3xl font-bold mb-4">Informativa sulla Privacy</h1>
 
   <p class="text-sm text-gray-500 mb-8">
-    Versione: mylocalcare_privacy_termini_2026_v1
+    {{ tr('legal.version_label') }}: {{ legal_document_version }}
   </p>
 
   <p class="mb-4 text-sm text-gray-600">
@@ -60,6 +60,10 @@
     Le informazioni inserite volontariamente nel profilo pubblico o negli annunci sono destinate alla pubblicazione sulla piattaforma e possono essere visibili agli altri utenti secondo le impostazioni e le funzionalità previste dal sito.
     L’utente deve quindi inserire solo informazioni che intende effettivamente rendere visibili.
   </p>
+
+  <h2 class="text-xl font-semibold mt-6 mb-2">{{ tr('legal.profile_cards_privacy_title') }}</h2>
+  <p class="mb-4">{{ tr('legal.profile_cards_privacy_body') }}</p>
+  <p class="mb-4">{{ tr('legal.profile_cards_privacy_retention') }}</p>
 
   <h2 class="text-xl font-semibold mt-6 mb-2">4. Dati relativi ai pagamenti e ai servizi attivati</h2>
   <p class="mb-4">

@@ -1749,6 +1749,7 @@ def elimina_utente(id):
     - token reset password
     - push subscription
     - revisioni profilo
+    - schede strutturate di esperienze, formazione e certificazioni
     - video call log
     - servizi attivi collegati all'utente o ai suoi annunci
     - interessi lasciati dall'utente o ricevuti dai suoi annunci
@@ -1903,6 +1904,29 @@ def elimina_utente(id):
             WHERE utente_id = ?
         """), (id,))
 
+        # Le schede strutturate hanno ON DELETE CASCADE, ma l'account viene
+        # anonimizzato e non cancellato fisicamente. Vanno quindi rimosse in
+        # modo esplicito insieme al relativo storico dei controlli.
+        if is_postgres():
+            cur.execute(sql(
+                "SELECT to_regclass('public.schede_profilo') AS tabella"
+            ))
+            schede_presenti = bool(fetchone_value(cur.fetchone()))
+        else:
+            cur.execute(sql("""
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'schede_profilo'
+                LIMIT 1
+            """))
+            schede_presenti = cur.fetchone() is not None
+
+        if schede_presenti:
+            cur.execute(sql("""
+                    DELETE FROM schede_profilo
+                    WHERE utente_id = ?
+                """), (id,))
+
         # La riga utente viene anonimizzata, non cancellata: rimuoviamo
         # quindi esplicitamente gli interessi lasciati dall'account.
         # Quelli ricevuti sarebbero eliminati anche dalla FK CASCADE sugli
@@ -1948,6 +1972,13 @@ def elimina_utente(id):
                 foto_profilo = NULL,
                 copertina = NULL,
                 foto_galleria = NULL,
+                esperienza_1 = NULL,
+                esperienza_2 = NULL,
+                esperienza_3 = NULL,
+                studio_1 = NULL,
+                studio_2 = NULL,
+                studio_3 = NULL,
+                certificazioni = NULL,
                 attivo = 0,
                 sospeso = 0,
                 eliminato = 1,

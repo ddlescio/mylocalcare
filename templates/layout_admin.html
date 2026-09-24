@@ -118,6 +118,22 @@
         </span>
       </a>
 
+      <a href="{{ url_for('admin_schede_profilo') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/schede-profilo') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>🎓</span>
+        <span>Schede e qualifiche</span>
+
+        <span id="badge-schede-profilo"
+              class="ml-auto inline-flex items-center justify-center rounded-full min-w-[1.5rem]
+                     h-6 text-xs font-semibold bg-amber-100 text-amber-700 hidden">
+        </span>
+      </a>
+
       <a href="{{ url_for('admin_acquisti') }}"
          class="flex items-center gap-2 px-3 py-2 rounded-xl
                 {% if current.startswith('/admin/acquisti') %}
@@ -292,6 +308,12 @@ document.addEventListener('DOMContentLoaded', function () {
         bRev.classList.remove('hidden');
       }
 
+      const bSchede = document.getElementById('badge-schede-profilo');
+      if (bSchede && data.schede_profilo_da_verificare && data.schede_profilo_da_verificare > 0) {
+        bSchede.textContent = data.schede_profilo_da_verificare;
+        bSchede.classList.remove('hidden');
+      }
+
     })
     .catch(() => {});
 });
@@ -315,6 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const bAnn = document.getElementById("badge-annunci");
                 const bRec = document.getElementById("badge-recensioni");
                 const bRev = document.getElementById("badge-revisioni-profilo");
+                const bSchede = document.getElementById("badge-schede-profilo");
 
                 if (bAnn) {
                     if (data.annunci > 0) {
@@ -340,6 +363,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         bRev.classList.remove("hidden");
                     } else {
                         bRev.classList.add("hidden");
+                    }
+                }
+
+                if (bSchede) {
+                    if (data.schede_profilo_da_verificare > 0) {
+                        bSchede.textContent = data.schede_profilo_da_verificare;
+                        bSchede.classList.remove("hidden");
+                    } else {
+                        bSchede.classList.add("hidden");
                     }
                 }
 

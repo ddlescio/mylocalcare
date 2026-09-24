@@ -5,6 +5,7 @@ from i18n import (
     EXTRA_LANGUAGE_ORDER,
     EXTRA_PATTERN_TRANSLATIONS,
     EXTRA_SOURCE_TRANSLATIONS,
+    LEGAL_DOCUMENT_VERSION,
     LEGAL_SOURCE_TRANSLATIONS,
     SOURCE_TRANSLATIONS,
     SUPPORTED_LANGUAGES,
@@ -257,6 +258,162 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn("input.click()", base)
         self.assertIn('input[type="file"]', base)
         self.assertIn('input.classList.contains("hidden")', base)
+
+    def test_profile_card_copy_covers_every_supported_language(self):
+        keys = {
+            "profile_card.sheet",
+            "profile_card.catalog_title",
+            "profile_card.request_check",
+            "profile_card.state_declared",
+            "profile_card.state_document",
+            "profile_card.state_feedback",
+            "profile_card.saved_requested",
+            "profile_card.error_save",
+            "profile_card.error_delete",
+            "profile_card.no_contacts_note",
+            "profile_card.public_data_notice",
+            "profile_card.error_contacts",
+            "profile_card.error_certificate_limit",
+            "profile_card.error_request_rate_limit",
+            "profile_card.confirm_delete",
+            "profile_card.error_checked",
+            "profile_card.error_changed",
+            "profile_card.error_expired",
+            "profile_card.error_acknowledgement",
+        }
+
+        profile_card_keys = {
+            key for key in TRANSLATIONS if key.startswith("profile_card.")
+        }
+        self.assertTrue(keys.issubset(profile_card_keys))
+        for key in profile_card_keys:
+            self.assertEqual(set(TRANSLATIONS[key]), set(SUPPORTED_LANGUAGES), key)
+
+        self.assertEqual(
+            translate("profile_card.state_document", "en"),
+            "Document viewed by MyLocalCare",
+        )
+        self.assertEqual(
+            translate_source("Scheda non trovata.", "es"),
+            "Ficha no encontrada.",
+        )
+
+    def test_profile_card_dynamic_ui_uses_localized_copy(self):
+        dialog = (
+            self.ROOT / "templates" / "partials" / "schede_profilo_dialog.html"
+        ).read_text(encoding="utf-8")
+        private = (
+            self.ROOT / "templates" / "partials" / "tab_info_privato.html"
+        ).read_text(encoding="utf-8")
+        public = (
+            self.ROOT / "templates" / "partials" / "tab_info_pubblico.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("const copy = Object.freeze", dialog)
+        self.assertIn("tr('profile_card.saved_requested')", dialog)
+        self.assertIn("localizeApiError", dialog)
+        self.assertIn("copy.errorChecked", dialog)
+        self.assertIn("copy.errorChanged", dialog)
+        self.assertIn("copy.errorExpired", dialog)
+        self.assertIn("copy.errorContacts", dialog)
+        self.assertIn("copy.errorCertificateLimit", dialog)
+        self.assertIn("copy.errorRequestRateLimit", dialog)
+        self.assertIn("massimo\\s+20\\s+certificazioni", dialog)
+        self.assertIn("troppe\\s+richieste.*controllo", dialog)
+        self.assertIn("tr('profile_card.no_contacts_note')", dialog)
+        self.assertIn("profile-card-contact-note", dialog)
+        self.assertIn("saveButton.textContent = copy.saving", dialog)
+        self.assertIn("deleteButton.textContent = copy.deleting", dialog)
+        self.assertIn('option.setAttribute("data-no-translate", "")', dialog)
+        self.assertNotIn('saveButton.textContent = "Salva scheda"', dialog)
+        self.assertNotIn('deleteButton.textContent = "Elimina scheda"', dialog)
+
+        self.assertIn("tr('profile_card.short')", private)
+        self.assertIn("tr('profile_card.add')", private)
+        self.assertIn("tr('profile_card.state_document')", public)
+        self.assertIn("tr('profile_card.state_feedback')", public)
+        self.assertIn("tr('profile_card.state_declared')", public)
+
+    def test_profile_card_notice_and_legal_update_are_versioned(self):
+        app_source = (self.ROOT / "app.py").read_text(encoding="utf-8")
+        module_source = (self.ROOT / "profilo_schede.py").read_text(
+            encoding="utf-8"
+        )
+        dialog = (
+            self.ROOT / "templates" / "partials" / "schede_profilo_dialog.html"
+        ).read_text(encoding="utf-8")
+
+        for key in (
+            "legal.version_label",
+            "legal.profile_cards_privacy_title",
+            "legal.profile_cards_privacy_body",
+            "legal.profile_cards_privacy_retention",
+            "legal.profile_cards_terms_title",
+            "legal.profile_cards_terms_body",
+            "legal.profile_cards_terms_duty",
+        ):
+            self.assertIn(key, TRANSLATIONS)
+            self.assertEqual(
+                set(TRANSLATIONS[key]), set(SUPPORTED_LANGUAGES), key
+            )
+
+        self.assertIn(
+            'PROFILE_CARD_NOTICE_VERSION = "profile_cards_2026_v1"',
+            module_source,
+        )
+        self.assertIn("acknowledged: true", dialog)
+        self.assertIn('notice_version: "profile_cards_2026_v1"', dialog)
+        self.assertEqual(
+            LEGAL_DOCUMENT_VERSION,
+            "mylocalcare_privacy_termini_2026_v2",
+        )
+        self.assertIn("LEGAL_DOCUMENT_VERSION", app_source)
+
+        for template_name in (
+            "privacy.html",
+            "termini.html",
+            "cookie_policy.html",
+        ):
+            source = (self.ROOT / "templates" / template_name).read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("{{ legal_document_version }}", source)
+
+        privacy = (self.ROOT / "templates" / "privacy.html").read_text(
+            encoding="utf-8"
+        )
+        terms = (self.ROOT / "templates" / "termini.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("legal.profile_cards_privacy_body", privacy)
+        self.assertIn("legal.profile_cards_terms_body", terms)
+
+    def test_video_age_confirmation_does_not_overwrite_legal_version(self):
+        app_source = (self.ROOT / "app.py").read_text(encoding="utf-8")
+        start = app_source.index(
+            '@app.route("/video/verifica-maggiorenne", methods=["POST"])'
+        )
+        end = app_source.index(
+            '@app.route("/video/check-maggiorenne")', start
+        )
+        route_source = app_source[start:end]
+
+        self.assertNotIn("versione_consenso", route_source)
+        self.assertNotIn("v1.0_video", route_source)
+
+    def test_profile_card_mutations_send_version_and_use_independent_rate_limit(self):
+        app_source = (self.ROOT / "app.py").read_text(encoding="utf-8")
+        dialog = (
+            self.ROOT / "templates" / "partials" / "schede_profilo_dialog.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("normalized.versione = Number", dialog)
+        self.assertGreaterEqual(dialog.count("versione: Number"), 2)
+        self.assertIn('"Content-Type": "application/json"', dialog)
+        self.assertIn("versione_visualizzata", app_source)
+        self.assertIn("_prenota_richiesta_controllo_scheda", app_source)
+        self.assertIn("rate:profile-card-check:", app_source)
+        self.assertIn("redis_client.eval", app_source)
 
     def test_screenshot_translation_gaps_use_explicit_keys(self):
         home = (self.ROOT / "templates" / "home.html").read_text(encoding="utf-8")

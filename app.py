@@ -38,7 +38,7 @@ from models import (
 from models import crea_notifica
 from flask_login import login_required
 from itsdangerous import URLSafeTimedSerializer, URLSafeSerializer, BadSignature, SignatureExpired
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from services import (
     attiva_servizio,
     revoca_attivazione,
@@ -89,7 +89,22 @@ from chat_risk import (
     segnalazione_chat_controllata,
     valuta_rischio_chat,
 )
+from profilo_schede import (
+    ADMIN_VERIFICATION_STATES,
+    CARD_CONTENT_FIELDS,
+    LEGACY_SLOT_TYPES,
+    PROFILE_CARD_NOTICE_VERSION,
+    SINGLE_CARD_SLOTS,
+    VERIFICATION_METHODS,
+    card_public_details,
+    effective_verification_state,
+    group_cards_by_legacy_key,
+    normalize_card_payload,
+    public_verification_label,
+    verification_reset_patch,
+)
 from i18n import (
+    LEGAL_DOCUMENT_VERSION,
     SUPPORTED_LANGUAGES,
     frontend_pattern_catalog_b64,
     frontend_source_catalog_b64,
@@ -1335,6 +1350,7 @@ def inject_interface_language():
         "current_language_code": language,
         "current_language": SUPPORTED_LANGUAGES[language],
         "supported_languages": SUPPORTED_LANGUAGES,
+        "legal_document_version": LEGAL_DOCUMENT_VERSION,
         "tr": lambda key, **values: translate(key, language, **values),
         "tr_text": lambda value: translate_source(value, language),
         "i18n_catalog_b64": frontend_source_catalog_b64(language),
@@ -5132,6 +5148,33 @@ def admin_counters():
             WHERE stato = 'in_attesa'
         """, step=step)
 
+        step = "schede_profilo"
+        try:
+            schede_profilo_da_verificare = get_count(cur, """
+                SELECT COUNT(*) AS valore
+                FROM schede_profilo
+                WHERE attiva = TRUE
+                  AND (
+                    stato_verifica = 'richiesta'
+                    OR (
+                      stato_verifica IN (
+                        'documento_visionato', 'riscontro_effettuato'
+                      )
+                      AND data_scadenza IS NOT NULL
+                      AND data_scadenza < CURRENT_DATE
+                    )
+                  )
+            """, step=step)
+        except Exception as e:
+            # Rollout tollerante: il resto della dashboard admin continua a
+            # funzionare anche prima dell'esecuzione della nuova migrazione.
+            schede_profilo_da_verificare = 0
+            log_exception_safe(
+                "Schede profilo non ancora disponibili nei contatori admin",
+                e,
+                production=True,
+            )
+
         step = "utenti"
 
         try:
@@ -5321,8 +5364,14 @@ def admin_counters():
             "recensioni": pending_recensioni_totali,
             "risposte": pending_risposte,
             "revisioni_profilo": pending_revisioni_profilo,
+            "schede_profilo_da_verificare": schede_profilo_da_verificare,
             "messaggi": messaggi_non_letti,
-            "totale": pending_annunci + pending_recensioni_totali + pending_revisioni_profilo,
+            "totale": (
+                pending_annunci
+                + pending_recensioni_totali
+                + pending_revisioni_profilo
+                + schede_profilo_da_verificare
+            ),
             "video_minuti": video_minuti,
             "acquisti_attivi": acquisti_attivi,
             "utenti_chat_sospetti": utenti_chat_sospetti,
@@ -5366,6 +5415,7 @@ def admin_counters():
             "recensioni": 0,
             "risposte": 0,
             "revisioni_profilo": 0,
+            "schede_profilo_da_verificare": 0,
             "messaggi": 0,
             "totale": 0,
             "video_minuti": 0,
@@ -6114,6 +6164,369 @@ def admin_interessi():
             conn.close()
         except Exception:
             pass
+
+
+# ==========================================================
+# 🎓 ADMIN — SCHEDE ESPERIENZE E QUALIFICHE
+# ==========================================================
+@app.route("/admin/schede-profilo")
+@admin_required
+def admin_schede_profilo():
+    stato = (request.args.get("stato") or "attenzione").strip().lower()
+    tipo = (request.args.get("tipo") or "tutti").strip().lower()
+    ricerca = (request.args.get("q") or "").strip()
+    try:
+        page = max(1, int(request.args.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
+    per_page = 100
+
+    stati_filtro = {
+        "tutti",
+        "attenzione",
+        "dichiarata",
+        "richiesta",
+        "documento_visionato",
+        "riscontro_effettuato",
+        "non_confermata",
+        "scaduta",
+        "revocata",
+    }
+    tipi_filtro = {"tutti", "esperienza", "formazione", "certificazione"}
+    if stato not in stati_filtro:
+        stato = "attenzione"
+    if tipo not in tipi_filtro:
+        tipo = "tutti"
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cards = []
+    filtered_total = 0
+    total_pages = 1
+    counts = {
+        "richiesta": 0,
+        "scadute": 0,
+        "attenzione": 0,
+        "confermate": 0,
+        "totale": 0,
+    }
+
+    try:
+        cur.execute(sql("""
+            SELECT
+                COUNT(*) AS totale,
+                SUM(CASE WHEN stato_verifica = 'richiesta' THEN 1 ELSE 0 END)
+                    AS richiesta,
+                SUM(CASE WHEN stato_verifica IN (
+                    'documento_visionato', 'riscontro_effettuato'
+                ) AND data_scadenza IS NOT NULL
+                  AND data_scadenza < CURRENT_DATE
+                    THEN 1 ELSE 0 END) AS scadute,
+                SUM(CASE WHEN stato_verifica IN (
+                    'documento_visionato', 'riscontro_effettuato'
+                ) AND (
+                    data_scadenza IS NULL OR data_scadenza >= CURRENT_DATE
+                ) THEN 1 ELSE 0 END) AS confermate
+            FROM schede_profilo
+            WHERE attiva = TRUE
+        """))
+        count_row = cur.fetchone()
+        if count_row:
+            richieste = int(count_row["richiesta"] or 0)
+            scadute = int(count_row["scadute"] or 0)
+            counts = {
+                "totale": int(count_row["totale"] or 0),
+                "richiesta": richieste,
+                "scadute": scadute,
+                "attenzione": richieste + scadute,
+                "confermate": int(count_row["confermate"] or 0),
+            }
+
+        where = ["s.attiva = TRUE"]
+        params = []
+        if stato == "attenzione":
+            where.append("""
+                (
+                    s.stato_verifica = 'richiesta'
+                    OR (
+                        s.stato_verifica IN (
+                            'documento_visionato', 'riscontro_effettuato'
+                        )
+                        AND s.data_scadenza IS NOT NULL
+                        AND s.data_scadenza < CURRENT_DATE
+                    )
+                )
+            """)
+        elif stato == "scaduta":
+            where.append("""
+                (
+                    s.stato_verifica = 'scaduta'
+                    OR (
+                        s.stato_verifica IN (
+                            'documento_visionato', 'riscontro_effettuato'
+                        )
+                        AND s.data_scadenza IS NOT NULL
+                        AND s.data_scadenza < CURRENT_DATE
+                    )
+                )
+            """)
+        elif stato in {"documento_visionato", "riscontro_effettuato"}:
+            where.append("""
+                s.stato_verifica = ?
+                AND (s.data_scadenza IS NULL OR s.data_scadenza >= CURRENT_DATE)
+            """)
+            params.append(stato)
+        elif stato != "tutti":
+            where.append("s.stato_verifica = ?")
+            params.append(stato)
+        if tipo != "tutti":
+            where.append("s.tipo_scheda = ?")
+            params.append(tipo)
+        if ricerca:
+            where.append("""
+                (
+                    LOWER(COALESCE(u.username, '')) LIKE ?
+                    OR LOWER(COALESCE(u.email, '')) LIKE ?
+                    OR LOWER(COALESCE(s.titolo, '')) LIKE ?
+                    OR LOWER(COALESCE(s.ente, '')) LIKE ?
+                )
+            """)
+            needle = f"%{ricerca.lower()}%"
+            params.extend([needle, needle, needle, needle])
+
+        cur.execute(sql(f"""
+            SELECT COUNT(*) AS totale
+            FROM schede_profilo s
+            JOIN utenti u ON u.id = s.utente_id
+            WHERE {' AND '.join(where)}
+        """), tuple(params))
+        filtered_total = int(cur.fetchone()["totale"] or 0)
+        total_pages = max(1, (filtered_total + per_page - 1) // per_page)
+        page = min(page, total_pages)
+        offset = (page - 1) * per_page
+
+        cur.execute(sql(f"""
+            SELECT
+                s.*,
+                u.username,
+                u.email,
+                u.nome,
+                u.cognome,
+                u.foto_profilo,
+                q.codice AS catalogo_codice,
+                q.natura AS catalogo_natura,
+                (
+                    SELECT storico.nota_admin
+                    FROM schede_profilo_verifiche storico
+                    WHERE storico.scheda_id = s.id
+                      AND storico.nota_admin IS NOT NULL
+                    ORDER BY storico.created_at DESC, storico.id DESC
+                    LIMIT 1
+                ) AS nota_admin
+            FROM schede_profilo s
+            JOIN utenti u ON u.id = s.utente_id
+            LEFT JOIN catalogo_qualifiche q ON q.id = s.catalogo_id
+            WHERE {' AND '.join(where)}
+            ORDER BY
+                CASE WHEN s.stato_verifica = 'richiesta' THEN 0 ELSE 1 END,
+                COALESCE(s.richiesta_verifica_at, s.updated_at) DESC,
+                s.id DESC
+            LIMIT ? OFFSET ?
+        """), tuple(params) + (per_page, offset))
+        cards = [_scheda_profilo_json(row) for row in cur.fetchall()]
+
+    except Exception as exc:
+        log_exception_safe(
+            "Errore caricamento admin schede profilo",
+            exc,
+            {"stato": stato, "tipo": tipo},
+            production=True,
+        )
+        flash(
+            "La sezione schede non è ancora disponibile. Verifica che la migrazione sia stata eseguita.",
+            "warning",
+        )
+
+    return render_template(
+        "admin_schede_profilo.html",
+        schede=cards,
+        conteggi=counts,
+        filtri={"stato": stato, "tipo": tipo, "q": ricerca},
+        paginazione={
+            "pagina": page,
+            "pagine": total_pages,
+            "totale": filtered_total,
+        },
+    )
+
+
+@app.route(
+    "/admin/schede-profilo/<int:scheda_id>/verifica",
+    methods=["POST"],
+)
+@admin_required
+def admin_scheda_profilo_verifica(scheda_id):
+    verify_csrf()
+    stato = (request.form.get("stato_verifica") or "").strip()
+    metodo = (request.form.get("metodo_verifica") or "nessuno").strip()
+    nota_admin = (request.form.get("nota_admin") or "").strip()
+    versione_scheda_raw = (request.form.get("scheda_versione") or "").strip()
+    try:
+        versione_scheda = int(versione_scheda_raw)
+    except (TypeError, ValueError):
+        versione_scheda = 0
+
+    if stato not in ADMIN_VERIFICATION_STATES:
+        flash("Esito del controllo non valido.", "error")
+        return redirect(url_for("admin_schede_profilo"))
+    if metodo not in VERIFICATION_METHODS:
+        flash("Metodo di controllo non valido.", "error")
+        return redirect(url_for("admin_schede_profilo"))
+    if stato == "documento_visionato" and metodo != "documento":
+        flash(
+            "Per usare 'Documento visionato' devi aver realmente visionato il documento.",
+            "error",
+        )
+        return redirect(url_for("admin_schede_profilo", stato="attenzione"))
+    if stato == "riscontro_effettuato" and metodo not in {
+        "fonte_pubblica",
+        "ente_contattato",
+        "altro",
+    }:
+        flash("Indica come è stato effettuato il riscontro.", "error")
+        return redirect(url_for("admin_schede_profilo", stato="attenzione"))
+    if len(nota_admin) > 2000:
+        flash("La nota interna supera la lunghezza consentita.", "error")
+        return redirect(url_for("admin_schede_profilo", stato="attenzione"))
+    if not versione_scheda:
+        flash("La versione della scheda non è valida. Ricarica la pagina.", "error")
+        return redirect(url_for("admin_schede_profilo", stato="attenzione"))
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    user_id = None
+
+    try:
+        cur.execute(sql("""
+            SELECT *
+            FROM schede_profilo
+            WHERE id = ? AND attiva = TRUE
+            LIMIT 1
+        """), (scheda_id,))
+        card = cur.fetchone()
+        if not card:
+            flash("Scheda non trovata.", "error")
+            return redirect(url_for("admin_schede_profilo"))
+
+        if stato in {"documento_visionato", "riscontro_effettuato"}:
+            raw_expiry = str(card["data_scadenza"] or "").strip()
+            if raw_expiry:
+                try:
+                    is_expired = date.fromisoformat(raw_expiry[:10]) < date.today()
+                except ValueError:
+                    is_expired = True
+                if is_expired:
+                    flash(
+                        "Non puoi registrare un controllo positivo: la data di "
+                        "scadenza indicata è già trascorsa.",
+                        "error",
+                    )
+                    return redirect(
+                        url_for("admin_schede_profilo", stato="attenzione")
+                    )
+
+        user_id = int(card["utente_id"])
+        _schede_profilo_begin(cur)
+        cur.execute(sql("""
+            UPDATE schede_profilo
+            SET stato_verifica = ?,
+                verificata_at = CASE
+                    WHEN ? IN ('documento_visionato', 'riscontro_effettuato')
+                    THEN CURRENT_TIMESTAMP
+                    ELSE NULL
+                END,
+                verificata_da_admin_id = ?,
+                metodo_verifica = ?,
+                nota_pubblica = NULL,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND attiva = TRUE
+              AND versione = ?
+        """), (
+            stato,
+            stato,
+            int(g.utente["id"]),
+            metodo,
+            scheda_id,
+            versione_scheda,
+        ))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            flash(
+                "La scheda è stata modificata dall’utente mentre la stavi "
+                "controllando. Riaprila e verifica i dati aggiornati.",
+                "warning",
+            )
+            return redirect(url_for("admin_schede_profilo", stato="attenzione"))
+        cur.execute(sql("""
+            INSERT INTO schede_profilo_verifiche (
+                scheda_id, stato, metodo, nota_admin,
+                nota_pubblica, scheda_snapshot, admin_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """), (
+            scheda_id,
+            stato,
+            metodo,
+            nota_admin or None,
+            None,
+            _scheda_profilo_audit_snapshot(card),
+            int(g.utente["id"]),
+        ))
+        _schede_profilo_commit(cur)
+        invalidate_admin_counters()
+
+        if stato == "documento_visionato":
+            message = f"Documento visionato per la scheda: {card['titolo']}."
+        elif stato == "riscontro_effettuato":
+            message = f"Riscontro effettuato per la scheda: {card['titolo']}."
+        else:
+            message = (
+                f"Il controllo della scheda '{card['titolo']}' è stato aggiornato. "
+                "Apri il profilo per i dettagli."
+            )
+        # Il controllo è già stato registrato: un problema secondario nella
+        # notifica non deve trasformare un successo in un falso errore né
+        # indurre l'admin a ripetere l'operazione.
+        try:
+            _crea_notifica(
+                user_id,
+                "Aggiornamento scheda profilo",
+                message,
+                tipo="profilo",
+                link=url_for("dashboard") + "#tab-info",
+            )
+            emit_update_notifications(user_id)
+        except Exception as notification_exc:
+            log_exception_safe(
+                "Controllo scheda salvato ma notifica utente non inviata",
+                notification_exc,
+                {"scheda_id": scheda_id, "utente_id": user_id},
+                production=True,
+            )
+        flash("Esito del controllo registrato.", "success")
+
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore verifica admin scheda profilo",
+            exc,
+            {"scheda_id": scheda_id, "utente_id": user_id},
+            production=True,
+        )
+        flash("Non è stato possibile registrare il controllo.", "error")
+
+    return redirect(url_for("admin_schede_profilo", stato="attenzione"))
 
 # ==========================================================
 # 🕵️ ADMIN — REVISIONE TESTI PROFILO
@@ -16049,6 +16462,296 @@ def modifica_annuncio(id):
         quartieri_selezionati=quartieri_selezionati
     )
 
+# ==========================================================
+# 🎓 SCHEDE PROFILO — ESPERIENZE, FORMAZIONE E QUALIFICHE
+# ==========================================================
+
+def _scheda_profilo_bool(value):
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _scheda_profilo_iso(value):
+    if value is None:
+        return ""
+    if hasattr(value, "isoformat"):
+        try:
+            return value.isoformat()
+        except Exception:
+            pass
+    return str(value)
+
+
+def _scheda_profilo_json(row):
+    """Converte una riga DB in un payload sicuro e serializzabile."""
+
+    card = dict(row)
+    for field in (
+        "data_inizio",
+        "data_fine",
+        "data_rilascio",
+        "data_scadenza",
+        "richiesta_verifica_at",
+        "verificata_at",
+        "created_at",
+        "updated_at",
+    ):
+        card[field] = _scheda_profilo_iso(card.get(field))
+
+    for field in (
+        "in_corso",
+        "attiva",
+        "richiede_ente",
+        "prevede_scadenza",
+        "professione_regolamentata",
+    ):
+        if field in card:
+            card[field] = _scheda_profilo_bool(card.get(field))
+
+    card["stato_verifica"] = effective_verification_state(card)
+
+    return card
+
+
+def _scheda_profilo_audit_snapshot(row, overrides=None, *, notice_version=None):
+    """Congela i dati cui si riferisce un evento dello storico controlli."""
+
+    source = dict(row or {})
+    source.update(overrides or {})
+    snapshot = {
+        "id": source.get("id"),
+        "utente_id": source.get("utente_id"),
+    }
+    for field in CARD_CONTENT_FIELDS:
+        value = source.get(field)
+        if field == "in_corso":
+            value = _scheda_profilo_bool(value)
+        elif field.startswith("data_"):
+            value = _scheda_profilo_iso(value)
+        snapshot[field] = value
+    if notice_version:
+        snapshot["notice_version"] = str(notice_version)
+    return json.dumps(snapshot, ensure_ascii=False, sort_keys=True)
+
+
+def _schede_profilo_begin(cur):
+    """Apre una transazione reale anche con PostgreSQL in autocommit."""
+
+    statement = "BEGIN" if app.config.get("IS_POSTGRES") else "BEGIN IMMEDIATE"
+    cur.execute(sql(statement))
+
+
+def _schede_profilo_commit(cur):
+    cur.execute(sql("COMMIT"))
+
+
+def _schede_profilo_rollback(cur):
+    try:
+        cur.execute(sql("ROLLBACK"))
+    except Exception:
+        pass
+
+
+def _schede_profilo_lock_user(cur, user_id):
+    """Serializza le operazioni soggette a limiti per lo stesso utente."""
+
+    suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+    cur.execute(
+        sql(f"SELECT id FROM utenti WHERE id = ?{suffix}"),
+        (int(user_id),),
+    )
+    if not cur.fetchone():
+        raise ValueError("Utente non trovato")
+
+
+def _prenota_richiesta_controllo_scheda(user_id):
+    """Applica un limite orario non eliminabile insieme alla scheda.
+
+    Lo storico del database resta utile per l'audit, ma non può essere
+    l'unica fonte del limite perché la cancellazione della scheda elimina
+    correttamente anche quello storico. Redis conserva soltanto un contatore
+    tecnico per utente, con scadenza automatica di un'ora.
+    """
+
+    key = f"rate:profile-card-check:{int(user_id)}"
+    try:
+        current = int(redis_client.eval("""
+            local value = redis.call('INCR', KEYS[1])
+            if value == 1 then
+                redis.call('EXPIRE', KEYS[1], ARGV[1])
+            end
+            return value
+        """, 1, key, 3600))
+        return current <= 5
+    except Exception as exc:
+        log_exception_safe(
+            "Rate limit Redis controllo scheda non disponibile",
+            exc,
+            {"utente_id": user_id},
+            production=True,
+        )
+        # In caso di guasto Redis resta attivo il controllo secondario sul DB.
+        return None
+
+
+def _schede_profilo_table_exists(cur):
+    """Verifica la tabella durante il rollout senza rompere funzioni storiche."""
+
+    if app.config.get("IS_POSTGRES"):
+        cur.execute("SELECT to_regclass('public.schede_profilo') AS tabella")
+        row = cur.fetchone()
+        return bool(row and row["tabella"])
+
+    cur.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'schede_profilo'
+        LIMIT 1
+    """)
+    return cur.fetchone() is not None
+
+
+def carica_catalogo_schede_profilo(cur, *, solo_attive=True):
+    where = "WHERE q.attivo = TRUE" if solo_attive else ""
+    cur.execute(sql(f"""
+        SELECT
+            q.id,
+            q.codice,
+            q.titolo,
+            q.tipo_scheda,
+            q.natura,
+            q.descrizione,
+            q.richiede_ente,
+            q.prevede_scadenza,
+            q.professione_regolamentata,
+            q.ordine,
+            q.attivo
+        FROM catalogo_qualifiche q
+        {where}
+        ORDER BY q.tipo_scheda, q.ordine, q.titolo
+    """))
+    entries = [_scheda_profilo_json(row) for row in cur.fetchall()]
+    if not entries:
+        return []
+
+    by_id = {int(entry["id"]): entry for entry in entries}
+    placeholders = ", ".join("?" for _ in by_id)
+    cur.execute(sql(f"""
+        SELECT catalogo_id, categoria_slug
+        FROM catalogo_qualifiche_categorie
+        WHERE catalogo_id IN ({placeholders})
+        ORDER BY categoria_slug
+    """), tuple(by_id.keys()))
+    for row in cur.fetchall():
+        catalog_id = int(row["catalogo_id"])
+        if catalog_id in by_id:
+            by_id[catalog_id].setdefault("categorie", []).append(
+                row["categoria_slug"]
+            )
+    for entry in entries:
+        entry.setdefault("categorie", [])
+    return entries
+
+
+def carica_schede_profilo(cur, utente_id, *, pubbliche=False):
+    cur.execute(sql("""
+        SELECT
+            s.*,
+            q.codice AS catalogo_codice,
+            q.natura AS catalogo_natura,
+            q.richiede_ente,
+            q.prevede_scadenza,
+            q.professione_regolamentata
+        FROM schede_profilo s
+        LEFT JOIN catalogo_qualifiche q ON q.id = s.catalogo_id
+        WHERE s.utente_id = ?
+          AND s.attiva = TRUE
+        ORDER BY
+            CASE s.legacy_key
+                WHEN 'esperienza_1' THEN 1
+                WHEN 'esperienza_2' THEN 2
+                WHEN 'esperienza_3' THEN 3
+                WHEN 'studio_1' THEN 4
+                WHEN 'studio_2' THEN 5
+                WHEN 'studio_3' THEN 6
+                ELSE 7
+            END,
+            s.created_at,
+            s.id
+    """), (int(utente_id),))
+    cards = [_scheda_profilo_json(row) for row in cur.fetchall()]
+    # Questi metadati servono alla coda amministrativa, non al browser
+    # dell'utente. In particolare le note interne non devono mai finire nel
+    # sorgente della dashboard o nelle risposte delle API proprietario.
+    for card in cards:
+        card.pop("verificata_da_admin_id", None)
+        card.pop("metodo_verifica", None)
+        card.pop("nota_admin", None)
+    if pubbliche:
+        cards = [card_public_details(card) for card in cards]
+    return cards
+
+
+def _scheda_profilo_catalog_entry(cur, catalog_id):
+    if not catalog_id:
+        return None
+    cur.execute(sql("""
+        SELECT *
+        FROM catalogo_qualifiche
+        WHERE id = ? AND attivo = TRUE
+        LIMIT 1
+    """), (int(catalog_id),))
+    row = cur.fetchone()
+    if not row:
+        return None
+    entry = dict(row)
+    cur.execute(sql("""
+        SELECT categoria_slug
+        FROM catalogo_qualifiche_categorie
+        WHERE catalogo_id = ?
+        ORDER BY categoria_slug
+    """), (int(catalog_id),))
+    entry["categorie"] = [r["categoria_slug"] for r in cur.fetchall()]
+    return entry
+
+
+def _scheda_profilo_utente(cur, scheda_id, utente_id):
+    cur.execute(sql("""
+        SELECT *
+        FROM schede_profilo
+        WHERE id = ? AND utente_id = ? AND attiva = TRUE
+        LIMIT 1
+    """), (int(scheda_id), int(utente_id)))
+    return cur.fetchone()
+
+
+def _schede_profilo_context(cur, utente_id, *, pubblico=False):
+    """Carica le schede senza rendere indisponibile il profilo preesistente.
+
+    Durante il rollout il codice può arrivare prima della migrazione DB. In tal
+    caso il profilo continua a funzionare con i campi storici e le API spiegano
+    che la funzione non è ancora disponibile.
+    """
+
+    try:
+        cards = carica_schede_profilo(
+            cur,
+            utente_id,
+            pubbliche=pubblico,
+        )
+        catalog = [] if pubblico else carica_catalogo_schede_profilo(cur)
+        return cards, group_cards_by_legacy_key(cards), catalog, True
+    except Exception as exc:
+        log_exception_safe(
+            "Schede profilo non disponibili",
+            exc,
+            {"utente_id": int(utente_id), "pubblico": bool(pubblico)},
+            production=True,
+        )
+        return [], group_cards_by_legacy_key([]), [], False
+
+
 # --- Dashboard: carica anche i nuovi campi (sostituisci la tua dashboard() attuale) ---
 @app.route('/utente/dashboard')
 @login_required
@@ -16136,6 +16839,12 @@ def dashboard():
     """), (session["utente_id"],))
     annunci = [dict(r) for r in c.fetchall()]
 
+    (
+        schede_profilo_private,
+        schede_profilo_private_per_legacy,
+        catalogo_schede_profilo,
+        schede_profilo_disponibili,
+    ) = _schede_profilo_context(c, utente["id"], pubblico=False)
 
     # 🔹 Ritorna la dashboard con gli annunci caricati
     return render_template(
@@ -16147,6 +16856,10 @@ def dashboard():
         totale_recensioni=totale,
         recensioni_ricevute=recensioni_ricevute,
         recensioni_scritte=recensioni_scritte,
+        schede_profilo_private=schede_profilo_private,
+        schede_profilo_private_per_legacy=schede_profilo_private_per_legacy,
+        catalogo_schede_profilo=catalogo_schede_profilo,
+        schede_profilo_disponibili=schede_profilo_disponibili,
         pubblico=False,
         page="profilo"
     )
@@ -16850,6 +17563,7 @@ def utente_update_esperienza():
         "user_id": session.get("utente_id"),
         "campi_presenti": list(request.form.keys())
     })
+    verify_csrf()
     user_id = session.get("utente_id")
     if not user_id:
         flash("Sessione non valida.", "error")
@@ -16858,13 +17572,25 @@ def utente_update_esperienza():
     conn = get_db_connection()
     c = get_cursor(conn)
 
-    esperienza_1 = request.form.get("esperienza_1", "")
-    esperienza_2 = request.form.get("esperienza_2", "")
-    esperienza_3 = request.form.get("esperienza_3", "")
-    studio_1 = request.form.get("studio_1", "")
-    studio_2 = request.form.get("studio_2", "")
-    studio_3 = request.form.get("studio_3", "")
-    certificazioni = request.form.get("certificazioni", "")
+    def testo_profilo(nome, limite):
+        valore = str(request.form.get(nome, "") or "").strip()
+        if len(valore) > limite:
+            raise ValueError(f"{nome} supera {limite} caratteri")
+        return valore
+
+    try:
+        esperienza_1 = testo_profilo("esperienza_1", 500)
+        esperienza_2 = testo_profilo("esperienza_2", 500)
+        esperienza_3 = testo_profilo("esperienza_3", 500)
+        studio_1 = testo_profilo("studio_1", 500)
+        studio_2 = testo_profilo("studio_2", 500)
+        studio_3 = testo_profilo("studio_3", 500)
+        certificazioni = testo_profilo("certificazioni", 1500)
+    except ValueError as exc:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "message": str(exc)}), 400
+        flash(str(exc), "error")
+        return redirect(url_for("dashboard") + "#tab-info")
 
     privacy_debug("update_esperienza dati letti", {
         "user_id": user_id,
@@ -16882,9 +17608,16 @@ def utente_update_esperienza():
             WHERE id = ?
         """), (esperienza_1, esperienza_2, esperienza_3, studio_1, studio_2, studio_3, certificazioni, user_id))
         conn.commit()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": True, "message": "Modifiche salvate."})
         flash("✅ Esperienza e formazione aggiornate con successo.", "success")
     except Exception as e:
         conn.rollback()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({
+                "ok": False,
+                "message": "Non è stato possibile salvare le modifiche."
+            }), 500
         flash(f"❌ Errore durante il salvataggio: {e}", "error")
     finally:
         try:
@@ -16894,6 +17627,445 @@ def utente_update_esperienza():
 
 
     return redirect(url_for("dashboard") + "#tab-info")
+
+
+@app.route("/api/utente/schede-profilo", methods=["GET", "POST"])
+@login_required
+def api_utente_schede_profilo():
+    user_id = int(g.utente["id"])
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        if request.method == "GET":
+            cards = carica_schede_profilo(cur, user_id)
+            return jsonify({"ok": True, "schede": cards})
+
+        verify_csrf()
+        payload = request.get_json(silent=True) or {}
+        catalog_entry = _scheda_profilo_catalog_entry(
+            cur,
+            payload.get("catalogo_id"),
+        )
+        normalized = normalize_card_payload(
+            payload,
+            catalog_entry=catalog_entry,
+        )
+
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+
+        if normalized["legacy_key"] in SINGLE_CARD_SLOTS:
+            cur.execute(sql("""
+                SELECT id
+                FROM schede_profilo
+                WHERE utente_id = ?
+                  AND legacy_key = ?
+                  AND attiva = TRUE
+                LIMIT 1
+            """), (user_id, normalized["legacy_key"]))
+            if cur.fetchone():
+                _schede_profilo_rollback(cur)
+                return jsonify({
+                    "ok": False,
+                    "message": "Per questo campo esiste già una scheda. Aprila per modificarla."
+                }), 409
+        else:
+            cur.execute(sql("""
+                SELECT COUNT(*) AS totale
+                FROM schede_profilo
+                WHERE utente_id = ?
+                  AND legacy_key = 'certificazioni'
+                  AND attiva = TRUE
+            """), (user_id,))
+            active_certifications = int(cur.fetchone()["totale"] or 0)
+            if active_certifications >= 20:
+                _schede_profilo_rollback(cur)
+                return jsonify({
+                    "ok": False,
+                    "message": (
+                        "Puoi mantenere al massimo 20 certificazioni attive "
+                        "nel profilo."
+                    ),
+                }), 409
+
+        card_id = insert_and_get_id(cur, """
+            INSERT INTO schede_profilo (
+                utente_id, legacy_key, tipo_scheda, catalogo_id, titolo,
+                categoria_slug, ente, luogo, data_inizio, data_fine,
+                in_corso, data_rilascio, data_scadenza, codice_qualifica,
+                descrizione, attiva, stato_verifica, metodo_verifica,
+                created_at, updated_at
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE,
+                'dichiarata', 'nessuno', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """, (
+            user_id,
+            normalized["legacy_key"],
+            normalized["tipo_scheda"],
+            normalized["catalogo_id"],
+            normalized["titolo"],
+            normalized["categoria_slug"] or None,
+            normalized["ente"] or None,
+            normalized["luogo"] or None,
+            normalized["data_inizio"],
+            normalized["data_fine"],
+            normalized["in_corso"],
+            normalized["data_rilascio"],
+            normalized["data_scadenza"],
+            normalized["codice_qualifica"] or None,
+            normalized["descrizione"] or None,
+        ))
+        _schede_profilo_commit(cur)
+
+        cards = carica_schede_profilo(cur, user_id)
+        card = next((item for item in cards if int(item["id"]) == int(card_id)), None)
+        return jsonify({"ok": True, "scheda": card}), 201
+
+    except ValueError as exc:
+        _schede_profilo_rollback(cur)
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore API schede profilo",
+            exc,
+            {"utente_id": user_id, "metodo": request.method},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": "La funzione non è ancora disponibile o si è verificato un errore."
+        }), 503
+
+
+@app.route("/api/utente/schede-profilo/<int:scheda_id>", methods=["PUT", "DELETE"])
+@login_required
+def api_utente_scheda_profilo(scheda_id):
+    verify_csrf()
+    user_id = int(g.utente["id"])
+    request_payload = dict(request.get_json(silent=True) or {})
+    try:
+        versione_visualizzata = int(request_payload.get("versione") or 0)
+    except (TypeError, ValueError):
+        versione_visualizzata = 0
+    if versione_visualizzata < 1:
+        return jsonify({
+            "ok": False,
+            "message": "La scheda è cambiata. Riaprila e riprova.",
+        }), 409
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        existing = _scheda_profilo_utente(cur, scheda_id, user_id)
+        if not existing:
+            return jsonify({"ok": False, "message": "Scheda non trovata."}), 404
+
+        existing_dict = dict(existing)
+
+        if request.method == "DELETE":
+            _schede_profilo_begin(cur)
+            cur.execute(sql("""
+                DELETE FROM schede_profilo
+                WHERE id = ? AND utente_id = ? AND attiva = TRUE
+                  AND versione = ?
+            """), (scheda_id, user_id, versione_visualizzata))
+            if cur.rowcount != 1:
+                _schede_profilo_rollback(cur)
+                return jsonify({
+                    "ok": False,
+                    "message": "La scheda è cambiata. Riaprila e riprova.",
+                }), 409
+            _schede_profilo_commit(cur)
+            invalidate_admin_counters()
+            return jsonify({"ok": True})
+
+        payload = request_payload
+        # Una modifica non può spostare la scheda in un altro campo.
+        payload["legacy_key"] = existing_dict["legacy_key"]
+        payload["tipo_scheda"] = existing_dict["tipo_scheda"]
+        catalog_entry = _scheda_profilo_catalog_entry(
+            cur,
+            payload.get("catalogo_id"),
+        )
+        normalized = normalize_card_payload(
+            payload,
+            catalog_entry=catalog_entry,
+        )
+        reset = verification_reset_patch(existing_dict, normalized)
+
+        stato = reset.get(
+            "stato_verifica",
+            existing_dict.get("stato_verifica") or "dichiarata",
+        )
+        richiesta_at = reset.get(
+            "richiesta_verifica_at",
+            existing_dict.get("richiesta_verifica_at"),
+        )
+        verificata_at = reset.get(
+            "verificata_at",
+            existing_dict.get("verificata_at"),
+        )
+        verificata_da = reset.get(
+            "verificata_da_admin_id",
+            existing_dict.get("verificata_da_admin_id"),
+        )
+        metodo = reset.get(
+            "metodo_verifica",
+            existing_dict.get("metodo_verifica") or "nessuno",
+        )
+        nota_pubblica = reset.get(
+            "nota_pubblica",
+            existing_dict.get("nota_pubblica"),
+        )
+
+        _schede_profilo_begin(cur)
+        cur.execute(sql("""
+            UPDATE schede_profilo SET
+                catalogo_id = ?, titolo = ?, categoria_slug = ?, ente = ?,
+                luogo = ?, data_inizio = ?, data_fine = ?, in_corso = ?,
+                data_rilascio = ?, data_scadenza = ?, codice_qualifica = ?,
+                descrizione = ?, stato_verifica = ?,
+                richiesta_verifica_at = ?, verificata_at = ?,
+                verificata_da_admin_id = ?, metodo_verifica = ?,
+                nota_pubblica = ?, versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND utente_id = ? AND attiva = TRUE
+              AND versione = ?
+        """), (
+            normalized["catalogo_id"],
+            normalized["titolo"],
+            normalized["categoria_slug"] or None,
+            normalized["ente"] or None,
+            normalized["luogo"] or None,
+            normalized["data_inizio"],
+            normalized["data_fine"],
+            normalized["in_corso"],
+            normalized["data_rilascio"],
+            normalized["data_scadenza"],
+            normalized["codice_qualifica"] or None,
+            normalized["descrizione"] or None,
+            stato,
+            richiesta_at,
+            verificata_at,
+            verificata_da,
+            metodo,
+            nota_pubblica,
+            scheda_id,
+            user_id,
+            versione_visualizzata,
+        ))
+
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": "La scheda è cambiata. Riaprila e riprova.",
+            }), 409
+
+        if reset:
+            cur.execute(sql("""
+                INSERT INTO schede_profilo_verifiche (
+                    scheda_id, stato, metodo, nota_admin,
+                    scheda_snapshot, admin_id
+                ) VALUES (?, 'dichiarata', 'nessuno', ?, ?, NULL)
+            """), (
+                scheda_id,
+                "Controllo azzerato automaticamente dopo una modifica dell'utente.",
+                _scheda_profilo_audit_snapshot(existing_dict, normalized),
+            ))
+
+        _schede_profilo_commit(cur)
+        if reset:
+            invalidate_admin_counters()
+        cards = carica_schede_profilo(cur, user_id)
+        card = next((item for item in cards if int(item["id"]) == scheda_id), None)
+        return jsonify({"ok": True, "scheda": card})
+
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore modifica scheda profilo",
+            exc,
+            {"utente_id": user_id, "scheda_id": scheda_id},
+            production=True,
+        )
+        return jsonify({"ok": False, "message": "Operazione non riuscita."}), 500
+
+
+@app.route(
+    "/api/utente/schede-profilo/<int:scheda_id>/richiedi-verifica",
+    methods=["POST"],
+)
+@login_required
+def api_utente_richiedi_verifica_scheda_profilo(scheda_id):
+    verify_csrf()
+    user_id = int(g.utente["id"])
+    request_payload = request.get_json(silent=True) or {}
+    if (
+        request_payload.get("acknowledged") is not True
+        or request_payload.get("notice_version") != PROFILE_CARD_NOTICE_VERSION
+    ):
+        return jsonify({
+            "ok": False,
+            "message": "Conferma di aver letto le informazioni sul controllo.",
+        }), 400
+    try:
+        versione_visualizzata = int(request_payload.get("versione") or 0)
+    except (TypeError, ValueError):
+        versione_visualizzata = 0
+    if versione_visualizzata < 1:
+        return jsonify({
+            "ok": False,
+            "message": "La scheda è cambiata. Riaprila e riprova.",
+        }), 409
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        existing = _scheda_profilo_utente(cur, scheda_id, user_id)
+        if not existing:
+            return jsonify({"ok": False, "message": "Scheda non trovata."}), 404
+        if int(existing["versione"] or 1) != versione_visualizzata:
+            return jsonify({
+                "ok": False,
+                "message": "La scheda è cambiata. Riaprila e riprova.",
+            }), 409
+
+        effective_state = effective_verification_state(existing)
+
+        if effective_state == "richiesta":
+            cards = carica_schede_profilo(cur, user_id)
+            card = next((item for item in cards if int(item["id"]) == scheda_id), None)
+            return jsonify({"ok": True, "scheda": card})
+
+        if effective_state in {
+            "documento_visionato",
+            "riscontro_effettuato",
+        }:
+            return jsonify({
+                "ok": False,
+                "message": (
+                    "Questa scheda è già stata controllata. "
+                    "Se modifichi i dati, il controllo verrà azzerato "
+                    "e potrai richiederlo di nuovo."
+                ),
+            }), 409
+
+        if effective_state == "scaduta":
+            return jsonify({
+                "ok": False,
+                "message": (
+                    "La scheda è scaduta. Aggiorna prima la data di scadenza "
+                    "e poi richiedi un nuovo controllo."
+                ),
+            }), 409
+
+        redis_allowed = _prenota_richiesta_controllo_scheda(user_id)
+        if redis_allowed is False:
+            return jsonify({
+                "ok": False,
+                "message": (
+                    "Hai già inviato diverse richieste di controllo. "
+                    "Riprova tra un'ora."
+                ),
+            }), 429
+
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+
+        recent_cutoff = (
+            "CURRENT_TIMESTAMP - INTERVAL '1 hour'"
+            if app.config.get("IS_POSTGRES")
+            else "datetime('now', '-1 hour')"
+        )
+        cur.execute(sql(f"""
+            SELECT COUNT(*) AS totale
+            FROM schede_profilo_verifiche storico
+            JOIN schede_profilo scheda ON scheda.id = storico.scheda_id
+            WHERE scheda.utente_id = ?
+              AND storico.stato = 'richiesta'
+              AND storico.created_at >= {recent_cutoff}
+        """), (user_id,))
+        recent_requests = int(cur.fetchone()["totale"] or 0)
+        if recent_requests >= 5:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": (
+                    "Hai già inviato diverse richieste di controllo. "
+                    "Riprova tra un'ora."
+                ),
+            }), 429
+
+        cur.execute(sql("""
+            UPDATE schede_profilo
+            SET stato_verifica = 'richiesta',
+                richiesta_verifica_at = CURRENT_TIMESTAMP,
+                verificata_at = NULL,
+                verificata_da_admin_id = NULL,
+                metodo_verifica = 'nessuno',
+                nota_pubblica = NULL,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND utente_id = ? AND attiva = TRUE
+              AND versione = ?
+        """), (scheda_id, user_id, versione_visualizzata))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": "La scheda è cambiata. Riaprila e riprova.",
+            }), 409
+        cur.execute(sql("""
+            INSERT INTO schede_profilo_verifiche (
+                scheda_id, stato, metodo, nota_admin,
+                scheda_snapshot, admin_id
+            ) VALUES (?, 'richiesta', 'nessuno', NULL, ?, NULL)
+        """), (
+            scheda_id,
+            _scheda_profilo_audit_snapshot(
+                existing,
+                notice_version=PROFILE_CARD_NOTICE_VERSION,
+            ),
+        ))
+        _schede_profilo_commit(cur)
+
+        # Completiamo la risposta prima delle notifiche, che usano a loro
+        # volta una connessione DB condivisa nel contesto della richiesta.
+        cards = carica_schede_profilo(cur, user_id)
+        card = next((item for item in cards if int(item["id"]) == scheda_id), None)
+
+        try:
+            invalidate_admin_counters()
+            notifica_admin_evento(
+                "Nuova scheda da controllare 🎓",
+                "Un utente ha chiesto il controllo di una scheda del profilo.",
+                link=url_for("admin_schede_profilo", stato="attenzione"),
+                push=True,
+            )
+        except Exception as notification_exc:
+            log_exception_safe(
+                "Richiesta controllo salvata ma notifica admin non inviata",
+                notification_exc,
+                {"scheda_id": scheda_id, "utente_id": user_id},
+                production=True,
+            )
+        return jsonify({"ok": True, "scheda": card})
+
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore richiesta controllo scheda profilo",
+            exc,
+            {"utente_id": user_id, "scheda_id": scheda_id},
+            production=True,
+        )
+        return jsonify({"ok": False, "message": "Richiesta non riuscita."}), 500
 
 # ---------------------------------------------------------
 # 📞 AGGIORNA CONTATTI UTENTE
@@ -19947,7 +21119,7 @@ def register():
             salt_b64, dek_enc_b64, dek_nonce_b64,
             None, None,
             x25519_pub_b64, x25519_priv_enc_b64, x25519_priv_nonce_b64,
-            "mylocalcare_privacy_termini_2026_v1",
+            LEGAL_DOCUMENT_VERSION,
             normalize_language(session.get("lingua_interfaccia"))
         ))
 
@@ -24476,6 +25648,16 @@ def elimina_account_step2():
                 WHERE utente_id = ?
             """), (user_id,))
 
+            # Le schede strutturate e il relativo storico contengono dati
+            # dichiarati dall'utente e controlli amministrativi. Poiché la
+            # riga utente viene anonimizzata anziché eliminata, le rimuoviamo
+            # esplicitamente; lo storico cade tramite ON DELETE CASCADE.
+            if _schede_profilo_table_exists(cur):
+                cur.execute(sql("""
+                    DELETE FROM schede_profilo
+                    WHERE utente_id = ?
+                """), (user_id,))
+
             # Gli interessi lasciati dall'utente vanno rimossi anche se
             # la riga utente verrà anonimizzata anziché cancellata.
             cur.execute(sql("""
@@ -25576,7 +26758,13 @@ def profilo_pubblico(id):
 
     # 🔒 Controllo visibilità profilo
     if not bool(utente.get("visibile_pubblicamente", 0)):
-        if not g.utente or g.utente["id"] != utente["id"]:
+        viewer_is_owner = bool(
+            g.utente and int(g.utente["id"]) == int(utente["id"])
+        )
+        viewer_is_admin = bool(
+            g.utente and (g.utente["ruolo"] or "") == "admin"
+        )
+        if not viewer_is_owner and not viewer_is_admin:
 
             flash("Questo profilo è privato.", "info")
             return redirect(url_for("cerca"))
@@ -25616,6 +26804,13 @@ def profilo_pubblico(id):
     """), (id,))
     annunci = [dict(r) for r in c.fetchall()]
 
+    (
+        schede_profilo_pubbliche,
+        schede_profilo_pubbliche_per_legacy,
+        _catalogo_schede_profilo,
+        schede_profilo_disponibili,
+    ) = _schede_profilo_context(c, utente["id"], pubblico=True)
+
 
     # =========================================================
     # 🔹 OFFRO / CERCO
@@ -25654,6 +26849,10 @@ def profilo_pubblico(id):
         recensioni_ricevute=recensioni,
         recensioni=recensioni,
         recensioni_pubbliche=recensioni,
+
+        schede_profilo_pubbliche=schede_profilo_pubbliche,
+        schede_profilo_pubbliche_per_legacy=schede_profilo_pubbliche_per_legacy,
+        schede_profilo_disponibili=schede_profilo_disponibili,
 
         offro_presenti=offro_presenti,
         cerco_presenti=cerco_presenti,
@@ -26883,10 +28082,9 @@ def verifica_maggiorenne():
         UPDATE utenti
         SET maggiorenne_verificato = 1,
             data_verifica_maggiorenne = {now_sql()},
-            ip_verifica_maggiorenne = ?,
-            versione_consenso = ?
+            ip_verifica_maggiorenne = ?
         WHERE id = ?
-    """), (ip, "v1.0_video", g.utente["id"]))
+    """), (ip, g.utente["id"]))
 
     conn.commit()
 

@@ -77,6 +77,7 @@
           <p class="info-card-sub">Percorso, competenze e attestati.</p>
         </div>
 
+        {% set schede_pubbliche = schede_profilo_pubbliche_per_legacy|default({}, true) %}
         {% set esperienze = [
           utente.get('esperienza_1')|default('', true)|trim,
           utente.get('esperienza_2')|default('', true)|trim,
@@ -91,47 +92,121 @@
 
         {% set esperienze_presenti = esperienze | reject('equalto','') | list %}
         {% set formazioni_presenti = formazioni | reject('equalto','') | list %}
+        {% set schede_esperienze = (schede_pubbliche.get('esperienza_1', []) or []) + (schede_pubbliche.get('esperienza_2', []) or []) + (schede_pubbliche.get('esperienza_3', []) or []) %}
+        {% set schede_formazioni = (schede_pubbliche.get('studio_1', []) or []) + (schede_pubbliche.get('studio_2', []) or []) + (schede_pubbliche.get('studio_3', []) or []) %}
+        {% set schede_certificazioni = schede_pubbliche.get('certificazioni', []) or [] %}
 
-        {% if (esperienze_presenti|length == 0) and (formazioni_presenti|length == 0) and (not certificazioni) %}
+        {% if (esperienze_presenti|length == 0) and (formazioni_presenti|length == 0) and (not certificazioni) and (schede_esperienze|length == 0) and (schede_formazioni|length == 0) and (schede_certificazioni|length == 0) %}
           <p class="info-empty-block">{{ tr('profile.empty_experience_full') }}</p>
         {% else %}
 
         <div class="info-highlight-grid">
 
-          {% if esperienze_presenti %}
+          {% if esperienze_presenti or schede_esperienze %}
             <div class="info-highlight-card">
               <div class="info-highlight-icon">💼</div>
               <div>
                 <div class="info-highlight-title">Esperienze</div>
                 <div class="info-chip-list">
-                  {% for exp in esperienze_presenti %}
-                    <span class="info-chip">{{ exp }}</span>
+                  {% for i in range(1, 4) %}
+                    {% set legacy_key = 'esperienza_' ~ i %}
+                    {% set schede_slot = schede_pubbliche.get(legacy_key, []) or [] %}
+                    {% set valore_legacy = utente.get(legacy_key)|default('', true)|trim %}
+                    {% if schede_slot %}
+                      {% for scheda in schede_slot %}
+                        <button
+                          type="button"
+                          class="info-chip info-chip-profile-card"
+                          data-profile-card-public-open="{{ scheda.get('id') }}"
+                          aria-haspopup="dialog">
+                          <span class="info-chip-profile-card-title" data-no-translate>{{ scheda.get('titolo') }}</span>
+                          <span class="info-chip-profile-card-state">
+                            {% if scheda.get('stato_verifica') == 'documento_visionato' %}
+                              {{ tr('profile_card.state_document') }}
+                            {% elif scheda.get('stato_verifica') == 'riscontro_effettuato' %}
+                              {{ tr('profile_card.state_feedback') }}
+                            {% else %}
+                              {{ tr('profile_card.state_declared') }}
+                            {% endif %}
+                          </span>
+                        </button>
+                      {% endfor %}
+                    {% elif valore_legacy %}
+                      <span class="info-chip" data-no-translate>{{ valore_legacy }}</span>
+                    {% endif %}
                   {% endfor %}
                 </div>
               </div>
             </div>
           {% endif %}
 
-          {% if formazioni_presenti %}
+          {% if formazioni_presenti or schede_formazioni %}
             <div class="info-highlight-card">
               <div class="info-highlight-icon">🎓</div>
               <div>
                 <div class="info-highlight-title">Formazione</div>
                 <div class="info-chip-list">
-                  {% for f in formazioni_presenti %}
-                    <span class="info-chip">{{ f }}</span>
+                  {% for i in range(1, 4) %}
+                    {% set legacy_key = 'studio_' ~ i %}
+                    {% set schede_slot = schede_pubbliche.get(legacy_key, []) or [] %}
+                    {% set valore_legacy = utente.get(legacy_key)|default('', true)|trim %}
+                    {% if schede_slot %}
+                      {% for scheda in schede_slot %}
+                        <button
+                          type="button"
+                          class="info-chip info-chip-profile-card"
+                          data-profile-card-public-open="{{ scheda.get('id') }}"
+                          aria-haspopup="dialog">
+                          <span class="info-chip-profile-card-title" data-no-translate>{{ scheda.get('titolo') }}</span>
+                          <span class="info-chip-profile-card-state">
+                            {% if scheda.get('stato_verifica') == 'documento_visionato' %}
+                              {{ tr('profile_card.state_document') }}
+                            {% elif scheda.get('stato_verifica') == 'riscontro_effettuato' %}
+                              {{ tr('profile_card.state_feedback') }}
+                            {% else %}
+                              {{ tr('profile_card.state_declared') }}
+                            {% endif %}
+                          </span>
+                        </button>
+                      {% endfor %}
+                    {% elif valore_legacy %}
+                      <span class="info-chip" data-no-translate>{{ valore_legacy }}</span>
+                    {% endif %}
                   {% endfor %}
                 </div>
               </div>
             </div>
           {% endif %}
 
-          {% if certificazioni %}
+          {% if certificazioni or schede_certificazioni %}
             <div class="info-highlight-card">
               <div class="info-highlight-icon">📜</div>
               <div>
                 <div class="info-highlight-title">Certificazioni</div>
-                <div class="info-paragraph">{{ certificazioni }}</div>
+                {% if schede_certificazioni %}
+                  <div class="info-chip-list">
+                    {% for scheda in schede_certificazioni %}
+                      <button
+                        type="button"
+                        class="info-chip info-chip-profile-card"
+                        data-profile-card-public-open="{{ scheda.get('id') }}"
+                        aria-haspopup="dialog">
+                        <span class="info-chip-profile-card-title" data-no-translate>{{ scheda.get('titolo') }}</span>
+                        <span class="info-chip-profile-card-state">
+                          {% if scheda.get('stato_verifica') == 'documento_visionato' %}
+                            {{ tr('profile_card.state_document') }}
+                          {% elif scheda.get('stato_verifica') == 'riscontro_effettuato' %}
+                            {{ tr('profile_card.state_feedback') }}
+                          {% else %}
+                            {{ tr('profile_card.state_declared') }}
+                          {% endif %}
+                        </span>
+                      </button>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="info-paragraph" data-no-translate>{{ certificazioni }}</div>
+                {% endif %}
               </div>
             </div>
           {% endif %}
@@ -775,6 +850,44 @@
     color: #334155;
     font-size: 0.86rem;
     font-weight: 650;
+  }
+
+  .info-chip-profile-card{
+    min-width:0;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.16rem;
+    padding:.46rem .68rem;
+    text-align:left;
+    cursor:pointer;
+    appearance:none;
+    transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+
+  .info-chip-profile-card:hover{
+    transform:translateY(-1px);
+    border-color:#93c5fd;
+    box-shadow:0 6px 14px rgba(37,99,235,.09);
+  }
+
+  .info-chip-profile-card:focus-visible{
+    outline:3px solid rgba(96,165,250,.3);
+    outline-offset:2px;
+  }
+
+  .info-chip-profile-card-title{
+    max-width:100%;
+    color:#1e3a8a;
+    font-size:.84rem;
+    line-height:1.2;
+    font-weight:780;
+  }
+
+  .info-chip-profile-card-state{
+    color:#64748b;
+    font-size:.62rem;
+    line-height:1.2;
+    font-weight:650;
   }
 
   .info-empty-block{
