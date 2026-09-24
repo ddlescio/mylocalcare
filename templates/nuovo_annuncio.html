@@ -494,7 +494,7 @@
                     class="block w-full border-2 border-blue-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
 
                     {% if current_language_code not in ('it', 'en') %}data-no-translate{% endif %}
-                    placeholder="Descrivi nel dettaglio cosa offri, la tua esperienza, disponibilità, ecc.">{{ current_descrizione }}</textarea>
+                    placeholder="{{ tr('availability.listing_description_placeholder') }}">{{ current_descrizione }}</textarea>
 
         </div>
 

@@ -72,6 +72,106 @@
 
       <!-- ✅ ESPERIENZE / FORMAZIONE -->
       <section data-section="work_education" class="info-card hidden">
+        {% set disponibilita = disponibilita_servizi_public|default(None) %}
+        {% if disponibilita %}
+        {% set stato_disponibilita = disponibilita.get('stato') %}
+        <article
+          class="service-availability-card service-availability-card-public"
+          data-availability-state="{{ stato_disponibilita }}">
+          <div class="service-availability-card-icon" aria-hidden="true">🗓️</div>
+          <div class="service-availability-card-main">
+            <div class="service-availability-card-heading">
+              <div>
+                <h4 class="service-availability-card-title">
+                  {{ tr('availability.title') }}
+                </h4>
+                <p class="service-availability-card-subtitle">
+                  {{ tr('availability.public_subtitle') }}
+                </p>
+              </div>
+              <span class="service-availability-status service-availability-status-{{ stato_disponibilita }}">
+                {% if stato_disponibilita == 'disponibile' %}
+                  {{ tr('availability.status_available') }}
+                {% elif stato_disponibilita == 'limitata' %}
+                  {{ tr('availability.status_limited') }}
+                {% else %}
+                  {{ tr('availability.status_unavailable') }}
+                {% endif %}
+              </span>
+            </div>
+
+            <p class="service-availability-applies">
+              {{ tr('availability.applies_all_services') }}
+            </p>
+
+            {% if disponibilita.get('settimanale') %}
+            <details class="service-availability-public-details">
+              <summary>{{ tr('availability.view_schedule') }}</summary>
+              <div class="service-availability-public-week">
+                {% set giorni = [
+                  tr('availability.day_monday'), tr('availability.day_tuesday'),
+                  tr('availability.day_wednesday'), tr('availability.day_thursday'),
+                  tr('availability.day_friday'), tr('availability.day_saturday'),
+                  tr('availability.day_sunday')
+                ] %}
+                {% for giorno in range(1, 8) %}
+                  {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+                  {% if fasce_giorno %}
+                  <div class="service-availability-public-day">
+                    <strong>{{ giorni[giorno - 1] }}</strong>
+                    <span>
+                      {% for elemento in fasce_giorno %}
+                        {% if elemento.get('fascia') == 'mattina' %}{{ tr('availability.slot_morning') }}{% endif %}
+                        {% if elemento.get('fascia') == 'pomeriggio' %}{{ tr('availability.slot_afternoon') }}{% endif %}
+                        {% if elemento.get('fascia') == 'sera' %}{{ tr('availability.slot_evening') }}{% endif %}
+                        {% if elemento.get('fascia') == 'notte' %}{{ tr('availability.slot_night') }}{% endif %}
+                        {% if not loop.last %} · {% endif %}
+                      {% endfor %}
+                    </span>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </details>
+            {% else %}
+              <p class="service-availability-empty">{{ tr('availability.no_weekly') }}</p>
+            {% endif %}
+
+            {% if disponibilita.get('date_speciali') or disponibilita.get('assenze') %}
+            <div class="service-availability-public-exceptions">
+              {% if disponibilita.get('date_speciali') %}
+              <span>
+                {{ tr('availability.exceptions_count', count=disponibilita.get('date_speciali')|length) }}
+              </span>
+              {% endif %}
+              {% if disponibilita.get('assenze') %}
+              <span>
+                {{ tr('availability.absences_count', count=disponibilita.get('assenze')|length) }}
+              </span>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            {% set freschezza = disponibilita.get('freschezza', {}) %}
+            {% if freschezza.get('confermata_il') %}
+            <p class="service-availability-confirmed">
+              {{ tr('availability.public_confirmed') }}
+              <strong>{{ freschezza.get('confermata_il')|datetimeformat }}</strong>
+            </p>
+            {% endif %}
+            {% if freschezza.get('codice') == 'da_riconfermare' %}
+            <p class="service-availability-freshness service-availability-freshness-da_riconfermare">
+              {{ tr('availability.freshness_due') }}
+            </p>
+            {% elif freschezza.get('codice') in ('priorita_ridotta', 'esclusa_filtro', 'mai_confermata') %}
+            <p class="service-availability-freshness service-availability-freshness-{{ freschezza.get('codice') }}">
+              {{ tr('availability.freshness_old') }}
+            </p>
+            {% endif %}
+          </div>
+        </article>
+        {% endif %}
+
         <div class="info-card-head">
           <h4 class="info-card-title">Esperienze e formazione</h4>
           <p class="info-card-sub">Percorso, competenze e attestati.</p>

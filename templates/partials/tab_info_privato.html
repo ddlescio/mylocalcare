@@ -34,7 +34,7 @@
           },
           'contacts': {
             'label': 'Contatti',
-            'desc': 'Email, telefono, social e disponibilità',
+            'desc': tr('availability.contacts_sidebar_description'),
             'icon': '📞'
           },
           'description': {
@@ -282,6 +282,90 @@
                 {% endfor %}
               </div>
             </div>
+            {% endif %}
+
+            {% if disponibilita_servizi_disponibile|default(false) %}
+            {% set disponibilita = disponibilita_servizi_private|default(None) %}
+            <article
+              id="service-availability-summary"
+              class="service-availability-card service-availability-card-private"
+              data-availability-state="{{ disponibilita.get('stato') if disponibilita else 'non_configurata' }}">
+              <div class="service-availability-card-icon" aria-hidden="true">🗓️</div>
+
+              <div class="service-availability-card-main">
+                <div class="service-availability-card-heading">
+                  <div>
+                    <h5 class="service-availability-card-title">
+                      {{ tr('availability.title') }}
+                    </h5>
+                    <p class="service-availability-card-subtitle">
+                      {{ tr('availability.private_subtitle') }}
+                    </p>
+                  </div>
+
+                  {% if disponibilita %}
+                    {% set stato_disponibilita = disponibilita.get('stato') %}
+                    <span class="service-availability-status service-availability-status-{{ stato_disponibilita }}">
+                      {% if stato_disponibilita == 'disponibile' %}
+                        {{ tr('availability.status_available') }}
+                      {% elif stato_disponibilita == 'limitata' %}
+                        {{ tr('availability.status_limited') }}
+                      {% else %}
+                        {{ tr('availability.status_unavailable') }}
+                      {% endif %}
+                    </span>
+                  {% endif %}
+                </div>
+
+                {% if disponibilita %}
+                  <div class="service-availability-card-meta">
+                    <span>
+                      {{ tr('availability.weekly_slots', count=disponibilita.get('settimanale', [])|length) }}
+                    </span>
+                    {% if disponibilita.get('confermata_at') %}
+                    <span>
+                      {{ tr('availability.public_confirmed') }}
+                      <strong>{{ disponibilita.get('confermata_at')|datetimeformat }}</strong>
+                    </span>
+                    {% endif %}
+                  </div>
+
+                  {% set freschezza = disponibilita.get('freschezza', {}).get('codice') %}
+                  <p class="service-availability-freshness service-availability-freshness-{{ freschezza }}">
+                    {% if freschezza == 'aggiornata' %}
+                      {{ tr('availability.freshness_current') }}
+                    {% elif freschezza == 'da_riconfermare' %}
+                      {{ tr('availability.freshness_due') }}
+                    {% else %}
+                      {{ tr('availability.freshness_old') }}
+                    {% endif %}
+                  </p>
+                {% else %}
+                  <p class="service-availability-empty">
+                    {{ tr('availability.not_configured') }}
+                  </p>
+                {% endif %}
+
+                <div class="service-availability-card-actions">
+                  <button
+                    type="button"
+                    class="service-availability-primary"
+                    data-service-availability-open>
+                    {{ tr('availability.edit') if disponibilita else tr('availability.setup') }}
+                  </button>
+
+                  {% if disponibilita %}
+                  <button
+                    type="button"
+                    class="service-availability-secondary"
+                    data-service-availability-reconfirm
+                    data-availability-version="{{ disponibilita.get('versione', 0) }}">
+                    {{ tr('availability.reconfirm') }}
+                  </button>
+                  {% endif %}
+                </div>
+              </div>
+            </article>
             {% endif %}
 
             <!-- FRASE PERSONALE - SPOSTATA SOTTO OFFRO/CERCO -->
@@ -875,11 +959,11 @@
                   </div>
                 </div>
 
-                <!-- DISPONIBILITÀ -->
+                <!-- PREFERENZE DI CONTATTO (distinte dalla disponibilità ai servizi) -->
                 <div class="cp-card">
                   <div class="cp-card-head">
-                    <h5 class="cp-card-title">Disponibilità</h5>
-                    <p class="cp-card-sub">Specifica quando e come preferisci essere contattato.</p>
+                    <h5 class="cp-card-title">{{ tr('availability.contact_preferences_title') }}</h5>
+                    <p class="cp-card-sub">{{ tr('availability.contact_preferences_subtitle') }}</p>
                   </div>
 
                   <div class="cp-grid cp-grid-2">

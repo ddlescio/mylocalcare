@@ -1,0 +1,1798 @@
+{#
+  Popup privato per impostare la disponibilita reale ai servizi offerti.
+  Le classi service-availability-card* sono condivise con le card riassuntive
+  private e pubbliche, definite nei relativi partial del profilo.
+#}
+{% if not (pubblico|default(false)) %}
+<div
+  id="service-availability-dialog"
+  class="service-availability-dialog service-availability-hidden"
+  aria-hidden="true">
+
+  <button
+    type="button"
+    class="service-availability-dialog-backdrop"
+    data-service-availability-close
+    aria-label="{{ tr('availability.close') }}">
+  </button>
+
+  <section
+    class="service-availability-dialog-sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="service-availability-dialog-title"
+    aria-describedby="service-availability-dialog-subtitle">
+
+    <div class="service-availability-dialog-handle" aria-hidden="true"></div>
+
+    <header class="service-availability-dialog-header">
+      <div class="service-availability-dialog-heading">
+        <span class="service-availability-dialog-icon" aria-hidden="true">📅</span>
+        <div>
+          <p class="service-availability-dialog-eyebrow">
+            {{ tr('availability.edit') }}
+          </p>
+          <h3 id="service-availability-dialog-title" class="service-availability-dialog-title">
+            {{ tr('availability.title') }}
+          </h3>
+          <p id="service-availability-dialog-subtitle" class="service-availability-dialog-subtitle">
+            {{ tr('availability.private_subtitle') }}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="service-availability-dialog-close"
+        data-service-availability-close
+        aria-label="{{ tr('availability.close') }}">
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+
+    <div
+      id="service-availability-loading"
+      class="service-availability-loading"
+      role="status"
+      aria-live="polite">
+      <span class="service-availability-spinner" aria-hidden="true"></span>
+      <span>{{ tr('availability.loading') }}</span>
+    </div>
+
+    <form
+      id="service-availability-form"
+      class="service-availability-form service-availability-hidden"
+      novalidate>
+
+      <fieldset class="service-availability-section service-availability-status-section">
+        <legend>{{ tr('availability.overall_status') }}</legend>
+        <p class="service-availability-section-help">
+          {{ tr('availability.overall_help') }}
+        </p>
+
+        <div class="service-availability-status-options">
+          <label class="service-availability-status-option service-availability-status-option--available">
+            <input type="radio" name="service-availability-status" value="disponibile">
+            <span class="service-availability-status-dot" aria-hidden="true"></span>
+            <span>{{ tr('availability.status_available') }}</span>
+          </label>
+          <label class="service-availability-status-option service-availability-status-option--limited">
+            <input type="radio" name="service-availability-status" value="limitata">
+            <span class="service-availability-status-dot" aria-hidden="true"></span>
+            <span>{{ tr('availability.status_limited') }}</span>
+          </label>
+          <label class="service-availability-status-option service-availability-status-option--unavailable">
+            <input type="radio" name="service-availability-status" value="non_disponibile">
+            <span class="service-availability-status-dot" aria-hidden="true"></span>
+            <span>{{ tr('availability.status_unavailable') }}</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="service-availability-section">
+        <legend>{{ tr('availability.weekly_title') }}</legend>
+        <p class="service-availability-section-help">
+          {{ tr('availability.weekly_help') }}
+        </p>
+
+        <div class="service-availability-week" id="service-availability-week">
+          {% set availability_days = [
+            (1, 'availability.day_monday'),
+            (2, 'availability.day_tuesday'),
+            (3, 'availability.day_wednesday'),
+            (4, 'availability.day_thursday'),
+            (5, 'availability.day_friday'),
+            (6, 'availability.day_saturday'),
+            (7, 'availability.day_sunday')
+          ] %}
+          {% set availability_slots = [
+            ('mattina', 'availability.slot_morning'),
+            ('pomeriggio', 'availability.slot_afternoon'),
+            ('sera', 'availability.slot_evening'),
+            ('notte', 'availability.slot_night')
+          ] %}
+          {% for day_number, day_key in availability_days %}
+          <div class="service-availability-day" data-availability-day="{{ day_number }}">
+            <span class="service-availability-day-label">{{ tr(day_key) }}</span>
+            <div class="service-availability-slot-list">
+              {% for slot_value, slot_key in availability_slots %}
+              <label class="service-availability-slot-chip">
+                <input
+                  type="checkbox"
+                  name="service-availability-weekly"
+                  value="{{ day_number }}:{{ slot_value }}"
+                  data-day="{{ day_number }}"
+                  data-slot="{{ slot_value }}">
+                <span>{{ tr(slot_key) }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <fieldset class="service-availability-section">
+        <legend>{{ tr('availability.special_title') }}</legend>
+        <div class="service-availability-section-heading">
+          <p class="service-availability-section-help">
+            {{ tr('availability.special_help') }}
+          </p>
+          <button
+            type="button"
+            class="service-availability-add-button"
+            id="service-availability-add-special">
+            <span aria-hidden="true">＋</span>
+            <span>{{ tr('availability.add_special') }}</span>
+          </button>
+        </div>
+
+        <div id="service-availability-special-list" class="service-availability-dynamic-list"></div>
+        <p id="service-availability-special-empty" class="service-availability-empty">
+          {{ tr('availability.empty_special_dates') }}
+        </p>
+      </fieldset>
+
+      <fieldset class="service-availability-section">
+        <legend>{{ tr('availability.absences_title') }}</legend>
+        <div class="service-availability-section-heading">
+          <p class="service-availability-section-help">
+            {{ tr('availability.absences_help') }}
+          </p>
+          <button
+            type="button"
+            class="service-availability-add-button"
+            id="service-availability-add-absence">
+            <span aria-hidden="true">＋</span>
+            <span>{{ tr('availability.add_absence') }}</span>
+          </button>
+        </div>
+
+        <div id="service-availability-absence-list" class="service-availability-dynamic-list"></div>
+        <p id="service-availability-absence-empty" class="service-availability-empty">
+          {{ tr('availability.empty_absences') }}
+        </p>
+      </fieldset>
+
+      <div
+        id="service-availability-error"
+        class="service-availability-message service-availability-message--error service-availability-hidden"
+        role="alert"></div>
+      <div
+        id="service-availability-success"
+        class="service-availability-message service-availability-message--success service-availability-hidden"
+        aria-live="polite"></div>
+
+      <footer class="service-availability-dialog-actions">
+        <button
+          type="button"
+          class="service-availability-secondary-button"
+          data-service-availability-close>
+          {{ tr('availability.close') }}
+        </button>
+        <button
+          type="submit"
+          id="service-availability-save"
+          class="service-availability-primary-button">
+          {{ tr('availability.save') }}
+        </button>
+      </footer>
+    </form>
+  </section>
+</div>
+
+<div
+  id="service-availability-global-message"
+  class="service-availability-toast service-availability-hidden"
+  role="status"
+  aria-live="polite"></div>
+{% endif %}
+
+<style>
+  /* Card riassuntive: usate sia nel profilo privato sia in quello pubblico. */
+  .service-availability-card{
+    --availability-accent:#2563eb;
+    --availability-soft:#eff6ff;
+    position:relative;
+    min-width:0;
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    gap:.72rem;
+    align-items:start;
+    padding:.9rem;
+    border:1px solid rgba(191,219,254,.92);
+    border-radius:1.2rem;
+    background:
+      radial-gradient(circle at 100% 0, rgba(219,234,254,.72), transparent 42%),
+      linear-gradient(145deg, rgba(255,255,255,.98), rgba(248,251,255,.96));
+    box-shadow:0 12px 28px rgba(30,64,175,.08), inset 0 1px 0 #fff;
+    color:#0f172a;
+  }
+
+  .service-availability-card[data-availability-state="limitata"]{
+    --availability-accent:#d97706;
+    --availability-soft:#fff7ed;
+    border-color:rgba(253,186,116,.72);
+  }
+
+  .service-availability-card[data-availability-state="non_disponibile"]{
+    --availability-accent:#64748b;
+    --availability-soft:#f1f5f9;
+    border-color:rgba(203,213,225,.92);
+  }
+
+  .service-availability-card-icon{
+    width:2.45rem;
+    height:2.45rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid color-mix(in srgb, var(--availability-accent) 26%, white);
+    border-radius:.92rem;
+    background:var(--availability-soft);
+    box-shadow:inset 0 1px 0 #fff;
+    font-size:1.05rem;
+  }
+
+  .service-availability-card-content{
+    min-width:0;
+    display:grid;
+    gap:.24rem;
+  }
+
+  .service-availability-card-main{
+    min-width:0;
+    display:grid;
+    gap:.52rem;
+  }
+
+  .service-availability-card-heading{
+    min-width:0;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.55rem;
+  }
+
+  .service-availability-card-heading > div{
+    min-width:0;
+  }
+
+  .service-availability-card-kicker{
+    margin:0;
+    color:var(--availability-accent);
+    font-size:.63rem;
+    line-height:1.2;
+    font-weight:900;
+    letter-spacing:.075em;
+    text-transform:uppercase;
+  }
+
+  .service-availability-card-title{
+    margin:0;
+    color:#0f172a;
+    font-size:.94rem;
+    line-height:1.2;
+    font-weight:880;
+    letter-spacing:-.025em;
+  }
+
+  .service-availability-card-subtitle{
+    margin:.18rem 0 0;
+    color:#64748b;
+    font-size:.7rem;
+    line-height:1.4;
+  }
+
+  .service-availability-card-summary,
+  .service-availability-card-meta{
+    margin:0;
+    color:#64748b;
+    font-size:.72rem;
+    line-height:1.42;
+  }
+
+  .service-availability-card-meta{
+    font-size:.66rem;
+  }
+
+  .service-availability-card-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.3rem .58rem;
+  }
+
+  .service-availability-card-meta span{
+    display:inline-flex;
+    align-items:center;
+    gap:.2rem;
+  }
+
+  .service-availability-status{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    min-height:1.7rem;
+    padding:.3rem .55rem;
+    border:1px solid #bbf7d0;
+    border-radius:9999px;
+    background:#f0fdf4;
+    color:#15803d;
+    font-size:.62rem;
+    line-height:1.15;
+    font-weight:880;
+    text-align:center;
+  }
+
+  .service-availability-status-limitata{
+    border-color:#fed7aa;
+    background:#fff7ed;
+    color:#b45309;
+  }
+
+  .service-availability-status-non_disponibile{
+    border-color:#dbe3ee;
+    background:#f1f5f9;
+    color:#64748b;
+  }
+
+  .service-availability-freshness,
+  .service-availability-applies,
+  .service-availability-confirmed{
+    margin:0;
+    padding:.5rem .58rem;
+    border:1px solid #dbeafe;
+    border-radius:.76rem;
+    background:rgba(239,246,255,.64);
+    color:#475569;
+    font-size:.65rem;
+    line-height:1.38;
+  }
+
+  .service-availability-freshness-aggiornata{
+    border-color:#bbf7d0;
+    background:#f0fdf4;
+    color:#166534;
+  }
+
+  .service-availability-freshness-da_riconfermare{
+    border-color:#fde68a;
+    background:#fffbeb;
+    color:#92400e;
+  }
+
+  .service-availability-freshness-priorita_ridotta,
+  .service-availability-freshness-esclusa_filtro,
+  .service-availability-freshness-mai_confermata{
+    border-color:#fed7aa;
+    background:#fff7ed;
+    color:#9a3412;
+  }
+
+  .service-availability-public-details{
+    border:1px solid rgba(219,234,254,.88);
+    border-radius:.86rem;
+    background:rgba(248,251,255,.72);
+    overflow:hidden;
+  }
+
+  .service-availability-public-details summary{
+    min-height:2.3rem;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.5rem;
+    padding:.58rem .68rem;
+    color:#1e40af;
+    font-size:.68rem;
+    line-height:1.25;
+    font-weight:850;
+    cursor:pointer;
+    list-style:none;
+  }
+
+  .service-availability-public-details summary::-webkit-details-marker{
+    display:none;
+  }
+
+  .service-availability-public-details summary::after{
+    content:"⌄";
+    font-size:.8rem;
+    transition:transform .18s ease;
+  }
+
+  .service-availability-public-details[open] summary::after{
+    transform:rotate(180deg);
+  }
+
+  .service-availability-public-week{
+    display:grid;
+    gap:.34rem;
+    padding:0 .68rem .65rem;
+  }
+
+  .service-availability-public-day{
+    min-width:0;
+    display:grid;
+    grid-template-columns:minmax(5.3rem, .65fr) minmax(0, 1.35fr);
+    gap:.5rem;
+    padding:.4rem 0;
+    border-top:1px solid rgba(226,232,240,.78);
+    color:#475569;
+    font-size:.64rem;
+    line-height:1.35;
+  }
+
+  .service-availability-public-day strong{
+    color:#334155;
+    font-weight:830;
+  }
+
+  .service-availability-public-exceptions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.35rem;
+    padding:.55rem .68rem .68rem;
+    border-top:1px solid rgba(226,232,240,.85);
+  }
+
+  .service-availability-public-exceptions span{
+    padding:.3rem .52rem;
+    border:1px solid #dbe3ee;
+    border-radius:9999px;
+    background:#fff;
+    color:#64748b;
+    font-size:.6rem;
+    line-height:1.15;
+    font-weight:760;
+  }
+
+  .service-availability-card-badge{
+    width:fit-content;
+    display:inline-flex;
+    align-items:center;
+    gap:.3rem;
+    min-height:1.65rem;
+    margin-top:.15rem;
+    padding:.28rem .58rem;
+    border:1px solid color-mix(in srgb, var(--availability-accent) 26%, white);
+    border-radius:9999px;
+    background:var(--availability-soft);
+    color:var(--availability-accent);
+    font-size:.65rem;
+    line-height:1.15;
+    font-weight:850;
+  }
+
+  .service-availability-card-actions{
+    grid-column:1 / -1;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:.48rem;
+    padding-top:.18rem;
+  }
+
+  .service-availability-card-button,
+  [data-service-availability-open],
+  [data-service-availability-reconfirm]{
+    min-height:2.25rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.32rem;
+    padding:.54rem .78rem;
+    border:1px solid #bfdbfe;
+    border-radius:9999px;
+    background:rgba(255,255,255,.94);
+    color:#1d4ed8;
+    font:inherit;
+    font-size:.7rem;
+    line-height:1;
+    font-weight:850;
+    cursor:pointer;
+    box-shadow:0 5px 12px rgba(37,99,235,.08), inset 0 1px 0 #fff;
+  }
+
+  .service-availability-card-button:hover,
+  [data-service-availability-open]:hover,
+  [data-service-availability-reconfirm]:hover{
+    border-color:#93c5fd;
+    background:#eff6ff;
+  }
+
+  .service-availability-card-button:focus-visible,
+  [data-service-availability-open]:focus-visible,
+  [data-service-availability-reconfirm]:focus-visible{
+    outline:3px solid rgba(96,165,250,.32);
+    outline-offset:2px;
+  }
+
+  .service-availability-primary[data-service-availability-open]{
+    border-color:#2563eb;
+    background:linear-gradient(135deg, #2563eb, #4f46e5 62%, #c026d3);
+    color:#fff;
+    box-shadow:0 8px 18px rgba(79,70,229,.18);
+  }
+
+  .service-availability-primary[data-service-availability-open]:hover{
+    border-color:#1d4ed8;
+    background:linear-gradient(135deg, #1d4ed8, #4338ca 62%, #a21caf);
+  }
+
+  .service-availability-secondary[data-service-availability-reconfirm]{
+    border-color:#dbe3ee;
+    color:#475569;
+  }
+
+  [data-service-availability-reconfirm][disabled]{
+    cursor:wait;
+    opacity:.62;
+  }
+
+  .service-availability-dialog{
+    position:fixed;
+    inset:0;
+    z-index:10060;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:0;
+  }
+
+  .service-availability-hidden{
+    display:none !important;
+  }
+
+  .service-availability-dialog-backdrop{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    border:0;
+    background:rgba(15,23,42,.62);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+  }
+
+  .service-availability-dialog-sheet{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-height:min(94dvh, 920px);
+    overflow:auto;
+    overscroll-behavior:contain;
+    padding:.9rem .9rem calc(.95rem + env(safe-area-inset-bottom));
+    border:1px solid rgba(219,234,254,.98);
+    border-radius:1.65rem 1.65rem 0 0;
+    background:
+      radial-gradient(circle at 0 0, rgba(219,234,254,.7), transparent 33%),
+      radial-gradient(circle at 100% 0, rgba(250,232,255,.5), transparent 30%),
+      linear-gradient(180deg, rgba(255,255,255,.995), rgba(248,250,252,.985));
+    box-shadow:0 -22px 70px rgba(15,23,42,.28);
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .service-availability-dialog-handle{
+    width:2.9rem;
+    height:.25rem;
+    margin:0 auto .72rem;
+    border-radius:9999px;
+    background:#cbd5e1;
+  }
+
+  .service-availability-dialog-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.7rem;
+    padding:0 .1rem .88rem;
+    border-bottom:1px solid rgba(226,232,240,.9);
+  }
+
+  .service-availability-dialog-heading{
+    min-width:0;
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    gap:.68rem;
+    align-items:start;
+  }
+
+  .service-availability-dialog-icon{
+    width:2.4rem;
+    height:2.4rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #bfdbfe;
+    border-radius:.92rem;
+    background:linear-gradient(180deg, #fff, #eff6ff);
+    box-shadow:0 6px 14px rgba(37,99,235,.08);
+    font-size:1.03rem;
+  }
+
+  .service-availability-dialog-eyebrow{
+    margin:0 0 .12rem;
+    color:#2563eb;
+    font-size:.64rem;
+    line-height:1.2;
+    font-weight:900;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+  }
+
+  .service-availability-dialog-title{
+    margin:0;
+    color:#0f172a;
+    font-size:1.1rem;
+    line-height:1.16;
+    font-weight:900;
+    letter-spacing:-.034em;
+  }
+
+  .service-availability-dialog-subtitle{
+    margin:.24rem 0 0;
+    color:#64748b;
+    font-size:.74rem;
+    line-height:1.4;
+  }
+
+  .service-availability-dialog-close{
+    flex:0 0 auto;
+    width:2.42rem;
+    height:2.42rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #dbe3ee;
+    border-radius:9999px;
+    background:rgba(248,250,252,.94);
+    color:#475569;
+    font-size:1.34rem;
+    line-height:1;
+    cursor:pointer;
+    box-shadow:inset 0 1px 0 #fff;
+  }
+
+  .service-availability-loading{
+    min-height:11rem;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:.7rem;
+    color:#64748b;
+    font-size:.78rem;
+    font-weight:750;
+  }
+
+  .service-availability-spinner{
+    width:2rem;
+    height:2rem;
+    border:.2rem solid #dbeafe;
+    border-top-color:#2563eb;
+    border-radius:50%;
+    animation:service-availability-spin .75s linear infinite;
+  }
+
+  @keyframes service-availability-spin{
+    to{ transform:rotate(360deg); }
+  }
+
+  .service-availability-form{
+    display:grid;
+    gap:.78rem;
+    padding-top:.9rem;
+  }
+
+  .service-availability-section{
+    min-width:0;
+    margin:0;
+    padding:.82rem;
+    border:1px solid rgba(219,234,254,.9);
+    border-radius:1.12rem;
+    background:rgba(255,255,255,.78);
+    box-shadow:0 8px 20px rgba(30,64,175,.045), inset 0 1px 0 #fff;
+  }
+
+  .service-availability-section legend{
+    padding:0;
+    color:#0f172a;
+    font-size:.86rem;
+    line-height:1.25;
+    font-weight:880;
+  }
+
+  .service-availability-section-help{
+    margin:.22rem 0 .72rem;
+    color:#64748b;
+    font-size:.68rem;
+    line-height:1.4;
+  }
+
+  .service-availability-section-heading{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.58rem;
+    margin-top:.22rem;
+  }
+
+  .service-availability-section-heading .service-availability-section-help{
+    margin-bottom:0;
+  }
+
+  .service-availability-status-options{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:.48rem;
+  }
+
+  .service-availability-status-option{
+    position:relative;
+    min-height:2.72rem;
+    display:flex;
+    align-items:center;
+    gap:.52rem;
+    padding:.62rem .7rem;
+    border:1px solid #dbe3ee;
+    border-radius:.92rem;
+    background:#fff;
+    color:#334155;
+    font-size:.73rem;
+    line-height:1.25;
+    font-weight:820;
+    cursor:pointer;
+  }
+
+  .service-availability-status-option input{
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    opacity:0;
+  }
+
+  .service-availability-status-dot{
+    width:.72rem;
+    height:.72rem;
+    flex:0 0 auto;
+    border-radius:9999px;
+    background:#22c55e;
+    box-shadow:0 0 0 4px rgba(34,197,94,.12);
+  }
+
+  .service-availability-status-option--limited .service-availability-status-dot{
+    background:#f59e0b;
+    box-shadow:0 0 0 4px rgba(245,158,11,.13);
+  }
+
+  .service-availability-status-option--unavailable .service-availability-status-dot{
+    background:#94a3b8;
+    box-shadow:0 0 0 4px rgba(148,163,184,.16);
+  }
+
+  .service-availability-status-option:has(input:checked){
+    border-color:#60a5fa;
+    background:#eff6ff;
+    color:#1e40af;
+    box-shadow:0 0 0 3px rgba(96,165,250,.16);
+  }
+
+  .service-availability-status-option:has(input:focus-visible){
+    outline:3px solid rgba(96,165,250,.32);
+    outline-offset:2px;
+  }
+
+  .service-availability-week{
+    display:grid;
+    gap:.62rem;
+  }
+
+  .service-availability-day{
+    min-width:0;
+    display:grid;
+    gap:.38rem;
+    padding-bottom:.62rem;
+    border-bottom:1px solid rgba(226,232,240,.85);
+  }
+
+  .service-availability-day:last-child{
+    padding-bottom:0;
+    border-bottom:0;
+  }
+
+  .service-availability-day-label{
+    color:#334155;
+    font-size:.72rem;
+    line-height:1.2;
+    font-weight:850;
+  }
+
+  .service-availability-slot-list{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.36rem;
+  }
+
+  .service-availability-slot-chip{
+    position:relative;
+    min-width:0;
+    cursor:pointer;
+  }
+
+  .service-availability-slot-chip input{
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    opacity:0;
+  }
+
+  .service-availability-slot-chip span{
+    min-height:2rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:.42rem .38rem;
+    border:1px solid #dbe3ee;
+    border-radius:9999px;
+    background:#f8fafc;
+    color:#64748b;
+    font-size:.63rem;
+    line-height:1.12;
+    font-weight:780;
+    text-align:center;
+  }
+
+  .service-availability-slot-chip input:checked + span{
+    border-color:#93c5fd;
+    background:#eff6ff;
+    color:#1d4ed8;
+    box-shadow:inset 0 0 0 1px rgba(37,99,235,.08);
+  }
+
+  .service-availability-slot-chip input:focus-visible + span{
+    outline:3px solid rgba(96,165,250,.3);
+    outline-offset:2px;
+  }
+
+  .service-availability-slot-chip input:disabled + span{
+    cursor:not-allowed;
+    opacity:.5;
+  }
+
+  .service-availability-add-button{
+    min-height:2.16rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.25rem;
+    padding:.5rem .68rem;
+    border:1px solid #bfdbfe;
+    border-radius:9999px;
+    background:#f8fbff;
+    color:#1d4ed8;
+    font:inherit;
+    font-size:.66rem;
+    line-height:1;
+    font-weight:850;
+    cursor:pointer;
+  }
+
+  .service-availability-dynamic-list{
+    display:grid;
+    gap:.58rem;
+    margin-top:.68rem;
+  }
+
+  .service-availability-dynamic-row{
+    min-width:0;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:.55rem;
+    padding:.68rem;
+    border:1px solid rgba(226,232,240,.94);
+    border-radius:.92rem;
+    background:#f8fafc;
+  }
+
+  .service-availability-field{
+    min-width:0;
+    display:grid;
+    gap:.28rem;
+  }
+
+  .service-availability-field > span{
+    color:#475569;
+    font-size:.64rem;
+    line-height:1.2;
+    font-weight:800;
+  }
+
+  .service-availability-control{
+    width:100%;
+    min-height:2.5rem;
+    padding:.6rem .65rem;
+    border:1px solid #d7deea;
+    border-radius:.82rem;
+    outline:none;
+    background:#fff;
+    color:#1e293b;
+    font:inherit;
+    font-size:.76rem;
+    line-height:1.25;
+    box-shadow:inset 0 1px 0 #fff;
+  }
+
+  .service-availability-control:focus{
+    border-color:#60a5fa;
+    box-shadow:0 0 0 3px rgba(96,165,250,.18);
+  }
+
+  .service-availability-special-slots{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.35rem;
+  }
+
+  .service-availability-row-actions{
+    display:flex;
+    justify-content:flex-end;
+  }
+
+  .service-availability-remove-button{
+    min-height:2rem;
+    padding:.43rem .62rem;
+    border:1px solid #fecaca;
+    border-radius:9999px;
+    background:#fff7f7;
+    color:#b91c1c;
+    font:inherit;
+    font-size:.63rem;
+    line-height:1;
+    font-weight:830;
+    cursor:pointer;
+  }
+
+  .service-availability-empty{
+    margin:.7rem 0 0;
+    padding:.68rem;
+    border:1px dashed #cbd5e1;
+    border-radius:.82rem;
+    color:#94a3b8;
+    font-size:.67rem;
+    line-height:1.4;
+    text-align:center;
+  }
+
+  .service-availability-message{
+    padding:.7rem .76rem;
+    border-radius:.9rem;
+    font-size:.72rem;
+    line-height:1.42;
+    font-weight:720;
+  }
+
+  .service-availability-message--error{
+    border:1px solid #fecaca;
+    background:#fef2f2;
+    color:#b91c1c;
+  }
+
+  .service-availability-message--success{
+    border:1px solid #bbf7d0;
+    background:#f0fdf4;
+    color:#166534;
+  }
+
+  .service-availability-dialog-actions{
+    position:sticky;
+    bottom:calc(-.95rem - env(safe-area-inset-bottom));
+    z-index:2;
+    display:grid;
+    grid-template-columns:minmax(0, .72fr) minmax(0, 1.28fr);
+    gap:.5rem;
+    margin:0 -.9rem calc(-.95rem - env(safe-area-inset-bottom));
+    padding:.72rem .9rem calc(.72rem + env(safe-area-inset-bottom));
+    border-top:1px solid rgba(226,232,240,.94);
+    background:rgba(248,250,252,.95);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+  }
+
+  .service-availability-primary-button,
+  .service-availability-secondary-button{
+    min-height:2.75rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.7rem .85rem;
+    border-radius:9999px;
+    font:inherit;
+    font-size:.74rem;
+    line-height:1;
+    font-weight:880;
+    cursor:pointer;
+  }
+
+  .service-availability-primary-button{
+    border:1px solid #2563eb;
+    background:linear-gradient(135deg, #2563eb, #4f46e5 58%, #d946ef);
+    color:#fff;
+    box-shadow:0 10px 22px rgba(79,70,229,.2);
+  }
+
+  .service-availability-secondary-button{
+    border:1px solid #dbe3ee;
+    background:#fff;
+    color:#475569;
+  }
+
+  .service-availability-primary-button:disabled,
+  .service-availability-secondary-button:disabled,
+  .service-availability-add-button:disabled,
+  .service-availability-remove-button:disabled{
+    cursor:wait;
+    opacity:.58;
+  }
+
+  .service-availability-toast{
+    position:fixed;
+    z-index:10080;
+    right:max(1rem, env(safe-area-inset-right));
+    bottom:max(1rem, env(safe-area-inset-bottom));
+    max-width:min(24rem, calc(100vw - 2rem));
+    padding:.72rem .9rem;
+    border:1px solid #bbf7d0;
+    border-radius:.92rem;
+    background:#f0fdf4;
+    color:#166534;
+    font-size:.72rem;
+    line-height:1.4;
+    font-weight:760;
+    box-shadow:0 16px 42px rgba(15,23,42,.2);
+  }
+
+  .service-availability-toast.is-error{
+    border-color:#fecaca;
+    background:#fef2f2;
+    color:#b91c1c;
+  }
+
+  body.service-availability-dialog-open{
+    overflow:hidden;
+  }
+
+  @media (min-width:430px){
+    .service-availability-status-options{
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
+
+    .service-availability-status-option{
+      justify-content:center;
+      padding:.6rem .42rem;
+      text-align:center;
+    }
+
+    .service-availability-slot-list,
+    .service-availability-special-slots{
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+    }
+
+    .service-availability-section-heading{
+      flex-direction:row;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+
+    .service-availability-dynamic-row--special{
+      grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .service-availability-dynamic-row--special .service-availability-special-slots,
+    .service-availability-dynamic-row--special .service-availability-row-actions{
+      grid-column:1 / -1;
+    }
+
+    .service-availability-dynamic-row--absence{
+      grid-template-columns:1fr 1fr;
+    }
+
+    .service-availability-dynamic-row--absence .service-availability-row-actions{
+      grid-column:1 / -1;
+    }
+  }
+
+  @media (max-width:429px){
+    .service-availability-card-heading{
+      flex-direction:column;
+    }
+
+    .service-availability-card-actions > *{
+      flex:1 1 auto;
+    }
+  }
+
+  @media (min-width:680px){
+    .service-availability-dialog{
+      align-items:center;
+      padding:1.25rem;
+    }
+
+    .service-availability-dialog-sheet{
+      max-width:45rem;
+      padding:1.1rem 1.18rem 1.18rem;
+      border-radius:1.65rem;
+      box-shadow:0 30px 90px rgba(15,23,42,.32);
+    }
+
+    .service-availability-dialog-handle{
+      display:none;
+    }
+
+    .service-availability-day{
+      grid-template-columns:minmax(7rem, .55fr) minmax(0, 1.45fr);
+      align-items:center;
+    }
+
+    .service-availability-dialog-actions{
+      bottom:-1.18rem;
+      margin:0 -1.18rem -1.18rem;
+      padding:.78rem 1.18rem;
+    }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .service-availability-spinner{
+      animation-duration:1.8s;
+    }
+  }
+</style>
+
+{% if not (pubblico|default(false)) %}
+<script>
+(function () {
+  const dialog = document.getElementById("service-availability-dialog");
+  if (!dialog || dialog.dataset.initialized === "true") return;
+  dialog.dataset.initialized = "true";
+
+  const csrfToken = {{ csrf_token()|tojson }};
+  const copy = Object.freeze({
+    close: {{ tr('availability.close')|tojson }},
+    loading: {{ tr('availability.loading')|tojson }},
+    specialDate: {{ tr('availability.date')|tojson }},
+    type: {{ tr('availability.type')|tojson }},
+    specialAvailable: {{ tr('availability.special_available')|tojson }},
+    specialUnavailable: {{ tr('availability.special_unavailable')|tojson }},
+    slots: {{ tr('availability.slots')|tojson }},
+    from: {{ tr('availability.start')|tojson }},
+    to: {{ tr('availability.end')|tojson }},
+    remove: {{ tr('availability.remove')|tojson }},
+    save: {{ tr('availability.save')|tojson }},
+    saving: {{ tr('availability.saving')|tojson }},
+    confirming: {{ tr('availability.confirming')|tojson }},
+    confirm: {{ tr('availability.reconfirm')|tojson }},
+    errorLoad: {{ tr('availability.unavailable_feature')|tojson }},
+    errorSave: {{ tr('availability.error_generic')|tojson }},
+    errorInvalidData: {{ tr('availability.error_invalid_data')|tojson }},
+    errorDateRequired: {{ tr('availability.error_date_required')|tojson }},
+    errorDateOrder: {{ tr('availability.error_date_order')|tojson }},
+    errorDuplicateDate: {{ tr('availability.error_duplicate_date')|tojson }},
+    errorSpecialSlots: {{ tr('availability.error_select_slot')|tojson }},
+    saved: {{ tr('availability.saved')|tojson }},
+    reconfirmed: {{ tr('availability.reconfirmed')|tojson }},
+    slotMorning: {{ tr('availability.slot_morning')|tojson }},
+    slotAfternoon: {{ tr('availability.slot_afternoon')|tojson }},
+    slotEvening: {{ tr('availability.slot_evening')|tojson }},
+    slotNight: {{ tr('availability.slot_night')|tojson }}
+  });
+
+  const allowedStates = new Set(["disponibile", "limitata", "non_disponibile"]);
+  const allowedSlots = ["mattina", "pomeriggio", "sera", "notte"];
+  const slotLabels = {
+    mattina: copy.slotMorning,
+    pomeriggio: copy.slotAfternoon,
+    sera: copy.slotEvening,
+    notte: copy.slotNight
+  };
+
+  const sheet = dialog.querySelector(".service-availability-dialog-sheet");
+  const loading = document.getElementById("service-availability-loading");
+  const form = document.getElementById("service-availability-form");
+  const specialList = document.getElementById("service-availability-special-list");
+  const specialEmpty = document.getElementById("service-availability-special-empty");
+  const absenceList = document.getElementById("service-availability-absence-list");
+  const absenceEmpty = document.getElementById("service-availability-absence-empty");
+  const addSpecialButton = document.getElementById("service-availability-add-special");
+  const addAbsenceButton = document.getElementById("service-availability-add-absence");
+  const saveButton = document.getElementById("service-availability-save");
+  const errorElement = document.getElementById("service-availability-error");
+  const successElement = document.getElementById("service-availability-success");
+  const globalMessage = document.getElementById("service-availability-global-message");
+
+  let previousFocus = null;
+  let busy = false;
+  let requestSequence = 0;
+  let currentVersion = 0;
+  let toastTimer = 0;
+
+  function setHidden(element, hidden) {
+    if (element) element.classList.toggle("service-availability-hidden", Boolean(hidden));
+  }
+
+  function asArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
+  function normalizeSlots(value) {
+    let slots = value;
+    if (typeof slots === "string") {
+      try {
+        slots = JSON.parse(slots);
+      } catch (_) {
+        slots = [];
+      }
+    }
+    return Array.from(new Set(asArray(slots).filter(slot => allowedSlots.includes(slot))));
+  }
+
+  function normalizeAvailability(payload) {
+    const root = payload && typeof payload === "object" ? payload : {};
+    const nested = root.disponibilita
+      || (root.data && root.data.disponibilita)
+      || root.availability
+      || root.data
+      || root;
+    const source = nested && typeof nested === "object" ? nested : {};
+    const state = source.stato || source.stato_generale || "disponibile";
+
+    return {
+      versione: Number(root.versione ?? source.versione ?? 0) || 0,
+      stato: allowedStates.has(state) ? state : "disponibile",
+      settimanale: asArray(source.settimanale).map(item => ({
+        giorno_settimana: Number(item && item.giorno_settimana),
+        fascia: String((item && item.fascia) || "")
+      })).filter(item => (
+        item.giorno_settimana >= 1
+        && item.giorno_settimana <= 7
+        && allowedSlots.includes(item.fascia)
+      )),
+      date_speciali: asArray(source.date_speciali).map(item => ({
+        data: String((item && item.data) || ""),
+        tipo: item && item.tipo === "non_disponibile" ? "non_disponibile" : "disponibile",
+        fasce: normalizeSlots(item && item.fasce)
+      })),
+      assenze: asArray(source.assenze).map(item => ({
+        data_inizio: String((item && item.data_inizio) || ""),
+        data_fine: String((item && item.data_fine) || "")
+      }))
+    };
+  }
+
+  function clearMessages() {
+    if (errorElement) {
+      errorElement.textContent = "";
+      setHidden(errorElement, true);
+    }
+    if (successElement) {
+      successElement.textContent = "";
+      setHidden(successElement, true);
+    }
+  }
+
+  function showError(message, focusTarget) {
+    if (!errorElement) return;
+    errorElement.textContent = message || copy.errorInvalidData;
+    setHidden(errorElement, false);
+    if (focusTarget && typeof focusTarget.focus === "function") {
+      focusTarget.focus({ preventScroll: true });
+      focusTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      errorElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function showToast(message, isError) {
+    if (!globalMessage) return;
+    window.clearTimeout(toastTimer);
+    globalMessage.textContent = message;
+    globalMessage.classList.toggle("is-error", Boolean(isError));
+    setHidden(globalMessage, false);
+    toastTimer = window.setTimeout(() => setHidden(globalMessage, true), 4200);
+  }
+
+  function setBusy(value) {
+    busy = Boolean(value);
+    if (saveButton) saveButton.disabled = busy;
+    if (addSpecialButton) addSpecialButton.disabled = busy;
+    if (addAbsenceButton) addAbsenceButton.disabled = busy;
+    dialog.querySelectorAll("[data-service-availability-remove]").forEach(button => {
+      button.disabled = busy;
+    });
+    dialog.querySelectorAll("[data-service-availability-close]").forEach(button => {
+      button.disabled = busy;
+    });
+  }
+
+  function createElement(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+  }
+
+  function createField(labelText, control) {
+    const label = createElement("label", "service-availability-field");
+    label.append(createElement("span", "", labelText), control);
+    return label;
+  }
+
+  function createDateInput(value) {
+    const input = createElement("input", "service-availability-control");
+    input.type = "date";
+    input.value = value || "";
+    return input;
+  }
+
+  function createRemoveButton() {
+    const wrapper = createElement("div", "service-availability-row-actions");
+    const button = createElement("button", "service-availability-remove-button", copy.remove);
+    button.type = "button";
+    button.dataset.serviceAvailabilityRemove = "";
+    button.addEventListener("click", () => {
+      if (busy) return;
+      const row = button.closest(".service-availability-dynamic-row");
+      if (row) row.remove();
+      updateEmptyStates();
+    });
+    wrapper.appendChild(button);
+    return wrapper;
+  }
+
+  function createSlotChoices(selectedSlots) {
+    const wrapper = createElement("div", "service-availability-special-slots");
+    const selected = new Set(normalizeSlots(selectedSlots));
+    wrapper.setAttribute("role", "group");
+    wrapper.setAttribute("aria-label", copy.slots);
+
+    allowedSlots.forEach(slot => {
+      const label = createElement("label", "service-availability-slot-chip");
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = slot;
+      input.checked = selected.has(slot);
+      const text = createElement("span", "", slotLabels[slot]);
+      label.append(input, text);
+      wrapper.appendChild(label);
+    });
+    return wrapper;
+  }
+
+  function syncSpecialRow(row) {
+    if (!row) return;
+    const typeInput = row.querySelector("[data-service-availability-special-type]");
+    const disabled = !typeInput || typeInput.value === "non_disponibile";
+    row.querySelectorAll(".service-availability-special-slots input").forEach(input => {
+      input.disabled = disabled;
+    });
+  }
+
+  function addSpecialRow(value) {
+    const item = value || {};
+    const row = createElement(
+      "div",
+      "service-availability-dynamic-row service-availability-dynamic-row--special"
+    );
+    row.dataset.serviceAvailabilitySpecial = "";
+
+    const dateInput = createDateInput(item.data);
+    dateInput.dataset.serviceAvailabilitySpecialDate = "";
+
+    const typeInput = createElement("select", "service-availability-control");
+    typeInput.dataset.serviceAvailabilitySpecialType = "";
+    const availableOption = createElement("option", "", copy.specialAvailable);
+    availableOption.value = "disponibile";
+    const unavailableOption = createElement("option", "", copy.specialUnavailable);
+    unavailableOption.value = "non_disponibile";
+    typeInput.append(availableOption, unavailableOption);
+    typeInput.value = item.tipo === "non_disponibile" ? "non_disponibile" : "disponibile";
+
+    const slots = createSlotChoices(item.fasce);
+    typeInput.addEventListener("change", () => syncSpecialRow(row));
+
+    row.append(
+      createField(copy.specialDate, dateInput),
+      createField(copy.type, typeInput),
+      slots,
+      createRemoveButton()
+    );
+    specialList.appendChild(row);
+    syncSpecialRow(row);
+    updateEmptyStates();
+    return row;
+  }
+
+  function addAbsenceRow(value) {
+    const item = value || {};
+    const row = createElement(
+      "div",
+      "service-availability-dynamic-row service-availability-dynamic-row--absence"
+    );
+    row.dataset.serviceAvailabilityAbsence = "";
+
+    const startInput = createDateInput(item.data_inizio);
+    startInput.dataset.serviceAvailabilityAbsenceStart = "";
+    const endInput = createDateInput(item.data_fine);
+    endInput.dataset.serviceAvailabilityAbsenceEnd = "";
+
+    row.append(
+      createField(copy.from, startInput),
+      createField(copy.to, endInput),
+      createRemoveButton()
+    );
+    absenceList.appendChild(row);
+    updateEmptyStates();
+    return row;
+  }
+
+  function updateEmptyStates() {
+    setHidden(specialEmpty, Boolean(specialList && specialList.children.length));
+    setHidden(absenceEmpty, Boolean(absenceList && absenceList.children.length));
+  }
+
+  function populateForm(value) {
+    const availability = normalizeAvailability(value);
+    currentVersion = availability.versione;
+    clearMessages();
+
+    const statusInput = form.querySelector(
+      `[name="service-availability-status"][value="${availability.stato}"]`
+    );
+    if (statusInput) statusInput.checked = true;
+
+    const weekly = new Set(availability.settimanale.map(item => (
+      `${item.giorno_settimana}:${item.fascia}`
+    )));
+    form.querySelectorAll('[name="service-availability-weekly"]').forEach(input => {
+      input.checked = weekly.has(input.value);
+    });
+
+    specialList.replaceChildren();
+    availability.date_speciali.forEach(addSpecialRow);
+    absenceList.replaceChildren();
+    availability.assenze.forEach(addAbsenceRow);
+    updateEmptyStates();
+  }
+
+  function payloadFromForm() {
+    const statusInput = form.querySelector('[name="service-availability-status"]:checked');
+    if (!statusInput || !allowedStates.has(statusInput.value)) {
+      throw { message: copy.errorInvalidData, target: form.querySelector('[name="service-availability-status"]') };
+    }
+
+    const weekly = Array.from(
+      form.querySelectorAll('[name="service-availability-weekly"]:checked')
+    ).map(input => ({
+      giorno_settimana: Number(input.dataset.day),
+      fascia: input.dataset.slot
+    }));
+
+    const seenDates = new Set();
+    const specialDates = [];
+    for (const row of specialList.querySelectorAll("[data-service-availability-special]")) {
+      const dateInput = row.querySelector("[data-service-availability-special-date]");
+      const typeInput = row.querySelector("[data-service-availability-special-type]");
+      const date = dateInput.value;
+      if (!date) {
+        throw { message: copy.errorDateRequired, target: dateInput };
+      }
+      if (seenDates.has(date)) {
+        throw { message: copy.errorDuplicateDate, target: dateInput };
+      }
+      seenDates.add(date);
+
+      const type = typeInput.value === "non_disponibile"
+        ? "non_disponibile"
+        : "disponibile";
+      const slots = type === "disponibile"
+        ? Array.from(row.querySelectorAll(".service-availability-special-slots input:checked"))
+            .map(input => input.value)
+        : [];
+      if (type === "disponibile" && slots.length === 0) {
+        throw {
+          message: copy.errorSpecialSlots,
+          target: row.querySelector(".service-availability-special-slots input")
+        };
+      }
+      specialDates.push({ data: date, tipo: type, fasce: slots });
+    }
+
+    const absences = [];
+    for (const row of absenceList.querySelectorAll("[data-service-availability-absence]")) {
+      const startInput = row.querySelector("[data-service-availability-absence-start]");
+      const endInput = row.querySelector("[data-service-availability-absence-end]");
+      if (!startInput.value || !endInput.value) {
+        throw { message: copy.errorDateRequired, target: startInput.value ? endInput : startInput };
+      }
+      if (endInput.value < startInput.value) {
+        throw { message: copy.errorDateOrder, target: endInput };
+      }
+      absences.push({
+        data_inizio: startInput.value,
+        data_fine: endInput.value
+      });
+    }
+
+    return {
+      versione: currentVersion,
+      disponibilita: {
+        stato: statusInput.value,
+        settimanale: weekly,
+        date_speciali: specialDates,
+        assenze: absences
+      }
+    };
+  }
+
+  function localizedApiError(data, fallback) {
+    const code = String((data && (data.code || data.error_code)) || "");
+    if (code === "version_conflict" || code === "conflict") {
+      return copy.errorLoad;
+    }
+    if (code === "invalid_date" || code === "invalid_date_range") {
+      return copy.errorDateOrder;
+    }
+    if (code === "duplicate_special_date") return copy.errorDuplicateDate;
+    if (code === "missing_special_slots") return copy.errorSpecialSlots;
+    return fallback;
+  }
+
+  async function parseResponse(response, fallback) {
+    let data = {};
+    let parsed = false;
+    try {
+      data = await response.json();
+      parsed = true;
+    } catch (_) {
+      data = {};
+    }
+    if (!parsed || !response.ok || data.ok === false) {
+      throw new Error(localizedApiError(data, fallback));
+    }
+    return data;
+  }
+
+  function focusableElements() {
+    return Array.from(dialog.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled])'
+    )).filter(element => element.offsetParent !== null);
+  }
+
+  function setOpenHooksExpanded(expanded) {
+    document.querySelectorAll("[data-service-availability-open]").forEach(button => {
+      button.setAttribute("aria-expanded", expanded ? "true" : "false");
+      button.setAttribute("aria-controls", "service-availability-dialog");
+    });
+  }
+
+  function openDialog(trigger) {
+    previousFocus = trigger || document.activeElement;
+    dialog.classList.remove("service-availability-hidden");
+    dialog.setAttribute("aria-hidden", "false");
+    document.body.classList.add("service-availability-dialog-open");
+    setOpenHooksExpanded(true);
+    if (sheet) sheet.scrollTop = 0;
+  }
+
+  function closeDialog() {
+    if (busy) return;
+    requestSequence += 1;
+    dialog.classList.add("service-availability-hidden");
+    dialog.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("service-availability-dialog-open");
+    setOpenHooksExpanded(false);
+    if (previousFocus && typeof previousFocus.focus === "function") {
+      previousFocus.focus({ preventScroll: true });
+    }
+  }
+
+  async function loadAvailability(trigger) {
+    const sequence = ++requestSequence;
+    openDialog(trigger);
+    clearMessages();
+    setHidden(form, true);
+    setHidden(loading, false);
+
+    try {
+      const response = await fetch("/api/utente/disponibilita", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+      const data = await parseResponse(response, copy.errorLoad);
+      if (sequence !== requestSequence) return;
+      populateForm(data);
+      setHidden(loading, true);
+      setHidden(form, false);
+      window.requestAnimationFrame(() => {
+        const first = form.querySelector('[name="service-availability-status"]:checked')
+          || form.querySelector("input, select, button");
+        if (first) first.focus({ preventScroll: true });
+      });
+    } catch (error) {
+      if (sequence !== requestSequence) return;
+      setHidden(loading, true);
+      setHidden(form, false);
+      showError(error.message || copy.errorLoad);
+    }
+  }
+
+  async function saveAvailability(event) {
+    event.preventDefault();
+    if (busy) return;
+    clearMessages();
+
+    let payload;
+    try {
+      payload = payloadFromForm();
+    } catch (validationError) {
+      showError(
+        validationError.message || copy.errorInvalidData,
+        validationError.target || null
+      );
+      return;
+    }
+
+    setBusy(true);
+    saveButton.textContent = copy.saving;
+    try {
+      const response = await fetch("/api/utente/disponibilita", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify(payload)
+      });
+      await parseResponse(response, copy.errorSave);
+      successElement.textContent = copy.saved;
+      setHidden(successElement, false);
+      window.setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      showError(error.message || copy.errorSave);
+      setBusy(false);
+      saveButton.textContent = copy.save;
+    }
+  }
+
+  async function reconfirmAvailability(button) {
+    if (!button || button.disabled) return;
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = copy.confirming;
+
+    try {
+      let version = Number(
+        button.dataset.availabilityVersion
+        || button.dataset.versione
+        || 0
+      );
+      if (version < 1) {
+        const stateResponse = await fetch("/api/utente/disponibilita", {
+          method: "GET",
+          credentials: "same-origin",
+          headers: {
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+          }
+        });
+        const stateData = await parseResponse(stateResponse, copy.errorLoad);
+        version = normalizeAvailability(stateData).versione;
+      }
+      if (version < 1) throw new Error(copy.errorLoad);
+
+      const response = await fetch("/api/utente/disponibilita/riconferma", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({ versione: version })
+      });
+      await parseResponse(response, copy.errorSave);
+      showToast(copy.reconfirmed, false);
+      window.setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = originalLabel || copy.confirm;
+      showToast(error.message || copy.errorSave, true);
+    }
+  }
+
+  document.addEventListener("click", event => {
+    const openButton = event.target.closest("[data-service-availability-open]");
+    if (openButton) {
+      event.preventDefault();
+      loadAvailability(openButton);
+      return;
+    }
+
+    const reconfirmButton = event.target.closest("[data-service-availability-reconfirm]");
+    if (reconfirmButton) {
+      event.preventDefault();
+      reconfirmAvailability(reconfirmButton);
+    }
+  });
+
+  dialog.querySelectorAll("[data-service-availability-close]").forEach(button => {
+    button.addEventListener("click", closeDialog);
+  });
+  addSpecialButton.addEventListener("click", () => {
+    const row = addSpecialRow({ tipo: "disponibile", fasce: [] });
+    const input = row.querySelector("input[type=date]");
+    if (input) input.focus({ preventScroll: true });
+  });
+  addAbsenceButton.addEventListener("click", () => {
+    const row = addAbsenceRow({});
+    const input = row.querySelector("input[type=date]");
+    if (input) input.focus({ preventScroll: true });
+  });
+  form.addEventListener("submit", saveAvailability);
+
+  document.addEventListener("keydown", event => {
+    if (dialog.classList.contains("service-availability-hidden")) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDialog();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = focusableElements();
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  setOpenHooksExpanded(false);
+  updateEmptyStates();
+})();
+</script>
+{% endif %}

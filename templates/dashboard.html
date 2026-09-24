@@ -765,6 +765,10 @@
       {% include 'partials/schede_profilo_dialog.html' %}
     {% endif %}
 
+    {% if disponibilita_servizi_disponibile|default(false) %}
+      {% include 'partials/disponibilita_servizi_dialog.html' %}
+    {% endif %}
+
     <!-- 🟨 TAB: FOTO -->
     <div id="tab-foto" class="tab-pane hidden">
       {% include 'partials/tab_foto_privato.html' %}

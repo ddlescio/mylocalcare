@@ -104,6 +104,11 @@ from profilo_schede import (
     public_verification_label,
     verification_reset_patch,
 )
+from disponibilita_servizi import (
+    calcola_freschezza_disponibilita,
+    normalize_disponibilita_payload,
+    serializza_disponibilita_pubblica,
+)
 from i18n import (
     LEGAL_DOCUMENT_VERSION,
     SUPPORTED_LANGUAGES,
@@ -16633,6 +16638,21 @@ def _schede_profilo_table_exists(cur):
     return cur.fetchone() is not None
 
 
+def _disponibilita_servizi_table_exists(cur):
+    if app.config.get("IS_POSTGRES"):
+        cur.execute(
+            "SELECT to_regclass('public.disponibilita_profili') AS tabella"
+        )
+        return bool(fetchone_value(cur.fetchone()))
+    cur.execute(sql("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'disponibilita_profili'
+        LIMIT 1
+    """))
+    return cur.fetchone() is not None
+
+
 def carica_catalogo_schede_profilo(cur, *, solo_attive=True):
     where = "WHERE q.attivo = TRUE" if solo_attive else ""
     cur.execute(sql(f"""
@@ -16773,6 +16793,357 @@ def _schede_profilo_context(cur, utente_id, *, pubblico=False):
         return [], group_cards_by_legacy_key([]), [], False
 
 
+def _disponibilita_servizi_iso(value):
+    """Converte date DB in una forma JSON stabile senza alterarne il fuso."""
+
+    if value is None:
+        return None
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    return str(value)
+
+
+def carica_disponibilita_servizi(cur, utente_id, *, pubblica=False):
+    """Carica la disponibilita ai servizi, tenendola distinta dai contatti."""
+
+    cur.execute(sql("""
+        SELECT utente_id, stato_generale, fuso_orario, confermata_at,
+               ultimo_promemoria_at, versione, created_at, updated_at
+        FROM disponibilita_profili
+        WHERE utente_id = ?
+        LIMIT 1
+    """), (int(utente_id),))
+    profile_row = cur.fetchone()
+    if not profile_row:
+        return None
+
+    profile = dict(profile_row)
+
+    cur.execute(sql("""
+        SELECT giorno_settimana, fascia
+        FROM disponibilita_settimanale
+        WHERE utente_id = ?
+        ORDER BY giorno_settimana,
+                 CASE fascia
+                     WHEN 'mattina' THEN 1
+                     WHEN 'pomeriggio' THEN 2
+                     WHEN 'sera' THEN 3
+                     WHEN 'notte' THEN 4
+                     ELSE 5
+                 END
+    """), (int(utente_id),))
+    weekly = [
+        {
+            "giorno_settimana": int(row["giorno_settimana"]),
+            "fascia": row["fascia"],
+        }
+        for row in cur.fetchall()
+    ]
+
+    cur.execute(sql("""
+        SELECT data, tipo, fasce
+        FROM disponibilita_date_speciali
+        WHERE utente_id = ?
+        ORDER BY data, id
+    """), (int(utente_id),))
+    special_dates = []
+    for row in cur.fetchall():
+        raw_slots = row["fasce"]
+        if isinstance(raw_slots, str):
+            try:
+                raw_slots = json.loads(raw_slots)
+            except (TypeError, ValueError):
+                raw_slots = []
+        special_dates.append({
+            "data": _disponibilita_servizi_iso(row["data"])[:10],
+            "tipo": row["tipo"],
+            "fasce": list(raw_slots or []),
+        })
+
+    cur.execute(sql("""
+        SELECT data_inizio, data_fine
+        FROM disponibilita_assenze
+        WHERE utente_id = ?
+        ORDER BY data_inizio, data_fine, id
+    """), (int(utente_id),))
+    absences = [
+        {
+            "data_inizio": _disponibilita_servizi_iso(row["data_inizio"])[:10],
+            "data_fine": _disponibilita_servizi_iso(row["data_fine"])[:10],
+        }
+        for row in cur.fetchall()
+    ]
+
+    availability = normalize_disponibilita_payload({
+        "stato": profile["stato_generale"],
+        "settimanale": weekly,
+        "date_speciali": special_dates,
+        "assenze": absences,
+    })
+    confirmed_at = _disponibilita_servizi_iso(profile.get("confermata_at"))
+
+    if pubblica:
+        public_data = serializza_disponibilita_pubblica(
+            availability,
+            confermata_at=confirmed_at,
+        )
+        public_data["configurata"] = True
+        return public_data
+
+    availability.update({
+        "configurata": True,
+        "versione": int(profile.get("versione") or 1),
+        "fuso_orario": profile.get("fuso_orario") or "Europe/Rome",
+        "confermata_at": confirmed_at,
+        "ultimo_promemoria_at": _disponibilita_servizi_iso(
+            profile.get("ultimo_promemoria_at")
+        ),
+        "updated_at": _disponibilita_servizi_iso(profile.get("updated_at")),
+        "freschezza": calcola_freschezza_disponibilita(confirmed_at),
+    })
+    return availability
+
+
+def _disponibilita_servizi_context(cur, utente_id, *, pubblica=False):
+    """Mantiene operativo il profilo se il codice precede la migrazione DB."""
+
+    try:
+        if not _disponibilita_servizi_table_exists(cur):
+            return None, False
+        return carica_disponibilita_servizi(
+            cur,
+            utente_id,
+            pubblica=pubblica,
+        ), True
+    except Exception as exc:
+        log_exception_safe(
+            "Disponibilita servizi non disponibile",
+            exc,
+            {"utente_id": int(utente_id), "pubblica": bool(pubblica)},
+            production=True,
+        )
+        return None, False
+
+
+def _disponibilita_servizi_request_version(payload):
+    try:
+        version = int((payload or {}).get("versione") or 0)
+    except (TypeError, ValueError):
+        raise ValueError("La disponibilita e cambiata. Riaprila e riprova.")
+    if version < 0:
+        raise ValueError("La disponibilita e cambiata. Riaprila e riprova.")
+    return version
+
+
+@app.route("/api/utente/disponibilita", methods=["GET", "PUT"])
+@login_required
+def api_utente_disponibilita_servizi():
+    if request.method == "PUT":
+        verify_csrf()
+
+    user_id = int(g.utente["id"])
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+
+    try:
+        if request.method == "GET":
+            availability = carica_disponibilita_servizi(cur, user_id)
+            return jsonify({
+                "ok": True,
+                "configurata": bool(availability),
+                "disponibilita": availability,
+            })
+
+        request_payload = request.get_json(silent=True)
+        if not isinstance(request_payload, dict):
+            raise ValueError("Dati disponibilita non validi.")
+
+        submitted_version = _disponibilita_servizi_request_version(
+            request_payload
+        )
+        normalized = normalize_disponibilita_payload(
+            request_payload.get("disponibilita")
+        )
+
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+        lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+        cur.execute(sql(f"""
+            SELECT versione
+            FROM disponibilita_profili
+            WHERE utente_id = ?{lock_suffix}
+        """), (user_id,))
+        existing = cur.fetchone()
+        current_version = int(existing["versione"] or 1) if existing else 0
+
+        if submitted_version != current_version:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": "La disponibilita e cambiata. Riaprila e riprova.",
+            }), 409
+
+        if existing:
+            cur.execute(sql("""
+                UPDATE disponibilita_profili
+                SET stato_generale = ?, fuso_orario = 'Europe/Rome',
+                    confermata_at = CURRENT_TIMESTAMP,
+                    ultimo_promemoria_at = NULL,
+                    versione = versione + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE utente_id = ? AND versione = ?
+            """), (
+                normalized["stato"],
+                user_id,
+                current_version,
+            ))
+            if cur.rowcount != 1:
+                _schede_profilo_rollback(cur)
+                return jsonify({
+                    "ok": False,
+                    "message": "La disponibilita e cambiata. Riaprila e riprova.",
+                }), 409
+        else:
+            cur.execute(sql("""
+                INSERT INTO disponibilita_profili (
+                    utente_id, stato_generale, fuso_orario, confermata_at,
+                    ultimo_promemoria_at, versione, created_at, updated_at
+                ) VALUES (
+                    ?, ?, 'Europe/Rome', CURRENT_TIMESTAMP, NULL, 1,
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+            """), (user_id, normalized["stato"]))
+
+        for table in (
+            "disponibilita_settimanale",
+            "disponibilita_date_speciali",
+            "disponibilita_assenze",
+        ):
+            cur.execute(sql(f"DELETE FROM {table} WHERE utente_id = ?"), (user_id,))
+
+        if normalized["settimanale"]:
+            cur.executemany(sql("""
+                INSERT INTO disponibilita_settimanale (
+                    utente_id, giorno_settimana, fascia, created_at
+                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            """), [
+                (user_id, row["giorno_settimana"], row["fascia"])
+                for row in normalized["settimanale"]
+            ])
+
+        if normalized["date_speciali"]:
+            cur.executemany(sql("""
+                INSERT INTO disponibilita_date_speciali (
+                    utente_id, data, tipo, fasce, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """), [
+                (
+                    user_id,
+                    row["data"],
+                    row["tipo"],
+                    json.dumps(row["fasce"], ensure_ascii=False),
+                )
+                for row in normalized["date_speciali"]
+            ])
+
+        if normalized["assenze"]:
+            cur.executemany(sql("""
+                INSERT INTO disponibilita_assenze (
+                    utente_id, data_inizio, data_fine,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """), [
+                (user_id, row["data_inizio"], row["data_fine"])
+                for row in normalized["assenze"]
+            ])
+
+        _schede_profilo_commit(cur)
+        availability = carica_disponibilita_servizi(cur, user_id)
+        return jsonify({
+            "ok": True,
+            "configurata": True,
+            "disponibilita": availability,
+        })
+
+    except ValueError as exc:
+        _schede_profilo_rollback(cur)
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore API disponibilita servizi",
+            exc,
+            {"utente_id": user_id, "metodo": request.method},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": "La funzione non e ancora disponibile o si e verificato un errore.",
+        }), 503
+
+
+@app.route("/api/utente/disponibilita/riconferma", methods=["POST"])
+@login_required
+def api_utente_riconferma_disponibilita_servizi():
+    verify_csrf()
+    user_id = int(g.utente["id"])
+    request_payload = request.get_json(silent=True)
+    if not isinstance(request_payload, dict):
+        return jsonify({"ok": False, "message": "Dati non validi."}), 400
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        submitted_version = _disponibilita_servizi_request_version(
+            request_payload
+        )
+        if submitted_version < 1:
+            return jsonify({
+                "ok": False,
+                "message": "Imposta prima la disponibilita per i tuoi servizi.",
+            }), 400
+
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+        cur.execute(sql("""
+            UPDATE disponibilita_profili
+            SET confermata_at = CURRENT_TIMESTAMP,
+                ultimo_promemoria_at = NULL,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE utente_id = ? AND versione = ?
+        """), (user_id, submitted_version))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": "La disponibilita e cambiata. Riaprila e riprova.",
+            }), 409
+        _schede_profilo_commit(cur)
+
+        availability = carica_disponibilita_servizi(cur, user_id)
+        return jsonify({
+            "ok": True,
+            "configurata": True,
+            "disponibilita": availability,
+        })
+    except ValueError as exc:
+        _schede_profilo_rollback(cur)
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore riconferma disponibilita servizi",
+            exc,
+            {"utente_id": user_id},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": "Non e stato possibile riconfermare la disponibilita.",
+        }), 503
+
+
 # --- Dashboard: carica anche i nuovi campi (sostituisci la tua dashboard() attuale) ---
 @app.route('/utente/dashboard')
 @login_required
@@ -16866,6 +17237,10 @@ def dashboard():
         catalogo_schede_profilo,
         schede_profilo_disponibili,
     ) = _schede_profilo_context(c, utente["id"], pubblico=False)
+    (
+        disponibilita_servizi_private,
+        disponibilita_servizi_disponibile,
+    ) = _disponibilita_servizi_context(c, utente["id"], pubblica=False)
 
     # 🔹 Ritorna la dashboard con gli annunci caricati
     return render_template(
@@ -16881,6 +17256,8 @@ def dashboard():
         schede_profilo_private_per_legacy=schede_profilo_private_per_legacy,
         catalogo_schede_profilo=catalogo_schede_profilo,
         schede_profilo_disponibili=schede_profilo_disponibili,
+        disponibilita_servizi_private=disponibilita_servizi_private,
+        disponibilita_servizi_disponibile=disponibilita_servizi_disponibile,
         pubblico=False,
         page="profilo"
     )
@@ -25680,6 +26057,15 @@ def elimina_account_step2():
                     WHERE utente_id = ?
                 """), (user_id,))
 
+            # La riga utente viene anonimizzata, quindi la disponibilità ai
+            # servizi non verrebbe rimossa dalla FK. Eliminiamo il profilo
+            # principale: settimana, eccezioni e assenze cadono in cascata.
+            if _disponibilita_servizi_table_exists(cur):
+                cur.execute(sql("""
+                    DELETE FROM disponibilita_profili
+                    WHERE utente_id = ?
+                """), (user_id,))
+
             # Gli interessi lasciati dall'utente vanno rimossi anche se
             # la riga utente verrà anonimizzata anziché cancellata.
             cur.execute(sql("""
@@ -26832,6 +27218,10 @@ def profilo_pubblico(id):
         _catalogo_schede_profilo,
         schede_profilo_disponibili,
     ) = _schede_profilo_context(c, utente["id"], pubblico=True)
+    (
+        disponibilita_servizi_public,
+        disponibilita_servizi_disponibile,
+    ) = _disponibilita_servizi_context(c, utente["id"], pubblica=True)
 
 
     # =========================================================
@@ -26875,6 +27265,8 @@ def profilo_pubblico(id):
         schede_profilo_pubbliche=schede_profilo_pubbliche,
         schede_profilo_pubbliche_per_legacy=schede_profilo_pubbliche_per_legacy,
         schede_profilo_disponibili=schede_profilo_disponibili,
+        disponibilita_servizi_public=disponibilita_servizi_public,
+        disponibilita_servizi_disponibile=disponibilita_servizi_disponibile,
 
         offro_presenti=offro_presenti,
         cerco_presenti=cerco_presenti,

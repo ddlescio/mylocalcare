@@ -1646,6 +1646,127 @@ def crea_tabelle_schede_profilo():
     print("✅ Tabelle schede profilo e verifiche pronte.")
 
 
+def crea_tabelle_disponibilita_servizi():
+    """Crea la disponibilità strutturata, unica per il profilo utente.
+
+    ``utenti.orari`` resta una preferenza di contatto separata e non viene
+    migrato né interpretato come disponibilità per i servizi.
+    """
+
+    conn = get_conn()
+    c = conn.cursor()
+    date_type = "DATE" if IS_POSTGRES else "TEXT"
+
+    try:
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS disponibilita_profili (
+                utente_id INTEGER PRIMARY KEY,
+                stato_generale TEXT NOT NULL DEFAULT 'disponibile' CHECK (
+                    stato_generale IN (
+                        'disponibile', 'limitata', 'non_disponibile'
+                    )
+                ),
+                fuso_orario TEXT NOT NULL DEFAULT 'Europe/Rome',
+                confermata_at {dt_col()},
+                ultimo_promemoria_at {dt_col()},
+                versione INTEGER NOT NULL DEFAULT 1 CHECK (versione >= 1),
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE
+            );
+        """))
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS disponibilita_settimanale (
+                id {pk_col()},
+                utente_id INTEGER NOT NULL,
+                giorno_settimana INTEGER NOT NULL CHECK (
+                    giorno_settimana BETWEEN 1 AND 7
+                ),
+                fascia TEXT NOT NULL CHECK (
+                    fascia IN ('mattina', 'pomeriggio', 'sera', 'notte')
+                ),
+                created_at {dt_col(True)} NOT NULL,
+                UNIQUE (utente_id, giorno_settimana, fascia),
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE
+            );
+        """))
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS disponibilita_date_speciali (
+                id {pk_col()},
+                utente_id INTEGER NOT NULL,
+                data {date_type} NOT NULL,
+                tipo TEXT NOT NULL CHECK (
+                    tipo IN ('disponibile', 'non_disponibile')
+                ),
+                fasce TEXT NOT NULL DEFAULT '[]',
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE
+            );
+        """))
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS disponibilita_assenze (
+                id {pk_col()},
+                utente_id INTEGER NOT NULL,
+                data_inizio {date_type} NOT NULL,
+                data_fine {date_type} NOT NULL,
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                CHECK (data_fine >= data_inizio),
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE
+            );
+        """))
+
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_disponibilita_profili_stato
+            ON disponibilita_profili (stato_generale, confermata_at);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_disponibilita_profili_promemoria
+            ON disponibilita_profili (ultimo_promemoria_at, confermata_at);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_disponibilita_settimanale_utente
+            ON disponibilita_settimanale (utente_id, giorno_settimana);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_disponibilita_date_utente
+            ON disponibilita_date_speciali (utente_id, data);
+        """))
+        c.execute(sql("""
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_disponibilita_date_utente
+            ON disponibilita_date_speciali (utente_id, data);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_disponibilita_assenze_utente
+            ON disponibilita_assenze (utente_id, data_inizio, data_fine);
+        """))
+        c.execute(sql("""
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_disponibilita_assenze_utente
+            ON disponibilita_assenze (utente_id, data_inizio, data_fine);
+        """))
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+        conn.close()
+
+    print("✅ Tabelle disponibilità servizi pronte.")
+
+
 def semina_catalogo_qualifiche():
     """Inserisce soltanto le voci mancanti del catalogo iniziale.
 
@@ -2166,6 +2287,7 @@ def inizializza_database():
     crea_tabella_revisioni_profilo()
     crea_tabelle_schede_profilo()
     semina_catalogo_qualifiche()
+    crea_tabelle_disponibilita_servizi()
 
     crea_tabella_operatori()
     crea_tabella_annunci()

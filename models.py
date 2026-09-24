@@ -1750,6 +1750,7 @@ def elimina_utente(id):
     - push subscription
     - revisioni profilo
     - schede strutturate di esperienze, formazione e certificazioni
+    - disponibilità strutturata per i servizi
     - video call log
     - servizi attivi collegati all'utente o ai suoi annunci
     - interessi lasciati dall'utente o ricevuti dai suoi annunci
@@ -1926,6 +1927,29 @@ def elimina_utente(id):
                     DELETE FROM schede_profilo
                     WHERE utente_id = ?
                 """), (id,))
+
+        # Anche la disponibilità è collegata a una riga utente che viene
+        # anonimizzata e non cancellata. La riga principale va quindi rimossa
+        # esplicitamente; settimana, date speciali e assenze cadono in cascata.
+        if is_postgres():
+            cur.execute(sql(
+                "SELECT to_regclass('public.disponibilita_profili') AS tabella"
+            ))
+            disponibilita_presente = bool(fetchone_value(cur.fetchone()))
+        else:
+            cur.execute(sql("""
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'disponibilita_profili'
+                LIMIT 1
+            """))
+            disponibilita_presente = cur.fetchone() is not None
+
+        if disponibilita_presente:
+            cur.execute(sql("""
+                DELETE FROM disponibilita_profili
+                WHERE utente_id = ?
+            """), (id,))
 
         # La riga utente viene anonimizzata, non cancellata: rimuoviamo
         # quindi esplicitamente gli interessi lasciati dall'account.
