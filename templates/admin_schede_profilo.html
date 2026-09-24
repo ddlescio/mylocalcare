@@ -11,8 +11,9 @@
           Schede esperienze e qualifiche
         </h1>
         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-          Le schede sono dichiarate dagli utenti. Registra soltanto il controllo realmente svolto:
-          “Documento visionato” oppure “Riscontro effettuato”.
+          Le schede sono visibili subito come dichiarazioni dell’utente: qui non ne approvi la
+          pubblicazione. Registra soltanto il controllo realmente svolto, così il profilo potrà
+          mostrare con precisione “Documento visionato” oppure “Riscontro effettuato”.
         </p>
       </div>
 
@@ -29,6 +30,25 @@
           <div class="text-2xl font-black text-slate-700">{{ conteggi.get('totale', 0) }}</div>
           <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Totali</div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-5 rounded-[1.5rem] border border-blue-200 bg-blue-50/70 p-4 shadow-sm sm:p-5">
+    <div class="flex items-start gap-3">
+      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm ring-1 ring-blue-100" aria-hidden="true">🛡️</div>
+      <div>
+        <h2 class="font-black text-blue-950">Come si gestisce una richiesta</h2>
+        <p class="mt-1 text-sm leading-6 text-blue-950/75">
+          La richiesta non contiene allegati: è una scelta di privacy. Contatta l’utente via chat
+          o email e concorda una videochiamata, una visione diretta del documento oppure un
+          riscontro presso una fonte o un ente. MyLocalCare non conserva copie del documento.
+        </p>
+        <ol class="mt-3 grid gap-2 text-xs font-semibold leading-5 text-blue-950/80 sm:grid-cols-3">
+          <li class="rounded-xl bg-white/80 p-3 ring-1 ring-blue-100"><strong>1. Contatta</strong><br>Concorda con l’utente come effettuare il controllo.</li>
+          <li class="rounded-xl bg-white/80 p-3 ring-1 ring-blue-100"><strong>2. Confronta</strong><br>Verifica soltanto i dati dichiarati nella scheda.</li>
+          <li class="rounded-xl bg-white/80 p-3 ring-1 ring-blue-100"><strong>3. Registra</strong><br>Salva metodo ed esito senza trascrivere dati superflui.</li>
+        </ol>
       </div>
     </div>
   </section>
@@ -89,6 +109,7 @@
     <div class="mt-5 grid gap-4 lg:grid-cols-2">
       {% for scheda in schede %}
         {% set stato = scheda.get('stato_verifica') or 'dichiarata' %}
+        {% set utente_disponibile = scheda.get('utente_attivo') and not scheda.get('utente_sospeso') and not scheda.get('utente_disattivato_admin') %}
         <article class="overflow-hidden rounded-[1.65rem] border {% if stato == 'richiesta' %}border-amber-300{% else %}border-slate-200{% endif %} bg-white shadow-sm">
           <div class="p-4 sm:p-5">
             <div class="flex items-start gap-3">
@@ -118,10 +139,48 @@
                 <p class="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400">
                   {{ (scheda.get('tipo_scheda') or '')|capitalize }} · ID {{ scheda.get('id') }}
                 </p>
+                <p class="mt-1 truncate text-xs text-slate-500" data-no-translate>
+                  {{ ((scheda.get('nome') or '') ~ ' ' ~ (scheda.get('cognome') or ''))|trim or 'Nome non indicato' }}
+                  {% if scheda.get('email') %} · {{ scheda.get('email') }}{% endif %}
+                </p>
               </div>
             </div>
 
-            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+            {% if stato == 'richiesta' %}
+              <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3.5">
+                <p class="text-xs font-black uppercase tracking-wide text-amber-800">Nessun documento allegato</p>
+                <p class="mt-1 text-xs leading-5 text-amber-900/80">
+                  Contatta l’utente e concorda come mostrare il documento o consentire un
+                  riscontro esterno. Puoi concordare una videochiamata direttamente dalla chat.
+                </p>
+                <div class="mt-3 grid grid-cols-3 gap-2">
+                  {% if utente_disponibile %}
+                    <a href="{{ url_for('chat_conversazione_view', other_id=scheda.get('utente_id')) }}"
+                       class="flex min-h-10 items-center justify-center rounded-xl bg-blue-600 px-2 text-xs font-extrabold text-white hover:bg-blue-700">💬 Chat</a>
+                  {% else %}
+                    <span class="flex min-h-10 items-center justify-center rounded-xl bg-slate-200 px-2 text-center text-xs font-bold text-slate-500">Chat non disponibile</span>
+                  {% endif %}
+                  <a href="mailto:{{ scheda.get('email') }}"
+                     class="flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">✉️ Mail</a>
+                  {% if utente_disponibile %}
+                    <a href="{{ url_for('profilo_pubblico', id=scheda.get('utente_id')) }}"
+                       class="flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">👤 Profilo</a>
+                  {% else %}
+                    <span class="flex min-h-10 items-center justify-center rounded-xl bg-slate-200 px-2 text-center text-xs font-bold text-slate-500">Profilo non disponibile</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+
+            <div class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Dati dichiarati da confrontare</div>
+            <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+              <div class="rounded-xl bg-slate-50 p-3">
+                <div class="text-[10px] font-black uppercase tracking-wide text-slate-400">Natura / ambito</div>
+                <div class="mt-1 font-semibold text-slate-700">
+                  {{ (scheda.get('catalogo_natura') or scheda.get('tipo_scheda') or '—')|replace('_', ' ')|title }}
+                  {% if scheda.get('categoria_slug') %} · {{ scheda.get('categoria_slug')|replace('-', ' ')|title }}{% endif %}
+                </div>
+              </div>
               <div class="rounded-xl bg-slate-50 p-3">
                 <div class="text-[10px] font-black uppercase tracking-wide text-slate-400">Ente / organizzazione</div>
                 <div class="mt-1 font-semibold text-slate-700" data-no-translate>{{ scheda.get('ente') or '—' }}</div>
@@ -132,7 +191,7 @@
               </div>
             </div>
 
-            <details class="group mt-3 rounded-2xl border border-slate-200 bg-slate-50/70">
+            <details class="group mt-3 rounded-2xl border border-slate-200 bg-slate-50/70" {% if stato == 'richiesta' %}open{% endif %}>
               <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-extrabold text-slate-700">
                 <span>Dettagli e decisione</span>
                 <span class="transition group-open:rotate-180">⌄</span>
@@ -166,6 +225,16 @@
                   </div>
                 {% endif %}
 
+                {% if stato == 'richiesta' %}
+                  <div class="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950">
+                    <strong>Cosa verificare:</strong>
+                    confronta intestatario, titolo, ente, date, eventuale scadenza e codice con
+                    quanto mostrato o con la fonte esterna. Una semplice dichiarazione dell’utente
+                    non basta per un esito positivo. Non salvare copie, fotografie, numeri completi
+                    di documento o dati non necessari.
+                  </div>
+                {% endif %}
+
                 <form method="post" action="{{ url_for('admin_scheda_profilo_verifica', scheda_id=scheda.get('id')) }}"
                       class="admin-profile-card-action mt-4 space-y-3">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -181,6 +250,11 @@
                       <option value="scaduta">Scaduta</option>
                       <option value="revocata">Revocata</option>
                     </select>
+                    <span class="mt-1.5 block text-[11px] leading-4 text-slate-400">
+                      “Documento visionato” significa che hai visto un documento coerente con la scheda;
+                      “Riscontro effettuato” che hai confrontato i dati con una fonte o un ente esterno.
+                      Nessuno dei due certifica idoneità professionale o autenticità assoluta.
+                    </span>
                   </label>
 
                   <label class="block">
@@ -192,6 +266,10 @@
                       <option value="ente_contattato">Ente contattato</option>
                       <option value="altro">Altro riscontro</option>
                     </select>
+                    <span class="mt-1.5 block text-[11px] leading-4 text-slate-400">
+                      Per un documento scegli “Documento mostrato all’admin”; per un riscontro indica
+                      la fonte realmente usata. Se la prova è insufficiente o discordante, scegli “Non confermata”.
+                    </span>
                   </label>
 
                   <label class="block">

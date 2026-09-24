@@ -15,6 +15,7 @@ from profilo_schede import (
     card_content_changed,
     card_public_details,
     effective_verification_state,
+    group_cards_by_legacy_key,
     normalize_card_payload,
     public_verification_label,
     verification_reset_patch,
@@ -213,6 +214,29 @@ class ProfiloSchedeValidationTest(unittest.TestCase):
             public_verification_label("riscontro_effettuato"),
             "Riscontro effettuato da MyLocalCare",
         )
+
+    def test_richiesta_e_mancata_conferma_restano_visibili_come_dichiarate(self):
+        cards = []
+        for card_id, state in ((31, "richiesta"), (32, "non_confermata")):
+            public = card_public_details({
+                "id": card_id,
+                "legacy_key": "esperienza_1",
+                "tipo_scheda": "esperienza",
+                "titolo": "Babysitter",
+                "descrizione": "Esperienza con due famiglie",
+                "stato_verifica": state,
+                "verificata_at": "2026-09-24T10:00:00+00:00",
+            })
+            self.assertEqual(public["id"], card_id)
+            self.assertEqual(public["titolo"], "Babysitter")
+            self.assertEqual(public["descrizione"], "Esperienza con due famiglie")
+            self.assertEqual(public["stato_verifica"], "dichiarata")
+            self.assertEqual(public["etichetta_verifica"], "Dichiarato dall'utente")
+            self.assertEqual(public["verificata_at"], "")
+            cards.append(public)
+
+        grouped = group_cards_by_legacy_key(cards)
+        self.assertEqual([card["id"] for card in grouped["esperienza_1"]], [31, 32])
 
     def test_controllo_positivo_scaduto_non_resta_pubblicamente_verificato(self):
         card = {

@@ -173,6 +173,7 @@
         <input id="profile-card-request" type="checkbox">
         <span>
           <strong>{{ tr('profile_card.request_check') }}</strong>
+          <small class="profile-card-request-benefit">{{ tr('profile_card.request_benefit') }}</small>
           <small>{{ tr('profile_card.request_help') }}</small>
         </span>
       </label>
@@ -487,6 +488,12 @@
     color:#64748b;
     font-size:.66rem;
     line-height:1.4;
+  }
+
+  .profile-card-request .profile-card-request-benefit{
+    margin-top:.32rem;
+    color:#1e40af;
+    font-weight:750;
   }
 
   .profile-card-message{
@@ -903,7 +910,7 @@
     return catalog.find(entry => Number(entry.id) === numericId) || null;
   }
 
-  function populateCatalog(type, selectedId, category) {
+  function populateCatalog(type, selectedId) {
     if (!catalogSelect) return;
     catalogSelect.replaceChildren();
 
@@ -914,11 +921,7 @@
 
     catalog
       .filter(entry => {
-        if (String(entry.tipo_scheda || "") !== type) return false;
-        const allowedCategories = asArray(entry.categorie);
-        return !category
-          || allowedCategories.length === 0
-          || allowedCategories.includes(category);
+        return String(entry.tipo_scheda || "") === type;
       })
       .sort((a, b) => String(a.titolo || "").localeCompare(String(b.titolo || ""), "it"))
       .forEach(entry => {
@@ -948,7 +951,6 @@
       ) {
         categoryInput.value = String(allowedCategories[0] || "");
       }
-      populateCatalog(activeCardType, entry.id, categoryInput.value);
     } else {
       titleInput.readOnly = false;
     }
@@ -966,8 +968,9 @@
       || !categoryInput.value
       || allowedCategories.length === 0
       || allowedCategories.includes(categoryInput.value);
-    const selectedId = compatible && entry ? entry.id : null;
-    populateCatalog(activeCardType, selectedId, categoryInput.value);
+    if (entry && !compatible) {
+      catalogSelect.value = "";
+    }
     syncCatalogTitle();
   }
 
@@ -995,7 +998,7 @@
 
     titleInput.value = card ? String(card.titolo || "") : legacyValue(legacyKey);
     categoryInput.value = card ? String(card.categoria_slug || "") : "";
-    populateCatalog(type, card && card.catalogo_id, categoryInput.value);
+    populateCatalog(type, card && card.catalogo_id);
     issuerInput.value = card ? String(card.ente || "") : "";
     placeInput.value = card ? String(card.luogo || "") : "";
     codeInput.value = card ? String(card.codice_qualifica || "") : "";
@@ -1128,6 +1131,17 @@
       button.classList.toggle("has-card", Boolean(card));
       if (label) label.textContent = card ? copy.open : copy.short;
       button.dataset.cardId = card ? String(card.id) : "";
+    });
+
+    document.querySelectorAll("[data-profile-card-slot-preview]").forEach(preview => {
+      const legacyKey = preview.dataset.profileCardSlotPreview || "";
+      const card = findSingleCard(legacyKey);
+      const title = preview.querySelector("[data-profile-card-preview-title]");
+      const state = preview.querySelector("[data-profile-card-preview-state]");
+      setHidden(preview, !card);
+      if (!card) return;
+      if (title) title.textContent = String(card.titolo || copy.short);
+      if (state) state.textContent = statusLabel(card);
     });
 
     const list = document.getElementById("profile-card-certifications-list");

@@ -264,6 +264,7 @@ class InterfaceTranslationsTest(unittest.TestCase):
             "profile_card.sheet",
             "profile_card.catalog_title",
             "profile_card.request_check",
+            "profile_card.request_benefit",
             "profile_card.state_declared",
             "profile_card.state_document",
             "profile_card.state_feedback",
@@ -272,6 +273,7 @@ class InterfaceTranslationsTest(unittest.TestCase):
             "profile_card.error_delete",
             "profile_card.no_contacts_note",
             "profile_card.public_data_notice",
+            "profile_card.public_preview",
             "profile_card.error_contacts",
             "profile_card.error_certificate_limit",
             "profile_card.error_request_rate_limit",
@@ -293,6 +295,9 @@ class InterfaceTranslationsTest(unittest.TestCase):
             translate("profile_card.state_document", "en"),
             "Document viewed by MyLocalCare",
         )
+        benefit = translate("profile_card.request_benefit", "it")
+        self.assertIn("profilo pubblico", benefit)
+        self.assertIn("Dichiarato dall’utente", benefit)
         self.assertEqual(
             translate_source("Scheda non trovata.", "es"),
             "Ficha no encontrada.",
@@ -321,10 +326,13 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn("massimo\\s+20\\s+certificazioni", dialog)
         self.assertIn("troppe\\s+richieste.*controllo", dialog)
         self.assertIn("tr('profile_card.no_contacts_note')", dialog)
+        self.assertIn("tr('profile_card.request_benefit')", dialog)
         self.assertIn("profile-card-contact-note", dialog)
         self.assertIn("saveButton.textContent = copy.saving", dialog)
         self.assertIn("deleteButton.textContent = copy.deleting", dialog)
         self.assertIn('option.setAttribute("data-no-translate", "")', dialog)
+        self.assertIn("data-profile-card-slot-preview", private)
+        self.assertIn("tr('profile_card.public_preview')", private)
         self.assertNotIn('saveButton.textContent = "Salva scheda"', dialog)
         self.assertNotIn('deleteButton.textContent = "Elimina scheda"', dialog)
 
@@ -333,6 +341,19 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn("tr('profile_card.state_document')", public)
         self.assertIn("tr('profile_card.state_feedback')", public)
         self.assertIn("tr('profile_card.state_declared')", public)
+
+    def test_profile_card_catalog_remains_complete_after_selection(self):
+        dialog = (
+            self.ROOT / "templates" / "partials" / "schede_profilo_dialog.html"
+        ).read_text(encoding="utf-8")
+        start = dialog.index("function populateCatalog")
+        end = dialog.index("function syncCatalogTitle")
+        populate = dialog[start:end]
+
+        self.assertIn('String(entry.tipo_scheda || "") === type', populate)
+        self.assertNotIn("allowedCategories", populate)
+        self.assertNotIn("categoryInput.value", populate)
+        self.assertNotIn("populateCatalog(activeCardType, entry.id", dialog)
 
     def test_profile_card_notice_and_legal_update_are_versioned(self):
         app_source = (self.ROOT / "app.py").read_text(encoding="utf-8")

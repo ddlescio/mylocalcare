@@ -447,6 +447,15 @@
                       {% else %}
                         placeholder="Es. Dog-sitter • Assistente anziani"
                       {% endif %}>
+                    {% if schede_profilo_disponibili|default(false) %}
+                      <div
+                        class="profile-card-slot-preview hidden"
+                        data-profile-card-slot-preview="esperienza_{{ i }}">
+                        <span class="profile-card-slot-preview-label">{{ tr('profile_card.public_preview') }}</span>
+                        <span class="profile-card-slot-preview-title" data-profile-card-preview-title data-no-translate></span>
+                        <span class="profile-card-slot-preview-state" data-profile-card-preview-state></span>
+                      </div>
+                    {% endif %}
                   </div>
                 {% endfor %}
               </div>
@@ -489,6 +498,15 @@
                       {% else %}
                         placeholder="Es. Certificazione linguistica"
                       {% endif %}>
+                    {% if schede_profilo_disponibili|default(false) %}
+                      <div
+                        class="profile-card-slot-preview hidden"
+                        data-profile-card-slot-preview="studio_{{ i }}">
+                        <span class="profile-card-slot-preview-label">{{ tr('profile_card.public_preview') }}</span>
+                        <span class="profile-card-slot-preview-title" data-profile-card-preview-title data-no-translate></span>
+                        <span class="profile-card-slot-preview-state" data-profile-card-preview-state></span>
+                      </div>
+                    {% endif %}
                   </div>
                 {% endfor %}
               </div>
@@ -1478,6 +1496,45 @@
 
   .profile-card-slot-btn-add{
     margin-top:.05rem;
+  }
+
+  .profile-card-slot-preview{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:.32rem .48rem;
+    padding:.48rem .62rem;
+    border:1px solid rgba(199,210,254,.82);
+    border-radius:.82rem;
+    background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(238,242,255,.78));
+    color:#475569;
+    font-size:.7rem;
+    line-height:1.3;
+  }
+
+  .profile-card-slot-preview.hidden{
+    display:none;
+  }
+
+  .profile-card-slot-preview-label{
+    color:#64748b;
+    font-weight:650;
+  }
+
+  .profile-card-slot-preview-title{
+    color:#1e293b;
+    font-weight:800;
+  }
+
+  .profile-card-slot-preview-state{
+    margin-left:auto;
+    padding:.18rem .42rem;
+    border-radius:9999px;
+    background:#fff;
+    color:#4338ca;
+    font-size:.63rem;
+    font-weight:800;
+    box-shadow:inset 0 0 0 1px rgba(165,180,252,.72);
   }
 
   .profile-card-private-list{

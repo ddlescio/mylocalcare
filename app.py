@@ -6313,8 +6313,14 @@ def admin_schede_profilo():
                 u.nome,
                 u.cognome,
                 u.foto_profilo,
+                u.attivo AS utente_attivo,
+                u.sospeso AS utente_sospeso,
+                u.disattivato_admin AS utente_disattivato_admin,
                 q.codice AS catalogo_codice,
                 q.natura AS catalogo_natura,
+                q.richiede_ente,
+                q.prevede_scadenza,
+                q.professione_regolamentata,
                 (
                     SELECT storico.nota_admin
                     FROM schede_profilo_verifiche storico
