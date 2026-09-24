@@ -71,6 +71,7 @@ VERIFICATION_STATES = {
     "documento_visionato",
     "riscontro_effettuato",
     "non_confermata",
+    "non_verificabile",
     "scaduta",
     "revocata",
 }
@@ -79,6 +80,7 @@ ADMIN_VERIFICATION_STATES = {
     "documento_visionato",
     "riscontro_effettuato",
     "non_confermata",
+    "non_verificabile",
     "scaduta",
     "revocata",
 }
@@ -96,7 +98,15 @@ PUBLIC_VERIFICATION_STATES = {
     "riscontro_effettuato",
 }
 
-PROFILE_CARD_NOTICE_VERSION = "profile_cards_2026_v1"
+# Questi esiti restano chiusi finché l'utente non modifica i dati dichiarati.
+# La modifica passa già da ``verification_reset_patch`` e li riporta a
+# ``dichiarata`` prima che sia possibile inviare una nuova richiesta.
+EDIT_REQUIRED_VERIFICATION_STATES = PUBLIC_VERIFICATION_STATES | {
+    "scaduta",
+    "non_verificabile",
+}
+
+PROFILE_CARD_NOTICE_VERSION = "profile_cards_2026_v2"
 
 # Sono i campi la cui modifica rende non più valido un controllo precedente.
 # I metadati tecnici e le note dell'admin non fanno parte del confronto.

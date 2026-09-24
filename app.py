@@ -92,6 +92,7 @@ from chat_risk import (
 from profilo_schede import (
     ADMIN_VERIFICATION_STATES,
     CARD_CONTENT_FIELDS,
+    EDIT_REQUIRED_VERIFICATION_STATES,
     LEGACY_SLOT_TYPES,
     PROFILE_CARD_NOTICE_VERSION,
     SINGLE_CARD_SLOTS,
@@ -6189,6 +6190,7 @@ def admin_schede_profilo():
         "documento_visionato",
         "riscontro_effettuato",
         "non_confermata",
+        "non_verificabile",
         "scaduta",
         "revocata",
     }
@@ -6400,6 +6402,19 @@ def admin_scheda_profilo_verifica(scheda_id):
         "altro",
     }:
         flash("Indica come è stato effettuato il riscontro.", "error")
+        return redirect(url_for("admin_schede_profilo", stato="attenzione"))
+    if stato == "non_confermata" and metodo == "nessuno":
+        flash(
+            "Per registrare 'Non confermata' indica la prova o la fonte "
+            "realmente esaminata.",
+            "error",
+        )
+        return redirect(url_for("admin_schede_profilo", stato="attenzione"))
+    if stato == "non_verificabile" and not nota_admin:
+        flash(
+            "Indica nella nota interna perché il controllo non è verificabile.",
+            "error",
+        )
         return redirect(url_for("admin_schede_profilo", stato="attenzione"))
     if len(nota_admin) > 2000:
         flash("La nota interna supera la lunghezza consentita.", "error")
@@ -17949,27 +17964,28 @@ def api_utente_richiedi_verifica_scheda_profilo(scheda_id):
             card = next((item for item in cards if int(item["id"]) == scheda_id), None)
             return jsonify({"ok": True, "scheda": card})
 
-        if effective_state in {
-            "documento_visionato",
-            "riscontro_effettuato",
-        }:
-            return jsonify({
-                "ok": False,
-                "message": (
+        if effective_state in EDIT_REQUIRED_VERIFICATION_STATES:
+            if effective_state in {
+                "documento_visionato",
+                "riscontro_effettuato",
+            }:
+                message = (
                     "Questa scheda è già stata controllata. "
                     "Se modifichi i dati, il controllo verrà azzerato "
                     "e potrai richiederlo di nuovo."
-                ),
-            }), 409
-
-        if effective_state == "scaduta":
-            return jsonify({
-                "ok": False,
-                "message": (
+                )
+            elif effective_state == "scaduta":
+                message = (
                     "La scheda è scaduta. Aggiorna prima la data di scadenza "
                     "e poi richiedi un nuovo controllo."
-                ),
-            }), 409
+                )
+            else:
+                message = (
+                    "Questa scheda non è verificabile con i dati disponibili. "
+                    "Modifica i dati della scheda prima di richiedere un nuovo "
+                    "controllo."
+                )
+            return jsonify({"ok": False, "message": message}), 409
 
         redis_allowed = _prenota_richiesta_controllo_scheda(user_id)
         if redis_allowed is False:

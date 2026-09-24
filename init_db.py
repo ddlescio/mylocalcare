@@ -1502,8 +1502,8 @@ def crea_tabelle_schede_profilo():
                 stato_verifica TEXT NOT NULL DEFAULT 'dichiarata' CHECK (
                     stato_verifica IN (
                         'dichiarata', 'richiesta', 'documento_visionato',
-                        'riscontro_effettuato', 'non_confermata', 'scaduta',
-                        'revocata'
+                        'riscontro_effettuato', 'non_confermata',
+                        'non_verificabile', 'scaduta', 'revocata'
                     )
                 ),
                 richiesta_verifica_at {dt_col()},
@@ -1566,8 +1566,8 @@ def crea_tabelle_schede_profilo():
                 scheda_id INTEGER NOT NULL,
                 stato TEXT NOT NULL CHECK (stato IN (
                     'dichiarata', 'richiesta', 'documento_visionato',
-                    'riscontro_effettuato', 'non_confermata', 'scaduta',
-                    'revocata'
+                    'riscontro_effettuato', 'non_confermata',
+                    'non_verificabile', 'scaduta', 'revocata'
                 )),
                 metodo TEXT NOT NULL DEFAULT 'nessuno' CHECK (metodo IN (
                     'nessuno', 'documento', 'fonte_pubblica',

@@ -10,8 +10,12 @@ from pathlib import Path
 from unittest import mock
 
 from profilo_schede import (
+    ADMIN_VERIFICATION_STATES,
     CATALOGO_SCHEDE_SEED,
+    EDIT_REQUIRED_VERIFICATION_STATES,
     PROFILE_CARD_CATEGORIES,
+    PUBLIC_VERIFICATION_STATES,
+    VERIFICATION_STATES,
     card_content_changed,
     card_public_details,
     effective_verification_state,
@@ -55,6 +59,19 @@ def load_init_db_without_flask():
 
 
 class ProfiloSchedeValidationTest(unittest.TestCase):
+    def test_non_verificabile_e_un_esito_admin_ma_non_pubblico(self):
+        self.assertIn("non_verificabile", VERIFICATION_STATES)
+        self.assertIn("non_verificabile", ADMIN_VERIFICATION_STATES)
+        self.assertNotIn("non_verificabile", PUBLIC_VERIFICATION_STATES)
+        self.assertIn(
+            "non_verificabile",
+            EDIT_REQUIRED_VERIFICATION_STATES,
+        )
+        self.assertNotIn(
+            "non_confermata",
+            EDIT_REQUIRED_VERIFICATION_STATES,
+        )
+
     def test_catalogo_copre_tutte_le_categorie_ed_ha_codici_unici(self):
         codes = [entry["codice"] for entry in CATALOGO_SCHEDE_SEED]
         covered = {
@@ -78,6 +95,25 @@ class ProfiloSchedeValidationTest(unittest.TestCase):
             self.assertIn(f"'{escaped_code}'", migration)
         self.assertIn("versione INTEGER NOT NULL DEFAULT 1", migration)
         self.assertIn("ON DELETE CASCADE", migration)
+        self.assertGreaterEqual(migration.count("'non_verificabile'"), 2)
+
+        incremental_migration = (
+            ROOT
+            / "migrations"
+            / "20260924_schede_profilo_non_verificabile.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "schede_profilo_stato_verifica_check",
+            incremental_migration,
+        )
+        self.assertIn(
+            "schede_profilo_verifiche_stato_check",
+            incremental_migration,
+        )
+        self.assertGreaterEqual(
+            incremental_migration.count("'non_verificabile'"),
+            2,
+        )
 
     def test_payload_catalogo_impone_tipo_categoria_ed_ente(self):
         entry = {
@@ -178,6 +214,16 @@ class ProfiloSchedeValidationTest(unittest.TestCase):
         self.assertIsNone(reset["verificata_at"])
         self.assertIsNone(reset["nota_pubblica"])
 
+        non_verificabile = dict(previous, stato_verifica="non_verificabile")
+        reset_non_verificabile = verification_reset_patch(
+            non_verificabile,
+            changed,
+        )
+        self.assertEqual(
+            reset_non_verificabile["stato_verifica"],
+            "dichiarata",
+        )
+
     def test_popup_pubblico_espone_solo_le_due_formule_positive(self):
         card = {
             "id": 12,
@@ -215,9 +261,13 @@ class ProfiloSchedeValidationTest(unittest.TestCase):
             "Riscontro effettuato da MyLocalCare",
         )
 
-    def test_richiesta_e_mancata_conferma_restano_visibili_come_dichiarate(self):
+    def test_esiti_non_pubblici_restano_visibili_come_dichiarati(self):
         cards = []
-        for card_id, state in ((31, "richiesta"), (32, "non_confermata")):
+        for card_id, state in (
+            (31, "richiesta"),
+            (32, "non_confermata"),
+            (33, "non_verificabile"),
+        ):
             public = card_public_details({
                 "id": card_id,
                 "legacy_key": "esperienza_1",
@@ -236,7 +286,10 @@ class ProfiloSchedeValidationTest(unittest.TestCase):
             cards.append(public)
 
         grouped = group_cards_by_legacy_key(cards)
-        self.assertEqual([card["id"] for card in grouped["esperienza_1"]], [31, 32])
+        self.assertEqual(
+            [card["id"] for card in grouped["esperienza_1"]],
+            [31, 32, 33],
+        )
 
     def test_controllo_positivo_scaduto_non_resta_pubblicamente_verificato(self):
         card = {
@@ -387,6 +440,53 @@ class ProfiloSchedeSchemaTest(unittest.TestCase):
                     utente_id, legacy_key, tipo_scheda, titolo
                 ) VALUES (1, 'studio_1', 'esperienza', 'Non coerente')
             """)
+        conn.close()
+
+    def test_database_accetta_non_verificabile_su_scheda_e_storico(self):
+        with mock.patch.object(
+            self.init_db,
+            "get_conn",
+            side_effect=self._connect,
+        ):
+            self.init_db.crea_tabelle_schede_profilo()
+
+        conn = self._connect()
+        cursor = conn.execute("""
+            INSERT INTO schede_profilo (
+                utente_id, legacy_key, tipo_scheda, titolo,
+                stato_verifica
+            ) VALUES (
+                1, 'esperienza_1', 'esperienza', 'Babysitter',
+                'non_verificabile'
+            )
+        """)
+        scheda_id = cursor.lastrowid
+        conn.execute("""
+            INSERT INTO schede_profilo_verifiche (
+                scheda_id, stato, metodo, admin_id
+            ) VALUES (?, 'non_verificabile', 'nessuno', 2)
+        """, (scheda_id,))
+
+        scheda_state = conn.execute("""
+            SELECT stato_verifica
+            FROM schede_profilo
+            WHERE id = ?
+        """, (scheda_id,)).fetchone()[0]
+        history_state = conn.execute("""
+            SELECT stato
+            FROM schede_profilo_verifiche
+            WHERE scheda_id = ?
+        """, (scheda_id,)).fetchone()[0]
+
+        self.assertEqual(scheda_state, "non_verificabile")
+        self.assertEqual(history_state, "non_verificabile")
+
+        with self.assertRaises(sqlite3.IntegrityError):
+            conn.execute("""
+                UPDATE schede_profilo
+                SET stato_verifica = 'stato_inesistente'
+                WHERE id = ?
+            """, (scheda_id,))
         conn.close()
 
     def test_storico_prevede_snapshot_dei_dati_controllati(self):

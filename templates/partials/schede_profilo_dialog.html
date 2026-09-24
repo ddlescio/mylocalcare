@@ -48,6 +48,7 @@
     {% if not pubblico %}
     <form id="profile-card-form" class="profile-card-form" novalidate>
       <div id="profile-card-form-state" class="profile-card-form-state" aria-live="polite"></div>
+      <div id="profile-card-state-help" class="profile-card-state-help hidden" role="status"></div>
 
       <div class="profile-card-field profile-card-field-wide">
         <label for="profile-card-catalog">{{ tr('profile_card.catalog_title') }}</label>
@@ -174,6 +175,7 @@
         <span>
           <strong>{{ tr('profile_card.request_check') }}</strong>
           <small class="profile-card-request-benefit">{{ tr('profile_card.request_benefit') }}</small>
+          <small class="profile-card-request-process">{{ tr('profile_card.request_process') }}</small>
           <small>{{ tr('profile_card.request_help') }}</small>
         </span>
       </label>
@@ -341,6 +343,18 @@
     font-weight:800;
   }
 
+  .profile-card-state-help{
+    margin-top:-.35rem;
+    padding:.62rem .72rem;
+    border:1px solid #fed7aa;
+    border-radius:.85rem;
+    background:#fff7ed;
+    color:#9a3412;
+    font-size:.68rem;
+    line-height:1.45;
+    font-weight:680;
+  }
+
   .profile-card-field{
     min-width:0;
     display:flex;
@@ -494,6 +508,16 @@
     margin-top:.32rem;
     color:#1e40af;
     font-weight:750;
+  }
+
+  .profile-card-request .profile-card-request-process{
+    margin-top:.42rem;
+    padding:.5rem .58rem;
+    border:1px solid rgba(147,197,253,.7);
+    border-radius:.72rem;
+    background:rgba(255,255,255,.78);
+    color:#334155;
+    font-weight:720;
   }
 
   .profile-card-message{
@@ -701,6 +725,8 @@
     stateDocument: {{ tr('profile_card.state_document')|tojson }},
     stateFeedback: {{ tr('profile_card.state_feedback')|tojson }},
     stateUnconfirmed: {{ tr('profile_card.state_unconfirmed')|tojson }},
+    stateUnverifiable: {{ tr('profile_card.state_unverifiable')|tojson }},
+    unverifiableHelp: {{ tr('profile_card.unverifiable_help')|tojson }},
     stateExpired: {{ tr('profile_card.state_expired')|tojson }},
     stateRevoked: {{ tr('profile_card.state_revoked')|tojson }},
     edit: {{ tr('profile_card.edit')|tojson }},
@@ -718,6 +744,8 @@
     note: {{ tr('profile_card.note')|tojson }},
     open: {{ tr('profile_card.open')|tojson }},
     short: {{ tr('profile_card.short')|tojson }},
+    add: {{ tr('profile_card.add')|tojson }},
+    linkedCard: {{ tr('profile_card.linked_card')|tojson }},
     saving: {{ tr('profile_card.saving')|tojson }},
     deleting: {{ tr('profile_card.deleting')|tojson }},
     saved: {{ tr('profile_card.saved')|tojson }},
@@ -733,6 +761,7 @@
     errorExisting: {{ tr('profile_card.error_existing')|tojson }},
     errorNotFound: {{ tr('profile_card.error_not_found')|tojson }},
     errorChecked: {{ tr('profile_card.error_checked')|tojson }},
+    errorUnverifiable: {{ tr('profile_card.error_unverifiable')|tojson }},
     errorChanged: {{ tr('profile_card.error_changed')|tojson }},
     errorExpired: {{ tr('profile_card.error_expired')|tojson }},
     errorAcknowledgement: {{ tr('profile_card.error_acknowledgement')|tojson }},
@@ -775,6 +804,7 @@
     documento_visionato: copy.stateDocument,
     riscontro_effettuato: copy.stateFeedback,
     non_confermata: copy.stateUnconfirmed,
+    non_verificabile: copy.stateUnverifiable,
     scaduta: copy.stateExpired,
     revocata: copy.stateRevoked
   };
@@ -783,6 +813,7 @@
     "richiesta",
     "documento_visionato",
     "riscontro_effettuato",
+    "non_verificabile",
     "scaduta"
   ]);
 
@@ -845,6 +876,7 @@
   const issueFields = document.getElementById("profile-card-issue-fields");
   const codeField = dialog.querySelector(".profile-card-code-field");
   const stateElement = document.getElementById("profile-card-form-state");
+  const stateHelpElement = document.getElementById("profile-card-state-help");
   const requestRow = document.getElementById("profile-card-request-row");
   const requestInput = document.getElementById("profile-card-request");
   const errorElement = document.getElementById("profile-card-error");
@@ -982,11 +1014,16 @@
 
   function updateRequestVisibility(card) {
     if (!requestRow || !requestInput) return;
-    const hidden = positiveOrPendingStates.has(
-      (card && card.stato_verifica) || "dichiarata"
-    );
+    const state = (card && card.stato_verifica) || "dichiarata";
+    const hidden = positiveOrPendingStates.has(state);
     requestInput.checked = false;
     setHidden(requestRow, hidden);
+    if (stateHelpElement) {
+      stateHelpElement.textContent = state === "non_verificabile"
+        ? copy.unverifiableHelp
+        : "";
+      setHidden(stateHelpElement, state !== "non_verificabile");
+    }
   }
 
   function resetPrivateForm(card, legacyKey, type) {
@@ -1123,26 +1160,53 @@
   function renderPrivateControls() {
     if (isPublic) return;
 
-    document.querySelectorAll("[data-profile-card-open]").forEach(button => {
-      const legacyKey = button.dataset.legacyKey || "";
-      if (legacyKey === "certificazioni") return;
+    document.querySelectorAll("[data-profile-card-slot]").forEach(slot => {
+      const legacyKey = slot.dataset.profileCardSlot || "";
       const card = findSingleCard(legacyKey);
-      const label = button.querySelector("[data-profile-card-button-label]");
-      button.classList.toggle("has-card", Boolean(card));
-      if (label) label.textContent = card ? copy.open : copy.short;
-      button.dataset.cardId = card ? String(card.id) : "";
-    });
+      const launcher = slot.querySelector("[data-profile-card-slot-launcher]");
+      const input = slot.querySelector("[data-profile-card-slot-input]");
+      const preview = slot.querySelector("[data-profile-card-slot-preview]");
+      const title = preview
+        ? preview.querySelector("[data-profile-card-preview-title]")
+        : null;
+      const state = preview
+        ? preview.querySelector("[data-profile-card-preview-state]")
+        : null;
 
-    document.querySelectorAll("[data-profile-card-slot-preview]").forEach(preview => {
-      const legacyKey = preview.dataset.profileCardSlotPreview || "";
-      const card = findSingleCard(legacyKey);
-      const title = preview.querySelector("[data-profile-card-preview-title]");
-      const state = preview.querySelector("[data-profile-card-preview-state]");
+      slot.classList.toggle("has-profile-card", Boolean(card));
+      setHidden(launcher, Boolean(card));
+      setHidden(input, Boolean(card));
       setHidden(preview, !card);
+
+      if (launcher) {
+        launcher.hidden = Boolean(card);
+        launcher.dataset.cardId = "";
+        const label = launcher.querySelector("[data-profile-card-button-label]");
+        if (label) label.textContent = copy.add;
+      }
+      if (input) input.hidden = Boolean(card);
+      if (preview) preview.hidden = !card;
       if (!card) return;
+
+      if (preview) preview.dataset.cardId = String(card.id);
       if (title) title.textContent = String(card.titolo || copy.short);
       if (state) state.textContent = statusLabel(card);
     });
+
+    if (activeLegacyKey) {
+      const activeSlot = Array.from(
+        document.querySelectorAll("[data-profile-card-slot]")
+      ).find(slot => slot.dataset.profileCardSlot === activeLegacyKey);
+      if (activeSlot) {
+        const card = findSingleCard(activeLegacyKey);
+        const focusTarget = activeSlot.querySelector(
+          card
+            ? "[data-profile-card-slot-preview]"
+            : "[data-profile-card-slot-launcher]"
+        );
+        if (focusTarget) previousFocus = focusTarget;
+      }
+    }
 
     const list = document.getElementById("profile-card-certifications-list");
     if (!list) return;
@@ -1230,6 +1294,10 @@
     [
       "Questa scheda è già stata controllata. Se modifichi i dati, il controllo verrà azzerato e potrai richiederlo di nuovo.",
       copy.errorChecked
+    ],
+    [
+      "Questa scheda non è verificabile con i dati disponibili. Modifica i dati della scheda prima di richiedere un nuovo controllo.",
+      copy.errorUnverifiable
     ]
   ]);
 
@@ -1337,7 +1405,7 @@
             },
             body: JSON.stringify({
               acknowledged: true,
-              notice_version: "profile_cards_2026_v1",
+              notice_version: "profile_cards_2026_v2",
               versione: Number(saved.versione || 0)
             })
           }

@@ -118,7 +118,8 @@
                           type="button"
                           class="info-chip info-chip-profile-card"
                           data-profile-card-public-open="{{ scheda.get('id') }}"
-                          aria-haspopup="dialog">
+                          aria-haspopup="dialog"
+                          aria-controls="profile-card-dialog">
                           <span class="info-chip-profile-card-title" data-no-translate>{{ scheda.get('titolo') }}</span>
                           <span class="info-chip-profile-card-state">
                             {% if scheda.get('stato_verifica') == 'documento_visionato' %}
@@ -128,6 +129,10 @@
                             {% else %}
                               {{ tr('profile_card.state_declared') }}
                             {% endif %}
+                          </span>
+                          <span class="info-chip-profile-card-action">
+                            <span>{{ tr('profile_card.view_details') }}</span>
+                            <span class="info-chip-profile-card-arrow" aria-hidden="true">›</span>
                           </span>
                         </button>
                       {% endfor %}
@@ -156,7 +161,8 @@
                           type="button"
                           class="info-chip info-chip-profile-card"
                           data-profile-card-public-open="{{ scheda.get('id') }}"
-                          aria-haspopup="dialog">
+                          aria-haspopup="dialog"
+                          aria-controls="profile-card-dialog">
                           <span class="info-chip-profile-card-title" data-no-translate>{{ scheda.get('titolo') }}</span>
                           <span class="info-chip-profile-card-state">
                             {% if scheda.get('stato_verifica') == 'documento_visionato' %}
@@ -166,6 +172,10 @@
                             {% else %}
                               {{ tr('profile_card.state_declared') }}
                             {% endif %}
+                          </span>
+                          <span class="info-chip-profile-card-action">
+                            <span>{{ tr('profile_card.view_details') }}</span>
+                            <span class="info-chip-profile-card-arrow" aria-hidden="true">›</span>
                           </span>
                         </button>
                       {% endfor %}
@@ -190,7 +200,8 @@
                         type="button"
                         class="info-chip info-chip-profile-card"
                         data-profile-card-public-open="{{ scheda.get('id') }}"
-                        aria-haspopup="dialog">
+                        aria-haspopup="dialog"
+                        aria-controls="profile-card-dialog">
                         <span class="info-chip-profile-card-title" data-no-translate>{{ scheda.get('titolo') }}</span>
                         <span class="info-chip-profile-card-state">
                           {% if scheda.get('stato_verifica') == 'documento_visionato' %}
@@ -200,6 +211,10 @@
                           {% else %}
                             {{ tr('profile_card.state_declared') }}
                           {% endif %}
+                        </span>
+                        <span class="info-chip-profile-card-action">
+                          <span>{{ tr('profile_card.view_details') }}</span>
+                          <span class="info-chip-profile-card-arrow" aria-hidden="true">›</span>
                         </span>
                       </button>
                     {% endfor %}
@@ -853,21 +868,35 @@
   }
 
   .info-chip-profile-card{
+    width:100%;
     min-width:0;
-    flex-direction:column;
-    align-items:flex-start;
-    gap:.16rem;
-    padding:.46rem .68rem;
+    min-height:3.35rem;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "state"
+      "action";
+    align-items:center;
+    gap:.2rem .7rem;
+    padding:.62rem .72rem;
+    border-radius:1rem;
     text-align:left;
     cursor:pointer;
     appearance:none;
-    transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    box-shadow:0 3px 10px rgba(37,99,235,.045);
+    transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
   }
 
   .info-chip-profile-card:hover{
     transform:translateY(-1px);
     border-color:#93c5fd;
+    background:#fff;
     box-shadow:0 6px 14px rgba(37,99,235,.09);
+  }
+
+  .info-chip-profile-card:active{
+    transform:translateY(0) scale(.99);
   }
 
   .info-chip-profile-card:focus-visible{
@@ -876,18 +905,84 @@
   }
 
   .info-chip-profile-card-title{
+    grid-area:title;
     max-width:100%;
     color:#1e3a8a;
     font-size:.84rem;
     line-height:1.2;
     font-weight:780;
+    overflow-wrap:anywhere;
   }
 
   .info-chip-profile-card-state{
+    grid-area:state;
     color:#64748b;
     font-size:.62rem;
     line-height:1.2;
     font-weight:650;
+  }
+
+  .info-chip-profile-card-action{
+    grid-area:action;
+    min-height:1.85rem;
+    width:100%;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.28rem;
+    margin-top:.2rem;
+    padding:.3rem .55rem;
+    border-radius:.68rem;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-size:.68rem;
+    line-height:1.15;
+    font-weight:800;
+    box-shadow:inset 0 0 0 1px rgba(147,197,253,.72);
+  }
+
+  .info-chip-profile-card-arrow{
+    font-size:.9rem;
+    line-height:1;
+    transition:transform .16s ease;
+  }
+
+  .info-chip-profile-card:hover .info-chip-profile-card-action,
+  .info-chip-profile-card:focus-visible .info-chip-profile-card-action{
+    background:#dbeafe;
+    color:#1e40af;
+  }
+
+  .info-chip-profile-card:hover .info-chip-profile-card-arrow,
+  .info-chip-profile-card:focus-visible .info-chip-profile-card-arrow{
+    transform:translateX(2px);
+  }
+
+  @media (min-width:390px){
+    .info-chip-profile-card{
+      grid-template-columns:minmax(0, 1fr) auto;
+      grid-template-areas:
+        "title action"
+        "state action";
+    }
+
+    .info-chip-profile-card-action{
+      width:auto;
+      min-width:6.7rem;
+      margin-top:0;
+    }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .info-chip-profile-card,
+    .info-chip-profile-card-arrow{
+      transition:none;
+    }
+
+    .info-chip-profile-card:hover,
+    .info-chip-profile-card:active{
+      transform:none;
+    }
   }
 
   .info-empty-block{

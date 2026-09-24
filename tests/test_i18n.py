@@ -265,20 +265,26 @@ class InterfaceTranslationsTest(unittest.TestCase):
             "profile_card.catalog_title",
             "profile_card.request_check",
             "profile_card.request_benefit",
+            "profile_card.request_process",
             "profile_card.state_declared",
             "profile_card.state_document",
             "profile_card.state_feedback",
+            "profile_card.state_unverifiable",
+            "profile_card.unverifiable_help",
             "profile_card.saved_requested",
             "profile_card.error_save",
             "profile_card.error_delete",
             "profile_card.no_contacts_note",
             "profile_card.public_data_notice",
             "profile_card.public_preview",
+            "profile_card.linked_card",
+            "profile_card.view_details",
             "profile_card.error_contacts",
             "profile_card.error_certificate_limit",
             "profile_card.error_request_rate_limit",
             "profile_card.confirm_delete",
             "profile_card.error_checked",
+            "profile_card.error_unverifiable",
             "profile_card.error_changed",
             "profile_card.error_expired",
             "profile_card.error_acknowledgement",
@@ -327,11 +333,16 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn("troppe\\s+richieste.*controllo", dialog)
         self.assertIn("tr('profile_card.no_contacts_note')", dialog)
         self.assertIn("tr('profile_card.request_benefit')", dialog)
+        self.assertIn("tr('profile_card.request_process')", dialog)
+        self.assertIn("tr('profile_card.state_unverifiable')", dialog)
         self.assertIn("profile-card-contact-note", dialog)
         self.assertIn("saveButton.textContent = copy.saving", dialog)
         self.assertIn("deleteButton.textContent = copy.deleting", dialog)
         self.assertIn('option.setAttribute("data-no-translate", "")', dialog)
         self.assertIn("data-profile-card-slot-preview", private)
+        self.assertIn("data-profile-card-slot-input", private)
+        self.assertIn("data-profile-card-slot-launcher", private)
+        self.assertIn("tr('profile_card.linked_card')", private)
         self.assertIn("tr('profile_card.public_preview')", private)
         self.assertNotIn('saveButton.textContent = "Salva scheda"', dialog)
         self.assertNotIn('deleteButton.textContent = "Elimina scheda"', dialog)
@@ -341,6 +352,8 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn("tr('profile_card.state_document')", public)
         self.assertIn("tr('profile_card.state_feedback')", public)
         self.assertIn("tr('profile_card.state_declared')", public)
+        self.assertIn("tr('profile_card.view_details')", public)
+        self.assertIn("info-chip-profile-card-action", public)
 
     def test_profile_card_catalog_remains_complete_after_selection(self):
         dialog = (
@@ -379,11 +392,11 @@ class InterfaceTranslationsTest(unittest.TestCase):
             )
 
         self.assertIn(
-            'PROFILE_CARD_NOTICE_VERSION = "profile_cards_2026_v1"',
+            'PROFILE_CARD_NOTICE_VERSION = "profile_cards_2026_v2"',
             module_source,
         )
         self.assertIn("acknowledged: true", dialog)
-        self.assertIn('notice_version: "profile_cards_2026_v1"', dialog)
+        self.assertIn('notice_version: "profile_cards_2026_v2"', dialog)
         self.assertEqual(
             LEGAL_DOCUMENT_VERSION,
             "mylocalcare_privacy_termini_2026_v2",
