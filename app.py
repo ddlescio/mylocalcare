@@ -105,8 +105,10 @@ from profilo_schede import (
     verification_reset_patch,
 )
 from disponibilita_servizi import (
+    CATEGORIE_SERVIZI,
     calcola_freschezza_disponibilita,
     normalize_disponibilita_payload,
+    risolvi_disponibilita_per_categoria,
     serializza_disponibilita_pubblica,
 )
 from i18n import (
@@ -1961,6 +1963,23 @@ def fmt_it_date(value):
     except Exception as e:
         log_exception_safe(
             "❌ Errore filtro fmt_it_date",
+            e
+        )
+        return value
+
+
+@app.template_filter('fmt_day_month')
+def fmt_day_month(value):
+    """Restituisce una data compatta nel formato gg/mm per badge e card."""
+    try:
+        dt = to_datetime_filter(value)
+        if not dt:
+            return value
+
+        return dt.astimezone(ZoneInfo("Europe/Rome")).strftime("%d/%m")
+    except Exception as e:
+        log_exception_safe(
+            "❌ Errore filtro fmt_day_month",
             e
         )
         return value
@@ -16653,6 +16672,25 @@ def _disponibilita_servizi_table_exists(cur):
     return cur.fetchone() is not None
 
 
+def _disponibilita_categoria_table_exists(cur):
+    """Verifica il rollout additivo delle disponibilita per categoria."""
+
+    if app.config.get("IS_POSTGRES"):
+        cur.execute(
+            "SELECT to_regclass('public.disponibilita_profili_categoria') "
+            "AS tabella"
+        )
+        return bool(fetchone_value(cur.fetchone()))
+    cur.execute(sql("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'disponibilita_profili_categoria'
+        LIMIT 1
+    """))
+    return cur.fetchone() is not None
+
+
 def carica_catalogo_schede_profilo(cur, *, solo_attive=True):
     where = "WHERE q.attivo = TRUE" if solo_attive else ""
     cur.execute(sql(f"""
@@ -16803,8 +16841,77 @@ def _disponibilita_servizi_iso(value):
     return str(value)
 
 
+def _disponibilita_categoria_label(categoria_slug):
+    mapping = CATEGORY_MAP.get(str(categoria_slug or "").strip().lower())
+    if mapping:
+        return mapping[1]
+    return str(categoria_slug or "").replace("-", " ").strip().title()
+
+
+def _disponibilita_decode_slots(raw_slots):
+    if isinstance(raw_slots, str):
+        try:
+            raw_slots = json.loads(raw_slots)
+        except (TypeError, ValueError):
+            raw_slots = []
+    return list(raw_slots or [])
+
+
+def _serializza_profilo_disponibilita(
+    profile,
+    weekly,
+    special_dates,
+    absences,
+    *,
+    pubblica=False,
+    categoria_slug=None,
+):
+    availability = normalize_disponibilita_payload({
+        "stato": profile["stato_generale"],
+        "settimanale": weekly,
+        "date_speciali": special_dates,
+        "assenze": absences,
+    })
+    confirmed_at = _disponibilita_servizi_iso(profile.get("confermata_at"))
+
+    if pubblica:
+        availability = serializza_disponibilita_pubblica(
+            availability,
+            confermata_at=confirmed_at,
+        )
+        # Se la persona si dichiara non disponibile, il calendario conservato
+        # resta utile per una futura riattivazione ma non deve suggerire al
+        # pubblico fasce o date prenotabili in contraddizione con lo stato.
+        if availability["stato"] == "non_disponibile":
+            availability["settimanale"] = []
+            availability["date_speciali"] = []
+            availability["assenze"] = []
+    else:
+        availability.update({
+            "versione": int(profile.get("versione") or 1),
+            "fuso_orario": profile.get("fuso_orario") or "Europe/Rome",
+            "confermata_at": confirmed_at,
+            "ultimo_promemoria_at": _disponibilita_servizi_iso(
+                profile.get("ultimo_promemoria_at")
+            ),
+            "updated_at": _disponibilita_servizi_iso(profile.get("updated_at")),
+            "freschezza": calcola_freschezza_disponibilita(confirmed_at),
+        })
+
+    availability.update({
+        "configurata": True,
+        "categoria_slug": categoria_slug,
+        "categoria_label": (
+            _disponibilita_categoria_label(categoria_slug)
+            if categoria_slug
+            else None
+        ),
+    })
+    return availability
+
+
 def carica_disponibilita_servizi(cur, utente_id, *, pubblica=False):
-    """Carica la disponibilita ai servizi, tenendola distinta dai contatti."""
+    """Carica la disponibilita generale, valida per tutti i servizi."""
 
     cur.execute(sql("""
         SELECT utente_id, stato_generale, fuso_orario, confermata_at,
@@ -16816,7 +16923,6 @@ def carica_disponibilita_servizi(cur, utente_id, *, pubblica=False):
     profile_row = cur.fetchone()
     if not profile_row:
         return None
-
     profile = dict(profile_row)
 
     cur.execute(sql("""
@@ -16846,19 +16952,14 @@ def carica_disponibilita_servizi(cur, utente_id, *, pubblica=False):
         WHERE utente_id = ?
         ORDER BY data, id
     """), (int(utente_id),))
-    special_dates = []
-    for row in cur.fetchall():
-        raw_slots = row["fasce"]
-        if isinstance(raw_slots, str):
-            try:
-                raw_slots = json.loads(raw_slots)
-            except (TypeError, ValueError):
-                raw_slots = []
-        special_dates.append({
+    special_dates = [
+        {
             "data": _disponibilita_servizi_iso(row["data"])[:10],
             "tipo": row["tipo"],
-            "fasce": list(raw_slots or []),
-        })
+            "fasce": _disponibilita_decode_slots(row["fasce"]),
+        }
+        for row in cur.fetchall()
+    ]
 
     cur.execute(sql("""
         SELECT data_inizio, data_fine
@@ -16873,48 +16974,289 @@ def carica_disponibilita_servizi(cur, utente_id, *, pubblica=False):
         }
         for row in cur.fetchall()
     ]
+    return _serializza_profilo_disponibilita(
+        profile,
+        weekly,
+        special_dates,
+        absences,
+        pubblica=pubblica,
+    )
 
-    availability = normalize_disponibilita_payload({
-        "stato": profile["stato_generale"],
-        "settimanale": weekly,
-        "date_speciali": special_dates,
-        "assenze": absences,
-    })
-    confirmed_at = _disponibilita_servizi_iso(profile.get("confermata_at"))
 
-    if pubblica:
-        public_data = serializza_disponibilita_pubblica(
-            availability,
-            confermata_at=confirmed_at,
+def carica_disponibilita_servizi_categoria(
+    cur,
+    utente_id,
+    categoria_slug,
+    *,
+    pubblica=False,
+):
+    """Carica l'eventuale agenda specifica per una categoria offerta."""
+
+    categoria_slug = to_slug(categoria_slug)
+    if categoria_slug not in CATEGORIE_SERVIZI:
+        return None
+    if not _disponibilita_categoria_table_exists(cur):
+        return None
+
+    cur.execute(sql("""
+        SELECT id, utente_id, categoria_slug, stato_generale, fuso_orario,
+               confermata_at, ultimo_promemoria_at, versione,
+               created_at, updated_at
+        FROM disponibilita_profili_categoria
+        WHERE utente_id = ? AND categoria_slug = ?
+        LIMIT 1
+    """), (int(utente_id), categoria_slug))
+    profile_row = cur.fetchone()
+    if not profile_row:
+        return None
+    profile = dict(profile_row)
+    profile_id = int(profile["id"])
+
+    cur.execute(sql("""
+        SELECT giorno_settimana, fascia
+        FROM disponibilita_settimanale_categoria
+        WHERE profilo_categoria_id = ?
+        ORDER BY giorno_settimana,
+                 CASE fascia
+                     WHEN 'mattina' THEN 1
+                     WHEN 'pomeriggio' THEN 2
+                     WHEN 'sera' THEN 3
+                     WHEN 'notte' THEN 4
+                     ELSE 5
+                 END
+    """), (profile_id,))
+    weekly = [
+        {
+            "giorno_settimana": int(row["giorno_settimana"]),
+            "fascia": row["fascia"],
+        }
+        for row in cur.fetchall()
+    ]
+
+    cur.execute(sql("""
+        SELECT data, tipo, fasce
+        FROM disponibilita_date_speciali_categoria
+        WHERE profilo_categoria_id = ?
+        ORDER BY data, id
+    """), (profile_id,))
+    special_dates = [
+        {
+            "data": _disponibilita_servizi_iso(row["data"])[:10],
+            "tipo": row["tipo"],
+            "fasce": _disponibilita_decode_slots(row["fasce"]),
+        }
+        for row in cur.fetchall()
+    ]
+
+    cur.execute(sql("""
+        SELECT data_inizio, data_fine
+        FROM disponibilita_assenze_categoria
+        WHERE profilo_categoria_id = ?
+        ORDER BY data_inizio, data_fine, id
+    """), (profile_id,))
+    absences = [
+        {
+            "data_inizio": _disponibilita_servizi_iso(row["data_inizio"])[:10],
+            "data_fine": _disponibilita_servizi_iso(row["data_fine"])[:10],
+        }
+        for row in cur.fetchall()
+    ]
+    return _serializza_profilo_disponibilita(
+        profile,
+        weekly,
+        special_dates,
+        absences,
+        pubblica=pubblica,
+        categoria_slug=categoria_slug,
+    )
+
+
+def elenca_disponibilita_servizi(cur, utente_id, *, pubblica=False):
+    """Restituisce prima l'agenda generale, poi le eccezioni per servizio."""
+
+    profiles = []
+    general = carica_disponibilita_servizi(
+        cur,
+        utente_id,
+        pubblica=pubblica,
+    )
+    if general:
+        profiles.append(general)
+    if not _disponibilita_categoria_table_exists(cur):
+        return profiles
+
+    cur.execute(sql("""
+        SELECT id, utente_id, categoria_slug, stato_generale, fuso_orario,
+               confermata_at, ultimo_promemoria_at, versione,
+               created_at, updated_at
+        FROM disponibilita_profili_categoria
+        WHERE utente_id = ?
+    """), (int(utente_id),))
+    profile_rows = [dict(row) for row in cur.fetchall()]
+    if pubblica and profile_rows:
+        # In privato manteniamo modificabili anche vecchie eccezioni. In
+        # pubblico, invece, una disponibilita specifica ha senso soltanto se
+        # quella categoria risulta ancora effettivamente offerta.
+        categorie_offerte = {
+            item["slug"]
+            for item in _categorie_disponibilita_offerte(cur, utente_id)
+        }
+        profile_rows = [
+            row for row in profile_rows
+            if row["categoria_slug"] in categorie_offerte
+        ]
+    if not profile_rows:
+        return profiles
+
+    ids = [int(row["id"]) for row in profile_rows]
+    placeholders = ", ".join("?" for _ in ids)
+    weekly_by_profile = {profile_id: [] for profile_id in ids}
+    special_by_profile = {profile_id: [] for profile_id in ids}
+    absences_by_profile = {profile_id: [] for profile_id in ids}
+
+    cur.execute(sql(f"""
+        SELECT profilo_categoria_id, giorno_settimana, fascia
+        FROM disponibilita_settimanale_categoria
+        WHERE profilo_categoria_id IN ({placeholders})
+        ORDER BY profilo_categoria_id, giorno_settimana,
+                 CASE fascia
+                     WHEN 'mattina' THEN 1
+                     WHEN 'pomeriggio' THEN 2
+                     WHEN 'sera' THEN 3
+                     WHEN 'notte' THEN 4
+                     ELSE 5
+                 END
+    """), tuple(ids))
+    for row in cur.fetchall():
+        weekly_by_profile[int(row["profilo_categoria_id"])].append({
+            "giorno_settimana": int(row["giorno_settimana"]),
+            "fascia": row["fascia"],
+        })
+
+    cur.execute(sql(f"""
+        SELECT profilo_categoria_id, data, tipo, fasce
+        FROM disponibilita_date_speciali_categoria
+        WHERE profilo_categoria_id IN ({placeholders})
+        ORDER BY profilo_categoria_id, data, id
+    """), tuple(ids))
+    for row in cur.fetchall():
+        special_by_profile[int(row["profilo_categoria_id"])].append({
+            "data": _disponibilita_servizi_iso(row["data"])[:10],
+            "tipo": row["tipo"],
+            "fasce": _disponibilita_decode_slots(row["fasce"]),
+        })
+
+    cur.execute(sql(f"""
+        SELECT profilo_categoria_id, data_inizio, data_fine
+        FROM disponibilita_assenze_categoria
+        WHERE profilo_categoria_id IN ({placeholders})
+        ORDER BY profilo_categoria_id, data_inizio, data_fine, id
+    """), tuple(ids))
+    for row in cur.fetchall():
+        absences_by_profile[int(row["profilo_categoria_id"])].append({
+            "data_inizio": _disponibilita_servizi_iso(
+                row["data_inizio"]
+            )[:10],
+            "data_fine": _disponibilita_servizi_iso(row["data_fine"])[:10],
+        })
+
+    profiles_by_slug = {
+        row["categoria_slug"]: row for row in profile_rows
+    }
+    for categoria_slug in CATEGORIE_SERVIZI:
+        profile_row = profiles_by_slug.get(categoria_slug)
+        if not profile_row:
+            continue
+        profile_id = int(profile_row["id"])
+        profile = _serializza_profilo_disponibilita(
+            profile_row,
+            weekly_by_profile[profile_id],
+            special_by_profile[profile_id],
+            absences_by_profile[profile_id],
+            pubblica=pubblica,
+            categoria_slug=categoria_slug,
         )
-        public_data["configurata"] = True
-        return public_data
+        profiles.append(profile)
+    return profiles
 
-    availability.update({
-        "configurata": True,
-        "versione": int(profile.get("versione") or 1),
-        "fuso_orario": profile.get("fuso_orario") or "Europe/Rome",
-        "confermata_at": confirmed_at,
-        "ultimo_promemoria_at": _disponibilita_servizi_iso(
-            profile.get("ultimo_promemoria_at")
-        ),
-        "updated_at": _disponibilita_servizi_iso(profile.get("updated_at")),
-        "freschezza": calcola_freschezza_disponibilita(confirmed_at),
-    })
-    return availability
+
+def risolvi_disponibilita_servizi_annuncio(
+    cur,
+    utente_id,
+    categoria_slug,
+    *,
+    pubblica=True,
+):
+    categoria_slug = to_slug(categoria_slug)
+    general = carica_disponibilita_servizi(
+        cur,
+        utente_id,
+        pubblica=pubblica,
+    )
+    category = carica_disponibilita_servizi_categoria(
+        cur,
+        utente_id,
+        categoria_slug,
+        pubblica=pubblica,
+    )
+    return risolvi_disponibilita_per_categoria(
+        general,
+        [category] if category else [],
+        categoria_slug,
+    )
+
+
+def _categorie_disponibilita_offerte(cur, utente_id):
+    """Categorie realmente offerte, da preferenze e annunci non eliminati."""
+
+    columns = ", ".join(f"offro_{index}" for index in range(1, 14))
+    cur.execute(
+        sql(f"SELECT {columns} FROM utenti WHERE id = ? LIMIT 1"),
+        (int(utente_id),),
+    )
+    row = cur.fetchone()
+    selected = set()
+    if row:
+        for index, categoria_slug in enumerate(CATEGORIE_SERVIZI, start=1):
+            if _scheda_profilo_bool(row[f"offro_{index}"]):
+                selected.add(categoria_slug)
+
+    cur.execute(sql("""
+        SELECT DISTINCT categoria
+        FROM annunci
+        WHERE utente_id = ?
+          AND tipo_annuncio = 'offro'
+          AND COALESCE(stato, '') <> 'eliminato'
+    """), (int(utente_id),))
+    for result in cur.fetchall():
+        slug = to_slug(result["categoria"])
+        if slug in CATEGORIE_SERVIZI:
+            selected.add(slug)
+
+    return [
+        {
+            "slug": slug,
+            "label": _disponibilita_categoria_label(slug),
+        }
+        for slug in CATEGORIE_SERVIZI
+        if slug in selected
+    ]
 
 
 def _disponibilita_servizi_context(cur, utente_id, *, pubblica=False):
     """Mantiene operativo il profilo se il codice precede la migrazione DB."""
 
     try:
+        utente_offre_servizi = bool(
+            _categorie_disponibilita_offerte(cur, utente_id)
+        )
         if not _disponibilita_servizi_table_exists(cur):
-            return None, False
-        return carica_disponibilita_servizi(
+            return [], False, utente_offre_servizi
+        return elenca_disponibilita_servizi(
             cur,
             utente_id,
             pubblica=pubblica,
-        ), True
+        ), True, utente_offre_servizi
     except Exception as exc:
         log_exception_safe(
             "Disponibilita servizi non disponibile",
@@ -16922,7 +17264,94 @@ def _disponibilita_servizi_context(cur, utente_id, *, pubblica=False):
             {"utente_id": int(utente_id), "pubblica": bool(pubblica)},
             production=True,
         )
-        return None, False
+        return [], False, False
+
+
+def _riepilogo_pubblico_disponibilita(row, *, categoria_slug=None):
+    if not row:
+        return None
+    summary = serializza_disponibilita_pubblica(
+        {
+            "stato": row["stato_generale"],
+            "settimanale": [],
+            "date_speciali": [],
+            "assenze": [],
+        },
+        confermata_at=_disponibilita_servizi_iso(row.get("confermata_at")),
+    )
+    summary.update({
+        "configurata": True,
+        "categoria_slug": categoria_slug,
+        "categoria_label": (
+            _disponibilita_categoria_label(categoria_slug)
+            if categoria_slug
+            else None
+        ),
+    })
+    return summary
+
+
+def assegna_disponibilita_annunci(cur, *liste_annunci):
+    """Annota le card offro in blocco, evitando query per singolo annuncio."""
+
+    offers = []
+    user_ids = set()
+    for lista_annunci in liste_annunci:
+        for annuncio in lista_annunci or []:
+            tipo_annuncio = str(
+                annuncio.get("tipo_annuncio") or ""
+            ).strip().lower()
+            annuncio["tipo_annuncio"] = tipo_annuncio
+            if tipo_annuncio != "offro":
+                continue
+            try:
+                user_id = int(annuncio["utente_id"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            categoria_slug = to_slug(annuncio.get("categoria"))
+            annuncio["disponibilita_servizi"] = None
+            offers.append((annuncio, user_id, categoria_slug))
+            user_ids.add(user_id)
+
+    if not offers or not _disponibilita_servizi_table_exists(cur):
+        return
+
+    placeholders = ", ".join("?" for _ in user_ids)
+    params = tuple(sorted(user_ids))
+    cur.execute(sql(f"""
+        SELECT utente_id, stato_generale, confermata_at
+        FROM disponibilita_profili
+        WHERE utente_id IN ({placeholders})
+    """), params)
+    general_by_user = {
+        int(row["utente_id"]): _riepilogo_pubblico_disponibilita(dict(row))
+        for row in cur.fetchall()
+    }
+
+    category_by_user = {}
+    if _disponibilita_categoria_table_exists(cur):
+        cur.execute(sql(f"""
+            SELECT utente_id, categoria_slug, stato_generale, confermata_at
+            FROM disponibilita_profili_categoria
+            WHERE utente_id IN ({placeholders})
+        """), params)
+        for row in cur.fetchall():
+            categoria_slug = row["categoria_slug"]
+            category_by_user.setdefault(int(row["utente_id"]), {})[
+                categoria_slug
+            ] = _riepilogo_pubblico_disponibilita(
+                dict(row),
+                categoria_slug=categoria_slug,
+            )
+
+    for annuncio, user_id, categoria_slug in offers:
+        annuncio["disponibilita_servizi"] = (
+            risolvi_disponibilita_per_categoria(
+                general_by_user.get(user_id),
+                category_by_user.get(user_id, {}),
+                categoria_slug,
+            )
+        )
 
 
 def _disponibilita_servizi_request_version(payload):
@@ -16935,10 +17364,407 @@ def _disponibilita_servizi_request_version(payload):
     return version
 
 
-@app.route("/api/utente/disponibilita", methods=["GET", "PUT"])
+def _disponibilita_servizi_request_categoria(payload):
+    raw = (payload or {}).get("categoria_slug")
+    if raw is None or str(raw).strip() == "":
+        return None
+    categoria_slug = to_slug(raw)
+    if categoria_slug not in CATEGORIE_SERVIZI:
+        raise ValueError("Categoria di servizio non valida.")
+    return categoria_slug
+
+
+def _disponibilita_categoria_esistente(cur, user_id, categoria_slug):
+    if not categoria_slug or not _disponibilita_categoria_table_exists(cur):
+        return False
+    cur.execute(sql("""
+        SELECT 1
+        FROM disponibilita_profili_categoria
+        WHERE utente_id = ? AND categoria_slug = ?
+        LIMIT 1
+    """), (int(user_id), categoria_slug))
+    return cur.fetchone() is not None
+
+
+def _disponibilita_generale_esistente(cur, user_id):
+    cur.execute(sql("""
+        SELECT 1
+        FROM disponibilita_profili
+        WHERE utente_id = ?
+        LIMIT 1
+    """), (int(user_id),))
+    return cur.fetchone() is not None
+
+
+def _valida_categoria_disponibilita_utente(cur, user_id, categoria_slug):
+    offered = {
+        item["slug"] for item in _categorie_disponibilita_offerte(cur, user_id)
+    }
+    if not categoria_slug:
+        # Non introduciamo un'agenda a chi usa la piattaforma soltanto per
+        # cercare. Una configurazione generale gia esistente resta comunque
+        # modificabile (e cancellabile) se in seguito l'utente smette di
+        # offrire servizi.
+        if not offered and not _disponibilita_generale_esistente(cur, user_id):
+            raise ValueError(
+                "Puoi impostare la disponibilita solo se offri almeno un "
+                "servizio."
+            )
+        return
+    if (
+        categoria_slug not in offered
+        and not _disponibilita_categoria_esistente(cur, user_id, categoria_slug)
+    ):
+        raise ValueError(
+            "Puoi impostare una disponibilita specifica solo per i servizi "
+            "che offri."
+        )
+
+
+def _elimina_disponibilita_generale(
+    cur,
+    user_id,
+    *,
+    submitted_version=None,
+):
+    """Elimina agenda generale e figli senza affidarsi a una FK al parent."""
+
+    lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+    cur.execute(sql(f"""
+        SELECT versione
+        FROM disponibilita_profili
+        WHERE utente_id = ?{lock_suffix}
+    """), (int(user_id),))
+    existing = cur.fetchone()
+    if not existing:
+        if submitted_version not in (None, 0):
+            raise RuntimeError("version_conflict")
+    else:
+        current_version = int(existing["versione"] or 1)
+        if (
+            submitted_version is not None
+            and int(submitted_version) != current_version
+        ):
+            raise RuntimeError("version_conflict")
+
+    # Le tabelle storiche puntano direttamente a utenti, non al profilo.
+    # Vanno quindi eliminate esplicitamente prima del parent.
+    for table in (
+        "disponibilita_settimanale",
+        "disponibilita_date_speciali",
+        "disponibilita_assenze",
+    ):
+        cur.execute(
+            sql(f"DELETE FROM {table} WHERE utente_id = ?"),
+            (int(user_id),),
+        )
+    if not existing:
+        return False
+    cur.execute(sql("""
+        DELETE FROM disponibilita_profili
+        WHERE utente_id = ?
+    """), (int(user_id),))
+    return True
+
+
+def _elimina_disponibilita_categoria(
+    cur,
+    user_id,
+    categoria_slug,
+    *,
+    submitted_version=None,
+):
+    """Elimina una sola eccezione, lasciando attivo il fallback generale."""
+
+    if not _disponibilita_categoria_table_exists(cur):
+        raise RuntimeError("category_tables_missing")
+    lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+    cur.execute(sql(f"""
+        SELECT id, versione
+        FROM disponibilita_profili_categoria
+        WHERE utente_id = ? AND categoria_slug = ?{lock_suffix}
+    """), (int(user_id), categoria_slug))
+    existing = cur.fetchone()
+    if not existing:
+        if submitted_version not in (None, 0):
+            raise RuntimeError("version_conflict")
+        return False
+
+    current_version = int(existing["versione"] or 1)
+    if (
+        submitted_version is not None
+        and int(submitted_version) != current_version
+    ):
+        raise RuntimeError("version_conflict")
+    profile_id = int(existing["id"])
+
+    # La migrazione usa ON DELETE CASCADE. Le cancellazioni esplicite rendono
+    # la funzione sicura anche nei test SQLite e durante rollout incompleti.
+    for table in (
+        "disponibilita_settimanale_categoria",
+        "disponibilita_date_speciali_categoria",
+        "disponibilita_assenze_categoria",
+    ):
+        cur.execute(
+            sql(f"DELETE FROM {table} WHERE profilo_categoria_id = ?"),
+            (profile_id,),
+        )
+    cur.execute(sql("""
+        DELETE FROM disponibilita_profili_categoria
+        WHERE id = ? AND utente_id = ?
+    """), (profile_id, int(user_id)))
+    return True
+
+
+def _elimina_tutte_disponibilita_utente(cur, user_id):
+    """Bonifica le disponibilita prima dell'anonimizzazione dell'account."""
+
+    if _disponibilita_servizi_table_exists(cur):
+        _elimina_disponibilita_generale(cur, user_id)
+    if _disponibilita_categoria_table_exists(cur):
+        # I figli per categoria cadono in cascata dal parent in produzione.
+        cur.execute(sql("""
+            DELETE FROM disponibilita_profili_categoria
+            WHERE utente_id = ?
+        """), (int(user_id),))
+
+
+def _salva_disponibilita_generale(
+    cur,
+    user_id,
+    normalized,
+    submitted_version,
+):
+    lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+    cur.execute(sql(f"""
+        SELECT versione
+        FROM disponibilita_profili
+        WHERE utente_id = ?{lock_suffix}
+    """), (user_id,))
+    existing = cur.fetchone()
+    current_version = int(existing["versione"] or 1) if existing else 0
+    if submitted_version != current_version:
+        raise RuntimeError("version_conflict")
+
+    if existing:
+        cur.execute(sql("""
+            UPDATE disponibilita_profili
+            SET stato_generale = ?, fuso_orario = 'Europe/Rome',
+                confermata_at = CURRENT_TIMESTAMP,
+                ultimo_promemoria_at = NULL,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE utente_id = ? AND versione = ?
+        """), (normalized["stato"], user_id, current_version))
+        if cur.rowcount != 1:
+            raise RuntimeError("version_conflict")
+    else:
+        cur.execute(sql("""
+            INSERT INTO disponibilita_profili (
+                utente_id, stato_generale, fuso_orario, confermata_at,
+                ultimo_promemoria_at, versione, created_at, updated_at
+            ) VALUES (
+                ?, ?, 'Europe/Rome', CURRENT_TIMESTAMP, NULL, 1,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """), (user_id, normalized["stato"]))
+
+    for table in (
+        "disponibilita_settimanale",
+        "disponibilita_date_speciali",
+        "disponibilita_assenze",
+    ):
+        cur.execute(sql(f"DELETE FROM {table} WHERE utente_id = ?"), (user_id,))
+
+    if normalized["settimanale"]:
+        cur.executemany(sql("""
+            INSERT INTO disponibilita_settimanale (
+                utente_id, giorno_settimana, fascia, created_at
+            ) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        """), [
+            (user_id, row["giorno_settimana"], row["fascia"])
+            for row in normalized["settimanale"]
+        ])
+    if normalized["date_speciali"]:
+        cur.executemany(sql("""
+            INSERT INTO disponibilita_date_speciali (
+                utente_id, data, tipo, fasce, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """), [
+            (
+                user_id,
+                row["data"],
+                row["tipo"],
+                json.dumps(row["fasce"], ensure_ascii=False),
+            )
+            for row in normalized["date_speciali"]
+        ])
+    if normalized["assenze"]:
+        cur.executemany(sql("""
+            INSERT INTO disponibilita_assenze (
+                utente_id, data_inizio, data_fine, created_at, updated_at
+            ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """), [
+            (user_id, row["data_inizio"], row["data_fine"])
+            for row in normalized["assenze"]
+        ])
+
+
+def _salva_disponibilita_categoria(
+    cur,
+    user_id,
+    categoria_slug,
+    normalized,
+    submitted_version,
+):
+    if not _disponibilita_categoria_table_exists(cur):
+        raise RuntimeError("category_tables_missing")
+
+    lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+    cur.execute(sql(f"""
+        SELECT id, versione
+        FROM disponibilita_profili_categoria
+        WHERE utente_id = ? AND categoria_slug = ?{lock_suffix}
+    """), (user_id, categoria_slug))
+    existing = cur.fetchone()
+    current_version = int(existing["versione"] or 1) if existing else 0
+    if submitted_version != current_version:
+        raise RuntimeError("version_conflict")
+
+    if existing:
+        profile_id = int(existing["id"])
+        cur.execute(sql("""
+            UPDATE disponibilita_profili_categoria
+            SET stato_generale = ?, fuso_orario = 'Europe/Rome',
+                confermata_at = CURRENT_TIMESTAMP,
+                ultimo_promemoria_at = NULL,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND utente_id = ? AND versione = ?
+        """), (
+            normalized["stato"],
+            profile_id,
+            user_id,
+            current_version,
+        ))
+        if cur.rowcount != 1:
+            raise RuntimeError("version_conflict")
+    else:
+        profile_id = insert_and_get_id(cur, """
+            INSERT INTO disponibilita_profili_categoria (
+                utente_id, categoria_slug, stato_generale, fuso_orario,
+                confermata_at, ultimo_promemoria_at, versione,
+                created_at, updated_at
+            ) VALUES (
+                ?, ?, ?, 'Europe/Rome', CURRENT_TIMESTAMP, NULL, 1,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """, (user_id, categoria_slug, normalized["stato"]))
+        if not profile_id:
+            raise RuntimeError("category_profile_insert_failed")
+        profile_id = int(profile_id)
+
+    for table in (
+        "disponibilita_settimanale_categoria",
+        "disponibilita_date_speciali_categoria",
+        "disponibilita_assenze_categoria",
+    ):
+        cur.execute(
+            sql(f"DELETE FROM {table} WHERE profilo_categoria_id = ?"),
+            (profile_id,),
+        )
+
+    if normalized["settimanale"]:
+        cur.executemany(sql("""
+            INSERT INTO disponibilita_settimanale_categoria (
+                profilo_categoria_id, giorno_settimana, fascia, created_at
+            ) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        """), [
+            (profile_id, row["giorno_settimana"], row["fascia"])
+            for row in normalized["settimanale"]
+        ])
+    if normalized["date_speciali"]:
+        cur.executemany(sql("""
+            INSERT INTO disponibilita_date_speciali_categoria (
+                profilo_categoria_id, data, tipo, fasce,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """), [
+            (
+                profile_id,
+                row["data"],
+                row["tipo"],
+                json.dumps(row["fasce"], ensure_ascii=False),
+            )
+            for row in normalized["date_speciali"]
+        ])
+    if normalized["assenze"]:
+        cur.executemany(sql("""
+            INSERT INTO disponibilita_assenze_categoria (
+                profilo_categoria_id, data_inizio, data_fine,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """), [
+            (profile_id, row["data_inizio"], row["data_fine"])
+            for row in normalized["assenze"]
+        ])
+
+
+def _risposta_disponibilita_servizi(cur, user_id, *, categoria_slug=None):
+    profiles = elenca_disponibilita_servizi(cur, user_id, pubblica=False)
+    scope_categoria_disponibile = _disponibilita_categoria_table_exists(cur)
+    categorie_effettivamente_offerte = _categorie_disponibilita_offerte(
+        cur,
+        user_id,
+    )
+    categorie_offerte = (
+        categorie_effettivamente_offerte
+        if scope_categoria_disponibile
+        else []
+    )
+    selected = None
+    if categoria_slug:
+        selected = next(
+            (
+                profile for profile in profiles
+                if profile.get("categoria_slug") == categoria_slug
+            ),
+            None,
+        )
+        if selected is None:
+            # Dopo la cancellazione di un override la risposta mostra il vero
+            # fallback generale, senza saltare a un'altra categoria casuale.
+            selected = next(
+                (
+                    profile for profile in profiles
+                    if not profile.get("categoria_slug")
+                ),
+                None,
+            )
+    elif selected is None:
+        selected = next(
+            (
+                profile for profile in profiles
+                if not profile.get("categoria_slug")
+            ),
+            profiles[0] if profiles else None,
+        )
+    return {
+        "ok": True,
+        "configurata": bool(profiles),
+        "disponibilita": selected,
+        "profili": profiles,
+        "categorie_offerte": categorie_offerte,
+        "scope_categoria_disponibile": scope_categoria_disponibile,
+        "utente_offre_servizi": bool(categorie_effettivamente_offerte),
+        "categoria_slug": categoria_slug,
+    }
+
+
+@app.route("/api/utente/disponibilita", methods=["GET", "PUT", "DELETE"])
 @login_required
 def api_utente_disponibilita_servizi():
-    if request.method == "PUT":
+    if request.method in {"PUT", "DELETE"}:
         verify_csrf()
 
     user_id = int(g.utente["id"])
@@ -16946,128 +17772,96 @@ def api_utente_disponibilita_servizi():
     cur = get_cursor(conn)
 
     try:
+        if not _disponibilita_servizi_table_exists(cur):
+            raise RuntimeError("availability_tables_missing")
+
         if request.method == "GET":
-            availability = carica_disponibilita_servizi(cur, user_id)
-            return jsonify({
-                "ok": True,
-                "configurata": bool(availability),
-                "disponibilita": availability,
-            })
+            return jsonify(_risposta_disponibilita_servizi(cur, user_id))
 
         request_payload = request.get_json(silent=True)
         if not isinstance(request_payload, dict):
             raise ValueError("Dati disponibilita non validi.")
 
-        submitted_version = _disponibilita_servizi_request_version(
+        categoria_slug = _disponibilita_servizi_request_categoria(
             request_payload
         )
-        normalized = normalize_disponibilita_payload(
-            request_payload.get("disponibilita")
+        submitted_version = _disponibilita_servizi_request_version(
+            request_payload
         )
 
         _schede_profilo_begin(cur)
         _schede_profilo_lock_user(cur, user_id)
-        lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
-        cur.execute(sql(f"""
-            SELECT versione
-            FROM disponibilita_profili
-            WHERE utente_id = ?{lock_suffix}
-        """), (user_id,))
-        existing = cur.fetchone()
-        current_version = int(existing["versione"] or 1) if existing else 0
-
-        if submitted_version != current_version:
-            _schede_profilo_rollback(cur)
-            return jsonify({
-                "ok": False,
-                "message": "La disponibilita e cambiata. Riaprila e riprova.",
-            }), 409
-
-        if existing:
-            cur.execute(sql("""
-                UPDATE disponibilita_profili
-                SET stato_generale = ?, fuso_orario = 'Europe/Rome',
-                    confermata_at = CURRENT_TIMESTAMP,
-                    ultimo_promemoria_at = NULL,
-                    versione = versione + 1,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE utente_id = ? AND versione = ?
-            """), (
-                normalized["stato"],
-                user_id,
-                current_version,
-            ))
-            if cur.rowcount != 1:
-                _schede_profilo_rollback(cur)
-                return jsonify({
-                    "ok": False,
-                    "message": "La disponibilita e cambiata. Riaprila e riprova.",
-                }), 409
-        else:
-            cur.execute(sql("""
-                INSERT INTO disponibilita_profili (
-                    utente_id, stato_generale, fuso_orario, confermata_at,
-                    ultimo_promemoria_at, versione, created_at, updated_at
-                ) VALUES (
-                    ?, ?, 'Europe/Rome', CURRENT_TIMESTAMP, NULL, 1,
-                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                )
-            """), (user_id, normalized["stato"]))
-
-        for table in (
-            "disponibilita_settimanale",
-            "disponibilita_date_speciali",
-            "disponibilita_assenze",
-        ):
-            cur.execute(sql(f"DELETE FROM {table} WHERE utente_id = ?"), (user_id,))
-
-        if normalized["settimanale"]:
-            cur.executemany(sql("""
-                INSERT INTO disponibilita_settimanale (
-                    utente_id, giorno_settimana, fascia, created_at
-                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            """), [
-                (user_id, row["giorno_settimana"], row["fascia"])
-                for row in normalized["settimanale"]
-            ])
-
-        if normalized["date_speciali"]:
-            cur.executemany(sql("""
-                INSERT INTO disponibilita_date_speciali (
-                    utente_id, data, tipo, fasce, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """), [
-                (
+        if request.method == "DELETE":
+            if categoria_slug:
+                _elimina_disponibilita_categoria(
+                    cur,
                     user_id,
-                    row["data"],
-                    row["tipo"],
-                    json.dumps(row["fasce"], ensure_ascii=False),
+                    categoria_slug,
+                    submitted_version=submitted_version,
                 )
-                for row in normalized["date_speciali"]
-            ])
-
-        if normalized["assenze"]:
-            cur.executemany(sql("""
-                INSERT INTO disponibilita_assenze (
-                    utente_id, data_inizio, data_fine,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """), [
-                (user_id, row["data_inizio"], row["data_fine"])
-                for row in normalized["assenze"]
-            ])
+            else:
+                _elimina_disponibilita_generale(
+                    cur,
+                    user_id,
+                    submitted_version=submitted_version,
+                )
+        else:
+            # La validazione avviene dopo il lock utente, cosi categorie e
+            # primo salvataggio non possono cambiare durante l'operazione.
+            _valida_categoria_disponibilita_utente(
+                cur,
+                user_id,
+                categoria_slug,
+            )
+            normalized = normalize_disponibilita_payload(
+                request_payload.get("disponibilita")
+            )
+            if categoria_slug:
+                _salva_disponibilita_categoria(
+                    cur,
+                    user_id,
+                    categoria_slug,
+                    normalized,
+                    submitted_version,
+                )
+            else:
+                _salva_disponibilita_generale(
+                    cur,
+                    user_id,
+                    normalized,
+                    submitted_version,
+                )
 
         _schede_profilo_commit(cur)
-        availability = carica_disponibilita_servizi(cur, user_id)
-        return jsonify({
-            "ok": True,
-            "configurata": True,
-            "disponibilita": availability,
-        })
+        response_payload = _risposta_disponibilita_servizi(
+            cur,
+            user_id,
+            categoria_slug=categoria_slug,
+        )
+        if request.method == "DELETE":
+            response_payload["eliminata"] = True
+        return jsonify(response_payload)
 
     except ValueError as exc:
         _schede_profilo_rollback(cur)
         return jsonify({"ok": False, "message": str(exc)}), 400
+    except RuntimeError as exc:
+        _schede_profilo_rollback(cur)
+        if str(exc) == "version_conflict":
+            return jsonify({
+                "ok": False,
+                "message": "La disponibilita e cambiata. Riaprila e riprova.",
+            }), 409
+        log_exception_safe(
+            "Disponibilita servizi non installata",
+            exc,
+            {"utente_id": user_id, "metodo": request.method},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": "La funzione non e ancora disponibile.",
+        }), 503
     except Exception as exc:
         _schede_profilo_rollback(cur)
         log_exception_safe(
@@ -17094,6 +17888,9 @@ def api_utente_riconferma_disponibilita_servizi():
     conn = get_db_connection()
     cur = get_cursor(conn)
     try:
+        categoria_slug = _disponibilita_servizi_request_categoria(
+            request_payload
+        )
         submitted_version = _disponibilita_servizi_request_version(
             request_payload
         )
@@ -17105,14 +17902,28 @@ def api_utente_riconferma_disponibilita_servizi():
 
         _schede_profilo_begin(cur)
         _schede_profilo_lock_user(cur, user_id)
-        cur.execute(sql("""
-            UPDATE disponibilita_profili
-            SET confermata_at = CURRENT_TIMESTAMP,
-                ultimo_promemoria_at = NULL,
-                versione = versione + 1,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE utente_id = ? AND versione = ?
-        """), (user_id, submitted_version))
+        if categoria_slug:
+            if not _disponibilita_categoria_table_exists(cur):
+                raise RuntimeError("category_tables_missing")
+            cur.execute(sql("""
+                UPDATE disponibilita_profili_categoria
+                SET confermata_at = CURRENT_TIMESTAMP,
+                    ultimo_promemoria_at = NULL,
+                    versione = versione + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE utente_id = ?
+                  AND categoria_slug = ?
+                  AND versione = ?
+            """), (user_id, categoria_slug, submitted_version))
+        else:
+            cur.execute(sql("""
+                UPDATE disponibilita_profili
+                SET confermata_at = CURRENT_TIMESTAMP,
+                    ultimo_promemoria_at = NULL,
+                    versione = versione + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE utente_id = ? AND versione = ?
+            """), (user_id, submitted_version))
         if cur.rowcount != 1:
             _schede_profilo_rollback(cur)
             return jsonify({
@@ -17121,12 +17932,11 @@ def api_utente_riconferma_disponibilita_servizi():
             }), 409
         _schede_profilo_commit(cur)
 
-        availability = carica_disponibilita_servizi(cur, user_id)
-        return jsonify({
-            "ok": True,
-            "configurata": True,
-            "disponibilita": availability,
-        })
+        return jsonify(_risposta_disponibilita_servizi(
+            cur,
+            user_id,
+            categoria_slug=categoria_slug,
+        ))
     except ValueError as exc:
         _schede_profilo_rollback(cur)
         return jsonify({"ok": False, "message": str(exc)}), 400
@@ -17209,7 +18019,8 @@ def dashboard():
 
     c = get_cursor(conn)
     c.execute(sql("""
-        SELECT id, titolo, categoria, descrizione, zona, filtri_categoria,
+        SELECT id, utente_id, titolo, categoria, tipo_annuncio, descrizione, zona,
+               filtri_categoria,
                data_pubblicazione, stato,
                COALESCE((
                    SELECT COUNT(*)
@@ -17238,9 +18049,18 @@ def dashboard():
         schede_profilo_disponibili,
     ) = _schede_profilo_context(c, utente["id"], pubblico=False)
     (
-        disponibilita_servizi_private,
+        disponibilita_servizi_profili_private,
         disponibilita_servizi_disponibile,
+        utente_offre_servizi,
     ) = _disponibilita_servizi_context(c, utente["id"], pubblica=False)
+    assegna_disponibilita_annunci(c, annunci)
+    disponibilita_servizi_private = next(
+        (
+            profile for profile in disponibilita_servizi_profili_private
+            if not profile.get("categoria_slug")
+        ),
+        None,
+    )
 
     # 🔹 Ritorna la dashboard con gli annunci caricati
     return render_template(
@@ -17257,7 +18077,11 @@ def dashboard():
         catalogo_schede_profilo=catalogo_schede_profilo,
         schede_profilo_disponibili=schede_profilo_disponibili,
         disponibilita_servizi_private=disponibilita_servizi_private,
+        disponibilita_servizi_profili_private=(
+            disponibilita_servizi_profili_private
+        ),
         disponibilita_servizi_disponibile=disponibilita_servizi_disponibile,
+        utente_offre_servizi=utente_offre_servizi,
         pubblico=False,
         page="profilo"
     )
@@ -24170,6 +24994,8 @@ def cerca():
                 )
             )
 
+    assegna_disponibilita_annunci(c, annunci, annunci_vetrina)
+
     return render_template(
         "cerca.html",
         categoria=json_key,
@@ -26057,14 +26883,11 @@ def elimina_account_step2():
                     WHERE utente_id = ?
                 """), (user_id,))
 
-            # La riga utente viene anonimizzata, quindi la disponibilità ai
-            # servizi non verrebbe rimossa dalla FK. Eliminiamo il profilo
-            # principale: settimana, eccezioni e assenze cadono in cascata.
-            if _disponibilita_servizi_table_exists(cur):
-                cur.execute(sql("""
-                    DELETE FROM disponibilita_profili
-                    WHERE utente_id = ?
-                """), (user_id,))
+            # La riga utente viene anonimizzata anziché eliminata: rimuoviamo
+            # esplicitamente sia l'agenda generale (i cui figli puntano
+            # direttamente a utenti) sia le eventuali eccezioni per categoria.
+            # I controlli interni rendono l'operazione sicura durante il rollout.
+            _elimina_tutte_disponibilita_utente(cur, user_id)
 
             # Gli interessi lasciati dall'utente vanno rimossi anche se
             # la riga utente verrà anonimizzata anziché cancellata.
@@ -27082,6 +27905,26 @@ def visualizza_annuncio_pubblico(id):
         annuncio["email"] = ""
         annuncio["telefono"] = ""
 
+    disponibilita_annuncio = None
+    if annuncio["tipo_annuncio"] == "offro":
+        try:
+            if _disponibilita_servizi_table_exists(c):
+                disponibilita_annuncio = (
+                    risolvi_disponibilita_servizi_annuncio(
+                        c,
+                        annuncio["utente_id"],
+                        annuncio.get("categoria"),
+                        pubblica=True,
+                    )
+                )
+        except Exception as exc:
+            log_exception_safe(
+                "Disponibilita annuncio non disponibile",
+                exc,
+                {"annuncio_id": int(id)},
+                production=True,
+            )
+
     # 🔁 Gestione intelligente del tasto “Torna”
     ref = request.referrer or ""
 
@@ -27099,6 +27942,7 @@ def visualizza_annuncio_pubblico(id):
         contatti_attivi=contatti_attivi,
         proprietario_corrente=proprietario_corrente,
         interessati_annuncio=interessati_annuncio,
+        disponibilita_annuncio=disponibilita_annuncio,
         back_url=back_url
     )
 
@@ -27204,7 +28048,8 @@ def profilo_pubblico(id):
 
     # 🔹 Annunci
     c.execute(sql("""
-        SELECT id, titolo, categoria, zona, prezzo, descrizione,
+        SELECT id, utente_id, titolo, categoria, tipo_annuncio, zona, prezzo,
+               descrizione,
                media AS media_img, data_pubblicazione, filtri_categoria
         FROM annunci
         WHERE utente_id = ? AND stato = 'approvato'
@@ -27219,9 +28064,18 @@ def profilo_pubblico(id):
         schede_profilo_disponibili,
     ) = _schede_profilo_context(c, utente["id"], pubblico=True)
     (
-        disponibilita_servizi_public,
+        disponibilita_servizi_profili_public,
         disponibilita_servizi_disponibile,
+        utente_offre_servizi,
     ) = _disponibilita_servizi_context(c, utente["id"], pubblica=True)
+    assegna_disponibilita_annunci(c, annunci)
+    disponibilita_servizi_public = next(
+        (
+            profile for profile in disponibilita_servizi_profili_public
+            if not profile.get("categoria_slug")
+        ),
+        None,
+    )
 
 
     # =========================================================
@@ -27266,7 +28120,11 @@ def profilo_pubblico(id):
         schede_profilo_pubbliche_per_legacy=schede_profilo_pubbliche_per_legacy,
         schede_profilo_disponibili=schede_profilo_disponibili,
         disponibilita_servizi_public=disponibilita_servizi_public,
+        disponibilita_servizi_profili_public=(
+            disponibilita_servizi_profili_public
+        ),
         disponibilita_servizi_disponibile=disponibilita_servizi_disponibile,
+        utente_offre_servizi=utente_offre_servizi,
 
         offro_presenti=offro_presenti,
         cerco_presenti=cerco_presenti,

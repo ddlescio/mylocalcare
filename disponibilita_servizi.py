@@ -27,6 +27,21 @@ TIPI_DATA_SPECIALE = (
     "disponibile",
     "non_disponibile",
 )
+CATEGORIE_SERVIZI = (
+    "operatori-benessere",
+    "aiuto-in-casa",
+    "ripetizioni",
+    "babysitter",
+    "pet-sitter",
+    "caregiver",
+    "escursioni-sport",
+    "biglietti-spettacoli",
+    "libri-scuola",
+    "caffe-parole",
+    "family-kids",
+    "eventi-socialita",
+    "spazi-sale",
+)
 
 MAX_RIGHE_SETTIMANALI = 28
 MAX_DATE_SPECIALI = 180
@@ -263,6 +278,37 @@ def normalize_disponibilita_payload(payload: Any) -> dict[str, Any]:
     }
 
 
+def risolvi_disponibilita_per_categoria(
+    disponibilita_generale: Any,
+    disponibilita_per_categoria: Any,
+    categoria: Any,
+) -> Any:
+    """Sceglie l'agenda specifica, con fallback trasparente a quella generale.
+
+    ``disponibilita_per_categoria`` puo essere una mapping indicizzata per slug
+    oppure una lista di mapping che espongono ``categoria_slug``. Il valore
+    restituito non viene copiato: il chiamante conserva i propri metadati DB.
+    """
+
+    if not isinstance(categoria, str):
+        return disponibilita_generale
+    category_slug = categoria.strip().lower()
+    if category_slug not in CATEGORIE_SERVIZI:
+        return disponibilita_generale
+
+    if isinstance(disponibilita_per_categoria, Mapping):
+        specific = disponibilita_per_categoria.get(category_slug)
+        return specific if specific is not None else disponibilita_generale
+
+    if isinstance(disponibilita_per_categoria, (list, tuple)):
+        for profile in disponibilita_per_categoria:
+            if not isinstance(profile, Mapping):
+                continue
+            if profile.get("categoria_slug") == category_slug:
+                return profile
+    return disponibilita_generale
+
+
 def _utc_datetime(value: Any, field_name: str) -> datetime:
     if isinstance(value, date) and not isinstance(value, datetime):
         parsed = datetime.combine(value, time.min, tzinfo=timezone.utc)
@@ -391,6 +437,7 @@ __all__ = [
     "STATI_DISPONIBILITA",
     "FASCE_DISPONIBILITA",
     "TIPI_DATA_SPECIALE",
+    "CATEGORIE_SERVIZI",
     "MAX_RIGHE_SETTIMANALI",
     "MAX_DATE_SPECIALI",
     "MAX_ASSENZE",
@@ -403,6 +450,7 @@ __all__ = [
     "CODICE_ESCLUSA_FILTRO",
     "CODICE_MAI_CONFERMATA",
     "normalize_disponibilita_payload",
+    "risolvi_disponibilita_per_categoria",
     "calcola_freschezza_disponibilita",
     "serializza_disponibilita_pubblica",
 ]

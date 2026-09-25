@@ -1,0 +1,271 @@
+{% macro availability_status(disponibilita) -%}
+  {% if disponibilita.get('stato') == 'disponibile' %}
+    {{ tr('availability.status_available') }}
+  {% elif disponibilita.get('stato') == 'limitata' %}
+    {{ tr('availability.status_limited') }}
+  {% else %}
+    {{ tr('availability.status_unavailable') }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro availability_scope(disponibilita) -%}
+  {% if disponibilita.get('categoria_slug') %}
+    {% set categoria_slug = disponibilita.get('categoria_slug') %}
+    {% set categoria_key = 'availability.category.' ~ categoria_slug %}
+    {% set categoria_tradotta = tr(categoria_key) %}
+    {% if categoria_tradotta == categoria_key %}
+      {{ disponibilita.get('categoria_label') or categoria_slug }}
+    {% else %}
+      {{ categoria_tradotta }}
+    {% endif %}
+  {% else %}
+    {{ tr('availability.scope_all_services') }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro availability_badge(disponibilita, extra_class='') -%}
+  {% set configurata = disponibilita and disponibilita.get('configurata', true) %}
+  {% set freschezza = disponibilita.get('freschezza', {}) if configurata else {} %}
+  {% set data_conferma = (disponibilita.get('confermata_at') or freschezza.get('confermata_il')) if configurata else none %}
+  {% set codice_freschezza = freschezza.get('codice') %}
+  {% set mai_confermata = (not configurata) or codice_freschezza == 'mai_confermata' or not data_conferma %}
+  {% set scaduta = (not mai_confermata) and (freschezza.get('riconferma_richiesta', false) or codice_freschezza in ['da_riconfermare', 'priorita_ridotta', 'esclusa_filtro']) %}
+  {% set stato = disponibilita.get('stato', 'non_disponibile') if configurata else 'non_disponibile' %}
+  {% set badge_class = 'is-never-confirmed' if mai_confermata else ('is-expired' if scaduta else ('is-limited' if stato == 'limitata' else ('is-unavailable' if stato == 'non_disponibile' else 'is-available'))) %}
+  <span class="availability-card-badge {{ badge_class }} {{ extra_class }}">
+    <span aria-hidden="true">
+      {% if mai_confermata %}◷{% elif scaduta %}↻{% elif stato == 'limitata' %}◐{% elif stato == 'non_disponibile' %}–{% else %}✓{% endif %}
+    </span>
+    <span>
+      {% if mai_confermata %}
+        {{ tr('availability.card_never_confirmed') }}
+      {% elif scaduta %}
+        {{ tr('availability.card_expired') }}
+      {% elif stato == 'limitata' %}
+        {{ tr('availability.card_limited_on', date=(data_conferma|fmt_day_month)) }}
+      {% elif stato == 'non_disponibile' %}
+        {{ tr('availability.card_unavailable_on', date=(data_conferma|fmt_day_month)) }}
+      {% else %}
+        {{ tr('availability.card_available_on', date=(data_conferma|fmt_day_month)) }}
+      {% endif %}
+    </span>
+  </span>
+{%- endmacro %}
+
+{% macro availability_details(disponibilita, private=false, compact=false) -%}
+  {% set freschezza = disponibilita.get('freschezza', {}) %}
+  {% set data_conferma = disponibilita.get('confermata_at') or freschezza.get('confermata_il') %}
+  {% set giorni = [
+    tr('availability.day_monday'), tr('availability.day_tuesday'),
+    tr('availability.day_wednesday'), tr('availability.day_thursday'),
+    tr('availability.day_friday'), tr('availability.day_saturday'),
+    tr('availability.day_sunday')
+  ] %}
+
+  <article
+    class="availability-detail {{ 'is-compact' if compact else '' }}"
+    data-availability-state="{{ disponibilita.get('stato', 'non_disponibile') }}">
+    <header class="availability-detail__head">
+      <div class="availability-detail__titlebox">
+        <span class="availability-detail__scope">{{ availability_scope(disponibilita) }}</span>
+        <strong>{{ availability_status(disponibilita) }}</strong>
+      </div>
+      {{ availability_badge(disponibilita) }}
+    </header>
+
+    {% if disponibilita.get('stato') == 'non_disponibile' %}
+      <p class="availability-detail__empty availability-detail__state-note">
+        {{ tr('availability.unavailable_details') }}
+      </p>
+    {% elif disponibilita.get('settimanale') %}
+      <div class="availability-detail__section">
+        <h4>{{ tr('availability.weekly_title') }}</h4>
+        <div class="availability-detail__week">
+          {% for giorno in range(1, 8) %}
+            {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+            {% if fasce_giorno %}
+              <div class="availability-detail__day">
+                <strong>{{ giorni[giorno - 1] }}</strong>
+                <span>
+                  {% for elemento in fasce_giorno %}
+                    {% if elemento.get('fascia') == 'mattina' %}{{ tr('availability.slot_morning') }}{% endif %}
+                    {% if elemento.get('fascia') == 'pomeriggio' %}{{ tr('availability.slot_afternoon') }}{% endif %}
+                    {% if elemento.get('fascia') == 'sera' %}{{ tr('availability.slot_evening') }}{% endif %}
+                    {% if elemento.get('fascia') == 'notte' %}{{ tr('availability.slot_night') }}{% endif %}
+                    {% if not loop.last %}<em>·</em>{% endif %}
+                  {% endfor %}
+                </span>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <p class="availability-detail__empty">{{ tr('availability.no_weekly') }}</p>
+    {% endif %}
+
+    {% if disponibilita.get('stato') != 'non_disponibile' and disponibilita.get('date_speciali') %}
+      <div class="availability-detail__section">
+        <h4>{{ tr('availability.special_dates_title') }}</h4>
+        <div class="availability-detail__items">
+          {% for giorno_speciale in disponibilita.get('date_speciali', []) %}
+            <div class="availability-detail__item">
+              <strong>{{ giorno_speciale.get('data')|fmt_it_date }}</strong>
+              <span>
+                {% if giorno_speciale.get('tipo') == 'non_disponibile' %}
+                  {{ tr('availability.special_unavailable') }}
+                {% else %}
+                  {{ tr('availability.special_available') }}
+                  {% if giorno_speciale.get('fasce') %}
+                    ·
+                    {% for fascia in giorno_speciale.get('fasce', []) %}
+                      {% if fascia == 'mattina' %}{{ tr('availability.slot_morning') }}{% endif %}
+                      {% if fascia == 'pomeriggio' %}{{ tr('availability.slot_afternoon') }}{% endif %}
+                      {% if fascia == 'sera' %}{{ tr('availability.slot_evening') }}{% endif %}
+                      {% if fascia == 'notte' %}{{ tr('availability.slot_night') }}{% endif %}
+                      {% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if disponibilita.get('stato') != 'non_disponibile' and disponibilita.get('assenze') %}
+      <div class="availability-detail__section">
+        <h4>{{ tr('availability.absences_title') }}</h4>
+        <div class="availability-detail__items">
+          {% for assenza in disponibilita.get('assenze', []) %}
+            <div class="availability-detail__item">
+              <strong>{{ assenza.get('data_inizio')|fmt_it_date }}</strong>
+              <span>→ {{ assenza.get('data_fine')|fmt_it_date }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if freschezza.get('riconferma_richiesta', false) %}
+      <p class="availability-detail__notice is-due">{{ tr('availability.freshness_due') }}</p>
+    {% elif data_conferma %}
+      <p class="availability-detail__notice">
+        {{ tr('availability.last_confirmed_full', date=(data_conferma|datetimeformat)) }}
+      </p>
+    {% endif %}
+
+    {% if private %}
+      <div class="availability-detail__actions">
+        <button
+          type="button"
+          class="availability-detail__edit"
+          data-service-availability-open
+          data-service-availability-category="{{ disponibilita.get('categoria_slug') or '' }}">
+          {{ tr('availability.edit_this_scope') }}
+        </button>
+        <button
+          type="button"
+          class="availability-detail__reconfirm"
+          data-service-availability-reconfirm
+          data-availability-category="{{ disponibilita.get('categoria_slug') or '' }}"
+          data-availability-version="{{ disponibilita.get('versione', 0) }}">
+          {{ tr('availability.reconfirm') }}
+        </button>
+      </div>
+    {% endif %}
+  </article>
+{%- endmacro %}
+
+{% macro availability_intro(profili, pubblico=false, feature_available=true, utente_offre_servizi=true) -%}
+  {% set profili = profili|default([], true) %}
+  {#
+    In pubblico il riepilogo accompagna sempre chi offre servizi, anche se la
+    disponibilita deve ancora essere confermata. In privato manteniamo invece
+    accessibili anche vecchie configurazioni rimaste dopo la rimozione degli
+    ultimi servizi, cosi l'utente puo modificarle o eliminarle.
+  #}
+  {% set mostra_disponibilita = utente_offre_servizi or ((not pubblico) and profili) %}
+  {% if feature_available and mostra_disponibilita %}
+    <section class="intro-availability-wrap" aria-label="{{ tr('availability.title') }}">
+      {% if profili %}
+        {% set primo = profili[0] %}
+        <details class="intro-availability">
+          <summary>
+            <span class="intro-availability__icon" aria-hidden="true">🗓️</span>
+            <span class="intro-availability__copy">
+              <strong>{{ tr('availability.title') }}</strong>
+              {{ availability_badge(primo, 'intro-availability__badge') }}
+              {% if profili|length > 1 %}
+                <span class="intro-availability__multi">
+                  {{ tr('availability.configured_scopes', count=profili|length) }}
+                </span>
+              {% endif %}
+            </span>
+            <span class="intro-availability__action">
+              {{ tr('availability.view') if pubblico else tr('availability.edit') }}
+            </span>
+          </summary>
+          <div class="intro-availability__body">
+            {% for profilo in profili %}
+              {{ availability_details(profilo, private=(not pubblico), compact=true) }}
+            {% endfor %}
+            {% if not pubblico %}
+              <button
+                type="button"
+                class="intro-availability__add"
+                data-service-availability-open>
+                {{ tr('availability.add_service_availability') }}
+              </button>
+            {% endif %}
+          </div>
+        </details>
+      {% else %}
+        <div class="intro-availability intro-availability--empty">
+          <span class="intro-availability__icon" aria-hidden="true">🗓️</span>
+          <span class="intro-availability__copy">
+            <strong>{{ tr('availability.title') }}</strong>
+            {{ availability_badge(none, 'intro-availability__badge') }}
+          </span>
+          {% if not pubblico %}
+            <button
+              type="button"
+              class="intro-availability__action"
+              data-service-availability-open>
+              {{ tr('availability.setup') }}
+            </button>
+          {% endif %}
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+{%- endmacro %}
+
+{% macro availability_listing(disponibilita) -%}
+  <section class="availability-listing-section">
+    {% if disponibilita and disponibilita.get('configurata', true) %}
+      <details class="availability-listing-details">
+        <summary>
+          <span class="availability-listing-details__icon" aria-hidden="true">🗓️</span>
+          <span>
+            <strong>{{ tr('availability.listing_title') }}</strong>
+            {{ availability_badge(disponibilita) }}
+          </span>
+          <span class="availability-listing-details__action">{{ tr('availability.view') }}</span>
+        </summary>
+        <div class="availability-listing-details__body">
+          {{ availability_details(disponibilita) }}
+        </div>
+      </details>
+    {% else %}
+      <div class="availability-listing-details availability-listing-details--empty">
+        <span class="availability-listing-details__icon" aria-hidden="true">🗓️</span>
+        <span>
+          <strong>{{ tr('availability.listing_title') }}</strong>
+          {{ availability_badge(none) }}
+        </span>
+      </div>
+    {% endif %}
+  </section>
+{%- endmacro %}

@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% set body_class = "offset-navbar" %}
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/disponibilita-servizi-display.css') }}">
+{% endblock %}
 {% block content %}
 {% from "partials/interesse_annuncio_button.html" import interesse_annuncio_button with context %}
+{% from "partials/disponibilita_servizi_display.html" import availability_listing with context %}
 
 {% set zoom_foto_profilo_annuncio = url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) %}
 {% set zoom_foto_annuncio = [] %}
@@ -220,6 +224,10 @@
       </div>
     </div>
   </section>
+
+  {% if annuncio.get('tipo_annuncio') == 'offro' %}
+    {{ availability_listing(disponibilita_annuncio|default(None)) }}
+  {% endif %}
 
   <!-- 📄 DESCRIZIONE -->
   {% if annuncio['descrizione'] %}

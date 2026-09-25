@@ -100,6 +100,36 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         "availability.special_dates_title",
         "availability.to",
         "availability.type",
+        "availability.scope_all_services",
+        "availability.card_unconfirmed",
+        "availability.card_confirmed_on",
+        "availability.card_available_on",
+        "availability.card_limited_on",
+        "availability.card_unavailable_on",
+        "availability.card_expired",
+        "availability.card_never_confirmed",
+        "availability.unavailable_details",
+        "availability.last_confirmed_full",
+        "availability.edit_this_scope",
+        "availability.configured_scopes",
+        "availability.view",
+        "availability.add_service_availability",
+        "availability.listing_title",
+        "availability.scope_title",
+        "availability.scope_help",
+        "availability.scope_general",
+        "availability.scope_category",
+        "availability.choose_category",
+        "availability.no_offered_categories",
+        "availability.only_offers_notice",
+        "availability.scope_category_disabled",
+        "availability.public_data_notice",
+        "availability.delete_profile",
+        "availability.delete_profile_confirm",
+        "availability.deleting",
+        "availability.deleted",
+        "availability.delete_privacy_note",
+        "availability.delete_profile_category_fallback",
         "availability.listing_description_placeholder",
         "availability.contact_preferences_title",
         "availability.contact_preferences_subtitle",
@@ -136,6 +166,7 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
             "availability.weekly_slots",
             "availability.exceptions_count",
             "availability.absences_count",
+            "availability.configured_scopes",
         )
 
         for key in count_keys:
@@ -144,6 +175,34 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
                 rendered = translate(key, language, count=3)
                 self.assertIn("3", rendered)
                 self.assertNotIn("{count}", rendered)
+
+    def test_date_summaries_keep_their_placeholder_in_every_language(self):
+        date_keys = (
+            "availability.card_confirmed_on",
+            "availability.card_available_on",
+            "availability.card_limited_on",
+            "availability.card_unavailable_on",
+            "availability.last_confirmed_full",
+        )
+
+        for key in date_keys:
+            for language in SUPPORTED_LANGUAGES:
+                self.assertIn("{date}", TRANSLATIONS[key][language], key)
+                rendered = translate(key, language, date="25/09/2026")
+                self.assertIn("25/09/2026", rendered)
+                self.assertNotIn("{date}", rendered)
+
+    def test_service_category_labels_are_translated(self):
+        slugs = (
+            "operatori-benessere", "aiuto-in-casa", "ripetizioni",
+            "babysitter", "pet-sitter", "caregiver", "escursioni-sport",
+            "biglietti-spettacoli", "libri-scuola", "caffe-parole",
+            "family-kids", "eventi-socialita", "spazi-sale",
+        )
+        for slug in slugs:
+            key = f"availability.category.{slug}"
+            self.assertIn(key, TRANSLATIONS)
+            self.assertEqual(set(TRANSLATIONS[key]), set(SUPPORTED_LANGUAGES))
 
     def test_public_profile_does_not_emit_private_availability_controls(self):
         environment = Environment(

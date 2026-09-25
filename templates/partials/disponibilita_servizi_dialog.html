@@ -64,6 +64,73 @@
       class="service-availability-form service-availability-hidden"
       novalidate>
 
+      <fieldset
+        class="service-availability-section service-availability-scope-section"
+        aria-describedby="service-availability-scope-help">
+        <legend>{{ tr('availability.scope_title') }}</legend>
+        <p id="service-availability-scope-help" class="service-availability-section-help">
+          {{ tr('availability.scope_help') }}
+        </p>
+
+        <div class="service-availability-scope-options">
+          <label class="service-availability-scope-option">
+            <input
+              id="service-availability-scope-general"
+              type="radio"
+              name="service-availability-scope"
+              value="general"
+              checked>
+            <span class="service-availability-scope-option-icon" aria-hidden="true">🌐</span>
+            <span>
+              <strong>{{ tr('availability.scope_general') }}</strong>
+              <small>{{ tr('availability.scope_all_services') }}</small>
+            </span>
+          </label>
+
+          <label class="service-availability-scope-option">
+            <input
+              id="service-availability-scope-category"
+              type="radio"
+              name="service-availability-scope"
+              value="category"
+              aria-controls="service-availability-category-field"
+              aria-expanded="false">
+            <span class="service-availability-scope-option-icon" aria-hidden="true">🎯</span>
+            <span>
+              <strong>{{ tr('availability.scope_category') }}</strong>
+              <small>{{ tr('availability.choose_category') }}</small>
+            </span>
+          </label>
+        </div>
+
+        <label
+          id="service-availability-category-field"
+          class="service-availability-field service-availability-category-field service-availability-hidden"
+          for="service-availability-category">
+          <span>{{ tr('availability.choose_category') }}</span>
+          <select
+            id="service-availability-category"
+            class="service-availability-control"
+            disabled></select>
+        </label>
+
+        <p
+          id="service-availability-no-categories"
+          class="service-availability-scope-empty service-availability-hidden"
+          role="status">
+          {{ tr('availability.no_offered_categories') }}
+        </p>
+
+        <p class="service-availability-scope-note">
+          {{ tr('availability.only_offers_notice') }}
+        </p>
+      </fieldset>
+
+      <aside class="service-availability-privacy-note" role="note">
+        <span class="service-availability-privacy-note-icon" aria-hidden="true">🛡️</span>
+        <p>{{ tr('availability.public_data_notice') }}</p>
+      </aside>
+
       <fieldset class="service-availability-section service-availability-status-section">
         <legend>{{ tr('availability.overall_status') }}</legend>
         <p class="service-availability-section-help">
@@ -89,7 +156,15 @@
         </div>
       </fieldset>
 
-      <fieldset class="service-availability-section">
+      <p
+        id="service-availability-positive-details-hidden"
+        class="service-availability-details-hidden-message service-availability-hidden"
+        role="status">
+        {{ tr('availability.status_unavailable_description') }}
+      </p>
+
+      <div id="service-availability-positive-details">
+      <fieldset class="service-availability-section" data-service-availability-positive-section>
         <legend>{{ tr('availability.weekly_title') }}</legend>
         <p class="service-availability-section-help">
           {{ tr('availability.weekly_help') }}
@@ -132,7 +207,7 @@
         </div>
       </fieldset>
 
-      <fieldset class="service-availability-section">
+      <fieldset class="service-availability-section" data-service-availability-positive-section>
         <legend>{{ tr('availability.special_title') }}</legend>
         <div class="service-availability-section-heading">
           <p class="service-availability-section-help">
@@ -153,7 +228,7 @@
         </p>
       </fieldset>
 
-      <fieldset class="service-availability-section">
+      <fieldset class="service-availability-section" data-service-availability-positive-section>
         <legend>{{ tr('availability.absences_title') }}</legend>
         <div class="service-availability-section-heading">
           <p class="service-availability-section-help">
@@ -173,6 +248,30 @@
           {{ tr('availability.empty_absences') }}
         </p>
       </fieldset>
+      </div>
+
+      <section
+        id="service-availability-delete-panel"
+        class="service-availability-delete-panel service-availability-hidden"
+        aria-labelledby="service-availability-delete-title">
+        <div>
+          <strong id="service-availability-delete-title">
+            {{ tr('availability.delete_profile') }}
+          </strong>
+          <p>{{ tr('availability.delete_privacy_note') }}</p>
+          <p
+            id="service-availability-delete-category-fallback"
+            class="service-availability-hidden">
+            {{ tr('availability.delete_profile_category_fallback') }}
+          </p>
+        </div>
+        <button
+          type="button"
+          id="service-availability-delete"
+          class="service-availability-delete-button">
+          {{ tr('availability.delete_profile') }}
+        </button>
+      </section>
 
       <div
         id="service-availability-error"
@@ -730,6 +829,226 @@
     line-height:1.4;
   }
 
+  .service-availability-scope-section{
+    background:
+      radial-gradient(circle at 100% 0, rgba(219,234,254,.78), transparent 48%),
+      rgba(255,255,255,.9);
+  }
+
+  .service-availability-scope-options{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:.48rem;
+  }
+
+  .service-availability-scope-option{
+    position:relative;
+    min-width:0;
+    min-height:3.45rem;
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    align-items:center;
+    gap:.58rem;
+    padding:.62rem .7rem;
+    border:1px solid #dbe3ee;
+    border-radius:.95rem;
+    background:rgba(255,255,255,.96);
+    color:#334155;
+    cursor:pointer;
+    box-shadow:inset 0 1px 0 #fff;
+  }
+
+  .service-availability-scope-option input{
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    opacity:0;
+  }
+
+  .service-availability-scope-option-icon{
+    width:2.1rem;
+    height:2.1rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #dbeafe;
+    border-radius:.78rem;
+    background:#f8fbff;
+    font-size:.92rem;
+  }
+
+  .service-availability-scope-option > span:last-child{
+    min-width:0;
+    display:grid;
+    gap:.08rem;
+  }
+
+  .service-availability-scope-option strong{
+    color:#1e293b;
+    font-size:.71rem;
+    line-height:1.25;
+    font-weight:860;
+  }
+
+  .service-availability-scope-option small{
+    color:#64748b;
+    font-size:.61rem;
+    line-height:1.3;
+  }
+
+  .service-availability-scope-option:has(input:checked){
+    border-color:#60a5fa;
+    background:#eff6ff;
+    box-shadow:0 0 0 3px rgba(96,165,250,.14), inset 0 1px 0 #fff;
+  }
+
+  .service-availability-scope-option:has(input:checked) .service-availability-scope-option-icon{
+    border-color:#93c5fd;
+    background:#fff;
+  }
+
+  .service-availability-scope-option:has(input:focus-visible){
+    outline:3px solid rgba(96,165,250,.32);
+    outline-offset:2px;
+  }
+
+  .service-availability-scope-option:has(input:disabled){
+    cursor:not-allowed;
+    opacity:.56;
+  }
+
+  .service-availability-category-field{
+    margin-top:.68rem;
+    padding:.65rem;
+    border:1px solid #bfdbfe;
+    border-radius:.9rem;
+    background:#f8fbff;
+  }
+
+  .service-availability-scope-empty{
+    margin:.65rem 0 0;
+    padding:.62rem .68rem;
+    border:1px dashed #fbbf24;
+    border-radius:.84rem;
+    background:#fffbeb;
+    color:#92400e;
+    font-size:.65rem;
+    line-height:1.42;
+  }
+
+  .service-availability-scope-note{
+    margin:.62rem 0 0;
+    color:#64748b;
+    font-size:.62rem;
+    line-height:1.45;
+  }
+
+  .service-availability-privacy-note{
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    gap:.58rem;
+    align-items:start;
+    padding:.78rem .82rem;
+    border:1px solid #bfdbfe;
+    border-radius:1rem;
+    background:linear-gradient(145deg, #eff6ff, #f8fbff);
+    color:#334155;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+  }
+
+  .service-availability-privacy-note-icon{
+    width:2rem;
+    height:2rem;
+    display:grid;
+    place-items:center;
+    border:1px solid #bfdbfe;
+    border-radius:.72rem;
+    background:#fff;
+    font-size:.88rem;
+  }
+
+  .service-availability-privacy-note p{
+    margin:0;
+    font-size:.66rem;
+    line-height:1.5;
+    font-weight:700;
+  }
+
+  .service-availability-details-hidden-message{
+    margin:0;
+    padding:.78rem .82rem;
+    border:1px dashed #cbd5e1;
+    border-radius:.95rem;
+    background:#f8fafc;
+    color:#475569;
+    font-size:.68rem;
+    line-height:1.45;
+  }
+
+  #service-availability-positive-details{
+    display:grid;
+    gap:.85rem;
+  }
+
+  #service-availability-positive-details.is-suspended{
+    display:none;
+  }
+
+  .service-availability-delete-panel{
+    display:grid;
+    gap:.7rem;
+    padding:.82rem;
+    border:1px solid #fecaca;
+    border-radius:1rem;
+    background:linear-gradient(145deg, #fff7f7, #fff);
+  }
+
+  .service-availability-delete-panel.service-availability-hidden{
+    display:none;
+  }
+
+  .service-availability-delete-panel > div{
+    min-width:0;
+  }
+
+  .service-availability-delete-panel strong{
+    display:block;
+    color:#991b1b;
+    font-size:.72rem;
+    line-height:1.3;
+  }
+
+  .service-availability-delete-panel p{
+    margin:.25rem 0 0;
+    color:#64748b;
+    font-size:.62rem;
+    line-height:1.42;
+  }
+
+  .service-availability-delete-button{
+    min-height:2.55rem;
+    padding:.58rem .78rem;
+    border:1px solid #fca5a5;
+    border-radius:.84rem;
+    background:#fff;
+    color:#b91c1c;
+    font:inherit;
+    font-size:.68rem;
+    font-weight:850;
+    cursor:pointer;
+  }
+
+  .service-availability-delete-button:hover{
+    border-color:#ef4444;
+    background:#fef2f2;
+  }
+
+  .service-availability-delete-button:focus-visible{
+    outline:3px solid rgba(248,113,113,.3);
+    outline-offset:2px;
+  }
+
   .service-availability-section-heading{
     display:flex;
     flex-direction:column;
@@ -1085,8 +1404,17 @@
   }
 
   @media (min-width:430px){
+    .service-availability-scope-options{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
     .service-availability-status-options{
       grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
+
+    .service-availability-delete-panel{
+      grid-template-columns:minmax(0, 1fr) auto;
+      align-items:center;
     }
 
     .service-availability-status-option{
@@ -1200,12 +1528,35 @@
     errorDateOrder: {{ tr('availability.error_date_order')|tojson }},
     errorDuplicateDate: {{ tr('availability.error_duplicate_date')|tojson }},
     errorSpecialSlots: {{ tr('availability.error_select_slot')|tojson }},
+    chooseCategory: {{ tr('availability.choose_category')|tojson }},
+    scopeCategoryDisabled: {{ tr('availability.scope_category_disabled')|tojson }},
     saved: {{ tr('availability.saved')|tojson }},
     reconfirmed: {{ tr('availability.reconfirmed')|tojson }},
+    deleteProfile: {{ tr('availability.delete_profile')|tojson }},
+    deleteProfileConfirm: {{ tr('availability.delete_profile_confirm')|tojson }},
+    deleteProfileCategoryFallback: {{ tr('availability.delete_profile_category_fallback')|tojson }},
+    deleting: {{ tr('availability.deleting')|tojson }},
+    deleted: {{ tr('availability.deleted')|tojson }},
     slotMorning: {{ tr('availability.slot_morning')|tojson }},
     slotAfternoon: {{ tr('availability.slot_afternoon')|tojson }},
     slotEvening: {{ tr('availability.slot_evening')|tojson }},
     slotNight: {{ tr('availability.slot_night')|tojson }}
+  });
+
+  const categoryLabels = Object.freeze({
+    "operatori-benessere": {{ tr('availability.category.operatori-benessere')|tojson }},
+    "aiuto-in-casa": {{ tr('availability.category.aiuto-in-casa')|tojson }},
+    "ripetizioni": {{ tr('availability.category.ripetizioni')|tojson }},
+    "babysitter": {{ tr('availability.category.babysitter')|tojson }},
+    "pet-sitter": {{ tr('availability.category.pet-sitter')|tojson }},
+    "caregiver": {{ tr('availability.category.caregiver')|tojson }},
+    "escursioni-sport": {{ tr('availability.category.escursioni-sport')|tojson }},
+    "biglietti-spettacoli": {{ tr('availability.category.biglietti-spettacoli')|tojson }},
+    "libri-scuola": {{ tr('availability.category.libri-scuola')|tojson }},
+    "caffe-parole": {{ tr('availability.category.caffe-parole')|tojson }},
+    "family-kids": {{ tr('availability.category.family-kids')|tojson }},
+    "eventi-socialita": {{ tr('availability.category.eventi-socialita')|tojson }},
+    "spazi-sale": {{ tr('availability.category.spazi-sale')|tojson }}
   });
 
   const allowedStates = new Set(["disponibile", "limitata", "non_disponibile"]);
@@ -1224,6 +1575,16 @@
   const specialEmpty = document.getElementById("service-availability-special-empty");
   const absenceList = document.getElementById("service-availability-absence-list");
   const absenceEmpty = document.getElementById("service-availability-absence-empty");
+  const scopeGeneralInput = document.getElementById("service-availability-scope-general");
+  const scopeCategoryInput = document.getElementById("service-availability-scope-category");
+  const categoryField = document.getElementById("service-availability-category-field");
+  const categorySelect = document.getElementById("service-availability-category");
+  const noCategoriesMessage = document.getElementById("service-availability-no-categories");
+  const positiveDetails = document.getElementById("service-availability-positive-details");
+  const positiveDetailsHiddenMessage = document.getElementById("service-availability-positive-details-hidden");
+  const deletePanel = document.getElementById("service-availability-delete-panel");
+  const deleteButton = document.getElementById("service-availability-delete");
+  const deleteCategoryFallback = document.getElementById("service-availability-delete-category-fallback");
   const addSpecialButton = document.getElementById("service-availability-add-special");
   const addAbsenceButton = document.getElementById("service-availability-add-absence");
   const saveButton = document.getElementById("service-availability-save");
@@ -1235,6 +1596,10 @@
   let busy = false;
   let requestSequence = 0;
   let currentVersion = 0;
+  let profilesByScope = new Map();
+  let offeredCategories = [];
+  let scopeCategoryAvailable = false;
+  let userOffersServices = false;
   let toastTimer = 0;
 
   function setHidden(element, hidden) {
@@ -1243,6 +1608,10 @@
 
   function asArray(value) {
     return Array.isArray(value) ? value : [];
+  }
+
+  function normalizeCategorySlug(value) {
+    return String(value == null ? "" : value).trim();
   }
 
   function normalizeSlots(value) {
@@ -1269,6 +1638,12 @@
 
     return {
       versione: Number(root.versione ?? source.versione ?? 0) || 0,
+      categoria_slug: normalizeCategorySlug(
+        root.categoria_slug ?? source.categoria_slug ?? ""
+      ),
+      categoria_label: String(
+        root.categoria_label ?? source.categoria_label ?? ""
+      ).trim(),
       stato: allowedStates.has(state) ? state : "disponibile",
       settimanale: asArray(source.settimanale).map(item => ({
         giorno_settimana: Number(item && item.giorno_settimana),
@@ -1287,6 +1662,106 @@
         data_inizio: String((item && item.data_inizio) || ""),
         data_fine: String((item && item.data_fine) || "")
       }))
+    };
+  }
+
+  function normalizeCategory(value) {
+    if (typeof value === "string") {
+      const slug = normalizeCategorySlug(value);
+      return slug ? { slug, label: categoryLabels[slug] || slug } : null;
+    }
+    if (!value || typeof value !== "object") return null;
+    const slug = normalizeCategorySlug(
+      value.slug ?? value.categoria_slug ?? value.categoria ?? value.value ?? value.id
+    );
+    if (!slug) return null;
+    const label = String(
+      categoryLabels[slug]
+      ?? value.label
+      ?? value.nome
+      ?? value.categoria_label
+      ?? value.nome_categoria
+      ?? value.etichetta
+      ?? value.title
+      ?? slug
+    ).trim() || slug;
+    return { slug, label };
+  }
+
+  function normalizedApiState(payload) {
+    const root = payload && typeof payload === "object" ? payload : {};
+    const data = root.data && typeof root.data === "object" ? root.data : {};
+    const rawProfiles = root.profili
+      ?? root.disponibilita_profili
+      ?? data.profili
+      ?? data.disponibilita_profili;
+    const profileValues = Array.isArray(rawProfiles)
+      ? rawProfiles
+      : Object.values(rawProfiles || {});
+    let profiles = profileValues
+      .filter(value => value && typeof value === "object")
+      .map(normalizeAvailability);
+
+    /* Compatibilita con la risposta precedente, che esponeva un solo profilo. */
+    if (!profiles.length) {
+      const legacyAvailability = root.disponibilita
+        ?? data.disponibilita
+        ?? root.availability
+        ?? data.availability;
+      if (Array.isArray(legacyAvailability)) {
+        profiles = legacyAvailability
+          .filter(value => value && typeof value === "object")
+          .map(normalizeAvailability);
+      } else if (legacyAvailability && typeof legacyAvailability === "object") {
+        profiles = [normalizeAvailability({
+          ...legacyAvailability,
+          categoria_slug: legacyAvailability.categoria_slug || ""
+        })];
+      } else if (root.stato || root.stato_generale || root.settimanale) {
+        profiles = [normalizeAvailability(root)];
+      }
+    }
+
+    const rawCategories = root.categorie_offerte
+      ?? root.categorie
+      ?? data.categorie_offerte
+      ?? data.categorie
+      ?? [];
+    const categoryMap = new Map();
+    const categoryValues = Array.isArray(rawCategories)
+      ? rawCategories
+      : Object.entries(rawCategories || {}).map(([slug, label]) => ({ slug, label }));
+    categoryValues.forEach(value => {
+      const category = normalizeCategory(value);
+      if (category) categoryMap.set(category.slug, category);
+    });
+
+    /* Un profilo gia configurato resta sempre modificabile, anche se nel
+       frattempo la relativa categoria non compare piu tra gli annunci attivi. */
+    profiles.forEach(profile => {
+      if (!profile.categoria_slug || categoryMap.has(profile.categoria_slug)) return;
+      categoryMap.set(profile.categoria_slug, {
+        slug: profile.categoria_slug,
+        label: categoryLabels[profile.categoria_slug]
+          || profile.categoria_label
+          || profile.categoria_slug
+      });
+    });
+
+    const rawScopeCategoryAvailable = root.scope_categoria_disponibile
+      ?? data.scope_categoria_disponibile;
+    const rawUserOffersServices = root.utente_offre_servizi
+      ?? data.utente_offre_servizi;
+
+    return {
+      profiles,
+      categories: Array.from(categoryMap.values()),
+      scopeCategoryAvailable: rawScopeCategoryAvailable === undefined
+        ? categoryMap.size > 0
+        : rawScopeCategoryAvailable === true,
+      userOffersServices: rawUserOffersServices === undefined
+        ? categoryMap.size > 0
+        : rawUserOffersServices === true
     };
   }
 
@@ -1322,17 +1797,63 @@
     toastTimer = window.setTimeout(() => setHidden(globalMessage, true), 4200);
   }
 
+  function selectedProfile() {
+    return profilesByScope.get(selectedCategorySlug()) || null;
+  }
+
+  function canSaveSelectedScope() {
+    if (selectedProfile()) return true;
+    if (!userOffersServices) return false;
+    return !scopeCategoryInput.checked || scopeCategoryAvailable;
+  }
+
+  function syncPositiveDetailsState() {
+    const statusInput = form.querySelector('[name="service-availability-status"]:checked');
+    const unavailable = Boolean(
+      statusInput && statusInput.value === "non_disponibile"
+    );
+    if (positiveDetails) {
+      positiveDetails.classList.toggle("is-suspended", unavailable);
+      positiveDetails.setAttribute("aria-hidden", unavailable ? "true" : "false");
+    }
+    setHidden(positiveDetailsHiddenMessage, !unavailable);
+    form.querySelectorAll("[data-service-availability-positive-section]").forEach(section => {
+      section.disabled = busy || unavailable;
+    });
+  }
+
+  function syncDeletePanel() {
+    const profile = selectedProfile();
+    const exists = Boolean(profile && Number(profile.versione) > 0);
+    setHidden(deletePanel, !exists);
+    setHidden(deleteCategoryFallback, !exists || !selectedCategorySlug());
+    if (deleteButton) deleteButton.disabled = busy || !exists;
+  }
+
+  function syncPrimaryActions() {
+    if (saveButton) saveButton.disabled = busy || !canSaveSelectedScope();
+    syncDeletePanel();
+    syncPositiveDetailsState();
+  }
+
   function setBusy(value) {
     busy = Boolean(value);
-    if (saveButton) saveButton.disabled = busy;
     if (addSpecialButton) addSpecialButton.disabled = busy;
     if (addAbsenceButton) addAbsenceButton.disabled = busy;
+    if (scopeGeneralInput) scopeGeneralInput.disabled = busy;
+    if (scopeCategoryInput) {
+      scopeCategoryInput.disabled = busy || offeredCategories.length === 0;
+    }
+    if (categorySelect) {
+      categorySelect.disabled = busy || !(scopeCategoryInput && scopeCategoryInput.checked);
+    }
     dialog.querySelectorAll("[data-service-availability-remove]").forEach(button => {
       button.disabled = busy;
     });
     dialog.querySelectorAll("[data-service-availability-close]").forEach(button => {
       button.disabled = busy;
     });
+    syncScopeControls({ populate: false });
   }
 
   function createElement(tag, className, text) {
@@ -1461,6 +1982,119 @@
     setHidden(absenceEmpty, Boolean(absenceList && absenceList.children.length));
   }
 
+  function emptyAvailability(categorySlug) {
+    return {
+      versione: 0,
+      categoria_slug: normalizeCategorySlug(categorySlug),
+      stato: "disponibile",
+      settimanale: [],
+      date_speciali: [],
+      assenze: []
+    };
+  }
+
+  function selectedCategorySlug() {
+    if (!scopeCategoryInput || !scopeCategoryInput.checked) return "";
+    return normalizeCategorySlug(categorySelect && categorySelect.value);
+  }
+
+  function renderCategoryOptions() {
+    if (!categorySelect) return;
+    categorySelect.replaceChildren();
+
+    const placeholder = createElement("option", "", copy.chooseCategory || "");
+    placeholder.value = "";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    categorySelect.appendChild(placeholder);
+
+    offeredCategories.forEach(category => {
+      const option = createElement("option", "", category.label);
+      option.value = category.slug;
+      categorySelect.appendChild(option);
+    });
+  }
+
+  function populateSelectedScope() {
+    const slug = selectedCategorySlug();
+    populateForm(profilesByScope.get(slug) || emptyAvailability(slug));
+  }
+
+  function syncScopeControls(options) {
+    const settings = options || {};
+    const hasCategories = offeredCategories.length > 0;
+    const hasExistingCategoryProfile = Array.from(profilesByScope.keys()).some(Boolean);
+    const categoryScopeUsable = hasExistingCategoryProfile
+      || (scopeCategoryAvailable && userOffersServices);
+    const categoryMode = Boolean(
+      scopeCategoryInput
+      && scopeCategoryInput.checked
+      && categoryScopeUsable
+      && hasCategories
+    );
+
+    if (scopeCategoryInput) {
+      scopeCategoryInput.disabled = busy || !categoryScopeUsable || !hasCategories;
+    }
+    if ((!categoryScopeUsable || !hasCategories) && scopeGeneralInput) {
+      scopeGeneralInput.checked = true;
+    }
+    if (scopeCategoryInput) {
+      scopeCategoryInput.setAttribute("aria-expanded", categoryMode ? "true" : "false");
+    }
+    if (categorySelect) {
+      categorySelect.disabled = busy || !categoryMode;
+      categorySelect.required = categoryMode;
+      categorySelect.setAttribute("aria-required", categoryMode ? "true" : "false");
+    }
+    setHidden(categoryField, !categoryMode);
+    setHidden(
+      noCategoriesMessage,
+      userOffersServices || profilesByScope.size > 0
+    );
+    if (
+      noCategoriesMessage
+      && !userOffersServices
+      && profilesByScope.size === 0
+    ) {
+      noCategoriesMessage.textContent = copy.scopeCategoryDisabled;
+    }
+
+    if (settings.populate !== false) populateSelectedScope();
+    syncPrimaryActions();
+  }
+
+  function configureScopes(apiState, trigger) {
+    const state = apiState || { profiles: [], categories: [] };
+    profilesByScope = new Map();
+    state.profiles.forEach(profile => {
+      profilesByScope.set(normalizeCategorySlug(profile.categoria_slug), profile);
+    });
+    offeredCategories = state.categories;
+    scopeCategoryAvailable = Boolean(state.scopeCategoryAvailable);
+    userOffersServices = Boolean(state.userOffersServices);
+    renderCategoryOptions();
+
+    const triggerValue = trigger
+      ? trigger.getAttribute("data-service-availability-category")
+      : null;
+    const requestedSlug = triggerValue === null
+      ? ""
+      : normalizeCategorySlug(triggerValue);
+
+    if (
+      requestedSlug
+      && offeredCategories.some(item => item.slug === requestedSlug)
+    ) {
+      scopeCategoryInput.checked = true;
+      categorySelect.value = requestedSlug;
+    } else {
+      scopeGeneralInput.checked = true;
+      categorySelect.value = "";
+    }
+    syncScopeControls({ populate: true });
+  }
+
   function populateForm(value) {
     const availability = normalizeAvailability(value);
     currentVersion = availability.versione;
@@ -1483,9 +2117,18 @@
     absenceList.replaceChildren();
     availability.assenze.forEach(addAbsenceRow);
     updateEmptyStates();
+    syncPrimaryActions();
   }
 
   function payloadFromForm() {
+    const categorySlug = selectedCategorySlug();
+    if (!canSaveSelectedScope()) {
+      throw { message: copy.scopeCategoryDisabled, target: scopeGeneralInput };
+    }
+    if (scopeCategoryInput && scopeCategoryInput.checked && !categorySlug) {
+      throw { message: copy.errorInvalidData, target: categorySelect };
+    }
+
     const statusInput = form.querySelector('[name="service-availability-status"]:checked');
     if (!statusInput || !allowedStates.has(statusInput.value)) {
       throw { message: copy.errorInvalidData, target: form.querySelector('[name="service-availability-status"]') };
@@ -1546,6 +2189,7 @@
 
     return {
       versione: currentVersion,
+      categoria_slug: categorySlug || null,
       disponibilita: {
         stato: statusInput.value,
         settimanale: weekly,
@@ -1562,6 +2206,9 @@
     }
     if (code === "invalid_date" || code === "invalid_date_range") {
       return copy.errorDateOrder;
+    }
+    if (code === "invalid_category" || code === "category_not_offered") {
+      return copy.errorInvalidData;
     }
     if (code === "duplicate_special_date") return copy.errorDuplicateDate;
     if (code === "missing_special_slots") return copy.errorSpecialSlots;
@@ -1635,11 +2282,12 @@
       });
       const data = await parseResponse(response, copy.errorLoad);
       if (sequence !== requestSequence) return;
-      populateForm(data);
+      configureScopes(normalizedApiState(data), trigger);
       setHidden(loading, true);
       setHidden(form, false);
       window.requestAnimationFrame(() => {
-        const first = form.querySelector('[name="service-availability-status"]:checked')
+        const first = form.querySelector('[name="service-availability-scope"]:checked')
+          || form.querySelector('[name="service-availability-status"]:checked')
           || form.querySelector("input, select, button");
         if (first) first.focus({ preventScroll: true });
       });
@@ -1692,9 +2340,55 @@
     }
   }
 
+  async function deleteAvailability() {
+    if (busy) return;
+    const categorySlug = selectedCategorySlug();
+    const profile = profilesByScope.get(categorySlug);
+    if (!profile || Number(profile.versione) < 1) return;
+
+    let confirmationMessage = copy.deleteProfileConfirm;
+    if (categorySlug) {
+      confirmationMessage += `\n\n${copy.deleteProfileCategoryFallback}`;
+    }
+    if (!window.confirm(confirmationMessage)) return;
+
+    clearMessages();
+    setBusy(true);
+    deleteButton.textContent = copy.deleting;
+    try {
+      const response = await fetch("/api/utente/disponibilita", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({
+          versione: Number(profile.versione),
+          categoria_slug: categorySlug || null
+        })
+      });
+      await parseResponse(response, copy.errorSave);
+      successElement.textContent = copy.deleted;
+      setHidden(successElement, false);
+      window.setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      showError(error.message || copy.errorSave);
+      deleteButton.textContent = copy.deleteProfile;
+      setBusy(false);
+    }
+  }
+
   async function reconfirmAvailability(button) {
     if (!button || button.disabled) return;
     const originalLabel = button.textContent;
+    const categorySlug = normalizeCategorySlug(
+      button.dataset.availabilityCategory
+      ?? button.dataset.serviceAvailabilityCategory
+      ?? ""
+    );
     button.disabled = true;
     button.textContent = copy.confirming;
 
@@ -1714,7 +2408,11 @@
           }
         });
         const stateData = await parseResponse(stateResponse, copy.errorLoad);
-        version = normalizeAvailability(stateData).versione;
+        const state = normalizedApiState(stateData);
+        const matchingProfile = state.profiles.find(profile => (
+          normalizeCategorySlug(profile.categoria_slug) === categorySlug
+        ));
+        version = matchingProfile ? matchingProfile.versione : 0;
       }
       if (version < 1) throw new Error(copy.errorLoad);
 
@@ -1727,7 +2425,10 @@
           "X-CSRF-Token": csrfToken,
           "X-Requested-With": "XMLHttpRequest"
         },
-        body: JSON.stringify({ versione: version })
+        body: JSON.stringify({
+          versione: version,
+          categoria_slug: categorySlug || null
+        })
       });
       await parseResponse(response, copy.errorSave);
       showToast(copy.reconfirmed, false);
@@ -1757,6 +2458,23 @@
   dialog.querySelectorAll("[data-service-availability-close]").forEach(button => {
     button.addEventListener("click", closeDialog);
   });
+  if (scopeGeneralInput) {
+    scopeGeneralInput.addEventListener("change", () => {
+      if (scopeGeneralInput.checked) syncScopeControls({ populate: true });
+    });
+  }
+  if (scopeCategoryInput) {
+    scopeCategoryInput.addEventListener("change", () => {
+      if (scopeCategoryInput.checked) syncScopeControls({ populate: true });
+    });
+  }
+  if (categorySelect) {
+    categorySelect.addEventListener("change", populateSelectedScope);
+  }
+  form.querySelectorAll('[name="service-availability-status"]').forEach(input => {
+    input.addEventListener("change", syncPositiveDetailsState);
+  });
+  if (deleteButton) deleteButton.addEventListener("click", deleteAvailability);
   addSpecialButton.addEventListener("click", () => {
     const row = addSpecialRow({ tipo: "disponibile", fasce: [] });
     const input = row.querySelector("input[type=date]");

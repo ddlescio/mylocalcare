@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% set page = "profilo" %}
 {% set body_class = "offset-navbar" %}
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/disponibilita-servizi-display.css') }}">
+{% endblock %}
 {% block content %}
 {% from "partials/interesse_annuncio_button.html" import interesse_annuncio_icon with context %}
+{% from "partials/disponibilita_servizi_display.html" import availability_badge, availability_intro with context %}
 {% set pubblico = pubblico|default(False) %}
 
 
@@ -361,6 +365,19 @@
 
               </div>
 
+              {% if pubblico %}
+                {% set disponibilita_intro = disponibilita_servizi_profili_public|default([], true) %}
+              {% else %}
+                {% set disponibilita_intro = disponibilita_servizi_profili_private|default([], true) %}
+              {% endif %}
+
+              {{ availability_intro(
+                disponibilita_intro,
+                pubblico=pubblico,
+                feature_available=disponibilita_servizi_disponibile|default(false),
+                utente_offre_servizi=utente_offre_servizi|default(false)
+              ) }}
+
               <!-- 🔹 Attività Offro / Cerco -->
               {% set categorie = [
                 'Operatori benessere',
@@ -629,6 +646,12 @@
                           <p class="profile-annuncio-description">
                             {{ a['descrizione'] }}
                           </p>
+                        {% endif %}
+
+                        {% if a.get('tipo_annuncio') == 'offro' %}
+                          <div class="profile-annuncio-availability">
+                            {{ availability_badge(a.get('disponibilita_servizi')) }}
+                          </div>
                         {% endif %}
 
                       </div>

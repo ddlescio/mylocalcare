@@ -3,6 +3,7 @@ import unittest
 from datetime import date, datetime, timedelta, timezone
 
 from disponibilita_servizi import (
+    CATEGORIE_SERVIZI,
     CODICE_ESCLUSA_FILTRO,
     CODICE_FRESCA,
     CODICE_MAI_CONFERMATA,
@@ -17,6 +18,7 @@ from disponibilita_servizi import (
     MAX_RIGHE_SETTIMANALI,
     STATI_DISPONIBILITA,
     calcola_freschezza_disponibilita,
+    risolvi_disponibilita_per_categoria,
     normalize_disponibilita_payload,
     serializza_disponibilita_pubblica,
 )
@@ -43,6 +45,7 @@ class DisponibilitaNormalizationTest(unittest.TestCase):
             FASCE_DISPONIBILITA,
             ("mattina", "pomeriggio", "sera", "notte"),
         )
+        self.assertIn("babysitter", CATEGORIE_SERVIZI)
 
     def test_normalizza_ordina_e_rimuove_duplicati(self):
         payload = valid_payload(
@@ -113,6 +116,48 @@ class DisponibilitaNormalizationTest(unittest.TestCase):
                 "date_speciali": [],
                 "assenze": [],
             },
+        )
+
+    def test_risolutore_preferisce_categoria_e_ripiega_sulla_generale(self):
+        general = {"stato": "disponibile", "origine": "generale"}
+        pet = {"stato": "limitata", "origine": "pet"}
+        profiles = {"pet-sitter": pet}
+
+        self.assertIs(
+            risolvi_disponibilita_per_categoria(
+                general,
+                profiles,
+                "pet-sitter",
+            ),
+            pet,
+        )
+        self.assertIs(
+            risolvi_disponibilita_per_categoria(
+                general,
+                profiles,
+                "babysitter",
+            ),
+            general,
+        )
+        self.assertIs(
+            risolvi_disponibilita_per_categoria(
+                general,
+                profiles,
+                "categoria-inventata",
+            ),
+            general,
+        )
+
+    def test_risolutore_accetta_lista_di_righe_db(self):
+        general = {"origine": "generale"}
+        babysitter = {"categoria_slug": "babysitter", "origine": "specifica"}
+        self.assertIs(
+            risolvi_disponibilita_per_categoria(
+                general,
+                [babysitter],
+                "babysitter",
+            ),
+            babysitter,
         )
 
     def test_rifiuta_stato_giorno_e_fascia_non_validi(self):
