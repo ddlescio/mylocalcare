@@ -164,6 +164,24 @@
       </p>
 
       <div id="service-availability-positive-details">
+      <fieldset
+        class="service-availability-section service-availability-on-call-section"
+        data-service-availability-positive-section>
+        <legend>{{ tr('availability.on_call_title') }}</legend>
+        <label class="service-availability-on-call-option">
+          <input
+            id="service-availability-on-call"
+            type="checkbox"
+            name="service-availability-on-call">
+          <span class="service-availability-on-call-icon" aria-hidden="true">☎️</span>
+          <span class="service-availability-on-call-copy">
+            <strong>{{ tr('availability.on_call_label') }}</strong>
+            <small>{{ tr('availability.on_call_help') }}</small>
+          </span>
+          <span class="service-availability-on-call-check" aria-hidden="true">✓</span>
+        </label>
+      </fieldset>
+
       <fieldset class="service-availability-section" data-service-availability-positive-section>
         <legend>{{ tr('availability.weekly_title') }}</legend>
         <p class="service-availability-section-help">
@@ -1123,6 +1141,91 @@
     outline-offset:2px;
   }
 
+  .service-availability-on-call-option{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    gap:.8rem;
+    align-items:center;
+    padding:.9rem 1rem;
+    border:1px solid rgba(147,197,253,.92);
+    border-radius:1rem;
+    background:linear-gradient(145deg, rgba(239,246,255,.98), rgba(255,255,255,.98));
+    color:#1e3a8a;
+    cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95);
+  }
+
+  .service-availability-on-call-option input{
+    position:absolute;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .service-availability-on-call-icon{
+    display:grid;
+    place-items:center;
+    width:2.5rem;
+    height:2.5rem;
+    border-radius:.85rem;
+    background:#fff;
+    box-shadow:0 6px 16px rgba(37,99,235,.12);
+    font-size:1.2rem;
+  }
+
+  .service-availability-on-call-copy{
+    display:grid;
+    gap:.18rem;
+    min-width:0;
+  }
+
+  .service-availability-on-call-copy strong{
+    font-size:.95rem;
+    line-height:1.2;
+  }
+
+  .service-availability-on-call-copy small{
+    color:#64748b;
+    font-size:.78rem;
+    line-height:1.35;
+  }
+
+  .service-availability-on-call-check{
+    display:grid;
+    place-items:center;
+    width:1.7rem;
+    height:1.7rem;
+    border:1px solid #bfdbfe;
+    border-radius:.58rem;
+    background:#fff;
+    color:transparent;
+    font-weight:900;
+    transition:background .16s ease, color .16s ease, border-color .16s ease;
+  }
+
+  .service-availability-on-call-option:has(input:checked){
+    border-color:#60a5fa;
+    background:linear-gradient(145deg, #dbeafe, #eff6ff);
+    box-shadow:0 10px 24px rgba(37,99,235,.12), inset 0 1px 0 #fff;
+  }
+
+  .service-availability-on-call-option:has(input:checked) .service-availability-on-call-check{
+    border-color:#2563eb;
+    background:#2563eb;
+    color:#fff;
+  }
+
+  .service-availability-on-call-option:has(input:focus-visible){
+    outline:3px solid rgba(59,130,246,.3);
+    outline-offset:3px;
+  }
+
+  .service-availability-on-call-option:has(input:disabled){
+    cursor:not-allowed;
+    opacity:.62;
+  }
+
   .service-availability-week{
     display:grid;
     gap:.62rem;
@@ -1580,6 +1683,7 @@
   const categoryField = document.getElementById("service-availability-category-field");
   const categorySelect = document.getElementById("service-availability-category");
   const noCategoriesMessage = document.getElementById("service-availability-no-categories");
+  const onCallInput = document.getElementById("service-availability-on-call");
   const positiveDetails = document.getElementById("service-availability-positive-details");
   const positiveDetailsHiddenMessage = document.getElementById("service-availability-positive-details-hidden");
   const deletePanel = document.getElementById("service-availability-delete-panel");
@@ -1645,6 +1749,7 @@
         root.categoria_label ?? source.categoria_label ?? ""
       ).trim(),
       stato: allowedStates.has(state) ? state : "disponibile",
+      a_chiamata: source.a_chiamata === true,
       settimanale: asArray(source.settimanale).map(item => ({
         giorno_settimana: Number(item && item.giorno_settimana),
         fascia: String((item && item.fascia) || "")
@@ -1816,6 +1921,7 @@
       positiveDetails.classList.toggle("is-suspended", unavailable);
       positiveDetails.setAttribute("aria-hidden", unavailable ? "true" : "false");
     }
+    if (unavailable && onCallInput) onCallInput.checked = false;
     setHidden(positiveDetailsHiddenMessage, !unavailable);
     form.querySelectorAll("[data-service-availability-positive-section]").forEach(section => {
       section.disabled = busy || unavailable;
@@ -1987,6 +2093,7 @@
       versione: 0,
       categoria_slug: normalizeCategorySlug(categorySlug),
       stato: "disponibile",
+      a_chiamata: false,
       settimanale: [],
       date_speciali: [],
       assenze: []
@@ -2104,6 +2211,7 @@
       `[name="service-availability-status"][value="${availability.stato}"]`
     );
     if (statusInput) statusInput.checked = true;
+    if (onCallInput) onCallInput.checked = availability.a_chiamata;
 
     const weekly = new Set(availability.settimanale.map(item => (
       `${item.giorno_settimana}:${item.fascia}`
@@ -2192,6 +2300,7 @@
       categoria_slug: categorySlug || null,
       disponibilita: {
         stato: statusInput.value,
+        a_chiamata: Boolean(onCallInput && onCallInput.checked),
         settimanale: weekly,
         date_speciali: specialDates,
         assenze: absences
@@ -2244,7 +2353,9 @@
   }
 
   function openDialog(trigger) {
-    previousFocus = trigger || document.activeElement;
+    previousFocus = trigger && trigger.isConnected
+      ? trigger
+      : document.activeElement;
     dialog.classList.remove("service-availability-hidden");
     dialog.setAttribute("aria-hidden", "false");
     document.body.classList.add("service-availability-dialog-open");
@@ -2297,6 +2408,35 @@
       setHidden(form, false);
       showError(error.message || copy.errorLoad);
     }
+  }
+
+  function availabilityDeepLink() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("disponibilita") !== "riconferma") return null;
+
+    return {
+      categorySlug: normalizeCategorySlug(url.searchParams.get("categoria")),
+      clean() {
+        url.searchParams.delete("disponibilita");
+        url.searchParams.delete("categoria");
+        const cleanUrl = `${url.pathname}${url.search}${url.hash}`;
+        window.history.replaceState(window.history.state, "", cleanUrl);
+      }
+    };
+  }
+
+  function openAvailabilityFromDeepLink() {
+    const deepLink = availabilityDeepLink();
+    if (!deepLink) return;
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.setAttribute(
+      "data-service-availability-category",
+      deepLink.categorySlug
+    );
+
+    loadAvailability(trigger).finally(() => deepLink.clean());
   }
 
   async function saveAvailability(event) {
@@ -2511,6 +2651,7 @@
 
   setOpenHooksExpanded(false);
   updateEmptyStates();
+  openAvailabilityFromDeepLink();
 })();
 </script>
 {% endif %}

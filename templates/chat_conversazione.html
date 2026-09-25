@@ -3,6 +3,7 @@
 
 {% block head_extra %}
   <meta name="chat-aperta" content="true">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/richieste-disponibilita-proprietario.css') }}">
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       console.log("📍 CHAT DOMContentLoaded", {
@@ -715,6 +716,10 @@ body {
            </div>
          </div>
        {% endfor %}
+
+       {% if richieste_disponibilita_chat %}
+         {% include "partials/richieste_disponibilita_proprietario.html" %}
+       {% endif %}
       </div>
 
       <div
@@ -1453,6 +1458,13 @@ body {
           videoBtn.disabled = false;
         }
       }
+
+      document.dispatchEvent(
+        new CustomEvent(
+          'localcare:chat-block-status',
+          { detail: { ...chatBlockStatus } }
+        )
+      );
     }
 
     window.__applyChatBlockStatus =

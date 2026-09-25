@@ -20,6 +20,18 @@ from disponibilita_servizi import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def availability_payload(**overrides):
+    payload = {
+        "stato": "disponibile",
+        "a_chiamata": False,
+        "settimanale": [],
+        "date_speciali": [],
+        "assenze": [],
+    }
+    payload.update(overrides)
+    return normalize_disponibilita_payload(payload)
+
+
 def load_backend_functions():
     """Carica le funzioni pure/DB senza importare l'intera applicazione web."""
 
@@ -45,6 +57,7 @@ def load_backend_functions():
         "_elimina_disponibilita_generale",
         "_elimina_disponibilita_categoria",
         "_elimina_tutte_disponibilita_utente",
+        "_salva_disponibilita_generale",
         "_salva_disponibilita_categoria",
         "_risposta_disponibilita_servizi",
     }
@@ -137,6 +150,7 @@ class DisponibilitaBackendTest(unittest.TestCase):
             CREATE TABLE disponibilita_profili (
                 utente_id INTEGER PRIMARY KEY,
                 stato_generale TEXT NOT NULL,
+                a_chiamata INTEGER NOT NULL DEFAULT 0,
                 fuso_orario TEXT,
                 confermata_at TEXT,
                 ultimo_promemoria_at TEXT,
@@ -173,6 +187,7 @@ class DisponibilitaBackendTest(unittest.TestCase):
                 utente_id INTEGER NOT NULL,
                 categoria_slug TEXT NOT NULL,
                 stato_generale TEXT NOT NULL,
+                a_chiamata INTEGER NOT NULL DEFAULT 0,
                 fuso_orario TEXT,
                 confermata_at TEXT,
                 ultimo_promemoria_at TEXT,
@@ -213,59 +228,88 @@ class DisponibilitaBackendTest(unittest.TestCase):
     def test_salva_aggiorna_e_rilegge_disponibilita_categoria(self):
         save = self.backend["_salva_disponibilita_categoria"]
         load = self.backend["carica_disponibilita_servizi_categoria"]
-        first = normalize_disponibilita_payload({
-            "stato": "limitata",
-            "settimanale": [
+        first = availability_payload(
+            stato="limitata",
+            a_chiamata=True,
+            settimanale=[
                 {"giorno_settimana": 2, "fascia": "pomeriggio"},
             ],
-            "date_speciali": [{
+            date_speciali=[{
                 "data": "2026-10-10",
                 "tipo": "disponibile",
                 "fasce": ["sera"],
             }],
-            "assenze": [{
+            assenze=[{
                 "data_inizio": "2026-12-20",
                 "data_fine": "2026-12-27",
             }],
-        })
+        )
         save(self.cursor, 7, "babysitter", first, 0)
 
         profile = load(self.cursor, 7, "babysitter", pubblica=False)
         self.assertEqual(profile["categoria_slug"], "babysitter")
         self.assertEqual(profile["stato"], "limitata")
+        self.assertTrue(profile["a_chiamata"])
         self.assertEqual(profile["versione"], 1)
         self.assertEqual(profile["settimanale"], first["settimanale"])
         self.assertEqual(profile["date_speciali"], first["date_speciali"])
         self.assertEqual(profile["assenze"], first["assenze"])
 
-        second = normalize_disponibilita_payload({
-            "stato": "disponibile",
-            "settimanale": [
+        second = availability_payload(
+            stato="disponibile",
+            a_chiamata=False,
+            settimanale=[
                 {"giorno_settimana": 5, "fascia": "mattina"},
             ],
-            "date_speciali": [],
-            "assenze": [],
-        })
+            date_speciali=[],
+            assenze=[],
+        )
         save(self.cursor, 7, "babysitter", second, 1)
         updated = load(self.cursor, 7, "babysitter", pubblica=False)
         self.assertEqual(updated["stato"], "disponibile")
+        self.assertFalse(updated["a_chiamata"])
         self.assertEqual(updated["versione"], 2)
         self.assertEqual(updated["settimanale"], second["settimanale"])
         self.assertEqual(updated["date_speciali"], [])
         self.assertEqual(updated["assenze"], [])
 
+    def test_salva_e_rilegge_a_chiamata_generale_senza_fasce(self):
+        save = self.backend["_salva_disponibilita_generale"]
+        load = self.backend["carica_disponibilita_servizi"]
+        standalone = availability_payload(a_chiamata=True)
+
+        save(self.cursor, 8, standalone, 0)
+
+        private = load(self.cursor, 8, pubblica=False)
+        public = load(self.cursor, 8, pubblica=True)
+        stored = self.cursor.execute(
+            "SELECT a_chiamata FROM disponibilita_profili "
+            "WHERE utente_id = 8"
+        ).fetchone()
+
+        self.assertTrue(private["a_chiamata"])
+        self.assertEqual(private["settimanale"], [])
+        self.assertTrue(public["a_chiamata"])
+        self.assertEqual(public["settimanale"], [])
+        self.assertEqual(stored["a_chiamata"], 1)
+
+    def test_payload_helper_disattiva_a_chiamata_per_default(self):
+        self.assertFalse(availability_payload()["a_chiamata"])
+
     def test_card_offro_usa_categoria_e_fallback_generale(self):
-        self.cursor.execute("""
-            INSERT INTO disponibilita_profili (
-                utente_id, stato_generale, confermata_at, versione
-            ) VALUES (7, 'disponibile', CURRENT_TIMESTAMP, 1)
-        """)
-        self.cursor.execute("""
-            INSERT INTO disponibilita_profili_categoria (
-                utente_id, categoria_slug, stato_generale,
-                confermata_at, versione
-            ) VALUES (7, 'pet-sitter', 'limitata', CURRENT_TIMESTAMP, 1)
-        """)
+        self.backend["_salva_disponibilita_generale"](
+            self.cursor,
+            7,
+            availability_payload(a_chiamata=True),
+            0,
+        )
+        self.backend["_salva_disponibilita_categoria"](
+            self.cursor,
+            7,
+            "pet-sitter",
+            availability_payload(stato="limitata", a_chiamata=False),
+            0,
+        )
         cards = [
             {
                 "id": 1,
@@ -290,10 +334,12 @@ class DisponibilitaBackendTest(unittest.TestCase):
         self.backend["assegna_disponibilita_annunci"](self.cursor, cards)
 
         self.assertEqual(cards[0]["disponibilita_servizi"]["stato"], "disponibile")
+        self.assertTrue(cards[0]["disponibilita_servizi"]["a_chiamata"])
         self.assertIsNone(
             cards[0]["disponibilita_servizi"]["categoria_slug"]
         )
         self.assertEqual(cards[1]["disponibilita_servizi"]["stato"], "limitata")
+        self.assertFalse(cards[1]["disponibilita_servizi"]["a_chiamata"])
         self.assertEqual(
             cards[1]["disponibilita_servizi"]["categoria_slug"],
             "pet-sitter",

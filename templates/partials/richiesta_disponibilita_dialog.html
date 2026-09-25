@@ -1,0 +1,177 @@
+{% set request_days = [
+  (1, tr('availability.day_monday'), tr('availability.day_monday_short')),
+  (2, tr('availability.day_tuesday'), tr('availability.day_tuesday_short')),
+  (3, tr('availability.day_wednesday'), tr('availability.day_wednesday_short')),
+  (4, tr('availability.day_thursday'), tr('availability.day_thursday_short')),
+  (5, tr('availability.day_friday'), tr('availability.day_friday_short')),
+  (6, tr('availability.day_saturday'), tr('availability.day_saturday_short')),
+  (7, tr('availability.day_sunday'), tr('availability.day_sunday_short'))
+] %}
+{% set request_slots = [
+  ('mattina', tr('availability.slot_morning'), '☀️'),
+  ('pomeriggio', tr('availability.slot_afternoon'), '🌤️'),
+  ('sera', tr('availability.slot_evening'), '🌆'),
+  ('notte', tr('availability.slot_night'), '🌙')
+] %}
+
+<div id="availability-request-dialog"
+     class="availability-request-dialog"
+     data-endpoint="/api/annunci/{{ annuncio['id'] }}/richieste-disponibilita"
+     data-csrf-token="{{ csrf_token() }}"
+     aria-hidden="true"
+     hidden>
+  <section class="availability-request-sheet"
+           role="dialog"
+           aria-modal="true"
+           aria-labelledby="availability-request-title"
+           aria-describedby="availability-request-subtitle"
+           tabindex="-1">
+
+    <header class="availability-request-header">
+      <div class="availability-request-heading-mark" aria-hidden="true">📅</div>
+      <div class="availability-request-heading-copy">
+        <p class="availability-request-eyebrow">{{ tr('availability_request.eyebrow') }}</p>
+        <h2 id="availability-request-title">{{ tr('availability_request.title') }}</h2>
+        <p id="availability-request-subtitle">{{ tr('availability_request.subtitle') }}</p>
+      </div>
+      <button type="button"
+              class="availability-request-close"
+              data-availability-request-close
+              aria-label="{{ tr('availability.close') }}">
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+
+    <div id="availability-request-success"
+         class="availability-request-success"
+         role="status"
+         aria-live="polite"
+         hidden>
+      <span class="availability-request-success-icon" aria-hidden="true">✓</span>
+      <div>
+        <h3>{{ tr('availability_request.success_title') }}</h3>
+        <p>{{ tr('availability_request.success_message') }}</p>
+      </div>
+    </div>
+
+    <form id="availability-request-form" novalidate>
+      <div class="availability-request-intro">
+        <h3>{{ tr('availability_request.selection_title') }}</h3>
+        <p>{{ tr('availability_request.selection_help') }}</p>
+      </div>
+
+      <label class="availability-request-on-call">
+        <input type="checkbox"
+               data-availability-request-on-call>
+        <span class="availability-request-on-call-icon" aria-hidden="true">📞</span>
+        <span class="availability-request-on-call-copy">
+          <strong>{{ tr('availability.on_call_label') }}</strong>
+          <small>{{ tr('availability_request.on_call_help') }}</small>
+        </span>
+        <span class="availability-request-on-call-check" aria-hidden="true">✓</span>
+      </label>
+
+      <div class="availability-request-days">
+        {% for day_number, day_label, day_short in request_days %}
+          <article class="availability-request-day"
+                   data-availability-request-day
+                   data-day="{{ day_number }}">
+            <div class="availability-request-day-toggle-row">
+              <input id="availability-request-day-{{ day_number }}"
+                     class="availability-request-day-checkbox"
+                     type="checkbox"
+                     data-availability-request-day-toggle
+                     aria-controls="availability-request-day-details-{{ day_number }}"
+                     aria-expanded="false">
+              <label for="availability-request-day-{{ day_number }}"
+                     class="availability-request-day-toggle">
+                <span class="availability-request-day-short" aria-hidden="true">{{ day_short }}</span>
+                <span class="availability-request-day-name">{{ day_label }}</span>
+                <span class="availability-request-day-check" aria-hidden="true">✓</span>
+              </label>
+            </div>
+
+            <div id="availability-request-day-details-{{ day_number }}"
+                 class="availability-request-day-details"
+                 data-availability-request-day-details
+                 hidden>
+              <fieldset class="availability-request-slot-fieldset">
+                <legend>{{ tr('availability.slots') }}</legend>
+                <div class="availability-request-slots">
+                  {% for slot_value, slot_label, slot_icon in request_slots %}
+                    <label class="availability-request-slot">
+                      <input type="checkbox"
+                             value="{{ slot_value }}"
+                             data-availability-request-slot>
+                      <span aria-hidden="true">{{ slot_icon }}</span>
+                      <span>{{ slot_label }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </fieldset>
+
+              <section class="availability-request-intervals-section"
+                       aria-labelledby="availability-request-intervals-title-{{ day_number }}">
+                <div class="availability-request-intervals-heading">
+                  <h4 id="availability-request-intervals-title-{{ day_number }}">
+                    {{ tr('availability_request.exact_intervals') }}
+                  </h4>
+                  <button type="button"
+                          class="availability-request-add-interval"
+                          data-availability-request-add-interval>
+                    <span aria-hidden="true">＋</span>
+                    <span>{{ tr('availability_request.add_interval') }}</span>
+                  </button>
+                </div>
+                <div class="availability-request-intervals"
+                     data-availability-request-intervals></div>
+              </section>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+
+      <div id="availability-request-error"
+           class="availability-request-error"
+           role="alert"
+           tabindex="-1"
+           hidden></div>
+
+      <footer class="availability-request-footer">
+        <button type="button"
+                class="availability-request-cancel"
+                data-availability-request-close>
+          {{ tr('availability.cancel') }}
+        </button>
+        <button type="submit"
+                id="availability-request-submit"
+                class="availability-request-submit">
+          <span class="availability-request-submit-icon" aria-hidden="true">📨</span>
+          <span data-availability-request-submit-label>{{ tr('availability_request.submit') }}</span>
+          <span class="availability-request-spinner" aria-hidden="true" hidden></span>
+        </button>
+      </footer>
+    </form>
+  </section>
+</div>
+
+<script id="availability-request-copy" type="application/json">{{ {
+  'intervalLabel': tr('availability_request.interval_label'),
+  'fromLabel': tr('availability.from'),
+  'toLabel': tr('availability.to'),
+  'nextDayLabel': tr('availability_request.next_day'),
+  'nextDayHelp': tr('availability_request.next_day_help'),
+  'removeInterval': tr('availability_request.remove_interval'),
+  'submit': tr('availability_request.submit'),
+  'submitting': tr('availability_request.submitting'),
+  'errorSelectDay': tr('availability_request.error_select_day'),
+  'errorEmptyDay': tr('availability_request.error_empty_day'),
+  'errorIncompleteInterval': tr('availability_request.error_incomplete_interval'),
+  'errorInvalidInterval': tr('availability_request.error_invalid_interval'),
+  'errorInvalidNightInterval': tr('availability_request.error_invalid_night_interval'),
+  'errorLimitPerDay': tr('availability_request.error_limit_per_day'),
+  'errorLimitTotal': tr('availability_request.error_limit_total'),
+  'errorGeneric': tr('availability_request.error_generic')
+}|tojson }}</script>
+
+<script src="{{ url_for('static', filename='js/richiesta-disponibilita.js') }}" defer></script>

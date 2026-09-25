@@ -8,6 +8,15 @@
   {% endif %}
 {%- endmacro %}
 
+{% macro availability_on_call_badge(disponibilita, extra_class='') -%}
+  {% if disponibilita and disponibilita.get('a_chiamata', false) and disponibilita.get('stato') != 'non_disponibile' %}
+    <span class="availability-on-call-badge {{ extra_class }}">
+      <span aria-hidden="true">☎️</span>
+      <span>{{ tr('availability.on_call_label') }}</span>
+    </span>
+  {% endif %}
+{%- endmacro %}
+
 {% macro availability_scope(disponibilita) -%}
   {% if disponibilita.get('categoria_slug') %}
     {% set categoria_slug = disponibilita.get('categoria_slug') %}
@@ -69,6 +78,7 @@
       <div class="availability-detail__titlebox">
         <span class="availability-detail__scope">{{ availability_scope(disponibilita) }}</span>
         <strong>{{ availability_status(disponibilita) }}</strong>
+        {{ availability_on_call_badge(disponibilita) }}
       </div>
       {{ availability_badge(disponibilita) }}
     </header>
@@ -100,7 +110,7 @@
           {% endfor %}
         </div>
       </div>
-    {% else %}
+    {% elif not disponibilita.get('a_chiamata', false) %}
       <p class="availability-detail__empty">{{ tr('availability.no_weekly') }}</p>
     {% endif %}
 
@@ -197,6 +207,7 @@
             <span class="intro-availability__copy">
               <strong>{{ tr('availability.title') }}</strong>
               {{ availability_badge(primo, 'intro-availability__badge') }}
+              {{ availability_on_call_badge(primo, 'intro-availability__on-call') }}
               {% if profili|length > 1 %}
                 <span class="intro-availability__multi">
                   {{ tr('availability.configured_scopes', count=profili|length) }}
@@ -251,6 +262,7 @@
           <span>
             <strong>{{ tr('availability.listing_title') }}</strong>
             {{ availability_badge(disponibilita) }}
+            {{ availability_on_call_badge(disponibilita) }}
           </span>
           <span class="availability-listing-details__action">{{ tr('availability.view') }}</span>
         </summary>

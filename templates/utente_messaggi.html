@@ -53,7 +53,7 @@
     <section class="chat-list-stack">
 
       {% for c in threads %}
-      <a href="{{ url_for('chat_conversazione_view', other_id=c['altro_id']) }}"
+      <a href="{{ url_for('chat_conversazione_view', other_id=c['altro_id'], richiesta_disponibilita=c.get('richiesta_disponibilita_id')) if c.get('ultimo_evento_tipo') == 'richiesta_disponibilita' else url_for('chat_conversazione_view', other_id=c['altro_id']) }}"
          class="chat-thread-card {% if c['non_letti'] > 0 %}chat-thread-card-unread{% endif %}"
          data-chat-other-id="{{ c['altro_id'] }}"
          data-chat-unread="{{ c['non_letti'] or 0 }}">
@@ -106,7 +106,11 @@
               {% else %}
                 <span class="chat-thread-from">@{{ c['altro_username'] }}:</span>
               {% endif %}
-              {{ c['ultimo_testo'] }}
+              {% if c.get('ultimo_evento_tipo') == 'richiesta_disponibilita' %}
+                {{ tr('availability_request.chat_preview') }}
+              {% else %}
+                {{ c['ultimo_testo'] }}
+              {% endif %}
             </p>
 
             {% if c['non_letti'] > 0 %}

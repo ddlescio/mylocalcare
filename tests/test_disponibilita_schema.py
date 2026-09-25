@@ -218,6 +218,86 @@ class DisponibilitaSchemaTest(unittest.TestCase):
         self.assertNotIn("DROP TABLE", additive.upper())
         self.assertNotIn("ALTER TABLE disponibilita_profili", additive)
 
+        on_call = (
+            ROOT / "migrations" / "20260925_disponibilita_a_chiamata.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("ALTER TABLE disponibilita_profili", on_call)
+        self.assertIn("ALTER TABLE disponibilita_profili_categoria", on_call)
+        self.assertIn("a_chiamata BOOLEAN NOT NULL DEFAULT FALSE", on_call)
+        self.assertNotIn("DROP TABLE", on_call.upper())
+
+    def test_bootstrap_include_opzione_a_chiamata(self):
+        self._bootstrap()
+        connection = self._connect()
+        general_columns = {
+            row[1]: row for row in connection.execute(
+                "PRAGMA table_info(disponibilita_profili)"
+            )
+        }
+        category_columns = {
+            row[1]: row for row in connection.execute(
+                "PRAGMA table_info(disponibilita_profili_categoria)"
+            )
+        }
+        connection.close()
+
+        self.assertIn("a_chiamata", general_columns)
+        self.assertIn("a_chiamata", category_columns)
+        self.assertEqual(general_columns["a_chiamata"][3], 1)
+        self.assertEqual(category_columns["a_chiamata"][3], 1)
+
+    def test_bootstrap_aggiunge_a_chiamata_a_tabelle_esistenti(self):
+        connection = self._connect()
+        connection.executescript("""
+            CREATE TABLE disponibilita_profili (
+                utente_id INTEGER PRIMARY KEY,
+                stato_generale TEXT NOT NULL DEFAULT 'disponibile',
+                fuso_orario TEXT,
+                confermata_at TEXT,
+                ultimo_promemoria_at TEXT,
+                versione INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE disponibilita_profili_categoria (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                utente_id INTEGER NOT NULL,
+                categoria_slug TEXT NOT NULL,
+                stato_generale TEXT NOT NULL DEFAULT 'disponibile',
+                fuso_orario TEXT,
+                confermata_at TEXT,
+                ultimo_promemoria_at TEXT,
+                versione INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT,
+                updated_at TEXT,
+                UNIQUE (utente_id, categoria_slug)
+            );
+            INSERT INTO disponibilita_profili (
+                utente_id, stato_generale, versione
+            ) VALUES (1, 'limitata', 3);
+        """)
+        connection.commit()
+        connection.close()
+
+        self._bootstrap()
+
+        connection = self._connect()
+        profile = connection.execute(
+            "SELECT stato_generale, versione, a_chiamata "
+            "FROM disponibilita_profili WHERE utente_id = 1"
+        ).fetchone()
+        category_columns = {
+            row[1] for row in connection.execute(
+                "PRAGMA table_info(disponibilita_profili_categoria)"
+            )
+        }
+        connection.close()
+
+        self.assertEqual(profile["stato_generale"], "limitata")
+        self.assertEqual(profile["versione"], 3)
+        self.assertEqual(profile["a_chiamata"], 0)
+        self.assertIn("a_chiamata", category_columns)
+
 
 if __name__ == "__main__":
     unittest.main()

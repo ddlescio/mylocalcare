@@ -27,6 +27,7 @@ from disponibilita_servizi import (
 def valid_payload(**overrides):
     payload = {
         "stato": "disponibile",
+        "a_chiamata": False,
         "settimanale": [],
         "date_speciali": [],
         "assenze": [],
@@ -112,11 +113,38 @@ class DisponibilitaNormalizationTest(unittest.TestCase):
             normalize_disponibilita_payload({"stato": "non_disponibile"}),
             {
                 "stato": "non_disponibile",
+                "a_chiamata": False,
                 "settimanale": [],
                 "date_speciali": [],
                 "assenze": [],
             },
         )
+
+    def test_a_chiamata_puo_stare_da_sola_o_con_fasce(self):
+        only_on_call = normalize_disponibilita_payload(valid_payload(
+            a_chiamata=True,
+        ))
+        combined = normalize_disponibilita_payload(valid_payload(
+            a_chiamata=True,
+            settimanale=[{
+                "giorno_settimana": 1,
+                "fascia": "mattina",
+            }],
+        ))
+
+        self.assertTrue(only_on_call["a_chiamata"])
+        self.assertEqual(only_on_call["settimanale"], [])
+        self.assertTrue(combined["a_chiamata"])
+        self.assertEqual(len(combined["settimanale"]), 1)
+
+    def test_a_chiamata_richiede_booleano_e_stato_compatibile(self):
+        with self.assertRaisesRegex(ValueError, "valore booleano"):
+            normalize_disponibilita_payload(valid_payload(a_chiamata="si"))
+        with self.assertRaisesRegex(ValueError, "non disponibile"):
+            normalize_disponibilita_payload(valid_payload(
+                stato="non_disponibile",
+                a_chiamata=True,
+            ))
 
     def test_risolutore_preferisce_categoria_e_ripiega_sulla_generale(self):
         general = {"stato": "disponibile", "origine": "generale"}
@@ -426,6 +454,7 @@ class DisponibilitaPublicSerializerTest(unittest.TestCase):
 
         self.assertEqual(set(result), {
             "stato",
+            "a_chiamata",
             "settimanale",
             "date_speciali",
             "assenze",
@@ -435,6 +464,14 @@ class DisponibilitaPublicSerializerTest(unittest.TestCase):
         self.assertNotIn("email", result)
         self.assertEqual(result["freschezza"]["confermata_il"], "2026-01-01")
         self.assertNotIn("confermata_at", result["freschezza"])
+
+    def test_serializzatore_pubblico_conserva_a_chiamata(self):
+        result = serializza_disponibilita_pubblica(
+            valid_payload(a_chiamata=True),
+            confermata_at="2026-01-01T12:34:56Z",
+            now="2026-01-02T12:34:56Z",
+        )
+        self.assertTrue(result["a_chiamata"])
 
     def test_serializzatore_rivalida_i_dati_pubblici(self):
         with self.assertRaises(ValueError):

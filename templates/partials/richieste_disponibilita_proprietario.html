@@ -1,0 +1,212 @@
+{% set request_states = {
+  'in_attesa': tr('availability_request_owner.state_pending'),
+  'disponibile': tr('availability_request_owner.state_available'),
+  'non_disponibile': tr('availability_request_owner.state_unavailable'),
+  'informazioni': tr('availability_request_owner.state_information'),
+  'scaduta': tr('availability_request_owner.state_expired')
+} %}
+{% set request_days = {
+  1: tr('availability.day_monday'),
+  2: tr('availability.day_tuesday'),
+  3: tr('availability.day_wednesday'),
+  4: tr('availability.day_thursday'),
+  5: tr('availability.day_friday'),
+  6: tr('availability.day_saturday'),
+  7: tr('availability.day_sunday')
+} %}
+{% set request_slots = {
+  'mattina': tr('availability.slot_morning'),
+  'pomeriggio': tr('availability.slot_afternoon'),
+  'sera': tr('availability.slot_evening'),
+  'notte': tr('availability.slot_night')
+} %}
+
+<section id="richieste-disponibilita-chat"
+         class="owner-availability-requests-wrap"
+         data-owner-availability-requests
+         data-csrf-token="{{ csrf_token() }}"
+         aria-label="{{ tr('availability_request_owner.title') }}">
+  <div class="owner-availability-request-list">
+    {% for richiesta in richieste_disponibilita_chat %}
+      {% set request_id = richiesta.get('id') %}
+      {% set request_state = richiesta.get('stato', 'in_attesa') %}
+      {% set listing = richiesta.get('annuncio') or {} %}
+      {% set listing_title = listing.get('titolo') or listing.get('categoria') or tr('availability_request_chat.listing_fallback') %}
+      {% set can_answer_request = richiesta.get('sono_offerente') and request_state == 'in_attesa' %}
+
+      <article id="richiesta-disponibilita-{{ request_id }}"
+               class="owner-availability-request-card"
+               data-owner-availability-request
+               data-request-id="{{ request_id }}"
+               data-version="{{ richiesta.get('versione', 1) }}"
+               data-state="{{ request_state }}"
+               data-can-respond="{{ '1' if can_answer_request else '0' }}"
+               data-chat-blocked="{{ '1' if richiesta.get('conversazione_bloccata') else '0' }}"
+               data-endpoint="/api/richieste-disponibilita/{{ request_id }}/risposta">
+        <details class="owner-availability-request-details"
+                 data-owner-availability-request-details>
+          <summary class="owner-availability-request-summary">
+            <span class="owner-availability-request-icon" aria-hidden="true">📅</span>
+
+            <span class="owner-availability-request-person">
+              <span class="owner-availability-request-eyebrow">
+                {% if richiesta.get('inviata_da_me') %}
+                  {{ tr('availability_request_chat.sent_by_you') }}
+                {% else %}
+                  {{ tr('availability_request_chat.received_by_you') }}
+                {% endif %}
+              </span>
+              <strong class="ugc-text">{{ listing_title }}</strong>
+              {% if listing.get('categoria') and listing.get('categoria') != listing_title %}
+                <small class="ugc-text">{{ listing.get('categoria') }}</small>
+              {% endif %}
+            </span>
+
+            <span class="owner-availability-request-meta">
+              <span class="owner-availability-request-status is-{{ request_state }}"
+                    data-owner-availability-status>
+                {{ request_states.get(request_state, request_state) }}
+              </span>
+              <small>
+                <time datetime="{{ richiesta.get('created_at') or '' }}"
+                      data-owner-availability-date>{{ richiesta.get('created_at') or '—' }}</time>
+              </small>
+            </span>
+
+            <span class="owner-availability-request-chevron" aria-hidden="true">⌄</span>
+          </summary>
+
+          <div class="owner-availability-request-content">
+            <div class="owner-availability-request-content-heading">
+              <h3>{{ tr('availability_request_owner.schedule_title') }}</h3>
+              {% if listing.get('url') %}
+                <a href="{{ listing.get('url') }}"
+                   class="owner-availability-request-profile-link">
+                  <span aria-hidden="true">↗</span>
+                  <span>{{ tr('availability_request_chat.view_listing') }}</span>
+                </a>
+              {% endif %}
+            </div>
+
+            <div class="owner-availability-request-schedule">
+              {% if richiesta.get('a_chiamata') %}
+                <div class="owner-availability-request-on-call">
+                  <span aria-hidden="true">⚡</span>
+                  <span>{{ tr('availability.on_call_label') }}</span>
+                </div>
+              {% endif %}
+
+              {% for giorno in richiesta.get('giorni', []) %}
+                {% set day_number = giorno.get('giorno_settimana')|int %}
+                {% set day_slots = giorno.get('fasce') or [] %}
+                {% set day_intervals = giorno.get('intervalli') or [] %}
+                <section class="owner-availability-request-day">
+                  <h4>{{ request_days.get(day_number, day_number) }}</h4>
+
+                  {% if day_slots %}
+                    <div class="owner-availability-request-slots"
+                         aria-label="{{ tr('availability.slots') }}">
+                      {% for slot in day_slots %}
+                        <span>{{ request_slots.get(slot, slot) }}</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+
+                  {% if day_intervals %}
+                    <div class="owner-availability-request-intervals"
+                         aria-label="{{ tr('availability_request.exact_intervals') }}">
+                      {% for interval in day_intervals %}
+                        <span class="owner-availability-request-interval">
+                          <time>{{ interval.get('ora_inizio') }}</time>
+                          <span aria-hidden="true">→</span>
+                          <time>{{ interval.get('ora_fine') }}</time>
+                          {% if interval.get('giorno_successivo') %}
+                            <em>{{ tr('availability_request_owner.next_day_short') }}</em>
+                          {% endif %}
+                        </span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </section>
+              {% else %}
+                {% if not richiesta.get('a_chiamata') %}
+                  <p class="owner-availability-request-no-schedule">
+                    {{ tr('availability_request_owner.no_schedule') }}
+                  </p>
+                {% endif %}
+              {% endfor %}
+            </div>
+
+            {% if can_answer_request %}
+              <section class="owner-availability-request-response"
+                       data-owner-availability-actions
+                       {% if richiesta.get('conversazione_bloccata') %}hidden{% endif %}>
+                <h4>{{ tr('availability_request_owner.answer_title') }}</h4>
+                <div class="owner-availability-response-buttons">
+                  <button type="button"
+                          class="owner-availability-response-button is-available"
+                          data-owner-availability-response="disponibile">
+                    <span aria-hidden="true">✓</span>
+                    <span data-owner-availability-response-label>
+                      {{ tr('availability_request_owner.answer_available') }}
+                    </span>
+                  </button>
+                  <button type="button"
+                          class="owner-availability-response-button is-unavailable"
+                          data-owner-availability-response="non_disponibile">
+                    <span aria-hidden="true">×</span>
+                    <span data-owner-availability-response-label>
+                      {{ tr('availability_request_owner.answer_unavailable') }}
+                    </span>
+                  </button>
+                  <button type="button"
+                          class="owner-availability-response-button is-information"
+                          data-owner-availability-response="informazioni">
+                    <span aria-hidden="true">💬</span>
+                    <span data-owner-availability-response-label>
+                      {{ tr('availability_request_owner.answer_information') }}
+                    </span>
+                  </button>
+                </div>
+              </section>
+            {% endif %}
+
+            {% if request_state == 'in_attesa' %}
+              <p class="owner-availability-request-waiting"
+                 data-owner-availability-waiting
+                 {% if can_answer_request and not richiesta.get('conversazione_bloccata') %}hidden{% endif %}>
+                {% if richiesta.get('conversazione_bloccata') %}
+                  {{ tr('availability_request_chat.blocked') }}
+                {% else %}
+                  {{ tr('availability_request_chat.awaiting_reply') }}
+                {% endif %}
+              </p>
+            {% endif %}
+
+            <p class="owner-availability-response-result"
+               data-owner-availability-result
+               role="status"
+               aria-live="polite"
+               hidden></p>
+            <p class="owner-availability-response-error"
+               data-owner-availability-error
+               role="alert"
+               tabindex="-1"
+               hidden></p>
+          </div>
+        </details>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<script id="owner-availability-request-copy" type="application/json">{{ {
+  'sending': tr('availability_request_owner.sending'),
+  'answerRecorded': tr('availability_request_owner.answer_recorded'),
+  'errorGeneric': tr('availability_request_owner.error_generic'),
+  'errorConflict': tr('availability_request_owner.error_conflict'),
+  'blocked': tr('availability_request_chat.blocked'),
+  'awaitingReply': tr('availability_request_chat.awaiting_reply'),
+  'stateLabels': request_states
+}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/richieste-disponibilita-proprietario.js') }}" defer></script>

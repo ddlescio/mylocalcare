@@ -1315,6 +1315,126 @@ def chat_conversazione(
 
     return messaggi_decifrati
 
+def _chat_availability_requests_available(c) -> bool:
+    """Verifica la disponibilita della nuova tabella senza romperne il fallback.
+
+    In produzione il deploy dell'applicazione puo precedere la migrazione del
+    database.  Evitiamo quindi di interrogare direttamente una relazione che
+    potrebbe non esistere (su PostgreSQL l'errore invaliderebbe l'intera
+    transazione corrente).
+    """
+
+    if is_postgres():
+        c.execute(sql("""
+            SELECT COALESCE(
+                has_table_privilege(
+                    current_user,
+                    to_regclass('public.richieste_disponibilita'),
+                    'SELECT'
+                ),
+                FALSE
+            ) AS disponibile
+        """))
+    else:
+        c.execute(sql("""
+            SELECT CASE WHEN EXISTS (
+                SELECT 1
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name = 'richieste_disponibilita'
+            ) THEN 1 ELSE 0 END AS disponibile
+        """))
+
+    return bool(fetchone_value(c.fetchone()))
+
+
+def _chat_latest_availability_events(c, user_id: int):
+    """Restituisce al massimo una richiesta recente per interlocutore."""
+
+    if not _chat_availability_requests_available(c):
+        return []
+
+    rows = c.execute(sql("""
+        WITH ranked_requests AS (
+            SELECT
+                rd.id AS richiesta_id,
+                rd.richiedente_id,
+                rd.offerente_id,
+                rd.stato AS richiesta_stato,
+                rd.created_at AS richiesta_created_at,
+                rd.updated_at AS richiesta_updated_at,
+                CASE
+                    WHEN rd.richiedente_id = ? THEN rd.offerente_id
+                    ELSE rd.richiedente_id
+                END AS altro_id,
+                ROW_NUMBER() OVER (
+                    PARTITION BY CASE
+                        WHEN rd.richiedente_id = ? THEN rd.offerente_id
+                        ELSE rd.richiedente_id
+                    END
+                    ORDER BY
+                        COALESCE(rd.updated_at, rd.created_at) DESC,
+                        rd.id DESC
+                ) AS rn
+            FROM richieste_disponibilita rd
+            WHERE rd.richiedente_id = ?
+               OR rd.offerente_id = ?
+        )
+        SELECT
+            rr.richiesta_id,
+            rr.richiedente_id,
+            rr.offerente_id,
+            rr.richiesta_stato,
+            rr.richiesta_created_at,
+            rr.richiesta_updated_at,
+            rr.altro_id,
+            u.username AS username_altro,
+            u.nome AS altro_nome,
+            u.cognome AS altro_cognome,
+            u.foto_profilo AS altro_foto
+        FROM ranked_requests rr
+        JOIN utenti u ON u.id = rr.altro_id
+            AND u.sospeso = 0
+            AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
+            AND u.attivo = 1
+        WHERE rr.rn = 1
+    """), (
+        int(user_id),
+        int(user_id),
+        int(user_id),
+        int(user_id),
+    )).fetchall()
+
+    return [dict(row) for row in rows]
+
+
+def _chat_event_sort_key(value):
+    """Normalizza datetime PostgreSQL e stringhe ISO SQLite per l'ordinamento."""
+
+    from datetime import datetime, timezone
+
+    if value is None:
+        return float("-inf")
+
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        raw = str(value).strip()
+        if not raw:
+            return float("-inf")
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        try:
+            parsed = datetime.fromisoformat(raw)
+        except (TypeError, ValueError):
+            return float("-inf")
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.timestamp()
+
+
 def chat_threads(user_id: int):
     """
     Logica IDENTICA alla tua.
@@ -1543,7 +1663,95 @@ def chat_threads(user_id: int):
                 testo = "🔒 Messaggio cifrato"
 
         d["ultimo_testo"] = testo
+        d["ultimo_evento_tipo"] = "messaggio"
         threads.append(d)
+
+    # Le richieste di disponibilita sono eventi strutturati della chat e non
+    # messaggi cifrati.  Le fondiamo qui, senza creare falsi record in
+    # messaggi_chat e senza compromettere la cifratura end-to-end.
+    try:
+        availability_events = _chat_latest_availability_events(c, user_id)
+    except Exception as exc:
+        # Compatibilita durante deploy/migrazioni parziali: la lista chat deve
+        # continuare a funzionare anche se la nuova relazione non e leggibile.
+        print(f"[Richieste disponibilita non disponibili nella lista chat] {exc}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        availability_events = []
+
+    threads_by_other = {
+        int(thread["altro_id"]): thread
+        for thread in threads
+    }
+
+    for event in availability_events:
+        altro_id = int(event["altro_id"])
+        event_time = (
+            event.get("richiesta_updated_at")
+            or event.get("richiesta_created_at")
+        )
+        stato = str(event.get("richiesta_stato") or "").strip().lower()
+        actor_id = (
+            int(event["offerente_id"])
+            if stato != "in_attesa"
+            else int(event["richiedente_id"])
+        )
+        recipient_id = (
+            int(event["richiedente_id"])
+            if actor_id == int(event["offerente_id"])
+            else int(event["offerente_id"])
+        )
+
+        thread = threads_by_other.get(altro_id)
+        if thread is None:
+            thread = {
+                "altro_id": altro_id,
+                "username_altro": event["username_altro"],
+                "altro_username": event["username_altro"],
+                "altro_nome": event.get("altro_nome"),
+                "altro_cognome": event.get("altro_cognome"),
+                "altro_foto": event.get("altro_foto"),
+                "nome_chat": "@" + event["username_altro"],
+                "last_msg_id": None,
+                "ultimo_ciphertext": None,
+                "ultimo_nonce": None,
+                "ultimo_eph_pub": None,
+                "ultimo_eph_priv_enc": None,
+                "ultimo_eph_priv_nonce": None,
+                "ultimo_edited_at": None,
+                "ultimo_deleted_at": None,
+                "ultimo_updated_at": event_time,
+                "ultimo_consegnato": 0,
+                "ultimo_letto": 0,
+                "non_letti": 0,
+            }
+            threads.append(thread)
+            threads_by_other[altro_id] = thread
+
+        if (
+            thread.get("ultimo_evento_tipo") != "messaggio"
+            or _chat_event_sort_key(event_time)
+            >= _chat_event_sort_key(thread.get("ultimo_invio"))
+        ):
+            thread.update({
+                "ultimo_mittente_id": actor_id,
+                "ultimo_destinatario_id": recipient_id,
+                "ultimo_invio": event_time,
+                "ultimo_updated_at": event_time,
+                "ultimo_testo": "Richiesta di disponibilità",
+                "ultimo_evento_tipo": "richiesta_disponibilita",
+                "richiesta_disponibilita_id": int(
+                    event["richiesta_id"]
+                ),
+                "richiesta_disponibilita_stato": stato,
+            })
+
+    threads.sort(
+        key=lambda thread: _chat_event_sort_key(thread.get("ultimo_invio")),
+        reverse=True,
+    )
 
     return threads
 

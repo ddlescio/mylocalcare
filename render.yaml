@@ -167,3 +167,53 @@ projects:
       buildCommand: pip install -r requirements.txt
       startCommand: mkdir -p /tmp/uploads && python sync_servizi_scaduti.py
       autoDeployTrigger: commit
+
+    - type: cron
+      name: localcare-promemoria-disponibilita
+      runtime: python
+      repo: https://github.com/ddlescio/mylocalcare
+      plan: starter
+      envVars:
+      - key: APP_BASE_URL
+        sync: false
+      - key: INTERNAL_PUSH_TOKEN
+        sync: false
+      - key: RUNTIME_SERVICE
+        value: cron
+      - key: REDIS_URL
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_CLAIM_EMAIL
+        sync: false
+      - key: PYTHON_VERSION
+        sync: false
+      - key: MASTER_SECRET_KEY
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: MAIL_FROM_NAME
+        sync: false
+      - key: POSTMARK_SERVER_TOKEN
+        sync: false
+      - key: POSTMARK_MESSAGE_STREAM
+        sync: false
+      - key: FLASK_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DAILY_API_KEY
+        sync: false
+      schedule: "15 8 * * *"
+      region: frankfurt
+      buildCommand: pip install -r requirements.txt
+      startCommand: python run_availability_reminders.py
+      autoDeployTrigger: commit

@@ -78,6 +78,31 @@ class DisponibilitaDialogScopeTest(unittest.TestCase):
         self.assertIn("section.disabled = busy || unavailable", self.rendered)
         self.assertIn('positiveDetails.classList.toggle("is-suspended"', self.rendered)
 
+    def test_reconfirmation_deep_link_opens_requested_scope_and_cleans_url(self):
+        self.assertIn(
+            'url.searchParams.get("disponibilita") !== "riconferma"',
+            self.rendered,
+        )
+        self.assertIn(
+            'normalizeCategorySlug(url.searchParams.get("categoria"))',
+            self.rendered,
+        )
+        self.assertIn(
+            '"data-service-availability-category",',
+            self.rendered,
+        )
+        self.assertIn(
+            "loadAvailability(trigger).finally(() => deepLink.clean())",
+            self.rendered,
+        )
+        self.assertIn('url.searchParams.delete("disponibilita")', self.rendered)
+        self.assertIn('url.searchParams.delete("categoria")', self.rendered)
+        self.assertIn(
+            'window.history.replaceState(window.history.state, "", cleanUrl)',
+            self.rendered,
+        )
+        self.assertIn("openAvailabilityFromDeepLink();", self.rendered)
+
     @unittest.skipUnless(shutil.which("node"), "Node.js non disponibile")
     def test_rendered_dialog_javascript_has_valid_syntax(self):
         start = self.rendered.index("<script>") + len("<script>")

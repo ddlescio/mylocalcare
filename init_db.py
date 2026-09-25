@@ -1666,6 +1666,7 @@ def crea_tabelle_disponibilita_servizi():
                         'disponibile', 'limitata', 'non_disponibile'
                     )
                 ),
+                a_chiamata BOOLEAN NOT NULL DEFAULT FALSE,
                 fuso_orario TEXT NOT NULL DEFAULT 'Europe/Rome',
                 confermata_at {dt_col()},
                 ultimo_promemoria_at {dt_col()},
@@ -1740,6 +1741,7 @@ def crea_tabelle_disponibilita_servizi():
                         'disponibile', 'limitata', 'non_disponibile'
                     )
                 ),
+                a_chiamata BOOLEAN NOT NULL DEFAULT FALSE,
                 fuso_orario TEXT NOT NULL DEFAULT 'Europe/Rome',
                 confermata_at {dt_col()},
                 ultimo_promemoria_at {dt_col()},
@@ -1804,6 +1806,33 @@ def crea_tabelle_disponibilita_servizi():
             );
         """))
 
+        # Upgrade additivo per database creati prima dell'opzione. PostgreSQL
+        # supporta IF NOT EXISTS; su SQLite verifichiamo prima lo schema per
+        # mantenere il bootstrap ripetibile e senza perdita di dati.
+        if IS_POSTGRES:
+            c.execute(sql("""
+                ALTER TABLE disponibilita_profili
+                ADD COLUMN IF NOT EXISTS a_chiamata
+                    BOOLEAN NOT NULL DEFAULT FALSE;
+            """))
+            c.execute(sql("""
+                ALTER TABLE disponibilita_profili_categoria
+                ADD COLUMN IF NOT EXISTS a_chiamata
+                    BOOLEAN NOT NULL DEFAULT FALSE;
+            """))
+        else:
+            for table in (
+                "disponibilita_profili",
+                "disponibilita_profili_categoria",
+            ):
+                c.execute(f"PRAGMA table_info({table})")
+                columns = {row[1] for row in c.fetchall()}
+                if "a_chiamata" not in columns:
+                    c.execute(
+                        f"ALTER TABLE {table} "
+                        "ADD COLUMN a_chiamata INTEGER NOT NULL DEFAULT 0"
+                    )
+
         c.execute(sql("""
             CREATE INDEX IF NOT EXISTS idx_disponibilita_profili_stato
             ON disponibilita_profili (stato_generale, confermata_at);
@@ -1853,6 +1882,148 @@ def crea_tabelle_disponibilita_servizi():
         conn.close()
 
     print("✅ Tabelle disponibilità servizi pronte.")
+
+
+def crea_tabelle_richieste_disponibilita():
+    """Bootstrap additivo delle richieste anche nel database SQLite locale."""
+
+    conn = get_conn()
+    c = conn.cursor()
+    request_pk = (
+        "BIGSERIAL PRIMARY KEY"
+        if IS_POSTGRES
+        else "INTEGER PRIMARY KEY AUTOINCREMENT"
+    )
+    request_fk_type = "BIGINT" if IS_POSTGRES else "INTEGER"
+    time_type = "TIME WITHOUT TIME ZONE" if IS_POSTGRES else "TEXT"
+    boolean_type = "BOOLEAN" if IS_POSTGRES else "INTEGER"
+    false_default = "FALSE" if IS_POSTGRES else "0"
+    night_start = "TIME '18:00'" if IS_POSTGRES else "'18:00'"
+    night_end = "TIME '08:00'" if IS_POSTGRES else "'08:00'"
+
+    try:
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS richieste_disponibilita (
+                id {request_pk},
+                annuncio_id INTEGER NOT NULL,
+                richiedente_id INTEGER NOT NULL,
+                offerente_id INTEGER NOT NULL,
+                a_chiamata {boolean_type} NOT NULL DEFAULT {false_default},
+                stato TEXT NOT NULL DEFAULT 'in_attesa' CHECK (stato IN (
+                    'in_attesa', 'disponibile', 'non_disponibile',
+                    'informazioni', 'scaduta'
+                )),
+                risposta_at {dt_col()},
+                versione INTEGER NOT NULL DEFAULT 1 CHECK (versione >= 1),
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (annuncio_id)
+                    REFERENCES annunci(id) ON DELETE CASCADE,
+                FOREIGN KEY (richiedente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE,
+                FOREIGN KEY (offerente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE,
+                CHECK (richiedente_id <> offerente_id),
+                CHECK (
+                    (stato = 'in_attesa' AND risposta_at IS NULL)
+                    OR
+                    (stato <> 'in_attesa' AND risposta_at IS NOT NULL)
+                )
+            );
+        """))
+        if IS_POSTGRES:
+            c.execute(sql("""
+                ALTER TABLE richieste_disponibilita
+                ADD COLUMN IF NOT EXISTS a_chiamata
+                    BOOLEAN NOT NULL DEFAULT FALSE;
+            """))
+        else:
+            c.execute("PRAGMA table_info(richieste_disponibilita)")
+            colonne_richiesta = {row[1] for row in c.fetchall()}
+            if "a_chiamata" not in colonne_richiesta:
+                c.execute("""
+                    ALTER TABLE richieste_disponibilita
+                    ADD COLUMN a_chiamata INTEGER NOT NULL DEFAULT 0
+                """)
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS richieste_disponibilita_fasce (
+                id {request_pk},
+                richiesta_id {request_fk_type} NOT NULL,
+                giorno_settimana INTEGER NOT NULL CHECK (
+                    giorno_settimana BETWEEN 1 AND 7
+                ),
+                fascia TEXT NOT NULL CHECK (fascia IN (
+                    'mattina', 'pomeriggio', 'sera', 'notte'
+                )),
+                created_at {dt_col(True)} NOT NULL,
+                UNIQUE (richiesta_id, giorno_settimana, fascia),
+                FOREIGN KEY (richiesta_id)
+                    REFERENCES richieste_disponibilita(id) ON DELETE CASCADE
+            );
+        """))
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS richieste_disponibilita_intervalli (
+                id {request_pk},
+                richiesta_id {request_fk_type} NOT NULL,
+                giorno_settimana INTEGER NOT NULL CHECK (
+                    giorno_settimana BETWEEN 1 AND 7
+                ),
+                ora_inizio {time_type} NOT NULL,
+                ora_fine {time_type} NOT NULL,
+                giorno_successivo {boolean_type} NOT NULL
+                    DEFAULT {false_default},
+                created_at {dt_col(True)} NOT NULL,
+                UNIQUE (
+                    richiesta_id, giorno_settimana, ora_inizio,
+                    ora_fine, giorno_successivo
+                ),
+                CHECK (
+                    (
+                        giorno_successivo = {false_default}
+                        AND ora_fine > ora_inizio
+                    )
+                    OR
+                    (
+                        giorno_successivo <> {false_default}
+                        AND ora_inizio > ora_fine
+                        AND ora_inizio >= {night_start}
+                        AND ora_fine <= {night_end}
+                    )
+                ),
+                FOREIGN KEY (richiesta_id)
+                    REFERENCES richieste_disponibilita(id) ON DELETE CASCADE
+            );
+        """))
+        c.execute(sql("""
+            CREATE UNIQUE INDEX IF NOT EXISTS
+                ux_richieste_disponibilita_pendente
+            ON richieste_disponibilita (annuncio_id, richiedente_id)
+            WHERE stato = 'in_attesa';
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_richieste_disponibilita_offerente
+            ON richieste_disponibilita (offerente_id, stato, created_at DESC);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_richieste_disponibilita_richiedente
+            ON richieste_disponibilita (richiedente_id, created_at DESC);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_richieste_disponibilita_annuncio
+            ON richieste_disponibilita (annuncio_id, created_at DESC);
+        """))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+        conn.close()
+
+    print("✅ Tabelle richieste disponibilità pronte.")
 
 
 def semina_catalogo_qualifiche():
@@ -2376,6 +2547,7 @@ def inizializza_database():
     crea_tabelle_schede_profilo()
     semina_catalogo_qualifiche()
     crea_tabelle_disponibilita_servizi()
+    crea_tabelle_richieste_disponibilita()
 
     crea_tabella_operatori()
     crea_tabella_annunci()

@@ -1,7 +1,14 @@
 import os
 
 RUNTIME_SERVICE = os.getenv("RUNTIME_SERVICE", "web").strip().lower()
-APP_RUNTIME_ROLE = "realtime" if RUNTIME_SERVICE == "chat" else "web"
+if RUNTIME_SERVICE == "chat":
+    APP_RUNTIME_ROLE = "realtime"
+elif RUNTIME_SERVICE in {"job", "cron"}:
+    # I job importano l'applicazione per riusarne servizi e configurazione, ma
+    # non devono avviare i loop permanenti riservati ai worker web.
+    APP_RUNTIME_ROLE = "job"
+else:
+    APP_RUNTIME_ROLE = "web"
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory, abort
 from whitenoise import WhiteNoise
@@ -106,10 +113,17 @@ from profilo_schede import (
 )
 from disponibilita_servizi import (
     CATEGORIE_SERVIZI,
+    GIORNI_RICONFERMA,
     calcola_freschezza_disponibilita,
     normalize_disponibilita_payload,
     risolvi_disponibilita_per_categoria,
     serializza_disponibilita_pubblica,
+)
+from richieste_disponibilita import (
+    GIORNI_SCADENZA_RICHIESTA,
+    normalize_richiesta_disponibilita_payload,
+    normalizza_stato_richiesta_disponibilita,
+    valida_limiti_anti_abuso,
 )
 from i18n import (
     LEGAL_DOCUMENT_VERSION,
@@ -16691,6 +16705,41 @@ def _disponibilita_categoria_table_exists(cur):
     return cur.fetchone() is not None
 
 
+def _richieste_disponibilita_tables_exist(cur):
+    """Controlla il rollout delle tre tabelle senza rompere l'annuncio."""
+
+    table_names = (
+        "richieste_disponibilita",
+        "richieste_disponibilita_fasce",
+        "richieste_disponibilita_intervalli",
+    )
+    if app.config.get("IS_POSTGRES"):
+        cur.execute("""
+            SELECT
+                to_regclass('public.richieste_disponibilita') AS richieste,
+                to_regclass('public.richieste_disponibilita_fasce') AS fasce,
+                to_regclass('public.richieste_disponibilita_intervalli')
+                    AS intervalli
+        """)
+        row = cur.fetchone()
+        return bool(
+            row
+            and row["richieste"]
+            and row["fasce"]
+            and row["intervalli"]
+        )
+
+    placeholders = ", ".join("?" for _ in table_names)
+    cur.execute(sql(f"""
+        SELECT COUNT(*) AS totale
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name IN ({placeholders})
+    """), table_names)
+    row = cur.fetchone()
+    return int(fetchone_value(row) or 0) == len(table_names)
+
+
 def carica_catalogo_schede_profilo(cur, *, solo_attive=True):
     where = "WHERE q.attivo = TRUE" if solo_attive else ""
     cur.execute(sql(f"""
@@ -16868,6 +16917,7 @@ def _serializza_profilo_disponibilita(
 ):
     availability = normalize_disponibilita_payload({
         "stato": profile["stato_generale"],
+        "a_chiamata": bool(profile.get("a_chiamata")),
         "settimanale": weekly,
         "date_speciali": special_dates,
         "assenze": absences,
@@ -16883,6 +16933,7 @@ def _serializza_profilo_disponibilita(
         # resta utile per una futura riattivazione ma non deve suggerire al
         # pubblico fasce o date prenotabili in contraddizione con lo stato.
         if availability["stato"] == "non_disponibile":
+            availability["a_chiamata"] = False
             availability["settimanale"] = []
             availability["date_speciali"] = []
             availability["assenze"] = []
@@ -16914,7 +16965,8 @@ def carica_disponibilita_servizi(cur, utente_id, *, pubblica=False):
     """Carica la disponibilita generale, valida per tutti i servizi."""
 
     cur.execute(sql("""
-        SELECT utente_id, stato_generale, fuso_orario, confermata_at,
+        SELECT utente_id, stato_generale, a_chiamata,
+               fuso_orario, confermata_at,
                ultimo_promemoria_at, versione, created_at, updated_at
         FROM disponibilita_profili
         WHERE utente_id = ?
@@ -16999,7 +17051,8 @@ def carica_disponibilita_servizi_categoria(
         return None
 
     cur.execute(sql("""
-        SELECT id, utente_id, categoria_slug, stato_generale, fuso_orario,
+        SELECT id, utente_id, categoria_slug, stato_generale, a_chiamata,
+               fuso_orario,
                confermata_at, ultimo_promemoria_at, versione,
                created_at, updated_at
         FROM disponibilita_profili_categoria
@@ -17086,7 +17139,8 @@ def elenca_disponibilita_servizi(cur, utente_id, *, pubblica=False):
         return profiles
 
     cur.execute(sql("""
-        SELECT id, utente_id, categoria_slug, stato_generale, fuso_orario,
+        SELECT id, utente_id, categoria_slug, stato_generale, a_chiamata,
+               fuso_orario,
                confermata_at, ultimo_promemoria_at, versione,
                created_at, updated_at
         FROM disponibilita_profili_categoria
@@ -17243,6 +17297,441 @@ def _categorie_disponibilita_offerte(cur, utente_id):
     ]
 
 
+DISPONIBILITA_PROMEMORIA_BATCH_DEFAULT = 100
+DISPONIBILITA_PROMEMORIA_BATCH_MAX = 1000
+
+
+def _normalizza_limite_promemoria_disponibilita(limite):
+    """Limita il lavoro di un singolo job senza accettare batch illimitati."""
+
+    try:
+        limite = int(limite)
+    except (TypeError, ValueError):
+        limite = DISPONIBILITA_PROMEMORIA_BATCH_DEFAULT
+    return max(1, min(limite, DISPONIBILITA_PROMEMORIA_BATCH_MAX))
+
+
+def _disponibilita_promemoria_datetime(value):
+    """Normalizza timestamp PostgreSQL/SQLite per confronti deterministici."""
+
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        result = value
+    elif isinstance(value, date):
+        result = datetime.combine(value, datetime.min.time())
+    else:
+        raw = str(value).strip()
+        if raw.endswith("Z"):
+            raw = f"{raw[:-1]}+00:00"
+        try:
+            result = datetime.fromisoformat(raw)
+        except (TypeError, ValueError):
+            return None
+    if result.tzinfo is None:
+        result = result.replace(tzinfo=timezone.utc)
+    return result.astimezone(timezone.utc)
+
+
+def _link_promemoria_disponibilita(categoria_slug=None):
+    """Link relativo usabile allo stesso modo da notifica, push ed email."""
+
+    link = "/utente/dashboard?disponibilita=riconferma"
+    categoria_slug = str(categoria_slug or "").strip().lower()
+    if categoria_slug in CATEGORIE_SERVIZI:
+        link = f"{link}&categoria={categoria_slug}"
+    return link
+
+
+def _piano_promemoria_disponibilita(
+    profilo_generale,
+    profili_categoria,
+    categorie_offerte,
+    *,
+    adesso=None,
+):
+    """Calcola una sola riconferma per utente senza cambiare le disponibilita.
+
+    Il timestamp dell'ultimo promemoria viene considerato a livello utente:
+    basta che uno dei profili ancora pertinenti sia stato prenotato negli
+    ultimi trenta giorni per impedire un secondo invio. Le categorie non piu
+    offerte vengono ignorate sia per la scadenza sia per il limite.
+    """
+
+    adesso = _disponibilita_promemoria_datetime(adesso) or datetime.now(
+        timezone.utc
+    )
+    soglia = adesso - timedelta(days=GIORNI_RICONFERMA)
+    offerte = {
+        str(item or "").strip().lower()
+        for item in (categorie_offerte or [])
+        if str(item or "").strip().lower() in CATEGORIE_SERVIZI
+    }
+
+    generale = dict(profilo_generale) if profilo_generale else None
+    categorie = []
+    for raw_profile in profili_categoria or []:
+        profile = dict(raw_profile)
+        slug = str(profile.get("categoria_slug") or "").strip().lower()
+        if slug in offerte:
+            profile["categoria_slug"] = slug
+            categorie.append(profile)
+
+    profili_pertinenti = ([generale] if generale else []) + categorie
+    if not offerte or not profili_pertinenti:
+        return None
+
+    scaduti = []
+    for profile in profili_pertinenti:
+        confermata_at = _disponibilita_promemoria_datetime(
+            profile.get("confermata_at")
+        )
+        if confermata_at is not None and confermata_at <= soglia:
+            scaduti.append(profile)
+    if not scaduti:
+        return None
+
+    for profile in profili_pertinenti:
+        ultimo_promemoria_at = _disponibilita_promemoria_datetime(
+            profile.get("ultimo_promemoria_at")
+        )
+        if ultimo_promemoria_at is not None and ultimo_promemoria_at > soglia:
+            return None
+
+    ordine_categorie = {
+        slug: index for index, slug in enumerate(CATEGORIE_SERVIZI)
+    }
+    categorie_scadute = sorted(
+        {
+            profile["categoria_slug"]
+            for profile in scaduti
+            if profile.get("categoria_slug")
+        },
+        key=lambda slug: ordine_categorie.get(slug, len(ordine_categorie)),
+    )
+    return {
+        "generale_scaduta": bool(generale and generale in scaduti),
+        "categorie_scadute": categorie_scadute,
+        "categoria_link": categorie_scadute[0] if categorie_scadute else None,
+        # La prenotazione viene propagata a tutti i profili pertinenti gia
+        # esistenti. In questo modo il limite di 30 giorni resta per utente,
+        # anche se due categorie diventano obsolete in giorni diversi.
+        "aggiorna_generale": bool(generale),
+        "profili_categoria_ids": [
+            int(profile["id"])
+            for profile in categorie
+            if profile.get("id") is not None
+        ],
+    }
+
+
+def processa_promemoria_disponibilita(limite=100, dry_run=False):
+    """Prenota e invia i promemoria mensili di riconferma disponibilita.
+
+    Ogni utente riceve al massimo una notifica interna, una chiamata push e
+    una email (se abilitata), anche se ha piu profili scaduti. Il lock sulla
+    riga utente serializza job concorrenti; prenotazione e notifica interna
+    vengono confermate insieme prima di contattare servizi esterni.
+    """
+
+    limite = _normalizza_limite_promemoria_disponibilita(limite)
+    dry_run = bool(dry_run)
+    adesso = datetime.now(timezone.utc)
+    soglia = adesso - timedelta(days=GIORNI_RICONFERMA)
+    stats = {
+        "ok": True,
+        "dry_run": dry_run,
+        "limite": limite,
+        "candidati_esaminati": 0,
+        "utenti_prenotati": 0,
+        "utenti_da_notificare": 0,
+        "notifiche_create": 0,
+        "push_tentate": 0,
+        "email_inviate": 0,
+        "email_saltate": 0,
+        "errori": [],
+    }
+    conn = None
+    cur = None
+
+    try:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        if not _disponibilita_servizi_table_exists(cur):
+            return {
+                **stats,
+                "ok": False,
+                "error": "availability_tables_missing",
+            }
+        categorie_installate = _disponibilita_categoria_table_exists(cur)
+        category_due_clause = ""
+        if categorie_installate:
+            category_due_clause = """
+                OR EXISTS (
+                    SELECT 1
+                    FROM disponibilita_profili_categoria dpc
+                    WHERE dpc.utente_id = u.id
+                      AND dpc.confermata_at IS NOT NULL
+                      AND dpc.confermata_at <= ?
+                )
+            """
+
+        ultimo_id = 0
+        page_size = max(50, min(limite * 4, 500))
+        while stats["utenti_da_notificare"] < limite:
+            params = [ultimo_id, soglia]
+            if categorie_installate:
+                params.append(soglia)
+            params.append(page_size)
+            cur.execute(sql(f"""
+                SELECT u.id
+                FROM utenti u
+                WHERE u.id > ?
+                  AND COALESCE(u.attivo, 0) = 1
+                  AND COALESCE(u.sospeso, 0) = 0
+                  AND COALESCE(u.disattivato_admin, 0) = 0
+                  AND COALESCE(u.eliminato, 0) = 0
+                  AND (
+                      EXISTS (
+                          SELECT 1
+                          FROM disponibilita_profili dp
+                          WHERE dp.utente_id = u.id
+                            AND dp.confermata_at IS NOT NULL
+                            AND dp.confermata_at <= ?
+                      )
+                      {category_due_clause}
+                  )
+                ORDER BY u.id
+                LIMIT ?
+            """), tuple(params))
+            candidate_ids = [int(row["id"]) for row in cur.fetchall()]
+            if not candidate_ids:
+                break
+
+            for user_id in candidate_ids:
+                ultimo_id = user_id
+                if stats["utenti_da_notificare"] >= limite:
+                    break
+                stats["candidati_esaminati"] += 1
+                user = None
+                plan = None
+                titolo = None
+                messaggio = None
+                link = None
+
+                try:
+                    _schede_profilo_begin(cur)
+                    lock_suffix = (
+                        " FOR UPDATE SKIP LOCKED"
+                        if app.config.get("IS_POSTGRES")
+                        else ""
+                    )
+                    cur.execute(sql(f"""
+                        SELECT id, email, nome, username, email_notifiche,
+                               COALESCE(lingua_interfaccia, 'it')
+                                   AS lingua_interfaccia
+                        FROM utenti
+                        WHERE id = ?
+                          AND COALESCE(attivo, 0) = 1
+                          AND COALESCE(sospeso, 0) = 0
+                          AND COALESCE(disattivato_admin, 0) = 0
+                          AND COALESCE(eliminato, 0) = 0
+                        {lock_suffix}
+                    """), (user_id,))
+                    locked_user = cur.fetchone()
+                    if not locked_user:
+                        _schede_profilo_rollback(cur)
+                        continue
+                    user = dict(locked_user)
+
+                    categorie_offerte = [
+                        item["slug"]
+                        for item in _categorie_disponibilita_offerte(
+                            cur,
+                            user_id,
+                        )
+                    ]
+                    cur.execute(sql("""
+                        SELECT utente_id AS id, confermata_at,
+                               ultimo_promemoria_at
+                        FROM disponibilita_profili
+                        WHERE utente_id = ?
+                        LIMIT 1
+                    """), (user_id,))
+                    general_row = cur.fetchone()
+                    general_profile = dict(general_row) if general_row else None
+
+                    category_profiles = []
+                    if categorie_installate:
+                        cur.execute(sql("""
+                            SELECT id, categoria_slug, confermata_at,
+                                   ultimo_promemoria_at
+                            FROM disponibilita_profili_categoria
+                            WHERE utente_id = ?
+                            ORDER BY id
+                        """), (user_id,))
+                        category_profiles = [
+                            dict(row) for row in cur.fetchall()
+                        ]
+
+                    plan = _piano_promemoria_disponibilita(
+                        general_profile,
+                        category_profiles,
+                        categorie_offerte,
+                        adesso=adesso,
+                    )
+                    if not plan:
+                        _schede_profilo_rollback(cur)
+                        continue
+
+                    stats["utenti_da_notificare"] += 1
+                    if dry_run:
+                        _schede_profilo_rollback(cur)
+                        continue
+
+                    if plan["aggiorna_generale"]:
+                        cur.execute(sql("""
+                            UPDATE disponibilita_profili
+                            SET ultimo_promemoria_at = ?
+                            WHERE utente_id = ?
+                        """), (adesso, user_id))
+                    category_ids = plan["profili_categoria_ids"]
+                    if category_ids:
+                        placeholders = ", ".join("?" for _ in category_ids)
+                        cur.execute(sql(f"""
+                            UPDATE disponibilita_profili_categoria
+                            SET ultimo_promemoria_at = ?
+                            WHERE utente_id = ?
+                              AND id IN ({placeholders})
+                        """), (adesso, user_id, *category_ids))
+
+                    language = normalize_language(user["lingua_interfaccia"])
+                    titolo_sorgente = "Riconferma la tua disponibilità"
+                    messaggio_sorgente = (
+                        "È passato circa un mese dall’ultima conferma. "
+                        "Controlla i dati già salvati: puoi riconfermarli "
+                        "così come sono oppure modificarli."
+                    )
+                    titolo = translate_source(titolo_sorgente, language)
+                    messaggio = translate_source(messaggio_sorgente, language)
+                    link = _link_promemoria_disponibilita(
+                        plan["categoria_link"]
+                    )
+                    cur.execute(sql("""
+                        INSERT INTO notifiche (
+                            id_utente, titolo, messaggio, link, tipo, letta
+                        ) VALUES (?, ?, ?, ?, 'disponibilita_promemoria', 0)
+                    """), (user_id, titolo, messaggio, link))
+                    _schede_profilo_commit(cur)
+                    stats["utenti_prenotati"] += 1
+                    stats["notifiche_create"] += 1
+
+                except Exception as exc:
+                    _schede_profilo_rollback(cur)
+                    stats["errori"].append({
+                        "utente_id": user_id,
+                        "canale": "prenotazione",
+                    })
+                    log_exception_safe(
+                        "Errore prenotazione promemoria disponibilita",
+                        exc,
+                        {"utente_id": user_id},
+                        production=True,
+                    )
+                    continue
+
+                # Tutto cio che segue avviene dopo il COMMIT: una seconda
+                # istanza vedra il timestamp e non ripetera i canali esterni.
+                try:
+                    emit_update_notifications(user_id)
+                except Exception as exc:
+                    log_exception_safe(
+                        "Errore realtime promemoria disponibilita",
+                        exc,
+                        {"utente_id": user_id},
+                        production=True,
+                    )
+
+                stats["push_tentate"] += 1
+                try:
+                    invia_push(user_id, titolo, messaggio, url=link)
+                except Exception as exc:
+                    stats["errori"].append({
+                        "utente_id": user_id,
+                        "canale": "push",
+                    })
+                    log_exception_safe(
+                        "Errore push promemoria disponibilita",
+                        exc,
+                        {"utente_id": user_id},
+                        production=True,
+                    )
+
+                if int(user.get("email_notifiche") or 0) == 1 and user.get(
+                    "email"
+                ):
+                    action_url = (
+                        f"{app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')}"
+                        f"{link}"
+                    )
+                    try:
+                        if _invia_email(
+                            destinazione=user["email"],
+                            oggetto=(
+                                "Riconferma la tua disponibilità su "
+                                "MyLocalCare"
+                            ),
+                            corpo=(
+                                f"{titolo_sorgente}\n\n"
+                                f"{messaggio_sorgente}"
+                            ),
+                            action_url=action_url,
+                            action_label="Controlla disponibilità",
+                            language=language,
+                        ):
+                            stats["email_inviate"] += 1
+                    except Exception as exc:
+                        stats["errori"].append({
+                            "utente_id": user_id,
+                            "canale": "email",
+                        })
+                        log_exception_safe(
+                            "Errore email promemoria disponibilita",
+                            exc,
+                            {"utente_id": user_id},
+                            production=True,
+                        )
+                else:
+                    stats["email_saltate"] += 1
+
+        return stats
+
+    except Exception as exc:
+        if cur is not None:
+            _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore job promemoria disponibilita",
+            exc,
+            production=True,
+        )
+        return {
+            **stats,
+            "ok": False,
+            "error": type(exc).__name__,
+        }
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def _disponibilita_servizi_context(cur, utente_id, *, pubblica=False):
     """Mantiene operativo il profilo se il codice precede la migrazione DB."""
 
@@ -17273,6 +17762,7 @@ def _riepilogo_pubblico_disponibilita(row, *, categoria_slug=None):
     summary = serializza_disponibilita_pubblica(
         {
             "stato": row["stato_generale"],
+            "a_chiamata": bool(row.get("a_chiamata")),
             "settimanale": [],
             "date_speciali": [],
             "assenze": [],
@@ -17319,7 +17809,7 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
     placeholders = ", ".join("?" for _ in user_ids)
     params = tuple(sorted(user_ids))
     cur.execute(sql(f"""
-        SELECT utente_id, stato_generale, confermata_at
+        SELECT utente_id, stato_generale, a_chiamata, confermata_at
         FROM disponibilita_profili
         WHERE utente_id IN ({placeholders})
     """), params)
@@ -17331,7 +17821,8 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
     category_by_user = {}
     if _disponibilita_categoria_table_exists(cur):
         cur.execute(sql(f"""
-            SELECT utente_id, categoria_slug, stato_generale, confermata_at
+            SELECT utente_id, categoria_slug, stato_generale, a_chiamata,
+                   confermata_at
             FROM disponibilita_profili_categoria
             WHERE utente_id IN ({placeholders})
         """), params)
@@ -17549,25 +18040,36 @@ def _salva_disponibilita_generale(
     if existing:
         cur.execute(sql("""
             UPDATE disponibilita_profili
-            SET stato_generale = ?, fuso_orario = 'Europe/Rome',
+            SET stato_generale = ?, a_chiamata = ?,
+                fuso_orario = 'Europe/Rome',
                 confermata_at = CURRENT_TIMESTAMP,
                 ultimo_promemoria_at = NULL,
                 versione = versione + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE utente_id = ? AND versione = ?
-        """), (normalized["stato"], user_id, current_version))
+        """), (
+            normalized["stato"],
+            bool(normalized["a_chiamata"]),
+            user_id,
+            current_version,
+        ))
         if cur.rowcount != 1:
             raise RuntimeError("version_conflict")
     else:
         cur.execute(sql("""
             INSERT INTO disponibilita_profili (
-                utente_id, stato_generale, fuso_orario, confermata_at,
-                ultimo_promemoria_at, versione, created_at, updated_at
+                utente_id, stato_generale, a_chiamata, fuso_orario,
+                confermata_at, ultimo_promemoria_at, versione,
+                created_at, updated_at
             ) VALUES (
-                ?, ?, 'Europe/Rome', CURRENT_TIMESTAMP, NULL, 1,
+                ?, ?, ?, 'Europe/Rome', CURRENT_TIMESTAMP, NULL, 1,
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
-        """), (user_id, normalized["stato"]))
+        """), (
+            user_id,
+            normalized["stato"],
+            bool(normalized["a_chiamata"]),
+        ))
 
     for table in (
         "disponibilita_settimanale",
@@ -17635,7 +18137,8 @@ def _salva_disponibilita_categoria(
         profile_id = int(existing["id"])
         cur.execute(sql("""
             UPDATE disponibilita_profili_categoria
-            SET stato_generale = ?, fuso_orario = 'Europe/Rome',
+            SET stato_generale = ?, a_chiamata = ?,
+                fuso_orario = 'Europe/Rome',
                 confermata_at = CURRENT_TIMESTAMP,
                 ultimo_promemoria_at = NULL,
                 versione = versione + 1,
@@ -17643,6 +18146,7 @@ def _salva_disponibilita_categoria(
             WHERE id = ? AND utente_id = ? AND versione = ?
         """), (
             normalized["stato"],
+            bool(normalized["a_chiamata"]),
             profile_id,
             user_id,
             current_version,
@@ -17652,14 +18156,19 @@ def _salva_disponibilita_categoria(
     else:
         profile_id = insert_and_get_id(cur, """
             INSERT INTO disponibilita_profili_categoria (
-                utente_id, categoria_slug, stato_generale, fuso_orario,
-                confermata_at, ultimo_promemoria_at, versione,
+                utente_id, categoria_slug, stato_generale, a_chiamata,
+                fuso_orario, confermata_at, ultimo_promemoria_at, versione,
                 created_at, updated_at
             ) VALUES (
-                ?, ?, ?, 'Europe/Rome', CURRENT_TIMESTAMP, NULL, 1,
+                ?, ?, ?, ?, 'Europe/Rome', CURRENT_TIMESTAMP, NULL, 1,
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
-        """, (user_id, categoria_slug, normalized["stato"]))
+        """, (
+            user_id,
+            categoria_slug,
+            normalized["stato"],
+            bool(normalized["a_chiamata"]),
+        ))
         if not profile_id:
             raise RuntimeError("category_profile_insert_failed")
         profile_id = int(profile_id)
@@ -20053,8 +20562,8 @@ UPLOAD_COPERTINE_FOLDER = os.path.join(UPLOAD_FOLDER, "copertine")
 UPLOAD_GALLERIA_FOLDER = os.path.join(UPLOAD_FOLDER, "galleria")
 
 # Le cartelle upload vanno create solo sul servizio web.
-# Il servizio realtime/chat non deve provare a scrivere su /uploads.
-if APP_RUNTIME_ROLE != "realtime":
+# Realtime e job non devono provare a scrivere su /uploads.
+if APP_RUNTIME_ROLE == "web":
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(UPLOAD_COPERTINE_FOLDER, exist_ok=True)
     os.makedirs(UPLOAD_GALLERIA_FOLDER, exist_ok=True)
@@ -23614,6 +24123,1037 @@ def _elenca_interessati_annuncio(conn, annuncio_id):
     return interessati
 
 
+RICHIESTA_DISPONIBILITA_TITOLO = "Nuova richiesta di disponibilità"
+RICHIESTA_DISPONIBILITA_MESSAGGIO = (
+    "Un utente ti ha chiesto di confermare la disponibilità per un tuo "
+    "annuncio."
+)
+RICHIESTA_DISPONIBILITA_EMAIL_OGGETTO = (
+    "Hai ricevuto una richiesta di disponibilità su MyLocalCare"
+)
+RICHIESTA_DISPONIBILITA_EMAIL_CTA = "Apri la chat"
+RISPOSTA_DISPONIBILITA_TITOLO = "Risposta alla tua richiesta di disponibilità"
+RISPOSTA_DISPONIBILITA_MESSAGGI = {
+    "disponibile": "L’utente ha confermato la disponibilità richiesta.",
+    "non_disponibile": "L’utente ha indicato di non essere disponibile.",
+    "informazioni": (
+        "L’utente ha bisogno di maggiori informazioni prima di confermare."
+    ),
+}
+RISPOSTA_DISPONIBILITA_EMAIL_OGGETTO = (
+    "Hai ricevuto una risposta su MyLocalCare"
+)
+RISPOSTA_DISPONIBILITA_EMAIL_CTA = "Apri la chat"
+
+
+class RichiestaDisponibilitaError(ValueError):
+    """Errore applicativo sicuro da restituire alle API disponibilita."""
+
+    def __init__(
+        self,
+        source,
+        *,
+        status=400,
+        code="invalid_request",
+        commit_changes=False,
+    ):
+        super().__init__(source)
+        self.source = source
+        self.status = int(status)
+        self.code = code
+        self.commit_changes = bool(commit_changes)
+
+
+def _richiesta_disponibilita_error(error):
+    source = getattr(error, "source", str(error))
+    status = int(getattr(error, "status", 400))
+    code = getattr(error, "code", "invalid_request")
+    return jsonify({
+        "ok": False,
+        "code": code,
+        "error": translate_source(source, get_interface_language()),
+    }), status
+
+
+def _richiesta_disponibilita_account_attivo(row, prefix=""):
+    return bool(
+        row
+        and int(row[f"{prefix}attivo"] or 0) == 1
+        and int(row[f"{prefix}sospeso"] or 0) == 0
+        and int(row[f"{prefix}disattivato_admin"] or 0) == 0
+        and int(row[f"{prefix}eliminato"] or 0) == 0
+        and str(row[f"{prefix}ruolo"] or "user").strip().lower() != "admin"
+    )
+
+
+def _richiesta_disponibilita_time(value):
+    """Serializza TIME PostgreSQL/SQLite nel formato stabile HH:MM."""
+
+    if value is None:
+        return ""
+    if hasattr(value, "strftime"):
+        try:
+            return value.strftime("%H:%M")
+        except Exception:
+            pass
+    raw = str(value).strip()
+    return raw[:5] if len(raw) >= 5 else raw
+
+
+def _richiesta_disponibilita_bloccata(cur, primo_id, secondo_id):
+    cur.execute(sql("""
+        SELECT 1
+        FROM chat_blocchi
+        WHERE (
+                bloccante_id = ?
+            AND bloccato_id = ?
+        ) OR (
+                bloccante_id = ?
+            AND bloccato_id = ?
+        )
+        LIMIT 1
+    """), (
+        int(primo_id),
+        int(secondo_id),
+        int(secondo_id),
+        int(primo_id),
+    ))
+    return cur.fetchone() is not None
+
+
+def _link_richiesta_disponibilita(richiedente_id, richiesta_id):
+    """Apre per l'offerente la card della richiesta nella chat corretta."""
+
+    return url_for(
+        "chat_conversazione_view",
+        other_id=int(richiedente_id),
+        richiesta_disponibilita=int(richiesta_id),
+    )
+
+
+def _link_risposta_disponibilita(offerente_id, richiesta_id):
+    """Apre per il richiedente la stessa card, aggiornata, nella chat."""
+
+    return url_for(
+        "chat_conversazione_view",
+        other_id=int(offerente_id),
+        richiesta_disponibilita=int(richiesta_id),
+    )
+
+
+def _inserisci_notifica_richiesta_disponibilita(
+    cur,
+    *,
+    destinatario_id,
+    titolo,
+    messaggio,
+    link,
+    tipo,
+):
+    cur.execute(sql("""
+        INSERT INTO notifiche (
+            id_utente, titolo, messaggio, link, tipo, letta
+        ) VALUES (?, ?, ?, ?, ?, 0)
+    """), (
+        int(destinatario_id),
+        titolo,
+        messaggio,
+        link,
+        tipo,
+    ))
+
+
+def _prenota_richiesta_disponibilita(
+    cur,
+    *,
+    annuncio_id,
+    richiedente_id,
+    calendario,
+    adesso=None,
+):
+    """Valida e salva richiesta, calendario e notifica nella transazione."""
+
+    adesso = _disponibilita_promemoria_datetime(adesso) or datetime.now(
+        timezone.utc
+    )
+    account_lock_suffix = (
+        " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+    )
+    cur.execute(sql(f"""
+        SELECT id, username, nome, email, email_notifiche,
+               COALESCE(lingua_interfaccia, 'it') AS lingua_interfaccia,
+               attivo, sospeso, disattivato_admin, eliminato, ruolo
+        FROM utenti
+        WHERE id = ?
+        LIMIT 1{account_lock_suffix}
+    """), (int(richiedente_id),))
+    richiedente = cur.fetchone()
+    if not _richiesta_disponibilita_account_attivo(richiedente):
+        raise RichiestaDisponibilitaError(
+            "Il tuo account non può inviare questa richiesta.",
+            status=403,
+            code="account_unavailable",
+        )
+
+    listing_lock_suffix = (
+        " FOR UPDATE OF a" if app.config.get("IS_POSTGRES") else ""
+    )
+    cur.execute(sql(f"""
+        SELECT
+            a.id,
+            a.utente_id,
+            a.tipo_annuncio,
+            a.stato,
+            proprietario.username AS proprietario_username,
+            proprietario.nome AS proprietario_nome,
+            proprietario.email AS proprietario_email,
+            proprietario.email_notifiche AS proprietario_email_notifiche,
+            COALESCE(proprietario.lingua_interfaccia, 'it')
+                AS proprietario_lingua_interfaccia,
+            proprietario.attivo AS proprietario_attivo,
+            proprietario.sospeso AS proprietario_sospeso,
+            proprietario.disattivato_admin AS proprietario_disattivato_admin,
+            proprietario.eliminato AS proprietario_eliminato,
+            proprietario.ruolo AS proprietario_ruolo
+        FROM annunci a
+        JOIN utenti proprietario ON proprietario.id = a.utente_id
+        WHERE a.id = ?
+        LIMIT 1{listing_lock_suffix}
+    """), (int(annuncio_id),))
+    annuncio = cur.fetchone()
+    if (
+        not annuncio
+        or str(annuncio["stato"] or "").strip().lower() != "approvato"
+        or str(annuncio["tipo_annuncio"] or "").strip().lower() != "offro"
+        or not _richiesta_disponibilita_account_attivo(
+            annuncio,
+            "proprietario_",
+        )
+    ):
+        raise RichiestaDisponibilitaError(
+            "Questo annuncio non è disponibile.",
+            status=404,
+            code="listing_unavailable",
+        )
+
+    offerente_id = int(annuncio["utente_id"])
+    if offerente_id == int(richiedente_id):
+        raise RichiestaDisponibilitaError(
+            "Non puoi chiedere disponibilità per il tuo annuncio.",
+            status=403,
+            code="self_request",
+        )
+    if _richiesta_disponibilita_bloccata(
+        cur,
+        richiedente_id,
+        offerente_id,
+    ):
+        raise RichiestaDisponibilitaError(
+            "Non è possibile inviare la richiesta a questo utente.",
+            status=403,
+            code="blocked",
+        )
+
+    # Le richieste senza risposta non devono occupare per sempre il limite
+    # globale o l'indice univoco dello stesso annuncio.
+    cur.execute(sql("""
+        UPDATE richieste_disponibilita
+        SET stato = 'scaduta',
+            risposta_at = ?,
+            updated_at = ?,
+            versione = versione + 1
+        WHERE richiedente_id = ?
+          AND stato = 'in_attesa'
+          AND created_at <= ?
+    """), (
+        adesso,
+        adesso,
+        int(richiedente_id),
+        adesso - timedelta(days=GIORNI_SCADENZA_RICHIESTA),
+    ))
+
+    cur.execute(sql("""
+        SELECT
+            COALESCE(SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END), 0)
+                AS richieste_24_ore,
+            COALESCE(SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END), 0)
+                AS richieste_7_giorni,
+            COALESCE(SUM(CASE WHEN stato = 'in_attesa' THEN 1 ELSE 0 END), 0)
+                AS richieste_pendenti,
+            COALESCE(SUM(CASE
+                WHEN stato = 'in_attesa' AND annuncio_id = ? THEN 1
+                ELSE 0
+            END), 0) AS pendenti_stesso_annuncio,
+            MAX(CASE WHEN annuncio_id = ? THEN created_at END)
+                AS ultima_stesso_annuncio
+        FROM richieste_disponibilita
+        WHERE richiedente_id = ?
+    """), (
+        adesso - timedelta(hours=24),
+        adesso - timedelta(days=7),
+        int(annuncio_id),
+        int(annuncio_id),
+        int(richiedente_id),
+    ))
+    limiti = dict(cur.fetchone() or {})
+    ultima = _disponibilita_promemoria_datetime(
+        limiti.get("ultima_stesso_annuncio")
+    )
+    minuti_da_ultima = None
+    if ultima is not None:
+        minuti_da_ultima = max(
+            0,
+            int((adesso - ultima).total_seconds() // 60),
+        )
+    try:
+        valida_limiti_anti_abuso(
+            richieste_24_ore=int(limiti.get("richieste_24_ore") or 0),
+            richieste_7_giorni=int(limiti.get("richieste_7_giorni") or 0),
+            richieste_pendenti=int(limiti.get("richieste_pendenti") or 0),
+            richiesta_pendente_stesso_annuncio=bool(
+                int(limiti.get("pendenti_stesso_annuncio") or 0)
+            ),
+            minuti_da_ultima_stesso_annuncio=minuti_da_ultima,
+        )
+    except ValueError as exc:
+        raw_error = str(exc).lower()
+        duplicate = "stesso annuncio" in raw_error
+        raise RichiestaDisponibilitaError(
+            (
+                "Hai già una richiesta recente per questo annuncio."
+                if duplicate
+                else "Hai raggiunto il limite temporaneo di richieste. "
+                     "Riprova più tardi."
+            ),
+            status=409 if duplicate else 429,
+            code="duplicate_or_cooldown" if duplicate else "rate_limit",
+        ) from exc
+
+    richiesta_id = insert_and_get_id(
+        cur,
+        sql("""
+            INSERT INTO richieste_disponibilita (
+                annuncio_id,
+                richiedente_id,
+                offerente_id,
+                a_chiamata,
+                stato,
+                versione,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, 'in_attesa', 1, ?, ?)
+        """),
+        (
+            int(annuncio_id),
+            int(richiedente_id),
+            offerente_id,
+            bool(calendario["a_chiamata"]),
+            adesso,
+            adesso,
+        ),
+    )
+    if not richiesta_id:
+        raise RuntimeError("Richiesta disponibilita non inserita")
+
+    fasce = []
+    intervalli = []
+    for giorno in calendario["giorni"]:
+        numero_giorno = int(giorno["giorno_settimana"])
+        fasce.extend(
+            (int(richiesta_id), numero_giorno, fascia, adesso)
+            for fascia in giorno["fasce"]
+        )
+        intervalli.extend(
+            (
+                int(richiesta_id),
+                numero_giorno,
+                intervallo["ora_inizio"],
+                intervallo["ora_fine"],
+                bool(intervallo["giorno_successivo"]),
+                adesso,
+            )
+            for intervallo in giorno["intervalli"]
+        )
+    if fasce:
+        cur.executemany(sql("""
+            INSERT INTO richieste_disponibilita_fasce (
+                richiesta_id, giorno_settimana, fascia, created_at
+            ) VALUES (?, ?, ?, ?)
+        """), fasce)
+    if intervalli:
+        cur.executemany(sql("""
+            INSERT INTO richieste_disponibilita_intervalli (
+                richiesta_id, giorno_settimana, ora_inizio, ora_fine,
+                giorno_successivo, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """), intervalli)
+
+    language = normalize_language(
+        annuncio["proprietario_lingua_interfaccia"]
+    )
+    titolo = translate_source(RICHIESTA_DISPONIBILITA_TITOLO, language)
+    messaggio = translate_source(RICHIESTA_DISPONIBILITA_MESSAGGIO, language)
+    link = _link_richiesta_disponibilita(richiedente_id, richiesta_id)
+    _inserisci_notifica_richiesta_disponibilita(
+        cur,
+        destinatario_id=offerente_id,
+        titolo=titolo,
+        messaggio=messaggio,
+        link=link,
+        tipo="richiesta_disponibilita",
+    )
+    return {
+        "richiesta_id": int(richiesta_id),
+        "annuncio_id": int(annuncio_id),
+        "destinatario_id": offerente_id,
+        "destinatario_email": annuncio["proprietario_email"],
+        "email_notifiche": int(
+            annuncio["proprietario_email_notifiche"] or 0
+        ),
+        "language": language,
+        "link": link,
+        "titolo": titolo,
+        "messaggio": messaggio,
+    }
+
+
+def _prenota_risposta_disponibilita(
+    cur,
+    *,
+    richiesta_id,
+    offerente_id,
+    stato,
+    versione,
+    adesso=None,
+):
+    """Registra una sola risposta e la relativa notifica in modo atomico."""
+
+    adesso = _disponibilita_promemoria_datetime(adesso) or datetime.now(
+        timezone.utc
+    )
+    request_lock_suffix = (
+        " FOR UPDATE OF rd" if app.config.get("IS_POSTGRES") else ""
+    )
+    cur.execute(sql(f"""
+        SELECT
+            rd.id,
+            rd.annuncio_id,
+            rd.richiedente_id,
+            rd.offerente_id,
+            rd.a_chiamata,
+            rd.stato,
+            rd.versione,
+            rd.created_at,
+            richiedente.email AS richiedente_email,
+            richiedente.email_notifiche AS richiedente_email_notifiche,
+            COALESCE(richiedente.lingua_interfaccia, 'it')
+                AS richiedente_lingua_interfaccia,
+            richiedente.attivo AS richiedente_attivo,
+            richiedente.sospeso AS richiedente_sospeso,
+            richiedente.disattivato_admin AS richiedente_disattivato_admin,
+            richiedente.eliminato AS richiedente_eliminato,
+            richiedente.ruolo AS richiedente_ruolo,
+            proprietario.attivo AS proprietario_attivo,
+            proprietario.sospeso AS proprietario_sospeso,
+            proprietario.disattivato_admin AS proprietario_disattivato_admin,
+            proprietario.eliminato AS proprietario_eliminato,
+            proprietario.ruolo AS proprietario_ruolo
+        FROM richieste_disponibilita rd
+        JOIN annunci a
+          ON a.id = rd.annuncio_id
+         AND a.utente_id = rd.offerente_id
+        JOIN utenti richiedente ON richiedente.id = rd.richiedente_id
+        JOIN utenti proprietario ON proprietario.id = rd.offerente_id
+        WHERE rd.id = ?
+          AND rd.offerente_id = ?
+        LIMIT 1{request_lock_suffix}
+    """), (int(richiesta_id), int(offerente_id)))
+    richiesta = cur.fetchone()
+    if not richiesta:
+        raise RichiestaDisponibilitaError(
+            "Richiesta non trovata.",
+            status=404,
+            code="not_found",
+        )
+    if not _richiesta_disponibilita_account_attivo(
+        richiesta,
+        "proprietario_",
+    ):
+        raise RichiestaDisponibilitaError(
+            "Il tuo account non può rispondere a questa richiesta.",
+            status=403,
+            code="account_unavailable",
+        )
+    if not _richiesta_disponibilita_account_attivo(
+        richiesta,
+        "richiedente_",
+    ):
+        raise RichiestaDisponibilitaError(
+            "Questa richiesta non è più disponibile.",
+            status=409,
+            code="request_unavailable",
+        )
+    if _richiesta_disponibilita_bloccata(
+        cur,
+        richiesta["richiedente_id"],
+        richiesta["offerente_id"],
+    ):
+        raise RichiestaDisponibilitaError(
+            "Questa richiesta non è più disponibile.",
+            status=409,
+            code="request_unavailable",
+        )
+    created_at = _disponibilita_promemoria_datetime(
+        richiesta["created_at"]
+    )
+    if richiesta["stato"] == "scaduta":
+        raise RichiestaDisponibilitaError(
+            "Questa richiesta è scaduta.",
+            status=409,
+            code="expired",
+        )
+    if (
+        richiesta["stato"] == "in_attesa"
+        and created_at is not None
+        and created_at
+        <= adesso - timedelta(days=GIORNI_SCADENZA_RICHIESTA)
+    ):
+        cur.execute(sql("""
+            UPDATE richieste_disponibilita
+            SET stato = 'scaduta',
+                risposta_at = ?,
+                updated_at = ?,
+                versione = versione + 1
+            WHERE id = ?
+              AND offerente_id = ?
+              AND stato = 'in_attesa'
+              AND versione = ?
+        """), (
+            adesso,
+            adesso,
+            int(richiesta_id),
+            int(offerente_id),
+            int(richiesta["versione"]),
+        ))
+        raise RichiestaDisponibilitaError(
+            "Questa richiesta è scaduta.",
+            status=409,
+            code="expired",
+            commit_changes=True,
+        )
+    if richiesta["stato"] != "in_attesa":
+        raise RichiestaDisponibilitaError(
+            "Questa richiesta ha già ricevuto una risposta.",
+            status=409,
+            code="already_answered",
+        )
+    if int(richiesta["versione"] or 0) != int(versione):
+        raise RichiestaDisponibilitaError(
+            "La richiesta è cambiata. Ricarica e riprova.",
+            status=409,
+            code="version_conflict",
+        )
+
+    cur.execute(sql("""
+        UPDATE richieste_disponibilita
+        SET stato = ?,
+            risposta_at = ?,
+            updated_at = ?,
+            versione = versione + 1
+        WHERE id = ?
+          AND offerente_id = ?
+          AND stato = 'in_attesa'
+          AND versione = ?
+    """), (
+        stato,
+        adesso,
+        adesso,
+        int(richiesta_id),
+        int(offerente_id),
+        int(versione),
+    ))
+    if cur.rowcount != 1:
+        raise RichiestaDisponibilitaError(
+            "La richiesta è cambiata. Ricarica e riprova.",
+            status=409,
+            code="version_conflict",
+        )
+
+    language = normalize_language(
+        richiesta["richiedente_lingua_interfaccia"]
+    )
+    titolo = translate_source(RISPOSTA_DISPONIBILITA_TITOLO, language)
+    messaggio_source = RISPOSTA_DISPONIBILITA_MESSAGGI[stato]
+    messaggio = translate_source(messaggio_source, language)
+    link = _link_risposta_disponibilita(
+        richiesta["offerente_id"],
+        richiesta_id,
+    )
+    _inserisci_notifica_richiesta_disponibilita(
+        cur,
+        destinatario_id=richiesta["richiedente_id"],
+        titolo=titolo,
+        messaggio=messaggio,
+        link=link,
+        tipo="risposta_disponibilita",
+    )
+    return {
+        "richiesta_id": int(richiesta_id),
+        "annuncio_id": int(richiesta["annuncio_id"]),
+        "richiedente_id": int(richiesta["richiedente_id"]),
+        "destinatario_id": int(richiesta["richiedente_id"]),
+        "destinatario_email": richiesta["richiedente_email"],
+        "email_notifiche": int(
+            richiesta["richiedente_email_notifiche"] or 0
+        ),
+        "language": language,
+        "link": link,
+        "titolo": titolo,
+        "messaggio": messaggio,
+        "messaggio_source": messaggio_source,
+        "versione": int(versione) + 1,
+    }
+
+
+def _invia_canali_richiesta_disponibilita(
+    dispatch,
+    *,
+    titolo_email,
+    cta_email,
+    messaggio_email_source,
+):
+    """Invia realtime, push ed email soltanto dopo il commit del chiamante."""
+
+    destinatario_id = int(dispatch["destinatario_id"])
+    try:
+        emit_update_notifications(destinatario_id)
+    except Exception as exc:
+        log_exception_safe(
+            "Errore realtime richiesta disponibilita",
+            exc,
+            {"destinatario_id": destinatario_id},
+            production=True,
+        )
+    try:
+        invia_push(
+            destinatario_id,
+            dispatch["titolo"],
+            dispatch["messaggio"],
+            url=dispatch["link"],
+        )
+    except Exception as exc:
+        log_exception_safe(
+            "Errore push richiesta disponibilita",
+            exc,
+            {"destinatario_id": destinatario_id},
+            production=True,
+        )
+
+    if (
+        int(dispatch.get("email_notifiche") or 0) == 1
+        and dispatch.get("destinatario_email")
+    ):
+        try:
+            _invia_email(
+                destinazione=dispatch["destinatario_email"],
+                oggetto=titolo_email,
+                corpo=messaggio_email_source,
+                action_url=(
+                    f"{app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')}"
+                    f"{dispatch['link']}"
+                ),
+                action_label=cta_email,
+                language=dispatch["language"],
+            )
+        except Exception as exc:
+            log_exception_safe(
+                "Errore email richiesta disponibilita",
+                exc,
+                {"destinatario_id": destinatario_id},
+                production=True,
+            )
+
+
+def _elenca_richieste_disponibilita_chat(
+    cur,
+    utente_id,
+    altro_utente_id,
+):
+    """Restituisce le card di disponibilità della sola coppia in chat.
+
+    Le richieste restano entità strutturate separate dai messaggi cifrati:
+    nessuna card viene trasformata in un falso messaggio modificabile.
+    """
+
+    if not _richieste_disponibilita_tables_exist(cur):
+        return []
+    utente_id = int(utente_id)
+    altro_utente_id = int(altro_utente_id)
+    if utente_id == altro_utente_id:
+        return []
+
+    adesso = datetime.now(timezone.utc)
+    soglia_scadenza = adesso - timedelta(days=GIORNI_SCADENZA_RICHIESTA)
+    conversazione_bloccata = _richiesta_disponibilita_bloccata(
+        cur,
+        utente_id,
+        altro_utente_id,
+    )
+    cur.execute(sql("""
+        WITH filtered AS (
+        SELECT
+            rd.id,
+            rd.annuncio_id,
+            rd.richiedente_id,
+            rd.offerente_id,
+            rd.a_chiamata,
+            rd.stato,
+            rd.versione,
+            rd.created_at,
+            rd.risposta_at,
+            a.titolo AS annuncio_titolo,
+            a.categoria AS annuncio_categoria,
+            a.stato AS annuncio_stato
+        FROM richieste_disponibilita rd
+        JOIN annunci a
+          ON a.id = rd.annuncio_id
+         AND a.utente_id = rd.offerente_id
+        WHERE (
+                rd.richiedente_id = ?
+            AND rd.offerente_id = ?
+        ) OR (
+                rd.richiedente_id = ?
+            AND rd.offerente_id = ?
+          )
+        ), history AS (
+            SELECT *
+            FROM filtered
+            WHERE NOT (
+                stato = 'in_attesa'
+                AND created_at > ?
+            )
+            ORDER BY created_at DESC, id DESC
+            LIMIT 50
+        )
+        SELECT *, 0 AS sort_group
+        FROM filtered
+        WHERE stato = 'in_attesa'
+          AND created_at > ?
+        UNION ALL
+        SELECT *, 1 AS sort_group
+        FROM history
+        ORDER BY sort_group, created_at DESC, id DESC
+    """), (
+        utente_id,
+        altro_utente_id,
+        altro_utente_id,
+        utente_id,
+        soglia_scadenza,
+        soglia_scadenza,
+    ))
+    rows = [dict(row) for row in cur.fetchall()]
+    if not rows:
+        return []
+
+    ids = [int(row["id"]) for row in rows]
+    placeholders = ", ".join("?" for _ in ids)
+    fasce_per_richiesta = {}
+    cur.execute(sql(f"""
+        SELECT richiesta_id, giorno_settimana, fascia
+        FROM richieste_disponibilita_fasce
+        WHERE richiesta_id IN ({placeholders})
+        ORDER BY richiesta_id, giorno_settimana,
+            CASE fascia
+                WHEN 'mattina' THEN 1
+                WHEN 'pomeriggio' THEN 2
+                WHEN 'sera' THEN 3
+                WHEN 'notte' THEN 4
+                ELSE 5
+            END
+    """), tuple(ids))
+    for row in cur.fetchall():
+        richiesta_id = int(row["richiesta_id"])
+        giorno = int(row["giorno_settimana"])
+        fasce_per_richiesta.setdefault(richiesta_id, {}).setdefault(
+            giorno,
+            [],
+        ).append(row["fascia"])
+
+    intervalli_per_richiesta = {}
+    cur.execute(sql(f"""
+        SELECT richiesta_id, giorno_settimana, ora_inizio, ora_fine,
+               giorno_successivo
+        FROM richieste_disponibilita_intervalli
+        WHERE richiesta_id IN ({placeholders})
+        ORDER BY richiesta_id, giorno_settimana, ora_inizio, ora_fine
+    """), tuple(ids))
+    for row in cur.fetchall():
+        richiesta_id = int(row["richiesta_id"])
+        giorno = int(row["giorno_settimana"])
+        intervalli_per_richiesta.setdefault(richiesta_id, {}).setdefault(
+            giorno,
+            [],
+        ).append({
+            "ora_inizio": _richiesta_disponibilita_time(row["ora_inizio"]),
+            "ora_fine": _richiesta_disponibilita_time(row["ora_fine"]),
+            "giorno_successivo": _scheda_profilo_bool(
+                row["giorno_successivo"]
+            ),
+        })
+
+    result = []
+    for row in rows:
+        richiesta_id = int(row["id"])
+        fasce_giorni = fasce_per_richiesta.get(richiesta_id, {})
+        intervalli_giorni = intervalli_per_richiesta.get(richiesta_id, {})
+        giorni = []
+        for giorno in sorted(set(fasce_giorni) | set(intervalli_giorni)):
+            giorni.append({
+                "giorno_settimana": int(giorno),
+                "fasce": fasce_giorni.get(giorno, []),
+                "intervalli": intervalli_giorni.get(giorno, []),
+            })
+        stato = row["stato"]
+        created_at = _disponibilita_promemoria_datetime(
+            row.get("created_at")
+        )
+        if (
+            stato == "in_attesa"
+            and created_at is not None
+            and created_at
+            <= adesso - timedelta(days=GIORNI_SCADENZA_RICHIESTA)
+        ):
+            stato = "scaduta"
+        result.append({
+            "id": richiesta_id,
+            "annuncio_id": int(row["annuncio_id"]),
+            "stato": stato,
+            "versione": int(row["versione"]),
+            "created_at": _scheda_profilo_iso(row.get("created_at")),
+            "risposta_at": _scheda_profilo_iso(row.get("risposta_at")),
+            "richiedente_id": int(row["richiedente_id"]),
+            "offerente_id": int(row["offerente_id"]),
+            "a_chiamata": _scheda_profilo_bool(row["a_chiamata"]),
+            "inviata_da_me": (
+                int(row["richiedente_id"]) == utente_id
+            ),
+            "sono_offerente": (
+                int(row["offerente_id"]) == utente_id
+            ),
+            "posso_rispondere": bool(
+                int(row["offerente_id"]) == utente_id
+                and stato == "in_attesa"
+                and not conversazione_bloccata
+            ),
+            "conversazione_bloccata": conversazione_bloccata,
+            "annuncio": {
+                "titolo": (row.get("annuncio_titolo") or "").strip(),
+                "categoria": (
+                    row.get("annuncio_categoria") or ""
+                ).strip(),
+                "stato": (row.get("annuncio_stato") or "").strip(),
+                "url": url_for(
+                    "visualizza_annuncio_pubblico",
+                    id=int(row["annuncio_id"]),
+                ),
+            },
+            "giorni": giorni,
+        })
+    return result
+
+
+@app.route(
+    "/api/annunci/<int:annuncio_id>/richieste-disponibilita",
+    methods=["POST"],
+)
+def crea_richiesta_disponibilita_route(annuncio_id):
+    if not g.utente:
+        return jsonify({
+            "ok": False,
+            "code": "login_required",
+            "error": translate_source(
+                "Accedi per chiedere la disponibilità.",
+                get_interface_language(),
+            ),
+            "login_url": url_for(
+                "login",
+                next=request.referrer
+                or url_for("visualizza_annuncio_pubblico", id=annuncio_id),
+            ),
+        }), 401
+    verify_csrf()
+    if str(g.utente["ruolo"] or "user").strip().lower() == "admin":
+        return _richiesta_disponibilita_error(
+            RichiestaDisponibilitaError(
+                "Gli amministratori non possono usare questa funzione.",
+                status=403,
+                code="admin_forbidden",
+            )
+        )
+    try:
+        calendario = normalize_richiesta_disponibilita_payload(
+            request.get_json(silent=True)
+        )
+    except ValueError:
+        return _richiesta_disponibilita_error(
+            RichiestaDisponibilitaError(
+                "Controlla i giorni e gli orari indicati.",
+                status=400,
+                code="invalid_calendar",
+            )
+        )
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        if not _richieste_disponibilita_tables_exist(cur):
+            raise RichiestaDisponibilitaError(
+                "La funzione non è ancora disponibile.",
+                status=503,
+                code="feature_unavailable",
+            )
+        _schede_profilo_begin(cur)
+        dispatch = _prenota_richiesta_disponibilita(
+            cur,
+            annuncio_id=annuncio_id,
+            richiedente_id=int(g.utente["id"]),
+            calendario=calendario,
+        )
+        _schede_profilo_commit(cur)
+    except RichiestaDisponibilitaError as exc:
+        _schede_profilo_rollback(cur)
+        return _richiesta_disponibilita_error(exc)
+    except (sqlite3.IntegrityError, psycopg2.IntegrityError):
+        _schede_profilo_rollback(cur)
+        return _richiesta_disponibilita_error(
+            RichiestaDisponibilitaError(
+                "Hai già una richiesta recente per questo annuncio.",
+                status=409,
+                code="duplicate_or_cooldown",
+            )
+        )
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore creazione richiesta disponibilita",
+            exc,
+            {"annuncio_id": int(annuncio_id)},
+            production=True,
+        )
+        return _richiesta_disponibilita_error(
+            RichiestaDisponibilitaError(
+                "Non è stato possibile inviare la richiesta. Riprova.",
+                status=500,
+                code="request_failed",
+            )
+        )
+
+    _invia_canali_richiesta_disponibilita(
+        dispatch,
+        titolo_email=RICHIESTA_DISPONIBILITA_EMAIL_OGGETTO,
+        cta_email=RICHIESTA_DISPONIBILITA_EMAIL_CTA,
+        messaggio_email_source=RICHIESTA_DISPONIBILITA_MESSAGGIO,
+    )
+    return jsonify({
+        "ok": True,
+        "richiesta_id": dispatch["richiesta_id"],
+        "stato": "in_attesa",
+    }), 201
+
+
+@app.route(
+    "/api/richieste-disponibilita/<int:richiesta_id>/risposta",
+    methods=["POST"],
+)
+def rispondi_richiesta_disponibilita_route(richiesta_id):
+    if not g.utente:
+        return jsonify({
+            "ok": False,
+            "code": "login_required",
+            "error": translate_source(
+                "Accedi per rispondere alla richiesta.",
+                get_interface_language(),
+            ),
+            "login_url": url_for("login", next=request.referrer or "/"),
+        }), 401
+    verify_csrf()
+    payload = request.get_json(silent=True) or {}
+    try:
+        stato = normalizza_stato_richiesta_disponibilita(
+            payload.get("stato")
+        )
+    except ValueError:
+        stato = ""
+    versione = payload.get("versione")
+    if (
+        stato not in {"disponibile", "non_disponibile", "informazioni"}
+        or isinstance(versione, bool)
+        or not isinstance(versione, int)
+        or versione < 1
+    ):
+        return _richiesta_disponibilita_error(
+            RichiestaDisponibilitaError(
+                "La risposta indicata non è valida.",
+                status=400,
+                code="invalid_answer",
+            )
+        )
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        if not _richieste_disponibilita_tables_exist(cur):
+            raise RichiestaDisponibilitaError(
+                "La funzione non è ancora disponibile.",
+                status=503,
+                code="feature_unavailable",
+            )
+        _schede_profilo_begin(cur)
+        dispatch = _prenota_risposta_disponibilita(
+            cur,
+            richiesta_id=richiesta_id,
+            offerente_id=int(g.utente["id"]),
+            stato=stato,
+            versione=versione,
+        )
+        _schede_profilo_commit(cur)
+    except RichiestaDisponibilitaError as exc:
+        if exc.commit_changes:
+            _schede_profilo_commit(cur)
+        else:
+            _schede_profilo_rollback(cur)
+        return _richiesta_disponibilita_error(exc)
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore risposta richiesta disponibilita",
+            exc,
+            {"richiesta_id": int(richiesta_id)},
+            production=True,
+        )
+        return _richiesta_disponibilita_error(
+            RichiestaDisponibilitaError(
+                "Non è stato possibile salvare la risposta. Riprova.",
+                status=500,
+                code="answer_failed",
+            )
+        )
+
+    _invia_canali_richiesta_disponibilita(
+        dispatch,
+        titolo_email=RISPOSTA_DISPONIBILITA_EMAIL_OGGETTO,
+        cta_email=RISPOSTA_DISPONIBILITA_EMAIL_CTA,
+        messaggio_email_source=dispatch["messaggio_source"],
+    )
+    response = {
+        "ok": True,
+        "richiesta_id": dispatch["richiesta_id"],
+        "stato": stato,
+        "versione": dispatch["versione"],
+    }
+    return jsonify(response)
+
+
 @app.route(
     "/api/annunci/<int:annuncio_id>/interesse",
     methods=["POST"],
@@ -26889,6 +28429,29 @@ def elimina_account_step2():
             # I controlli interni rendono l'operazione sicura durante il rollout.
             _elimina_tutte_disponibilita_utente(cur, user_id)
 
+            # Le richieste ricevute o inviate contengono il calendario scelto
+            # dall'utente. Poiché la riga account viene anonimizzata e non
+            # eliminata, le rimuoviamo esplicitamente in entrambe le direzioni.
+            if _richieste_disponibilita_tables_exist(cur):
+                for child_table in (
+                    "richieste_disponibilita_fasce",
+                    "richieste_disponibilita_intervalli",
+                ):
+                    cur.execute(sql(f"""
+                        DELETE FROM {child_table}
+                        WHERE richiesta_id IN (
+                            SELECT id
+                            FROM richieste_disponibilita
+                            WHERE richiedente_id = ?
+                               OR offerente_id = ?
+                        )
+                    """), (user_id, user_id))
+                cur.execute(sql("""
+                    DELETE FROM richieste_disponibilita
+                    WHERE richiedente_id = ?
+                       OR offerente_id = ?
+                """), (user_id, user_id))
+
             # Gli interessi lasciati dall'utente vanno rimossi anche se
             # la riga utente verrà anonimizzata anziché cancellata.
             cur.execute(sql("""
@@ -28635,9 +30198,15 @@ def chat_unread_count():
     })
 
 @app.route("/chat/<int:other_id>")
-@login_required
 def chat_conversazione_view(other_id):
     """Mostra la pagina della chat tra l’utente loggato e un altro utente."""
+    if not g.utente:
+        next_url = request.full_path
+        if next_url.endswith("?"):
+            next_url = next_url[:-1]
+        flash("Devi accedere per vedere questa pagina.")
+        return redirect(url_for("login", next=next_url))
+
     conn = get_db_connection()
 
     c = get_cursor(conn)
@@ -28659,6 +30228,57 @@ def chat_conversazione_view(other_id):
     other_is_admin = is_admin(other_id)
     current_is_admin = g.utente["ruolo"] == "admin"
 
+    blocco_disponibile = (
+        g.utente["ruolo"] != "admin"
+        and not other_is_admin
+    )
+
+    if blocco_disponibile:
+        chat_block_status = chat_stato_blocco(
+            g.utente["id"],
+            other_id
+        )
+    else:
+        chat_block_status = {
+            "bloccata": False,
+            "bloccato_da_me": False,
+            "sono_stato_bloccato": False
+        }
+
+    richieste_disponibilita_chat = []
+    if not (current_is_admin or other_is_admin):
+        try:
+            richieste_disponibilita_chat = (
+                _elenca_richieste_disponibilita_chat(
+                    c,
+                    g.utente["id"],
+                    other_id,
+                )
+            )
+        except Exception as exc:
+            log_exception_safe(
+                "Richieste disponibilita chat non disponibili",
+                exc,
+                {
+                    "utente_id": int(g.utente["id"]),
+                    "altro_utente_id": int(other_id),
+                },
+                production=True,
+            )
+
+    raw_richiesta_id = request.args.get("richiesta_disponibilita")
+    if raw_richiesta_id is not None:
+        try:
+            richiesta_deep_link = int(raw_richiesta_id)
+        except (TypeError, ValueError):
+            richiesta_deep_link = 0
+        richieste_accessibili = {
+            int(item["id"])
+            for item in richieste_disponibilita_chat
+        }
+        if richiesta_deep_link not in richieste_accessibili:
+            return "Richiesta non disponibile", 404
+
     # La foto profilo rimane obbligatoria nelle chat normali.
     # Se almeno uno dei due partecipanti è admin, la chat
     # deve funzionare anche quando l'utente non ha ancora una foto.
@@ -28667,6 +30287,7 @@ def chat_conversazione_view(other_id):
     if (
         not chat_con_admin
         and not g.utente["foto_profilo"]
+        and not richieste_disponibilita_chat
     ):
         flash(
             "Per usare la chat devi prima caricare una foto profilo.",
@@ -28694,23 +30315,6 @@ def chat_conversazione_view(other_id):
         room=f"user_{g.utente['id']}"
     )
 
-    blocco_disponibile = (
-        g.utente["ruolo"] != "admin"
-        and not other_is_admin
-    )
-
-    if blocco_disponibile:
-        chat_block_status = chat_stato_blocco(
-            g.utente["id"],
-            other_id
-        )
-    else:
-        chat_block_status = {
-            "bloccata": False,
-            "bloccato_da_me": False,
-            "sono_stato_bloccato": False
-        }
-
     return render_template(
         "chat_conversazione.html",
         altro=altro,
@@ -28718,7 +30322,8 @@ def chat_conversazione_view(other_id):
         utente=g.utente,
         is_support=other_is_admin,
         blocco_disponibile=blocco_disponibile,
-        chat_block_status=chat_block_status
+        chat_block_status=chat_block_status,
+        richieste_disponibilita_chat=richieste_disponibilita_chat,
     )
 
 def _emit_chat_block_updates(user_a: int, user_b: int):

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS disponibilita_profili_categoria (
     stato_generale TEXT NOT NULL DEFAULT 'disponibile' CHECK (
         stato_generale IN ('disponibile', 'limitata', 'non_disponibile')
     ),
+    a_chiamata BOOLEAN NOT NULL DEFAULT FALSE,
     fuso_orario TEXT NOT NULL DEFAULT 'Europe/Rome',
     confermata_at TIMESTAMPTZ,
     ultimo_promemoria_at TIMESTAMPTZ,

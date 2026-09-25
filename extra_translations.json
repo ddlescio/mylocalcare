@@ -262,6 +262,151 @@
     }
   },
   "sources": {
+    "Nuova richiesta di disponibilità": {
+      "fil": "Bagong kahilingan sa availability",
+      "ro": "Cerere nouă de disponibilitate",
+      "uk": "Новий запит щодо доступності"
+    },
+    "Un utente ti ha chiesto di confermare la disponibilità per un tuo annuncio.": {
+      "fil": "Hiniling sa iyo ng isang user na kumpirmahin ang availability mo para sa isa sa iyong mga ad.",
+      "ro": "Un utilizator ți-a cerut să confirmi disponibilitatea pentru unul dintre anunțurile tale.",
+      "uk": "Користувач попросив вас підтвердити доступність для одного з ваших оголошень."
+    },
+    "Hai ricevuto una richiesta di disponibilità su MyLocalCare": {
+      "fil": "Nakatanggap ka ng kahilingan sa availability sa MyLocalCare",
+      "ro": "Ai primit o cerere de disponibilitate pe MyLocalCare",
+      "uk": "Ви отримали запит щодо доступності на MyLocalCare"
+    },
+    "Visualizza richiesta": {
+      "fil": "Tingnan ang kahilingan",
+      "ro": "Vezi cererea",
+      "uk": "Переглянути запит"
+    },
+    "Risposta alla tua richiesta di disponibilità": {
+      "fil": "Sagot sa iyong kahilingan sa availability",
+      "ro": "Răspuns la cererea ta de disponibilitate",
+      "uk": "Відповідь на ваш запит щодо доступності"
+    },
+    "L’utente ha confermato la disponibilità richiesta.": {
+      "fil": "Kinumpirma ng user ang hinihiling na availability.",
+      "ro": "Utilizatorul a confirmat disponibilitatea solicitată.",
+      "uk": "Користувач підтвердив запитану доступність."
+    },
+    "L’utente ha indicato di non essere disponibile.": {
+      "fil": "Ipinahiwatig ng user na hindi siya available.",
+      "ro": "Utilizatorul a indicat că nu este disponibil.",
+      "uk": "Користувач зазначив, що він недоступний."
+    },
+    "L’utente ha bisogno di maggiori informazioni prima di confermare.": {
+      "fil": "Kailangan ng user ng karagdagang impormasyon bago magkumpirma.",
+      "ro": "Utilizatorul are nevoie de mai multe informații înainte de confirmare.",
+      "uk": "Користувачеві потрібна додаткова інформація перед підтвердженням."
+    },
+    "Hai ricevuto una risposta su MyLocalCare": {
+      "fil": "Nakatanggap ka ng sagot sa MyLocalCare",
+      "ro": "Ai primit un răspuns pe MyLocalCare",
+      "uk": "Ви отримали відповідь на MyLocalCare"
+    },
+    "Visualizza risposta": {
+      "fil": "Tingnan ang sagot",
+      "ro": "Vezi răspunsul",
+      "uk": "Переглянути відповідь"
+    },
+    "Gli amministratori non possono usare questa funzione.": {
+      "fil": "Hindi magagamit ng mga administrator ang feature na ito.",
+      "ro": "Administratorii nu pot folosi această funcție.",
+      "uk": "Адміністратори не можуть використовувати цю функцію."
+    },
+    "Il tuo account non può inviare questa richiesta.": {
+      "fil": "Hindi maipapadala ng iyong account ang kahilingang ito.",
+      "ro": "Contul tău nu poate trimite această cerere.",
+      "uk": "Ваш обліковий запис не може надіслати цей запит."
+    },
+    "Non puoi chiedere disponibilità per il tuo annuncio.": {
+      "fil": "Hindi ka maaaring humiling ng availability para sa sarili mong ad.",
+      "ro": "Nu poți solicita disponibilitatea pentru propriul anunț.",
+      "uk": "Ви не можете запитувати доступність для власного оголошення."
+    },
+    "Non è possibile inviare la richiesta a questo utente.": {
+      "fil": "Hindi maipapadala ang kahilingan sa user na ito.",
+      "ro": "Cererea nu poate fi trimisă acestui utilizator.",
+      "uk": "Неможливо надіслати запит цьому користувачеві."
+    },
+    "Hai già una richiesta recente per questo annuncio.": {
+      "fil": "May kamakailan ka nang kahilingan para sa ad na ito.",
+      "ro": "Ai deja o cerere recentă pentru acest anunț.",
+      "uk": "У вас уже є нещодавній запит для цього оголошення."
+    },
+    "Hai raggiunto il limite temporaneo di richieste. Riprova più tardi.": {
+      "fil": "Naabot mo ang pansamantalang limitasyon ng mga kahilingan. Subukan muli mamaya.",
+      "ro": "Ai atins limita temporară de cereri. Încearcă din nou mai târziu.",
+      "uk": "Ви досягли тимчасового ліміту запитів. Спробуйте пізніше."
+    },
+    "Richiesta non trovata.": {
+      "fil": "Hindi nakita ang kahilingan.",
+      "ro": "Cererea nu a fost găsită.",
+      "uk": "Запит не знайдено."
+    },
+    "Il tuo account non può rispondere a questa richiesta.": {
+      "fil": "Hindi makakasagot ang iyong account sa kahilingang ito.",
+      "ro": "Contul tău nu poate răspunde la această cerere.",
+      "uk": "Ваш обліковий запис не може відповісти на цей запит."
+    },
+    "Questa richiesta non è più disponibile.": {
+      "fil": "Hindi na available ang kahilingang ito.",
+      "ro": "Această cerere nu mai este disponibilă.",
+      "uk": "Цей запит більше недоступний."
+    },
+    "Questa richiesta è scaduta.": {
+      "fil": "Nag-expire na ang kahilingang ito.",
+      "ro": "Această cerere a expirat.",
+      "uk": "Термін дії цього запиту минув."
+    },
+    "Questa richiesta ha già ricevuto una risposta.": {
+      "fil": "Nasagot na ang kahilingang ito.",
+      "ro": "Această cerere a primit deja un răspuns.",
+      "uk": "На цей запит уже надано відповідь."
+    },
+    "La richiesta è cambiata. Ricarica e riprova.": {
+      "fil": "Nabago ang kahilingan. I-reload at subukan muli.",
+      "ro": "Cererea s-a modificat. Reîncarcă pagina și încearcă din nou.",
+      "uk": "Запит змінився. Перезавантажте сторінку та спробуйте ще раз."
+    },
+    "Accedi per chiedere la disponibilità.": {
+      "fil": "Mag-sign in para humiling ng availability.",
+      "ro": "Autentifică-te pentru a solicita disponibilitatea.",
+      "uk": "Увійдіть, щоб запитати про доступність."
+    },
+    "Controlla i giorni e gli orari indicati.": {
+      "fil": "Suriin ang mga napiling araw at oras.",
+      "ro": "Verifică zilele și orele selectate.",
+      "uk": "Перевірте вибрані дні та час."
+    },
+    "La funzione non è ancora disponibile.": {
+      "fil": "Hindi pa available ang feature na ito.",
+      "ro": "Această funcție nu este încă disponibilă.",
+      "uk": "Ця функція ще недоступна."
+    },
+    "Non è stato possibile inviare la richiesta. Riprova.": {
+      "fil": "Hindi maipadala ang kahilingan. Subukan muli.",
+      "ro": "Cererea nu a putut fi trimisă. Încearcă din nou.",
+      "uk": "Не вдалося надіслати запит. Спробуйте ще раз."
+    },
+    "Accedi per rispondere alla richiesta.": {
+      "fil": "Mag-sign in para sagutin ang kahilingan.",
+      "ro": "Autentifică-te pentru a răspunde la cerere.",
+      "uk": "Увійдіть, щоб відповісти на запит."
+    },
+    "La risposta indicata non è valida.": {
+      "fil": "Hindi wasto ang napiling sagot.",
+      "ro": "Răspunsul selectat nu este valid.",
+      "uk": "Вибрана відповідь недійсна."
+    },
+    "Non è stato possibile salvare la risposta. Riprova.": {
+      "fil": "Hindi ma-save ang sagot. Subukan muli.",
+      "ro": "Răspunsul nu a putut fi salvat. Încearcă din nou.",
+      "uk": "Не вдалося зберегти відповідь. Спробуйте ще раз."
+    },
     "(nessuna recensione)": {
       "fil": "(walang mga review)",
       "ro": "(fără recenzii)",
@@ -4646,6 +4791,26 @@
       "fil": "Bagong katugmang mga talaan sa MyLocalCare",
       "ro": "Noi liste de potrivire pe MyLocalCare",
       "uk": "Нові списки відповідності на MyLocalCare"
+    },
+    "Riconferma la tua disponibilità": {
+      "fil": "Kumpirmahing muli ang iyong availability",
+      "ro": "Reconfirmă-ți disponibilitatea",
+      "uk": "Підтвердьте свою доступність ще раз"
+    },
+    "È passato circa un mese dall’ultima conferma. Controlla i dati già salvati: puoi riconfermarli così come sono oppure modificarli.": {
+      "fil": "Humigit-kumulang isang buwan na ang lumipas mula noong huli mong pagkumpirma. Suriin ang mga naka-save na detalye: maaari mong kumpirmahing muli ang mga ito nang walang pagbabago o i-update ang mga ito.",
+      "ro": "A trecut aproximativ o lună de la ultima confirmare. Verifică informațiile deja salvate: le poți reconfirma așa cum sunt sau le poți modifica.",
+      "uk": "Від останнього підтвердження минув приблизно місяць. Перевірте вже збережені дані: ви можете підтвердити їх без змін або відредагувати."
+    },
+    "Riconferma la tua disponibilità su MyLocalCare": {
+      "fil": "Kumpirmahing muli ang iyong availability sa MyLocalCare",
+      "ro": "Reconfirmă-ți disponibilitatea pe MyLocalCare",
+      "uk": "Підтвердьте свою доступність у MyLocalCare ще раз"
+    },
+    "Controlla disponibilità": {
+      "fil": "Suriin ang availability",
+      "ro": "Verifică disponibilitatea",
+      "uk": "Перевірити доступність"
     },
     "Nuovo interesse": {
       "fil": "Bagong interes",

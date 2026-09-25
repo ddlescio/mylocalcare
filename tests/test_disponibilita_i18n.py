@@ -29,6 +29,9 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         "availability.status_unavailable_description",
         "availability.weekly_title",
         "availability.weekly_help",
+        "availability.on_call_title",
+        "availability.on_call_label",
+        "availability.on_call_help",
         "availability.slot_morning",
         "availability.slot_afternoon",
         "availability.slot_evening",
@@ -239,6 +242,32 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         self.assertIn("private-token", rendered)
         self.assertIn('X-CSRF-Token', rendered)
         self.assertIn('/api/utente/disponibilita', rendered)
+        self.assertIn('id="service-availability-on-call"', rendered)
+        self.assertIn('a_chiamata: Boolean(onCallInput && onCallInput.checked)', rendered)
+
+    def test_display_pubblico_mostra_badge_a_chiamata_senza_calendario(self):
+        environment = Environment(
+            loader=FileSystemLoader(ROOT / "templates")
+        )
+        environment.globals["tr"] = lambda key, **values: key.format(**values)
+        environment.filters["fmt_day_month"] = lambda value: value or ""
+        environment.filters["fmt_it_date"] = lambda value: value or ""
+        environment.filters["datetimeformat"] = lambda value: value or ""
+        template = environment.get_template(
+            "partials/disponibilita_servizi_display.html"
+        )
+        macro = template.module.availability_details
+        rendered = str(macro({
+            "stato": "disponibile",
+            "a_chiamata": True,
+            "settimanale": [],
+            "date_speciali": [],
+            "assenze": [],
+            "freschezza": {},
+        }))
+        self.assertIn("availability-on-call-badge", rendered)
+        self.assertIn("availability.on_call_label", rendered)
+        self.assertNotIn("availability.no_weekly", rendered)
 
 
 if __name__ == "__main__":

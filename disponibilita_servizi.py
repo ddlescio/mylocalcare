@@ -59,6 +59,7 @@ CODICE_MAI_CONFERMATA = "mai_confermata"
 
 _TOP_LEVEL_FIELDS = frozenset({
     "stato",
+    "a_chiamata",
     "settimanale",
     "date_speciali",
     "assenze",
@@ -249,6 +250,13 @@ def normalize_disponibilita_payload(payload: Any) -> dict[str, Any]:
     data = _require_mapping(payload, "disponibilita")
     _reject_unknown_fields(data, _TOP_LEVEL_FIELDS, "disponibilita")
     status = _enum(data.get("stato"), STATI_DISPONIBILITA, "stato")
+    on_call = data.get("a_chiamata", False)
+    if not isinstance(on_call, bool):
+        raise ValueError("a_chiamata deve essere un valore booleano")
+    if status == "non_disponibile" and on_call:
+        raise ValueError(
+            "a_chiamata non puo essere attiva quando lo stato e non disponibile"
+        )
     weekly = _normalize_weekly(data.get("settimanale"))
     special_dates = _normalize_special_dates(data.get("date_speciali"))
     absences = _normalize_absences(data.get("assenze"))
@@ -272,6 +280,7 @@ def normalize_disponibilita_payload(payload: Any) -> dict[str, Any]:
 
     return {
         "stato": status,
+        "a_chiamata": on_call,
         "settimanale": weekly,
         "date_speciali": special_dates,
         "assenze": absences,
@@ -417,7 +426,11 @@ def serializza_disponibilita_pubblica(
     """
 
     source = _require_mapping(disponibilita, "disponibilita")
-    whitelisted = {key: source.get(key) for key in _TOP_LEVEL_FIELDS}
+    whitelisted = {
+        key: source.get(key)
+        for key in _TOP_LEVEL_FIELDS
+        if key in source
+    }
     normalized = normalize_disponibilita_payload(whitelisted)
     freshness = calcola_freschezza_disponibilita(confermata_at, now=now)
     confirmed = freshness["confermata_at"]

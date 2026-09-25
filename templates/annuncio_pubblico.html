@@ -2,10 +2,18 @@
 {% set body_class = "offset-navbar" %}
 {% block head_extra %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/disponibilita-servizi-display.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/richiesta-disponibilita.css') }}">
 {% endblock %}
 {% block content %}
 {% from "partials/interesse_annuncio_button.html" import interesse_annuncio_button with context %}
 {% from "partials/disponibilita_servizi_display.html" import availability_listing with context %}
+{% set visitatore_admin = session.get('is_admin')
+    or session.get('ruolo') == 'admin'
+    or (g.utente and (
+      g.utente.get('is_admin')
+      or g.utente.get('ruolo') == 'admin'
+      or g.utente.get('username') == 'ADMIN'
+    )) %}
 
 {% set zoom_foto_profilo_annuncio = url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) %}
 {% set zoom_foto_annuncio = [] %}
@@ -307,12 +315,24 @@
           </div>
         </div>
 
-        <div class="annuncio-info-card-body annuncio-contact-body">
+        <div class="annuncio-info-card-body annuncio-contact-body{% if annuncio.get('tipo_annuncio') == 'offro' and not visitatore_admin %} availability-request-actions{% endif %}">
           <a href="{{ url_for('chat_conversazione_view', other_id=annuncio['utente_id']) }}"
              class="annuncio-main-action-btn">
             <span>💬</span>
             <span>Scrivi in chat</span>
           </a>
+
+          {% if annuncio.get('tipo_annuncio') == 'offro' and not visitatore_admin %}
+            <button type="button"
+                    class="availability-request-trigger"
+                    data-availability-request-open
+                    aria-haspopup="dialog"
+                    aria-controls="availability-request-dialog"
+                    aria-expanded="false">
+              <span aria-hidden="true">📅</span>
+              <span>{{ tr('availability_request.open') }}</span>
+            </button>
+          {% endif %}
         </div>
       </section>
 
@@ -342,6 +362,13 @@
 
     {% endif %}
   </div>
+
+  {% if g.utente
+        and g.utente['id'] != annuncio['utente_id']
+        and not visitatore_admin
+        and annuncio.get('tipo_annuncio') == 'offro' %}
+    {% include "partials/richiesta_disponibilita_dialog.html" %}
+  {% endif %}
 
   <!-- 📞 CONTATTI -->
   {% if annuncio['contatti_visibili'] %}
