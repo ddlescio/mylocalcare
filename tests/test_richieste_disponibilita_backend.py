@@ -121,6 +121,8 @@ def load_request_backend():
         ),
         "_richieste_disponibilita_tables_exist": lambda cur: True,
         "emit_update_notifications": lambda user_id: None,
+        "socketio": SimpleNamespace(emit=lambda *args, **kwargs: None),
+        "chat_count_unread": lambda user_id: 0,
         "invia_push": lambda *args, **kwargs: None,
         "_invia_email": lambda **kwargs: True,
         "log_exception_safe": lambda *args, **kwargs: None,
@@ -176,6 +178,7 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
                 a_chiamata INTEGER NOT NULL DEFAULT 0,
                 stato TEXT NOT NULL DEFAULT 'in_attesa',
                 risposta_at TEXT,
+                evento_letto_at TEXT,
                 versione INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
@@ -270,7 +273,7 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         conn.close()
         return dispatch
 
-    def test_creazione_persistente_con_figli_e_una_notifica_localizzata(self):
+    def test_creazione_persistente_con_figli_senza_notifica_campanella(self):
         dispatch = self.create_request()
 
         conn = self.connect()
@@ -292,17 +295,13 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
 
         self.assertEqual(request_row["stato"], "in_attesa")
         self.assertEqual(request_row["a_chiamata"], 0)
+        self.assertIsNone(request_row["evento_letto_at"])
         self.assertEqual([(row[0], row[1]) for row in slots], [(2, "mattina")])
         self.assertEqual(
             [(row[0], row[1], row[2]) for row in intervals],
             [(2, "15:00", "18:00")],
         )
-        self.assertEqual(len(notifications), 1)
-        self.assertTrue(notifications[0]["titolo"].endswith("[fr]"))
-        self.assertEqual(
-            notifications[0]["link"],
-            f"/chat/1?richiesta_disponibilita={dispatch['richiesta_id']}",
-        )
+        self.assertEqual(notifications, [])
 
     def test_creazione_a_chiamata_senza_giorni(self):
         conn = self.connect()
@@ -412,6 +411,37 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         cur.execute("ROLLBACK")
         conn.close()
 
+    def test_richiedente_senza_foto_non_puo_creare_richiesta(self):
+        conn = self.connect()
+        conn.execute(
+            "UPDATE utenti SET foto_profilo = NULL WHERE id = 1"
+        )
+        conn.commit()
+
+        cur = conn.cursor()
+        cur.execute("BEGIN IMMEDIATE")
+        with self.assertRaises(
+            self.backend["RichiestaDisponibilitaError"]
+        ) as photo_error:
+            self.backend["_prenota_richiesta_disponibilita"](
+                cur,
+                annuncio_id=10,
+                richiedente_id=1,
+                calendario=self.calendar(),
+            )
+        self.assertEqual(
+            photo_error.exception.code,
+            "foto_profilo_richiesta",
+        )
+        self.assertEqual(photo_error.exception.status, 409)
+        cur.execute("ROLLBACK")
+
+        total = conn.execute(
+            "SELECT COUNT(*) FROM richieste_disponibilita"
+        ).fetchone()[0]
+        conn.close()
+        self.assertEqual(total, 0)
+
     def test_scadenza_libera_pending_e_consente_nuova_richiesta(self):
         now = datetime(2026, 9, 25, 10, tzinfo=timezone.utc)
         old = now - timedelta(days=GIORNI_SCADENZA_RICHIESTA, minutes=1)
@@ -440,6 +470,15 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
     def test_risposta_e_atomica_versionata_e_non_ripetibile(self):
         dispatch = self.create_request()
         conn = self.connect()
+        conn.execute(
+            """
+            UPDATE richieste_disponibilita
+            SET evento_letto_at = '2026-09-25T10:30:00+00:00'
+            WHERE id = ?
+            """,
+            (dispatch["richiesta_id"],),
+        )
+        conn.commit()
         cur = conn.cursor()
         cur.execute("BEGIN IMMEDIATE")
         answer = self.backend["_prenota_risposta_disponibilita"](
@@ -451,21 +490,23 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
             adesso=datetime(2026, 9, 25, 11, tzinfo=timezone.utc),
         )
         cur.execute("COMMIT")
-        row = conn.execute(
-            "SELECT stato, versione, risposta_at FROM richieste_disponibilita"
-        ).fetchone()
+        row = conn.execute("""
+            SELECT stato, versione, risposta_at, evento_letto_at
+            FROM richieste_disponibilita
+        """).fetchone()
         notices = conn.execute(
             "SELECT COUNT(*) FROM notifiche WHERE id_utente = 1"
         ).fetchone()[0]
         self.assertEqual(row["stato"], "informazioni")
         self.assertEqual(row["versione"], 2)
         self.assertIsNotNone(row["risposta_at"])
+        self.assertIsNone(row["evento_letto_at"])
         self.assertEqual(answer["versione"], 2)
         self.assertEqual(
             answer["link"],
             f"/chat/2?richiesta_disponibilita={dispatch['richiesta_id']}",
         )
-        self.assertEqual(notices, 1)
+        self.assertEqual(notices, 0)
 
         cur.execute("BEGIN IMMEDIATE")
         with self.assertRaisesRegex(
@@ -704,6 +745,11 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         route_source = function_sources["chat_conversazione_view"]
         self.assertIn('request.full_path', route_source)
         self.assertIn('url_for("login", next=next_url)', route_source)
+        self.assertIn("upload_foto", route_source)
+        self.assertNotIn(
+            "and not richieste_disponibilita_chat",
+            route_source,
+        )
 
     def test_route_invia_canali_solo_dopo_commit(self):
         source = (ROOT / "app.py").read_text(encoding="utf-8")
@@ -725,9 +771,12 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
             )
         helper = self.backend["_invia_canali_richiesta_disponibilita"]
         calls = []
-        self.backend["emit_update_notifications"] = (
-            lambda user_id: calls.append(("emit", user_id))
+        self.backend["socketio"] = SimpleNamespace(
+            emit=lambda *args, **kwargs: calls.append(
+                ("socket", args, kwargs)
+            )
         )
+        self.backend["chat_count_unread"] = lambda user_id: 4
         self.backend["invia_push"] = (
             lambda *args, **kwargs: calls.append(("push", args, kwargs))
         )
@@ -735,6 +784,7 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
             lambda **kwargs: calls.append(("email", kwargs)) or True
         )
         helper({
+            "mittente_id": 1,
             "destinatario_id": 2,
             "destinatario_email": "owner@example.test",
             "email_notifiche": 1,
@@ -744,7 +794,14 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
             "messaggio": "Messaggio",
         }, titolo_email="Oggetto", cta_email="Apri",
            messaggio_email_source="Messaggio")
-        self.assertEqual([call[0] for call in calls], ["emit", "push", "email"])
+        self.assertEqual(
+            [call[0] for call in calls],
+            ["socket", "socket", "push", "email"],
+        )
+        self.assertEqual(calls[0][1][0], "update_unread_count")
+        self.assertEqual(calls[0][1][1], {"count": 4})
+        self.assertEqual(calls[1][1][0], "chat_threads_update")
+        self.assertEqual(calls[1][1][1], {"from": 1})
         self.assertEqual(calls[-1][1]["language"], "fr")
 
     def test_bootstrap_sqlite_crea_tabelle_e_indice_additivi(self):
@@ -818,6 +875,7 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         })
         self.assertIn("ux_richieste_disponibilita_pendente", indexes)
         self.assertIn("a_chiamata", request_columns)
+        self.assertIn("evento_letto_at", request_columns)
 
         init_tree = ast.parse(source)
         init_function = next(

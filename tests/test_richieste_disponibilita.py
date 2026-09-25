@@ -390,6 +390,19 @@ class RichiestaDisponibilitaMigrationTest(unittest.TestCase):
         self.assertIn("GRANT SELECT, INSERT, UPDATE, DELETE", self.sql)
         self.assertIn("GRANT USAGE, SELECT", self.sql)
 
+    def test_migrazione_non_letti_aggiunge_evento_e_non_ripete_backfill(self):
+        migration = (
+            ROOT
+            / "migrations"
+            / "20260925_richieste_disponibilita_non_lette.sql"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("evento_letto_at", migration)
+        self.assertIn("information_schema.columns", migration)
+        self.assertIn("ADD COLUMN", migration)
+        self.assertIn("UPDATE richieste_disponibilita", migration)
+        self.assertIn("created_at", migration)
+
 
 if __name__ == "__main__":
     unittest.main()

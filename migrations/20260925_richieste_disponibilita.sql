@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS richieste_disponibilita (
         )
     ),
     risposta_at TIMESTAMPTZ,
+    evento_letto_at TIMESTAMPTZ,
     versione INTEGER NOT NULL DEFAULT 1 CHECK (versione >= 1),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

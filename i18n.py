@@ -2374,6 +2374,16 @@ TRANSLATIONS = {
         "uk": "Не вдалося надіслати запит. Спробуйте ще раз трохи пізніше.",
         "fil": "Hindi maipadala ang request. Subukan muli maya-maya.",
     },
+    "availability_request.profile_photo_required": {
+        "it": "Per chiedere la disponibilità devi prima caricare una foto profilo. Verrai portato alla pagina di caricamento.",
+        "en": "To ask about availability, you must first upload a profile photo. You will be taken to the upload page.",
+        "fr": "Pour demander une disponibilité, vous devez d’abord ajouter une photo de profil. Vous allez être redirigé vers la page de téléchargement.",
+        "es": "Para preguntar por la disponibilidad, primero debes subir una foto de perfil. Te llevaremos a la página de carga.",
+        "de": "Um nach der Verfügbarkeit zu fragen, musst du zuerst ein Profilfoto hochladen. Du wirst zur Upload-Seite weitergeleitet.",
+        "ro": "Pentru a solicita disponibilitatea, trebuie mai întâi să încarci o fotografie de profil. Vei fi redirecționat către pagina de încărcare.",
+        "uk": "Щоб запитати про доступність, спочатку завантажте фото профілю. Вас буде перенаправлено на сторінку завантаження.",
+        "fil": "Bago humingi ng availability, kailangan mo munang mag-upload ng profile photo. Dadalhin ka sa upload page.",
+    },
     "availability_request_owner.eyebrow": {
         "it": "PER IL TUO ANNUNCIO", "en": "FOR YOUR LISTING",
         "fr": "POUR VOTRE ANNONCE", "es": "PARA TU ANUNCIO",

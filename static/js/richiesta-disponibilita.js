@@ -544,6 +544,16 @@
     }
 
     function openDialog(trigger) {
+      if (dialog.dataset.profilePhotoMissing === "1") {
+        const view = documentRef.defaultView;
+        if (view && typeof view.alert === "function") {
+          view.alert(dialog.dataset.profilePhotoError || copy.errorGeneric || "");
+        }
+        if (view && view.location && dialog.dataset.profilePhotoUrl) {
+          view.location.assign(dialog.dataset.profilePhotoUrl);
+        }
+        return;
+      }
       if (completed) resetForm();
       previousFocus = trigger || documentRef.activeElement;
       dialog.hidden = false;
@@ -661,6 +671,21 @@
           signal: requestController.signal
         });
         const data = await parseResponse(response);
+
+        if (
+          data.code === "foto_profilo_richiesta"
+          && typeof data.action_url === "string"
+          && data.action_url
+        ) {
+          const view = documentRef.defaultView;
+          if (view && typeof view.alert === "function") {
+            view.alert(data.error || copy.errorGeneric || "");
+          }
+          if (view && view.location) {
+            view.location.assign(data.action_url);
+          }
+          return;
+        }
 
         if (!response.ok || data.ok === false) {
           const backendError = typeof data.error === "string"

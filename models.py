@@ -1348,6 +1348,89 @@ def _chat_availability_requests_available(c) -> bool:
     return bool(fetchone_value(c.fetchone()))
 
 
+def _chat_availability_unread_available(c) -> bool:
+    """Verifica il rollout del timestamp letto senza interrogare colonne assenti."""
+
+    if not _chat_availability_requests_available(c):
+        return False
+
+    if is_postgres():
+        c.execute(sql("""
+            SELECT CASE WHEN EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'richieste_disponibilita'
+                  AND column_name = 'evento_letto_at'
+            ) THEN 1 ELSE 0 END AS disponibile
+        """))
+        return bool(fetchone_value(c.fetchone()))
+
+    c.execute("PRAGMA table_info(richieste_disponibilita)")
+    return "evento_letto_at" in {
+        str(row[1]) for row in c.fetchall()
+    }
+
+
+def _chat_unread_availability_by_peer(c, user_id: int):
+    """Conta gli eventi disponibilita ricevuti e non letti per interlocutore."""
+
+    if not _chat_availability_unread_available(c):
+        return {}
+
+    rows = c.execute(sql("""
+        SELECT
+            CASE
+                WHEN rd.stato = 'in_attesa' THEN rd.richiedente_id
+                ELSE rd.offerente_id
+            END AS altro_id,
+            COUNT(*) AS totale
+        FROM richieste_disponibilita rd
+        JOIN utenti u
+          ON u.id = CASE
+              WHEN rd.stato = 'in_attesa' THEN rd.richiedente_id
+              ELSE rd.offerente_id
+          END
+         AND u.sospeso = 0
+         AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
+         AND u.attivo = 1
+        WHERE rd.evento_letto_at IS NULL
+          AND (
+                (
+                    rd.stato = 'in_attesa'
+                    AND rd.offerente_id = ?
+                )
+                OR
+                (
+                    rd.stato IN (
+                        'disponibile', 'non_disponibile', 'informazioni'
+                    )
+                    AND rd.richiedente_id = ?
+                )
+          )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM chat_blocchi cb
+              WHERE (
+                  cb.bloccante_id = rd.richiedente_id
+                  AND cb.bloccato_id = rd.offerente_id
+              ) OR (
+                  cb.bloccante_id = rd.offerente_id
+                  AND cb.bloccato_id = rd.richiedente_id
+              )
+          )
+        GROUP BY CASE
+            WHEN rd.stato = 'in_attesa' THEN rd.richiedente_id
+            ELSE rd.offerente_id
+        END
+    """), (int(user_id), int(user_id))).fetchall()
+
+    return {
+        int(row["altro_id"]): int(row["totale"] or 0)
+        for row in rows
+    }
+
+
 def _chat_latest_availability_events(c, user_id: int):
     """Restituisce al massimo una richiesta recente per interlocutore."""
 
@@ -1405,7 +1488,14 @@ def _chat_latest_availability_events(c, user_id: int):
         int(user_id),
     )).fetchall()
 
-    return [dict(row) for row in rows]
+    unread_by_peer = _chat_unread_availability_by_peer(c, user_id)
+    result = [dict(row) for row in rows]
+    for row in result:
+        row["richieste_non_lette"] = unread_by_peer.get(
+            int(row["altro_id"]),
+            0,
+        )
+    return result
 
 
 def _chat_event_sort_key(value):
@@ -1688,6 +1778,7 @@ def chat_threads(user_id: int):
 
     for event in availability_events:
         altro_id = int(event["altro_id"])
+        event_unread = int(event.get("richieste_non_lette") or 0)
         event_time = (
             event.get("richiesta_updated_at")
             or event.get("richiesta_created_at")
@@ -1725,10 +1816,14 @@ def chat_threads(user_id: int):
                 "ultimo_updated_at": event_time,
                 "ultimo_consegnato": 0,
                 "ultimo_letto": 0,
-                "non_letti": 0,
+                "non_letti": event_unread,
             }
             threads.append(thread)
             threads_by_other[altro_id] = thread
+        else:
+            thread["non_letti"] = (
+                int(thread.get("non_letti") or 0) + event_unread
+            )
 
         if (
             thread.get("ultimo_evento_tipo") != "messaggio"
@@ -1773,6 +1868,35 @@ def chat_segna_letti(user_id: int, other_id: int):
           AND letto = 0
     """, (user_id, other_id))
 
+    if _chat_availability_unread_available(c):
+        c.execute(sql("""
+            UPDATE richieste_disponibilita
+            SET evento_letto_at = CURRENT_TIMESTAMP
+            WHERE evento_letto_at IS NULL
+              AND (
+                    (
+                        stato = 'in_attesa'
+                        AND offerente_id = ?
+                        AND richiedente_id = ?
+                    )
+                    OR
+                    (
+                        stato IN (
+                            'disponibile',
+                            'non_disponibile',
+                            'informazioni'
+                        )
+                        AND richiedente_id = ?
+                        AND offerente_id = ?
+                    )
+              )
+        """), (
+            int(user_id),
+            int(other_id),
+            int(user_id),
+            int(other_id),
+        ))
+
 
     # Il ciclo termina soltanto quando il contatore complessivo
     # dei messaggi non letti dell'utente torna a zero.
@@ -1807,7 +1931,7 @@ def chat_segna_letti(user_id: int, other_id: int):
 
 
 def count_chat_non_letti(user_id: int) -> int:
-    """Conta i messaggi non letti, escludendo le chat bloccate."""
+    """Conta messaggi e card disponibilita non letti nelle chat attive."""
     conn = get_db_connection()
     c = get_cursor(conn)
 
@@ -1840,7 +1964,10 @@ def count_chat_non_letti(user_id: int) -> int:
         """), (user_id,))
 
         n = fetchone_value(c.fetchone())
-        return int(n or 0)
+        richieste_non_lette = sum(
+            _chat_unread_availability_by_peer(c, user_id).values()
+        )
+        return int(n or 0) + int(richieste_non_lette)
 
     finally:
         try:

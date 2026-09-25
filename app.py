@@ -16740,6 +16740,29 @@ def _richieste_disponibilita_tables_exist(cur):
     return int(fetchone_value(row) or 0) == len(table_names)
 
 
+def _richieste_disponibilita_unread_ready(cur):
+    """Verifica anche la colonna evento usata dal contatore della chat."""
+
+    if not _richieste_disponibilita_tables_exist(cur):
+        return False
+    if app.config.get("IS_POSTGRES"):
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'richieste_disponibilita'
+                  AND column_name = 'evento_letto_at'
+            ) AS disponibile
+        """)
+        return bool(fetchone_value(cur.fetchone()))
+
+    cur.execute("PRAGMA table_info(richieste_disponibilita)")
+    return "evento_letto_at" in {
+        str(row[1]) for row in cur.fetchall()
+    }
+
+
 def carica_catalogo_schede_profilo(cur, *, solo_attive=True):
     where = "WHERE q.attivo = TRUE" if solo_attive else ""
     cur.execute(sql(f"""
@@ -21401,7 +21424,71 @@ def invia_push(user_id, title, body, url=None):
             row_messaggi = cur.fetchone()
             unread_messaggi = int(row_messaggi["count"] or 0) if row_messaggi else 0
 
-            pwa_badge_count = unread_notifiche + unread_messaggi
+            unread_richieste = 0
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'richieste_disponibilita'
+                      AND column_name = 'evento_letto_at'
+                ) AS disponibile
+            """)
+            request_schema = cur.fetchone()
+            if request_schema and request_schema["disponibile"]:
+                cur.execute("""
+                    SELECT COUNT(*) AS count
+                    FROM richieste_disponibilita rd
+                    JOIN utenti mittente
+                      ON mittente.id = CASE
+                          WHEN rd.stato = 'in_attesa'
+                          THEN rd.richiedente_id
+                          ELSE rd.offerente_id
+                      END
+                    WHERE rd.evento_letto_at IS NULL
+                      AND (
+                            (
+                                rd.stato = 'in_attesa'
+                                AND rd.offerente_id = %s
+                            )
+                            OR
+                            (
+                                rd.stato IN (
+                                    'disponibile',
+                                    'non_disponibile',
+                                    'informazioni'
+                                )
+                                AND rd.richiedente_id = %s
+                            )
+                      )
+                      AND mittente.attivo = 1
+                      AND COALESCE(mittente.sospeso, 0) = 0
+                      AND COALESCE(mittente.disattivato_admin, 0) = 0
+                      AND COALESCE(mittente.eliminato, 0) = 0
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM chat_blocchi cb
+                          WHERE (
+                              cb.bloccante_id = rd.richiedente_id
+                              AND cb.bloccato_id = rd.offerente_id
+                          ) OR (
+                              cb.bloccante_id = rd.offerente_id
+                              AND cb.bloccato_id = rd.richiedente_id
+                          )
+                      )
+                """, (user_id, user_id))
+                row_richieste = cur.fetchone()
+                unread_richieste = (
+                    int(row_richieste["count"] or 0)
+                    if row_richieste
+                    else 0
+                )
+
+            pwa_badge_count = (
+                unread_notifiche
+                + unread_messaggi
+                + unread_richieste
+            )
 
         except Exception as e:
             security_log(
@@ -24168,11 +24255,24 @@ def _richiesta_disponibilita_error(error):
     source = getattr(error, "source", str(error))
     status = int(getattr(error, "status", 400))
     code = getattr(error, "code", "invalid_request")
-    return jsonify({
+    payload = {
         "ok": False,
         "code": code,
         "error": translate_source(source, get_interface_language()),
-    }), status
+    }
+    if code == "foto_profilo_richiesta":
+        payload.update({
+            "error": translate(
+                "availability_request.profile_photo_required",
+                get_interface_language(),
+            ),
+            "action_label": translate_source(
+                "Carica la foto profilo",
+                get_interface_language(),
+            ),
+            "action_url": url_for("upload_foto"),
+        })
+    return jsonify(payload), status
 
 
 def _richiesta_disponibilita_account_attivo(row, prefix=""):
@@ -24241,28 +24341,6 @@ def _link_risposta_disponibilita(offerente_id, richiesta_id):
     )
 
 
-def _inserisci_notifica_richiesta_disponibilita(
-    cur,
-    *,
-    destinatario_id,
-    titolo,
-    messaggio,
-    link,
-    tipo,
-):
-    cur.execute(sql("""
-        INSERT INTO notifiche (
-            id_utente, titolo, messaggio, link, tipo, letta
-        ) VALUES (?, ?, ?, ?, ?, 0)
-    """), (
-        int(destinatario_id),
-        titolo,
-        messaggio,
-        link,
-        tipo,
-    ))
-
-
 def _prenota_richiesta_disponibilita(
     cur,
     *,
@@ -24271,7 +24349,7 @@ def _prenota_richiesta_disponibilita(
     calendario,
     adesso=None,
 ):
-    """Valida e salva richiesta, calendario e notifica nella transazione."""
+    """Valida e salva richiesta e calendario nella transazione."""
 
     adesso = _disponibilita_promemoria_datetime(adesso) or datetime.now(
         timezone.utc
@@ -24280,7 +24358,7 @@ def _prenota_richiesta_disponibilita(
         " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
     )
     cur.execute(sql(f"""
-        SELECT id, username, nome, email, email_notifiche,
+        SELECT id, username, nome, email, email_notifiche, foto_profilo,
                COALESCE(lingua_interfaccia, 'it') AS lingua_interfaccia,
                attivo, sospeso, disattivato_admin, eliminato, ruolo
         FROM utenti
@@ -24293,6 +24371,13 @@ def _prenota_richiesta_disponibilita(
             "Il tuo account non può inviare questa richiesta.",
             status=403,
             code="account_unavailable",
+        )
+    if not str(richiedente["foto_profilo"] or "").strip():
+        raise RichiestaDisponibilitaError(
+            "Per chiedere la disponibilità devi prima caricare una foto "
+            "profilo, che sarà pubblica dopo l’approvazione.",
+            status=409,
+            code="foto_profilo_richiesta",
         )
 
     listing_lock_suffix = (
@@ -24494,17 +24579,10 @@ def _prenota_richiesta_disponibilita(
     titolo = translate_source(RICHIESTA_DISPONIBILITA_TITOLO, language)
     messaggio = translate_source(RICHIESTA_DISPONIBILITA_MESSAGGIO, language)
     link = _link_richiesta_disponibilita(richiedente_id, richiesta_id)
-    _inserisci_notifica_richiesta_disponibilita(
-        cur,
-        destinatario_id=offerente_id,
-        titolo=titolo,
-        messaggio=messaggio,
-        link=link,
-        tipo="richiesta_disponibilita",
-    )
     return {
         "richiesta_id": int(richiesta_id),
         "annuncio_id": int(annuncio_id),
+        "mittente_id": int(richiedente_id),
         "destinatario_id": offerente_id,
         "destinatario_email": annuncio["proprietario_email"],
         "email_notifiche": int(
@@ -24526,7 +24604,7 @@ def _prenota_risposta_disponibilita(
     versione,
     adesso=None,
 ):
-    """Registra una sola risposta e la relativa notifica in modo atomico."""
+    """Registra una sola risposta in modo atomico."""
 
     adesso = _disponibilita_promemoria_datetime(adesso) or datetime.now(
         timezone.utc
@@ -24659,6 +24737,7 @@ def _prenota_risposta_disponibilita(
         SET stato = ?,
             risposta_at = ?,
             updated_at = ?,
+            evento_letto_at = NULL,
             versione = versione + 1
         WHERE id = ?
           AND offerente_id = ?
@@ -24689,18 +24768,11 @@ def _prenota_risposta_disponibilita(
         richiesta["offerente_id"],
         richiesta_id,
     )
-    _inserisci_notifica_richiesta_disponibilita(
-        cur,
-        destinatario_id=richiesta["richiedente_id"],
-        titolo=titolo,
-        messaggio=messaggio,
-        link=link,
-        tipo="risposta_disponibilita",
-    )
     return {
         "richiesta_id": int(richiesta_id),
         "annuncio_id": int(richiesta["annuncio_id"]),
         "richiedente_id": int(richiesta["richiedente_id"]),
+        "mittente_id": int(richiesta["offerente_id"]),
         "destinatario_id": int(richiesta["richiedente_id"]),
         "destinatario_email": richiesta["richiedente_email"],
         "email_notifiche": int(
@@ -24722,14 +24794,23 @@ def _invia_canali_richiesta_disponibilita(
     cta_email,
     messaggio_email_source,
 ):
-    """Invia realtime, push ed email soltanto dopo il commit del chiamante."""
+    """Aggiorna la chat e invia push/email soltanto dopo il commit."""
 
     destinatario_id = int(dispatch["destinatario_id"])
     try:
-        emit_update_notifications(destinatario_id)
+        socketio.emit(
+            "update_unread_count",
+            {"count": chat_count_unread(destinatario_id)},
+            room=f"user_{destinatario_id}",
+        )
+        socketio.emit(
+            "chat_threads_update",
+            {"from": int(dispatch.get("mittente_id") or 0)},
+            room=f"user_{destinatario_id}",
+        )
     except Exception as exc:
         log_exception_safe(
-            "Errore realtime richiesta disponibilita",
+            "Errore realtime chat richiesta disponibilita",
             exc,
             {"destinatario_id": destinatario_id},
             production=True,
@@ -25006,7 +25087,7 @@ def crea_richiesta_disponibilita_route(annuncio_id):
     conn = get_db_connection()
     cur = get_cursor(conn)
     try:
-        if not _richieste_disponibilita_tables_exist(cur):
+        if not _richieste_disponibilita_unread_ready(cur):
             raise RichiestaDisponibilitaError(
                 "La funzione non è ancora disponibile.",
                 status=503,
@@ -25102,7 +25183,7 @@ def rispondi_richiesta_disponibilita_route(richiesta_id):
     conn = get_db_connection()
     cur = get_cursor(conn)
     try:
-        if not _richieste_disponibilita_tables_exist(cur):
+        if not _richieste_disponibilita_unread_ready(cur):
             raise RichiestaDisponibilitaError(
                 "La funzione non è ancora disponibile.",
                 status=503,
@@ -29951,6 +30032,34 @@ def chat_threads_json():
 
     return jsonify(threads)
 
+
+def _chat_foto_profilo_mancante(other_id):
+    """Mantiene libera solo la chat di supporto con un amministratore."""
+
+    if not g.utente:
+        return False
+    if str(g.utente["ruolo"] or "user").strip().lower() == "admin":
+        return False
+    if is_admin(other_id):
+        return False
+    return not str(g.utente["foto_profilo"] or "").strip()
+
+
+def _chat_foto_profilo_json_error():
+    return jsonify({
+        "ok": False,
+        "code": "foto_profilo_richiesta",
+        "error": translate_source(
+            "Per usare la chat devi prima caricare una foto profilo.",
+            get_interface_language(),
+        ),
+        "action_label": translate_source(
+            "Carica la foto profilo",
+            get_interface_language(),
+        ),
+        "action_url": url_for("upload_foto"),
+    }), 403
+
 @app.route("/chat/<int:other_id>/json")
 @login_required
 def chat_conversazione_json(other_id):
@@ -29963,6 +30072,8 @@ def chat_conversazione_json(other_id):
             "ok": False,
             "error": "Utente non disponibile."
         }), 404
+    if _chat_foto_profilo_mancante(other_id):
+        return _chat_foto_profilo_json_error()
 
     # 🔹 Messaggi
     messaggi = chat_conversazione(user_id, other_id, after_id=after_id)
@@ -30050,6 +30161,8 @@ def chat_load_older(other_id):
             "ok": False,
             "error": "Utente non disponibile."
         }), 404
+    if _chat_foto_profilo_mancante(other_id):
+        return _chat_foto_profilo_json_error()
 
     if not before_id:
         return jsonify([])
@@ -30094,6 +30207,8 @@ def chat_message_changes(other_id):
             "ok": False,
             "error": "Utente non disponibile."
         }), 404
+    if _chat_foto_profilo_mancante(other_id):
+        return _chat_foto_profilo_json_error()
 
     changed_after = (
         request.args.get("after", type=str)
@@ -30228,6 +30343,18 @@ def chat_conversazione_view(other_id):
     other_is_admin = is_admin(other_id)
     current_is_admin = g.utente["ruolo"] == "admin"
 
+    # La card disponibilita non deve mai aggirare il requisito della foto.
+    # Fa eccezione soltanto la chat di supporto con un amministratore.
+    if (
+        not (current_is_admin or other_is_admin)
+        and not str(g.utente["foto_profilo"] or "").strip()
+    ):
+        flash(
+            "Per usare la chat devi prima caricare una foto profilo.",
+            "error",
+        )
+        return redirect(url_for("upload_foto"))
+
     blocco_disponibile = (
         g.utente["ruolo"] != "admin"
         and not other_is_admin
@@ -30278,22 +30405,6 @@ def chat_conversazione_view(other_id):
         }
         if richiesta_deep_link not in richieste_accessibili:
             return "Richiesta non disponibile", 404
-
-    # La foto profilo rimane obbligatoria nelle chat normali.
-    # Se almeno uno dei due partecipanti è admin, la chat
-    # deve funzionare anche quando l'utente non ha ancora una foto.
-    chat_con_admin = current_is_admin or other_is_admin
-
-    if (
-        not chat_con_admin
-        and not g.utente["foto_profilo"]
-        and not richieste_disponibilita_chat
-    ):
-        flash(
-            "Per usare la chat devi prima caricare una foto profilo.",
-            "error"
-        )
-        return redirect(url_for("dashboard"))
 
     # 🔒 Maschera l'admin verso gli altri utenti
     if other_is_admin:
@@ -31228,44 +31339,9 @@ def check_video_status(data):
 
 
 def chat_count_unread(user_id):
-
-    conn = get_db_connection()
-    cur = get_cursor(conn)
-
-    cur.execute(sql("""
-        SELECT COUNT(*) AS count
-        FROM messaggi_chat mc
-        JOIN utenti mittente
-          ON mittente.id = mc.mittente_id
-        WHERE mc.destinatario_id = ?
-          AND mc.letto = 0
-          AND mittente.attivo = 1
-          AND mittente.sospeso = 0
-          AND COALESCE(mittente.disattivato_admin, 0) = 0
-          AND COALESCE(mittente.eliminato, 0) = 0
-          AND NOT EXISTS (
-              SELECT 1
-              FROM chat_blocchi cb
-              WHERE (
-                  cb.bloccante_id = mc.mittente_id
-                  AND cb.bloccato_id = mc.destinatario_id
-              )
-              OR (
-                  cb.bloccante_id = mc.destinatario_id
-                  AND cb.bloccato_id = mc.mittente_id
-              )
-          )
-    """), (user_id,))
-
-    row = cur.fetchone()
-
-    cur.close()
-    conn.close()
-
-    if not row:
-        return 0
-
-    return row["count"]
+    # Un'unica sorgente per navbar, realtime e PWA: include anche le card
+    # disponibilita ricevute e non ancora aperte in chat.
+    return count_chat_non_letti(int(user_id))
 
 # ==========================================================
 # 🔐 DB BOOTSTRAP — disattivato in runtime produzione

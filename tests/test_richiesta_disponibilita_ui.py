@@ -133,6 +133,15 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
             self.style_source,
         )
 
+    def test_missing_profile_photo_alerts_and_redirects_to_upload(self):
+        for marker in (
+            "foto_profilo_richiesta",
+            "action_url",
+            "alert(",
+            "location",
+        ):
+            self.assertIn(marker, self.script_source)
+
     def test_every_new_string_has_all_eight_languages(self):
         keys = sorted(
             key for key in TRANSLATIONS

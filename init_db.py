@@ -1914,6 +1914,7 @@ def crea_tabelle_richieste_disponibilita():
                     'informazioni', 'scaduta'
                 )),
                 risposta_at {dt_col()},
+                evento_letto_at {dt_col()},
                 versione INTEGER NOT NULL DEFAULT 1 CHECK (versione >= 1),
                 created_at {dt_col(True)} NOT NULL,
                 updated_at {dt_col(True)} NOT NULL,
@@ -1937,6 +1938,33 @@ def crea_tabelle_richieste_disponibilita():
                 ADD COLUMN IF NOT EXISTS a_chiamata
                     BOOLEAN NOT NULL DEFAULT FALSE;
             """))
+            c.execute("""
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'richieste_disponibilita'
+                      AND column_name = 'evento_letto_at'
+                )
+            """)
+            evento_letto_row = c.fetchone()
+            evento_letto_esiste = bool(
+                evento_letto_row and evento_letto_row[0]
+            )
+            if not evento_letto_esiste:
+                c.execute("""
+                    ALTER TABLE richieste_disponibilita
+                    ADD COLUMN evento_letto_at TIMESTAMPTZ
+                """)
+                c.execute("""
+                    UPDATE richieste_disponibilita
+                    SET evento_letto_at = COALESCE(
+                        updated_at,
+                        created_at,
+                        CURRENT_TIMESTAMP
+                    )
+                    WHERE evento_letto_at IS NULL
+                """)
         else:
             c.execute("PRAGMA table_info(richieste_disponibilita)")
             colonne_richiesta = {row[1] for row in c.fetchall()}
@@ -1944,6 +1972,20 @@ def crea_tabelle_richieste_disponibilita():
                 c.execute("""
                     ALTER TABLE richieste_disponibilita
                     ADD COLUMN a_chiamata INTEGER NOT NULL DEFAULT 0
+                """)
+            if "evento_letto_at" not in colonne_richiesta:
+                c.execute("""
+                    ALTER TABLE richieste_disponibilita
+                    ADD COLUMN evento_letto_at TEXT
+                """)
+                c.execute("""
+                    UPDATE richieste_disponibilita
+                    SET evento_letto_at = COALESCE(
+                        updated_at,
+                        created_at,
+                        CURRENT_TIMESTAMP
+                    )
+                    WHERE evento_letto_at IS NULL
                 """)
         c.execute(sql(f"""
             CREATE TABLE IF NOT EXISTS richieste_disponibilita_fasce (
@@ -2011,6 +2053,22 @@ def crea_tabelle_richieste_disponibilita():
         c.execute(sql("""
             CREATE INDEX IF NOT EXISTS idx_richieste_disponibilita_annuncio
             ON richieste_disponibilita (annuncio_id, created_at DESC);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS
+                idx_richieste_disponibilita_offerente_non_lette
+            ON richieste_disponibilita (offerente_id, updated_at DESC)
+            WHERE evento_letto_at IS NULL
+              AND stato = 'in_attesa';
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS
+                idx_richieste_disponibilita_richiedente_non_lette
+            ON richieste_disponibilita (richiedente_id, updated_at DESC)
+            WHERE evento_letto_at IS NULL
+              AND stato IN (
+                  'disponibile', 'non_disponibile', 'informazioni'
+              );
         """))
         conn.commit()
     except Exception:
