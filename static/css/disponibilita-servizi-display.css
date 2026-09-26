@@ -341,12 +341,27 @@
   margin: 1rem calc(50% - 50vw + 1mm) 0;
 }
 
+.availability-listing-shell {
+  overflow: hidden;
+  border: 1px solid rgba(191, 219, 254, .94);
+  border-radius: 1.35rem;
+  background: linear-gradient(145deg, rgba(255,255,255,.99), rgba(239,246,255,.9));
+  box-shadow: 0 14px 34px rgba(30, 64, 175, .09), inset 0 1px 0 #fff;
+}
+
 .availability-listing-details {
   overflow: hidden;
   border: 1px solid rgba(191, 219, 254, .94);
   border-radius: 1.35rem;
   background: linear-gradient(145deg, rgba(255,255,255,.99), rgba(239,246,255,.9));
   box-shadow: 0 14px 34px rgba(30, 64, 175, .09), inset 0 1px 0 #fff;
+}
+
+.availability-listing-shell > .availability-listing-details {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .availability-listing-details > summary,

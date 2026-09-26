@@ -164,6 +164,27 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         self.assertIn("services", english)
         self.assertNotIn("contact", english)
 
+    def test_italian_exact_time_labels_use_dalle_and_alle(self):
+        self.assertEqual(translate("availability.from", "it"), "Dalle")
+        self.assertEqual(translate("availability.to", "it"), "Alle")
+        self.assertEqual(translate("availability.from", "en"), "From")
+        self.assertEqual(translate("availability.to", "en"), "To")
+
+    def test_missing_photo_copy_points_to_personal_dashboard(self):
+        for language in SUPPORTED_LANGUAGES:
+            copy = translate(
+                "availability_request.profile_photo_required",
+                language,
+            ).lower()
+            self.assertIn("dashboard" if language in {"en", "fil"} else {
+                "it": "dashboard",
+                "fr": "tableau de bord",
+                "es": "panel",
+                "de": "persönlichen bereich",
+                "ro": "panoul",
+                "uk": "особистої панелі",
+            }[language], copy)
+
     def test_count_summaries_keep_their_placeholder_in_every_language(self):
         count_keys = (
             "availability.weekly_slots",

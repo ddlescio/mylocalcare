@@ -1,3 +1,4 @@
+from pathlib import Path
 import sqlite3
 import unittest
 
@@ -34,6 +35,7 @@ class ChatThreadsAvailabilityTests(unittest.TestCase):
                 foto_profilo TEXT,
                 sospeso INTEGER NOT NULL DEFAULT 0,
                 disattivato_admin INTEGER NOT NULL DEFAULT 0,
+                eliminato INTEGER NOT NULL DEFAULT 0,
                 attivo INTEGER NOT NULL DEFAULT 1,
                 x25519_pub TEXT
             );
@@ -173,6 +175,10 @@ class ChatThreadsAvailabilityTests(unittest.TestCase):
             threads[0]["ultimo_evento_tipo"],
             "richiesta_disponibilita",
         )
+        self.assertEqual(
+            threads[0]["ultimo_evento_preview_key"],
+            "availability_request.chat_preview",
+        )
         self.assertEqual(threads[0]["richiesta_disponibilita_id"], 1)
         self.assertEqual(threads[0]["ultimo_mittente_id"], 2)
         self.assertEqual(threads[0]["non_letti"], 1)
@@ -269,10 +275,89 @@ class ChatThreadsAvailabilityTests(unittest.TestCase):
         )
         self.assertEqual(threads[0]["ultimo_mittente_id"], 1)
         self.assertEqual(threads[0]["ultimo_destinatario_id"], 2)
+        self.assertEqual(
+            threads[0]["ultimo_evento_tipo"],
+            "risposta_disponibilita",
+        )
+        self.assertEqual(
+            threads[0]["ultimo_evento_preview_key"],
+            "availability_request.chat_preview_available",
+        )
+        self.assertEqual(
+            threads[0]["ultimo_testo"],
+            "Disponibilità confermata",
+        )
         self.assertEqual(threads[0]["non_letti"], 0)
 
         requester_threads = self._chat_threads(2)
         self.assertEqual(requester_threads[0]["non_letti"], 1)
+
+    def test_each_response_state_has_a_distinct_thread_preview(self):
+        self._create_availability_schema()
+        expected = {
+            "disponibile": (
+                "availability_request.chat_preview_available",
+                "Disponibilità confermata",
+            ),
+            "non_disponibile": (
+                "availability_request.chat_preview_unavailable",
+                "Non disponibile per la richiesta",
+            ),
+            "informazioni": (
+                "availability_request.chat_preview_information",
+                "Richiesta di maggiori informazioni",
+            ),
+        }
+
+        for index, (state, (preview_key, preview_text)) in enumerate(
+            expected.items(),
+            start=1,
+        ):
+            with self.subTest(state=state):
+                self.conn.execute("DELETE FROM richieste_disponibilita")
+                self.conn.commit()
+                self._insert_request(
+                    2,
+                    1,
+                    "2026-09-25T08:00:00+00:00",
+                    updated_at=f"2026-09-25T12:0{index}:00+00:00",
+                    state=state,
+                    response_at=f"2026-09-25T12:0{index}:00+00:00",
+                )
+
+                thread = self._chat_threads(2)[0]
+
+                self.assertEqual(
+                    thread["ultimo_evento_tipo"],
+                    "risposta_disponibilita",
+                )
+                self.assertEqual(
+                    thread["ultimo_evento_preview_key"],
+                    preview_key,
+                )
+                self.assertEqual(thread["ultimo_testo"], preview_text)
+
+    def test_eliminated_peer_availability_event_is_not_listed_or_counted(self):
+        self._create_availability_schema()
+        self._insert_request(2, 1, "2026-09-25T09:00:00+00:00")
+        self.conn.execute("UPDATE utenti SET eliminato = 1 WHERE id = 2")
+        self.conn.commit()
+
+        self.assertEqual(self._chat_threads(1), [])
+        with self.app.test_request_context("/chat"):
+            self.assertEqual(models.count_chat_non_letti(1), 0)
+
+    def test_chat_list_templates_translate_request_and_response_previews(self):
+        root = Path(__file__).resolve().parents[1]
+
+        for relative_path in (
+            "templates/utente_messaggi.html",
+            "templates/chat_threads.html",
+        ):
+            with self.subTest(template=relative_path):
+                source = (root / relative_path).read_text(encoding="utf-8")
+                self.assertIn("'risposta_disponibilita'", source)
+                self.assertIn("ultimo_evento_preview_key", source)
 
     def test_response_event_is_counted_globally_for_requester(self):
         self._create_availability_schema()

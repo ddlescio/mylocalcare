@@ -81,12 +81,37 @@ class RichiesteDisponibilitaOwnerUiTest(unittest.TestCase):
             'include "partials/richieste_disponibilita_proprietario.html"',
             self.chat_source,
         )
-        self.assertIn("richieste_disponibilita_chat", self.chat_source)
         self.assertIn("css/richieste-disponibilita-proprietario.css", self.chat_source)
         self.assertNotIn(
             'include "partials/richieste_disponibilita_proprietario.html"',
             self.listing_source,
         )
+        self.assertNotIn(
+            "{% if richieste_disponibilita_chat %}\n"
+            "         {% include \"partials/richieste_disponibilita_proprietario.html\" %}",
+            self.chat_source,
+        )
+
+    def test_empty_chat_keeps_hidden_realtime_host(self):
+        rendered = self.environment.get_template(
+            "partials/richieste_disponibilita_proprietario.html"
+        ).render(
+            richieste_disponibilita_chat=[],
+            richieste_disponibilita_refresh_url=(
+                "/api/chat/12/richieste-disponibilita"
+            ),
+            csrf_token=lambda: "token",
+            tr=lambda key, **values: key.format(**values),
+            url_for=lambda endpoint, filename=None, **kwargs: (
+                f"/static/{filename}" if filename else f"/{endpoint}"
+            ),
+        )
+        self.assertIn("data-owner-availability-requests", rendered)
+        self.assertIn(
+            'data-refresh-url="/api/chat/12/richieste-disponibilita"',
+            rendered,
+        )
+        self.assertIn("hidden", rendered.split("aria-label", 1)[0])
 
     def test_request_card_is_closed_and_is_not_a_fake_chat_message(self):
         self.assertIn("data-owner-availability-request-details", self.rendered)
@@ -129,7 +154,7 @@ class RichiesteDisponibilitaOwnerUiTest(unittest.TestCase):
         for forbidden in ("email", "telefono", "phone", "whatsapp"):
             self.assertNotIn(forbidden, rendered_lower)
 
-    def test_response_updates_in_place_and_information_focuses_composer(self):
+    def test_responder_sees_recorded_outcome_without_manual_message_prompt(self):
         for marker in (
             'method: "POST"',
             'credentials: "same-origin"',
@@ -140,16 +165,142 @@ class RichiesteDisponibilitaOwnerUiTest(unittest.TestCase):
             "versione: Number(version)",
             "card.dataset.version = String(Number(version))",
             "updateState(card, nextState, data.version)",
-            'documentRef.getElementById("msgInput")',
-            "messageInput?.focus({ preventScroll: true })",
             'typeof data.error === "string"',
             "data.error.trim()",
             "const message = backendError || (response.status === 409",
         ):
             self.assertIn(marker, self.script_source)
-        self.assertNotIn("windowRef.location.assign", self.script_source)
+        # L'unica navigazione ammessa e il guard richiesto quando la foto
+        # profilo viene rimossa mentre la chat e gia aperta. Una risposta
+        # valida resta invece nella conversazione e aggiorna la card.
+        self.assertIn(
+            "function redirectForMissingProfilePhoto(data)",
+            self.script_source,
+        )
+        self.assertIn(
+            'windowRef.location.assign(data.action_url || "/utente/dashboard")',
+            self.script_source,
+        )
         self.assertNotIn("data.chat_url", self.script_source)
         self.assertNotIn("windowRef.location.reload", self.script_source)
+        self.assertNotIn('documentRef.getElementById("msgInput")', self.script_source)
+
+    def test_response_is_a_successive_card_only_for_original_requester(self):
+        common = {
+            "id": 91,
+            "stato": "informazioni",
+            "versione": 2,
+            "created_at": "2026-09-25T09:30:00+02:00",
+            "risposta_at": "2026-09-25T10:00:00+02:00",
+            "a_chiamata": False,
+            "conversazione_bloccata": False,
+            "annuncio": {
+                "titolo": "Babysitter nel weekend",
+                "categoria": "Babysitter",
+                "url": "/annuncio/91",
+            },
+            "giorni": [],
+        }
+        requester_card = {
+            **common,
+            "inviata_da_me": True,
+            "sono_offerente": False,
+            "posso_rispondere": False,
+            "mostra_card_risposta": True,
+            "risposta": {
+                "stato": "informazioni",
+                "created_at": "2026-09-25T10:00:00+02:00",
+            },
+        }
+        rendered_requester = self.environment.get_template(
+            "partials/richieste_disponibilita_proprietario.html"
+        ).render(
+            richieste_disponibilita_chat=[requester_card],
+            csrf_token=lambda: "token",
+            tr=lambda key, **values: key.format(**values),
+            url_for=lambda endpoint, filename=None, **kwargs: (
+                f"/static/{filename}" if filename else f"/{endpoint}"
+            ),
+        )
+        self.assertIn('id="risposta-disponibilita-91"', rendered_requester)
+        self.assertIn("data-owner-availability-response-event", rendered_requester)
+        self.assertIn('data-response-state="informazioni"', rendered_requester)
+        self.assertIn("availability_request_chat.response_information", rendered_requester)
+        self.assertIn("availability_request_chat.request_sent", rendered_requester)
+
+        responder_card = {
+            **common,
+            "inviata_da_me": False,
+            "sono_offerente": True,
+            "posso_rispondere": False,
+            "mostra_card_risposta": False,
+            "risposta": None,
+        }
+        rendered_responder = self.environment.get_template(
+            "partials/richieste_disponibilita_proprietario.html"
+        ).render(
+            richieste_disponibilita_chat=[responder_card],
+            csrf_token=lambda: "token",
+            tr=lambda key, **values: key.format(**values),
+            url_for=lambda endpoint, filename=None, **kwargs: (
+                f"/static/{filename}" if filename else f"/{endpoint}"
+            ),
+        )
+        self.assertNotIn("data-owner-availability-response-event", rendered_responder)
+        self.assertIn(
+            "availability_request_owner.answer_recorded: "
+            "availability_request_owner.state_information",
+            " ".join(rendered_responder.split()),
+        )
+
+    def test_realtime_response_creates_card_and_marks_event_read(self):
+        combined = self.script_source + self.style_source
+        for marker in (
+            '"availability_request_response"',
+            'queueRealtimeEvent("response", payload)',
+            "refreshAvailabilityCards(latest)",
+            "markConversationReadIfVisible(activeConversationId())",
+            'socket.emit("mark_as_read", { other_id: normalizedId })',
+            ".owner-availability-response-event",
+            "data-owner-availability-response-event",
+        ):
+            self.assertIn(marker, combined)
+
+    def test_realtime_request_reconnect_and_visibility_are_robust(self):
+        for marker in (
+            '"availability_request_created"',
+            '"availability_request_response"',
+            '"socket_ready"',
+            'typeof windowRef.whenSocketReady === "function"',
+            'documentRef.addEventListener("visibilitychange"',
+            'windowRef.addEventListener("focus"',
+            'documentRef.visibilityState === "visible"',
+            "documentRef.hasFocus()",
+            "refreshAvailabilityCards(latest)",
+            'credentials: "same-origin"',
+            '"localcare:availability-cards-refreshed"',
+            "markConversationReadIfVisible(activeConversationId())",
+        ):
+            self.assertIn(marker, self.script_source)
+        self.assertNotIn("bindRealtimeResponses", self.script_source)
+        self.assertNotIn("(attempt || 0) < 20", self.script_source)
+        self.assertNotIn(
+            "setTimeout(function () {\n            bindRealtimeResponses",
+            self.script_source,
+        )
+        self.assertIn(
+            'document.visibilityState === "visible"',
+            self.chat_source,
+        )
+        self.assertIn(
+            'typeof document.hasFocus !== "function"',
+            self.chat_source,
+        )
+        self.assertIn(
+            'function isChatActivelyViewed()',
+            self.chat_source,
+        )
+        self.assertIn('document.hasFocus()', self.chat_source)
 
     def test_expired_requests_are_terminal_and_have_no_response_buttons(self):
         self.assertIn(
@@ -243,6 +394,17 @@ class RichiesteDisponibilitaOwnerUiTest(unittest.TestCase):
             self.assertEqual(expected, set(TRANSLATIONS[key]), key)
             for language in expected:
                 self.assertTrue(TRANSLATIONS[key][language].strip(), (key, language))
+
+        response_keys = (
+            "availability_request_chat.request_sent",
+            "availability_request_chat.response_received",
+            "availability_request_chat.response_available",
+            "availability_request_chat.response_unavailable",
+            "availability_request_chat.response_information",
+            "availability_request_chat.response_for_listing",
+        )
+        for key in response_keys:
+            self.assertEqual(expected, set(TRANSLATIONS[key]), key)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js non disponibile")
     def test_javascript_builds_exact_response_payload_and_cleans_chat_deep_link(self):

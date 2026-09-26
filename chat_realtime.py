@@ -300,18 +300,21 @@ def register_chat_socket_handlers(
 
             if (
                 not chat_con_admin
-                and not mittente["foto_profilo"]
+                and not str(mittente["foto_profilo"] or "").strip()
             ):
                 print(
                     "❌ [send_message] foto profilo mancante"
                 )
                 return {
                     "ok": False,
+                    "code": "foto_profilo_richiesta",
                     "error": (
                         "Per inviare messaggi devi prima "
                         "caricare una foto profilo."
-                    )
-                }                
+                    ),
+                    "action_label": "Vai alla dashboard personale",
+                    "action_url": "/utente/dashboard",
+                }
 
             print("📨 [send_message] prima di chat_invia")
             msg_id = chat_invia(mittente_id, destinatario_id, testo)

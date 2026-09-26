@@ -122,7 +122,7 @@
   </details>
 
   <!-- 🧭 Estensione ricerca alle province confinanti -->
-  <div class="grid grid-cols-1 {% if puo_filtrare_interessi %}sm:grid-cols-2{% endif %} gap-3 mb-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 {% if puo_filtrare_interessi %}lg:grid-cols-3{% endif %} gap-3 mb-6">
     <label
       for="includi_confinanti"
       class="flex items-start gap-3 cursor-pointer rounded-2xl border border-indigo-100
@@ -147,6 +147,27 @@
           Mostra anche gli annunci pubblicati nelle province vicine a quella selezionata.
         </span>
       </span>
+    </label>
+
+    <label
+      for="solo_disponibili"
+      class="cerca-interest-filter cerca-interest-filter--panel">
+      <input
+        type="checkbox"
+        id="solo_disponibili"
+        name="solo_disponibili"
+        value="1"
+        class="cerca-interest-filter__input"
+        {% if solo_disponibili %}checked{% endif %}>
+
+      <span class="cerca-interest-filter__icon" aria-hidden="true">📅</span>
+
+      <span class="cerca-interest-filter__copy">
+        <strong>{{ tr('search.available_only') }}</strong>
+        <small>{{ tr('search.available_only_hint') }}</small>
+      </span>
+
+      <span class="cerca-interest-filter__switch" aria-hidden="true"></span>
     </label>
 
     {% if puo_filtrare_interessi %}
@@ -343,7 +364,7 @@
           <span>Azzera</span>
         </button>
 
-        <div class="cerca-search-toggles {% if puo_filtrare_interessi %}has-interest-filter{% endif %}">
+        <div class="cerca-search-toggles has-search-filters">
           <!-- Province confinanti con applicazione immediata -->
           <label
             for="includi-confinanti-rapido"
@@ -360,6 +381,21 @@
               {% if request.args.get('includi_confinanti') == '1' %}checked{% endif %}
             >
             <span>Province vicine</span>
+          </label>
+
+          <label
+            for="solo-disponibili-rapido"
+            class="cerca-interest-filter cerca-interest-filter--quick"
+            title="{{ tr('search.available_only_hint') }}">
+            <input
+              type="checkbox"
+              id="solo-disponibili-rapido"
+              class="cerca-interest-filter__input"
+              {% if solo_disponibili %}checked{% endif %}>
+
+            <span class="cerca-interest-filter__icon" aria-hidden="true">📅</span>
+            <span class="cerca-interest-filter__quick-label">{{ tr('search.available_only') }}</span>
+            <span class="cerca-interest-filter__switch" aria-hidden="true"></span>
           </label>
 
           {% if puo_filtrare_interessi %}
@@ -702,7 +738,14 @@
 </section>
 {% endif %}
 
-{% if solo_interessi and not annunci and not annunci_vetrina %}
+{% if solo_disponibili and not annunci and not annunci_vetrina %}
+  <section class="cerca-interest-empty" aria-live="polite">
+    <span class="cerca-interest-empty__icon" aria-hidden="true">📅</span>
+    <h3>{{ tr('search.no_available_results') }}</h3>
+    <p>{{ tr('search.no_available_results_hint') }}</p>
+    <button type="button" id="mostra-tutti-disponibilita">{{ tr('search.show_all_listings') }}</button>
+  </section>
+{% elif solo_interessi and not annunci and not annunci_vetrina %}
   <section class="cerca-interest-empty" aria-live="polite">
     <span class="cerca-interest-empty__icon" aria-hidden="true">
       {{ interesse_annuncio_icon() }}
@@ -5356,7 +5399,7 @@ body.annuncio-navigation-loading #annuncio-loading-overlay * {
   }
 
   @media (max-width: 520px) {
-    .cerca-search-toggles.has-interest-filter {
+    .cerca-search-toggles.has-search-filters {
       width: 100%;
     }
 
@@ -5430,6 +5473,15 @@ document.addEventListener("DOMContentLoaded", function () {
   const interessiFiltro = document.getElementById(
     "solo_interessi"
   );
+  const disponibiliRapido = document.getElementById(
+    "solo-disponibili-rapido"
+  );
+  const disponibiliFiltro = document.getElementById(
+    "solo_disponibili"
+  );
+  const mostraTuttiDisponibilita = document.getElementById(
+    "mostra-tutti-disponibilita"
+  );
   const mostraTuttiInteressi = document.getElementById(
     "mostra-tutti-da-interessi"
   );
@@ -5473,6 +5525,37 @@ document.addEventListener("DOMContentLoaded", function () {
   if (confinantiFiltro && confinantiRapido) {
     confinantiFiltro.addEventListener("change", () => {
       confinantiRapido.checked = confinantiFiltro.checked;
+    });
+  }
+
+  /* ==========================================
+     DISPONIBILITÀ CONFERMATA — APPLICAZIONE RAPIDA
+  ========================================== */
+  if (disponibiliRapido) {
+    disponibiliRapido.addEventListener("change", () => {
+      const url = new URL(window.location.href);
+
+      if (disponibiliRapido.checked) {
+        url.searchParams.set("solo_disponibili", "1");
+      } else {
+        url.searchParams.delete("solo_disponibili");
+      }
+
+      window.location.href = url.toString();
+    });
+  }
+
+  if (disponibiliFiltro && disponibiliRapido) {
+    disponibiliFiltro.addEventListener("change", () => {
+      disponibiliRapido.checked = disponibiliFiltro.checked;
+    });
+  }
+
+  if (mostraTuttiDisponibilita) {
+    mostraTuttiDisponibilita.addEventListener("click", () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("solo_disponibili");
+      window.location.href = url.toString();
     });
   }
 

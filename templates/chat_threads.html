@@ -25,7 +25,7 @@
     <ul class="divide-y">
       {% for t in threads %}
         <li>
-          <a href="{{ url_for('chat_conversazione_view', other_id=t['altro_id'], richiesta_disponibilita=t.get('richiesta_disponibilita_id')) if t.get('ultimo_evento_tipo') == 'richiesta_disponibilita' else url_for('chat_conversazione_view', other_id=t['altro_id']) }}" class="flex items-center justify-between px-4 py-3 chat-item">
+          <a href="{{ url_for('chat_conversazione_view', other_id=t['altro_id'], richiesta_disponibilita=t.get('richiesta_disponibilita_id')) if t.get('ultimo_evento_tipo') in ['richiesta_disponibilita', 'risposta_disponibilita'] else url_for('chat_conversazione_view', other_id=t['altro_id']) }}" class="flex items-center justify-between px-4 py-3 chat-item">
             <div class="flex items-center gap-3">
               <!-- foto profilo -->
               <img src="{{ url_for('static', filename=t['altro_foto']) if t['altro_foto'] else url_for('static', filename='images/default_user.png') }}"
@@ -41,8 +41,8 @@
                   {% set prefix = 'Tu: ' if t['ultimo_mittente_id'] == my_id else '@' ~ t['altro_username'] ~ ': ' %}
                   <span class="text-gray-600 font-medium">{{ prefix }}</span>
 
-                  {% if t.get('ultimo_evento_tipo') == 'richiesta_disponibilita' %}
-                      {{ tr('availability_request.chat_preview') }}
+                  {% if t.get('ultimo_evento_tipo') in ['richiesta_disponibilita', 'risposta_disponibilita'] %}
+                      {{ tr(t.get('ultimo_evento_preview_key') or 'availability_request.chat_preview') }}
                   {% elif t['ultimo_testo'] %}
                       {{ t['ultimo_testo'][:40] }}{% if t['ultimo_testo']|length > 40 %}…{% endif %}
                   {% else %}

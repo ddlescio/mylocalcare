@@ -25,6 +25,8 @@
          class="owner-availability-requests-wrap"
          data-owner-availability-requests
          data-csrf-token="{{ csrf_token() }}"
+         data-refresh-url="{{ richieste_disponibilita_refresh_url or '' }}"
+         {% if not richieste_disponibilita_chat %}hidden{% endif %}
          aria-label="{{ tr('availability_request_owner.title') }}">
   <div class="owner-availability-request-list">
     {% for richiesta in richieste_disponibilita_chat %}
@@ -33,6 +35,8 @@
       {% set listing = richiesta.get('annuncio') or {} %}
       {% set listing_title = listing.get('titolo') or listing.get('categoria') or tr('availability_request_chat.listing_fallback') %}
       {% set can_answer_request = richiesta.get('sono_offerente') and request_state == 'in_attesa' %}
+      {% set show_response_event = richiesta.get('mostra_card_risposta') and richiesta.get('risposta') %}
+      {% set request_display_state = 'inviata' if show_response_event else request_state %}
 
       <article id="richiesta-disponibilita-{{ request_id }}"
                class="owner-availability-request-card"
@@ -40,6 +44,7 @@
                data-request-id="{{ request_id }}"
                data-version="{{ richiesta.get('versione', 1) }}"
                data-state="{{ request_state }}"
+               data-chat-timeline-at="{{ richiesta.get('created_at') or '' }}"
                data-can-respond="{{ '1' if can_answer_request else '0' }}"
                data-chat-blocked="{{ '1' if richiesta.get('conversazione_bloccata') else '0' }}"
                data-endpoint="/api/richieste-disponibilita/{{ request_id }}/risposta">
@@ -63,9 +68,13 @@
             </span>
 
             <span class="owner-availability-request-meta">
-              <span class="owner-availability-request-status is-{{ request_state }}"
+              <span class="owner-availability-request-status is-{{ request_display_state }}"
                     data-owner-availability-status>
-                {{ request_states.get(request_state, request_state) }}
+                {% if show_response_event %}
+                  {{ tr('availability_request_chat.request_sent') }}
+                {% else %}
+                  {{ request_states.get(request_state, request_state) }}
+                {% endif %}
               </span>
               <small>
                 <time datetime="{{ richiesta.get('created_at') or '' }}"
@@ -187,7 +196,7 @@
                data-owner-availability-result
                role="status"
                aria-live="polite"
-               hidden></p>
+               {% if not (richiesta.get('sono_offerente') and request_state in ['disponibile', 'non_disponibile', 'informazioni']) %}hidden{% endif %}>{% if richiesta.get('sono_offerente') and request_state in ['disponibile', 'non_disponibile', 'informazioni'] %}{{ tr('availability_request_owner.answer_recorded') }}: {{ request_states.get(request_state, request_state) }}{% endif %}</p>
             <p class="owner-availability-response-error"
                data-owner-availability-error
                role="alert"
@@ -196,6 +205,45 @@
           </div>
         </details>
       </article>
+
+      {% if show_response_event %}
+        {% set response = richiesta.get('risposta') or {} %}
+        {% set response_state = response.get('stato') %}
+        <article id="risposta-disponibilita-{{ request_id }}"
+                 class="owner-availability-response-event is-{{ response_state }}"
+                 data-owner-availability-response-event
+                 data-request-id="{{ request_id }}"
+                 data-response-state="{{ response_state }}"
+                 data-chat-timeline-at="{{ response.get('created_at') or '' }}"
+                 aria-label="{{ tr('availability_request_chat.response_received') }}">
+          <span class="owner-availability-response-event-icon" aria-hidden="true">
+            {% if response_state == 'disponibile' %}✓{% elif response_state == 'non_disponibile' %}×{% else %}💬{% endif %}
+          </span>
+
+          <span class="owner-availability-response-event-content">
+            <span class="owner-availability-response-event-eyebrow">
+              {{ tr('availability_request_chat.response_received') }}
+            </span>
+            <strong>{{ request_states.get(response_state, response_state) }}</strong>
+            <span class="owner-availability-response-event-message">
+              {% if response_state == 'disponibile' %}
+                {{ tr('availability_request_chat.response_available') }}
+              {% elif response_state == 'non_disponibile' %}
+                {{ tr('availability_request_chat.response_unavailable') }}
+              {% else %}
+                {{ tr('availability_request_chat.response_information') }}
+              {% endif %}
+            </span>
+            <small class="ugc-text">
+              {{ tr('availability_request_chat.response_for_listing', listing=listing_title) }}
+            </small>
+          </span>
+
+          <time class="owner-availability-response-event-time"
+                datetime="{{ response.get('created_at') or '' }}"
+                data-owner-availability-date>{{ response.get('created_at') or '—' }}</time>
+        </article>
+      {% endif %}
     {% endfor %}
   </div>
 </section>
@@ -207,6 +255,14 @@
   'errorConflict': tr('availability_request_owner.error_conflict'),
   'blocked': tr('availability_request_chat.blocked'),
   'awaitingReply': tr('availability_request_chat.awaiting_reply'),
+  'requestSent': tr('availability_request_chat.request_sent'),
+  'responseReceived': tr('availability_request_chat.response_received'),
+  'responseForListing': tr('availability_request_chat.response_for_listing', listing='{listing}'),
+  'responseMessages': {
+    'disponibile': tr('availability_request_chat.response_available'),
+    'non_disponibile': tr('availability_request_chat.response_unavailable'),
+    'informazioni': tr('availability_request_chat.response_information')
+  },
   'stateLabels': request_states
 }|tojson }}</script>
 <script src="{{ url_for('static', filename='js/richieste-disponibilita-proprietario.js') }}" defer></script>

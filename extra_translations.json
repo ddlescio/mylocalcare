@@ -4807,6 +4807,36 @@
       "ro": "Reconfirmă-ți disponibilitatea pe MyLocalCare",
       "uk": "Підтвердьте свою доступність у MyLocalCare ще раз"
     },
+    "La tua disponibilità sta per scadere": {
+      "fil": "Malapit nang mag-expire ang iyong availability",
+      "ro": "Disponibilitatea ta va expira în curând",
+      "uk": "Термін дії вашої доступності скоро завершиться"
+    },
+    "La tua disponibilità scadrà tra 5 giorni. Controlla i dati già salvati: puoi riconfermarli così come sono oppure modificarli.": {
+      "fil": "Mag-e-expire ang iyong availability sa loob ng 5 araw. Suriin ang mga naka-save na detalye: maaari mong kumpirmahing muli ang mga ito nang walang pagbabago o i-update ang mga ito.",
+      "ro": "Disponibilitatea ta va expira peste 5 zile. Verifică informațiile deja salvate: le poți reconfirma așa cum sunt sau le poți modifica.",
+      "uk": "Термін дії вашої доступності завершиться через 5 днів. Перевірте збережені дані: ви можете підтвердити їх без змін або відредагувати."
+    },
+    "Rinnova la tua disponibilità": {
+      "fil": "I-renew ang iyong availability",
+      "ro": "Reînnoiește-ți disponibilitatea",
+      "uk": "Оновіть свою доступність"
+    },
+    "La tua disponibilità è scaduta. Riconferma i dati già salvati oppure aggiornali per mantenerla attuale.": {
+      "fil": "Nag-expire na ang iyong availability. Kumpirmahing muli ang mga naka-save na detalye o i-update ang mga ito para manatiling napapanahon.",
+      "ro": "Disponibilitatea ta a expirat. Reconfirmă informațiile deja salvate sau actualizează-le pentru a o menține actuală.",
+      "uk": "Термін дії вашої доступності завершився. Підтвердьте збережені дані повторно або оновіть їх."
+    },
+    "Ultimo avviso: rinnova la disponibilità": {
+      "fil": "Huling paalala: i-renew ang iyong availability",
+      "ro": "Ultima avertizare: reînnoiește disponibilitatea",
+      "uk": "Останнє попередження: оновіть доступність"
+    },
+    "La tua disponibilità è scaduta da 7 giorni e la priorità dei tuoi annunci è stata ridotta. Riconfermala ora per ripristinarla.": {
+      "fil": "Pitong araw nang expired ang iyong availability at ibinaba na ang priority ng iyong mga listing. Kumpirmahin itong muli ngayon para maibalik ang priority.",
+      "ro": "Disponibilitatea ta a expirat de 7 zile, iar prioritatea anunțurilor tale a fost redusă. Reconfirm-o acum pentru a restabili prioritatea.",
+      "uk": "Термін дії вашої доступності завершився 7 днів тому, і пріоритет ваших оголошень знижено. Підтвердьте її зараз, щоб відновити пріоритет."
+    },
     "Controlla disponibilità": {
       "fil": "Suriin ang availability",
       "ro": "Verifică disponibilitatea",
@@ -7216,6 +7246,16 @@
       "fil": "🔗 Pangmalas Listahan",
       "ro": "🔗 Viewlisting",
       "uk": "🔗 Перегляд списку"
+    },
+    "Fai una domanda o presentati direttamente in chat": {
+      "fil": "Magtanong o magpakilala nang direkta sa chat",
+      "ro": "Pune o întrebare sau prezintă-te direct în chat",
+      "uk": "Поставте запитання або представтеся безпосередньо в чаті"
+    },
+    "Vai alla dashboard personale": {
+      "fil": "Pumunta sa iyong dashboard",
+      "ro": "Mergi la panoul tău personal",
+      "uk": "Перейти до особистої панелі"
     }
   }
 }

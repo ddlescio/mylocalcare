@@ -4,6 +4,7 @@
 {% block head_extra %}
   <meta name="chat-aperta" content="true">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/richieste-disponibilita-proprietario.css') }}">
+  <script src="{{ url_for('static', filename='js/chat-timeline.js') }}" defer></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       console.log("📍 CHAT DOMContentLoaded", {
@@ -717,9 +718,7 @@ body {
          </div>
        {% endfor %}
 
-       {% if richieste_disponibilita_chat %}
-         {% include "partials/richieste_disponibilita_proprietario.html" %}
-       {% endif %}
+       {% include "partials/richieste_disponibilita_proprietario.html" %}
       </div>
 
       <div
@@ -856,9 +855,39 @@ body {
       let loadingOlder = false;
       let oldestMessageId = null;
       let markReadTimer = null;
+      let profilePhotoRedirectInProgress = false;
 
       const destId = parseInt(document.getElementById('destinatario_id').value, 10);
       window.__activeChat = destId;
+
+      function handleProfilePhotoRequired(payload) {
+        if (
+          !payload
+          || ![
+            'foto_profilo_richiesta',
+            'profile_photo_required'
+          ].includes(payload.code)
+        ) {
+          return false;
+        }
+
+        if (profilePhotoRedirectInProgress) {
+          return true;
+        }
+
+        profilePhotoRedirectInProgress = true;
+        stopPollingFallback();
+
+        window.alert(
+          payload.error
+          || 'Per usare la chat devi prima caricare una foto profilo.'
+        );
+
+        window.location.assign(
+          payload.action_url || '/utente/dashboard'
+        );
+        return true;
+      }
 
       // 🔥 id univoco della pagina chat corrente
       const chatPageId = (window.crypto && crypto.randomUUID)
@@ -916,11 +945,25 @@ body {
         return globalSocket || boundSocket || null;
       }
 
+      function isChatActivelyViewed() {
+        return (
+          document.visibilityState === "visible"
+          && (
+            typeof document.hasFocus !== "function"
+            || document.hasFocus()
+          )
+        );
+      }
+
       let chatClosedEmitted = false;
       let chatOpenedOnce = false;
       let chatPresenceInterval = null;
 
       function emitChatOpened() {
+        if (!isChatActivelyViewed()) {
+          console.log("⏭️ chat_aperta non inviata: pagina non attiva");
+          return;
+        }
 
         if (chatOpenedOnce) {
           console.log("⏭️ chat_aperta già inviata → skip");
@@ -951,7 +994,7 @@ body {
             const liveSocket = getChatSocket();
 
             if (!liveSocket || !liveSocket.connected) return;
-            if (document.visibilityState !== "visible") return;
+            if (!isChatActivelyViewed()) return;
 
             liveSocket.emit("chat_aperta", { other_id: destId });
             liveSocket.emit("page_visible", {
@@ -1014,7 +1057,7 @@ body {
         return;
       }
 
-      const visible = document.visibilityState === "visible";
+      const visible = isChatActivelyViewed();
 
       const payload = {
         visible,
@@ -1035,11 +1078,13 @@ body {
     document.addEventListener("visibilitychange", () => {
       emitPageVisible();
 
-      if (document.visibilityState === "visible") {
+      if (isChatActivelyViewed()) {
         sincronizzaModificheMessaggi();
         chatClosedEmitted = false;
         chatOpenedOnce = false;
         emitChatOpened();
+      } else {
+        clearTimeout(markReadTimer);
       }
     });
 
@@ -1052,6 +1097,7 @@ body {
     });
 
     window.addEventListener("blur", () => {
+      clearTimeout(markReadTimer);
       emitPageVisible();
     });
 
@@ -1080,6 +1126,14 @@ body {
 
         const res = await fetch(`/chat/${destId}/older?before_id=${oldestMessageId}`);
         const msgs = await res.json();
+
+        if (handleProfilePhotoRequired(msgs)) {
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(`Caricamento messaggi fallito: ${res.status}`);
+        }
 
         if (!msgs || !msgs.length) {
           loadingOlder = false;
@@ -1664,7 +1718,7 @@ body {
             }
           }
 
-          if (m.destinatario_id === meId && document.visibilityState === "visible") {
+          if (m.destinatario_id === meId && isChatActivelyViewed()) {
             console.log("📩 [CHAT] preparo mark_as_read automatico");
             clearTimeout(markReadTimer);
 
@@ -1675,7 +1729,11 @@ body {
                 connected: !!(activeSocket && activeSocket.connected)
               });
 
-              if (activeSocket && activeSocket.connected) {
+              if (
+                isChatActivelyViewed()
+                && activeSocket
+                && activeSocket.connected
+              ) {
                 activeSocket.emit("mark_as_read", {
                   other_id: m.mittente_id
                 });
@@ -3000,13 +3058,17 @@ body {
         }
       );
 
+      const data = await response.json();
+
+      if (handleProfilePhotoRequired(data)) {
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(
           `Sincronizzazione modifiche fallita: ${response.status}`
         );
       }
-
-      const data = await response.json();
 
       if (
         !data ||
@@ -3071,7 +3133,7 @@ body {
 
   async function pollNewMessages() {
     if (pollingInFlight) return;
-    if (document.visibilityState !== "visible") return;
+    if (!isChatActivelyViewed()) return;
     if (document.body.dataset.chat !== "true") return;
 
     pollingInFlight = true;
@@ -3087,6 +3149,14 @@ body {
       });
 
       const data = await res.json();
+
+      if (handleProfilePhotoRequired(data)) {
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Aggiornamento chat fallito: ${res.status}`);
+      }
 
       if (
         data
@@ -3162,7 +3232,17 @@ body {
   }
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") return;
+    if (!isChatActivelyViewed()) return;
+
+    const s = getChatSocket();
+
+    if (!s || !s.connected) {
+      pollNewMessages();
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    if (!isChatActivelyViewed()) return;
 
     const s = getChatSocket();
 
@@ -3335,6 +3415,11 @@ body {
 
         if (!response || response.ok !== true) {
           console.error("❌ ACK send_message negativo:", response);
+
+          if (handleProfilePhotoRequired(response)) {
+            sending = false;
+            return;
+          }
 
           if (
             response

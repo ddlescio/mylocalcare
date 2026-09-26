@@ -1393,6 +1393,7 @@ def _chat_unread_availability_by_peer(c, user_id: int):
           END
          AND u.sospeso = 0
          AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
+         AND (u.eliminato IS NULL OR u.eliminato = 0)
          AND u.attivo = 1
         WHERE rd.evento_letto_at IS NULL
           AND (
@@ -1479,6 +1480,7 @@ def _chat_latest_availability_events(c, user_id: int):
         JOIN utenti u ON u.id = rr.altro_id
             AND u.sospeso = 0
             AND (u.disattivato_admin IS NULL OR u.disattivato_admin = 0)
+            AND (u.eliminato IS NULL OR u.eliminato = 0)
             AND u.attivo = 1
         WHERE rr.rn = 1
     """), (
@@ -1794,6 +1796,28 @@ def chat_threads(user_id: int):
             if actor_id == int(event["offerente_id"])
             else int(event["offerente_id"])
         )
+        response_preview_by_state = {
+            "disponibile": (
+                "availability_request.chat_preview_available",
+                "Disponibilità confermata",
+            ),
+            "non_disponibile": (
+                "availability_request.chat_preview_unavailable",
+                "Non disponibile per la richiesta",
+            ),
+            "informazioni": (
+                "availability_request.chat_preview_information",
+                "Richiesta di maggiori informazioni",
+            ),
+        }
+        is_response = stato in response_preview_by_state
+        preview_key, preview_text = response_preview_by_state.get(
+            stato,
+            (
+                "availability_request.chat_preview",
+                "Richiesta di disponibilità",
+            ),
+        )
 
         thread = threads_by_other.get(altro_id)
         if thread is None:
@@ -1835,8 +1859,13 @@ def chat_threads(user_id: int):
                 "ultimo_destinatario_id": recipient_id,
                 "ultimo_invio": event_time,
                 "ultimo_updated_at": event_time,
-                "ultimo_testo": "Richiesta di disponibilità",
-                "ultimo_evento_tipo": "richiesta_disponibilita",
+                "ultimo_testo": preview_text,
+                "ultimo_evento_tipo": (
+                    "risposta_disponibilita"
+                    if is_response
+                    else "richiesta_disponibilita"
+                ),
+                "ultimo_evento_preview_key": preview_key,
                 "richiesta_disponibilita_id": int(
                     event["richiesta_id"]
                 ),

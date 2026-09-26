@@ -9,12 +9,21 @@ from i18n_catalog import PHRASE_ROWS
 class AvailabilityReminderDeployTest(unittest.TestCase):
     ROOT = Path(__file__).resolve().parents[1]
     SOURCES = (
-        "Riconferma la tua disponibilità",
+        "La tua disponibilità sta per scadere",
         (
-            "È passato circa un mese dall’ultima conferma. Controlla i dati "
+            "La tua disponibilità scadrà tra 5 giorni. Controlla i dati "
             "già salvati: puoi riconfermarli così come sono oppure modificarli."
         ),
-        "Riconferma la tua disponibilità su MyLocalCare",
+        "Rinnova la tua disponibilità",
+        (
+            "La tua disponibilità è scaduta. Riconferma i dati già salvati "
+            "oppure aggiornali per mantenerla attuale."
+        ),
+        "Ultimo avviso: rinnova la disponibilità",
+        (
+            "La tua disponibilità è scaduta da 7 giorni e la priorità dei "
+            "tuoi annunci è stata ridotta. Riconfermala ora per ripristinarla."
+        ),
         "Controlla disponibilità",
     )
 
@@ -59,24 +68,27 @@ class AvailabilityReminderDeployTest(unittest.TestCase):
                 self.assertTrue(translation.strip(), source)
 
         self.assertEqual(
-            translate_source("Riconferma la tua disponibilità", "en"),
-            "Reconfirm your availability",
+            translate_source("La tua disponibilità sta per scadere", "en"),
+            "Your availability is about to expire",
         )
         self.assertEqual(
             translate_source("Controlla disponibilità", "de"),
             "Verfügbarkeit prüfen",
         )
         self.assertEqual(
-            translate_source("Riconferma la tua disponibilità", "ro"),
-            "Reconfirmă-ți disponibilitatea",
+            translate_source("Rinnova la tua disponibilità", "ro"),
+            "Reînnoiește-ți disponibilitatea",
         )
         self.assertEqual(
-            translate_source("Riconferma la tua disponibilità", "uk"),
-            "Підтвердьте свою доступність ще раз",
+            translate_source(
+                "Ultimo avviso: rinnova la disponibilità",
+                "uk",
+            ),
+            "Останнє попередження: оновіть доступність",
         )
         self.assertEqual(
-            translate_source("Riconferma la tua disponibilità", "fil"),
-            "Kumpirmahing muli ang iyong availability",
+            translate_source("La tua disponibilità sta per scadere", "fil"),
+            "Malapit nang mag-expire ang iyong availability",
         )
 
 

@@ -20,7 +20,7 @@
      data-csrf-token="{{ csrf_token() }}"
      data-profile-photo-missing="{{ '1' if (g is defined and g.utente and not (g.utente['foto_profilo']|default('', true)|trim)) else '0' }}"
      data-profile-photo-error="{{ tr('availability_request.profile_photo_required') }}"
-     data-profile-photo-url="{{ url_for('upload_foto') }}"
+     data-profile-photo-url="{{ url_for('dashboard') }}"
      aria-hidden="true"
      hidden>
   <section class="availability-request-sheet"

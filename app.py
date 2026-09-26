@@ -113,6 +113,9 @@ from profilo_schede import (
 )
 from disponibilita_servizi import (
     CATEGORIE_SERVIZI,
+    GIORNI_ESCLUSIONE_FILTRO,
+    GIORNI_PROMEMORIA_SCADENZA,
+    GIORNI_PRIORITA_RIDOTTA,
     GIORNI_RICONFERMA,
     calcola_freschezza_disponibilita,
     normalize_disponibilita_payload,
@@ -17322,6 +17325,12 @@ def _categorie_disponibilita_offerte(cur, utente_id):
 
 DISPONIBILITA_PROMEMORIA_BATCH_DEFAULT = 100
 DISPONIBILITA_PROMEMORIA_BATCH_MAX = 1000
+# I profili generale e per categoria possono essere confermati in giorni
+# diversi. Senza un intervallo minimo lo stesso utente potrebbe quindi
+# ricevere un avviso ogni giorno. Le fasi piu urgenti (30 e 37 giorni) non
+# vengono comunque rinviate: il limite vale soltanto tra avvisi della stessa
+# importanza o meno urgenti.
+DISPONIBILITA_PROMEMORIA_COOLDOWN_GIORNI = 3
 
 
 def _normalizza_limite_promemoria_disponibilita(limite):
@@ -17366,6 +17375,144 @@ def _link_promemoria_disponibilita(categoria_slug=None):
     return link
 
 
+def _disponibilita_priorita_cerca_sql(cur):
+    """Score organico: la disponibilita non aggiornata perde priorita a 37g.
+
+    Lo score riguarda esclusivamente gli annunci ``offro``: la disponibilita
+    dell'autore non deve modificare in alcun modo l'ordine degli annunci
+    ``cerco``.
+
+    L'eventuale profilo specifico della categoria prevale su quello generale,
+    come nel resto dell'interfaccia. Il fallback a zero mantiene operativa la
+    ricerca durante rollout o ambienti che non hanno ancora le nuove tabelle.
+    Boost e urgente restano comunque davanti grazie all'ordinamento esterno.
+    """
+
+    if not _disponibilita_servizi_table_exists(cur):
+        return "0"
+
+    soglia = (
+        "CURRENT_TIMESTAMP - "
+        f"INTERVAL '{GIORNI_PRIORITA_RIDOTTA} days'"
+        if app.config.get("IS_POSTGRES")
+        else (
+            "datetime('now', "
+            f"'-{GIORNI_PRIORITA_RIDOTTA} days')"
+        )
+    )
+    generale_valida = f"""
+        EXISTS (
+            SELECT 1
+            FROM disponibilita_profili dp_priorita
+            WHERE dp_priorita.utente_id = a.utente_id
+              AND dp_priorita.stato_generale IN ('disponibile', 'limitata')
+              AND dp_priorita.confermata_at IS NOT NULL
+              AND dp_priorita.confermata_at > {soglia}
+        )
+    """
+    if not _disponibilita_categoria_table_exists(cur):
+        return f"""
+            CASE
+              WHEN a.tipo_annuncio = 'offro' AND {generale_valida} THEN 1
+              ELSE 0
+            END
+        """
+
+    override_categoria = """
+        EXISTS (
+            SELECT 1
+            FROM disponibilita_profili_categoria dpc_override
+            WHERE dpc_override.utente_id = a.utente_id
+              AND dpc_override.categoria_slug = a.categoria
+        )
+    """
+    categoria_valida = f"""
+        EXISTS (
+            SELECT 1
+            FROM disponibilita_profili_categoria dpc_priorita
+            WHERE dpc_priorita.utente_id = a.utente_id
+              AND dpc_priorita.categoria_slug = a.categoria
+              AND dpc_priorita.stato_generale IN (
+                  'disponibile', 'limitata'
+              )
+              AND dpc_priorita.confermata_at IS NOT NULL
+              AND dpc_priorita.confermata_at > {soglia}
+        )
+    """
+    return f"""
+        CASE
+          WHEN a.tipo_annuncio != 'offro' OR a.tipo_annuncio IS NULL THEN 0
+          WHEN {categoria_valida} THEN 1
+          WHEN NOT {override_categoria} AND {generale_valida} THEN 1
+          ELSE 0
+        END
+    """
+
+
+def _disponibilita_filtro_cerca_sql(cur):
+    """Condizione per il filtro esplicito ``solo disponibili``.
+
+    La disponibilita specifica della categoria prevale su quella generale.
+    Una conferma vecchia di 44 giorni, uno stato ``non_disponibile`` o
+    l'assenza di una conferma non soddisfano il filtro. La condizione viene
+    applicata soltanto quando l'utente attiva il filtro: gli altri risultati
+    della ricerca continuano a restare visibili normalmente.
+    """
+
+    if not _disponibilita_servizi_table_exists(cur):
+        return "0"
+
+    soglia = (
+        "CURRENT_TIMESTAMP - "
+        f"INTERVAL '{GIORNI_ESCLUSIONE_FILTRO} days'"
+        if app.config.get("IS_POSTGRES")
+        else (
+            "datetime('now', "
+            f"'-{GIORNI_ESCLUSIONE_FILTRO} days')"
+        )
+    )
+    generale_inclusa = f"""
+        EXISTS (
+            SELECT 1
+            FROM disponibilita_profili dp_filtro
+            WHERE dp_filtro.utente_id = a.utente_id
+              AND dp_filtro.stato_generale IN ('disponibile', 'limitata')
+              AND dp_filtro.confermata_at IS NOT NULL
+              AND dp_filtro.confermata_at > {soglia}
+        )
+    """
+    if not _disponibilita_categoria_table_exists(cur):
+        return generale_inclusa
+
+    override_categoria = """
+        EXISTS (
+            SELECT 1
+            FROM disponibilita_profili_categoria dpc_filtro_override
+            WHERE dpc_filtro_override.utente_id = a.utente_id
+              AND dpc_filtro_override.categoria_slug = a.categoria
+        )
+    """
+    categoria_inclusa = f"""
+        EXISTS (
+            SELECT 1
+            FROM disponibilita_profili_categoria dpc_filtro
+            WHERE dpc_filtro.utente_id = a.utente_id
+              AND dpc_filtro.categoria_slug = a.categoria
+              AND dpc_filtro.stato_generale IN (
+                  'disponibile', 'limitata'
+              )
+              AND dpc_filtro.confermata_at IS NOT NULL
+              AND dpc_filtro.confermata_at > {soglia}
+        )
+    """
+    return f"""
+        (
+          {categoria_inclusa}
+          OR (NOT {override_categoria} AND {generale_inclusa})
+        )
+    """
+
+
 def _piano_promemoria_disponibilita(
     profilo_generale,
     profili_categoria,
@@ -17373,18 +17520,19 @@ def _piano_promemoria_disponibilita(
     *,
     adesso=None,
 ):
-    """Calcola una sola riconferma per utente senza cambiare le disponibilita.
+    """Calcola il prossimo avviso dovuto senza cambiare la disponibilita.
 
-    Il timestamp dell'ultimo promemoria viene considerato a livello utente:
-    basta che uno dei profili ancora pertinenti sia stato prenotato negli
-    ultimi trenta giorni per impedire un secondo invio. Le categorie non piu
-    offerte vengono ignorate sia per la scadenza sia per il limite.
+    Ogni profilo attraversa tre fasi nello stesso ciclo di conferma: preavviso
+    al giorno 25, richiesta di rinnovo al giorno 30 e ultimo avviso al giorno
+    37. ``ultimo_promemoria_at`` rende ogni fase idempotente confrontandola con
+    il relativo confine; la riconferma lo azzera e avvia un nuovo ciclo. Se
+    piu profili sono dovuti insieme viene prodotto un solo avviso, quello piu
+    urgente, e vengono prenotati tutti i profili gia maturi.
     """
 
     adesso = _disponibilita_promemoria_datetime(adesso) or datetime.now(
         timezone.utc
     )
-    soglia = adesso - timedelta(days=GIORNI_RICONFERMA)
     offerte = {
         str(item or "").strip().lower()
         for item in (categorie_offerte or [])
@@ -17404,52 +17552,125 @@ def _piano_promemoria_disponibilita(
     if not offerte or not profili_pertinenti:
         return None
 
-    scaduti = []
+    fasi = (
+        ("ultimo_avviso", GIORNI_PRIORITA_RIDOTTA, 3),
+        ("scaduta", GIORNI_RICONFERMA, 2),
+        ("in_scadenza", GIORNI_PROMEMORIA_SCADENZA, 1),
+    )
+    profili_dovuti = []
+    promemoria_recenti = []
     for profile in profili_pertinenti:
         confermata_at = _disponibilita_promemoria_datetime(
             profile.get("confermata_at")
         )
-        if confermata_at is not None and confermata_at <= soglia:
-            scaduti.append(profile)
-    if not scaduti:
-        return None
-
-    for profile in profili_pertinenti:
+        if confermata_at is None:
+            continue
         ultimo_promemoria_at = _disponibilita_promemoria_datetime(
             profile.get("ultimo_promemoria_at")
         )
-        if ultimo_promemoria_at is not None and ultimo_promemoria_at > soglia:
-            return None
+        if ultimo_promemoria_at is not None:
+            ordine_ultima_fase = 0
+            for _codice, giorni, ordine in fasi:
+                if ultimo_promemoria_at >= (
+                    confermata_at + timedelta(days=giorni)
+                ):
+                    ordine_ultima_fase = ordine
+                    break
+            promemoria_recenti.append({
+                "inviato_at": ultimo_promemoria_at,
+                "ordine": ordine_ultima_fase,
+            })
+        for codice, giorni, ordine in fasi:
+            confine = confermata_at + timedelta(days=giorni)
+            if adesso < confine:
+                continue
+            if (
+                ultimo_promemoria_at is not None
+                and ultimo_promemoria_at >= confine
+            ):
+                continue
+            profili_dovuti.append({
+                "profilo": profile,
+                "codice": codice,
+                "ordine": ordine,
+                "confine": confine,
+            })
+            break
+    if not profili_dovuti:
+        return None
+
+    fase_item = max(profili_dovuti, key=lambda item: item["ordine"])
+    fase = fase_item["codice"]
+    ordine_fase = fase_item["ordine"]
+
+    # Antispam tra profilo generale e profili categoria sfalsati. Una fase
+    # piu urgente parte subito; una fase uguale o meno urgente resta dovuta e
+    # verra ripresa automaticamente dopo il breve intervallo minimo.
+    limite_recente = adesso - timedelta(
+        days=DISPONIBILITA_PROMEMORIA_COOLDOWN_GIORNI
+    )
+    recenti_nel_cooldown = [
+        item
+        for item in promemoria_recenti
+        if item["inviato_at"] > limite_recente
+    ]
+    if recenti_nel_cooldown and ordine_fase <= max(
+        item["ordine"] for item in recenti_nel_cooldown
+    ):
+        return None
 
     ordine_categorie = {
         slug: index for index, slug in enumerate(CATEGORIE_SERVIZI)
     }
-    categorie_scadute = sorted(
+    categorie_dovute = sorted(
         {
-            profile["categoria_slug"]
-            for profile in scaduti
-            if profile.get("categoria_slug")
+            item["profilo"]["categoria_slug"]
+            for item in profili_dovuti
+            if item["profilo"].get("categoria_slug")
         },
         key=lambda slug: ordine_categorie.get(slug, len(ordine_categorie)),
     )
+    categorie_fase = sorted(
+        {
+            item["profilo"]["categoria_slug"]
+            for item in profili_dovuti
+            if item["codice"] == fase
+            and item["profilo"].get("categoria_slug")
+        },
+        key=lambda slug: ordine_categorie.get(slug, len(ordine_categorie)),
+    )
+    generale_nella_fase = any(
+        item["profilo"] is generale and item["codice"] == fase
+        for item in profili_dovuti
+    )
     return {
-        "generale_scaduta": bool(generale and generale in scaduti),
-        "categorie_scadute": categorie_scadute,
-        "categoria_link": categorie_scadute[0] if categorie_scadute else None,
-        # La prenotazione viene propagata a tutti i profili pertinenti gia
-        # esistenti. In questo modo il limite di 30 giorni resta per utente,
-        # anche se due categorie diventano obsolete in giorni diversi.
-        "aggiorna_generale": bool(generale),
+        "fase": fase,
+        "generale_scaduta": any(
+            item["profilo"] is generale for item in profili_dovuti
+        ),
+        "categorie_scadute": categorie_dovute,
+        # Quando la fase scelta riguarda anche il profilo generale bisogna
+        # aprire la riconferma generale. Il parametro categoria e corretto
+        # soltanto se l'avviso piu urgente riguarda una specifica categoria.
+        "categoria_link": (
+            None
+            if generale_nella_fase
+            else (categorie_fase[0] if categorie_fase else None)
+        ),
+        "aggiorna_generale": any(
+            item["profilo"] is generale for item in profili_dovuti
+        ),
         "profili_categoria_ids": [
-            int(profile["id"])
-            for profile in categorie
-            if profile.get("id") is not None
+            int(item["profilo"]["id"])
+            for item in profili_dovuti
+            if item["profilo"].get("categoria_slug")
+            and item["profilo"].get("id") is not None
         ],
     }
 
 
 def processa_promemoria_disponibilita(limite=100, dry_run=False):
-    """Prenota e invia i promemoria mensili di riconferma disponibilita.
+    """Prenota e invia gli avvisi progressivi sulla disponibilita.
 
     Ogni utente riceve al massimo una notifica interna, una chiamata push e
     una email (se abilitata), anche se ha piu profili scaduti. Il lock sulla
@@ -17460,7 +17681,7 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
     limite = _normalizza_limite_promemoria_disponibilita(limite)
     dry_run = bool(dry_run)
     adesso = datetime.now(timezone.utc)
-    soglia = adesso - timedelta(days=GIORNI_RICONFERMA)
+    soglia = adesso - timedelta(days=GIORNI_PROMEMORIA_SCADENZA)
     stats = {
         "ok": True,
         "dry_run": dry_run,
@@ -17629,12 +17850,31 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                         """), (adesso, user_id, *category_ids))
 
                     language = normalize_language(user["lingua_interfaccia"])
-                    titolo_sorgente = "Riconferma la tua disponibilità"
-                    messaggio_sorgente = (
-                        "È passato circa un mese dall’ultima conferma. "
-                        "Controlla i dati già salvati: puoi riconfermarli "
-                        "così come sono oppure modificarli."
-                    )
+                    if plan["fase"] == "in_scadenza":
+                        titolo_sorgente = (
+                            "La tua disponibilità sta per scadere"
+                        )
+                        messaggio_sorgente = (
+                            "La tua disponibilità scadrà tra 5 giorni. "
+                            "Controlla i dati già salvati: puoi riconfermarli "
+                            "così come sono oppure modificarli."
+                        )
+                    elif plan["fase"] == "scaduta":
+                        titolo_sorgente = "Rinnova la tua disponibilità"
+                        messaggio_sorgente = (
+                            "La tua disponibilità è scaduta. Riconferma "
+                            "i dati già salvati oppure aggiornali per "
+                            "mantenerla attuale."
+                        )
+                    else:
+                        titolo_sorgente = (
+                            "Ultimo avviso: rinnova la disponibilità"
+                        )
+                        messaggio_sorgente = (
+                            "La tua disponibilità è scaduta da 7 giorni "
+                            "e la priorità dei tuoi annunci è stata ridotta. "
+                            "Riconfermala ora per ripristinarla."
+                        )
                     titolo = translate_source(titolo_sorgente, language)
                     messaggio = translate_source(messaggio_sorgente, language)
                     link = _link_promemoria_disponibilita(
@@ -17700,10 +17940,7 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                     try:
                         if _invia_email(
                             destinazione=user["email"],
-                            oggetto=(
-                                "Riconferma la tua disponibilità su "
-                                "MyLocalCare"
-                            ),
+                            oggetto=titolo_sorgente,
                             corpo=(
                                 f"{titolo_sorgente}\n\n"
                                 f"{messaggio_sorgente}"
@@ -24267,10 +24504,10 @@ def _richiesta_disponibilita_error(error):
                 get_interface_language(),
             ),
             "action_label": translate_source(
-                "Carica la foto profilo",
+                "Vai alla dashboard personale",
                 get_interface_language(),
             ),
-            "action_url": url_for("upload_foto"),
+            "action_url": url_for("dashboard"),
         })
     return jsonify(payload), status
 
@@ -24580,6 +24817,7 @@ def _prenota_richiesta_disponibilita(
     messaggio = translate_source(RICHIESTA_DISPONIBILITA_MESSAGGIO, language)
     link = _link_richiesta_disponibilita(richiedente_id, richiesta_id)
     return {
+        "tipo_evento": "richiesta",
         "richiesta_id": int(richiesta_id),
         "annuncio_id": int(annuncio_id),
         "mittente_id": int(richiedente_id),
@@ -24769,6 +25007,7 @@ def _prenota_risposta_disponibilita(
         richiesta_id,
     )
     return {
+        "tipo_evento": "risposta",
         "richiesta_id": int(richiesta_id),
         "annuncio_id": int(richiesta["annuncio_id"]),
         "richiedente_id": int(richiesta["richiedente_id"]),
@@ -24783,6 +25022,8 @@ def _prenota_risposta_disponibilita(
         "titolo": titolo,
         "messaggio": messaggio,
         "messaggio_source": messaggio_source,
+        "stato": stato,
+        "risposta_at": _scheda_profilo_iso(adesso),
         "versione": int(versione) + 1,
     }
 
@@ -24808,6 +25049,29 @@ def _invia_canali_richiesta_disponibilita(
             {"from": int(dispatch.get("mittente_id") or 0)},
             room=f"user_{destinatario_id}",
         )
+        if dispatch.get("tipo_evento") == "risposta":
+            socketio.emit(
+                "availability_request_response",
+                {
+                    "richiesta_id": int(dispatch["richiesta_id"]),
+                    "stato": dispatch["stato"],
+                    "versione": int(dispatch["versione"]),
+                    "risposta_at": dispatch.get("risposta_at"),
+                    "from": int(dispatch.get("mittente_id") or 0),
+                    "to": destinatario_id,
+                },
+                room=f"user_{destinatario_id}",
+            )
+        elif dispatch.get("tipo_evento") == "richiesta":
+            socketio.emit(
+                "availability_request_created",
+                {
+                    "richiesta_id": int(dispatch["richiesta_id"]),
+                    "from": int(dispatch.get("mittente_id") or 0),
+                    "to": destinatario_id,
+                },
+                room=f"user_{destinatario_id}",
+            )
     except Exception as exc:
         log_exception_safe(
             "Errore realtime chat richiesta disponibilita",
@@ -25021,6 +25285,29 @@ def _elenca_richieste_disponibilita_chat(
             "sono_offerente": (
                 int(row["offerente_id"]) == utente_id
             ),
+            # La risposta e un secondo evento della conversazione: viene
+            # mostrata come card successiva soltanto alla persona che aveva
+            # inviato la richiesta. Chi risponde continua invece a vedere
+            # l'esito registrato dentro la card originale.
+            "mostra_card_risposta": bool(
+                int(row["richiedente_id"]) == utente_id
+                and stato in RISPOSTA_DISPONIBILITA_MESSAGGI
+                and row.get("risposta_at")
+            ),
+            "risposta": (
+                {
+                    "stato": stato,
+                    "created_at": _scheda_profilo_iso(
+                        row.get("risposta_at")
+                    ),
+                }
+                if (
+                    int(row["richiedente_id"]) == utente_id
+                    and stato in RISPOSTA_DISPONIBILITA_MESSAGGI
+                    and row.get("risposta_at")
+                )
+                else None
+            ),
             "posso_rispondere": bool(
                 int(row["offerente_id"]) == utente_id
                 and stato == "in_attesa"
@@ -25041,6 +25328,99 @@ def _elenca_richieste_disponibilita_chat(
             "giorni": giorni,
         })
     return result
+
+
+@app.route(
+    "/api/chat/<int:other_id>/richieste-disponibilita",
+    methods=["GET"],
+)
+def richieste_disponibilita_chat_fragment(other_id):
+    """Aggiorna le card della chat senza segnare eventi come letti.
+
+    La lettura viene confermata dal client soltanto quando la scheda della
+    chat e davvero visibile e la finestra ha il focus. In questo modo un tab
+    in background non azzera il contatore.
+    """
+
+    if not g.utente:
+        return jsonify({
+            "ok": False,
+            "code": "login_required",
+            "error": "Devi accedere per vedere questa pagina.",
+        }), 401
+
+    current_id = int(g.utente["id"])
+    other_id = int(other_id)
+    if current_id == other_id:
+        return jsonify({
+            "ok": False,
+            "code": "invalid_conversation",
+        }), 400
+    if str(g.utente["ruolo"] or "user").strip().lower() == "admin":
+        return jsonify({
+            "ok": False,
+            "code": "admin_forbidden",
+        }), 403
+    if not str(g.utente["foto_profilo"] or "").strip():
+        return _chat_foto_profilo_json_error()
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        cur.execute(sql("""
+            SELECT id, ruolo
+            FROM utenti
+            WHERE id = ?
+              AND sospeso = 0
+              AND (disattivato_admin IS NULL OR disattivato_admin = 0)
+              AND (eliminato IS NULL OR eliminato = 0)
+              AND attivo = 1
+            LIMIT 1
+        """), (other_id,))
+        other = cur.fetchone()
+        if not other:
+            return jsonify({
+                "ok": False,
+                "code": "user_unavailable",
+            }), 404
+        if str(other["ruolo"] or "user").strip().lower() == "admin":
+            return jsonify({
+                "ok": False,
+                "code": "admin_forbidden",
+            }), 403
+
+        cards = _elenca_richieste_disponibilita_chat(
+            cur,
+            current_id,
+            other_id,
+        )
+        refresh_url = url_for(
+            "richieste_disponibilita_chat_fragment",
+            other_id=other_id,
+        )
+        html = render_template(
+            "partials/richieste_disponibilita_proprietario.html",
+            richieste_disponibilita_chat=cards,
+            richieste_disponibilita_refresh_url=refresh_url,
+        )
+        return jsonify({
+            "ok": True,
+            "html": html,
+        })
+    except Exception as exc:
+        log_exception_safe(
+            "Aggiornamento card disponibilita chat non riuscito",
+            exc,
+            {
+                "utente_id": current_id,
+                "altro_utente_id": other_id,
+            },
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "code": "refresh_failed",
+        }), 500
 
 
 @app.route(
@@ -25158,6 +25538,17 @@ def rispondi_richiesta_disponibilita_route(richiesta_id):
             "login_url": url_for("login", next=request.referrer or "/"),
         }), 401
     verify_csrf()
+    if (
+        str(g.utente["ruolo"] or "user").strip().lower() != "admin"
+        and not str(g.utente["foto_profilo"] or "").strip()
+    ):
+        return _richiesta_disponibilita_error(
+            RichiestaDisponibilitaError(
+                "Per usare la chat devi prima caricare una foto profilo.",
+                status=409,
+                code="foto_profilo_richiesta",
+            )
+        )
     payload = request.get_json(silent=True) or {}
     try:
         stato = normalizza_stato_richiesta_disponibilita(
@@ -25846,6 +26237,9 @@ def cerca():
     solo_interessi_richiesto = (
         request.args.get("solo_interessi", "").strip() == "1"
     )
+    solo_disponibili = (
+        request.args.get("solo_disponibili", "").strip() == "1"
+    )
 
     if solo_interessi_richiesto and not utente_corrente:
         return redirect(url_for(
@@ -26052,6 +26446,9 @@ def cerca():
 
     c = get_cursor(conn)
 
+    disponibilita_priorita_sql = _disponibilita_priorita_cerca_sql(c)
+    disponibilita_filtro_sql = _disponibilita_filtro_cerca_sql(c)
+
     # =========================================================
     # 📍 VALIDAZIONE FILTRO QUARTIERI
     # =========================================================
@@ -26220,6 +26617,12 @@ def cerca():
 
     params_vetrina = list(province_query)
 
+    if solo_disponibili:
+        query_vetrina += f"""
+            AND a.tipo_annuncio = 'offro'
+            AND ({disponibilita_filtro_sql})
+        """
+
     if solo_interessi:
         query_vetrina += """
             AND EXISTS (
@@ -26336,6 +26739,7 @@ def cerca():
                 {has_evidenza_sql},
                 {has_urgente_sql},
                 {affidabilita_top_sql},
+                ({disponibilita_priorita_sql}) AS disponibilita_priorita,
                 COALESCE(ROUND((
                     SELECT AVG(r.voto)
                     FROM recensioni r
@@ -26371,6 +26775,12 @@ def cerca():
     """
 
     params = list(province_query)
+
+    if solo_disponibili:
+        query_annunci += f"""
+              AND a.tipo_annuncio = 'offro'
+              AND ({disponibilita_filtro_sql})
+        """
 
     if solo_interessi:
         query_annunci += """
@@ -26431,6 +26841,7 @@ def cerca():
             ELSE NULL
           END ASC,
 
+          disponibilita_priorita DESC,
           data_pubblicazione DESC,
           affidabilita_top DESC
     """
@@ -26632,6 +27043,7 @@ def cerca():
         cerca_admin_mode=cerca_admin_mode,
         puo_filtrare_interessi=puo_filtrare_interessi,
         solo_interessi=solo_interessi,
+        solo_disponibili=solo_disponibili,
     )
 
 @app.route("/notifica/<int:id>/apri")
@@ -30054,10 +30466,10 @@ def _chat_foto_profilo_json_error():
             get_interface_language(),
         ),
         "action_label": translate_source(
-            "Carica la foto profilo",
+            "Vai alla dashboard personale",
             get_interface_language(),
         ),
-        "action_url": url_for("upload_foto"),
+        "action_url": url_for("dashboard"),
     }), 403
 
 @app.route("/chat/<int:other_id>/json")
@@ -30076,8 +30488,10 @@ def chat_conversazione_json(other_id):
         return _chat_foto_profilo_json_error()
 
     # 🔹 Messaggi
+    # Endpoint di sola lettura usato anche dal polling di recupero. La lettura
+    # effettiva viene confermata dal client soltanto quando la chat e' visibile
+    # e la finestra ha davvero il focus.
     messaggi = chat_conversazione(user_id, other_id, after_id=after_id)
-    chat_segna_letti(user_id, other_id)
 
     # 🔹 Recupero info "altro utente" per nome/avatar
     conn = get_db_connection()
@@ -30353,7 +30767,7 @@ def chat_conversazione_view(other_id):
             "Per usare la chat devi prima caricare una foto profilo.",
             "error",
         )
-        return redirect(url_for("upload_foto"))
+        return redirect(url_for("dashboard"))
 
     blocco_disponibile = (
         g.utente["ruolo"] != "admin"
@@ -30418,14 +30832,6 @@ def chat_conversazione_view(other_id):
     messaggi = chat_conversazione(g.utente["id"], other_id)
 
 
-    # 🔹 Segna come letti i messaggi ricevuti
-    chat_segna_letti(g.utente["id"], other_id)
-    socketio.emit(
-        'update_unread_count',
-        {'count': chat_count_unread(g.utente["id"])},
-        room=f"user_{g.utente['id']}"
-    )
-
     return render_template(
         "chat_conversazione.html",
         altro=altro,
@@ -30435,6 +30841,10 @@ def chat_conversazione_view(other_id):
         blocco_disponibile=blocco_disponibile,
         chat_block_status=chat_block_status,
         richieste_disponibilita_chat=richieste_disponibilita_chat,
+        richieste_disponibilita_refresh_url=url_for(
+            "richieste_disponibilita_chat_fragment",
+            other_id=other_id,
+        ),
     )
 
 def _emit_chat_block_updates(user_a: int, user_b: int):

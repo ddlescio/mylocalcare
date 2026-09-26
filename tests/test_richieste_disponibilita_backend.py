@@ -502,6 +502,9 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         self.assertIsNotNone(row["risposta_at"])
         self.assertIsNone(row["evento_letto_at"])
         self.assertEqual(answer["versione"], 2)
+        self.assertEqual(answer["tipo_evento"], "risposta")
+        self.assertEqual(answer["stato"], "informazioni")
+        self.assertTrue(answer["risposta_at"])
         self.assertEqual(
             answer["link"],
             f"/chat/2?richiesta_disponibilita={dispatch['richiesta_id']}",
@@ -653,6 +656,25 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         self.assertFalse(pending["posso_rispondere"])
         self.assertEqual(pending["annuncio"]["categoria"], "Babysitter")
         self.assertEqual(pending["annuncio"]["url"], "/annuncio/10")
+        response_for_requester = next(
+            card
+            for card in cards
+            if card["richiedente_id"] == 1
+            and card["stato"] == "disponibile"
+        )
+        self.assertTrue(response_for_requester["mostra_card_risposta"])
+        self.assertEqual(
+            response_for_requester["risposta"]["stato"],
+            "disponibile",
+        )
+        response_sent_by_current_user = next(
+            card
+            for card in cards
+            if card["richiedente_id"] == 2
+            and card["stato"] == "non_disponibile"
+        )
+        self.assertFalse(response_sent_by_current_user["mostra_card_risposta"])
+        self.assertIsNone(response_sent_by_current_user["risposta"])
         serialized = repr(cards).lower()
         self.assertNotIn("rita@example.test", serialized)
         self.assertNotIn("erica@example.test", serialized)
@@ -745,7 +767,7 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         route_source = function_sources["chat_conversazione_view"]
         self.assertIn('request.full_path', route_source)
         self.assertIn('url_for("login", next=next_url)', route_source)
-        self.assertIn("upload_foto", route_source)
+        self.assertIn('url_for("dashboard")', route_source)
         self.assertNotIn(
             "and not richieste_disponibilita_chat",
             route_source,
@@ -803,6 +825,79 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         self.assertEqual(calls[1][1][0], "chat_threads_update")
         self.assertEqual(calls[1][1][1], {"from": 1})
         self.assertEqual(calls[-1][1]["language"], "fr")
+
+        calls.clear()
+        helper({
+            "tipo_evento": "richiesta",
+            "richiesta_id": 7,
+            "mittente_id": 1,
+            "destinatario_id": 2,
+            "destinatario_email": None,
+            "email_notifiche": 0,
+            "language": "it",
+            "link": "/chat/1?richiesta_disponibilita=7",
+            "titolo": "Richiesta",
+            "messaggio": "Nuova richiesta",
+        }, titolo_email="Oggetto", cta_email="Apri",
+           messaggio_email_source="Messaggio")
+        self.assertEqual(
+            [call[0] for call in calls],
+            ["socket", "socket", "socket", "push"],
+        )
+        created_realtime = calls[2]
+        self.assertEqual(
+            created_realtime[1][0],
+            "availability_request_created",
+        )
+        self.assertEqual(created_realtime[1][1]["richiesta_id"], 7)
+        self.assertEqual(created_realtime[1][1]["from"], 1)
+        self.assertEqual(created_realtime[1][1]["to"], 2)
+
+        calls.clear()
+        helper({
+            "tipo_evento": "risposta",
+            "richiesta_id": 8,
+            "stato": "informazioni",
+            "versione": 2,
+            "risposta_at": "2026-09-25T11:00:00+00:00",
+            "mittente_id": 2,
+            "destinatario_id": 1,
+            "destinatario_email": None,
+            "email_notifiche": 0,
+            "language": "it",
+            "link": "/chat/2?richiesta_disponibilita=8",
+            "titolo": "Risposta",
+            "messaggio": "Servono informazioni",
+        }, titolo_email="Oggetto", cta_email="Apri",
+           messaggio_email_source="Messaggio")
+        self.assertEqual(
+            [call[0] for call in calls],
+            ["socket", "socket", "socket", "push"],
+        )
+        realtime = calls[2]
+        self.assertEqual(realtime[1][0], "availability_request_response")
+        self.assertEqual(realtime[1][1]["richiesta_id"], 8)
+        self.assertEqual(realtime[1][1]["stato"], "informazioni")
+        self.assertEqual(realtime[1][1]["from"], 2)
+        self.assertEqual(realtime[1][1]["to"], 1)
+
+    def test_fragment_chat_non_segna_letto_e_restituisce_partial(self):
+        source = (ROOT / "app.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        node = next(
+            item
+            for item in tree.body
+            if isinstance(item, ast.FunctionDef)
+            and item.name == "richieste_disponibilita_chat_fragment"
+        )
+        body = ast.get_source_segment(source, node)
+        self.assertIn("_elenca_richieste_disponibilita_chat(", body)
+        self.assertIn(
+            '"partials/richieste_disponibilita_proprietario.html"',
+            body,
+        )
+        self.assertIn("richieste_disponibilita_refresh_url=refresh_url", body)
+        self.assertNotIn("chat_segna_letti", body)
 
     def test_bootstrap_sqlite_crea_tabelle_e_indice_additivi(self):
         source = (ROOT / "init_db.py").read_text(encoding="utf-8")

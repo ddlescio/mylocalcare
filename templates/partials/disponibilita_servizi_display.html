@@ -253,31 +253,48 @@
   {% endif %}
 {%- endmacro %}
 
-{% macro availability_listing(disponibilita) -%}
+{% macro availability_listing(disponibilita, can_request=false) -%}
   <section class="availability-listing-section">
-    {% if disponibilita and disponibilita.get('configurata', true) %}
-      <details class="availability-listing-details">
-        <summary>
+    <div class="availability-listing-shell{% if can_request %} is-requestable{% endif %}">
+      {% if disponibilita and disponibilita.get('configurata', true) %}
+        <details class="availability-listing-details">
+          <summary>
+            <span class="availability-listing-details__icon" aria-hidden="true">🗓️</span>
+            <span>
+              <strong>{{ tr('availability.listing_title') }}</strong>
+              {{ availability_badge(disponibilita) }}
+              {{ availability_on_call_badge(disponibilita) }}
+            </span>
+            <span class="availability-listing-details__action">{{ tr('availability.view') }}</span>
+          </summary>
+          <div class="availability-listing-details__body">
+            {{ availability_details(disponibilita) }}
+          </div>
+        </details>
+      {% else %}
+        <div class="availability-listing-details availability-listing-details--empty">
           <span class="availability-listing-details__icon" aria-hidden="true">🗓️</span>
           <span>
             <strong>{{ tr('availability.listing_title') }}</strong>
-            {{ availability_badge(disponibilita) }}
-            {{ availability_on_call_badge(disponibilita) }}
+            {{ availability_badge(none) }}
           </span>
-          <span class="availability-listing-details__action">{{ tr('availability.view') }}</span>
-        </summary>
-        <div class="availability-listing-details__body">
-          {{ availability_details(disponibilita) }}
         </div>
-      </details>
-    {% else %}
-      <div class="availability-listing-details availability-listing-details--empty">
-        <span class="availability-listing-details__icon" aria-hidden="true">🗓️</span>
-        <span>
-          <strong>{{ tr('availability.listing_title') }}</strong>
-          {{ availability_badge(none) }}
-        </span>
-      </div>
-    {% endif %}
+      {% endif %}
+
+      {% if can_request %}
+        <div class="availability-listing-request">
+          <button type="button"
+                  class="availability-request-trigger availability-listing-request__button"
+                  data-availability-request-open
+                  aria-haspopup="dialog"
+                  aria-controls="availability-request-dialog"
+                  aria-expanded="false">
+            <span class="availability-listing-request__icon" aria-hidden="true">📅</span>
+            <span class="availability-listing-request__label">{{ tr('availability_request.open') }}</span>
+            <span class="availability-listing-request__arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+      {% endif %}
+    </div>
   </section>
 {%- endmacro %}

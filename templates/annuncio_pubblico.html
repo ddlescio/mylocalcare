@@ -14,6 +14,10 @@
       or g.utente.get('ruolo') == 'admin'
       or g.utente.get('username') == 'ADMIN'
     )) %}
+{% set puo_richiedere_disponibilita = g.utente
+    and g.utente['id'] != annuncio['utente_id']
+    and not visitatore_admin
+    and annuncio.get('tipo_annuncio') == 'offro' %}
 
 {% set zoom_foto_profilo_annuncio = url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) %}
 {% set zoom_foto_annuncio = [] %}
@@ -234,7 +238,10 @@
   </section>
 
   {% if annuncio.get('tipo_annuncio') == 'offro' %}
-    {{ availability_listing(disponibilita_annuncio|default(None)) }}
+    {{ availability_listing(
+      disponibilita_annuncio|default(None),
+      can_request=puo_richiedere_disponibilita
+    ) }}
   {% endif %}
 
   <!-- 📄 DESCRIZIONE -->
@@ -311,28 +318,16 @@
 
           <div class="annuncio-info-card-titlebox">
             <h2>Messaggi</h2>
-            <p>Fai una domanda, presentati o verifica subito la disponibilità</p>
+            <p>Fai una domanda o presentati direttamente in chat</p>
           </div>
         </div>
 
-        <div class="annuncio-info-card-body annuncio-contact-body{% if annuncio.get('tipo_annuncio') == 'offro' and not visitatore_admin %} availability-request-actions{% endif %}">
+        <div class="annuncio-info-card-body annuncio-contact-body">
           <a href="{{ url_for('chat_conversazione_view', other_id=annuncio['utente_id']) }}"
              class="annuncio-main-action-btn">
             <span>💬</span>
             <span>Scrivi in chat</span>
           </a>
-
-          {% if annuncio.get('tipo_annuncio') == 'offro' and not visitatore_admin %}
-            <button type="button"
-                    class="availability-request-trigger"
-                    data-availability-request-open
-                    aria-haspopup="dialog"
-                    aria-controls="availability-request-dialog"
-                    aria-expanded="false">
-              <span aria-hidden="true">📅</span>
-              <span>{{ tr('availability_request.open') }}</span>
-            </button>
-          {% endif %}
         </div>
       </section>
 
@@ -363,10 +358,7 @@
     {% endif %}
   </div>
 
-  {% if g.utente
-        and g.utente['id'] != annuncio['utente_id']
-        and not visitatore_admin
-        and annuncio.get('tipo_annuncio') == 'offro' %}
+  {% if puo_richiedere_disponibilita %}
     {% include "partials/richiesta_disponibilita_dialog.html" %}
   {% endif %}
 

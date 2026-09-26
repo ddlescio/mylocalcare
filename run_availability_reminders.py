@@ -1,4 +1,4 @@
-"""Esegue un batch dei promemoria di riconferma disponibilita.
+"""Esegue un batch degli avvisi progressivi sulla disponibilita.
 
 Il processo e pensato per un cron/worker esterno. Impostando il ruolo ``job``
 prima dell'import evitiamo di avviare i loop permanenti del servizio web.
@@ -28,7 +28,7 @@ def _env_int(name, default):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Invia i promemoria mensili per la disponibilita servizi."
+        description="Invia gli avvisi progressivi per la disponibilita servizi."
     )
     parser.add_argument(
         "--limit",

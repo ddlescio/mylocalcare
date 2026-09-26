@@ -11,6 +11,7 @@ from disponibilita_servizi import (
     CODICE_RICONFERMA,
     FASCE_DISPONIBILITA,
     GIORNI_ESCLUSIONE_FILTRO,
+    GIORNI_PROMEMORIA_SCADENZA,
     GIORNI_PRIORITA_RIDOTTA,
     GIORNI_RICONFERMA,
     MAX_ASSENZE,
@@ -354,6 +355,7 @@ class DisponibilitaFreshnessTest(unittest.TestCase):
         )
 
     def test_soglie_sono_quelle_di_prodotto(self):
+        self.assertEqual(GIORNI_PROMEMORIA_SCADENZA, 25)
         self.assertEqual(GIORNI_RICONFERMA, 30)
         self.assertEqual(GIORNI_PRIORITA_RIDOTTA, 37)
         self.assertEqual(GIORNI_ESCLUSIONE_FILTRO, 44)

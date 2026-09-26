@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "templates"
 MAIN_TEMPLATE = TEMPLATES / "annuncio_pubblico.html"
 PARTIAL = TEMPLATES / "partials" / "richiesta_disponibilita_dialog.html"
+AVAILABILITY_DISPLAY = (
+    TEMPLATES / "partials" / "disponibilita_servizi_display.html"
+)
 SCRIPT = ROOT / "static" / "js" / "richiesta-disponibilita.js"
 STYLES = ROOT / "static" / "css" / "richiesta-disponibilita.css"
 
@@ -22,6 +25,9 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
     def setUpClass(cls):
         cls.main_source = MAIN_TEMPLATE.read_text(encoding="utf-8")
         cls.partial_source = PARTIAL.read_text(encoding="utf-8")
+        cls.availability_display_source = AVAILABILITY_DISPLAY.read_text(
+            encoding="utf-8"
+        )
         cls.script_source = SCRIPT.read_text(encoding="utf-8")
         cls.style_source = STYLES.read_text(encoding="utf-8")
 
@@ -30,12 +36,36 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
         self.assertIn("g.utente['id'] != annuncio['utente_id']", self.main_source)
         self.assertIn("{% set visitatore_admin = session.get('is_admin')", self.main_source)
         self.assertIn("and not visitatore_admin", self.main_source)
-        self.assertIn("data-availability-request-open", self.main_source)
+        self.assertIn(
+            "can_request=puo_richiedere_disponibilita",
+            self.main_source,
+        )
+        self.assertIn(
+            "data-availability-request-open",
+            self.availability_display_source,
+        )
         self.assertIn(
             'include "partials/richiesta_disponibilita_dialog.html"',
             self.main_source,
         )
-        self.assertIn("availability_request.open", self.main_source)
+        self.assertIn(
+            "availability_request.open",
+            self.availability_display_source,
+        )
+
+    def test_cta_is_inside_availability_card_not_messages_card(self):
+        contact_start = self.main_source.index('id="sezione-contatto"')
+        contact_end = self.main_source.index('<!-- 📞 CONTATTI -->')
+        contact_section = self.main_source[contact_start:contact_end]
+
+        self.assertNotIn("data-availability-request-open", contact_section)
+        self.assertIn("availability-listing-shell", self.availability_display_source)
+        self.assertIn("availability-listing-request", self.availability_display_source)
+        self.assertIn('aria-haspopup="dialog"', self.availability_display_source)
+        self.assertIn(
+            'aria-controls="availability-request-dialog"',
+            self.availability_display_source,
+        )
 
     def test_dialog_renders_literal_endpoint_and_has_no_free_text(self):
         environment = Environment(
@@ -78,7 +108,8 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
         self.assertIn("event.target === dialog", self.script_source)
         self.assertIn('event.key !== "Tab"', self.script_source)
         self.assertIn('classList.add("overflow-hidden", "modal-open")', self.script_source)
-        self.assertIn("grid-template-columns: minmax(0, 1fr);", self.style_source)
+        self.assertIn(".availability-listing-request__button", self.style_source)
+        self.assertIn("width: 100%;", self.style_source)
         self.assertIn("@media (min-width: 520px)", self.style_source)
         self.assertIn("max-height: 92vh;", self.style_source)
         self.assertIn("max-height: min(92dvh, 58rem);", self.style_source)
@@ -133,7 +164,7 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
             self.style_source,
         )
 
-    def test_missing_profile_photo_alerts_and_redirects_to_upload(self):
+    def test_missing_profile_photo_alerts_and_redirects_to_dashboard(self):
         for marker in (
             "foto_profilo_richiesta",
             "action_url",
@@ -141,6 +172,10 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
             "location",
         ):
             self.assertIn(marker, self.script_source)
+        self.assertIn(
+            "data-profile-photo-url=\"{{ url_for('dashboard') }}\"",
+            self.partial_source,
+        )
 
     def test_every_new_string_has_all_eight_languages(self):
         keys = sorted(

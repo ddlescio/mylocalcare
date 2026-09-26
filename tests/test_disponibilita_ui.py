@@ -114,6 +114,15 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         )
         self.assertEqual(len(guarded_badges), 3)
 
+    def test_search_exposes_confirmed_availability_filter_in_both_controls(self):
+        search = self.read_template("cerca.html")
+
+        self.assertIn('name="solo_disponibili"', search)
+        self.assertIn('id="solo-disponibili-rapido"', search)
+        self.assertEqual(search.count("tr('search.available_only')"), 2)
+        self.assertIn('url.searchParams.set("solo_disponibili", "1")', search)
+        self.assertIn('url.searchParams.delete("solo_disponibili")', search)
+
     def test_profile_listing_badge_is_only_rendered_for_offers(self):
         dashboard = self.read_template("dashboard.html")
 
@@ -141,7 +150,9 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
             re.compile(
                 r"\{% if annuncio\.get\('tipo_annuncio'\) == 'offro' %\}"
                 r"\s*\{\{ availability_listing\("
-                r"disponibilita_annuncio\|default\(None\)\) \}\}"
+                r"\s*disponibilita_annuncio\|default\(None\),"
+                r"\s*can_request=puo_richiedere_disponibilita"
+                r"\s*\) \}\}"
                 r"\s*\{% endif %\}",
                 flags=re.DOTALL,
             ),
