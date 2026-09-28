@@ -56,6 +56,8 @@ class CercaDisponibilitaFiltriUiTest(unittest.TestCase):
         self.assertIn("input.disabled = !attivi", self.source)
 
     def test_exact_time_browser_validation_requires_pair_and_day(self):
+        self.assertEqual(self.source.count('type="time"'), 2)
+        self.assertEqual(self.source.count('step="60"'), 2)
         self.assertIn("Boolean(dalle) !== Boolean(alle)", self.source)
         self.assertIn(
             'input[name="disponibilita_giorni"]:checked',

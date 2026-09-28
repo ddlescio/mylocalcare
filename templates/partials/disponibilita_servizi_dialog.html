@@ -68,7 +68,9 @@
         class="service-availability-section service-availability-scope-section"
         aria-describedby="service-availability-scope-help">
         <legend>{{ tr('availability.scope_title') }}</legend>
-        <p id="service-availability-scope-help" class="service-availability-section-help">
+        <p
+          id="service-availability-scope-help"
+          class="service-availability-section-help service-availability-sr-only">
           {{ tr('availability.scope_help') }}
         </p>
 
@@ -83,7 +85,7 @@
             <span class="service-availability-scope-option-icon" aria-hidden="true">🌐</span>
             <span>
               <strong>{{ tr('availability.scope_general') }}</strong>
-              <small>{{ tr('availability.scope_all_services') }}</small>
+              <small class="service-availability-sr-only">{{ tr('availability.scope_all_services') }}</small>
             </span>
           </label>
 
@@ -98,7 +100,7 @@
             <span class="service-availability-scope-option-icon" aria-hidden="true">🎯</span>
             <span>
               <strong>{{ tr('availability.scope_category') }}</strong>
-              <small>{{ tr('availability.choose_category') }}</small>
+              <small class="service-availability-sr-only">{{ tr('availability.choose_category') }}</small>
             </span>
           </label>
         </div>
@@ -121,19 +123,14 @@
           {{ tr('availability.no_offered_categories') }}
         </p>
 
-        <p class="service-availability-scope-note">
+        <p class="service-availability-scope-note service-availability-sr-only">
           {{ tr('availability.only_offers_notice') }}
         </p>
       </fieldset>
 
-      <aside class="service-availability-privacy-note" role="note">
-        <span class="service-availability-privacy-note-icon" aria-hidden="true">🛡️</span>
-        <p>{{ tr('availability.public_data_notice') }}</p>
-      </aside>
-
       <fieldset class="service-availability-section service-availability-status-section">
         <legend>{{ tr('availability.overall_status') }}</legend>
-        <p class="service-availability-section-help">
+        <p class="service-availability-section-help service-availability-sr-only">
           {{ tr('availability.overall_help') }}
         </p>
 
@@ -167,7 +164,7 @@
       <fieldset
         class="service-availability-section service-availability-on-call-section"
         data-service-availability-positive-section>
-        <legend>{{ tr('availability.on_call_title') }}</legend>
+        <legend class="service-availability-sr-only">{{ tr('availability.on_call_title') }}</legend>
         <label class="service-availability-on-call-option">
           <input
             id="service-availability-on-call"
@@ -182,37 +179,147 @@
         </label>
       </fieldset>
 
-      <fieldset class="service-availability-section" data-service-availability-positive-section>
+      <fieldset
+        class="service-availability-section service-availability-weekly-section"
+        data-service-availability-positive-section>
         <legend>{{ tr('availability.weekly_title') }}</legend>
-        <p class="service-availability-section-help">
+        <p class="service-availability-section-help service-availability-sr-only">
           {{ tr('availability.weekly_help') }}
         </p>
-        <p class="service-availability-exact-help">
-          <span aria-hidden="true">⏱️</span>
-          <span>{{ tr('availability.exact_intervals_help') }}</span>
-        </p>
 
-        <div class="service-availability-week" id="service-availability-week">
-          {% set availability_days = [
-            (1, 'availability.day_monday'),
-            (2, 'availability.day_tuesday'),
-            (3, 'availability.day_wednesday'),
-            (4, 'availability.day_thursday'),
-            (5, 'availability.day_friday'),
-            (6, 'availability.day_saturday'),
-            (7, 'availability.day_sunday')
-          ] %}
-          {% set availability_slots = [
-            ('mattina', 'availability.slot_morning'),
-            ('pomeriggio', 'availability.slot_afternoon'),
-            ('sera', 'availability.slot_evening'),
-            ('notte', 'availability.slot_night')
-          ] %}
-          {% for day_number, day_key in availability_days %}
-          <div class="service-availability-day" data-availability-day="{{ day_number }}">
-            <span class="service-availability-day-label">{{ tr(day_key) }}</span>
+        {% set availability_days = [
+          (1, 'availability.day_monday', 'availability.day_monday_short'),
+          (2, 'availability.day_tuesday', 'availability.day_tuesday_short'),
+          (3, 'availability.day_wednesday', 'availability.day_wednesday_short'),
+          (4, 'availability.day_thursday', 'availability.day_thursday_short'),
+          (5, 'availability.day_friday', 'availability.day_friday_short'),
+          (6, 'availability.day_saturday', 'availability.day_saturday_short'),
+          (7, 'availability.day_sunday', 'availability.day_sunday_short')
+        ] %}
+        {% set availability_slots = [
+          ('mattina', 'availability.slot_morning', '☀️'),
+          ('pomeriggio', 'availability.slot_afternoon', '🌤️'),
+          ('sera', 'availability.slot_evening', '🌆'),
+          ('notte', 'availability.slot_night', '🌙')
+        ] %}
+
+        <div class="service-availability-quick-editor">
+          <fieldset class="service-availability-quick-group">
+            <legend>{{ tr('search.availability_days_title') }}</legend>
+            <p
+              id="service-availability-days-help"
+              class="service-availability-quick-help">
+              {{ tr('search.availability_days_help') }}
+            </p>
+            <div
+              class="service-availability-day-picker"
+              aria-describedby="service-availability-days-help">
+              {% for day_number, day_key, day_short_key in availability_days %}
+              <label
+                class="service-availability-day-chip"
+                title="{{ tr(day_key) }}">
+                <input
+                  type="checkbox"
+                  value="{{ day_number }}"
+                  data-service-availability-day-picker
+                  aria-controls="service-availability-day-{{ day_number }}">
+                <span aria-hidden="true">{{ tr(day_short_key) }}</span>
+                <span class="service-availability-sr-only">{{ tr(day_key) }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+
+          <fieldset class="service-availability-quick-group">
+            <legend>{{ tr('availability.slots') }}</legend>
+            <p
+              id="service-availability-slots-help"
+              class="service-availability-quick-help">
+              {{ tr('search.availability_slots_help') }}
+            </p>
+            <div
+              class="service-availability-batch-slots"
+              aria-describedby="service-availability-slots-help">
+              {% for slot_value, slot_key, slot_icon in availability_slots %}
+              <label class="service-availability-batch-slot-chip">
+                <input
+                  type="checkbox"
+                  value="{{ slot_value }}"
+                  data-service-availability-batch-slot
+                  disabled>
+                <span aria-hidden="true">{{ slot_icon }}</span>
+                <span>{{ tr(slot_key) }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+
+          <fieldset class="service-availability-quick-group service-availability-batch-time-group">
+            <legend>{{ tr('availability.exact_intervals_title') }}</legend>
+            <p
+              id="service-availability-batch-time-help"
+              class="service-availability-quick-help">
+              {{ tr('availability.exact_intervals_help') }}
+            </p>
+            <div class="service-availability-batch-time-row">
+              <div
+                class="service-availability-batch-times"
+                aria-describedby="service-availability-batch-time-help">
+                <label for="service-availability-batch-from">
+                  <span>{{ tr('availability.from') }}</span>
+                  <input
+                    id="service-availability-batch-from"
+                    type="time"
+                    step="60"
+                    aria-describedby="service-availability-batch-time-help"
+                    data-service-availability-batch-from>
+                </label>
+                <label for="service-availability-batch-to">
+                  <span>{{ tr('availability.to') }}</span>
+                  <input
+                    id="service-availability-batch-to"
+                    type="time"
+                    step="60"
+                    aria-describedby="service-availability-batch-time-help"
+                    data-service-availability-batch-to>
+                </label>
+              </div>
+              <button
+                type="button"
+                class="service-availability-batch-add-interval"
+                data-service-availability-batch-add-interval
+                disabled>
+                <span aria-hidden="true">＋</span>
+                <span>{{ tr('availability.add_interval') }}</span>
+              </button>
+            </div>
+          </fieldset>
+        </div>
+
+        <details
+          class="service-availability-day-customizer service-availability-hidden"
+          id="service-availability-week">
+          <summary>
+            <span class="service-availability-day-customizer-icon" aria-hidden="true">⚙️</span>
+            <span class="service-availability-day-customizer-copy">
+              <strong>{{ tr('availability.customize_days_title') }}</strong>
+              <small>{{ tr('availability.customize_days_help') }}</small>
+            </span>
+            <span class="service-availability-day-customizer-chevron" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="service-availability-week" aria-live="polite">
+          {% for day_number, day_key, day_short_key in availability_days %}
+          <section
+            id="service-availability-day-{{ day_number }}"
+            class="service-availability-day service-availability-hidden"
+            data-availability-day="{{ day_number }}"
+            aria-hidden="true">
+            <header class="service-availability-day-header">
+              <span class="service-availability-day-label">{{ tr(day_key) }}</span>
+              <span class="service-availability-day-caption">{{ tr('availability.slots') }}</span>
+            </header>
             <div class="service-availability-slot-list">
-              {% for slot_value, slot_key in availability_slots %}
+              {% for slot_value, slot_key, slot_icon in availability_slots %}
               <label class="service-availability-slot-chip">
                 <input
                   type="checkbox"
@@ -220,6 +327,7 @@
                   value="{{ day_number }}:{{ slot_value }}"
                   data-day="{{ day_number }}"
                   data-slot="{{ slot_value }}">
+                <span aria-hidden="true">{{ slot_icon }}</span>
                 <span>{{ tr(slot_key) }}</span>
               </label>
               {% endfor %}
@@ -243,9 +351,10 @@
                 data-day="{{ day_number }}"
                 aria-live="polite"></div>
             </div>
-          </div>
+          </section>
           {% endfor %}
-        </div>
+          </div>
+        </details>
       </fieldset>
 
       <fieldset class="service-availability-section" data-service-availability-positive-section>
@@ -290,6 +399,11 @@
         </p>
       </fieldset>
       </div>
+
+      <aside class="service-availability-privacy-note" role="note">
+        <span class="service-availability-privacy-note-icon" aria-hidden="true">🛡️</span>
+        <p>{{ tr('availability.public_data_notice') }}</p>
+      </aside>
 
       <section
         id="service-availability-delete-panel"
@@ -722,7 +836,7 @@
     max-height:min(94dvh, 920px);
     overflow:auto;
     overscroll-behavior:contain;
-    padding:.9rem .9rem calc(.95rem + env(safe-area-inset-bottom));
+    padding:.68rem .78rem calc(.82rem + env(safe-area-inset-bottom));
     border:1px solid rgba(219,234,254,.98);
     border-radius:1.65rem 1.65rem 0 0;
     background:
@@ -736,7 +850,7 @@
   .service-availability-dialog-handle{
     width:2.9rem;
     height:.25rem;
-    margin:0 auto .72rem;
+    margin:0 auto .48rem;
     border-radius:9999px;
     background:#cbd5e1;
   }
@@ -745,8 +859,8 @@
     display:flex;
     align-items:flex-start;
     justify-content:space-between;
-    gap:.7rem;
-    padding:0 .1rem .88rem;
+    gap:.58rem;
+    padding:0 .04rem .58rem;
     border-bottom:1px solid rgba(226,232,240,.9);
   }
 
@@ -754,53 +868,47 @@
     min-width:0;
     display:grid;
     grid-template-columns:auto minmax(0, 1fr);
-    gap:.68rem;
-    align-items:start;
+    gap:.55rem;
+    align-items:center;
   }
 
   .service-availability-dialog-icon{
-    width:2.4rem;
-    height:2.4rem;
+    width:2.08rem;
+    height:2.08rem;
     display:flex;
     align-items:center;
     justify-content:center;
     border:1px solid #bfdbfe;
-    border-radius:.92rem;
+    border-radius:.76rem;
     background:linear-gradient(180deg, #fff, #eff6ff);
     box-shadow:0 6px 14px rgba(37,99,235,.08);
-    font-size:1.03rem;
+    font-size:.92rem;
   }
 
   .service-availability-dialog-eyebrow{
-    margin:0 0 .12rem;
-    color:#2563eb;
-    font-size:.64rem;
-    line-height:1.2;
-    font-weight:900;
-    letter-spacing:.09em;
-    text-transform:uppercase;
+    display:none;
   }
 
   .service-availability-dialog-title{
     margin:0;
     color:#0f172a;
-    font-size:1.1rem;
+    font-size:1rem;
     line-height:1.16;
     font-weight:900;
     letter-spacing:-.034em;
   }
 
   .service-availability-dialog-subtitle{
-    margin:.24rem 0 0;
+    margin:.15rem 0 0;
     color:#64748b;
-    font-size:.74rem;
-    line-height:1.4;
+    font-size:.65rem;
+    line-height:1.32;
   }
 
   .service-availability-dialog-close{
     flex:0 0 auto;
-    width:2.42rem;
-    height:2.42rem;
+    width:2.12rem;
+    height:2.12rem;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -808,7 +916,7 @@
     border-radius:9999px;
     background:rgba(248,250,252,.94);
     color:#475569;
-    font-size:1.34rem;
+    font-size:1.2rem;
     line-height:1;
     cursor:pointer;
     box-shadow:inset 0 1px 0 #fff;
@@ -841,16 +949,16 @@
 
   .service-availability-form{
     display:grid;
-    gap:.78rem;
-    padding-top:.9rem;
+    gap:.52rem;
+    padding-top:.58rem;
   }
 
   .service-availability-section{
     min-width:0;
     margin:0;
-    padding:.82rem;
+    padding:.68rem;
     border:1px solid rgba(219,234,254,.9);
-    border-radius:1.12rem;
+    border-radius:.96rem;
     background:rgba(255,255,255,.78);
     box-shadow:0 8px 20px rgba(30,64,175,.045), inset 0 1px 0 #fff;
   }
@@ -858,13 +966,13 @@
   .service-availability-section legend{
     padding:0;
     color:#0f172a;
-    font-size:.86rem;
+    font-size:.78rem;
     line-height:1.25;
     font-weight:880;
   }
 
   .service-availability-section-help{
-    margin:.22rem 0 .72rem;
+    margin:.15rem 0 .52rem;
     color:#64748b;
     font-size:.68rem;
     line-height:1.4;
@@ -878,21 +986,21 @@
 
   .service-availability-scope-options{
     display:grid;
-    grid-template-columns:1fr;
-    gap:.48rem;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.4rem;
   }
 
   .service-availability-scope-option{
     position:relative;
     min-width:0;
-    min-height:3.45rem;
+    min-height:2.22rem;
     display:grid;
     grid-template-columns:auto minmax(0, 1fr);
     align-items:center;
-    gap:.58rem;
-    padding:.62rem .7rem;
+    gap:.4rem;
+    padding:.38rem .48rem;
     border:1px solid #dbe3ee;
-    border-radius:.95rem;
+    border-radius:.76rem;
     background:rgba(255,255,255,.96);
     color:#334155;
     cursor:pointer;
@@ -908,15 +1016,15 @@
   }
 
   .service-availability-scope-option-icon{
-    width:2.1rem;
-    height:2.1rem;
+    width:1.55rem;
+    height:1.55rem;
     display:flex;
     align-items:center;
     justify-content:center;
     border:1px solid #dbeafe;
-    border-radius:.78rem;
+    border-radius:.55rem;
     background:#f8fbff;
-    font-size:.92rem;
+    font-size:.72rem;
   }
 
   .service-availability-scope-option > span:last-child{
@@ -927,7 +1035,7 @@
 
   .service-availability-scope-option strong{
     color:#1e293b;
-    font-size:.71rem;
+    font-size:.65rem;
     line-height:1.25;
     font-weight:860;
   }
@@ -960,10 +1068,10 @@
   }
 
   .service-availability-category-field{
-    margin-top:.68rem;
-    padding:.65rem;
+    margin-top:.48rem;
+    padding:.48rem;
     border:1px solid #bfdbfe;
-    border-radius:.9rem;
+    border-radius:.76rem;
     background:#f8fbff;
   }
 
@@ -988,31 +1096,31 @@
   .service-availability-privacy-note{
     display:grid;
     grid-template-columns:auto minmax(0, 1fr);
-    gap:.58rem;
+    gap:.45rem;
     align-items:start;
-    padding:.78rem .82rem;
+    padding:.58rem .64rem;
     border:1px solid #bfdbfe;
-    border-radius:1rem;
+    border-radius:.86rem;
     background:linear-gradient(145deg, #eff6ff, #f8fbff);
     color:#334155;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
   }
 
   .service-availability-privacy-note-icon{
-    width:2rem;
-    height:2rem;
+    width:1.65rem;
+    height:1.65rem;
     display:grid;
     place-items:center;
     border:1px solid #bfdbfe;
-    border-radius:.72rem;
+    border-radius:.58rem;
     background:#fff;
-    font-size:.88rem;
+    font-size:.72rem;
   }
 
   .service-availability-privacy-note p{
     margin:0;
-    font-size:.66rem;
-    line-height:1.5;
+    font-size:.61rem;
+    line-height:1.4;
     font-weight:700;
   }
 
@@ -1029,7 +1137,7 @@
 
   #service-availability-positive-details{
     display:grid;
-    gap:.85rem;
+    gap:.52rem;
   }
 
   #service-availability-positive-details.is-suspended{
@@ -1104,22 +1212,23 @@
 
   .service-availability-status-options{
     display:grid;
-    grid-template-columns:1fr;
-    gap:.48rem;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:.34rem;
   }
 
   .service-availability-status-option{
     position:relative;
-    min-height:2.72rem;
+    min-height:2.18rem;
     display:flex;
     align-items:center;
-    gap:.52rem;
-    padding:.62rem .7rem;
+    justify-content:center;
+    gap:.34rem;
+    padding:.4rem .32rem;
     border:1px solid #dbe3ee;
-    border-radius:.92rem;
+    border-radius:.74rem;
     background:#fff;
     color:#334155;
-    font-size:.73rem;
+    font-size:.61rem;
     line-height:1.25;
     font-weight:820;
     cursor:pointer;
@@ -1134,22 +1243,22 @@
   }
 
   .service-availability-status-dot{
-    width:.72rem;
-    height:.72rem;
+    width:.52rem;
+    height:.52rem;
     flex:0 0 auto;
     border-radius:9999px;
     background:#22c55e;
-    box-shadow:0 0 0 4px rgba(34,197,94,.12);
+    box-shadow:0 0 0 3px rgba(34,197,94,.12);
   }
 
   .service-availability-status-option--limited .service-availability-status-dot{
     background:#f59e0b;
-    box-shadow:0 0 0 4px rgba(245,158,11,.13);
+    box-shadow:0 0 0 3px rgba(245,158,11,.13);
   }
 
   .service-availability-status-option--unavailable .service-availability-status-dot{
     background:#94a3b8;
-    box-shadow:0 0 0 4px rgba(148,163,184,.16);
+    box-shadow:0 0 0 3px rgba(148,163,184,.16);
   }
 
   .service-availability-status-option:has(input:checked){
@@ -1164,14 +1273,22 @@
     outline-offset:2px;
   }
 
+  .service-availability-on-call-section{
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+
   .service-availability-on-call-option{
     display:grid;
     grid-template-columns:auto minmax(0,1fr) auto;
-    gap:.8rem;
+    gap:.55rem;
     align-items:center;
-    padding:.9rem 1rem;
+    padding:.52rem .62rem;
     border:1px solid rgba(147,197,253,.92);
-    border-radius:1rem;
+    border-radius:.86rem;
     background:linear-gradient(145deg, rgba(239,246,255,.98), rgba(255,255,255,.98));
     color:#1e3a8a;
     cursor:pointer;
@@ -1189,12 +1306,12 @@
   .service-availability-on-call-icon{
     display:grid;
     place-items:center;
-    width:2.5rem;
-    height:2.5rem;
-    border-radius:.85rem;
+    width:1.85rem;
+    height:1.85rem;
+    border-radius:.64rem;
     background:#fff;
     box-shadow:0 6px 16px rgba(37,99,235,.12);
-    font-size:1.2rem;
+    font-size:.84rem;
   }
 
   .service-availability-on-call-copy{
@@ -1204,23 +1321,23 @@
   }
 
   .service-availability-on-call-copy strong{
-    font-size:.95rem;
+    font-size:.73rem;
     line-height:1.2;
   }
 
   .service-availability-on-call-copy small{
     color:#64748b;
-    font-size:.78rem;
-    line-height:1.35;
+    font-size:.62rem;
+    line-height:1.28;
   }
 
   .service-availability-on-call-check{
     display:grid;
     place-items:center;
-    width:1.7rem;
-    height:1.7rem;
+    width:1.38rem;
+    height:1.38rem;
     border:1px solid #bfdbfe;
-    border-radius:.58rem;
+    border-radius:.48rem;
     background:#fff;
     color:transparent;
     font-weight:900;
@@ -1249,106 +1366,391 @@
     opacity:.62;
   }
 
-  .service-availability-week{
+  .service-availability-sr-only{
+    position:absolute !important;
+    width:1px !important;
+    height:1px !important;
+    padding:0 !important;
+    margin:-1px !important;
+    overflow:hidden !important;
+    clip:rect(0, 0, 0, 0) !important;
+    clip-path:inset(50%) !important;
+    white-space:nowrap !important;
+    border:0 !important;
+  }
+
+  .service-availability-weekly-section{
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 8% 0, rgba(59,130,246,.09), transparent 34%),
+      linear-gradient(145deg, rgba(255,255,255,.98), rgba(245,247,255,.94));
+  }
+
+  .service-availability-quick-editor{
     display:grid;
-    gap:.62rem;
+    gap:.82rem;
+    padding:.76rem;
+    border:1px solid rgba(147,197,253,.7);
+    border-radius:1rem;
+    background:rgba(255,255,255,.8);
+    box-shadow:0 10px 22px rgba(30,64,175,.06), inset 0 1px 0 #fff;
   }
 
-  .service-availability-exact-help{
-    display:flex;
-    align-items:flex-start;
-    gap:.38rem;
-    margin:-.28rem 0 .78rem;
-    padding:.52rem .58rem;
-    border:1px solid #dbeafe;
-    border-radius:.78rem;
-    background:#f8fbff;
-    color:#475569;
-    font-size:.63rem;
-    line-height:1.42;
-  }
-
-  .service-availability-day{
+  .service-availability-quick-group{
     min-width:0;
-    display:grid;
-    gap:.38rem;
-    padding-bottom:.62rem;
-    border-bottom:1px solid rgba(226,232,240,.85);
+    margin:0;
+    padding:0;
+    border:0;
   }
 
-  .service-availability-day:last-child{
-    padding-bottom:0;
-    border-bottom:0;
-  }
-
-  .service-availability-day-label{
+  .service-availability-quick-group legend{
+    padding:0;
     color:#334155;
-    font-size:.72rem;
-    line-height:1.2;
+    font-size:.74rem;
+    line-height:1.25;
     font-weight:850;
   }
 
-  .service-availability-slot-list{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:.36rem;
+  .service-availability-quick-help{
+    margin:.14rem 0 .5rem;
+    color:#64748b;
+    font-size:.64rem;
+    line-height:1.4;
   }
 
-  .service-availability-slot-chip{
+  .service-availability-day-picker{
+    display:grid;
+    grid-template-columns:repeat(7, minmax(2.35rem, 1fr));
+    gap:.28rem;
+    overflow-x:auto;
+    padding:.08rem 0 .14rem;
+    scrollbar-width:none;
+  }
+
+  .service-availability-day-picker::-webkit-scrollbar{
+    display:none;
+  }
+
+  .service-availability-day-chip,
+  .service-availability-batch-slot-chip{
     position:relative;
     min-width:0;
+    min-height:2.35rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.32rem;
+    padding:.46rem .5rem;
+    border:1px solid rgba(203,213,225,.9);
+    border-radius:.82rem;
+    background:rgba(255,255,255,.94);
+    color:#475569;
+    font-size:.7rem;
+    line-height:1.1;
+    font-weight:790;
+    text-align:center;
     cursor:pointer;
+    box-shadow:0 4px 11px rgba(15,23,42,.045);
+    transition:border-color .16s ease, background .16s ease, color .16s ease,
+      transform .16s ease, box-shadow .16s ease;
+    -webkit-tap-highlight-color:transparent;
   }
 
+  .service-availability-day-chip{
+    padding-inline:.18rem;
+    font-size:.64rem;
+  }
+
+  .service-availability-day-chip input,
+  .service-availability-batch-slot-chip input,
   .service-availability-slot-chip input{
     position:absolute;
     width:1px;
     height:1px;
     overflow:hidden;
-    opacity:0;
+    clip:rect(0 0 0 0);
+    clip-path:inset(50%);
+    white-space:nowrap;
   }
 
-  .service-availability-slot-chip span{
-    min-height:2rem;
-    display:flex;
+  .service-availability-day-chip:hover,
+  .service-availability-batch-slot-chip:hover,
+  .service-availability-slot-chip:hover{
+    border-color:#93c5fd;
+    transform:translateY(-1px);
+  }
+
+  .service-availability-day-chip:has(input:checked),
+  .service-availability-batch-slot-chip:has(input:checked),
+  .service-availability-slot-chip:has(input:checked){
+    border-color:#60a5fa;
+    background:linear-gradient(145deg, #eff6ff, #eef2ff);
+    color:#1d4ed8;
+    box-shadow:0 0 0 1px rgba(59,130,246,.08), 0 6px 14px rgba(37,99,235,.1);
+  }
+
+  .service-availability-batch-slot-chip.is-mixed{
+    border-color:#a5b4fc;
+    background:
+      repeating-linear-gradient(
+        135deg,
+        rgba(238,242,255,.98) 0,
+        rgba(238,242,255,.98) .42rem,
+        rgba(255,255,255,.98) .42rem,
+        rgba(255,255,255,.98) .84rem
+      );
+    color:#4338ca;
+  }
+
+  .service-availability-day-chip:has(input:focus-visible),
+  .service-availability-batch-slot-chip:has(input:focus-visible),
+  .service-availability-slot-chip:has(input:focus-visible){
+    outline:3px solid rgba(59,130,246,.28);
+    outline-offset:2px;
+  }
+
+  .service-availability-day-chip:has(input:disabled),
+  .service-availability-batch-slot-chip:has(input:disabled),
+  .service-availability-slot-chip:has(input:disabled){
+    cursor:not-allowed;
+    opacity:.5;
+    transform:none;
+  }
+
+  .service-availability-batch-slots{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.44rem;
+  }
+
+  .service-availability-batch-time-row{
+    display:grid;
+    gap:.52rem;
+  }
+
+  .service-availability-batch-times{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.54rem;
+  }
+
+  .service-availability-batch-times label{
+    min-width:0;
+  }
+
+  .service-availability-batch-times label > span{
+    display:block;
+    margin:0 0 .26rem .1rem;
+    color:#475569;
+    font-size:.66rem;
+    line-height:1.2;
+    font-weight:800;
+  }
+
+  .service-availability-batch-times input,
+  .service-availability-interval-time input{
+    display:block;
+    width:100%;
+    min-width:0;
+    min-height:2.65rem;
+    padding:.58rem .62rem;
+    border:1px solid rgba(191,219,254,.94);
+    border-radius:.78rem;
+    background:rgba(255,255,255,.96);
+    color:#1e293b;
+    font:inherit;
+    font-size:.82rem;
+    line-height:1.2;
+    font-weight:720;
+    box-shadow:inset 0 1px 2px rgba(15,23,42,.04);
+  }
+
+  .service-availability-batch-times input:focus,
+  .service-availability-interval-time input:focus{
+    border-color:#60a5fa;
+    outline:3px solid rgba(59,130,246,.16);
+    outline-offset:1px;
+  }
+
+  .service-availability-batch-add-interval{
+    width:100%;
+    min-height:2.5rem;
+    display:inline-flex;
     align-items:center;
     justify-content:center;
-    padding:.42rem .38rem;
-    border:1px solid #dbe3ee;
-    border-radius:9999px;
-    background:#f8fafc;
-    color:#64748b;
-    font-size:.63rem;
-    line-height:1.12;
-    font-weight:780;
-    text-align:center;
-  }
-
-  .service-availability-slot-chip input:checked + span{
-    border-color:#93c5fd;
+    gap:.25rem;
+    padding:.58rem .72rem;
+    border:1px solid #bfdbfe;
+    border-radius:.78rem;
     background:#eff6ff;
     color:#1d4ed8;
-    box-shadow:inset 0 0 0 1px rgba(37,99,235,.08);
+    font:inherit;
+    font-size:.68rem;
+    line-height:1;
+    font-weight:850;
+    cursor:pointer;
   }
 
-  .service-availability-slot-chip input:focus-visible + span{
+  .service-availability-batch-add-interval:focus-visible{
     outline:3px solid rgba(96,165,250,.3);
     outline-offset:2px;
   }
 
-  .service-availability-slot-chip input:disabled + span{
+  .service-availability-batch-add-interval:disabled{
     cursor:not-allowed;
     opacity:.5;
+  }
+
+  .service-availability-day-customizer{
+    margin-top:.58rem;
+    overflow:hidden;
+    border:1px solid rgba(191,219,254,.9);
+    border-radius:.9rem;
+    background:rgba(255,255,255,.88);
+    box-shadow:0 6px 15px rgba(30,64,175,.045);
+  }
+
+  .service-availability-day-customizer > summary{
+    min-height:3.2rem;
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr) auto;
+    align-items:center;
+    gap:.52rem;
+    padding:.58rem .64rem;
+    color:#334155;
+    cursor:pointer;
+    list-style:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  .service-availability-day-customizer > summary::-webkit-details-marker{
+    display:none;
+  }
+
+  .service-availability-day-customizer > summary:focus-visible{
+    outline:3px solid rgba(59,130,246,.26);
+    outline-offset:-3px;
+  }
+
+  .service-availability-day-customizer[open] > summary{
+    border-bottom:1px solid rgba(219,234,254,.9);
+    background:rgba(239,246,255,.68);
+  }
+
+  .service-availability-day-customizer-icon{
+    width:1.8rem;
+    height:1.8rem;
+    display:grid;
+    place-items:center;
+    border:1px solid #bfdbfe;
+    border-radius:.62rem;
+    background:#eff6ff;
+    font-size:.78rem;
+  }
+
+  .service-availability-day-customizer-copy{
+    min-width:0;
+    display:grid;
+    gap:.08rem;
+  }
+
+  .service-availability-day-customizer-copy strong{
+    color:#1e3a8a;
+    font-size:.69rem;
+    line-height:1.25;
+    font-weight:860;
+  }
+
+  .service-availability-day-customizer-copy small{
+    color:#64748b;
+    font-size:.59rem;
+    line-height:1.35;
+  }
+
+  .service-availability-day-customizer-chevron{
+    color:#2563eb;
+    font-size:.86rem;
+    font-weight:900;
+    transition:transform .18s ease;
+  }
+
+  .service-availability-day-customizer[open] .service-availability-day-customizer-chevron{
+    transform:rotate(180deg);
+  }
+
+  .service-availability-week{
+    display:grid;
+    gap:.58rem;
+    padding:.58rem;
+  }
+
+  .service-availability-day{
+    min-width:0;
+    display:grid;
+    gap:.52rem;
+    padding:.62rem;
+    border:1px solid rgba(203,213,225,.86);
+    border-radius:.92rem;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 6px 15px rgba(15,23,42,.045);
+  }
+
+  .service-availability-day-header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:.5rem;
+  }
+
+  .service-availability-day-label{
+    color:#172554;
+    font-size:.76rem;
+    line-height:1.2;
+    font-weight:880;
+  }
+
+  .service-availability-day-caption{
+    color:#94a3b8;
+    font-size:.57rem;
+    line-height:1.2;
+    font-weight:850;
+    letter-spacing:.055em;
+    text-transform:uppercase;
+  }
+
+  .service-availability-slot-list{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.4rem;
+  }
+
+  .service-availability-slot-chip{
+    position:relative;
+    min-width:0;
+    min-height:2.2rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:.3rem;
+    padding:.44rem .42rem;
+    border:1px solid rgba(203,213,225,.9);
+    border-radius:.78rem;
+    background:#fff;
+    color:#64748b;
+    font-size:.64rem;
+    line-height:1.12;
+    font-weight:780;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .16s ease, background .16s ease, color .16s ease,
+      transform .16s ease;
   }
 
   .service-availability-exact-times{
     display:grid;
     gap:.45rem;
-    margin-top:.08rem;
-    padding:.52rem;
-    border:1px solid rgba(219,234,254,.9);
-    border-radius:.82rem;
-    background:linear-gradient(145deg, rgba(248,251,255,.94), rgba(255,255,255,.98));
+    padding-top:.52rem;
+    border-top:1px solid rgba(219,234,254,.88);
   }
 
   .service-availability-exact-times-heading{
@@ -1456,19 +1858,6 @@
     font-size:.59rem;
     line-height:1.2;
     font-weight:780;
-  }
-
-  .service-availability-interval-time input{
-    width:100%;
-    min-width:0;
-    min-height:2.45rem;
-    padding:.46rem .48rem;
-    border:1px solid #cbd5e1;
-    border-radius:.68rem;
-    background:#fff;
-    color:#0f172a;
-    font:inherit;
-    font-size:.74rem;
   }
 
   .service-availability-next-day{
@@ -1638,13 +2027,13 @@
 
   .service-availability-dialog-actions{
     position:sticky;
-    bottom:calc(-.95rem - env(safe-area-inset-bottom));
+    bottom:calc(-.82rem - env(safe-area-inset-bottom));
     z-index:2;
     display:grid;
     grid-template-columns:minmax(0, .72fr) minmax(0, 1.28fr);
     gap:.5rem;
-    margin:0 -.9rem calc(-.95rem - env(safe-area-inset-bottom));
-    padding:.72rem .9rem calc(.72rem + env(safe-area-inset-bottom));
+    margin:0 -.78rem calc(-.82rem - env(safe-area-inset-bottom));
+    padding:.62rem .78rem calc(.62rem + env(safe-area-inset-bottom));
     border-top:1px solid rgba(226,232,240,.94);
     background:rgba(248,250,252,.95);
     backdrop-filter:blur(10px);
@@ -1730,7 +2119,7 @@
 
     .service-availability-status-option{
       justify-content:center;
-      padding:.6rem .42rem;
+      padding:.42rem .36rem;
       text-align:center;
     }
 
@@ -1790,13 +2179,31 @@
       display:none;
     }
 
-    .service-availability-day{
-      grid-template-columns:minmax(7rem, .55fr) minmax(0, 1.45fr);
-      align-items:center;
+    .service-availability-quick-editor{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
     }
 
-    .service-availability-exact-times{
-      grid-column:2;
+    .service-availability-batch-time-group{
+      grid-column:1 / -1;
+    }
+
+    .service-availability-day-picker{
+      grid-template-columns:repeat(7, minmax(0, 1fr));
+    }
+
+    .service-availability-batch-time-row{
+      grid-template-columns:minmax(0, 1fr) auto;
+      align-items:end;
+    }
+
+    .service-availability-batch-add-interval{
+      width:auto;
+      min-width:9rem;
+    }
+
+    .service-availability-week{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      align-items:start;
     }
 
     .service-availability-dialog-actions{
@@ -1926,6 +2333,18 @@
   const errorElement = document.getElementById("service-availability-error");
   const successElement = document.getElementById("service-availability-success");
   const globalMessage = document.getElementById("service-availability-global-message");
+  const weeklyEditor = document.getElementById("service-availability-week");
+  const dayPickerInputs = Array.from(
+    dialog.querySelectorAll("[data-service-availability-day-picker]")
+  );
+  const batchSlotInputs = Array.from(
+    dialog.querySelectorAll("[data-service-availability-batch-slot]")
+  );
+  const batchFromInput = dialog.querySelector("[data-service-availability-batch-from]");
+  const batchToInput = dialog.querySelector("[data-service-availability-batch-to]");
+  const batchAddIntervalButton = dialog.querySelector(
+    "[data-service-availability-batch-add-interval]"
+  );
 
   let previousFocus = null;
   let busy = false;
@@ -2215,6 +2634,7 @@
       button.disabled = busy;
     });
     syncWeeklyIntervalButtons();
+    syncWeeklyQuickEditor();
     syncScopeControls({ populate: false });
   }
 
@@ -2259,6 +2679,135 @@
     return (parts[0] * 60) + parts[1];
   }
 
+  function selectedQuickDays() {
+    return dayPickerInputs
+      .filter(input => input.checked)
+      .map(input => Number(input.value))
+      .filter(day => day >= 1 && day <= 7);
+  }
+
+  function syncQuickDayPanels() {
+    const selected = new Set(selectedQuickDays());
+    dayPickerInputs.forEach(input => {
+      const expanded = selected.has(Number(input.value));
+      input.disabled = busy;
+      input.setAttribute("aria-expanded", expanded ? "true" : "false");
+    });
+    dialog.querySelectorAll("[data-availability-day]").forEach(dayPanel => {
+      const visible = selected.has(Number(dayPanel.dataset.availabilityDay));
+      dayPanel.classList.toggle("service-availability-hidden", !visible);
+      dayPanel.setAttribute("aria-hidden", visible ? "false" : "true");
+    });
+    if (weeklyEditor) {
+      weeklyEditor.classList.toggle("service-availability-hidden", selected.size === 0);
+      if (selected.size === 0) weeklyEditor.open = false;
+    }
+  }
+
+  function syncBatchSlotControls() {
+    const selectedDays = selectedQuickDays();
+    batchSlotInputs.forEach(batchInput => {
+      const selectedCount = selectedDays.reduce((count, day) => {
+        const input = form.querySelector(
+          `[name="service-availability-weekly"][data-day="${day}"][data-slot="${batchInput.value}"]`
+        );
+        return count + (input && input.checked ? 1 : 0);
+      }, 0);
+      const mixed = selectedCount > 0 && selectedCount < selectedDays.length;
+      batchInput.disabled = busy || selectedDays.length === 0;
+      batchInput.checked = selectedDays.length > 0 && selectedCount === selectedDays.length;
+      batchInput.indeterminate = mixed;
+      batchInput.setAttribute(
+        "aria-checked",
+        mixed ? "mixed" : (batchInput.checked ? "true" : "false")
+      );
+      batchInput.closest(".service-availability-batch-slot-chip")
+        ?.classList.toggle("is-mixed", mixed);
+    });
+  }
+
+  function syncBatchTimeControls() {
+    const disabled = busy || selectedQuickDays().length === 0;
+    if (batchFromInput) batchFromInput.disabled = disabled;
+    if (batchToInput) batchToInput.disabled = disabled;
+    if (batchAddIntervalButton) batchAddIntervalButton.disabled = disabled;
+  }
+
+  function syncWeeklyQuickEditor() {
+    syncQuickDayPanels();
+    syncBatchSlotControls();
+    syncBatchTimeControls();
+  }
+
+  function applyBatchSlot(batchInput) {
+    const selectedDays = selectedQuickDays();
+    if (!selectedDays.length) return;
+    const checked = batchInput.checked;
+    selectedDays.forEach(day => {
+      const input = form.querySelector(
+        `[name="service-availability-weekly"][data-day="${day}"][data-slot="${batchInput.value}"]`
+      );
+      if (input) input.checked = checked;
+    });
+    syncBatchSlotControls();
+  }
+
+  function addBatchWeeklyInterval() {
+    if (busy) return;
+    clearMessages();
+    const selectedDays = selectedQuickDays();
+    if (!selectedDays.length) {
+      showError(copy.errorInvalidData, dayPickerInputs[0] || null);
+      return;
+    }
+
+    const start = batchFromInput ? batchFromInput.value : "";
+    const end = batchToInput ? batchToInput.value : "";
+    const startMinutes = timeToMinutes(start);
+    const endMinutes = timeToMinutes(end);
+    if (startMinutes === null || endMinutes === null) {
+      showError(
+        copy.errorIncompleteInterval,
+        startMinutes === null ? batchFromInput : batchToInput
+      );
+      return;
+    }
+    if (startMinutes === endMinutes) {
+      showError(copy.errorInvalidInterval, batchToInput);
+      return;
+    }
+
+    const nextDay = startMinutes > endMinutes;
+    if (nextDay && !(startMinutes >= nightStartMinutes && endMinutes <= nightEndMinutes)) {
+      showError(copy.errorInvalidNightInterval, batchToInput);
+      return;
+    }
+
+    const totalCount = dialog.querySelectorAll(
+      "[data-service-availability-interval]"
+    ).length;
+    if (totalCount + selectedDays.length > maxIntervalsTotal) {
+      showError(copy.errorIntervalLimitTotal, batchFromInput);
+      return;
+    }
+    if (selectedDays.some(day => weeklyIntervalCounts(day).day >= maxIntervalsPerDay)) {
+      showError(copy.errorIntervalLimitPerDay, batchFromInput);
+      return;
+    }
+
+    selectedDays.forEach(day => {
+      addWeeklyInterval(day, {
+        ora_inizio: start,
+        ora_fine: end,
+        giorno_successivo: nextDay
+      }, { focus: false });
+    });
+    batchFromInput.value = "";
+    batchToInput.value = "";
+    syncWeeklyQuickEditor();
+    batchFromInput.focus({ preventScroll: true });
+  }
+
   function weeklyIntervalCounts(dayNumber) {
     const allRows = dialog.querySelectorAll("[data-service-availability-interval]");
     const dayList = dialog.querySelector(
@@ -2280,6 +2829,7 @@
       button.disabled = busy || atLimit;
       button.setAttribute("aria-disabled", atLimit ? "true" : "false");
     });
+    syncBatchTimeControls();
   }
 
   function createWeeklyTimeField(uniqueId, suffix, labelText, value) {
@@ -2587,6 +3137,9 @@
     const availability = normalizeAvailability(value);
     currentVersion = availability.versione;
     clearMessages();
+    if (batchFromInput) batchFromInput.value = "";
+    if (batchToInput) batchToInput.value = "";
+    if (weeklyEditor) weeklyEditor.open = false;
 
     const statusInput = form.querySelector(
       `[name="service-availability-status"][value="${availability.stato}"]`
@@ -2607,6 +3160,14 @@
     availability.settimanale_intervalli.forEach(interval => {
       addWeeklyInterval(interval.giorno_settimana, interval, { focus: false });
     });
+    const configuredDays = new Set([
+      ...availability.settimanale.map(item => item.giorno_settimana),
+      ...availability.settimanale_intervalli.map(item => item.giorno_settimana)
+    ]);
+    dayPickerInputs.forEach(input => {
+      input.checked = configuredDays.has(Number(input.value));
+    });
+    syncWeeklyQuickEditor();
     syncWeeklyIntervalButtons();
 
     specialList.replaceChildren();
@@ -3084,6 +3645,18 @@
       addWeeklyInterval(button.dataset.day, {}, { focus: true });
     });
   });
+  dayPickerInputs.forEach(input => {
+    input.addEventListener("change", syncWeeklyQuickEditor);
+  });
+  batchSlotInputs.forEach(input => {
+    input.addEventListener("change", () => applyBatchSlot(input));
+  });
+  form.querySelectorAll('[name="service-availability-weekly"]').forEach(input => {
+    input.addEventListener("change", syncBatchSlotControls);
+  });
+  if (batchAddIntervalButton) {
+    batchAddIntervalButton.addEventListener("click", addBatchWeeklyInterval);
+  }
   addSpecialButton.addEventListener("click", () => {
     const row = addSpecialRow({ tipo: "disponibile", fasce: [] });
     const input = row.querySelector("input[type=date]");
@@ -3119,6 +3692,7 @@
   });
 
   setOpenHooksExpanded(false);
+  syncWeeklyQuickEditor();
   syncWeeklyIntervalButtons();
   updateEmptyStates();
   openAvailabilityFromDeepLink();

@@ -1785,6 +1785,22 @@ TRANSLATIONS = {
         "uk": "Для кожного дня виберіть час, коли ви можете надавати послуги.",
         "fil": "Piliin sa bawat araw ang mga oras kung kailan ka makakapagbigay ng serbisyo.",
     },
+    "availability.customize_days_title": {
+        "it": "Modifica i singoli giorni", "en": "Edit individual days",
+        "fr": "Modifier chaque jour", "es": "Editar días individuales",
+        "de": "Einzelne Tage bearbeiten", "ro": "Editează zilele individual",
+        "uk": "Редагувати окремі дні", "fil": "I-edit ang bawat araw",
+    },
+    "availability.customize_days_help": {
+        "it": "Apri per differenziare fasce e orari di uno o più giorni.",
+        "en": "Open to set different time slots and times for one or more days.",
+        "fr": "Ouvrez pour définir des créneaux et horaires différents pour un ou plusieurs jours.",
+        "es": "Abre para definir franjas y horarios diferentes para uno o varios días.",
+        "de": "Öffne diesen Bereich, um für einzelne Tage unterschiedliche Zeitfenster und Uhrzeiten festzulegen.",
+        "ro": "Deschide pentru a seta intervale și ore diferite pentru una sau mai multe zile.",
+        "uk": "Відкрийте, щоб налаштувати різні часові проміжки й години для одного або кількох днів.",
+        "fil": "Buksan para magtakda ng magkakaibang time slot at oras para sa isa o higit pang araw.",
+    },
     "availability.exact_intervals_help": {
         "it": "Se le fasce generiche non bastano, aggiungi anche uno o più orari precisi per ciascun giorno.",
         "en": "If general time slots are not enough, add one or more exact times for each day.",

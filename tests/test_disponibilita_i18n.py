@@ -29,6 +29,8 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         "availability.status_unavailable_description",
         "availability.weekly_title",
         "availability.weekly_help",
+        "availability.customize_days_title",
+        "availability.customize_days_help",
         "availability.exact_intervals_help",
         "availability.exact_intervals_title",
         "availability.add_interval",
@@ -302,6 +304,20 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
             rendered.count('class="service-availability-interval-list"'),
             7,
         )
+        self.assertEqual(
+            rendered.count('class="service-availability-day-chip"'),
+            7,
+        )
+        self.assertEqual(
+            rendered.count('class="service-availability-batch-slot-chip"'),
+            4,
+        )
+        self.assertEqual(rendered.count('type="time"'), 2)
+        self.assertEqual(rendered.count('step="60"'), 2)
+        self.assertIn(
+            'class="service-availability-day-customizer service-availability-hidden"',
+            rendered,
+        )
         for marker in (
             "settimanale_intervalli: normalizeWeeklyIntervals",
             "settimanale_intervalli: weeklyIntervals",
@@ -311,6 +327,11 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
             "giorno_successivo: nextDay",
             'input.type = "time"',
             'input.step = "60"',
+            'id="service-availability-batch-from"',
+            'id="service-availability-batch-to"',
+            "data-service-availability-batch-slot",
+            "data-service-availability-day-picker",
+            "addBatchWeeklyInterval",
             "availability.error_invalid_night_interval",
             "weeklyIntervalTimeline",
             "copy.errorOverlappingIntervals",

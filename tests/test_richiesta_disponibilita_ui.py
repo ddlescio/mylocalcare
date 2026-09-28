@@ -92,6 +92,19 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
         self.assertNotIn('name="messaggio"', rendered)
         self.assertNotIn('name="note"', rendered)
         self.assertIn('data-availability-request-on-call', rendered)
+        self.assertEqual(
+            rendered.count('data-availability-request-day-toggle'),
+            7,
+        )
+        self.assertEqual(
+            rendered.count('data-availability-request-time-start'),
+            1,
+        )
+        self.assertEqual(
+            rendered.count('data-availability-request-time-end'),
+            1,
+        )
+        self.assertNotIn('data-availability-request-add-interval', rendered)
 
     def test_dialog_is_accessible_and_mobile_first(self):
         for marker in (
@@ -117,9 +130,19 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
             self.style_source.index("max-height: 92vh;"),
             self.style_source.index("max-height: min(92dvh, 58rem);"),
         )
-        self.assertIn(".availability-request-slot.is-selected", self.style_source)
+        self.assertIn(".availability-request-chip.is-selected", self.style_source)
         self.assertIn('label.classList.toggle("is-selected"', self.script_source)
-        self.assertIn("refreshSlotVisualStates();", self.script_source)
+        self.assertIn("grid-template-columns: repeat(4", self.style_source)
+        self.assertIn("grid-template-columns: repeat(7", self.style_source)
+        self.assertIn("buildSharedPayload(", self.script_source)
+
+    def test_exact_time_uses_the_same_native_mobile_controls_as_search(self):
+        self.assertEqual(self.partial_source.count('type="time"'), 2)
+        self.assertEqual(self.partial_source.count('step="60"'), 2)
+        self.assertIn('data-availability-request-time-start', self.partial_source)
+        self.assertIn('data-availability-request-time-end', self.partial_source)
+        self.assertIn("const crossesMidnight", self.script_source)
+        self.assertIn("updateNextDayNote();", self.script_source)
 
     def test_post_uses_json_csrf_and_exact_payload_fields(self):
         for marker in (
@@ -139,30 +162,19 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
         ):
             self.assertIn(marker, self.script_source)
 
-    def test_backend_error_and_interval_limits_are_visible_and_accessible(self):
+    def test_backend_errors_and_shared_selection_are_visible_and_accessible(self):
         for marker in (
             'typeof data.error === "string"',
             "data.error.trim()",
-            "MAX_INTERVALS_PER_DAY = 8",
-            "MAX_INTERVALS_TOTAL = 28",
-            'return "limit_per_day"',
-            'return "limit_total"',
-            'button.setAttribute("aria-disabled", code ? "true" : "false")',
-            "showError(messageForLimit(limitCode), addButton)",
+            "selectedDayNumbers()",
+            "selectedSlots()",
+            "collectSharedPayload()",
+            "validateSharedSelection(payload)",
+            "showError(message, target)",
         ):
             self.assertIn(marker, self.script_source)
-        self.assertIn(
-            "availability_request.error_limit_per_day",
-            self.partial_source,
-        )
-        self.assertIn(
-            "availability_request.error_limit_total",
-            self.partial_source,
-        )
-        self.assertIn(
-            '.availability-request-add-interval[aria-disabled="true"]',
-            self.style_source,
-        )
+        self.assertIn('role="alert"', self.partial_source)
+        self.assertIn('aria-describedby="availability-request-error"', self.partial_source)
 
     def test_missing_profile_photo_alerts_and_redirects_to_dashboard(self):
         for marker in (
@@ -227,9 +239,17 @@ const payload = api.buildPayload([
     }]
   }
 ], true);
+const sharedPayload = api.buildSharedPayload(
+  [5, 1, 3],
+  ["sera", "mattina"],
+  "22:00",
+  "02:00",
+  true
+);
 const onCallOnly = api.buildPayload([], true);
 const result = {
   payload,
+  sharedPayload,
   valid: api.validatePayload(payload),
   onCallOnly,
   onCallOnlyValid: api.validatePayload(onCallOnly),
@@ -287,6 +307,22 @@ process.stdout.write(JSON.stringify(result));
             set(payload["giorni"][1]["intervalli"][0]),
             {"ora_inizio", "ora_fine", "giorno_successivo"},
         )
+        shared = result["sharedPayload"]
+        self.assertTrue(shared["a_chiamata"])
+        self.assertEqual(
+            [day["giorno_settimana"] for day in shared["giorni"]],
+            [1, 3, 5],
+        )
+        for day in shared["giorni"]:
+            self.assertEqual(day["fasce"], ["mattina", "sera"])
+            self.assertEqual(
+                day["intervalli"],
+                [{
+                    "ora_inizio": "22:00",
+                    "ora_fine": "02:00",
+                    "giorno_successivo": True,
+                }],
+            )
         self.assertIsNone(result["valid"])
         self.assertEqual(
             result["onCallOnly"],

@@ -78,6 +78,39 @@
     };
   }
 
+  function buildSharedPayload(dayNumbers, slots, start, end, onCall) {
+    const normalizedStart = String(start || "");
+    const normalizedEnd = String(end || "");
+    const startMinutes = timeToMinutes(normalizedStart);
+    const endMinutes = timeToMinutes(normalizedEnd);
+    const hasAnyTime = Boolean(normalizedStart || normalizedEnd);
+    const crossesMidnight = (
+      startMinutes !== null
+      && endMinutes !== null
+      && endMinutes < startMinutes
+    );
+    const sharedIntervals = hasAnyTime
+      ? [{
+          ora_inizio: normalizedStart,
+          ora_fine: normalizedEnd,
+          giorno_successivo: crossesMidnight
+        }]
+      : [];
+    const sharedSlots = Array.isArray(slots) ? slots.slice() : [];
+    const states = (Array.isArray(dayNumbers) ? dayNumbers : []).map(
+      function (dayNumber) {
+        return {
+          selected: true,
+          giorno_settimana: Number(dayNumber),
+          fasce: sharedSlots,
+          intervalli: sharedIntervals
+        };
+      }
+    );
+
+    return buildPayload(states, onCall);
+  }
+
   function validatePayload(payload) {
     if (
       !payload
@@ -211,8 +244,23 @@
     const closeButtons = Array.from(
       dialog.querySelectorAll("[data-availability-request-close]")
     );
+    const dayInputs = Array.from(dialog.querySelectorAll(
+      "[data-availability-request-day-toggle]"
+    ));
+    const slotInputs = Array.from(dialog.querySelectorAll(
+      "[data-availability-request-slot]"
+    ));
     const onCallInput = dialog.querySelector(
       "[data-availability-request-on-call]"
+    );
+    const startInput = dialog.querySelector(
+      "[data-availability-request-time-start]"
+    );
+    const endInput = dialog.querySelector(
+      "[data-availability-request-time-end]"
+    );
+    const nextDayNote = dialog.querySelector(
+      "[data-availability-request-next-day-note]"
     );
 
     let previousFocus = null;
@@ -221,7 +269,6 @@
     let requestController = null;
     let busy = false;
     let completed = false;
-    let intervalCounter = 0;
 
     function getFocusableElements() {
       if (!sheet) return [];
@@ -246,6 +293,11 @@
       if (!errorBox) return;
       errorBox.hidden = true;
       errorBox.textContent = "";
+      [startInput, endInput].forEach(function (input) {
+        if (!input) return;
+        input.setCustomValidity("");
+        input.removeAttribute("aria-invalid");
+      });
     }
 
     function showError(message, target) {
@@ -279,73 +331,10 @@
       if (spinner) spinner.hidden = !busy;
     }
 
-    function setDayExpanded(dayCard, expanded) {
-      if (!dayCard) return;
-      const toggle = dayCard.querySelector(
-        "[data-availability-request-day-toggle]"
-      );
-      const details = dayCard.querySelector(
-        "[data-availability-request-day-details]"
-      );
-      dayCard.classList.toggle("is-selected", expanded);
-      if (toggle) toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-      if (details) details.hidden = !expanded;
-    }
-
-    function makeElement(tagName, className, text) {
-      const element = documentRef.createElement(tagName);
-      if (className) element.className = className;
-      if (typeof text === "string") element.textContent = text;
-      return element;
-    }
-
-    function intervalCounts(dayCard) {
-      return {
-        day: dayCard
-          ? dayCard.querySelectorAll("[data-availability-request-interval]").length
-          : 0,
-        total: dialog.querySelectorAll(
-          "[data-availability-request-interval]"
-        ).length
-      };
-    }
-
-    function messageForLimit(code) {
-      if (code === "limit_per_day") return copy.errorLimitPerDay || "";
-      if (code === "limit_total") return copy.errorLimitTotal || "";
-      return "";
-    }
-
-    function refreshIntervalAddButtons() {
-      const totalCount = intervalCounts(null).total;
-      dialog.querySelectorAll("[data-availability-request-day]")
-        .forEach(function (dayCard) {
-          const button = dayCard.querySelector(
-            "[data-availability-request-add-interval]"
-          );
-          if (!button) return;
-          const code = intervalLimitCode(
-            intervalCounts(dayCard).day,
-            totalCount
-          );
-          button.setAttribute("aria-disabled", code ? "true" : "false");
-          if (code) {
-            button.title = messageForLimit(code);
-          } else {
-            button.removeAttribute("title");
-          }
-        });
-    }
-
-    function syncSlotVisualState(input) {
-      const label = input && input.closest(".availability-request-slot");
+    function syncChipState(input) {
+      const label = input && input.closest(".availability-request-chip");
       if (!label) return;
       label.classList.toggle("is-selected", Boolean(input.checked));
-    }
-
-    function refreshSlotVisualStates() {
-      dialog.querySelectorAll("[data-availability-request-slot]")
-        .forEach(syncSlotVisualState);
     }
 
     function syncOnCallVisualState() {
@@ -356,148 +345,64 @@
       label.classList.toggle("is-selected", Boolean(onCallInput.checked));
     }
 
-    function addInterval(dayCard) {
-      const intervals = dayCard && dayCard.querySelector(
-        "[data-availability-request-intervals]"
-      );
-      if (!intervals) return null;
-
-      const addButton = dayCard.querySelector(
-        "[data-availability-request-add-interval]"
-      );
-      const counts = intervalCounts(dayCard);
-      const limitCode = intervalLimitCode(counts.day, counts.total);
-      if (limitCode) {
-        showError(messageForLimit(limitCode), addButton);
-        refreshIntervalAddButtons();
-        return null;
-      }
-
-      clearError();
-
-      intervalCounter += 1;
-      const uniqueId = "availability-request-interval-" + intervalCounter;
-      const row = makeElement("div", "availability-request-interval");
-      row.dataset.availabilityRequestInterval = "";
-      row.setAttribute("role", "group");
-      row.setAttribute("aria-label", copy.intervalLabel || "");
-
-      const top = makeElement("div", "availability-request-interval-top");
-      top.appendChild(makeElement(
-        "span",
-        "availability-request-interval-title",
-        copy.intervalLabel || ""
-      ));
-
-      const removeButton = makeElement(
-        "button",
-        "availability-request-remove-interval",
-        "×"
-      );
-      removeButton.type = "button";
-      removeButton.dataset.availabilityRequestRemoveInterval = "";
-      removeButton.setAttribute("aria-label", copy.removeInterval || "");
-      removeButton.title = copy.removeInterval || "";
-      top.appendChild(removeButton);
-      row.appendChild(top);
-
-      const timeGrid = makeElement("div", "availability-request-time-grid");
-
-      function createTimeField(role, labelText, suffix) {
-        const label = makeElement("label", "availability-request-time-field");
-        label.setAttribute("for", uniqueId + "-" + suffix);
-        label.appendChild(makeElement("span", "", labelText || ""));
-
-        const input = documentRef.createElement("input");
-        input.id = uniqueId + "-" + suffix;
-        input.type = "time";
-        input.step = "900";
-        input.dataset.role = role;
-        input.required = true;
-        label.appendChild(input);
-        return label;
-      }
-
-      timeGrid.appendChild(createTimeField("start", copy.fromLabel, "start"));
-      timeGrid.appendChild(createTimeField("end", copy.toLabel, "end"));
-      row.appendChild(timeGrid);
-
-      const nextDayLabel = makeElement("label", "availability-request-next-day");
-      const nextDayInput = documentRef.createElement("input");
-      nextDayInput.type = "checkbox";
-      nextDayInput.dataset.role = "next-day";
-      nextDayLabel.appendChild(nextDayInput);
-
-      const nextDayCopy = makeElement("span", "");
-      nextDayCopy.appendChild(makeElement("span", "", copy.nextDayLabel || ""));
-      nextDayCopy.appendChild(makeElement("small", "", copy.nextDayHelp || ""));
-      nextDayLabel.appendChild(nextDayCopy);
-      row.appendChild(nextDayLabel);
-
-      intervals.appendChild(row);
-      refreshIntervalAddButtons();
-      row.querySelector("[data-role='start']")?.focus({ preventScroll: true });
-      return row;
+    function selectedDayNumbers() {
+      return dayInputs
+        .filter(function (input) { return input.checked; })
+        .map(function (input) { return Number(input.value); });
     }
 
-    function collectDayStates() {
-      return Array.from(dialog.querySelectorAll(
-        "[data-availability-request-day]"
-      )).map(function (dayCard) {
-        const selected = Boolean(dayCard.querySelector(
-          "[data-availability-request-day-toggle]"
-        )?.checked);
-        const slots = Array.from(dayCard.querySelectorAll(
-          "[data-availability-request-slot]:checked"
-        )).map(function (input) { return input.value; });
-        const intervals = Array.from(dayCard.querySelectorAll(
-          "[data-availability-request-interval]"
-        )).map(function (row) {
-          return {
-            ora_inizio: row.querySelector("[data-role='start']")?.value || "",
-            ora_fine: row.querySelector("[data-role='end']")?.value || "",
-            giorno_successivo: Boolean(
-              row.querySelector("[data-role='next-day']")?.checked
-            )
-          };
-        });
+    function selectedSlots() {
+      return slotInputs
+        .filter(function (input) { return input.checked; })
+        .map(function (input) { return input.value; });
+    }
 
-        return {
-          selected: selected,
-          giorno_settimana: Number(dayCard.dataset.day),
-          fasce: slots,
-          intervalli: intervals
-        };
-      });
+    function sharedTimeValues() {
+      return {
+        start: startInput ? startInput.value.trim() : "",
+        end: endInput ? endInput.value.trim() : ""
+      };
+    }
+
+    function updateNextDayNote() {
+      if (!nextDayNote) return;
+      const times = sharedTimeValues();
+      const startMinutes = timeToMinutes(times.start);
+      const endMinutes = timeToMinutes(times.end);
+      nextDayNote.hidden = !(
+        startMinutes !== null
+        && endMinutes !== null
+        && endMinutes < startMinutes
+      );
+    }
+
+    function collectSharedPayload() {
+      const times = sharedTimeValues();
+      return buildSharedPayload(
+        selectedDayNumbers(),
+        selectedSlots(),
+        times.start,
+        times.end,
+        Boolean(onCallInput && onCallInput.checked)
+      );
     }
 
     function targetForValidation(validation) {
-      if (!validation || !validation.dayNumber) {
-        return onCallInput
-          || dialog.querySelector("[data-availability-request-day-toggle]");
+      if (!validation) return null;
+      if (validation.code === "select_day") {
+        return dayInputs[0] || onCallInput;
       }
-
-      const dayCard = dialog.querySelector(
-        "[data-availability-request-day][data-day='"
-        + validation.dayNumber
-        + "']"
-      );
-      if (!dayCard) return null;
-
       if (validation.code === "empty_day") {
-        return dayCard.querySelector("[data-availability-request-slot]");
+        return slotInputs[0] || startInput;
       }
-
-      if (Number.isInteger(validation.intervalIndex)) {
-        const rows = dayCard.querySelectorAll(
-          "[data-availability-request-interval]"
-        );
-        return rows[validation.intervalIndex]?.querySelector(
-          "[data-role='start']"
-        ) || null;
+      if (
+        validation.code === "incomplete_interval"
+        || validation.code === "invalid_interval"
+        || validation.code === "invalid_night_interval"
+      ) {
+        return (!startInput?.value ? startInput : endInput) || startInput;
       }
-
-      return dayCard.querySelector("[data-availability-request-day-toggle]");
+      return dayInputs[0] || onCallInput;
     }
 
     function messageForValidation(validation) {
@@ -515,15 +420,22 @@
       return messages[validation.code] || copy.errorGeneric || "";
     }
 
+    function validateSharedSelection(payload) {
+      const times = sharedTimeValues();
+      const hasScheduleCriteria = Boolean(
+        selectedSlots().length || times.start || times.end
+      );
+      if (!selectedDayNumbers().length && hasScheduleCriteria) {
+        return { code: "select_day" };
+      }
+      return validatePayload(payload);
+    }
+
     function resetForm() {
       form.reset();
+      dayInputs.concat(slotInputs).forEach(syncChipState);
       syncOnCallVisualState();
-      refreshSlotVisualStates();
-      dialog.querySelectorAll("[data-availability-request-interval]")
-        .forEach(function (row) { row.remove(); });
-      dialog.querySelectorAll("[data-availability-request-day]")
-        .forEach(function (dayCard) { setDayExpanded(dayCard, false); });
-      refreshIntervalAddButtons();
+      updateNextDayNote();
       clearError();
       form.hidden = false;
       if (successBox) successBox.hidden = true;
@@ -541,6 +453,15 @@
       const body = documentRef.body;
       if (!bodyWasOverflowHidden) body.classList.remove("overflow-hidden");
       if (!bodyWasModalOpen) body.classList.remove("modal-open");
+    }
+
+    function rootRequestAnimationFrame(callback) {
+      const view = documentRef.defaultView;
+      if (view && typeof view.requestAnimationFrame === "function") {
+        view.requestAnimationFrame(callback);
+      } else {
+        callback();
+      }
     }
 
     function openDialog(trigger) {
@@ -563,10 +484,7 @@
       documentRef.addEventListener("keydown", handleKeydown);
 
       rootRequestAnimationFrame(function () {
-        const firstDay = dialog.querySelector(
-          "[data-availability-request-day-toggle]"
-        );
-        (firstDay || sheet)?.focus({ preventScroll: true });
+        (dayInputs[0] || sheet)?.focus({ preventScroll: true });
       });
     }
 
@@ -585,15 +503,6 @@
         previousFocus.focus({ preventScroll: true });
       }
       previousFocus = null;
-    }
-
-    function rootRequestAnimationFrame(callback) {
-      const view = documentRef.defaultView;
-      if (view && typeof view.requestAnimationFrame === "function") {
-        view.requestAnimationFrame(callback);
-      } else {
-        callback();
-      }
     }
 
     function handleKeydown(event) {
@@ -639,16 +548,20 @@
       if (busy) return;
       clearError();
 
-      const payload = buildPayload(
-        collectDayStates(),
-        Boolean(onCallInput && onCallInput.checked)
-      );
-      const validation = validatePayload(payload);
+      const payload = collectSharedPayload();
+      const validation = validateSharedSelection(payload);
       if (validation) {
-        showError(
-          messageForValidation(validation),
-          targetForValidation(validation)
-        );
+        const target = targetForValidation(validation);
+        const message = messageForValidation(validation);
+        if (
+          target
+          && (target === startInput || target === endInput)
+          && typeof target.setCustomValidity === "function"
+        ) {
+          target.setCustomValidity(message);
+          target.setAttribute("aria-invalid", "true");
+        }
+        showError(message, target);
         return;
       }
 
@@ -729,53 +642,29 @@
       if (event.target === dialog) closeDialog();
     });
 
-    dialog.querySelectorAll("[data-availability-request-day]")
-      .forEach(function (dayCard) {
-        const toggle = dayCard.querySelector(
-          "[data-availability-request-day-toggle]"
-        );
-        const addButton = dayCard.querySelector(
-          "[data-availability-request-add-interval]"
-        );
-
-        toggle?.addEventListener("change", function () {
-          setDayExpanded(dayCard, toggle.checked);
-        });
-
-        addButton?.addEventListener("click", function () {
-          if (toggle && !toggle.checked) {
-            toggle.checked = true;
-            setDayExpanded(dayCard, true);
-          }
-          addInterval(dayCard);
-        });
+    dayInputs.concat(slotInputs).forEach(function (input) {
+      input.addEventListener("change", function () {
+        syncChipState(input);
+        clearError();
       });
-
-    dialog.querySelectorAll("[data-availability-request-slot]")
-      .forEach(function (input) {
-        input.addEventListener("change", function () {
-          syncSlotVisualState(input);
-        });
-      });
+    });
 
     onCallInput?.addEventListener("change", function () {
       syncOnCallVisualState();
       clearError();
     });
 
-    dialog.addEventListener("click", function (event) {
-      const removeButton = event.target.closest(
-        "[data-availability-request-remove-interval]"
-      );
-      if (!removeButton) return;
-      removeButton.closest("[data-availability-request-interval]")?.remove();
-      clearError();
-      refreshIntervalAddButtons();
+    [startInput, endInput].forEach(function (input) {
+      input?.addEventListener("input", function () {
+        clearError();
+        updateNextDayNote();
+      });
+      input?.addEventListener("change", updateNextDayNote);
     });
 
+    dayInputs.concat(slotInputs).forEach(syncChipState);
     syncOnCallVisualState();
-    refreshSlotVisualStates();
-    refreshIntervalAddButtons();
+    updateNextDayNote();
     form.addEventListener("submit", submitRequest);
   }
 
@@ -785,6 +674,7 @@
     MAX_INTERVALS_TOTAL: MAX_INTERVALS_TOTAL,
     intervalLimitCode: intervalLimitCode,
     buildPayload: buildPayload,
+    buildSharedPayload: buildSharedPayload,
     validatePayload: validatePayload,
     timeToMinutes: timeToMinutes,
     init: init

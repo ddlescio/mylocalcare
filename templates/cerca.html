@@ -292,6 +292,7 @@
               <input type="time"
                      id="disponibilita-dalle"
                      name="disponibilita_dalle"
+                     step="60"
                      value="{{ request.args.get('disponibilita_dalle', '') }}"
                      aria-describedby="disponibilita-orari-aiuto disponibilita-orari-errore"
                      data-availability-detail-input
@@ -302,6 +303,7 @@
               <input type="time"
                      id="disponibilita-alle"
                      name="disponibilita_alle"
+                     step="60"
                      value="{{ request.args.get('disponibilita_alle', '') }}"
                      aria-describedby="disponibilita-orari-aiuto disponibilita-orari-errore"
                      data-availability-detail-input
