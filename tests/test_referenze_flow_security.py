@@ -1,9 +1,21 @@
 import ast
 import copy
+from datetime import datetime, timedelta, timezone
+import json
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+
+from flask import Flask, flash, redirect, request, session
+
+from referenze import (
+    REFERENCE_CONSENT_VERSION,
+    REFERENCE_KEY_ID,
+    decrypt_reference_phone,
+    encrypt_reference_phone,
+    normalize_reference_payload,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +45,34 @@ def load_function(name, namespace):
         namespace,
     )
     return namespace[name]
+
+
+def load_reference_bootstrap(connect):
+    source = (ROOT / "init_db.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    function = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "crea_tabelle_referenze"
+    )
+    namespace = {
+        "IS_POSTGRES": False,
+        "get_conn": connect,
+        "sql": lambda query: query,
+        "dt_col": lambda default=False: (
+            "TEXT DEFAULT CURRENT_TIMESTAMP" if default else "TEXT"
+        ),
+    }
+    exec(
+        compile(
+            ast.Module(body=[function], type_ignores=[]),
+            "init_db.py",
+            "exec",
+        ),
+        namespace,
+    )
+    return namespace["crea_tabelle_referenze"]
 
 
 class ReferenceFlowSecuritySourceTest(unittest.TestCase):
@@ -183,6 +223,248 @@ class ReferenceEmailFailurePersistenceTest(unittest.TestCase):
 
         self.assertEqual(error, "Invio email non riuscito")
         self.assertEqual(event_type, "invio_email_fallito")
+
+
+class ReferenceReplyPersistenceTest(unittest.TestCase):
+    MASTER_SECRET = bytes(range(32))
+
+    def setUp(self):
+        temporary = tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False)
+        temporary.close()
+        self.database_path = Path(temporary.name)
+
+        def connect():
+            connection = sqlite3.connect(self.database_path)
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            return connection
+
+        setup_connection = connect()
+        setup_connection.executescript("""
+            CREATE TABLE utenti (
+                id INTEGER PRIMARY KEY,
+                username TEXT,
+                lingua_interfaccia TEXT
+            );
+            INSERT INTO utenti (id, username, lingua_interfaccia)
+            VALUES (1, 'owner', 'it');
+        """)
+        setup_connection.commit()
+        setup_connection.close()
+        load_reference_bootstrap(connect)()
+
+        self.connection = connect()
+        self.reference_id = self.connection.execute("""
+            INSERT INTO referenze (
+                utente_id, categoria_slug, tipo_rapporto,
+                stato_risposta, stato_verifica, created_at, updated_at
+            ) VALUES (
+                1, 'babysitter', 'famiglia',
+                'in_attesa', 'non_esaminata',
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """).lastrowid
+        self.connection.execute("""
+            INSERT INTO referenze_contatti (
+                referenza_id, token_hash, token_expires_at,
+                email_cifrata, email_nonce, email_tag,
+                email_key_id, email_hash,
+                created_at, updated_at
+            ) VALUES (
+                ?, 'reply-token-hash', '2099-01-01T00:00:00+00:00',
+                'fixture-cipher', 'fixture-nonce', 'fixture-tag',
+                'references-pii-legacy-test', 'fixture-hash',
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """, (self.reference_id,))
+        self.connection.commit()
+
+        app = Flask(__name__)
+        app.secret_key = "reference-reply-test-secret"
+        app.config["IS_POSTGRES"] = False
+        self.app = app
+
+        def session_row(cursor):
+            cursor.execute("""
+                SELECT r.*, c.token_hash, c.token_expires_at,
+                       c.token_consumed_at, c.email_key_id,
+                       u.username AS utente_username,
+                       COALESCE(u.lingua_interfaccia, 'it')
+                           AS utente_lingua_interfaccia
+                FROM referenze r
+                JOIN referenze_contatti c ON c.referenza_id = r.id
+                JOIN utenti u ON u.id = r.utente_id
+                WHERE r.id = ?
+            """, (self.reference_id,))
+            return cursor.fetchone()
+
+        def rollback(cursor):
+            try:
+                cursor.execute("ROLLBACK")
+            except sqlite3.OperationalError:
+                pass
+
+        namespace = {
+            "app": app,
+            "request": request,
+            "session": session,
+            "flash": flash,
+            "redirect": redirect,
+            "render_template": (
+                lambda template, **kwargs: f"rendered:{template}"
+            ),
+            "url_for": lambda endpoint, **kwargs: f"/{endpoint}",
+            "get_db_connection": lambda: self.connection,
+            "get_cursor": lambda connection: connection.cursor(),
+            "_referenza_session_row": session_row,
+            "_referenza_presenta_privata": lambda row: dict(row),
+            "_referenze_categorie": lambda cursor, user_id: [{
+                "slug": "babysitter",
+                "label": "Babysitter",
+            }],
+            "_referenze_categoria_label": lambda slug: slug.title(),
+            "verify_csrf": lambda: None,
+            "_referenza_bool": lambda value: str(value).casefold() in {
+                "1", "true", "on",
+            },
+            "normalize_reference_payload": normalize_reference_payload,
+            "encrypt_reference_phone": encrypt_reference_phone,
+            "MASTER_SECRET": self.MASTER_SECRET,
+            "REFERENCE_CONSENT_VERSION": REFERENCE_CONSENT_VERSION,
+            "REFERENCE_KEY_ID": REFERENCE_KEY_ID,
+            "datetime": datetime,
+            "timezone": timezone,
+            "timedelta": timedelta,
+            "_schede_profilo_begin": (
+                lambda cursor: cursor.execute("BEGIN IMMEDIATE")
+            ),
+            "_schede_profilo_commit": lambda cursor: cursor.execute("COMMIT"),
+            "_schede_profilo_rollback": rollback,
+            "sql": lambda query: query,
+            "json": json,
+            "invalidate_admin_counters": lambda: None,
+            "normalize_language": lambda value: value or "it",
+            "translate": lambda key, language: key,
+            "_crea_notifica": lambda *args, **kwargs: None,
+            "emit_update_notifications": lambda user_id: None,
+            "log_exception_safe": lambda *args, **kwargs: None,
+            "_referenza_ui_message": lambda message, language=None: message,
+        }
+        load_function("_referenza_evento", namespace)
+        self.route = load_function("referenza_rispondi", namespace)
+
+    def tearDown(self):
+        self.connection.close()
+        self.database_path.unlink(missing_ok=True)
+
+    def submit(self, *, direct="1", consent="on", phone="+39 333 123 4567"):
+        data = {
+            "consenso_trattamento": "on",
+            "categoria_slug": "babysitter",
+            "tipo_rapporto": "famiglia",
+            "durata_fascia": "6_12_mesi",
+            "esperienza_diretta": direct,
+            "testo_referente": "Collaborazione confermata.",
+        }
+        if phone is not None:
+            data["referente_telefono"] = phone
+        if consent is not None:
+            data["autorizza_contatto_verifica"] = consent
+        with self.app.test_request_context(
+            "/referenze/rispondi",
+            method="POST",
+            data=data,
+        ):
+            session["referenza_access"] = {
+                "id": self.reference_id,
+                "token_hash": "reply-token-hash",
+            }
+            return self.route()
+
+    def test_post_salva_telefono_solo_cifrato_e_consuma_token(self):
+        response = self.submit()
+        self.assertEqual(response.status_code, 200)
+        reference = self.connection.execute(
+            "SELECT * FROM referenze WHERE id = ?", (self.reference_id,)
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        event = self.connection.execute(
+            "SELECT * FROM referenze_eventi WHERE referenza_id = ?",
+            (self.reference_id,),
+        ).fetchone()
+
+        self.assertEqual(reference["stato_risposta"], "risposta_ricevuta")
+        self.assertEqual(reference["stato_verifica"], "in_coda")
+        self.assertEqual(reference["consenso_versione"], "references_2026_v2")
+        self.assertNotIn("333", contact["telefono_cifrato"])
+        self.assertEqual(
+            decrypt_reference_phone(
+                contact["telefono_cifrato"],
+                contact["telefono_nonce"],
+                contact["telefono_tag"],
+                self.MASTER_SECRET,
+                key_id="references-pii-legacy-test",
+            ),
+            "+39 333 123 4567",
+        )
+        self.assertIsNotNone(contact["token_consumed_at"])
+        self.assertEqual(event["attore_tipo"], "referente")
+        self.assertIsNotNone(event["created_at"])
+
+    def test_rifiuto_azzera_consenso_e_non_salva_telefono(self):
+        response = self.submit(direct="0", consent="on")
+        self.assertEqual(response.status_code, 200)
+        reference = self.connection.execute(
+            "SELECT * FROM referenze WHERE id = ?", (self.reference_id,)
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        self.assertEqual(reference["stato_risposta"], "rifiutata")
+        self.assertEqual(reference["autorizza_contatto_verifica"], 0)
+        self.assertIsNone(reference["autorizzazione_contatto_at"])
+        self.assertIsNone(contact["telefono_cifrato"])
+
+    def test_senza_consenso_e_senza_telefono_invia_la_risposta(self):
+        response = self.submit(consent=None, phone=None)
+        self.assertEqual(response.status_code, 200)
+        reference = self.connection.execute(
+            "SELECT * FROM referenze WHERE id = ?", (self.reference_id,)
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        self.assertEqual(reference["stato_risposta"], "risposta_ricevuta")
+        self.assertEqual(reference["autorizza_contatto_verifica"], 0)
+        self.assertIsNone(contact["telefono_cifrato"])
+
+    def test_telefono_senza_consenso_non_viene_salvato(self):
+        response = self.submit(consent=None, phone="+39 333 123 4567")
+        self.assertEqual(response.status_code, 302)
+        reference = self.connection.execute(
+            "SELECT * FROM referenze WHERE id = ?", (self.reference_id,)
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        self.assertEqual(reference["stato_risposta"], "in_attesa")
+        self.assertIsNone(contact["telefono_cifrato"])
+        self.assertIsNone(contact["token_consumed_at"])
+
+    def test_consenso_senza_telefono_non_viene_salvato(self):
+        response = self.submit(consent="on", phone=None)
+        self.assertEqual(response.status_code, 302)
+        reference = self.connection.execute(
+            "SELECT stato_risposta FROM referenze WHERE id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        self.assertEqual(reference["stato_risposta"], "in_attesa")
 
 
 if __name__ == "__main__":

@@ -71,6 +71,10 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
             "autorizza_contatto_verifica": 1,
             "autorizza_pubblicazione": 1,
             "esperienza_diretta": 1,
+            "telefono_cifrato": "cipher",
+            "telefono_nonce": "nonce",
+            "telefono_tag": "tag",
+            "contatto_purged_at": None,
         }
         reference.update(changes)
         return reference
@@ -104,7 +108,7 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
                 validate(
                     without_consent,
                     stato=state,
-                    metodo="email",
+                    metodo="telefono",
                     nota_admin="Riscontro effettuato",
                     nota_pubblica="",
                 )
@@ -121,6 +125,10 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
 
     def test_verified_requires_direct_experience_and_real_contact_method(self):
         validate = self.backend["_referenza_admin_validate_decision"]
+        self.assertEqual(
+            self.backend["REFERENCE_ADMIN_CONTACT_METHODS"],
+            {"telefono"},
+        )
         with self.assertRaisesRegex(ValueError, "Indica come"):
             validate(
                 self.valid_reference(),
@@ -129,11 +137,28 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
                 nota_admin="",
                 nota_pubblica="",
             )
+
+        telephone = validate(
+            self.valid_reference(),
+            stato="verificata",
+            metodo="telefono",
+            nota_admin="Contatto telefonico concluso",
+            nota_pubblica="",
+        )
+        self.assertEqual(telephone["metodo"], "telefono")
+        with self.assertRaisesRegex(ValueError, "Metodo di controllo"):
+            validate(
+                self.valid_reference(),
+                stato="verificata",
+                metodo="email",
+                nota_admin="",
+                nota_pubblica="",
+            )
         with self.assertRaisesRegex(ValueError, "esperienza diretta"):
             validate(
                 self.valid_reference(esperienza_diretta=0),
                 stato="verificata",
-                metodo="email",
+                metodo="telefono",
                 nota_admin="",
                 nota_pubblica="",
             )
@@ -148,7 +173,7 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
             validate(
                 purged,
                 stato="verificata",
-                metodo="email",
+                metodo="telefono",
                 nota_admin="",
                 nota_pubblica="",
             )
@@ -165,13 +190,17 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
 
     def test_missing_contact_data_can_only_be_marked_non_verifiable(self):
         validate = self.backend["_referenza_admin_validate_decision"]
-        unavailable = self.valid_reference(contatto_disponibile=0)
+        unavailable = self.valid_reference(
+            telefono_cifrato=None,
+            telefono_nonce=None,
+            telefono_tag=None,
+        )
 
         with self.assertRaisesRegex(ValueError, "dati di contatto"):
             validate(
                 unavailable,
                 stato="non_confermata",
-                metodo="email",
+                metodo="telefono",
                 nota_admin="Il recapito non è disponibile.",
                 nota_pubblica="",
             )
@@ -194,7 +223,7 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
                 validate(
                     self.valid_reference(),
                     stato=state,
-                    metodo="email",
+                    metodo="telefono",
                     nota_admin="",
                     nota_pubblica="",
                 )
@@ -212,7 +241,7 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
                 validate(
                     self.valid_reference(),
                     stato="verificata",
-                    metodo="email",
+                    metodo="telefono",
                     nota_admin="",
                     nota_pubblica=note,
                 )
@@ -242,7 +271,7 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
         contradicted = validate(
             self.valid_reference(),
             stato="non_confermata",
-            metodo="email",
+            metodo="telefono",
             nota_admin="Il rapporto non è stato confermato.",
             nota_pubblica="",
             approva_pubblicazione="1",
@@ -265,6 +294,73 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
         self.assertEqual(event["titolo"], "Esito admin registrato")
         self.assertIn("non verificabile", event["dettaglio"])
         self.assertNotIn("sensibile", event["dettaglio"])
+
+
+class ReferenzeContactPresentationTest(unittest.TestCase):
+    def test_phone_is_decrypted_only_for_admin_and_email_only_for_invite(self):
+        function = _app_node("_referenza_decrypt_contact")
+        namespace = {
+            "decrypt_reference_email": lambda *args, **kwargs: (
+                "invite@example.test"
+            ),
+            "decrypt_reference_name": lambda *args, **kwargs: "Mario Rossi",
+            "decrypt_reference_phone": lambda *args, **kwargs: (
+                "+39 333 123 4567"
+            ),
+            "decrypt_invitation_message": lambda *args, **kwargs: "",
+            "MASTER_SECRET": bytes(range(32)),
+            "REFERENCE_KEY_ID": "references-pii-v1",
+            "log_exception_safe": lambda *args, **kwargs: None,
+        }
+        exec(
+            compile(
+                ast.Module(body=[function], type_ignores=[]),
+                "app.py",
+                "exec",
+            ),
+            namespace,
+        )
+        present = namespace["_referenza_decrypt_contact"]
+        row = {
+            "id": 9,
+            "autorizza_contatto_verifica": 1,
+            "email_cifrata": "email-cipher",
+            "email_nonce": "email-nonce",
+            "email_tag": "email-tag",
+            "email_key_id": "references-pii-v1",
+            "nome_cifrato": "name-cipher",
+            "nome_nonce": "name-nonce",
+            "nome_tag": "name-tag",
+            "telefono_cifrato": "phone-cipher",
+            "telefono_nonce": "phone-nonce",
+            "telefono_tag": "phone-tag",
+            "contatto_purged_at": None,
+        }
+
+        invitation_view = present(row)
+        self.assertEqual(
+            invitation_view["referente_email"],
+            "invite@example.test",
+        )
+        self.assertEqual(invitation_view["referente_telefono"], "")
+
+        admin_view = present(
+            row,
+            include_admin_phone=True,
+            include_invitation_email=False,
+        )
+        self.assertEqual(admin_view["referente_email"], "")
+        self.assertEqual(
+            admin_view["referente_telefono"],
+            "+39 333 123 4567",
+        )
+
+        no_consent = present(
+            {**row, "autorizza_contatto_verifica": 0},
+            include_admin_phone=True,
+            include_invitation_email=False,
+        )
+        self.assertEqual(no_consent["referente_telefono"], "")
 
 
 class ReferenzeAdminPersistenceTest(unittest.TestCase):
@@ -313,6 +409,9 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
                 nome_cifrato TEXT,
                 nome_nonce TEXT,
                 nome_tag TEXT,
+                telefono_cifrato TEXT,
+                telefono_nonce TEXT,
+                telefono_tag TEXT,
                 contatto_purged_at TEXT
             );
             CREATE TABLE utenti (
@@ -333,8 +432,12 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
         self.connection.execute("""
             INSERT INTO referenze_contatti (
                 referenza_id, email_cifrata, email_nonce, email_tag,
+                telefono_cifrato, telefono_nonce, telefono_tag,
                 contatto_purged_at
-            ) VALUES (10, 'cipher', 'nonce', 'tag', NULL)
+            ) VALUES (
+                10, 'email-cipher', 'email-nonce', 'email-tag',
+                'phone-cipher', 'phone-nonce', 'phone-tag', NULL
+            )
         """)
         self.connection.execute(
             "INSERT INTO utenti (id, lingua_interfaccia) VALUES (7, 'it')"
@@ -382,7 +485,10 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
             "get_cursor": lambda connection: connection.cursor(),
             "_referenze_tables_exist": lambda cursor: True,
             "_referenza_decrypt_contact": (
-                lambda row: {**dict(row), "referente_nome": "Mario Rossi"}
+                lambda row, **kwargs: {
+                    **dict(row),
+                    "referente_nome": "Mario Rossi",
+                }
             ),
             "_schede_profilo_begin": (
                 lambda cursor: cursor.execute("BEGIN IMMEDIATE")
@@ -431,7 +537,7 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
         form = {
             "versione": "2",
             "stato_verifica": "verificata",
-            "metodo_verifica": "email",
+            "metodo_verifica": "telefono",
             "nota_admin": "Contatto concluso",
             "nota_pubblica": "Rapporto confermato dal referente.",
         }
@@ -452,7 +558,7 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
         self.assertEqual(row["stato_verifica"], "verificata")
         self.assertEqual(row["versione"], 3)
         self.assertEqual(row["verificata_da_admin_id"], 99)
-        self.assertEqual(row["metodo_verifica"], "email")
+        self.assertEqual(row["metodo_verifica"], "telefono")
         self.assertIsNotNone(row["verificata_at"])
         self.assertEqual(event["tipo_evento"], "verifica_admin_registrata")
         self.assertEqual(event["attore_utente_id"], 99)
@@ -483,7 +589,7 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
         self.namespace["request"].form = {
             "versione": "1",
             "stato_verifica": "verificata",
-            "metodo_verifica": "email",
+            "metodo_verifica": "telefono",
             "nota_admin": "",
             "nota_pubblica": "",
         }
@@ -547,6 +653,17 @@ class ReferenzeAdminRouteContractTest(unittest.TestCase):
                 and node.name == "admin_referenza_verifica"
             ),
         )
+        list_source = ast.get_source_segment(
+            APP_SOURCE,
+            next(
+                node for node in APP_TREE.body
+                if isinstance(node, ast.FunctionDef)
+                and node.name == "admin_referenze"
+            ),
+        )
+        self.assertIn("include_invitation_email=False", list_source)
+        self.assertIn("include_invitation_email=False", post_source)
+        self.assertIn("c.telefono_cifrato IS NOT NULL", post_source)
         for marker in (
             "verify_csrf()",
             "AND versione = ?",

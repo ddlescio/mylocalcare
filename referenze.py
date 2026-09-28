@@ -101,7 +101,7 @@ VERIFICATION_METHOD_LABELS = {
     "altro": "Altro riscontro",
 }
 
-REFERENCE_CONSENT_VERSION = "references_2026_v1"
+REFERENCE_CONSENT_VERSION = "references_2026_v2"
 REFERENCE_KEY_ID = "references-pii-v1"
 REFERENCE_TOKEN_BYTES = 32
 
@@ -112,6 +112,7 @@ _EMAIL_RE = re.compile(
     r"(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+$",
     re.IGNORECASE,
 )
+_PHONE_RE = re.compile(r"^[0-9+().\s/\-]+$")
 _PUBLIC_CONTACT_PATTERNS = (
     re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE),
     re.compile(r"(?:\+?\d[\s().-]*){8,}"),
@@ -335,6 +336,68 @@ def decrypt_reference_name(
     )
 
 
+def normalize_reference_phone(phone: str | None) -> str | None:
+    """Normalizza un recapito telefonico facoltativo senza renderlo cercabile.
+
+    Conserviamo una formattazione leggibile per l'admin, ma imponiamo i limiti
+    internazionali usuali (massimo 15 cifre) e un insieme ristretto di
+    separatori. Il numero non viene mai trasformato in hash: non serve alcuna
+    ricerca per telefono e così riduciamo i dati correlabili nel database.
+    """
+
+    normalized = " ".join(str(phone or "").strip().split())
+    if not normalized:
+        return None
+    if len(normalized) > 40 or not _PHONE_RE.fullmatch(normalized):
+        raise ValueError("Numero di telefono del referente non valido.")
+    if normalized.count("+") > 1 or ("+" in normalized and not normalized.startswith("+")):
+        raise ValueError("Numero di telefono del referente non valido.")
+    digit_count = sum(character.isdigit() for character in normalized)
+    if digit_count < 7 or digit_count > 15:
+        raise ValueError("Numero di telefono del referente non valido.")
+    return normalized
+
+
+def encrypt_reference_phone(
+    phone: str,
+    master_secret: str | bytes,
+    *,
+    key_id: str = REFERENCE_KEY_ID,
+) -> dict[str, str]:
+    normalized = normalize_reference_phone(phone)
+    if not normalized:
+        raise ValueError("Numero di telefono del referente mancante.")
+    encrypted = _encrypt_private_text(
+        normalized,
+        master_secret,
+        field="phone",
+        key_id=key_id,
+    )
+    return {
+        "telefono_cifrato": encrypted["cifrato"],
+        "telefono_nonce": encrypted["nonce"],
+        "telefono_tag": encrypted["tag"],
+    }
+
+
+def decrypt_reference_phone(
+    telefono_cifrato: str,
+    telefono_nonce: str,
+    telefono_tag: str,
+    master_secret: str | bytes,
+    *,
+    key_id: str = REFERENCE_KEY_ID,
+) -> str:
+    return _decrypt_private_text(
+        telefono_cifrato,
+        telefono_nonce,
+        telefono_tag,
+        master_secret,
+        field="phone",
+        key_id=key_id,
+    )
+
+
 def encrypt_invitation_message(
     message: str,
     master_secret: str | bytes,
@@ -464,19 +527,43 @@ def normalize_reference_payload(
             "La pubblicazione del testo richiede una referenza pubblicabile."
         )
 
+    direct_experience = _as_bool(payload.get("esperienza_diretta"))
+    contact_allowed = _as_bool(
+        payload.get("autorizza_contatto_verifica")
+        if "autorizza_contatto_verifica" in payload
+        else payload.get("consenso_contatto")
+    )
+    raw_referee_phone = " ".join(
+        str(payload.get("referente_telefono") or "").strip().split()
+    )
+    # Se il referente non conferma l'esperienza, nessun recapito deve essere
+    # conservato anche quando un client obsoleto invia ancora questi campi.
+    if not direct_experience:
+        contact_allowed = False
+        referee_phone = None
+    else:
+        has_phone = bool(raw_referee_phone)
+        if contact_allowed != has_phone:
+            raise ValueError(
+                "Consenso al ricontatto telefonico e numero di telefono "
+                "devono essere indicati insieme."
+            )
+        referee_phone = (
+            normalize_reference_phone(raw_referee_phone)
+            if contact_allowed
+            else None
+        )
+
     return {
         "categoria_slug": category,
         "tipo_rapporto": relation,
         "anno_inizio": start_year,
         "anno_fine": end_year,
         "durata_fascia": duration,
-        "esperienza_diretta": _as_bool(payload.get("esperienza_diretta")),
+        "esperienza_diretta": direct_experience,
         "testo_referente": statement or None,
-        "autorizza_contatto_verifica": _as_bool(
-            payload.get("autorizza_contatto_verifica")
-            if "autorizza_contatto_verifica" in payload
-            else payload.get("consenso_contatto")
-        ),
+        "autorizza_contatto_verifica": contact_allowed,
+        "referente_telefono": referee_phone,
         "autorizza_pubblicazione": publish,
         "autorizza_testo_pubblico": publish_statement,
     }

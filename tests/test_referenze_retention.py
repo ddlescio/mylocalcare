@@ -106,13 +106,16 @@ class ReferenceRetentionTest(unittest.TestCase):
                 referenza_id,
                 email_cifrata, email_nonce, email_tag, email_key_id, email_hash,
                 nome_cifrato, nome_nonce, nome_tag,
+                telefono_cifrato, telefono_nonce, telefono_tag,
                 messaggio_invito_cifrato, messaggio_invito_nonce,
                 messaggio_invito_tag,
                 token_hash, token_expires_at, contatto_purge_at,
                 created_at, updated_at
             ) VALUES (
                 ?, 'email', 'nonce', 'tag', 'key', 'hash',
-                'nome', 'nonce', 'tag', 'messaggio', 'nonce', 'tag',
+                'nome', 'nonce', 'tag',
+                'telefono', 'nonce', 'tag',
+                'messaggio', 'nonce', 'tag',
                 'token', '2020-01-01T00:00:00+00:00',
                 '2020-02-01T00:00:00+00:00',
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
@@ -143,6 +146,7 @@ class ReferenceRetentionTest(unittest.TestCase):
         for field in (
             "email_cifrata", "email_nonce", "email_tag", "email_key_id",
             "email_hash", "nome_cifrato", "nome_nonce", "nome_tag",
+            "telefono_cifrato", "telefono_nonce", "telefono_tag",
             "messaggio_invito_cifrato", "messaggio_invito_nonce",
             "messaggio_invito_tag", "token_hash", "token_expires_at",
         ):

@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS referenze (
     cancellata_at TIMESTAMPTZ,
     verificata_da_admin_id INTEGER
         REFERENCES utenti(id) ON DELETE SET NULL,
+    -- email/altro sono valori storici; le nuove verifiche applicative
+    -- consentono come ricontatto soltanto il telefono autorizzato.
     metodo_verifica TEXT NOT NULL DEFAULT 'nessuno' CHECK (
         metodo_verifica IN ('nessuno', 'email', 'telefono', 'altro')
     ),
@@ -138,6 +140,9 @@ CREATE TABLE IF NOT EXISTS referenze_contatti (
     nome_cifrato TEXT,
     nome_nonce TEXT,
     nome_tag TEXT,
+    telefono_cifrato TEXT,
+    telefono_nonce TEXT,
+    telefono_tag TEXT,
     messaggio_invito_cifrato TEXT,
     messaggio_invito_nonce TEXT,
     messaggio_invito_tag TEXT,
@@ -172,6 +177,19 @@ CREATE TABLE IF NOT EXISTS referenze_contatti (
     ),
     CHECK (
         (
+            telefono_cifrato IS NOT NULL
+            AND telefono_nonce IS NOT NULL
+            AND telefono_tag IS NOT NULL
+        )
+        OR
+        (
+            telefono_cifrato IS NULL
+            AND telefono_nonce IS NULL
+            AND telefono_tag IS NULL
+        )
+    ),
+    CHECK (
+        (
             messaggio_invito_cifrato IS NOT NULL
             AND messaggio_invito_nonce IS NOT NULL
             AND messaggio_invito_tag IS NOT NULL
@@ -197,6 +215,12 @@ ALTER TABLE referenze_contatti
     ADD COLUMN IF NOT EXISTS contatto_purge_at TIMESTAMPTZ;
 ALTER TABLE referenze_contatti
     ADD COLUMN IF NOT EXISTS contatto_purged_at TIMESTAMPTZ;
+ALTER TABLE referenze_contatti
+    ADD COLUMN IF NOT EXISTS telefono_cifrato TEXT;
+ALTER TABLE referenze_contatti
+    ADD COLUMN IF NOT EXISTS telefono_nonce TEXT;
+ALTER TABLE referenze_contatti
+    ADD COLUMN IF NOT EXISTS telefono_tag TEXT;
 
 CREATE TABLE IF NOT EXISTS referenze_eventi (
     id BIGSERIAL PRIMARY KEY,

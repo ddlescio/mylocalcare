@@ -1,15 +1,19 @@
 import unittest
 
 from referenze import (
+    REFERENCE_CONSENT_VERSION,
     decrypt_invitation_message,
     decrypt_reference_email,
     decrypt_reference_name,
+    decrypt_reference_phone,
     encrypt_invitation_message,
     encrypt_reference_email,
     encrypt_reference_name,
+    encrypt_reference_phone,
     generate_reference_token,
     hash_reference_token,
     normalize_reference_payload,
+    normalize_reference_phone,
     reference_email_fingerprint,
     reference_token_matches,
     serialize_public_reference,
@@ -84,6 +88,26 @@ class ReferenceCryptoTest(unittest.TestCase):
         )
         self.assertIsNone(encrypt_invitation_message("  ", MASTER_SECRET))
 
+    def test_telefono_round_trip_senza_valore_in_chiaro_o_hash(self):
+        encrypted = encrypt_reference_phone(
+            "  +39 333 123 4567 ",
+            MASTER_SECRET,
+        )
+        self.assertEqual(
+            set(encrypted),
+            {"telefono_cifrato", "telefono_nonce", "telefono_tag"},
+        )
+        self.assertNotIn("333", encrypted["telefono_cifrato"])
+        self.assertEqual(
+            decrypt_reference_phone(
+                encrypted["telefono_cifrato"],
+                encrypted["telefono_nonce"],
+                encrypted["telefono_tag"],
+                MASTER_SECRET,
+            ),
+            "+39 333 123 4567",
+        )
+
     def test_token_memorizzato_solo_come_hash(self):
         token = generate_reference_token()
         digest = hash_reference_token(token)
@@ -110,6 +134,7 @@ class ReferenceValidationTest(unittest.TestCase):
                 "esperienza_diretta": "on",
                 "testo_referente": "Puntuale e affidabile.",
                 "consenso_contatto": "1",
+                "referente_telefono": "+39 333 123 4567",
                 "autorizza_pubblicazione": True,
                 "autorizza_testo_pubblico": True,
             },
@@ -119,7 +144,52 @@ class ReferenceValidationTest(unittest.TestCase):
         self.assertEqual(normalized["anno_inizio"], 2024)
         self.assertTrue(normalized["esperienza_diretta"])
         self.assertTrue(normalized["autorizza_contatto_verifica"])
+        self.assertEqual(
+            normalized["referente_telefono"],
+            "+39 333 123 4567",
+        )
         self.assertTrue(normalized["autorizza_testo_pubblico"])
+        self.assertEqual(REFERENCE_CONSENT_VERSION, "references_2026_v2")
+
+    def test_telefono_e_validato_e_richiede_consenso_abbinato(self):
+        base = {
+            "categoria_slug": "babysitter",
+            "tipo_rapporto": "famiglia",
+            "durata_fascia": "6_12_mesi",
+            "esperienza_diretta": "1",
+        }
+        self.assertIsNone(normalize_reference_phone("  "))
+        for invalid in (
+            "333-ABC-1234",
+            "+39 +333 1234567",
+            "12345",
+            "+1234567890123456",
+        ):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                normalize_reference_phone(invalid)
+
+        for mismatched in (
+            {"referente_telefono": "+39 333 123 4567"},
+            {"autorizza_contatto_verifica": "on"},
+        ):
+            with self.subTest(mismatched=mismatched), self.assertRaisesRegex(
+                ValueError,
+                "devono essere indicati insieme",
+            ):
+                normalize_reference_payload({**base, **mismatched})
+
+        normalized = normalize_reference_payload(base)
+        self.assertFalse(normalized["autorizza_contatto_verifica"])
+        self.assertIsNone(normalized["referente_telefono"])
+
+        declined = normalize_reference_payload({
+            **base,
+            "esperienza_diretta": "0",
+            "autorizza_contatto_verifica": "on",
+            "referente_telefono": "+39 333 123 4567",
+        })
+        self.assertFalse(declined["autorizza_contatto_verifica"])
+        self.assertIsNone(declined["referente_telefono"])
 
     def test_durata_strutturata_e_limite_messaggio_sono_server_side(self):
         with self.assertRaises(ValueError):
@@ -209,6 +279,7 @@ class ReferenceValidationTest(unittest.TestCase):
             "nota_pubblica": "Rapporto confermato dal referente.",
             "nota_admin": "Non deve uscire.",
             "email_cifrata": "Non deve uscire.",
+            "telefono_cifrato": "Non deve uscire.",
             "revocata_at": None,
             "cancellata_at": None,
         }
@@ -218,6 +289,7 @@ class ReferenceValidationTest(unittest.TestCase):
         self.assertEqual(public["testo_referente"], "Collaborazione positiva.")
         self.assertNotIn("utente_id", public)
         self.assertNotIn("nota_admin", public)
+        self.assertNotIn("telefono_cifrato", public)
         self.assertNotIn("email_cifrata", public)
 
         row["autorizza_testo_pubblico"] = 0

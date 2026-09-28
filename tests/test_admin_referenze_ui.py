@@ -31,9 +31,17 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
         self.assertIn("Dati riservati del referente", self.body)
         self.assertIn("Solo admin", self.body)
         self.assertIn("referente_nome", self.body)
-        self.assertIn("referente_email", self.body)
-        self.assertIn("Contatta il referente", self.body)
-        self.assertIn("referente_email')|urlencode", self.body)
+        self.assertIn("referente_telefono", self.body)
+        self.assertIn("Telefono autorizzato", self.body)
+        self.assertIn("Chiama il referente", self.body)
+        self.assertIn("referente_telefono')|replace(' ', '')", self.body)
+        self.assertIn('href="tel:', self.body)
+        self.assertNotIn('href="mailto:', self.body)
+        self.assertNotIn("Scrivi via email", self.body)
+        self.assertIn(
+            "contatto_disponibile and referenza.get('referente_telefono')",
+            self.body,
+        )
 
     def test_response_consents_and_timeline_are_visible(self):
         for field in (
@@ -59,10 +67,10 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
         self.assertIn('value="non_confermata"', self.body)
         self.assertIn('value="non_verificabile"', self.body)
         self.assertIn('name="metodo_verifica"', self.body)
-        self.assertIn('value="email"', self.body)
-        self.assertNotIn('value="telefono"', self.body)
-        self.assertIn('value="email"', self.body)
-        self.assertIn('value="altro"', self.body)
+        self.assertIn('value="telefono"', self.body)
+        self.assertNotIn('value="email"', self.body)
+        self.assertNotIn('value="altro"', self.body)
+        self.assertIn('method?.value !== "telefono"', self.body)
         self.assertIn('name="nota_admin"', self.body)
         self.assertIn('name="nota_pubblica"', self.body)
 

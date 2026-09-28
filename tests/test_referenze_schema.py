@@ -1,4 +1,5 @@
 import ast
+import re
 import sqlite3
 import tempfile
 import unittest
@@ -106,6 +107,7 @@ class ReferenceSchemaTest(unittest.TestCase):
             {
                 "email_cifrata", "email_nonce", "email_tag", "email_hash",
                 "nome_cifrato", "nome_nonce", "nome_tag",
+                "telefono_cifrato", "telefono_nonce", "telefono_tag",
                 "messaggio_invito_cifrato", "token_hash",
                 "contatto_purge_at", "contatto_purged_at",
             }.issubset(contact_columns)
@@ -155,7 +157,121 @@ class ReferenceSchemaTest(unittest.TestCase):
             "ultimo_errore_invio",
             "contatto_purge_at",
             "contatto_purged_at",
+            "telefono_cifrato",
+            "telefono_nonce",
+            "telefono_tag",
         }.issubset(columns))
+
+    def test_bootstrap_ripara_schema_legacy_e_permette_transizione_post(self):
+        conn = self.connect()
+        conn.executescript("""
+            CREATE TABLE referenze (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                utente_id INTEGER NOT NULL,
+                categoria_slug TEXT NOT NULL,
+                tipo_rapporto TEXT NOT NULL
+            );
+            CREATE TABLE referenze_contatti (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referenza_id INTEGER NOT NULL
+            );
+            CREATE TABLE referenze_eventi (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referenza_id INTEGER NOT NULL,
+                tipo_evento TEXT NOT NULL,
+                attore_tipo TEXT NOT NULL
+            );
+        """)
+        conn.commit()
+        conn.close()
+
+        self.bootstrap()
+        self.bootstrap()
+
+        conn = self.connect()
+        reference_id = conn.execute("""
+            INSERT INTO referenze (
+                utente_id, categoria_slug, tipo_rapporto,
+                stato_risposta, stato_verifica, versione,
+                created_at, updated_at
+            ) VALUES (
+                1, 'babysitter', 'famiglia', 'in_attesa',
+                'non_esaminata', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """).lastrowid
+        conn.execute("""
+            INSERT INTO referenze_contatti (
+                referenza_id, token_hash, token_expires_at,
+                telefono_cifrato, telefono_nonce, telefono_tag,
+                created_at, updated_at
+            ) VALUES (
+                ?, 'token-hash', '2099-01-01T00:00:00+00:00',
+                NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """, (reference_id,))
+
+        updated = conn.execute("""
+            UPDATE referenze
+            SET esperienza_diretta = 1,
+                stato_risposta = 'risposta_ricevuta',
+                stato_verifica = 'in_coda',
+                autorizza_contatto_verifica = 1,
+                consenso_versione = 'references_2026_v2',
+                consenso_trattamento_at = CURRENT_TIMESTAMP,
+                autorizzazione_contatto_at = CURRENT_TIMESTAMP,
+                risposta_at = CURRENT_TIMESTAMP,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND stato_risposta = 'in_attesa'
+              AND EXISTS (
+                  SELECT 1 FROM referenze_contatti c
+                  WHERE c.referenza_id = referenze.id
+                    AND c.token_hash = 'token-hash'
+                    AND c.token_consumed_at IS NULL
+                    AND datetime(c.token_expires_at) > CURRENT_TIMESTAMP
+              )
+        """, (reference_id,))
+        self.assertEqual(updated.rowcount, 1)
+        conn.execute("""
+            UPDATE referenze_contatti
+            SET token_consumed_at = CURRENT_TIMESTAMP,
+                telefono_cifrato = 'cipher',
+                telefono_nonce = 'nonce',
+                telefono_tag = 'tag',
+                contatto_purge_at = '2099-04-01T00:00:00+00:00',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE referenza_id = ? AND token_consumed_at IS NULL
+        """, (reference_id,))
+        conn.execute("""
+            INSERT INTO referenze_eventi (
+                referenza_id, tipo_evento, attore_tipo,
+                dettagli_snapshot, created_at
+            ) VALUES (
+                ?, 'risposta_ricevuta', 'referente', '{}', CURRENT_TIMESTAMP
+            )
+        """, (reference_id,))
+        conn.commit()
+
+        reference = conn.execute(
+            "SELECT * FROM referenze WHERE id = ?", (reference_id,)
+        ).fetchone()
+        contact = conn.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = ?",
+            (reference_id,),
+        ).fetchone()
+        event = conn.execute(
+            "SELECT * FROM referenze_eventi WHERE referenza_id = ?",
+            (reference_id,),
+        ).fetchone()
+        conn.close()
+
+        self.assertEqual(reference["stato_risposta"], "risposta_ricevuta")
+        self.assertEqual(reference["stato_verifica"], "in_coda")
+        self.assertEqual(reference["consenso_versione"], "references_2026_v2")
+        self.assertEqual(contact["telefono_cifrato"], "cipher")
+        self.assertIsNotNone(contact["token_consumed_at"])
+        self.assertEqual(event["attore_tipo"], "referente")
+        self.assertIsNotNone(event["created_at"])
 
     def test_vincoli_privacy_stati_e_cascade(self):
         self.bootstrap()
@@ -226,6 +342,8 @@ class ReferenceSchemaTest(unittest.TestCase):
         self.assertIn("CREATE TABLE IF NOT EXISTS referenze_eventi", migration)
         self.assertIn("email_cifrata TEXT", migration)
         self.assertIn("nome_cifrato TEXT", migration)
+        self.assertIn("telefono_cifrato TEXT", migration)
+        self.assertNotIn("referente_telefono TEXT", migration)
         self.assertIn("messaggio_invito_cifrato TEXT", migration)
         self.assertIn("token_hash TEXT UNIQUE", migration)
         self.assertIn("metodo_verifica", migration)
@@ -246,6 +364,21 @@ class ReferenceSchemaTest(unittest.TestCase):
         self.assertNotIn("referente_email TEXT", migration)
         self.assertIn("TO localcare_app", migration)
         self.assertIn("referenze_eventi_id_seq", migration)
+
+        repair = (
+            ROOT / "migrations" / "20260928_referenze_riparazione.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("ADD COLUMN IF NOT EXISTS risposta_at", repair)
+        self.assertIn("ADD COLUMN IF NOT EXISTS telefono_cifrato", repair)
+        self.assertIn("referenze_contatti_telefono_check_v2", repair)
+        self.assertIn("referenze_eventi_attore_tipo_check_v2", repair)
+        self.assertIn("CREATE UNIQUE INDEX IF NOT EXISTS", repair)
+        self.assertNotIn("referente_telefono TEXT", repair)
+        self.assertNotRegex(repair, r"LOOP\s*\n\s*LOOP")
+        self.assertEqual(
+            len(re.findall(r"^\s*LOOP\s*$", repair, re.MULTILINE)),
+            len(re.findall(r"^\s*END LOOP;\s*$", repair, re.MULTILINE)),
+        )
 
     def test_bootstrap_completo_invoca_referenze(self):
         source = (ROOT / "init_db.py").read_text(encoding="utf-8")

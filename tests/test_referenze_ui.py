@@ -82,7 +82,7 @@ class ReferenzeUiTest(unittest.TestCase):
         for marker in (
             "Inviti e referenze",
             "cifratura applicativa",
-            "Nome, indirizzo email, messaggio di invito e altri recapiti del referente restano riservati",
+            "Nome, indirizzo email, numero di telefono, messaggio di invito e altri recapiti del referente restano riservati",
             "può scegliere volontariamente di indicare un nome",
             "non aggiunge automaticamente al contenuto pubblico il nome",
             "nessuna referenza viene resa pubblica automaticamente",
@@ -96,6 +96,10 @@ class ReferenzeUiTest(unittest.TestCase):
             "30 giorni dopo la scadenza del collegamento",
             "entro 44 giorni dall’invio",
             "non più di 90 giorni",
+            "indicare facoltativamente il proprio numero di telefono",
+            "specifico consenso, svolgere un riscontro amministrativo telefonico",
+            "non come canale proposto per il riscontro della referenza",
+            "l’eventuale numero di telefono autorizzato",
             "le scelte di consenso e le registrazioni essenziali",
         ):
             self.assertIn(marker, self.privacy_source)
@@ -200,7 +204,7 @@ class ReferenzeUiTest(unittest.TestCase):
 
     def test_response_form_can_correct_structured_fields_and_has_separate_consent(self):
         self.assertIn("action=\"{{ url_for('referenza_rispondi') }}\"", self.response_source)
-        self.assertIn('name="token_form"', self.response_source)
+        self.assertNotIn('name="token_form"', self.response_source)
         for name in (
             "categoria_slug",
             "tipo_rapporto",
@@ -209,8 +213,21 @@ class ReferenzeUiTest(unittest.TestCase):
             "durata_fascia",
             "testo_referente",
             "consenso_contatto",
+            "referente_telefono",
         ):
             self.assertIn(f'name="{name}"', self.response_source)
+        self.assertIn('type="tel"', self.response_source)
+        self.assertIn('inputmode="tel"', self.response_source)
+        self.assertIn('autocomplete="tel"', self.response_source)
+        self.assertIn('maxlength="40"', self.response_source)
+        self.assertIn("reference.response.phone_help", self.response_source)
+        self.assertIn("data-reference-contact-consent", self.response_source)
+        self.assertIn("data-reference-contact-details", self.response_source)
+        self.assertIn("consent.required = hasPhone;", self.script_source)
+        self.assertIn("phone.required = consent.checked;", self.script_source)
+        self.assertNotIn("details.hidden =", self.script_source)
+        self.assertNotIn("phone.disabled = !contactAllowed", self.script_source)
+        self.assertIn("phone.disabled = cannotConfirm;", self.script_source)
         self.assertIn('name="autorizza_pubblicazione" value="1"', self.response_source)
         publication_input = self.response_source.split(
             'name="autorizza_pubblicazione"', 1
@@ -280,6 +297,12 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn("max-height: min(92dvh, 58rem);", self.style_source)
         self.assertIn("@media (min-width: 520px)", self.style_source)
         self.assertIn("min-height: 2.75rem", self.style_source)
+
+    def test_reference_fields_do_not_trigger_ios_focus_zoom(self):
+        controls = self.style_source.split(
+            ".reference-field input,", 1
+        )[1].split("}", 1)[0]
+        self.assertIn("font-size: 16px;", controls)
 
     def test_progressive_enhancement_keeps_real_forms(self):
         self.assertIn('method="post"', self.private_source)

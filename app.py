@@ -140,9 +140,11 @@ from referenze import (
     decrypt_invitation_message,
     decrypt_reference_email,
     decrypt_reference_name,
+    decrypt_reference_phone,
     encrypt_invitation_message,
     encrypt_reference_email,
     encrypt_reference_name,
+    encrypt_reference_phone,
     generate_reference_token,
     hash_reference_token,
     normalize_reference_payload,
@@ -6269,7 +6271,7 @@ REFERENCE_ADMIN_DECISION_STATES = {
     "non_confermata",
     "non_verificabile",
 }
-REFERENCE_ADMIN_CONTACT_METHODS = {"email", "altro"}
+REFERENCE_ADMIN_CONTACT_METHODS = {"telefono"}
 REFERENCE_ADMIN_METHODS = REFERENCE_ADMIN_CONTACT_METHODS | {"nessuno"}
 
 
@@ -6370,7 +6372,12 @@ def _referenza_admin_validate_decision(
     contact_available = bool(
         item.get(
             "contatto_disponibile",
-            not bool(item.get("contatto_purged_at")),
+            (
+                not bool(item.get("contatto_purged_at"))
+                and bool(item.get("telefono_cifrato"))
+                and bool(item.get("telefono_nonce"))
+                and bool(item.get("telefono_tag"))
+            ),
         )
     )
     if normalized_state in {"verificata", "non_confermata"}:
@@ -6522,8 +6529,9 @@ def admin_referenze():
             cur.execute(sql(f"""
                 SELECT
                     r.*,
-                    c.email_cifrata, c.email_nonce, c.email_tag,
-                    c.email_key_id, c.nome_cifrato, c.nome_nonce, c.nome_tag,
+                    c.email_key_id,
+                    c.nome_cifrato, c.nome_nonce, c.nome_tag,
+                    c.telefono_cifrato, c.telefono_nonce, c.telefono_tag,
                     c.messaggio_invito_cifrato,
                     c.messaggio_invito_nonce, c.messaggio_invito_tag,
                     c.token_expires_at, c.numero_invii, c.aperto_at,
@@ -6565,13 +6573,19 @@ def admin_referenze():
 
             needle = ricerca.casefold()
             for row in rows:
-                item = _referenza_presenta_privata(row)
+                item = _referenza_presenta_privata(
+                    row,
+                    include_admin_phone=True,
+                    include_invitation_email=False,
+                )
                 item["timeline"] = events_by_reference.get(int(item["id"]), [])
                 item["contatto_verifica_autorizzato"] = bool(
                     item.get("autorizza_contatto_verifica")
+                    and item.get("referente_telefono")
                 )
+                item["referente_email"] = ""
                 if not item["contatto_verifica_autorizzato"]:
-                    item["referente_email"] = ""
+                    item["referente_telefono"] = ""
                 if needle:
                     searchable = " ".join(str(item.get(field) or "") for field in (
                         "username",
@@ -6579,7 +6593,7 @@ def admin_referenze():
                         "cognome",
                         "utente_email",
                         "referente_nome",
-                        "referente_email",
+                        "referente_telefono",
                     )).casefold()
                     if needle not in searchable:
                         continue
@@ -6650,13 +6664,15 @@ def admin_referenza_verifica(referenza_id):
         cur.execute(sql(f"""
             SELECT r.*, c.contatto_purged_at,
                    COALESCE(owner.lingua_interfaccia, 'it') AS utente_lingua_interfaccia,
-                   c.email_cifrata, c.email_nonce, c.email_tag,
-                   c.email_key_id, c.nome_cifrato, c.nome_nonce, c.nome_tag,
+                   c.email_key_id,
+                   c.nome_cifrato, c.nome_nonce, c.nome_tag,
+                   c.telefono_cifrato, c.telefono_nonce, c.telefono_tag,
                    CASE
                        WHEN c.contatto_purged_at IS NULL
-                        AND c.email_cifrata IS NOT NULL
-                        AND c.email_nonce IS NOT NULL
-                        AND c.email_tag IS NOT NULL
+                        AND r.autorizza_contatto_verifica = TRUE
+                        AND c.telefono_cifrato IS NOT NULL
+                        AND c.telefono_nonce IS NOT NULL
+                        AND c.telefono_tag IS NOT NULL
                        THEN TRUE ELSE FALSE
                    END AS contatto_disponibile
             FROM referenze r
@@ -6672,7 +6688,11 @@ def admin_referenza_verifica(referenza_id):
             flash("Referenza non trovata.", "error")
             return redirect(url_for("admin_referenze"))
 
-        reference = _referenza_decrypt_contact(reference)
+        reference = _referenza_decrypt_contact(
+            reference,
+            include_admin_phone=True,
+            include_invitation_email=False,
+        )
         owner_id = int(reference["utente_id"])
         decision = _referenza_admin_validate_decision(
             reference,
@@ -16322,7 +16342,8 @@ def pulisci_referenze_scadute_e_contatti(batch_size=250):
     """Scade gli inviti e rimuove i recapiti cifrati a retention conclusa.
 
     La scheda anonima eventualmente autorizzata resta disponibile, mentre
-    email, nome, messaggio di invito e token vengono eliminati insieme.
+    email, telefono, nome, messaggio di invito e token vengono eliminati
+    insieme.
     """
 
     try:
@@ -16426,6 +16447,9 @@ def pulisci_referenze_scadute_e_contatti(batch_size=250):
                     nome_cifrato = NULL,
                     nome_nonce = NULL,
                     nome_tag = NULL,
+                    telefono_cifrato = NULL,
+                    telefono_nonce = NULL,
+                    telefono_tag = NULL,
                     messaggio_invito_cifrato = NULL,
                     messaggio_invito_nonce = NULL,
                     messaggio_invito_tag = NULL,
@@ -16455,8 +16479,11 @@ def pulisci_referenze_scadute_e_contatti(batch_size=250):
                 cur.execute(sql("""
                     INSERT INTO referenze_eventi (
                         referenza_id, tipo_evento, attore_tipo,
-                        dettagli_snapshot
-                    ) VALUES (?, 'contatti_rimossi_retention', 'sistema', ?)
+                        dettagli_snapshot, created_at
+                    ) VALUES (
+                        ?, 'contatti_rimossi_retention', 'sistema', ?,
+                        CURRENT_TIMESTAMP
+                    )
                 """), (
                     reference_id,
                     json.dumps(
@@ -17874,40 +17901,54 @@ def _referenza_private_state(row):
     return "risposta_ricevuta"
 
 
-def _referenza_decrypt_contact(row):
+def _referenza_decrypt_contact(
+    row,
+    *,
+    include_admin_phone=False,
+    include_invitation_email=True,
+):
     item = dict(row or {})
-    if item.get("contatto_purged_at") or not item.get("email_cifrata"):
-        item["referente_email"] = ""
-        item["referente_nome"] = (
-            "Dati rimossi" if item.get("contatto_purged_at") else "Referente"
-        )
-        item["messaggio_invito"] = ""
-        return item
-    try:
-        item["referente_email"] = decrypt_reference_email(
-            item.get("email_cifrata"),
-            item.get("email_nonce"),
-            item.get("email_tag"),
-            MASTER_SECRET,
-            key_id=item.get("email_key_id") or REFERENCE_KEY_ID,
-        )
-        item["referente_nome"] = decrypt_reference_name(
-            item.get("nome_cifrato"),
-            item.get("nome_nonce"),
-            item.get("nome_tag"),
-            MASTER_SECRET,
-            key_id=item.get("email_key_id") or REFERENCE_KEY_ID,
-        )
-    except Exception as exc:
-        item["referente_email"] = ""
-        item["referente_nome"] = "Referente"
-        log_exception_safe(
-            "Dati referente non decifrabili",
-            exc,
-            {"referenza_id": item.get("id")},
-            production=True,
-        )
+    item["referente_telefono"] = ""
+    item["referente_email"] = ""
+    item["referente_nome"] = "Referente"
     item["messaggio_invito"] = ""
+    if item.get("contatto_purged_at"):
+        item["referente_nome"] = (
+            "Dati rimossi"
+        )
+        return item
+    if include_invitation_email and item.get("email_cifrata"):
+        try:
+            item["referente_email"] = decrypt_reference_email(
+                item.get("email_cifrata"),
+                item.get("email_nonce"),
+                item.get("email_tag"),
+                MASTER_SECRET,
+                key_id=item.get("email_key_id") or REFERENCE_KEY_ID,
+            )
+        except Exception as exc:
+            log_exception_safe(
+                "Email referente non decifrabile",
+                exc,
+                {"referenza_id": item.get("id")},
+                production=True,
+            )
+    if item.get("nome_cifrato"):
+        try:
+            item["referente_nome"] = decrypt_reference_name(
+                item.get("nome_cifrato"),
+                item.get("nome_nonce"),
+                item.get("nome_tag"),
+                MASTER_SECRET,
+                key_id=item.get("email_key_id") or REFERENCE_KEY_ID,
+            )
+        except Exception as exc:
+            log_exception_safe(
+                "Nome referente non decifrabile",
+                exc,
+                {"referenza_id": item.get("id")},
+                production=True,
+            )
     if item.get("messaggio_invito_cifrato"):
         try:
             item["messaggio_invito"] = decrypt_invitation_message(
@@ -17919,11 +17960,44 @@ def _referenza_decrypt_contact(row):
             )
         except Exception:
             item["messaggio_invito"] = ""
+    # Il numero viene raccolto esclusivamente per il controllo interno: non e
+    # mai decifrato nei flussi del proprietario, del referente o pubblici.
+    if (
+        include_admin_phone
+        and item.get("autorizza_contatto_verifica")
+        and item.get("telefono_cifrato")
+        and item.get("telefono_nonce")
+        and item.get("telefono_tag")
+    ):
+        try:
+            item["referente_telefono"] = decrypt_reference_phone(
+                item.get("telefono_cifrato"),
+                item.get("telefono_nonce"),
+                item.get("telefono_tag"),
+                MASTER_SECRET,
+                key_id=item.get("email_key_id") or REFERENCE_KEY_ID,
+            )
+        except Exception as exc:
+            log_exception_safe(
+                "Telefono referente non decifrabile",
+                exc,
+                {"referenza_id": item.get("id")},
+                production=True,
+            )
     return item
 
 
-def _referenza_presenta_privata(row):
-    item = _referenza_decrypt_contact(row)
+def _referenza_presenta_privata(
+    row,
+    *,
+    include_admin_phone=False,
+    include_invitation_email=True,
+):
+    item = _referenza_decrypt_contact(
+        row,
+        include_admin_phone=include_admin_phone,
+        include_invitation_email=include_invitation_email,
+    )
     item["categoria_label"] = _referenze_categoria_label(
         item.get("categoria_slug")
     )
@@ -18041,8 +18115,8 @@ def _referenza_evento(
     cur.execute(sql("""
         INSERT INTO referenze_eventi (
             referenza_id, tipo_evento, attore_tipo,
-            attore_utente_id, dettagli_snapshot
-        ) VALUES (?, ?, ?, ?, ?)
+            attore_utente_id, dettagli_snapshot, created_at
+        ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     """), (
         int(referenza_id),
         str(tipo_evento),
@@ -21132,6 +21206,22 @@ def referenza_rispondi():
         if not direct:
             structured["autorizza_pubblicazione"] = False
             structured["autorizza_testo_pubblico"] = False
+            structured["autorizza_contatto_verifica"] = False
+            structured["referente_telefono"] = None
+        phone_encrypted = {
+            "telefono_cifrato": None,
+            "telefono_nonce": None,
+            "telefono_tag": None,
+        }
+        if (
+            structured["autorizza_contatto_verifica"]
+            and structured.get("referente_telefono")
+        ):
+            phone_encrypted = encrypt_reference_phone(
+                structured["referente_telefono"],
+                MASTER_SECRET,
+                key_id=row["email_key_id"] or REFERENCE_KEY_ID,
+            )
 
         _schede_profilo_begin(cur)
         token_not_expired = (
@@ -21192,9 +21282,15 @@ def referenza_rispondi():
         cur.execute(sql("""
             UPDATE referenze_contatti
             SET token_consumed_at = CURRENT_TIMESTAMP,
+                telefono_cifrato = ?,
+                telefono_nonce = ?,
+                telefono_tag = ?,
                 contatto_purge_at = ?, updated_at = CURRENT_TIMESTAMP
             WHERE referenza_id = ? AND token_consumed_at IS NULL
         """), (
+            phone_encrypted["telefono_cifrato"],
+            phone_encrypted["telefono_nonce"],
+            phone_encrypted["telefono_tag"],
             (datetime.now(timezone.utc) + timedelta(days=90)).isoformat(),
             reference_id,
         ))
@@ -21222,7 +21318,7 @@ def referenza_rispondi():
 
         try:
             owner_language = normalize_language(
-                row.get("utente_lingua_interfaccia")
+                row["utente_lingua_interfaccia"]
             )
             _crea_notifica(
                 owner_id,

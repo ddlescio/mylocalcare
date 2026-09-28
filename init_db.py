@@ -2325,65 +2325,196 @@ def crea_tabelle_referenze():
         """))
 
         if IS_POSTGRES:
+            # ``CREATE TABLE IF NOT EXISTS`` non completa una tabella nata da
+            # una versione precedente del rollout.  L'invito usa poche colonne,
+            # mentre la risposta scrive consensi, stati e timestamp aggiuntivi:
+            # garantiamo quindi tutto il contratto di persistenza del POST.
+            additive_reference_columns = {
+                "anno_inizio": "INTEGER",
+                "anno_fine": "INTEGER",
+                "durata_fascia": "TEXT",
+                "esperienza_diretta": "BOOLEAN NOT NULL DEFAULT FALSE",
+                "testo_referente": "TEXT",
+                "stato_risposta": (
+                    "TEXT NOT NULL DEFAULT 'in_attesa'"
+                ),
+                "stato_verifica": (
+                    "TEXT NOT NULL DEFAULT 'non_esaminata'"
+                ),
+                "autorizza_pubblicazione": (
+                    "BOOLEAN NOT NULL DEFAULT FALSE"
+                ),
+                "autorizza_testo_pubblico": (
+                    "BOOLEAN NOT NULL DEFAULT FALSE"
+                ),
+                "autorizza_contatto_verifica": (
+                    "BOOLEAN NOT NULL DEFAULT FALSE"
+                ),
+                "pubblicazione_approvata_admin": (
+                    "BOOLEAN NOT NULL DEFAULT FALSE"
+                ),
+                "pubblicazione_approvata_at": "TIMESTAMPTZ",
+                "pubblicazione_approvata_da_admin_id": (
+                    "INTEGER REFERENCES utenti(id) ON DELETE SET NULL"
+                ),
+                "visibile_profilo": "BOOLEAN NOT NULL DEFAULT TRUE",
+                "consenso_versione": "TEXT",
+                "consenso_trattamento_at": "TIMESTAMPTZ",
+                "autorizzazione_pubblica_at": "TIMESTAMPTZ",
+                "autorizzazione_testo_at": "TIMESTAMPTZ",
+                "autorizzazione_contatto_at": "TIMESTAMPTZ",
+                "risposta_at": "TIMESTAMPTZ",
+                "verificata_at": "TIMESTAMPTZ",
+                "revocata_at": "TIMESTAMPTZ",
+                "cancellata_at": "TIMESTAMPTZ",
+                "verificata_da_admin_id": (
+                    "INTEGER REFERENCES utenti(id) ON DELETE SET NULL"
+                ),
+                "metodo_verifica": "TEXT NOT NULL DEFAULT 'nessuno'",
+                "nota_admin": "TEXT",
+                "nota_pubblica": "TEXT",
+                "versione": "INTEGER NOT NULL DEFAULT 1",
+                "created_at": (
+                    "TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                ),
+                "updated_at": (
+                    "TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                ),
+            }
+            for column_name, column_type in additive_reference_columns.items():
+                c.execute(sql(
+                    f"ALTER TABLE referenze ADD COLUMN IF NOT EXISTS "
+                    f"{column_name} {column_type}"
+                ))
+
+            # Una tabella legacy puo anche conservare i CHECK della prima
+            # versione.  In quel caso 'in_coda' o 'risposta_ricevuta' vengono
+            # rifiutati soltanto al submit del referente.  Sostituiamo solo i
+            # due enum di stato, lasciando intatti i vincoli privacy.
             c.execute(sql("""
+                DO $reference_state_repair$
+                DECLARE
+                    constraint_row RECORD;
+                BEGIN
+                    FOR constraint_row IN
+                        SELECT con.conname
+                        FROM pg_constraint con
+                        WHERE con.conrelid = 'public.referenze'::regclass
+                          AND con.contype = 'c'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%stato_risposta%'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%in_attesa%'
+                    LOOP
+                        EXECUTE format(
+                            'ALTER TABLE public.referenze DROP CONSTRAINT %I',
+                            constraint_row.conname
+                        );
+                    END LOOP;
+
+                    FOR constraint_row IN
+                        SELECT con.conname
+                        FROM pg_constraint con
+                        WHERE con.conrelid = 'public.referenze'::regclass
+                          AND con.contype = 'c'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%stato_verifica%'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%non_esaminata%'
+                    LOOP
+                        EXECUTE format(
+                            'ALTER TABLE public.referenze DROP CONSTRAINT %I',
+                            constraint_row.conname
+                        );
+                    END LOOP;
+
+                    FOR constraint_row IN
+                        SELECT con.conname
+                        FROM pg_constraint con
+                        WHERE con.conrelid = 'public.referenze'::regclass
+                          AND con.contype = 'c'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%metodo_verifica%'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%nessuno%'
+                    LOOP
+                        EXECUTE format(
+                            'ALTER TABLE public.referenze DROP CONSTRAINT %I',
+                            constraint_row.conname
+                        );
+                    END LOOP;
+                END
+                $reference_state_repair$;
+
                 ALTER TABLE referenze
-                ADD COLUMN IF NOT EXISTS autorizza_contatto_verifica
-                BOOLEAN NOT NULL DEFAULT FALSE;
-            """))
-            c.execute(sql("""
+                    ADD CONSTRAINT referenze_stato_risposta_check_v2 CHECK (
+                        stato_risposta IN (
+                            'in_attesa', 'risposta_ricevuta', 'rifiutata',
+                            'scaduta', 'revocata', 'cancellata'
+                        )
+                    ) NOT VALID;
                 ALTER TABLE referenze
-                ADD COLUMN IF NOT EXISTS autorizzazione_contatto_at
-                TIMESTAMPTZ;
-            """))
-            c.execute(sql("""
+                    VALIDATE CONSTRAINT referenze_stato_risposta_check_v2;
+
                 ALTER TABLE referenze
-                ADD COLUMN IF NOT EXISTS pubblicazione_approvata_admin
-                BOOLEAN NOT NULL DEFAULT FALSE;
-            """))
-            c.execute(sql("""
+                    ADD CONSTRAINT referenze_stato_verifica_check_v2 CHECK (
+                        stato_verifica IN (
+                            'non_esaminata', 'in_coda', 'verificata',
+                            'non_confermata', 'non_verificabile', 'revocata'
+                        )
+                    ) NOT VALID;
                 ALTER TABLE referenze
-                ADD COLUMN IF NOT EXISTS pubblicazione_approvata_at
-                TIMESTAMPTZ;
-            """))
-            c.execute(sql("""
+                    VALIDATE CONSTRAINT referenze_stato_verifica_check_v2;
+
                 ALTER TABLE referenze
-                ADD COLUMN IF NOT EXISTS pubblicazione_approvata_da_admin_id
-                INTEGER REFERENCES utenti(id) ON DELETE SET NULL;
-            """))
-            c.execute(sql("""
+                    ADD CONSTRAINT referenze_metodo_verifica_check_v2 CHECK (
+                        metodo_verifica IN (
+                            'nessuno', 'email', 'telefono', 'altro'
+                        )
+                    ) NOT VALID;
                 ALTER TABLE referenze
-                ADD COLUMN IF NOT EXISTS visibile_profilo
-                BOOLEAN NOT NULL DEFAULT TRUE;
+                    VALIDATE CONSTRAINT
+                        referenze_metodo_verifica_check_v2;
             """))
         else:
             c.execute("PRAGMA table_info(referenze)")
             reference_columns = {row[1] for row in c.fetchall()}
-            if "autorizza_contatto_verifica" not in reference_columns:
-                c.execute("""
-                    ALTER TABLE referenze
-                    ADD COLUMN autorizza_contatto_verifica INTEGER
-                    NOT NULL DEFAULT 0 CHECK (
-                        autorizza_contatto_verifica IN (0, 1)
-                    )
-                """)
-            if "autorizzazione_contatto_at" not in reference_columns:
-                c.execute("""
-                    ALTER TABLE referenze
-                    ADD COLUMN autorizzazione_contatto_at TEXT
-                """)
             additive_reference_columns = {
+                "anno_inizio": "INTEGER",
+                "anno_fine": "INTEGER",
+                "durata_fascia": "TEXT",
+                "esperienza_diretta": "INTEGER NOT NULL DEFAULT 0",
+                "testo_referente": "TEXT",
+                "stato_risposta": "TEXT NOT NULL DEFAULT 'in_attesa'",
+                "stato_verifica": "TEXT NOT NULL DEFAULT 'non_esaminata'",
+                "autorizza_pubblicazione": "INTEGER NOT NULL DEFAULT 0",
+                "autorizza_testo_pubblico": "INTEGER NOT NULL DEFAULT 0",
+                "autorizza_contatto_verifica": "INTEGER NOT NULL DEFAULT 0",
                 "pubblicazione_approvata_admin": (
-                    "INTEGER NOT NULL DEFAULT 0 CHECK "
-                    "(pubblicazione_approvata_admin IN (0, 1))"
+                    "INTEGER NOT NULL DEFAULT 0"
                 ),
                 "pubblicazione_approvata_at": "TEXT",
                 "pubblicazione_approvata_da_admin_id": (
                     "INTEGER REFERENCES utenti(id) ON DELETE SET NULL"
                 ),
                 "visibile_profilo": (
-                    "INTEGER NOT NULL DEFAULT 1 CHECK "
-                    "(visibile_profilo IN (0, 1))"
+                    "INTEGER NOT NULL DEFAULT 1"
                 ),
+                "consenso_versione": "TEXT",
+                "consenso_trattamento_at": "TEXT",
+                "autorizzazione_pubblica_at": "TEXT",
+                "autorizzazione_testo_at": "TEXT",
+                "autorizzazione_contatto_at": "TEXT",
+                "risposta_at": "TEXT",
+                "verificata_at": "TEXT",
+                "revocata_at": "TEXT",
+                "cancellata_at": "TEXT",
+                "verificata_da_admin_id": (
+                    "INTEGER REFERENCES utenti(id) ON DELETE SET NULL"
+                ),
+                "metodo_verifica": "TEXT NOT NULL DEFAULT 'nessuno'",
+                "nota_admin": "TEXT",
+                "nota_pubblica": "TEXT",
+                "versione": "INTEGER NOT NULL DEFAULT 1",
+                # SQLite non consente CURRENT_TIMESTAMP come default durante
+                # ALTER TABLE; gli eventi e gli update applicativi valorizzano
+                # esplicitamente i timestamp mancanti.
+                "created_at": "TEXT",
+                "updated_at": "TEXT",
             }
             for column_name, column_type in additive_reference_columns.items():
                 if column_name not in reference_columns:
@@ -2404,6 +2535,9 @@ def crea_tabelle_referenze():
                 nome_cifrato TEXT,
                 nome_nonce TEXT,
                 nome_tag TEXT,
+                telefono_cifrato TEXT,
+                telefono_nonce TEXT,
+                telefono_tag TEXT,
                 messaggio_invito_cifrato TEXT,
                 messaggio_invito_nonce TEXT,
                 messaggio_invito_tag TEXT,
@@ -2447,6 +2581,19 @@ def crea_tabelle_referenze():
                 ),
                 CHECK (
                     (
+                        telefono_cifrato IS NOT NULL
+                        AND telefono_nonce IS NOT NULL
+                        AND telefono_tag IS NOT NULL
+                    )
+                    OR
+                    (
+                        telefono_cifrato IS NULL
+                        AND telefono_nonce IS NULL
+                        AND telefono_tag IS NULL
+                    )
+                ),
+                CHECK (
+                    (
                         messaggio_invito_cifrato IS NOT NULL
                         AND messaggio_invito_nonce IS NOT NULL
                         AND messaggio_invito_tag IS NOT NULL
@@ -2466,25 +2613,133 @@ def crea_tabelle_referenze():
         """))
 
         if IS_POSTGRES:
+            additive_contact_columns = {
+                "email_cifrata": "TEXT",
+                "email_nonce": "TEXT",
+                "email_tag": "TEXT",
+                "email_key_id": "TEXT",
+                "email_hash": "TEXT",
+                "nome_cifrato": "TEXT",
+                "nome_nonce": "TEXT",
+                "nome_tag": "TEXT",
+                "telefono_cifrato": "TEXT",
+                "telefono_nonce": "TEXT",
+                "telefono_tag": "TEXT",
+                "messaggio_invito_cifrato": "TEXT",
+                "messaggio_invito_nonce": "TEXT",
+                "messaggio_invito_tag": "TEXT",
+                "token_hash": "TEXT",
+                "token_expires_at": "TIMESTAMPTZ",
+                "token_consumed_at": "TIMESTAMPTZ",
+                "ultimo_invio_at": "TIMESTAMPTZ",
+                "numero_invii": "INTEGER NOT NULL DEFAULT 0",
+                "aperto_at": "TIMESTAMPTZ",
+                "ultimo_errore_invio": "TEXT",
+                "contatto_purge_at": "TIMESTAMPTZ",
+                "contatto_purged_at": "TIMESTAMPTZ",
+                "created_at": (
+                    "TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                ),
+                "updated_at": (
+                    "TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                ),
+            }
+            for column_name, column_type in additive_contact_columns.items():
+                c.execute(sql(
+                    f"ALTER TABLE referenze_contatti "
+                    f"ADD COLUMN IF NOT EXISTS {column_name} {column_type}"
+                ))
+            # Se un rollout interrotto avesse scritto solo una parte della
+            # terna AES-GCM, il dato non sarebbe autenticabile: lo eliminiamo
+            # prima di ripristinare il vincolo all-or-none.
             c.execute(sql("""
+                UPDATE referenze_contatti
+                SET telefono_cifrato = NULL,
+                    telefono_nonce = NULL,
+                    telefono_tag = NULL
+                WHERE NOT (
+                    (
+                        telefono_cifrato IS NOT NULL
+                        AND telefono_nonce IS NOT NULL
+                        AND telefono_tag IS NOT NULL
+                    )
+                    OR
+                    (
+                        telefono_cifrato IS NULL
+                        AND telefono_nonce IS NULL
+                        AND telefono_tag IS NULL
+                    )
+                );
+
+                DO $reference_phone_constraint_repair$
+                DECLARE
+                    constraint_row RECORD;
+                BEGIN
+                    FOR constraint_row IN
+                        SELECT con.conname
+                        FROM pg_constraint con
+                        WHERE con.conrelid =
+                            'public.referenze_contatti'::regclass
+                          AND con.contype = 'c'
+                          AND pg_get_constraintdef(con.oid)
+                              ILIKE '%telefono_cifrato%'
+                    LOOP
+                        EXECUTE format(
+                            'ALTER TABLE public.referenze_contatti '
+                            'DROP CONSTRAINT %I',
+                            constraint_row.conname
+                        );
+                    END LOOP;
+                END
+                $reference_phone_constraint_repair$;
+
                 ALTER TABLE referenze_contatti
-                ADD COLUMN IF NOT EXISTS ultimo_errore_invio TEXT;
-            """))
-            c.execute(sql(f"""
+                    ADD CONSTRAINT referenze_contatti_telefono_check_v2 CHECK (
+                        (
+                            telefono_cifrato IS NOT NULL
+                            AND telefono_nonce IS NOT NULL
+                            AND telefono_tag IS NOT NULL
+                        )
+                        OR
+                        (
+                            telefono_cifrato IS NULL
+                            AND telefono_nonce IS NULL
+                            AND telefono_tag IS NULL
+                        )
+                    ) NOT VALID;
                 ALTER TABLE referenze_contatti
-                ADD COLUMN IF NOT EXISTS contatto_purge_at {dt_col()};
-            """))
-            c.execute(sql(f"""
-                ALTER TABLE referenze_contatti
-                ADD COLUMN IF NOT EXISTS contatto_purged_at {dt_col()};
+                    VALIDATE CONSTRAINT
+                        referenze_contatti_telefono_check_v2;
             """))
         else:
             c.execute("PRAGMA table_info(referenze_contatti)")
             contact_columns = {row[1] for row in c.fetchall()}
             additive_contact_columns = {
+                "email_cifrata": "TEXT",
+                "email_nonce": "TEXT",
+                "email_tag": "TEXT",
+                "email_key_id": "TEXT",
+                "email_hash": "TEXT",
+                "nome_cifrato": "TEXT",
+                "nome_nonce": "TEXT",
+                "nome_tag": "TEXT",
+                "telefono_cifrato": "TEXT",
+                "telefono_nonce": "TEXT",
+                "telefono_tag": "TEXT",
+                "messaggio_invito_cifrato": "TEXT",
+                "messaggio_invito_nonce": "TEXT",
+                "messaggio_invito_tag": "TEXT",
+                "token_hash": "TEXT",
+                "token_expires_at": "TEXT",
+                "token_consumed_at": "TEXT",
+                "ultimo_invio_at": "TEXT",
+                "numero_invii": "INTEGER NOT NULL DEFAULT 0",
+                "aperto_at": "TEXT",
                 "ultimo_errore_invio": "TEXT",
                 "contatto_purge_at": dt_col(),
                 "contatto_purged_at": dt_col(),
+                "created_at": "TEXT",
+                "updated_at": "TEXT",
             }
             for column_name, column_type in additive_contact_columns.items():
                 if column_name not in contact_columns:
@@ -2510,6 +2765,83 @@ def crea_tabelle_referenze():
                     REFERENCES utenti(id) ON DELETE SET NULL,
                 CHECK (TRIM(tipo_evento) <> '')
             );
+        """))
+
+        if IS_POSTGRES:
+            additive_event_columns = {
+                "attore_utente_id": (
+                    "INTEGER REFERENCES utenti(id) ON DELETE SET NULL"
+                ),
+                "dettagli_snapshot": "TEXT",
+                "created_at": (
+                    "TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                ),
+            }
+            for column_name, column_type in additive_event_columns.items():
+                c.execute(sql(
+                    f"ALTER TABLE referenze_eventi "
+                    f"ADD COLUMN IF NOT EXISTS {column_name} {column_type}"
+                ))
+            c.execute(sql("""
+                DO $reference_actor_repair$
+                DECLARE
+                    constraint_row RECORD;
+                BEGIN
+                    FOR constraint_row IN
+                        SELECT con.conname
+                        FROM pg_constraint con
+                        WHERE con.conrelid = 'public.referenze_eventi'::regclass
+                          AND con.contype = 'c'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%attore_tipo%'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%utente%'
+                          AND pg_get_constraintdef(con.oid) ILIKE '%sistema%'
+                    LOOP
+                        EXECUTE format(
+                            'ALTER TABLE public.referenze_eventi '
+                            'DROP CONSTRAINT %I',
+                            constraint_row.conname
+                        );
+                    END LOOP;
+                END
+                $reference_actor_repair$;
+
+                ALTER TABLE referenze_eventi
+                    ADD CONSTRAINT referenze_eventi_attore_tipo_check_v2 CHECK (
+                        attore_tipo IN (
+                            'utente', 'referente', 'admin', 'sistema'
+                        )
+                    ) NOT VALID;
+                ALTER TABLE referenze_eventi
+                    VALIDATE CONSTRAINT
+                        referenze_eventi_attore_tipo_check_v2;
+            """))
+        else:
+            c.execute("PRAGMA table_info(referenze_eventi)")
+            event_columns = {row[1] for row in c.fetchall()}
+            additive_event_columns = {
+                "attore_utente_id": (
+                    "INTEGER REFERENCES utenti(id) ON DELETE SET NULL"
+                ),
+                "dettagli_snapshot": "TEXT",
+                "created_at": "TEXT",
+            }
+            for column_name, column_type in additive_event_columns.items():
+                if column_name not in event_columns:
+                    c.execute(
+                        f"ALTER TABLE referenze_eventi "
+                        f"ADD COLUMN {column_name} {column_type}"
+                    )
+
+        # Gli indici univoci nominati completano anche tabelle legacy create
+        # senza i due UNIQUE inline del modello attuale.
+        c.execute(sql("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_referenze_contatti_referenza
+            ON referenze_contatti (referenza_id);
+        """))
+        c.execute(sql("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_referenze_contatti_token
+            ON referenze_contatti (token_hash)
+            WHERE token_hash IS NOT NULL;
         """))
 
         c.execute(sql("""

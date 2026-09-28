@@ -283,7 +283,10 @@
   padding: 0.68rem 0.75rem;
   color: var(--reference-ink);
   font: inherit;
-  font-size: 0.82rem;
+  /* Safari iOS ingrandisce automaticamente la pagina se il campo attivo
+     usa un carattere inferiore a 16px. Manteniamo la soglia nativa senza
+     disabilitare lo zoom manuale o altre funzioni di accessibilità. */
+  font-size: 16px;
   outline: none;
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
@@ -335,6 +338,18 @@
   height: 1.2rem;
   margin-top: 0.05rem;
   accent-color: var(--reference-blue);
+}
+
+.reference-contact-consent {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.reference-contact-details {
+  padding: 0.75rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.95rem;
+  background: #f8fbff;
 }
 
 .reference-privacy-note,

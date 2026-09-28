@@ -67,7 +67,6 @@
           action="{{ url_for('referenza_rispondi') }}"
           data-reference-response-form>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="token_form" value="{{ token_form }}">
 
           <fieldset class="reference-response-question">
             <legend>{{ tr('reference.response.direct_question') }} <span aria-hidden="true">*</span></legend>
@@ -163,10 +162,38 @@
             <span>{{ tr('reference.response.processing_consent') }}</span>
           </label>
 
-          <label class="reference-consent reference-field--wide">
-            <input type="checkbox" name="consenso_contatto" value="1">
-            <span>{{ tr('reference.response.contact_consent') }}</span>
-          </label>
+          <div class="reference-contact-consent reference-field--wide">
+            <div
+              id="reference-response-contact-details"
+              class="reference-field reference-contact-details"
+              data-reference-contact-details>
+              <label for="reference-response-phone">
+                {{ tr('reference.response.phone_label') }}
+                <span class="reference-optional">{{ tr('reference.optional') }}</span>
+              </label>
+              <input
+                id="reference-response-phone"
+                name="referente_telefono"
+                type="tel"
+                inputmode="tel"
+                autocomplete="tel"
+                maxlength="40"
+                aria-describedby="reference-response-phone-help"
+                placeholder="+39 333 123 4567"
+                data-no-translate>
+              <small id="reference-response-phone-help">{{ tr('reference.response.phone_help') }}</small>
+            </div>
+            <label class="reference-consent">
+              <input
+                id="reference-response-contact-consent"
+                type="checkbox"
+                name="consenso_contatto"
+                value="1"
+                aria-controls="reference-response-contact-details"
+                data-reference-contact-consent>
+              <span>{{ tr('reference.response.contact_consent') }}</span>
+            </label>
+          </div>
 
           <label class="reference-consent reference-field--wide">
             <input type="checkbox" name="autorizza_pubblicazione" value="1">

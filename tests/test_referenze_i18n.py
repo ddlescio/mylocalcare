@@ -21,6 +21,10 @@ class ReferenceTranslationsTest(unittest.TestCase):
             "reference.manager.title",
             "reference.manager.existing_only",
             "reference.response.processing_consent",
+            "reference.response.contact_consent",
+            "reference.response.phone_label",
+            "reference.response.phone_help",
+            "reference.response.privacy_identity",
             "reference.result.thanks",
             "reference.email.subject",
             "reference.email.action",
@@ -33,6 +37,20 @@ class ReferenceTranslationsTest(unittest.TestCase):
             italian = translate(key, "it")
             for language in set(SUPPORTED_LANGUAGES) - {"it"}:
                 self.assertNotEqual(translate(key, language), italian, (key, language))
+
+    def test_optional_phone_copy_explains_contact_scope_and_privacy(self):
+        consent = translate("reference.response.contact_consent", "it")
+        phone_help = translate("reference.response.phone_help", "it")
+        privacy = translate("reference.response.privacy_identity", "it")
+
+        self.assertNotIn("email", consent.casefold())
+        self.assertIn("telefonicamente", consent)
+        self.assertIn("Facoltativo", phone_help)
+        self.assertIn("autorizza anche il ricontatto telefonico", phone_help)
+        self.assertIn("solo da MyLocalCare", phone_help)
+        self.assertIn("non sarà mai mostrato pubblicamente", phone_help)
+        self.assertIn("resteranno riservati", privacy)
+        self.assertIn("profilo pubblico", privacy)
 
     def test_email_and_notification_placeholders_are_formatted(self):
         for language in SUPPORTED_LANGUAGES:

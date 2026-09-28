@@ -39,7 +39,7 @@
         <h2 class="font-black text-blue-950">Cosa significa verificare una referenza</h2>
         <p class="mt-1 text-sm leading-6 text-blue-950/75">
           La risposta attesta ciò che il referente dichiara. Prima di segnare la referenza come
-          verificata, contattalo usando uno dei recapiti riservati e conferma che abbia risposto
+          verificata, chiamalo al numero telefonico autorizzato e conferma che abbia risposto
           personalmente e avuto un’esperienza diretta con l’utente. Non pubblicare recapiti,
           informazioni di terzi o dettagli non autorizzati.
         </p>
@@ -111,7 +111,7 @@
         {% set da_gestire = risposta == 'risposta_ricevuta' and stato in ('non_esaminata', 'in_coda', 'da_gestire', 'richiesta') %}
         {% set contatto_autorizzato = referenza.get('contatto_verifica_autorizzato') or referenza.get('autorizza_contatto_verifica') %}
         {% set contatto_rimosso = referenza.get('contatto_purged_at') %}
-        {% set contatto_disponibile = risposta == 'risposta_ricevuta' and contatto_autorizzato and referenza.get('referente_email') and not contatto_rimosso %}
+        {% set contatto_disponibile = risposta == 'risposta_ricevuta' and contatto_autorizzato and referenza.get('referente_telefono') and not contatto_rimosso %}
         <article class="overflow-hidden rounded-[1.65rem] border {% if da_gestire %}border-amber-300{% else %}border-slate-200{% endif %} bg-white shadow-sm">
           <div class="p-4 sm:p-5">
             <div class="flex items-start gap-3">
@@ -177,12 +177,12 @@
                     <dt class="text-xs font-bold text-violet-600/75">Nome</dt>
                     <dd class="mt-1 font-semibold text-violet-950" data-no-translate>{{ referenza.get('referente_nome') or '—' }}</dd>
                   </div>
-                  <div>
-                    <dt class="text-xs font-bold text-violet-600/75">Email</dt>
-                    <dd class="mt-1 break-all font-semibold text-violet-950" data-no-translate>
-                      {% if contatto_disponibile %}{{ referenza.get('referente_email') }}{% else %}Non utilizzabile per la verifica{% endif %}
-                    </dd>
-                  </div>
+                  {% if contatto_disponibile and referenza.get('referente_telefono') %}
+                    <div>
+                      <dt class="text-xs font-bold text-violet-600/75">Telefono autorizzato</dt>
+                      <dd class="mt-1 font-semibold text-violet-950" data-no-translate>{{ referenza.get('referente_telefono') }}</dd>
+                    </div>
+                  {% endif %}
                 </dl>
               {% endif %}
 
@@ -197,14 +197,15 @@
                   verifica. Il suo recapito non deve essere utilizzato e l’unico esito
                   registrabile è <strong>Non verificabile</strong>.
                 </div>
-              {% elif not contatto_rimosso and contatto_autorizzato and not referenza.get('referente_email') %}
+              {% elif not contatto_rimosso and contatto_autorizzato and not referenza.get('referente_telefono') %}
                 <div class="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs font-semibold leading-5 text-orange-900" data-contact-status="unavailable">
                   ⚠️ Il ricontatto era stato autorizzato, ma il recapito non è disponibile.
                   Registra la referenza come <strong>Non verificabile</strong>.
                 </div>
               {% elif contatto_disponibile %}
                 <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold leading-5 text-emerald-900" data-contact-status="available">
-                  ✓ Il referente ha autorizzato il ricontatto ai soli fini della verifica.
+                  ✓ Il referente ha indicato il numero e autorizzato il ricontatto telefonico
+                  ai soli fini della verifica. Dopo la chiamata registra l’esito del controllo.
                   {% if referenza.get('contatto_purge_at') %}
                     <span class="mt-1 block text-emerald-700/75">Conservazione prevista fino al {{ referenza.get('contatto_purge_at')|fmt_it_smart }}.</span>
                   {% endif %}
@@ -212,10 +213,14 @@
               {% endif %}
 
               {% if contatto_disponibile %}
-                <a href="mailto:{{ referenza.get('referente_email')|urlencode }}?subject=Verifica%20referenza%20MyLocalCare%20%23{{ referenza.get('id') }}"
-                   class="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-white px-3 text-xs font-extrabold text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100">
-                  ✉️ Contatta il referente
-                </a>
+                <div class="mt-3">
+                  {% if referenza.get('referente_telefono') %}
+                    <a href="tel:{{ referenza.get('referente_telefono')|replace(' ', '')|replace('(', '')|replace(')', '')|replace('-', '')|replace('.', '')|replace('/', '') }}"
+                       class="inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-white px-3 text-xs font-extrabold text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100">
+                      📞 Chiama il referente
+                    </a>
+                  {% endif %}
+                </div>
               {% endif %}
             </div>
 
@@ -331,8 +336,7 @@
                     <select {% if contatto_disponibile %}name="metodo_verifica"{% endif %} class="admin-reference-method min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500" {% if not contatto_disponibile %}disabled aria-disabled="true"{% endif %} required>
                       <option value="">Scegli…</option>
                       <option value="nessuno" {% if referenza.get('metodo_verifica') == 'nessuno' or not contatto_disponibile %}selected{% endif %}>Nessun contatto</option>
-                      <option value="email" {% if referenza.get('metodo_verifica') == 'email' %}selected{% endif %}>Email</option>
-                      <option value="altro" {% if referenza.get('metodo_verifica') == 'altro' %}selected{% endif %}>Altro</option>
+                      <option value="telefono" {% if referenza.get('metodo_verifica') == 'telefono' %}selected{% endif %}>Telefono</option>
                     </select>
                   </label>
 
@@ -434,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.alert("Senza un recapito autorizzato puoi registrare soltanto l’esito Non verificabile.");
         return;
       }
-      if (contactAvailable && contactOutcomes.includes(state?.value || "") && !["email", "altro"].includes(method?.value || "")) {
+      if (contactAvailable && contactOutcomes.includes(state?.value || "") && method?.value !== "telefono") {
         event.preventDefault();
         method?.focus();
         window.alert("Indica come hai contattato il referente.");

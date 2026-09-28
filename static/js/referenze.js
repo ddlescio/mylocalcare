@@ -259,6 +259,31 @@
     if (!publicTextAllowed) {
       publicText.checked = false;
     }
+    updateContactConsentState(form);
+  }
+
+  function updateContactConsentState(form) {
+    const consent = form?.querySelector("[data-reference-contact-consent]");
+    const details = form?.querySelector("[data-reference-contact-details]");
+    const phone = details?.querySelector("input[name='referente_telefono']");
+    if (!consent || !details || !phone) return;
+
+    const cannotConfirm = (
+      form?.querySelector("input[name='esperienza_diretta']:checked")?.value === "0"
+    );
+    if (cannotConfirm) {
+      phone.value = "";
+      consent.checked = false;
+    }
+    phone.disabled = cannotConfirm;
+    consent.disabled = cannotConfirm;
+    const hasPhone = Boolean(phone.value.trim());
+    // Il telefono e il consenso sono facoltativi come coppia: se viene
+    // compilato uno dei due, il browser richiede anche l'altro.
+    consent.required = hasPhone;
+    phone.required = consent.checked;
+    consent.setAttribute("aria-required", hasPhone ? "true" : "false");
+    phone.setAttribute("aria-required", consent.checked ? "true" : "false");
   }
 
   document.addEventListener("click", (event) => {
@@ -321,6 +346,9 @@
         updateDirectExperienceState(event.target.closest("form"));
       }
     }
+    if (event.target.matches("input[name='referente_telefono']")) {
+      updateContactConsentState(event.target.closest("form"));
+    }
   });
 
   document.addEventListener("change", (event) => {
@@ -329,16 +357,22 @@
     )) {
       updateDirectExperienceState(event.target.closest("form"));
     }
+    if (event.target.matches("[data-reference-contact-consent]")) {
+      updateContactConsentState(event.target.closest("form"));
+    }
   });
 
   document.addEventListener("DOMContentLoaded", () => {
     updateCounters(document);
-    updateDirectExperienceState(document.querySelector("[data-reference-response-form]"));
+    const responseForm = document.querySelector("[data-reference-response-form]");
+    updateDirectExperienceState(responseForm);
+    updateContactConsentState(responseForm);
   });
 
   global.MyLocalCareReferences = {
     openDialog,
     closeDialog,
-    updateDirectExperienceState
+    updateDirectExperienceState,
+    updateContactConsentState
   };
 })(window);
