@@ -17546,6 +17546,28 @@ def _disponibilita_categoria_table_exists(cur):
     return cur.fetchone() is not None
 
 
+def _disponibilita_intervalli_table_exists(cur, *, categoria=False):
+    """Rollout additivo degli intervalli orari reali del profilo."""
+
+    table = (
+        "disponibilita_intervalli_categoria"
+        if categoria
+        else "disponibilita_intervalli"
+    )
+    if app.config.get("IS_POSTGRES"):
+        cur.execute(
+            f"SELECT to_regclass('public.{table}') AS tabella"
+        )
+        return bool(fetchone_value(cur.fetchone()))
+    cur.execute(sql("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = ?
+        LIMIT 1
+    """), (table,))
+    return cur.fetchone() is not None
+
+
 def _richieste_disponibilita_tables_exist(cur):
     """Controlla il rollout delle tre tabelle senza rompere l'annuncio."""
 
@@ -18058,6 +18080,16 @@ def _disponibilita_servizi_iso(value):
     return str(value)
 
 
+def _disponibilita_servizi_time(value):
+    """Rende omogenei TIME PostgreSQL e stringhe SQLite nel JSON."""
+
+    if value is None:
+        return None
+    if hasattr(value, "strftime"):
+        return value.strftime("%H:%M")
+    return str(value).strip()[:5]
+
+
 def _disponibilita_categoria_label(categoria_slug):
     mapping = CATEGORY_MAP.get(str(categoria_slug or "").strip().lower())
     if mapping:
@@ -18080,6 +18112,7 @@ def _serializza_profilo_disponibilita(
     special_dates,
     absences,
     *,
+    intervals=None,
     pubblica=False,
     categoria_slug=None,
 ):
@@ -18087,6 +18120,7 @@ def _serializza_profilo_disponibilita(
         "stato": profile["stato_generale"],
         "a_chiamata": bool(profile.get("a_chiamata")),
         "settimanale": weekly,
+        "settimanale_intervalli": list(intervals or []),
         "date_speciali": special_dates,
         "assenze": absences,
     })
@@ -18103,6 +18137,7 @@ def _serializza_profilo_disponibilita(
         if availability["stato"] == "non_disponibile":
             availability["a_chiamata"] = False
             availability["settimanale"] = []
+            availability["settimanale_intervalli"] = []
             availability["date_speciali"] = []
             availability["assenze"] = []
     else:
@@ -18166,6 +18201,26 @@ def carica_disponibilita_servizi(cur, utente_id, *, pubblica=False):
         for row in cur.fetchall()
     ]
 
+    intervals = []
+    if _disponibilita_intervalli_table_exists(cur):
+        cur.execute(sql("""
+            SELECT giorno_settimana, ora_inizio, ora_fine, giorno_successivo
+            FROM disponibilita_intervalli
+            WHERE utente_id = ?
+            ORDER BY giorno_settimana, ora_inizio, ora_fine
+        """), (int(utente_id),))
+        intervals = [
+            {
+                "giorno_settimana": int(row["giorno_settimana"]),
+                "ora_inizio": _disponibilita_servizi_time(
+                    row["ora_inizio"]
+                ),
+                "ora_fine": _disponibilita_servizi_time(row["ora_fine"]),
+                "giorno_successivo": bool(row["giorno_successivo"]),
+            }
+            for row in cur.fetchall()
+        ]
+
     cur.execute(sql("""
         SELECT data, tipo, fasce
         FROM disponibilita_date_speciali
@@ -18199,6 +18254,7 @@ def carica_disponibilita_servizi(cur, utente_id, *, pubblica=False):
         weekly,
         special_dates,
         absences,
+        intervals=intervals,
         pubblica=pubblica,
     )
 
@@ -18254,6 +18310,26 @@ def carica_disponibilita_servizi_categoria(
         for row in cur.fetchall()
     ]
 
+    intervals = []
+    if _disponibilita_intervalli_table_exists(cur, categoria=True):
+        cur.execute(sql("""
+            SELECT giorno_settimana, ora_inizio, ora_fine, giorno_successivo
+            FROM disponibilita_intervalli_categoria
+            WHERE profilo_categoria_id = ?
+            ORDER BY giorno_settimana, ora_inizio, ora_fine
+        """), (profile_id,))
+        intervals = [
+            {
+                "giorno_settimana": int(row["giorno_settimana"]),
+                "ora_inizio": _disponibilita_servizi_time(
+                    row["ora_inizio"]
+                ),
+                "ora_fine": _disponibilita_servizi_time(row["ora_fine"]),
+                "giorno_successivo": bool(row["giorno_successivo"]),
+            }
+            for row in cur.fetchall()
+        ]
+
     cur.execute(sql("""
         SELECT data, tipo, fasce
         FROM disponibilita_date_speciali_categoria
@@ -18287,6 +18363,7 @@ def carica_disponibilita_servizi_categoria(
         weekly,
         special_dates,
         absences,
+        intervals=intervals,
         pubblica=pubblica,
         categoria_slug=categoria_slug,
     )
@@ -18333,6 +18410,7 @@ def elenca_disponibilita_servizi(cur, utente_id, *, pubblica=False):
     ids = [int(row["id"]) for row in profile_rows]
     placeholders = ", ".join("?" for _ in ids)
     weekly_by_profile = {profile_id: [] for profile_id in ids}
+    intervals_by_profile = {profile_id: [] for profile_id in ids}
     special_by_profile = {profile_id: [] for profile_id in ids}
     absences_by_profile = {profile_id: [] for profile_id in ids}
 
@@ -18354,6 +18432,25 @@ def elenca_disponibilita_servizi(cur, utente_id, *, pubblica=False):
             "giorno_settimana": int(row["giorno_settimana"]),
             "fascia": row["fascia"],
         })
+
+    if _disponibilita_intervalli_table_exists(cur, categoria=True):
+        cur.execute(sql(f"""
+            SELECT profilo_categoria_id, giorno_settimana,
+                   ora_inizio, ora_fine, giorno_successivo
+            FROM disponibilita_intervalli_categoria
+            WHERE profilo_categoria_id IN ({placeholders})
+            ORDER BY profilo_categoria_id, giorno_settimana,
+                     ora_inizio, ora_fine
+        """), tuple(ids))
+        for row in cur.fetchall():
+            intervals_by_profile[int(row["profilo_categoria_id"])].append({
+                "giorno_settimana": int(row["giorno_settimana"]),
+                "ora_inizio": _disponibilita_servizi_time(
+                    row["ora_inizio"]
+                ),
+                "ora_fine": _disponibilita_servizi_time(row["ora_fine"]),
+                "giorno_successivo": bool(row["giorno_successivo"]),
+            })
 
     cur.execute(sql(f"""
         SELECT profilo_categoria_id, data, tipo, fasce
@@ -18395,6 +18492,7 @@ def elenca_disponibilita_servizi(cur, utente_id, *, pubblica=False):
             weekly_by_profile[profile_id],
             special_by_profile[profile_id],
             absences_by_profile[profile_id],
+            intervals=intervals_by_profile[profile_id],
             pubblica=pubblica,
             categoria_slug=categoria_slug,
         )
@@ -18591,7 +18689,247 @@ def _disponibilita_priorita_cerca_sql(cur):
     """
 
 
-def _disponibilita_filtro_cerca_sql(cur):
+_DISPONIBILITA_CERCA_HHMM_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+
+
+def _normalizza_filtri_disponibilita_cerca(args):
+    """Valida i filtri GET senza trasformare orari precisi in fasce.
+
+    I giorni e le fasce sono parametri ripetibili. Un intervallo preciso deve
+    avere entrambi gli estremi e almeno un giorno: senza giorno il significato
+    sarebbe ambiguo, specialmente per gli intervalli oltre mezzanotte.
+    """
+
+    def values(name):
+        getter = getattr(args, "getlist", None)
+        raw = getter(name) if callable(getter) else args.get(name, [])
+        if raw is None:
+            return []
+        if isinstance(raw, str):
+            raw = [raw]
+        return [str(value).strip().lower() for value in raw if str(value).strip()]
+
+    raw_days = values("disponibilita_giorni")
+    days = []
+    for raw_day in raw_days:
+        try:
+            day = int(raw_day)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Giorno di disponibilita non valido.") from exc
+        if day < 1 or day > 7:
+            raise ValueError("Giorno di disponibilita non valido.")
+        if day not in days:
+            days.append(day)
+    days.sort()
+
+    slots = []
+    for slot in values("disponibilita_fasce"):
+        if slot not in ("mattina", "pomeriggio", "sera", "notte"):
+            raise ValueError("Fascia di disponibilita non valida.")
+        if slot not in slots:
+            slots.append(slot)
+
+    start = str(args.get("disponibilita_dalle", "") or "").strip()
+    end = str(args.get("disponibilita_alle", "") or "").strip()
+    if bool(start) != bool(end):
+        raise ValueError("Indica sia l'orario iniziale sia quello finale.")
+
+    next_day = False
+    if start:
+        if not _DISPONIBILITA_CERCA_HHMM_RE.fullmatch(start):
+            raise ValueError("L'orario iniziale deve usare il formato HH:MM.")
+        if not _DISPONIBILITA_CERCA_HHMM_RE.fullmatch(end):
+            raise ValueError("L'orario finale deve usare il formato HH:MM.")
+        if not days:
+            raise ValueError(
+                "Seleziona almeno un giorno per cercare una fascia oraria precisa."
+            )
+        start_minutes = int(start[:2]) * 60 + int(start[3:])
+        end_minutes = int(end[:2]) * 60 + int(end[3:])
+        if start_minutes == end_minutes:
+            raise ValueError("Gli orari iniziale e finale devono essere diversi.")
+        next_day = end_minutes < start_minutes
+        if next_day and not (
+            start_minutes >= 18 * 60 and end_minutes <= 8 * 60
+        ):
+            raise ValueError(
+                "Un intervallo oltre mezzanotte deve iniziare dopo le 18:00 "
+                "e terminare entro le 08:00."
+            )
+
+    raw_on_call = str(
+        args.get("disponibilita_a_chiamata", "") or ""
+    ).strip()
+    if raw_on_call not in ("", "0", "1"):
+        raise ValueError("Filtro disponibilita a chiamata non valido.")
+
+    return {
+        "giorni": tuple(days),
+        "fasce": tuple(slots),
+        "dalle": start or None,
+        "alle": end or None,
+        "giorno_successivo": next_day,
+        "a_chiamata": raw_on_call == "1",
+        "dettaglio_richiesto": bool(
+            days or slots or start or raw_on_call == "1"
+        ),
+    }
+
+
+def _disponibilita_profilo_schedule_sql(
+    *,
+    profile_alias,
+    categoria,
+    criteri,
+    intervalli_disponibili,
+):
+    """Crea i vincoli settimanali per un solo profilo risolto.
+
+    Quando esiste l'override di categoria questa funzione usa esclusivamente
+    le sue righe figlie. Non combina mai calendario specifico e generale.
+    """
+
+    owner_column = (
+        "profilo_categoria_id" if categoria else "utente_id"
+    )
+    weekly_table = (
+        "disponibilita_settimanale_categoria"
+        if categoria
+        else "disponibilita_settimanale"
+    )
+    interval_table = (
+        "disponibilita_intervalli_categoria"
+        if categoria
+        else "disponibilita_intervalli"
+    )
+    owner_value = (
+        f"{profile_alias}.id" if categoria else f"{profile_alias}.utente_id"
+    )
+
+    def for_day(day):
+        clauses = []
+        for index, slot in enumerate(criteri["fasce"]):
+            clauses.append(f"""
+                EXISTS (
+                    SELECT 1
+                    FROM {weekly_table} ds_{profile_alias}_{day}_{index}
+                    WHERE ds_{profile_alias}_{day}_{index}.{owner_column}
+                          = {owner_value}
+                      AND ds_{profile_alias}_{day}_{index}.giorno_settimana
+                          = {int(day)}
+                      AND ds_{profile_alias}_{day}_{index}.fascia = '{slot}'
+                )
+            """)
+
+        if criteri["dalle"]:
+            if not intervalli_disponibili:
+                clauses.append("0")
+            else:
+                next_day = bool(criteri["giorno_successivo"])
+                if next_day:
+                    containment = f"""
+                        di_{profile_alias}_{day}.giorno_successivo = TRUE
+                        AND di_{profile_alias}_{day}.ora_inizio
+                            <= '{criteri['dalle']}'
+                        AND di_{profile_alias}_{day}.ora_fine
+                            >= '{criteri['alle']}'
+                    """
+                else:
+                    end_minutes = (
+                        int(criteri["alle"][:2]) * 60
+                        + int(criteri["alle"][3:])
+                    )
+                    containment = f"""
+                        di_{profile_alias}_{day}.ora_inizio
+                            <= '{criteri['dalle']}'
+                        AND (
+                            di_{profile_alias}_{day}.giorno_successivo = TRUE
+                            OR di_{profile_alias}_{day}.ora_fine
+                                >= '{criteri['alle']}'
+                        )
+                    """
+                exact_current = f"""
+                    EXISTS (
+                        SELECT 1
+                        FROM {interval_table} di_{profile_alias}_{day}
+                        WHERE di_{profile_alias}_{day}.{owner_column}
+                              = {owner_value}
+                          AND di_{profile_alias}_{day}.giorno_settimana
+                              = {int(day)}
+                          AND {containment}
+                    )
+                """
+                exact_previous = ""
+                if not next_day and end_minutes <= 8 * 60:
+                    previous_day = 7 if int(day) == 1 else int(day) - 1
+                    exact_previous = f"""
+                        OR EXISTS (
+                            SELECT 1
+                            FROM {interval_table} dip_{profile_alias}_{day}
+                            WHERE dip_{profile_alias}_{day}.{owner_column}
+                                  = {owner_value}
+                              AND dip_{profile_alias}_{day}.giorno_settimana
+                                  = {previous_day}
+                              AND dip_{profile_alias}_{day}.giorno_successivo
+                                  = TRUE
+                              AND dip_{profile_alias}_{day}.ora_fine
+                                  >= '{criteri['alle']}'
+                        )
+                    """
+                clauses.append(f"({exact_current} {exact_previous})")
+
+        if not criteri["fasce"] and not criteri["dalle"]:
+            interval_exists = ""
+            if intervalli_disponibili:
+                previous_day = 7 if int(day) == 1 else int(day) - 1
+                interval_exists = f"""
+                    OR EXISTS (
+                        SELECT 1
+                        FROM {interval_table} di_{profile_alias}_{day}
+                        WHERE di_{profile_alias}_{day}.{owner_column}
+                              = {owner_value}
+                          AND di_{profile_alias}_{day}.giorno_settimana
+                              = {int(day)}
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM {interval_table} dip_{profile_alias}_{day}
+                        WHERE dip_{profile_alias}_{day}.{owner_column}
+                              = {owner_value}
+                          AND dip_{profile_alias}_{day}.giorno_settimana
+                              = {previous_day}
+                          AND dip_{profile_alias}_{day}.giorno_successivo = TRUE
+                          AND dip_{profile_alias}_{day}.ora_fine > '00:00'
+                    )
+                """
+            clauses.append(f"""
+                (
+                    EXISTS (
+                        SELECT 1
+                        FROM {weekly_table} ds_{profile_alias}_{day}
+                        WHERE ds_{profile_alias}_{day}.{owner_column}
+                              = {owner_value}
+                          AND ds_{profile_alias}_{day}.giorno_settimana
+                              = {int(day)}
+                    )
+                    {interval_exists}
+                )
+            """)
+        return " AND ".join(f"({clause})" for clause in clauses) or "1"
+
+    days = criteri["giorni"]
+    if days:
+        return " AND ".join(f"({for_day(day)})" for day in days)
+    if criteri["fasce"]:
+        # Senza giorni, tutte le fasce selezionate devono coesistere almeno
+        # nello stesso giorno: righe sparse su giorni diversi non fanno match.
+        return "(" + " OR ".join(
+            f"({for_day(day)})" for day in range(1, 8)
+        ) + ")"
+    return "1"
+
+
+def _disponibilita_filtro_cerca_sql(cur, criteri=None):
     """Condizione per il filtro esplicito ``solo disponibili``.
 
     La disponibilita specifica della categoria prevale su quella generale.
@@ -18603,6 +18941,26 @@ def _disponibilita_filtro_cerca_sql(cur):
 
     if not _disponibilita_servizi_table_exists(cur):
         return "0"
+
+    criteri = dict(criteri or {})
+    criteri.setdefault("giorni", ())
+    criteri.setdefault("fasce", ())
+    criteri.setdefault("dalle", None)
+    criteri.setdefault("alle", None)
+    criteri.setdefault("giorno_successivo", False)
+    criteri.setdefault("a_chiamata", False)
+    general_intervals_ready = _disponibilita_intervalli_table_exists(cur)
+    general_schedule = _disponibilita_profilo_schedule_sql(
+        profile_alias="dp_filtro",
+        categoria=False,
+        criteri=criteri,
+        intervalli_disponibili=general_intervals_ready,
+    )
+    on_call_general = (
+        "AND dp_filtro.a_chiamata = TRUE"
+        if criteri["a_chiamata"]
+        else ""
+    )
 
     soglia = (
         "CURRENT_TIMESTAMP - "
@@ -18621,10 +18979,12 @@ def _disponibilita_filtro_cerca_sql(cur):
               AND dp_filtro.stato_generale IN ('disponibile', 'limitata')
               AND dp_filtro.confermata_at IS NOT NULL
               AND dp_filtro.confermata_at > {soglia}
+              {on_call_general}
+              AND ({general_schedule})
         )
     """
     if not _disponibilita_categoria_table_exists(cur):
-        return generale_inclusa
+        return f"(a.tipo_annuncio = 'offro' AND {generale_inclusa})"
 
     override_categoria = """
         EXISTS (
@@ -18634,6 +18994,21 @@ def _disponibilita_filtro_cerca_sql(cur):
               AND dpc_filtro_override.categoria_slug = a.categoria
         )
     """
+    category_intervals_ready = _disponibilita_intervalli_table_exists(
+        cur,
+        categoria=True,
+    )
+    category_schedule = _disponibilita_profilo_schedule_sql(
+        profile_alias="dpc_filtro",
+        categoria=True,
+        criteri=criteri,
+        intervalli_disponibili=category_intervals_ready,
+    )
+    on_call_category = (
+        "AND dpc_filtro.a_chiamata = TRUE"
+        if criteri["a_chiamata"]
+        else ""
+    )
     categoria_inclusa = f"""
         EXISTS (
             SELECT 1
@@ -18645,12 +19020,17 @@ def _disponibilita_filtro_cerca_sql(cur):
               )
               AND dpc_filtro.confermata_at IS NOT NULL
               AND dpc_filtro.confermata_at > {soglia}
+              {on_call_category}
+              AND ({category_schedule})
         )
     """
     return f"""
         (
-          {categoria_inclusa}
-          OR (NOT {override_categoria} AND {generale_inclusa})
+          a.tipo_annuncio = 'offro'
+          AND (
+            {categoria_inclusa}
+            OR (NOT {override_categoria} AND {generale_inclusa})
+          )
         )
     """
 
@@ -19351,6 +19731,10 @@ def _elimina_disponibilita_generale(
             sql(f"DELETE FROM {table} WHERE utente_id = ?"),
             (int(user_id),),
         )
+    if _disponibilita_intervalli_table_exists(cur):
+        cur.execute(sql("""
+            DELETE FROM disponibilita_intervalli WHERE utente_id = ?
+        """), (int(user_id),))
     if not existing:
         return False
     cur.execute(sql("""
@@ -19402,6 +19786,11 @@ def _elimina_disponibilita_categoria(
             sql(f"DELETE FROM {table} WHERE profilo_categoria_id = ?"),
             (profile_id,),
         )
+    if _disponibilita_intervalli_table_exists(cur, categoria=True):
+        cur.execute(sql("""
+            DELETE FROM disponibilita_intervalli_categoria
+            WHERE profilo_categoria_id = ?
+        """), (profile_id,))
     cur.execute(sql("""
         DELETE FROM disponibilita_profili_categoria
         WHERE id = ? AND utente_id = ?
@@ -19480,6 +19869,14 @@ def _salva_disponibilita_generale(
     ):
         cur.execute(sql(f"DELETE FROM {table} WHERE utente_id = ?"), (user_id,))
 
+    intervals_ready = _disponibilita_intervalli_table_exists(cur)
+    if normalized["settimanale_intervalli"] and not intervals_ready:
+        raise RuntimeError("availability_interval_tables_missing")
+    if intervals_ready:
+        cur.execute(sql("""
+            DELETE FROM disponibilita_intervalli WHERE utente_id = ?
+        """), (user_id,))
+
     if normalized["settimanale"]:
         cur.executemany(sql("""
             INSERT INTO disponibilita_settimanale (
@@ -19488,6 +19885,22 @@ def _salva_disponibilita_generale(
         """), [
             (user_id, row["giorno_settimana"], row["fascia"])
             for row in normalized["settimanale"]
+        ])
+    if normalized["settimanale_intervalli"]:
+        cur.executemany(sql("""
+            INSERT INTO disponibilita_intervalli (
+                utente_id, giorno_settimana, ora_inizio, ora_fine,
+                giorno_successivo, created_at
+            ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """), [
+            (
+                user_id,
+                row["giorno_settimana"],
+                row["ora_inizio"],
+                row["ora_fine"],
+                bool(row["giorno_successivo"]),
+            )
+            for row in normalized["settimanale_intervalli"]
         ])
     if normalized["date_speciali"]:
         cur.executemany(sql("""
@@ -19585,6 +19998,18 @@ def _salva_disponibilita_categoria(
             (profile_id,),
         )
 
+    intervals_ready = _disponibilita_intervalli_table_exists(
+        cur,
+        categoria=True,
+    )
+    if normalized["settimanale_intervalli"] and not intervals_ready:
+        raise RuntimeError("availability_interval_tables_missing")
+    if intervals_ready:
+        cur.execute(sql("""
+            DELETE FROM disponibilita_intervalli_categoria
+            WHERE profilo_categoria_id = ?
+        """), (profile_id,))
+
     if normalized["settimanale"]:
         cur.executemany(sql("""
             INSERT INTO disponibilita_settimanale_categoria (
@@ -19593,6 +20018,22 @@ def _salva_disponibilita_categoria(
         """), [
             (profile_id, row["giorno_settimana"], row["fascia"])
             for row in normalized["settimanale"]
+        ])
+    if normalized["settimanale_intervalli"]:
+        cur.executemany(sql("""
+            INSERT INTO disponibilita_intervalli_categoria (
+                profilo_categoria_id, giorno_settimana,
+                ora_inizio, ora_fine, giorno_successivo, created_at
+            ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """), [
+            (
+                profile_id,
+                row["giorno_settimana"],
+                row["ora_inizio"],
+                row["ora_fine"],
+                bool(row["giorno_successivo"]),
+            )
+            for row in normalized["settimanale_intervalli"]
         ])
     if normalized["date_speciali"]:
         cur.executemany(sql("""
@@ -28349,8 +28790,18 @@ def cerca():
     solo_interessi_richiesto = (
         request.args.get("solo_interessi", "").strip() == "1"
     )
-    solo_disponibili = (
+    solo_disponibili_richiesto = (
         request.args.get("solo_disponibili", "").strip() == "1"
+    )
+    try:
+        filtri_disponibilita = _normalizza_filtri_disponibilita_cerca(
+            request.args
+        )
+    except ValueError as exc:
+        abort(400, description=str(exc))
+    solo_disponibili = bool(
+        solo_disponibili_richiesto
+        or filtri_disponibilita["dettaglio_richiesto"]
     )
 
     if solo_interessi_richiesto and not utente_corrente:
@@ -28559,7 +29010,14 @@ def cerca():
     c = get_cursor(conn)
 
     disponibilita_priorita_sql = _disponibilita_priorita_cerca_sql(c)
-    disponibilita_filtro_sql = _disponibilita_filtro_cerca_sql(c)
+    disponibilita_filtro_sql = (
+        _disponibilita_filtro_cerca_sql(
+            c,
+            filtri_disponibilita,
+        )
+        if solo_disponibili
+        else "1"
+    )
 
     # =========================================================
     # 📍 VALIDAZIONE FILTRO QUARTIERI
@@ -29156,6 +29614,7 @@ def cerca():
         puo_filtrare_interessi=puo_filtrare_interessi,
         solo_interessi=solo_interessi,
         solo_disponibili=solo_disponibili,
+        filtri_disponibilita=filtri_disponibilita,
     )
 
 @app.route("/notifica/<int:id>/apri")

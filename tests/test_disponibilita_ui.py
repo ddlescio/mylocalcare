@@ -114,14 +114,32 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         )
         self.assertEqual(len(guarded_badges), 3)
 
-    def test_search_exposes_confirmed_availability_filter_in_both_controls(self):
+    def test_search_exposes_confirmed_availability_only_inside_panel(self):
         search = self.read_template("cerca.html")
 
         self.assertIn('name="solo_disponibili"', search)
-        self.assertIn('id="solo-disponibili-rapido"', search)
-        self.assertEqual(search.count("tr('search.available_only')"), 2)
-        self.assertIn('url.searchParams.set("solo_disponibili", "1")', search)
-        self.assertIn('url.searchParams.delete("solo_disponibili")', search)
+        self.assertNotIn('id="solo-disponibili-rapido"', search)
+        self.assertEqual(search.count("tr('search.available_only')"), 1)
+        self.assertNotIn('url.searchParams.set("solo_disponibili", "1")', search)
+        self.assertIn('"solo_disponibili",', search)
+
+    def test_search_header_has_only_primary_filter_actions(self):
+        search = self.read_template("cerca.html")
+
+        header_start = search.index('class="header-cerca')
+        header_end = search.index("<!-- 🎯 Filtri attivi -->")
+        header = search[header_start:header_end]
+        self.assertIn('id="toggle-filtri"', header)
+        self.assertIn('id="reset-filtri"', header)
+        self.assertIn('id="includi-confinanti-rapido"', header)
+        self.assertNotIn('id="solo-disponibili-rapido"', header)
+        self.assertNotIn('id="solo-interessi-rapido"', header)
+
+    def test_search_panel_has_top_apply_before_close(self):
+        search = self.read_template("cerca.html")
+
+        self.assertLess(search.index('id="apply-filtri-top"'), search.index('id="close-filtri"'))
+        self.assertGreaterEqual(search.count('type="submit"'), 2)
 
     def test_profile_listing_badge_is_only_rendered_for_offers(self):
         dashboard = self.read_template("dashboard.html")
@@ -176,6 +194,15 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
             with self.subTest(selector=selector):
                 self.assertIn(selector, css)
         self.assertIn("@media (max-width: 420px)", css)
+
+    def test_provider_exact_time_inputs_allow_minute_precision(self):
+        dialog = self.read_template(
+            "partials/disponibilita_servizi_dialog.html"
+        )
+
+        self.assertIn('input.type = "time"', dialog)
+        self.assertIn('input.step = "60"', dialog)
+        self.assertNotIn('input.step = "900"', dialog)
 
 
 if __name__ == "__main__":

@@ -71,7 +71,7 @@ class DisponibilitaSchemaTest(unittest.TestCase):
         ):
             self.init_db.crea_tabelle_disponibilita_servizi()
 
-    def test_bootstrap_e_idempotente_e_crea_le_otto_tabelle(self):
+    def test_bootstrap_e_idempotente_e_crea_tutte_le_tabelle(self):
         self._bootstrap()
         self._bootstrap()
         connection = self._connect()
@@ -85,10 +85,12 @@ class DisponibilitaSchemaTest(unittest.TestCase):
         self.assertTrue({
             "disponibilita_profili",
             "disponibilita_settimanale",
+            "disponibilita_intervalli",
             "disponibilita_date_speciali",
             "disponibilita_assenze",
             "disponibilita_profili_categoria",
             "disponibilita_settimanale_categoria",
+            "disponibilita_intervalli_categoria",
             "disponibilita_date_speciali_categoria",
             "disponibilita_assenze_categoria",
         }.issubset(tables))
@@ -107,6 +109,12 @@ class DisponibilitaSchemaTest(unittest.TestCase):
             INSERT INTO disponibilita_settimanale (
                 utente_id, giorno_settimana, fascia, created_at
             ) VALUES (1, 1, 'mattina', CURRENT_TIMESTAMP)
+        """)
+        connection.execute("""
+            INSERT INTO disponibilita_intervalli (
+                utente_id, giorno_settimana, ora_inizio, ora_fine,
+                giorno_successivo, created_at
+            ) VALUES (1, 1, '09:00', '13:00', 0, CURRENT_TIMESTAMP)
         """)
         connection.execute("""
             INSERT INTO disponibilita_date_speciali (
@@ -132,6 +140,12 @@ class DisponibilitaSchemaTest(unittest.TestCase):
             INSERT INTO disponibilita_settimanale_categoria (
                 profilo_categoria_id, giorno_settimana, fascia, created_at
             ) VALUES (?, 2, 'pomeriggio', CURRENT_TIMESTAMP)
+        """, (profile_id,))
+        connection.execute("""
+            INSERT INTO disponibilita_intervalli_categoria (
+                profilo_categoria_id, giorno_settimana,
+                ora_inizio, ora_fine, giorno_successivo, created_at
+            ) VALUES (?, 2, '22:00', '03:00', 1, CURRENT_TIMESTAMP)
         """, (profile_id,))
         connection.execute("""
             INSERT INTO disponibilita_date_speciali_categoria (
@@ -171,6 +185,20 @@ class DisponibilitaSchemaTest(unittest.TestCase):
             """)
         with self.assertRaises(sqlite3.IntegrityError):
             connection.execute("""
+                INSERT INTO disponibilita_intervalli (
+                    utente_id, giorno_settimana, ora_inizio, ora_fine,
+                    giorno_successivo, created_at
+                ) VALUES (1, 1, '17:00', '03:00', 1, CURRENT_TIMESTAMP)
+            """)
+        with self.assertRaises(sqlite3.IntegrityError):
+            connection.execute("""
+                INSERT INTO disponibilita_intervalli (
+                    utente_id, giorno_settimana, ora_inizio, ora_fine,
+                    giorno_successivo, created_at
+                ) VALUES (1, 1, '13:00', '09:00', 0, CURRENT_TIMESTAMP)
+            """)
+        with self.assertRaises(sqlite3.IntegrityError):
+            connection.execute("""
                 INSERT INTO disponibilita_profili_categoria (
                     utente_id, categoria_slug, created_at, updated_at
                 ) VALUES (1, 'babysitter', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -187,10 +215,12 @@ class DisponibilitaSchemaTest(unittest.TestCase):
         for table in (
             "disponibilita_profili",
             "disponibilita_settimanale",
+            "disponibilita_intervalli",
             "disponibilita_date_speciali",
             "disponibilita_assenze",
             "disponibilita_profili_categoria",
             "disponibilita_settimanale_categoria",
+            "disponibilita_intervalli_categoria",
             "disponibilita_date_speciali_categoria",
             "disponibilita_assenze_categoria",
         ):
@@ -225,6 +255,17 @@ class DisponibilitaSchemaTest(unittest.TestCase):
         self.assertIn("ALTER TABLE disponibilita_profili_categoria", on_call)
         self.assertIn("a_chiamata BOOLEAN NOT NULL DEFAULT FALSE", on_call)
         self.assertNotIn("DROP TABLE", on_call.upper())
+
+        intervals = (
+            ROOT / "migrations" / "20260928_disponibilita_intervalli.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("CREATE TABLE IF NOT EXISTS disponibilita_intervalli", intervals)
+        self.assertIn("disponibilita_intervalli_categoria", intervals)
+        self.assertIn("giorno_successivo BOOLEAN NOT NULL DEFAULT FALSE", intervals)
+        self.assertIn("ora_inizio >= TIME '18:00'", intervals)
+        self.assertIn("ora_fine <= TIME '08:00'", intervals)
+        self.assertIn("TO localcare_app", intervals)
+        self.assertNotIn("DROP TABLE", intervals.upper())
 
     def test_bootstrap_include_opzione_a_chiamata(self):
         self._bootstrap()

@@ -16,6 +16,8 @@ from disponibilita_servizi import (
     GIORNI_RICONFERMA,
     MAX_ASSENZE,
     MAX_DATE_SPECIALI,
+    MAX_INTERVALLI_PER_GIORNO,
+    MAX_INTERVALLI_SETTIMANALI,
     MAX_RIGHE_SETTIMANALI,
     STATI_DISPONIBILITA,
     calcola_freschezza_disponibilita,
@@ -30,6 +32,7 @@ def valid_payload(**overrides):
         "stato": "disponibile",
         "a_chiamata": False,
         "settimanale": [],
+        "settimanale_intervalli": [],
         "date_speciali": [],
         "assenze": [],
     }
@@ -116,6 +119,7 @@ class DisponibilitaNormalizationTest(unittest.TestCase):
                 "stato": "non_disponibile",
                 "a_chiamata": False,
                 "settimanale": [],
+                "settimanale_intervalli": [],
                 "date_speciali": [],
                 "assenze": [],
             },
@@ -137,6 +141,224 @@ class DisponibilitaNormalizationTest(unittest.TestCase):
         self.assertEqual(only_on_call["settimanale"], [])
         self.assertTrue(combined["a_chiamata"])
         self.assertEqual(len(combined["settimanale"]), 1)
+
+    def test_intervalli_precisi_sono_ordinati_e_deduplicati(self):
+        intervals = [
+            {
+                "giorno_settimana": 5,
+                "ora_inizio": "22:00",
+                "ora_fine": "02:00",
+                "giorno_successivo": True,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "13:30",
+                "ora_fine": "17:15",
+                "giorno_successivo": False,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "08:15",
+                "ora_fine": "12:00",
+                "giorno_successivo": False,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "08:15",
+                "ora_fine": "12:00",
+                "giorno_successivo": False,
+            },
+        ]
+
+        normalized = normalize_disponibilita_payload(valid_payload(
+            settimanale_intervalli=intervals,
+        ))
+
+        self.assertEqual(normalized["settimanale_intervalli"], [
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "08:15",
+                "ora_fine": "12:00",
+                "giorno_successivo": False,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "13:30",
+                "ora_fine": "17:15",
+                "giorno_successivo": False,
+            },
+            {
+                "giorno_settimana": 5,
+                "ora_inizio": "22:00",
+                "ora_fine": "02:00",
+                "giorno_successivo": True,
+            },
+        ])
+
+    def test_a_chiamata_puo_stare_da_sola_o_con_intervalli_precisi(self):
+        only_on_call = normalize_disponibilita_payload(valid_payload(
+            a_chiamata=True,
+        ))
+        combined = normalize_disponibilita_payload(valid_payload(
+            a_chiamata=True,
+            settimanale_intervalli=[{
+                "giorno_settimana": 3,
+                "ora_inizio": "10:00",
+                "ora_fine": "12:00",
+                "giorno_successivo": False,
+            }],
+        ))
+
+        self.assertTrue(only_on_call["a_chiamata"])
+        self.assertEqual(only_on_call["settimanale_intervalli"], [])
+        self.assertTrue(combined["a_chiamata"])
+        self.assertEqual(len(combined["settimanale_intervalli"]), 1)
+
+    def test_intervalli_precisi_rifiutano_orari_e_notturni_non_validi(self):
+        invalid_intervals = (
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "09:00",
+                "ora_fine": "09:00",
+                "giorno_successivo": False,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "12:00",
+                "ora_fine": "09:00",
+                "giorno_successivo": False,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "17:00",
+                "ora_fine": "02:00",
+                "giorno_successivo": True,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "22:00",
+                "ora_fine": "09:00",
+                "giorno_successivo": True,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "22:00",
+                "ora_fine": "23:00",
+                "giorno_successivo": True,
+            },
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "9:00",
+                "ora_fine": "10:00",
+                "giorno_successivo": False,
+            },
+        )
+        for interval in invalid_intervals:
+            with self.subTest(interval=interval):
+                with self.assertRaises(ValueError):
+                    normalize_disponibilita_payload(valid_payload(
+                        settimanale_intervalli=[interval],
+                    ))
+
+    def test_intervalli_precisi_non_possono_sovrapporsi(self):
+        cases = (
+            [
+                {
+                    "giorno_settimana": 2,
+                    "ora_inizio": "09:00",
+                    "ora_fine": "12:00",
+                    "giorno_successivo": False,
+                },
+                {
+                    "giorno_settimana": 2,
+                    "ora_inizio": "11:30",
+                    "ora_fine": "14:00",
+                    "giorno_successivo": False,
+                },
+            ],
+            [
+                {
+                    "giorno_settimana": 5,
+                    "ora_inizio": "22:00",
+                    "ora_fine": "02:00",
+                    "giorno_successivo": True,
+                },
+                {
+                    "giorno_settimana": 6,
+                    "ora_inizio": "01:30",
+                    "ora_fine": "04:00",
+                    "giorno_successivo": False,
+                },
+            ],
+            [
+                {
+                    "giorno_settimana": 7,
+                    "ora_inizio": "23:00",
+                    "ora_fine": "02:00",
+                    "giorno_successivo": True,
+                },
+                {
+                    "giorno_settimana": 1,
+                    "ora_inizio": "01:30",
+                    "ora_fine": "03:00",
+                    "giorno_successivo": False,
+                },
+            ],
+        )
+        for intervals in cases:
+            with self.subTest(intervals=intervals):
+                with self.assertRaisesRegex(ValueError, "sovrapporsi"):
+                    normalize_disponibilita_payload(valid_payload(
+                        settimanale_intervalli=intervals,
+                    ))
+
+    def test_intervalli_precisi_adiacenti_sono_ammessi(self):
+        normalized = normalize_disponibilita_payload(valid_payload(
+            settimanale_intervalli=[
+                {
+                    "giorno_settimana": 4,
+                    "ora_inizio": "09:00",
+                    "ora_fine": "12:00",
+                    "giorno_successivo": False,
+                },
+                {
+                    "giorno_settimana": 4,
+                    "ora_inizio": "12:00",
+                    "ora_fine": "14:00",
+                    "giorno_successivo": False,
+                },
+            ],
+        ))
+        self.assertEqual(len(normalized["settimanale_intervalli"]), 2)
+
+    def test_applica_limiti_agli_intervalli_precisi(self):
+        per_day = [
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": f"{index * 2:02d}:00",
+                "ora_fine": f"{index * 2 + 1:02d}:00",
+                "giorno_successivo": False,
+            }
+            for index in range(MAX_INTERVALLI_PER_GIORNO + 1)
+        ]
+        with self.assertRaisesRegex(ValueError, str(MAX_INTERVALLI_PER_GIORNO)):
+            normalize_disponibilita_payload(valid_payload(
+                settimanale_intervalli=per_day,
+            ))
+
+        total = []
+        for index in range(MAX_INTERVALLI_SETTIMANALI + 1):
+            slot = index // 7
+            total.append({
+                "giorno_settimana": (index % 7) + 1,
+                "ora_inizio": f"{slot * 2:02d}:00",
+                "ora_fine": f"{slot * 2 + 1:02d}:00",
+                "giorno_successivo": False,
+            })
+        with self.assertRaisesRegex(ValueError, str(MAX_INTERVALLI_SETTIMANALI)):
+            normalize_disponibilita_payload(valid_payload(
+                settimanale_intervalli=total,
+            ))
 
     def test_a_chiamata_richiede_booleano_e_stato_compatibile(self):
         with self.assertRaisesRegex(ValueError, "valore booleano"):
@@ -437,7 +659,7 @@ class DisponibilitaFreshnessTest(unittest.TestCase):
 
 
 class DisponibilitaPublicSerializerTest(unittest.TestCase):
-    def test_whitelist_pubblica_esclude_campi_tecnici_e_precisione_oraria(self):
+    def test_whitelist_pubblica_esclude_campi_tecnici(self):
         source = valid_payload(
             stato="limitata",
             settimanale=[{"giorno_settimana": 1, "fascia": "mattina"}],
@@ -458,6 +680,7 @@ class DisponibilitaPublicSerializerTest(unittest.TestCase):
             "stato",
             "a_chiamata",
             "settimanale",
+            "settimanale_intervalli",
             "date_speciali",
             "assenze",
             "freschezza",
@@ -474,6 +697,28 @@ class DisponibilitaPublicSerializerTest(unittest.TestCase):
             now="2026-01-02T12:34:56Z",
         )
         self.assertTrue(result["a_chiamata"])
+
+    def test_serializzatore_pubblico_conserva_intervalli_precisi(self):
+        intervals = [
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "09:15",
+                "ora_fine": "12:30",
+                "giorno_successivo": False,
+            },
+            {
+                "giorno_settimana": 7,
+                "ora_inizio": "22:00",
+                "ora_fine": "02:00",
+                "giorno_successivo": True,
+            },
+        ]
+        result = serializza_disponibilita_pubblica(
+            valid_payload(settimanale_intervalli=intervals),
+            confermata_at="2026-01-01T12:34:56Z",
+            now="2026-01-02T12:34:56Z",
+        )
+        self.assertEqual(result["settimanale_intervalli"], intervals)
 
     def test_serializzatore_rivalida_i_dati_pubblici(self):
         with self.assertRaises(ValueError):

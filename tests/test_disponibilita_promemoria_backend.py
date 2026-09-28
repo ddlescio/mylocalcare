@@ -25,6 +25,8 @@ def load_reminder_backend():
         "_normalizza_limite_promemoria_disponibilita",
         "_disponibilita_promemoria_datetime",
         "_link_promemoria_disponibilita",
+        "_disponibilita_intervalli_table_exists",
+        "_disponibilita_profilo_schedule_sql",
         "_disponibilita_filtro_cerca_sql",
         "_disponibilita_priorita_cerca_sql",
         "_piano_promemoria_disponibilita",
@@ -53,6 +55,8 @@ def load_reminder_backend():
         "DISPONIBILITA_PROMEMORIA_BATCH_DEFAULT": 100,
         "DISPONIBILITA_PROMEMORIA_BATCH_MAX": 1000,
         "DISPONIBILITA_PROMEMORIA_COOLDOWN_GIORNI": 3,
+        "sql": lambda query: query,
+        "fetchone_value": lambda row: row[0] if row else None,
     }
     exec(
         compile(ast.Module(body=selected, type_ignores=[]), "app.py", "exec"),
@@ -497,7 +501,8 @@ class DisponibilitaPromemoriaBackendTest(unittest.TestCase):
         stale = (now - timedelta(days=45)).strftime("%Y-%m-%d %H:%M:%S")
         conn = self._connect()
         conn.executemany(
-            "INSERT INTO annunci (id, utente_id, categoria) VALUES (?, ?, ?)",
+            "INSERT INTO annunci (id, utente_id, categoria, tipo_annuncio) "
+            "VALUES (?, ?, ?, 'offro')",
             [
                 (11, 11, "babysitter"),
                 (12, 12, "babysitter"),

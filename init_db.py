@@ -1656,6 +1656,7 @@ def crea_tabelle_disponibilita_servizi():
     conn = get_conn()
     c = conn.cursor()
     date_type = "DATE" if IS_POSTGRES else "TEXT"
+    time_type = "TIME WITHOUT TIME ZONE" if IS_POSTGRES else "TEXT"
 
     try:
         c.execute(sql(f"""
@@ -1690,6 +1691,38 @@ def crea_tabelle_disponibilita_servizi():
                 ),
                 created_at {dt_col(True)} NOT NULL,
                 UNIQUE (utente_id, giorno_settimana, fascia),
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE
+            );
+        """))
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS disponibilita_intervalli (
+                id {pk_col()},
+                utente_id INTEGER NOT NULL,
+                giorno_settimana INTEGER NOT NULL CHECK (
+                    giorno_settimana BETWEEN 1 AND 7
+                ),
+                ora_inizio {time_type} NOT NULL,
+                ora_fine {time_type} NOT NULL,
+                giorno_successivo BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at {dt_col(True)} NOT NULL,
+                UNIQUE (
+                    utente_id, giorno_settimana, ora_inizio,
+                    ora_fine, giorno_successivo
+                ),
+                CHECK (
+                    (
+                        giorno_successivo = FALSE
+                        AND ora_fine > ora_inizio
+                    )
+                    OR (
+                        giorno_successivo = TRUE
+                        AND ora_inizio > ora_fine
+                        AND ora_inizio >= '18:00'
+                        AND ora_fine <= '08:00'
+                    )
+                ),
                 FOREIGN KEY (utente_id)
                     REFERENCES utenti(id) ON DELETE CASCADE
             );
@@ -1773,6 +1806,39 @@ def crea_tabelle_disponibilita_servizi():
         """))
 
         c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS disponibilita_intervalli_categoria (
+                id {pk_col()},
+                profilo_categoria_id INTEGER NOT NULL,
+                giorno_settimana INTEGER NOT NULL CHECK (
+                    giorno_settimana BETWEEN 1 AND 7
+                ),
+                ora_inizio {time_type} NOT NULL,
+                ora_fine {time_type} NOT NULL,
+                giorno_successivo BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at {dt_col(True)} NOT NULL,
+                UNIQUE (
+                    profilo_categoria_id, giorno_settimana, ora_inizio,
+                    ora_fine, giorno_successivo
+                ),
+                CHECK (
+                    (
+                        giorno_successivo = FALSE
+                        AND ora_fine > ora_inizio
+                    )
+                    OR (
+                        giorno_successivo = TRUE
+                        AND ora_inizio > ora_fine
+                        AND ora_inizio >= '18:00'
+                        AND ora_fine <= '08:00'
+                    )
+                ),
+                FOREIGN KEY (profilo_categoria_id)
+                    REFERENCES disponibilita_profili_categoria(id)
+                    ON DELETE CASCADE
+            );
+        """))
+
+        c.execute(sql(f"""
             CREATE TABLE IF NOT EXISTS disponibilita_date_speciali_categoria (
                 id {pk_col()},
                 profilo_categoria_id INTEGER NOT NULL,
@@ -1844,6 +1910,19 @@ def crea_tabelle_disponibilita_servizi():
         c.execute(sql("""
             CREATE INDEX IF NOT EXISTS idx_disponibilita_settimanale_utente
             ON disponibilita_settimanale (utente_id, giorno_settimana);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_disponibilita_intervalli_utente_giorno
+            ON disponibilita_intervalli (
+                utente_id, giorno_settimana, ora_inizio, ora_fine
+            );
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_disponibilita_intervalli_categoria_giorno
+            ON disponibilita_intervalli_categoria (
+                profilo_categoria_id, giorno_settimana,
+                ora_inizio, ora_fine
+            );
         """))
         c.execute(sql("""
             CREATE INDEX IF NOT EXISTS idx_disponibilita_date_utente

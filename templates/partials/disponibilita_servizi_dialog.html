@@ -187,6 +187,10 @@
         <p class="service-availability-section-help">
           {{ tr('availability.weekly_help') }}
         </p>
+        <p class="service-availability-exact-help">
+          <span aria-hidden="true">⏱️</span>
+          <span>{{ tr('availability.exact_intervals_help') }}</span>
+        </p>
 
         <div class="service-availability-week" id="service-availability-week">
           {% set availability_days = [
@@ -219,6 +223,25 @@
                 <span>{{ tr(slot_key) }}</span>
               </label>
               {% endfor %}
+            </div>
+            <div class="service-availability-exact-times">
+              <div class="service-availability-exact-times-heading">
+                <span>{{ tr('availability.exact_intervals_title') }}</span>
+                <button
+                  type="button"
+                  class="service-availability-add-interval"
+                  data-service-availability-add-interval
+                  data-day="{{ day_number }}"
+                  aria-label="{{ tr('availability.add_interval') }} — {{ tr(day_key) }}">
+                  <span aria-hidden="true">＋</span>
+                  <span>{{ tr('availability.add_interval') }}</span>
+                </button>
+              </div>
+              <div
+                class="service-availability-interval-list"
+                data-service-availability-interval-list
+                data-day="{{ day_number }}"
+                aria-live="polite"></div>
             </div>
           </div>
           {% endfor %}
@@ -1231,6 +1254,20 @@
     gap:.62rem;
   }
 
+  .service-availability-exact-help{
+    display:flex;
+    align-items:flex-start;
+    gap:.38rem;
+    margin:-.28rem 0 .78rem;
+    padding:.52rem .58rem;
+    border:1px solid #dbeafe;
+    border-radius:.78rem;
+    background:#f8fbff;
+    color:#475569;
+    font-size:.63rem;
+    line-height:1.42;
+  }
+
   .service-availability-day{
     min-width:0;
     display:grid;
@@ -1302,6 +1339,177 @@
   .service-availability-slot-chip input:disabled + span{
     cursor:not-allowed;
     opacity:.5;
+  }
+
+  .service-availability-exact-times{
+    display:grid;
+    gap:.45rem;
+    margin-top:.08rem;
+    padding:.52rem;
+    border:1px solid rgba(219,234,254,.9);
+    border-radius:.82rem;
+    background:linear-gradient(145deg, rgba(248,251,255,.94), rgba(255,255,255,.98));
+  }
+
+  .service-availability-exact-times-heading{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.5rem;
+  }
+
+  .service-availability-exact-times-heading > span{
+    min-width:0;
+    color:#475569;
+    font-size:.63rem;
+    line-height:1.25;
+    font-weight:820;
+  }
+
+  .service-availability-add-interval{
+    flex:0 0 auto;
+    min-height:1.9rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.18rem;
+    padding:.38rem .55rem;
+    border:1px solid #bfdbfe;
+    border-radius:9999px;
+    background:#fff;
+    color:#1d4ed8;
+    font:inherit;
+    font-size:.59rem;
+    line-height:1;
+    font-weight:850;
+    cursor:pointer;
+    box-shadow:0 4px 10px rgba(37,99,235,.07);
+  }
+
+  .service-availability-add-interval:focus-visible{
+    outline:3px solid rgba(96,165,250,.3);
+    outline-offset:2px;
+  }
+
+  .service-availability-add-interval:disabled{
+    cursor:not-allowed;
+    opacity:.52;
+  }
+
+  .service-availability-interval-list{
+    display:grid;
+    gap:.45rem;
+  }
+
+  .service-availability-interval-row{
+    min-width:0;
+    display:grid;
+    gap:.46rem;
+    padding:.55rem;
+    border:1px solid #dbe3ee;
+    border-radius:.76rem;
+    background:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.96);
+  }
+
+  .service-availability-interval-row-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.5rem;
+  }
+
+  .service-availability-interval-row-title{
+    color:#334155;
+    font-size:.61rem;
+    line-height:1.2;
+    font-weight:850;
+  }
+
+  .service-availability-interval-remove{
+    width:1.75rem;
+    height:1.75rem;
+    display:grid;
+    place-items:center;
+    padding:0;
+    border:1px solid #fecaca;
+    border-radius:9999px;
+    background:#fff7f7;
+    color:#b91c1c;
+    font:inherit;
+    font-size:1rem;
+    line-height:1;
+    cursor:pointer;
+  }
+
+  .service-availability-interval-time-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.45rem;
+  }
+
+  .service-availability-interval-time{
+    min-width:0;
+    display:grid;
+    gap:.25rem;
+    color:#475569;
+    font-size:.59rem;
+    line-height:1.2;
+    font-weight:780;
+  }
+
+  .service-availability-interval-time input{
+    width:100%;
+    min-width:0;
+    min-height:2.45rem;
+    padding:.46rem .48rem;
+    border:1px solid #cbd5e1;
+    border-radius:.68rem;
+    background:#fff;
+    color:#0f172a;
+    font:inherit;
+    font-size:.74rem;
+  }
+
+  .service-availability-next-day{
+    position:relative;
+    min-width:0;
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    align-items:start;
+    gap:.45rem;
+    padding:.48rem .52rem;
+    border:1px solid #e2e8f0;
+    border-radius:.68rem;
+    background:#f8fafc;
+    color:#475569;
+    cursor:pointer;
+  }
+
+  .service-availability-next-day input{
+    width:1.05rem;
+    height:1.05rem;
+    margin:.05rem 0 0;
+    accent-color:#2563eb;
+  }
+
+  .service-availability-next-day-copy{
+    min-width:0;
+    display:grid;
+    gap:.08rem;
+  }
+
+  .service-availability-next-day-copy strong{
+    color:#334155;
+    font-size:.6rem;
+    line-height:1.25;
+    font-weight:820;
+  }
+
+  .service-availability-next-day-copy small{
+    color:#64748b;
+    font-size:.56rem;
+    line-height:1.35;
   }
 
   .service-availability-add-button{
@@ -1587,6 +1795,10 @@
       align-items:center;
     }
 
+    .service-availability-exact-times{
+      grid-column:2;
+    }
+
     .service-availability-dialog-actions{
       bottom:-1.18rem;
       margin:0 -1.18rem -1.18rem;
@@ -1643,7 +1855,19 @@
     slotMorning: {{ tr('availability.slot_morning')|tojson }},
     slotAfternoon: {{ tr('availability.slot_afternoon')|tojson }},
     slotEvening: {{ tr('availability.slot_evening')|tojson }},
-    slotNight: {{ tr('availability.slot_night')|tojson }}
+    slotNight: {{ tr('availability.slot_night')|tojson }},
+    exactInterval: {{ tr('availability.exact_interval_label')|tojson }},
+    fromTime: {{ tr('availability.from')|tojson }},
+    toTime: {{ tr('availability.to')|tojson }},
+    nextDay: {{ tr('availability.next_day')|tojson }},
+    nextDayHelp: {{ tr('availability.next_day_help')|tojson }},
+    removeInterval: {{ tr('availability.remove_interval')|tojson }},
+    errorIncompleteInterval: {{ tr('availability.error_incomplete_interval')|tojson }},
+    errorInvalidInterval: {{ tr('availability.error_invalid_interval')|tojson }},
+    errorInvalidNightInterval: {{ tr('availability.error_invalid_night_interval')|tojson }},
+    errorOverlappingIntervals: {{ tr('availability.error_overlapping_intervals')|tojson }},
+    errorIntervalLimitPerDay: {{ tr('availability.error_interval_limit_per_day')|tojson }},
+    errorIntervalLimitTotal: {{ tr('availability.error_interval_limit_total')|tojson }}
   });
 
   const categoryLabels = Object.freeze({
@@ -1664,6 +1888,13 @@
 
   const allowedStates = new Set(["disponibile", "limitata", "non_disponibile"]);
   const allowedSlots = ["mattina", "pomeriggio", "sera", "notte"];
+  const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  const maxIntervalsPerDay = 8;
+  const maxIntervalsTotal = 28;
+  const nightStartMinutes = 18 * 60;
+  const nightEndMinutes = 8 * 60;
+  const minutesPerDay = 24 * 60;
+  const minutesPerWeek = 7 * minutesPerDay;
   const slotLabels = {
     mattina: copy.slotMorning,
     pomeriggio: copy.slotAfternoon,
@@ -1705,6 +1936,7 @@
   let scopeCategoryAvailable = false;
   let userOffersServices = false;
   let toastTimer = 0;
+  let intervalCounter = 0;
 
   function setHidden(element, hidden) {
     if (element) element.classList.toggle("service-availability-hidden", Boolean(hidden));
@@ -1728,6 +1960,23 @@
       }
     }
     return Array.from(new Set(asArray(slots).filter(slot => allowedSlots.includes(slot))));
+  }
+
+  function normalizeWeeklyIntervals(value) {
+    return asArray(value).map(item => ({
+      giorno_settimana: Number(item && item.giorno_settimana),
+      ora_inizio: String((item && item.ora_inizio) || ""),
+      ora_fine: String((item && item.ora_fine) || ""),
+      giorno_successivo: Boolean(
+        item
+        && (item.giorno_successivo === true || item.giorno_successivo === 1)
+      )
+    })).filter(item => (
+      item.giorno_settimana >= 1
+      && item.giorno_settimana <= 7
+      && timePattern.test(item.ora_inizio)
+      && timePattern.test(item.ora_fine)
+    ));
   }
 
   function normalizeAvailability(payload) {
@@ -1758,6 +2007,9 @@
         && item.giorno_settimana <= 7
         && allowedSlots.includes(item.fascia)
       )),
+      settimanale_intervalli: normalizeWeeklyIntervals(
+        source.settimanale_intervalli ?? source.intervalli_settimanali
+      ),
       date_speciali: asArray(source.date_speciali).map(item => ({
         data: String((item && item.data) || ""),
         tipo: item && item.tipo === "non_disponibile" ? "non_disponibile" : "disponibile",
@@ -1956,9 +2208,13 @@
     dialog.querySelectorAll("[data-service-availability-remove]").forEach(button => {
       button.disabled = busy;
     });
+    dialog.querySelectorAll("[data-service-availability-remove-interval]").forEach(button => {
+      button.disabled = busy;
+    });
     dialog.querySelectorAll("[data-service-availability-close]").forEach(button => {
       button.disabled = busy;
     });
+    syncWeeklyIntervalButtons();
     syncScopeControls({ populate: false });
   }
 
@@ -1995,6 +2251,130 @@
     });
     wrapper.appendChild(button);
     return wrapper;
+  }
+
+  function timeToMinutes(value) {
+    if (!timePattern.test(String(value || ""))) return null;
+    const parts = String(value).split(":").map(Number);
+    return (parts[0] * 60) + parts[1];
+  }
+
+  function weeklyIntervalCounts(dayNumber) {
+    const allRows = dialog.querySelectorAll("[data-service-availability-interval]");
+    const dayList = dialog.querySelector(
+      `[data-service-availability-interval-list][data-day="${Number(dayNumber)}"]`
+    );
+    return {
+      day: dayList
+        ? dayList.querySelectorAll("[data-service-availability-interval]").length
+        : 0,
+      total: allRows.length
+    };
+  }
+
+  function syncWeeklyIntervalButtons() {
+    dialog.querySelectorAll("[data-service-availability-add-interval]").forEach(button => {
+      const counts = weeklyIntervalCounts(button.dataset.day);
+      const atLimit = counts.day >= maxIntervalsPerDay
+        || counts.total >= maxIntervalsTotal;
+      button.disabled = busy || atLimit;
+      button.setAttribute("aria-disabled", atLimit ? "true" : "false");
+    });
+  }
+
+  function createWeeklyTimeField(uniqueId, suffix, labelText, value) {
+    const label = createElement("label", "service-availability-interval-time");
+    label.htmlFor = `${uniqueId}-${suffix}`;
+    label.appendChild(createElement("span", "", labelText));
+
+    const input = document.createElement("input");
+    input.id = `${uniqueId}-${suffix}`;
+    input.type = "time";
+    input.step = "60";
+    input.required = true;
+    input.value = value || "";
+    input.dataset.role = suffix;
+    label.appendChild(input);
+    return label;
+  }
+
+  function addWeeklyInterval(dayNumber, value, options) {
+    const day = Number(dayNumber);
+    const list = dialog.querySelector(
+      `[data-service-availability-interval-list][data-day="${day}"]`
+    );
+    if (!list || day < 1 || day > 7) return null;
+
+    const counts = weeklyIntervalCounts(day);
+    if (counts.day >= maxIntervalsPerDay) {
+      showError(copy.errorIntervalLimitPerDay);
+      syncWeeklyIntervalButtons();
+      return null;
+    }
+    if (counts.total >= maxIntervalsTotal) {
+      showError(copy.errorIntervalLimitTotal);
+      syncWeeklyIntervalButtons();
+      return null;
+    }
+
+    const item = value || {};
+    intervalCounter += 1;
+    const uniqueId = `service-availability-interval-${intervalCounter}`;
+    const row = createElement("div", "service-availability-interval-row");
+    row.dataset.serviceAvailabilityInterval = "";
+    row.dataset.day = String(day);
+    row.setAttribute("role", "group");
+    row.setAttribute("aria-label", copy.exactInterval);
+
+    const rowHead = createElement("div", "service-availability-interval-row-head");
+    rowHead.appendChild(createElement(
+      "span",
+      "service-availability-interval-row-title",
+      copy.exactInterval
+    ));
+    const removeButton = createElement(
+      "button",
+      "service-availability-interval-remove",
+      "×"
+    );
+    removeButton.type = "button";
+    removeButton.dataset.serviceAvailabilityRemoveInterval = "";
+    removeButton.setAttribute("aria-label", copy.removeInterval);
+    removeButton.title = copy.removeInterval;
+    removeButton.addEventListener("click", () => {
+      if (busy) return;
+      row.remove();
+      syncWeeklyIntervalButtons();
+    });
+    rowHead.appendChild(removeButton);
+    row.appendChild(rowHead);
+
+    const timeGrid = createElement("div", "service-availability-interval-time-grid");
+    timeGrid.append(
+      createWeeklyTimeField(uniqueId, "start", copy.fromTime, item.ora_inizio),
+      createWeeklyTimeField(uniqueId, "end", copy.toTime, item.ora_fine)
+    );
+    row.appendChild(timeGrid);
+
+    const nextDayLabel = createElement("label", "service-availability-next-day");
+    const nextDayInput = document.createElement("input");
+    nextDayInput.type = "checkbox";
+    nextDayInput.checked = item.giorno_successivo === true;
+    nextDayInput.dataset.role = "next-day";
+    const nextDayCopy = createElement("span", "service-availability-next-day-copy");
+    nextDayCopy.append(
+      createElement("strong", "", copy.nextDay),
+      createElement("small", "", copy.nextDayHelp)
+    );
+    nextDayLabel.append(nextDayInput, nextDayCopy);
+    row.appendChild(nextDayLabel);
+
+    list.appendChild(row);
+    syncWeeklyIntervalButtons();
+    if (!options || options.focus !== false) {
+      row.querySelector('[data-role="start"]')?.focus({ preventScroll: true });
+    }
+    return row;
   }
 
   function createSlotChoices(selectedSlots) {
@@ -2095,6 +2475,7 @@
       stato: "disponibile",
       a_chiamata: false,
       settimanale: [],
+      settimanale_intervalli: [],
       date_speciali: [],
       assenze: []
     };
@@ -2220,6 +2601,14 @@
       input.checked = weekly.has(input.value);
     });
 
+    form.querySelectorAll("[data-service-availability-interval-list]").forEach(list => {
+      list.replaceChildren();
+    });
+    availability.settimanale_intervalli.forEach(interval => {
+      addWeeklyInterval(interval.giorno_settimana, interval, { focus: false });
+    });
+    syncWeeklyIntervalButtons();
+
     specialList.replaceChildren();
     availability.date_speciali.forEach(addSpecialRow);
     absenceList.replaceChildren();
@@ -2248,6 +2637,79 @@
       giorno_settimana: Number(input.dataset.day),
       fascia: input.dataset.slot
     }));
+
+    const weeklyIntervals = [];
+    const weeklyIntervalTimeline = [];
+    for (const row of form.querySelectorAll("[data-service-availability-interval]")) {
+      const startInput = row.querySelector('[data-role="start"]');
+      const endInput = row.querySelector('[data-role="end"]');
+      const nextDayInput = row.querySelector('[data-role="next-day"]');
+      const start = startInput ? startInput.value : "";
+      const end = endInput ? endInput.value : "";
+      const startMinutes = timeToMinutes(start);
+      const endMinutes = timeToMinutes(end);
+      const nextDay = Boolean(nextDayInput && nextDayInput.checked);
+
+      if (startMinutes === null || endMinutes === null) {
+        throw {
+          message: copy.errorIncompleteInterval,
+          target: startMinutes === null ? startInput : endInput
+        };
+      }
+      if (nextDay) {
+        if (!(
+          startMinutes > endMinutes
+          && startMinutes >= nightStartMinutes
+          && endMinutes <= nightEndMinutes
+        )) {
+          throw {
+            message: copy.errorInvalidNightInterval,
+            target: nextDayInput
+          };
+        }
+      } else if (endMinutes <= startMinutes) {
+        throw { message: copy.errorInvalidInterval, target: endInput };
+      }
+
+      weeklyIntervals.push({
+        giorno_settimana: Number(row.dataset.day),
+        ora_inizio: start,
+        ora_fine: end,
+        giorno_successivo: nextDay
+      });
+      const dayOffset = (Number(row.dataset.day) - 1) * minutesPerDay;
+      weeklyIntervalTimeline.push({
+        start: dayOffset + startMinutes,
+        end: dayOffset + endMinutes + (nextDay ? minutesPerDay : 0),
+        target: startInput
+      });
+    }
+
+    weeklyIntervalTimeline.sort((left, right) => left.start - right.start);
+    for (let index = 1; index < weeklyIntervalTimeline.length; index += 1) {
+      if (weeklyIntervalTimeline[index - 1].end > weeklyIntervalTimeline[index].start) {
+        throw {
+          message: copy.errorOverlappingIntervals,
+          target: weeklyIntervalTimeline[index].target
+        };
+      }
+    }
+    if (
+      weeklyIntervalTimeline.length > 1
+      && weeklyIntervalTimeline[weeklyIntervalTimeline.length - 1].end
+        > weeklyIntervalTimeline[0].start + minutesPerWeek
+    ) {
+      throw {
+        message: copy.errorOverlappingIntervals,
+        target: weeklyIntervalTimeline[0].target
+      };
+    }
+
+    weeklyIntervals.sort((left, right) => (
+      left.giorno_settimana - right.giorno_settimana
+      || left.ora_inizio.localeCompare(right.ora_inizio)
+      || left.ora_fine.localeCompare(right.ora_fine)
+    ));
 
     const seenDates = new Set();
     const specialDates = [];
@@ -2302,6 +2764,7 @@
         stato: statusInput.value,
         a_chiamata: Boolean(onCallInput && onCallInput.checked),
         settimanale: weekly,
+        settimanale_intervalli: weeklyIntervals,
         date_speciali: specialDates,
         assenze: absences
       }
@@ -2615,6 +3078,12 @@
     input.addEventListener("change", syncPositiveDetailsState);
   });
   if (deleteButton) deleteButton.addEventListener("click", deleteAvailability);
+  dialog.querySelectorAll("[data-service-availability-add-interval]").forEach(button => {
+    button.addEventListener("click", () => {
+      if (busy) return;
+      addWeeklyInterval(button.dataset.day, {}, { focus: true });
+    });
+  });
   addSpecialButton.addEventListener("click", () => {
     const row = addSpecialRow({ tipo: "disponibile", fasce: [] });
     const input = row.querySelector("input[type=date]");
@@ -2650,6 +3119,7 @@
   });
 
   setOpenHooksExpanded(false);
+  syncWeeklyIntervalButtons();
   updateEmptyStates();
   openAvailabilityFromDeepLink();
 })();

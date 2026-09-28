@@ -40,7 +40,9 @@ def load_backend_functions():
         "_scheda_profilo_bool",
         "_disponibilita_servizi_table_exists",
         "_disponibilita_categoria_table_exists",
+        "_disponibilita_intervalli_table_exists",
         "_disponibilita_servizi_iso",
+        "_disponibilita_servizi_time",
         "_disponibilita_categoria_label",
         "_disponibilita_decode_slots",
         "_serializza_profilo_disponibilita",
@@ -165,6 +167,15 @@ class DisponibilitaBackendTest(unittest.TestCase):
                 fascia TEXT,
                 created_at TEXT
             );
+            CREATE TABLE disponibilita_intervalli (
+                id INTEGER PRIMARY KEY,
+                utente_id INTEGER,
+                giorno_settimana INTEGER,
+                ora_inizio TEXT,
+                ora_fine TEXT,
+                giorno_successivo INTEGER DEFAULT 0,
+                created_at TEXT
+            );
             CREATE TABLE disponibilita_date_speciali (
                 id INTEGER PRIMARY KEY,
                 utente_id INTEGER,
@@ -201,6 +212,15 @@ class DisponibilitaBackendTest(unittest.TestCase):
                 profilo_categoria_id INTEGER,
                 giorno_settimana INTEGER,
                 fascia TEXT,
+                created_at TEXT
+            );
+            CREATE TABLE disponibilita_intervalli_categoria (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                profilo_categoria_id INTEGER,
+                giorno_settimana INTEGER,
+                ora_inizio TEXT,
+                ora_fine TEXT,
+                giorno_successivo INTEGER DEFAULT 0,
                 created_at TEXT
             );
             CREATE TABLE disponibilita_date_speciali_categoria (
@@ -292,6 +312,105 @@ class DisponibilitaBackendTest(unittest.TestCase):
         self.assertTrue(public["a_chiamata"])
         self.assertEqual(public["settimanale"], [])
         self.assertEqual(stored["a_chiamata"], 1)
+
+    def test_intervalli_precisi_round_trip_generale_categoria_e_pubblico(self):
+        save_general = self.backend["_salva_disponibilita_generale"]
+        load_general = self.backend["carica_disponibilita_servizi"]
+        save_category = self.backend["_salva_disponibilita_categoria"]
+        load_category = self.backend["carica_disponibilita_servizi_categoria"]
+
+        general_intervals = [
+            {
+                "giorno_settimana": 1,
+                "ora_inizio": "09:15",
+                "ora_fine": "12:30",
+                "giorno_successivo": False,
+            },
+            {
+                "giorno_settimana": 5,
+                "ora_inizio": "22:00",
+                "ora_fine": "02:00",
+                "giorno_successivo": True,
+            },
+        ]
+        category_intervals = [
+            {
+                "giorno_settimana": 2,
+                "ora_inizio": "13:00",
+                "ora_fine": "16:45",
+                "giorno_successivo": False,
+            },
+        ]
+
+        save_general(
+            self.cursor,
+            21,
+            availability_payload(
+                a_chiamata=True,
+                settimanale_intervalli=general_intervals,
+            ),
+            0,
+        )
+        save_category(
+            self.cursor,
+            21,
+            "babysitter",
+            availability_payload(
+                stato="limitata",
+                settimanale_intervalli=category_intervals,
+            ),
+            0,
+        )
+
+        general_private = load_general(self.cursor, 21, pubblica=False)
+        general_public = load_general(self.cursor, 21, pubblica=True)
+        category_private = load_category(
+            self.cursor,
+            21,
+            "babysitter",
+            pubblica=False,
+        )
+        category_public = load_category(
+            self.cursor,
+            21,
+            "babysitter",
+            pubblica=True,
+        )
+
+        self.assertEqual(
+            general_private["settimanale_intervalli"],
+            general_intervals,
+        )
+        self.assertEqual(
+            general_public["settimanale_intervalli"],
+            general_intervals,
+        )
+        self.assertEqual(
+            category_private["settimanale_intervalli"],
+            category_intervals,
+        )
+        self.assertEqual(
+            category_public["settimanale_intervalli"],
+            category_intervals,
+        )
+        self.assertEqual(
+            self.cursor.execute(
+                "SELECT COUNT(*) FROM disponibilita_intervalli "
+                "WHERE utente_id = 21"
+            ).fetchone()[0],
+            2,
+        )
+        self.assertEqual(
+            self.cursor.execute(
+                "SELECT COUNT(*) "
+                "FROM disponibilita_intervalli_categoria dic "
+                "JOIN disponibilita_profili_categoria dpc "
+                "ON dpc.id = dic.profilo_categoria_id "
+                "WHERE dpc.utente_id = 21 "
+                "AND dpc.categoria_slug = 'babysitter'"
+            ).fetchone()[0],
+            1,
+        )
 
     def test_payload_helper_disattiva_a_chiamata_per_default(self):
         self.assertFalse(availability_payload()["a_chiamata"])

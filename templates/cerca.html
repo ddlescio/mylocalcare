@@ -17,7 +17,7 @@
              shadow-2xl backdrop-blur-lg">
   <input type="hidden" name="categoria" value="{{ categoria }}">
 
-  <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-indigo-100">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-indigo-100">
     <div class="flex items-center gap-2 min-w-0">
       <span class="text-lg">✨</span>
       <h3 class="text-base font-semibold bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 bg-clip-text text-transparent">
@@ -25,16 +25,29 @@
       </h3>
     </div>
 
-    <button
-      type="button"
-      id="close-filtri"
-      class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full
-             bg-white/90 text-slate-600 border border-slate-200
-             shadow-sm hover:bg-slate-50 hover:text-slate-800 transition-all duration-150 shrink-0"
-      aria-label="Chiudi filtri">
-      <span class="text-sm">✕</span>
-      <span class="text-sm font-semibold">Chiudi</span>
-    </button>
+    <div class="ml-auto flex shrink-0 items-center gap-2">
+      <button
+        type="submit"
+        id="apply-filtri-top"
+        class="inline-flex items-center justify-center gap-1.5 rounded-full
+               bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-500
+               px-3 py-1.5 text-sm font-semibold text-white shadow-md
+               hover:shadow-lg transition-all duration-150">
+        <span aria-hidden="true">✓</span>
+        <span>Applica filtri</span>
+      </button>
+
+      <button
+        type="button"
+        id="close-filtri"
+        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full
+               bg-white/90 text-slate-600 border border-slate-200
+               shadow-sm hover:bg-slate-50 hover:text-slate-800 transition-all duration-150 shrink-0"
+        aria-label="Chiudi filtri">
+        <span class="text-sm">✕</span>
+        <span class="text-sm font-semibold">Chiudi</span>
+      </button>
+    </div>
   </div>
 
   <!-- 📍 Campo ZONA con autocomplete -->
@@ -158,6 +171,8 @@
         name="solo_disponibili"
         value="1"
         class="cerca-interest-filter__input"
+        aria-controls="disponibilita-filtri-dettaglio"
+        aria-expanded="{{ 'true' if solo_disponibili else 'false' }}"
         {% if solo_disponibili %}checked{% endif %}>
 
       <span class="cerca-interest-filter__icon" aria-hidden="true">📅</span>
@@ -169,6 +184,150 @@
 
       <span class="cerca-interest-filter__switch" aria-hidden="true"></span>
     </label>
+
+    {% set disponibilita_giorni_selezionati = request.args.getlist('disponibilita_giorni') %}
+    {% set disponibilita_fasce_selezionate = request.args.getlist('disponibilita_fasce') %}
+    {% set disponibilita_giorni_opzioni = [
+      ('1', 'availability.day_monday', 'availability.day_monday_short'),
+      ('2', 'availability.day_tuesday', 'availability.day_tuesday_short'),
+      ('3', 'availability.day_wednesday', 'availability.day_wednesday_short'),
+      ('4', 'availability.day_thursday', 'availability.day_thursday_short'),
+      ('5', 'availability.day_friday', 'availability.day_friday_short'),
+      ('6', 'availability.day_saturday', 'availability.day_saturday_short'),
+      ('7', 'availability.day_sunday', 'availability.day_sunday_short')
+    ] %}
+    {% set disponibilita_fasce_opzioni = [
+      ('mattina', 'availability.slot_morning', '☀️'),
+      ('pomeriggio', 'availability.slot_afternoon', '🌤️'),
+      ('sera', 'availability.slot_evening', '🌆'),
+      ('notte', 'availability.slot_night', '🌙')
+    ] %}
+
+    <section id="disponibilita-filtri-dettaglio"
+             class="availability-search-detail sm:col-span-2 {% if puo_filtrare_interessi %}lg:col-span-3{% endif %}"
+             aria-labelledby="disponibilita-filtri-titolo"
+             aria-hidden="{{ 'false' if solo_disponibili else 'true' }}"
+             data-time-pair-error="{{ tr('search.availability_time_pair_error') }}"
+             data-time-equal-error="{{ tr('search.availability_time_equal_error') }}"
+             data-time-day-error="{{ tr('search.availability_time_day_error') }}"
+             data-time-night-error="{{ tr('availability_request.error_invalid_night_interval') }}"
+             {% if not solo_disponibili %}hidden{% endif %}>
+      <header class="availability-search-detail__header">
+        <span class="availability-search-detail__mark" aria-hidden="true">🗓️</span>
+        <span class="min-w-0">
+          <strong id="disponibilita-filtri-titolo">{{ tr('search.availability_detail_title') }}</strong>
+          <small>
+            {{ tr('search.availability_detail_hint') }}
+          </small>
+        </span>
+      </header>
+
+      <div class="availability-search-detail__body">
+        <fieldset class="availability-search-detail__group">
+          <legend>{{ tr('search.availability_days_title') }}</legend>
+          <p id="disponibilita-giorni-aiuto" class="availability-search-detail__help">
+            {{ tr('search.availability_days_help') }}
+          </p>
+          <div class="availability-search-days" aria-describedby="disponibilita-giorni-aiuto">
+            {% for day_value, day_label_key, day_short_key in disponibilita_giorni_opzioni %}
+              <label class="availability-search-chip availability-search-chip--day"
+                     title="{{ tr(day_label_key) }}">
+                <input type="checkbox"
+                       name="disponibilita_giorni"
+                       value="{{ day_value }}"
+                       data-availability-detail-input
+                       {% if day_value in disponibilita_giorni_selezionati %}checked{% endif %}
+                       {% if not solo_disponibili %}disabled{% endif %}>
+                <span aria-hidden="true">{{ tr(day_short_key) }}</span>
+                <span class="sr-only">{{ tr(day_label_key) }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+
+        <fieldset class="availability-search-detail__group">
+          <legend>{{ tr('availability.slots') }}</legend>
+          <p id="disponibilita-fasce-aiuto" class="availability-search-detail__help">
+            {{ tr('search.availability_slots_help') }}
+          </p>
+          <div class="availability-search-slots" aria-describedby="disponibilita-fasce-aiuto">
+            {% for slot_value, slot_label_key, slot_icon in disponibilita_fasce_opzioni %}
+              <label class="availability-search-chip availability-search-chip--slot">
+                <input type="checkbox"
+                       name="disponibilita_fasce"
+                       value="{{ slot_value }}"
+                       data-availability-detail-input
+                       {% if slot_value in disponibilita_fasce_selezionate %}checked{% endif %}
+                       {% if not solo_disponibili %}disabled{% endif %}>
+                <span aria-hidden="true">{{ slot_icon }}</span>
+                <span>{{ tr(slot_label_key) }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+
+        <label class="availability-search-on-call">
+          <input type="checkbox"
+                 name="disponibilita_a_chiamata"
+                 value="1"
+                 data-availability-detail-input
+                 {% if request.args.get('disponibilita_a_chiamata') == '1' %}checked{% endif %}
+                 {% if not solo_disponibili %}disabled{% endif %}>
+          <span class="availability-search-on-call__icon" aria-hidden="true">📞</span>
+          <span class="availability-search-on-call__copy">
+            <strong>{{ tr('availability.on_call_label') }}</strong>
+            <small>{{ tr('search.availability_on_call_help') }}</small>
+          </span>
+          <span class="availability-search-on-call__check" aria-hidden="true">✓</span>
+        </label>
+
+        <fieldset class="availability-search-detail__group availability-search-time-group">
+          <legend>{{ tr('search.availability_exact_time_title') }}</legend>
+          <p id="disponibilita-orari-aiuto" class="availability-search-detail__help">
+            {{ tr('search.availability_exact_time_help') }}
+          </p>
+          <div class="availability-search-times">
+            <label>
+              <span>{{ tr('availability.from') }}</span>
+              <input type="time"
+                     id="disponibilita-dalle"
+                     name="disponibilita_dalle"
+                     value="{{ request.args.get('disponibilita_dalle', '') }}"
+                     aria-describedby="disponibilita-orari-aiuto disponibilita-orari-errore"
+                     data-availability-detail-input
+                     {% if not solo_disponibili %}disabled{% endif %}>
+            </label>
+            <label>
+              <span>{{ tr('availability.to') }}</span>
+              <input type="time"
+                     id="disponibilita-alle"
+                     name="disponibilita_alle"
+                     value="{{ request.args.get('disponibilita_alle', '') }}"
+                     aria-describedby="disponibilita-orari-aiuto disponibilita-orari-errore"
+                     data-availability-detail-input
+                     {% if not solo_disponibili %}disabled{% endif %}>
+            </label>
+          </div>
+          <input type="hidden"
+                 id="disponibilita-giorno-successivo"
+                 name="disponibilita_giorno_successivo"
+                 value="{{ '1' if request.args.get('disponibilita_giorno_successivo') == '1' else '0' }}"
+                 data-availability-detail-input
+                 {% if not solo_disponibili %}disabled{% endif %}>
+          <p id="disponibilita-giorno-successivo-nota"
+             class="availability-search-next-day"
+             {% if request.args.get('disponibilita_giorno_successivo') != '1' %}hidden{% endif %}>
+            <strong>{{ tr('availability_request.next_day') }}</strong>
+            <span>{{ tr('availability_request.next_day_help') }}</span>
+          </p>
+          <p id="disponibilita-orari-errore"
+             class="availability-search-time-error"
+             role="alert"
+             aria-live="polite"
+             hidden></p>
+        </fieldset>
+      </div>
+    </section>
 
     {% if puo_filtrare_interessi %}
       <label
@@ -343,80 +502,48 @@
       </div>
 
       <!-- lato destro -->
-      <div class="flex flex-wrap items-center gap-3 lg:justify-end">
-
+      <div class="flex w-full flex-wrap items-center gap-3 lg:w-auto lg:justify-end">
+        <div class="cerca-search-toggles cerca-header-filter-row has-search-filters"
+             role="group"
+             aria-label="Azioni di ricerca">
         <button type="button" id="toggle-filtri"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
+                class="cerca-header-filter-action inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
                        bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500
                        text-white shadow-[0_10px_24px_rgba(59,130,246,0.28)]
                        hover:shadow-[0_14px_28px_rgba(59,130,246,0.34)]
-                       hover:-translate-y-0.5 transition-all duration-200">
-          <span>🔎</span>
+                       hover:-translate-y-0.5 transition-all duration-200"
+                aria-controls="filtri-container"
+                aria-expanded="false">
+          <span class="cerca-header-filter-icon" aria-hidden="true">🔎</span>
           <span>Filtri</span>
         </button>
 
         <button type="button" id="reset-filtri"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
+                class="cerca-header-filter-action inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
                        bg-white/88 text-rose-600 border border-rose-200
                        shadow-[0_8px_20px_rgba(15,23,42,0.06)]
                        hover:bg-rose-50 hover:border-rose-300 hover:-translate-y-0.5 transition-all duration-200">
-          <span>✕</span>
+          <span class="cerca-header-filter-icon" aria-hidden="true">✕</span>
           <span>Azzera</span>
         </button>
 
-        <div class="cerca-search-toggles has-search-filters">
-          <!-- Province confinanti con applicazione immediata -->
-          <label
-            for="includi-confinanti-rapido"
-            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
-                   bg-white/88 text-indigo-700 border border-indigo-200
-                   shadow-[0_8px_20px_rgba(15,23,42,0.06)]
-                   hover:bg-indigo-50 hover:border-indigo-300
-                   hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+        <!-- Province confinanti con applicazione immediata -->
+        <label
+          for="includi-confinanti-rapido"
+          class="cerca-header-province-toggle inline-flex min-w-0 items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-full
+                 bg-white/88 text-indigo-700 border border-indigo-200
+                 shadow-[0_8px_20px_rgba(15,23,42,0.06)]
+                 hover:bg-indigo-50 hover:border-indigo-300
+                 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            id="includi-confinanti-rapido"
+            class="h-4 w-4 shrink-0 accent-indigo-600"
+            {% if request.args.get('includi_confinanti') == '1' %}checked{% endif %}
           >
-            <input
-              type="checkbox"
-              id="includi-confinanti-rapido"
-              class="h-4 w-4 shrink-0 accent-indigo-600"
-              {% if request.args.get('includi_confinanti') == '1' %}checked{% endif %}
-            >
-            <span>Province vicine</span>
-          </label>
-
-          <label
-            for="solo-disponibili-rapido"
-            class="cerca-interest-filter cerca-interest-filter--quick"
-            title="{{ tr('search.available_only_hint') }}">
-            <input
-              type="checkbox"
-              id="solo-disponibili-rapido"
-              class="cerca-interest-filter__input"
-              {% if solo_disponibili %}checked{% endif %}>
-
-            <span class="cerca-interest-filter__icon" aria-hidden="true">📅</span>
-            <span class="cerca-interest-filter__quick-label">{{ tr('search.available_only') }}</span>
-            <span class="cerca-interest-filter__switch" aria-hidden="true"></span>
-          </label>
-
-          {% if puo_filtrare_interessi %}
-            <label
-              for="solo-interessi-rapido"
-              class="cerca-interest-filter cerca-interest-filter--quick"
-              title="Mostra solo gli annunci che hai selezionato con Mi interessa">
-              <input
-                type="checkbox"
-                id="solo-interessi-rapido"
-                class="cerca-interest-filter__input"
-                {% if solo_interessi %}checked{% endif %}>
-
-              <span class="cerca-interest-filter__icon" aria-hidden="true">
-                {{ interesse_annuncio_icon() }}
-              </span>
-
-              <span class="cerca-interest-filter__quick-label">{{ tr('search.my_interests') }}</span>
-              <span class="cerca-interest-filter__switch" aria-hidden="true"></span>
-            </label>
-          {% endif %}
+          <span>Province vicine</span>
+        </label>
         </div>
 
         <a href="{{ url_for('nuovo_annuncio') }}"
@@ -5202,6 +5329,51 @@ body.annuncio-navigation-loading #annuncio-loading-overlay * {
     gap: 0.6rem;
   }
 
+  .cerca-header-filter-row {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    width: 100%;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .cerca-header-filter-row .cerca-header-filter-action,
+  .cerca-header-filter-row .cerca-header-province-toggle {
+    min-width: 0;
+    min-height: 2.45rem;
+    justify-content: center;
+    padding: 0.5rem 0.68rem !important;
+    font-size: 0.76rem !important;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  .cerca-header-province-toggle input {
+    margin: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .cerca-header-filter-row {
+      width: auto;
+    }
+  }
+
+  @media (max-width: 370px) {
+    .cerca-header-filter-row {
+      gap: 0.32rem;
+    }
+
+    .cerca-header-filter-row .cerca-header-filter-action,
+    .cerca-header-filter-row .cerca-header-province-toggle {
+      padding-inline: 0.48rem !important;
+      font-size: 0.7rem !important;
+    }
+
+    .cerca-header-filter-icon {
+      display: none;
+    }
+  }
+
   .cerca-interest-filter:hover {
     transform: translateY(-1px);
     border-color: rgba(147, 197, 253, 0.98);
@@ -5342,6 +5514,337 @@ body.annuncio-navigation-loading #annuncio-loading-overlay * {
     transform: translateX(0.94rem);
   }
 
+  .availability-search-detail {
+    grid-column: 1 / -1;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(147, 197, 253, 0.72);
+    border-radius: 1.25rem;
+    background:
+      radial-gradient(circle at 8% 0%, rgba(59, 130, 246, 0.11), transparent 34%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(245, 247, 255, 0.96));
+    box-shadow:
+      0 13px 28px rgba(30, 64, 175, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  }
+
+  .availability-search-detail[hidden] {
+    display: none !important;
+  }
+
+  .availability-search-detail__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.68rem;
+    padding: 0.9rem 0.95rem 0.78rem;
+    border-bottom: 1px solid rgba(191, 219, 254, 0.72);
+  }
+
+  .availability-search-detail__mark {
+    display: inline-flex;
+    width: 2.15rem;
+    height: 2.15rem;
+    flex: 0 0 2.15rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(191, 219, 254, 0.88);
+    border-radius: 0.72rem;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 5px 12px rgba(37, 99, 235, 0.1);
+    font-size: 1rem;
+  }
+
+  .availability-search-detail__header strong,
+  .availability-search-detail__header small {
+    display: block;
+  }
+
+  .availability-search-detail__header strong {
+    color: #172554;
+    font-size: 0.9rem;
+    font-weight: 850;
+    line-height: 1.25;
+  }
+
+  .availability-search-detail__header small {
+    margin-top: 0.22rem;
+    color: #64748b;
+    font-size: 0.7rem;
+    line-height: 1.4;
+  }
+
+  .availability-search-detail__body {
+    display: grid;
+    gap: 0.85rem;
+    padding: 0.9rem;
+  }
+
+  .availability-search-detail__group {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .availability-search-detail__group legend {
+    padding: 0;
+    color: #334155;
+    font-size: 0.76rem;
+    font-weight: 850;
+  }
+
+  .availability-search-detail__help {
+    margin: 0.16rem 0 0.55rem;
+    color: #64748b;
+    font-size: 0.66rem;
+    line-height: 1.4;
+  }
+
+  .availability-search-days {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.42rem;
+  }
+
+  .availability-search-slots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.48rem;
+  }
+
+  .availability-search-chip {
+    position: relative;
+    display: inline-flex;
+    min-width: 0;
+    min-height: 2.35rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.34rem;
+    padding: 0.48rem 0.58rem;
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    border-radius: 0.82rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 780;
+    line-height: 1.1;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 4px 11px rgba(15, 23, 42, 0.045);
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .availability-search-chip input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .availability-search-chip:hover {
+    border-color: #93c5fd;
+    transform: translateY(-1px);
+  }
+
+  .availability-search-chip:has(input:checked) {
+    border-color: #60a5fa;
+    background: linear-gradient(145deg, #eff6ff, #eef2ff);
+    color: #1d4ed8;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 6px 14px rgba(37, 99, 235, 0.1);
+  }
+
+  .availability-search-chip:has(input:focus-visible) {
+    outline: 3px solid rgba(59, 130, 246, 0.28);
+    outline-offset: 2px;
+  }
+
+  .availability-search-on-call {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.62rem;
+    min-height: 3.5rem;
+    padding: 0.68rem 0.75rem;
+    border: 1px solid rgba(203, 213, 225, 0.88);
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    box-shadow: 0 5px 13px rgba(15, 23, 42, 0.045);
+  }
+
+  .availability-search-on-call > input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+  }
+
+  .availability-search-on-call:has(input:checked) {
+    border-color: #60a5fa;
+    background: linear-gradient(145deg, #eff6ff, #f5f3ff);
+  }
+
+  .availability-search-on-call:has(input:focus-visible) {
+    outline: 3px solid rgba(59, 130, 246, 0.28);
+    outline-offset: 2px;
+  }
+
+  .availability-search-on-call__icon {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.68rem;
+    background: #eff6ff;
+  }
+
+  .availability-search-on-call__copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .availability-search-on-call__copy strong,
+  .availability-search-on-call__copy small {
+    display: block;
+  }
+
+  .availability-search-on-call__copy strong {
+    color: #1e293b;
+    font-size: 0.78rem;
+    font-weight: 850;
+  }
+
+  .availability-search-on-call__copy small {
+    margin-top: 0.12rem;
+    color: #64748b;
+    font-size: 0.65rem;
+    line-height: 1.35;
+  }
+
+  .availability-search-on-call__check {
+    display: inline-flex;
+    width: 1.45rem;
+    height: 1.45rem;
+    flex: 0 0 1.45rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px;
+    background: #ffffff;
+    color: transparent;
+    font-size: 0.76rem;
+    font-weight: 900;
+  }
+
+  .availability-search-on-call input:checked ~ .availability-search-on-call__check {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+  }
+
+  .availability-search-times {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.58rem;
+  }
+
+  .availability-search-times label {
+    min-width: 0;
+  }
+
+  .availability-search-times label > span {
+    display: block;
+    margin: 0 0 0.28rem 0.12rem;
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .availability-search-times input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.65rem;
+    padding: 0.58rem 0.62rem;
+    border: 1px solid rgba(191, 219, 254, 0.94);
+    border-radius: 0.78rem;
+    background: rgba(255, 255, 255, 0.96);
+    color: #1e293b;
+    font-size: 0.82rem;
+    font-weight: 720;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .availability-search-times input:focus {
+    border-color: #60a5fa;
+    outline: 3px solid rgba(59, 130, 246, 0.16);
+    outline-offset: 1px;
+  }
+
+  .availability-search-times input[aria-invalid="true"] {
+    border-color: #fb7185;
+    outline-color: rgba(244, 63, 94, 0.15);
+  }
+
+  .availability-search-next-day {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin: 0.5rem 0 0;
+    padding: 0.48rem 0.6rem;
+    border: 1px solid rgba(165, 180, 252, 0.72);
+    border-radius: 0.72rem;
+    background: rgba(238, 242, 255, 0.78);
+    color: #4338ca;
+    font-size: 0.66rem;
+    line-height: 1.35;
+  }
+
+  .availability-search-next-day strong {
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .availability-search-next-day[hidden] {
+    display: none !important;
+  }
+
+  .availability-search-time-error {
+    margin: 0.48rem 0 0;
+    color: #be123c;
+    font-size: 0.68rem;
+    font-weight: 720;
+    line-height: 1.4;
+  }
+
+  .availability-search-time-error[hidden] {
+    display: none !important;
+  }
+
+  @media (min-width: 640px) {
+    .availability-search-detail__body {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: 1rem;
+    }
+
+    .availability-search-on-call,
+    .availability-search-time-group {
+      grid-column: 1 / -1;
+    }
+
+    .availability-search-days {
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+  }
+
   .cerca-interest-empty {
     width: min(100% - 1rem, 34rem);
     margin: 1.1rem auto 1.5rem;
@@ -5467,17 +5970,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const confinantiFiltro = document.getElementById(
     "includi_confinanti"
   );
-  const interessiRapido = document.getElementById(
-    "solo-interessi-rapido"
-  );
   const interessiFiltro = document.getElementById(
     "solo_interessi"
-  );
-  const disponibiliRapido = document.getElementById(
-    "solo-disponibili-rapido"
-  );
-  const disponibiliFiltro = document.getElementById(
-    "solo_disponibili"
   );
   const mostraTuttiDisponibilita = document.getElementById(
     "mostra-tutti-disponibilita"
@@ -5489,18 +5983,24 @@ document.addEventListener("DOMContentLoaded", function () {
   if (toggleBtn && container) {
     toggleBtn.addEventListener("click", () => {
       container.classList.toggle("hidden");
+      toggleBtn.setAttribute(
+        "aria-expanded",
+        String(!container.classList.contains("hidden"))
+      );
     });
   }
 
   if (closeBtn && container) {
     closeBtn.addEventListener("click", () => {
       container.classList.add("hidden");
+      toggleBtn?.setAttribute("aria-expanded", "false");
     });
   }
 
   if (closeBtnBottom && container) {
     closeBtnBottom.addEventListener("click", () => {
       container.classList.add("hidden");
+      toggleBtn?.setAttribute("aria-expanded", "false");
     });
   }
 
@@ -5528,58 +6028,222 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  /* ==========================================
-     DISPONIBILITÀ CONFERMATA — APPLICAZIONE RAPIDA
-  ========================================== */
-  if (disponibiliRapido) {
-    disponibiliRapido.addEventListener("change", () => {
-      const url = new URL(window.location.href);
-
-      if (disponibiliRapido.checked) {
-        url.searchParams.set("solo_disponibili", "1");
-      } else {
-        url.searchParams.delete("solo_disponibili");
-      }
-
-      window.location.href = url.toString();
-    });
-  }
-
-  if (disponibiliFiltro && disponibiliRapido) {
-    disponibiliFiltro.addEventListener("change", () => {
-      disponibiliRapido.checked = disponibiliFiltro.checked;
-    });
-  }
-
   if (mostraTuttiDisponibilita) {
     mostraTuttiDisponibilita.addEventListener("click", () => {
       const url = new URL(window.location.href);
-      url.searchParams.delete("solo_disponibili");
+      [
+        "solo_disponibili",
+        "disponibilita_giorni",
+        "disponibilita_fasce",
+        "disponibilita_dalle",
+        "disponibilita_alle",
+        "disponibilita_a_chiamata",
+        "disponibilita_giorno_successivo"
+      ].forEach((parametro) => url.searchParams.delete(parametro));
       window.location.href = url.toString();
     });
   }
 
   /* ==========================================
-     I MIEI INTERESSI — APPLICAZIONE RAPIDA
+     DISPONIBILITÀ — GIORNI, FASCE E ORARI ESATTI
   ========================================== */
-  if (interessiRapido) {
-    interessiRapido.addEventListener("change", () => {
-      const url = new URL(window.location.href);
+  const soloDisponibiliFiltro = document.getElementById(
+    "solo_disponibili"
+  );
+  const disponibilitaDettaglio = document.getElementById(
+    "disponibilita-filtri-dettaglio"
+  );
+  const disponibilitaDalle = document.getElementById(
+    "disponibilita-dalle"
+  );
+  const disponibilitaAlle = document.getElementById(
+    "disponibilita-alle"
+  );
+  const disponibilitaGiornoSuccessivo = document.getElementById(
+    "disponibilita-giorno-successivo"
+  );
+  const disponibilitaGiornoSuccessivoNota = document.getElementById(
+    "disponibilita-giorno-successivo-nota"
+  );
+  const disponibilitaErrore = document.getElementById(
+    "disponibilita-orari-errore"
+  );
 
-      if (interessiRapido.checked) {
-        url.searchParams.set("solo_interessi", "1");
-      } else {
-        url.searchParams.delete("solo_interessi");
-      }
+  const disponibilitaDetailInputs = disponibilitaDettaglio
+    ? Array.from(
+        disponibilitaDettaglio.querySelectorAll(
+          "[data-availability-detail-input]"
+        )
+      )
+    : [];
 
-      window.location.href = url.toString();
-    });
+  function minutiDaOrario(value) {
+    const [ore, minuti] = String(value || "").split(":").map(Number);
+    if (!Number.isInteger(ore) || !Number.isInteger(minuti)) return null;
+    return (ore * 60) + minuti;
   }
 
-  if (interessiFiltro && interessiRapido) {
-    interessiFiltro.addEventListener("change", () => {
-      interessiRapido.checked = interessiFiltro.checked;
+  function aggiornaIndicatoreGiornoSuccessivo(attivo) {
+    if (disponibilitaGiornoSuccessivo) {
+      disponibilitaGiornoSuccessivo.value = attivo ? "1" : "0";
+    }
+    if (disponibilitaGiornoSuccessivoNota) {
+      disponibilitaGiornoSuccessivoNota.hidden = !attivo;
+    }
+  }
+
+  function resetDisponibilitaTimeValidity() {
+    [disponibilitaDalle, disponibilitaAlle].forEach((input) => {
+      if (!input) return;
+      input.setCustomValidity("");
+      input.removeAttribute("aria-invalid");
     });
+
+    if (disponibilitaErrore) {
+      disponibilitaErrore.textContent = "";
+      disponibilitaErrore.hidden = true;
+    }
+  }
+
+  function mostraErroreDisponibilita(input, message) {
+    if (input) {
+      input.setCustomValidity(message);
+      input.setAttribute("aria-invalid", "true");
+    }
+
+    if (disponibilitaErrore) {
+      disponibilitaErrore.textContent = message;
+      disponibilitaErrore.hidden = false;
+    }
+  }
+
+  function validaOrarioDisponibilita() {
+    resetDisponibilitaTimeValidity();
+
+    if (
+      !soloDisponibiliFiltro?.checked
+      || !disponibilitaDettaglio
+      || !disponibilitaDalle
+      || !disponibilitaAlle
+    ) {
+      aggiornaIndicatoreGiornoSuccessivo(false);
+      return true;
+    }
+
+    const dalle = disponibilitaDalle.value.trim();
+    const alle = disponibilitaAlle.value.trim();
+    const giorniScelti = disponibilitaDettaglio.querySelectorAll(
+      'input[name="disponibilita_giorni"]:checked'
+    );
+
+    if (Boolean(dalle) !== Boolean(alle)) {
+      aggiornaIndicatoreGiornoSuccessivo(false);
+      mostraErroreDisponibilita(
+        dalle ? disponibilitaAlle : disponibilitaDalle,
+        disponibilitaDettaglio.dataset.timePairError
+      );
+      return false;
+    }
+
+    if (!dalle && !alle) {
+      aggiornaIndicatoreGiornoSuccessivo(false);
+      return true;
+    }
+
+    if (giorniScelti.length === 0) {
+      aggiornaIndicatoreGiornoSuccessivo(false);
+      mostraErroreDisponibilita(
+        disponibilitaDalle,
+        disponibilitaDettaglio.dataset.timeDayError
+      );
+      return false;
+    }
+
+    const dalleMinuti = minutiDaOrario(dalle);
+    const alleMinuti = minutiDaOrario(alle);
+
+    if (dalleMinuti === alleMinuti) {
+      aggiornaIndicatoreGiornoSuccessivo(false);
+      mostraErroreDisponibilita(
+        disponibilitaAlle,
+        disponibilitaDettaglio.dataset.timeEqualError
+      );
+      return false;
+    }
+
+    if (alleMinuti < dalleMinuti) {
+      const intervalloNotturno = dalleMinuti >= (18 * 60)
+        && alleMinuti <= (8 * 60);
+      if (!intervalloNotturno) {
+        aggiornaIndicatoreGiornoSuccessivo(false);
+        mostraErroreDisponibilita(
+          disponibilitaAlle,
+          disponibilitaDettaglio.dataset.timeNightError
+        );
+        return false;
+      }
+
+      aggiornaIndicatoreGiornoSuccessivo(true);
+      return true;
+    }
+
+    aggiornaIndicatoreGiornoSuccessivo(false);
+    return true;
+  }
+
+  function aggiornaDettagliDisponibilita() {
+    if (!soloDisponibiliFiltro || !disponibilitaDettaglio) return;
+
+    const attivi = soloDisponibiliFiltro.checked;
+    disponibilitaDettaglio.hidden = !attivi;
+    disponibilitaDettaglio.setAttribute(
+      "aria-hidden",
+      attivi ? "false" : "true"
+    );
+    soloDisponibiliFiltro.setAttribute(
+      "aria-expanded",
+      attivi ? "true" : "false"
+    );
+    disponibilitaDetailInputs.forEach((input) => {
+      input.disabled = !attivi;
+    });
+
+    if (attivi) {
+      validaOrarioDisponibilita();
+    } else {
+      resetDisponibilitaTimeValidity();
+      aggiornaIndicatoreGiornoSuccessivo(false);
+    }
+  }
+
+  if (soloDisponibiliFiltro && disponibilitaDettaglio) {
+    soloDisponibiliFiltro.addEventListener(
+      "change",
+      aggiornaDettagliDisponibilita
+    );
+
+    disponibilitaDetailInputs.forEach((input) => {
+      if (input.type === "hidden") return;
+      input.addEventListener("change", validaOrarioDisponibilita);
+      if (input.type === "time") {
+        input.addEventListener("input", validaOrarioDisponibilita);
+      }
+    });
+
+    if (container) {
+      container.addEventListener("submit", (event) => {
+        if (validaOrarioDisponibilita()) return;
+
+        event.preventDefault();
+        const invalidInput = [disponibilitaDalle, disponibilitaAlle].find(
+          (input) => input && !input.checkValidity()
+        );
+        invalidInput?.reportValidity();
+        invalidInput?.focus();
+      });
+    }
+
+    aggiornaDettagliDisponibilita();
   }
 
   if (mostraTuttiInteressi) {
@@ -5591,8 +6255,10 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   document.addEventListener("localcare:interesse-annuncio", (event) => {
+    const filtroInteressiAttivo = Boolean(interessiFiltro?.checked)
+      || new URL(window.location.href).searchParams.get("solo_interessi") === "1";
     if (
-      interessiRapido?.checked
+      filtroInteressiAttivo
       && event.detail?.attivo === false
     ) {
       window.location.reload();
@@ -5601,21 +6267,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (resetBtn && container) {
     resetBtn.addEventListener("click", () => {
-      container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-
-      const zonaHidden = container.querySelector('input[name="zona"]');
-      const provinciaHidden = container.querySelector('input[name="provincia"]');
-      const comuneQuartieriHidden = container.querySelector(
-        'input[name="comune_quartieri"]'
-      );
-
-      if (zonaHidden) zonaHidden.value = "";
-      if (provinciaHidden) provinciaHidden.value = "";
-      if (comuneQuartieriHidden) {
-        comuneQuartieriHidden.value = "";
-      }
-
-      container.submit();
+      const url = new URL(container.action || window.location.pathname, window.location.origin);
+      const categoria = container.querySelector('input[name="categoria"]')?.value.trim();
+      if (categoria) url.searchParams.set("categoria", categoria);
+      window.location.href = url.toString();
     });
   }
 

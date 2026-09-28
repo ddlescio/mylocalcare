@@ -9,6 +9,7 @@ possono finire accidentalmente nella disponibilita pubblica.
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
+import re
 from typing import Any, Mapping
 
 
@@ -44,6 +45,8 @@ CATEGORIE_SERVIZI = (
 )
 
 MAX_RIGHE_SETTIMANALI = 28
+MAX_INTERVALLI_PER_GIORNO = 8
+MAX_INTERVALLI_SETTIMANALI = 28
 MAX_DATE_SPECIALI = 180
 MAX_ASSENZE = 60
 
@@ -62,13 +65,25 @@ _TOP_LEVEL_FIELDS = frozenset({
     "stato",
     "a_chiamata",
     "settimanale",
+    "settimanale_intervalli",
     "date_speciali",
     "assenze",
 })
 _WEEKLY_FIELDS = frozenset({"giorno_settimana", "fascia"})
+_INTERVAL_FIELDS = frozenset({
+    "giorno_settimana",
+    "ora_inizio",
+    "ora_fine",
+    "giorno_successivo",
+})
 _SPECIAL_DATE_FIELDS = frozenset({"data", "tipo", "fasce"})
 _ABSENCE_FIELDS = frozenset({"data_inizio", "data_fine"})
 _FASCIA_ORDER = {value: index for index, value in enumerate(FASCE_DISPONIBILITA)}
+_HHMM_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+_MINUTES_PER_DAY = 24 * 60
+_MINUTES_PER_WEEK = 7 * _MINUTES_PER_DAY
+_NIGHT_START_MINUTES = 18 * 60
+_NIGHT_END_MINUTES = 8 * 60
 
 
 def _require_mapping(value: Any, field_name: str) -> Mapping[str, Any]:
@@ -152,6 +167,112 @@ def _normalize_weekly(value: Any) -> list[dict[str, Any]]:
         for day, slot in sorted(
             normalized,
             key=lambda item: (item[0], _FASCIA_ORDER[item[1]]),
+        )
+    ]
+
+
+def _parse_hhmm(value: Any, field_name: str) -> tuple[str, int]:
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} deve usare il formato HH:MM")
+    normalized = value.strip()
+    if not _HHMM_RE.fullmatch(normalized):
+        raise ValueError(f"{field_name} deve usare il formato HH:MM")
+    hours, minutes = (int(part) for part in normalized.split(":"))
+    return normalized, hours * 60 + minutes
+
+
+def _normalize_intervals(value: Any) -> list[dict[str, Any]]:
+    """Normalizza gli intervalli reali senza convertirli in fasce generiche."""
+
+    rows = _bounded_list(
+        value,
+        "settimanale_intervalli",
+        MAX_INTERVALLI_SETTIMANALI,
+    )
+    normalized: set[tuple[int, str, str, bool]] = set()
+    timeline: list[tuple[int, int]] = []
+    counts_by_day: dict[int, int] = {}
+
+    for index, raw_row in enumerate(rows):
+        field_name = f"settimanale_intervalli[{index}]"
+        row = _require_mapping(raw_row, field_name)
+        _reject_unknown_fields(row, _INTERVAL_FIELDS, field_name)
+
+        day = row.get("giorno_settimana")
+        if isinstance(day, bool) or not isinstance(day, int) or not 1 <= day <= 7:
+            raise ValueError(
+                f"{field_name}.giorno_settimana deve essere compreso tra 1 e 7"
+            )
+        start_text, start_minutes = _parse_hhmm(
+            row.get("ora_inizio"),
+            f"{field_name}.ora_inizio",
+        )
+        end_text, end_minutes = _parse_hhmm(
+            row.get("ora_fine"),
+            f"{field_name}.ora_fine",
+        )
+        next_day = row.get("giorno_successivo", False)
+        if not isinstance(next_day, bool):
+            raise ValueError(
+                f"{field_name}.giorno_successivo deve essere booleano"
+            )
+
+        if next_day:
+            if not (
+                start_minutes > end_minutes
+                and start_minutes >= _NIGHT_START_MINUTES
+                and end_minutes <= _NIGHT_END_MINUTES
+            ):
+                raise ValueError(
+                    f"{field_name} puo usare giorno_successivo solo per "
+                    "un intervallo notturno oltre mezzanotte"
+                )
+            absolute_end = end_minutes + _MINUTES_PER_DAY
+        else:
+            if end_minutes <= start_minutes:
+                raise ValueError(
+                    f"{field_name}.ora_fine deve essere successiva a ora_inizio"
+                )
+            absolute_end = end_minutes
+
+        key = (day, start_text, end_text, next_day)
+        if key in normalized:
+            continue
+        normalized.add(key)
+        counts_by_day[day] = counts_by_day.get(day, 0) + 1
+        if counts_by_day[day] > MAX_INTERVALLI_PER_GIORNO:
+            raise ValueError(
+                "settimanale_intervalli non puo contenere piu di "
+                f"{MAX_INTERVALLI_PER_GIORNO} elementi per giorno"
+            )
+        offset = (day - 1) * _MINUTES_PER_DAY
+        timeline.append((offset + start_minutes, offset + absolute_end))
+
+    # La settimana e circolare: una fascia di domenica oltre mezzanotte non
+    # puo sovrapporsi a una fascia del lunedi mattina.
+    timeline.sort()
+    if len(timeline) > 1:
+        circular = timeline + [
+            (start + _MINUTES_PER_WEEK, end + _MINUTES_PER_WEEK)
+            for start, end in timeline
+        ]
+        for index in range(1, len(timeline) + 1):
+            if circular[index - 1][1] > circular[index][0]:
+                raise ValueError(
+                    "gli intervalli precisi non possono sovrapporsi, "
+                    "neppure oltre mezzanotte"
+                )
+
+    return [
+        {
+            "giorno_settimana": day,
+            "ora_inizio": start,
+            "ora_fine": end,
+            "giorno_successivo": next_day,
+        }
+        for day, start, end, next_day in sorted(
+            normalized,
+            key=lambda item: (item[0], item[1], item[2], item[3]),
         )
     ]
 
@@ -259,6 +380,7 @@ def normalize_disponibilita_payload(payload: Any) -> dict[str, Any]:
             "a_chiamata non puo essere attiva quando lo stato e non disponibile"
         )
     weekly = _normalize_weekly(data.get("settimanale"))
+    intervals = _normalize_intervals(data.get("settimanale_intervalli"))
     special_dates = _normalize_special_dates(data.get("date_speciali"))
     absences = _normalize_absences(data.get("assenze"))
 
@@ -283,6 +405,7 @@ def normalize_disponibilita_payload(payload: Any) -> dict[str, Any]:
         "stato": status,
         "a_chiamata": on_call,
         "settimanale": weekly,
+        "settimanale_intervalli": intervals,
         "date_speciali": special_dates,
         "assenze": absences,
     }
@@ -453,6 +576,8 @@ __all__ = [
     "TIPI_DATA_SPECIALE",
     "CATEGORIE_SERVIZI",
     "MAX_RIGHE_SETTIMANALI",
+    "MAX_INTERVALLI_PER_GIORNO",
+    "MAX_INTERVALLI_SETTIMANALI",
     "MAX_DATE_SPECIALI",
     "MAX_ASSENZE",
     "GIORNI_PROMEMORIA_SCADENZA",

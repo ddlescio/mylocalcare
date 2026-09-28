@@ -87,23 +87,43 @@
       <p class="availability-detail__empty availability-detail__state-note">
         {{ tr('availability.unavailable_details') }}
       </p>
-    {% elif disponibilita.get('settimanale') %}
+    {% elif disponibilita.get('settimanale') or disponibilita.get('settimanale_intervalli') %}
       <div class="availability-detail__section">
         <h4>{{ tr('availability.weekly_title') }}</h4>
         <div class="availability-detail__week">
           {% for giorno in range(1, 8) %}
             {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
-            {% if fasce_giorno %}
+            {% set intervalli_giorno = disponibilita.get('settimanale_intervalli', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+            {% if fasce_giorno or intervalli_giorno %}
               <div class="availability-detail__day">
                 <strong>{{ giorni[giorno - 1] }}</strong>
-                <span>
-                  {% for elemento in fasce_giorno %}
-                    {% if elemento.get('fascia') == 'mattina' %}{{ tr('availability.slot_morning') }}{% endif %}
-                    {% if elemento.get('fascia') == 'pomeriggio' %}{{ tr('availability.slot_afternoon') }}{% endif %}
-                    {% if elemento.get('fascia') == 'sera' %}{{ tr('availability.slot_evening') }}{% endif %}
-                    {% if elemento.get('fascia') == 'notte' %}{{ tr('availability.slot_night') }}{% endif %}
-                    {% if not loop.last %}<em>·</em>{% endif %}
-                  {% endfor %}
+                <span class="availability-detail__day-times">
+                  {% if fasce_giorno %}
+                    <span class="availability-detail__slots">
+                      {% for elemento in fasce_giorno %}
+                        {% if elemento.get('fascia') == 'mattina' %}{{ tr('availability.slot_morning') }}{% endif %}
+                        {% if elemento.get('fascia') == 'pomeriggio' %}{{ tr('availability.slot_afternoon') }}{% endif %}
+                        {% if elemento.get('fascia') == 'sera' %}{{ tr('availability.slot_evening') }}{% endif %}
+                        {% if elemento.get('fascia') == 'notte' %}{{ tr('availability.slot_night') }}{% endif %}
+                        {% if not loop.last %}<em>·</em>{% endif %}
+                      {% endfor %}
+                    </span>
+                  {% endif %}
+                  {% if intervalli_giorno %}
+                    <span class="availability-detail__exact-times">
+                      {% for intervallo in intervalli_giorno %}
+                        <span class="availability-detail__exact-time">
+                          {{ tr(
+                            'availability.exact_interval_range',
+                            start=intervallo.get('ora_inizio'),
+                            end=intervallo.get('ora_fine')
+                          ) }}{% if intervallo.get('giorno_successivo') %}
+                            <small>({{ tr('availability.next_day_short') }})</small>
+                          {% endif %}
+                        </span>
+                      {% endfor %}
+                    </span>
+                  {% endif %}
                 </span>
               </div>
             {% endif %}

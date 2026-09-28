@@ -29,6 +29,21 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         "availability.status_unavailable_description",
         "availability.weekly_title",
         "availability.weekly_help",
+        "availability.exact_intervals_help",
+        "availability.exact_intervals_title",
+        "availability.add_interval",
+        "availability.exact_interval_label",
+        "availability.next_day",
+        "availability.next_day_help",
+        "availability.remove_interval",
+        "availability.error_incomplete_interval",
+        "availability.error_invalid_interval",
+        "availability.error_invalid_night_interval",
+        "availability.error_overlapping_intervals",
+        "availability.error_interval_limit_per_day",
+        "availability.error_interval_limit_total",
+        "availability.exact_interval_range",
+        "availability.next_day_short",
         "availability.on_call_title",
         "availability.on_call_label",
         "availability.on_call_help",
@@ -266,6 +281,45 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         self.assertIn('id="service-availability-on-call"', rendered)
         self.assertIn('a_chiamata: Boolean(onCallInput && onCallInput.checked)', rendered)
 
+    def test_private_profile_supports_exact_weekly_intervals(self):
+        environment = Environment(
+            loader=FileSystemLoader(ROOT / "templates")
+        )
+        template = environment.get_template(
+            "partials/disponibilita_servizi_dialog.html"
+        )
+        rendered = template.render(
+            pubblico=False,
+            tr=lambda key, **values: key,
+            csrf_token=lambda: "private-token",
+        )
+
+        self.assertEqual(
+            rendered.count('class="service-availability-add-interval"'),
+            7,
+        )
+        self.assertEqual(
+            rendered.count('class="service-availability-interval-list"'),
+            7,
+        )
+        for marker in (
+            "settimanale_intervalli: normalizeWeeklyIntervals",
+            "settimanale_intervalli: weeklyIntervals",
+            "giorno_settimana: Number(row.dataset.day)",
+            "ora_inizio: start",
+            "ora_fine: end",
+            "giorno_successivo: nextDay",
+            'input.type = "time"',
+            'input.step = "60"',
+            "availability.error_invalid_night_interval",
+            "weeklyIntervalTimeline",
+            "copy.errorOverlappingIntervals",
+        ):
+            self.assertIn(marker, rendered)
+
+        self.assertIn("maxIntervalsPerDay = 8", rendered)
+        self.assertIn("maxIntervalsTotal = 28", rendered)
+
     def test_display_pubblico_mostra_badge_a_chiamata_senza_calendario(self):
         environment = Environment(
             loader=FileSystemLoader(ROOT / "templates")
@@ -289,6 +343,52 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         self.assertIn("availability-on-call-badge", rendered)
         self.assertIn("availability.on_call_label", rendered)
         self.assertNotIn("availability.no_weekly", rendered)
+
+    def test_dettagli_espansi_mostrano_intervalli_precisi_non_i_badge(self):
+        environment = Environment(
+            loader=FileSystemLoader(ROOT / "templates")
+        )
+        environment.globals["tr"] = (
+            lambda key, **values: translate(key, "it", **values)
+        )
+        environment.filters["fmt_day_month"] = lambda value: value or ""
+        environment.filters["fmt_it_date"] = lambda value: value or ""
+        environment.filters["datetimeformat"] = lambda value: value or ""
+        template = environment.get_template(
+            "partials/disponibilita_servizi_display.html"
+        )
+        availability = {
+            "stato": "disponibile",
+            "a_chiamata": False,
+            "settimanale": [],
+            "settimanale_intervalli": [
+                {
+                    "giorno_settimana": 1,
+                    "ora_inizio": "09:15",
+                    "ora_fine": "12:30",
+                    "giorno_successivo": False,
+                },
+                {
+                    "giorno_settimana": 5,
+                    "ora_inizio": "22:00",
+                    "ora_fine": "02:00",
+                    "giorno_successivo": True,
+                },
+            ],
+            "date_speciali": [],
+            "assenze": [],
+            "freschezza": {},
+        }
+
+        details = str(template.module.availability_details(availability))
+        badge = str(template.module.availability_badge(availability))
+
+        self.assertIn("availability-detail__exact-time", details)
+        self.assertIn("09:15", details)
+        self.assertIn("12:30", details)
+        self.assertIn("giorno successivo", details)
+        self.assertNotIn("09:15", badge)
+        self.assertNotIn("availability-detail__exact-time", badge)
 
 
 if __name__ == "__main__":
