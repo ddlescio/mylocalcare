@@ -97,6 +97,9 @@
   }
 
   async function submitInvite(form) {
+    if (form.dataset.referenceSubmitting === "1") return;
+    form.dataset.referenceSubmitting = "1";
+
     const button = form.querySelector("[data-reference-submit]");
     const error = document.getElementById("reference-form-error");
     const success = document.getElementById("reference-form-success");
@@ -133,6 +136,7 @@
       setMessage(error, translate(requestError.message || "Non è stato possibile inviare la richiesta."));
       error?.focus?.();
     } finally {
+      delete form.dataset.referenceSubmitting;
       if (button) {
         button.disabled = false;
         button.textContent = button.dataset.originalLabel || translate("Invia la richiesta");
@@ -306,6 +310,7 @@
     const form = event.target.closest("#reference-invite-form");
     if (!form || !global.fetch || !global.FormData) return;
     event.preventDefault();
+    if (form.dataset.referenceSubmitting === "1") return;
     submitInvite(form);
   });
 

@@ -44,6 +44,7 @@
           class="reference-form"
           method="post"
           action="{{ url_for('api_referenze_crea') }}"
+          data-no-global-loader
           data-reference-create-endpoint="{{ url_for('api_referenze_crea') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 

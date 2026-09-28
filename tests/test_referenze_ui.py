@@ -139,6 +139,7 @@ class ReferenzeUiTest(unittest.TestCase):
         )
 
         self.assertIn('action="/api_referenze_crea"', rendered)
+        self.assertIn('data-no-global-loader', rendered)
         self.assertIn('data-endpoint="/api_referenza_reinvia/9"', rendered)
         self.assertIn('data-endpoint="/api_referenza_revoca/9"', rendered)
         self.assertIn('name="referente_email"', rendered)
@@ -283,9 +284,12 @@ class ReferenzeUiTest(unittest.TestCase):
     def test_progressive_enhancement_keeps_real_forms(self):
         self.assertIn('method="post"', self.private_source)
         self.assertIn('method="post"', self.response_source)
+        self.assertIn('data-no-global-loader', self.private_source)
         self.assertIn("if (!form || !global.fetch || !global.FormData) return;", self.script_source)
         self.assertIn('credentials: "same-origin"', self.script_source)
         self.assertIn('"X-CSRF-Token": csrfToken()', self.script_source)
+        self.assertIn('form.dataset.referenceSubmitting === "1"', self.script_source)
+        self.assertIn('delete form.dataset.referenceSubmitting;', self.script_source)
 
     def test_external_page_is_not_indexed_and_explains_privacy(self):
         self.assertIn('name="robots" content="noindex,nofollow"', self.response_source)
