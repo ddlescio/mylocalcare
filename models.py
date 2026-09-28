@@ -2292,6 +2292,29 @@ def elimina_utente(id):
                     WHERE utente_id = ?
                 """), (id,))
 
+        # L'account viene anonimizzato, quindi la FK non scatterebbe. Le
+        # referenze dell'utente (insieme ai recapiti cifrati del referente e
+        # al relativo audit) devono essere eliminate esplicitamente.
+        if is_postgres():
+            cur.execute(sql(
+                "SELECT to_regclass('public.referenze') AS tabella"
+            ))
+            referenze_presenti = bool(fetchone_value(cur.fetchone()))
+        else:
+            cur.execute(sql("""
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'referenze'
+                LIMIT 1
+            """))
+            referenze_presenti = cur.fetchone() is not None
+
+        if referenze_presenti:
+            cur.execute(sql("""
+                DELETE FROM referenze
+                WHERE utente_id = ?
+            """), (id,))
+
         # Anche la disponibilità è collegata a una riga utente che viene
         # anonimizzata e non cancellata. La riga principale va quindi rimossa
         # esplicitamente; settimana, date speciali e assenze cadono in cascata.

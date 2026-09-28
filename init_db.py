@@ -2084,6 +2084,402 @@ def crea_tabelle_richieste_disponibilita():
     print("✅ Tabelle richieste disponibilità pronte.")
 
 
+def crea_tabelle_referenze():
+    """Crea referenze, contatti cifrati e relativo audit.
+
+    I contatti sono separati dalla scheda pubblicabile, così possono essere
+    eliminati alla scadenza della retention senza perdere lo stato della
+    referenza. La cifratura è applicativa e non viene gestita dal database.
+    """
+
+    conn = get_conn()
+    c = conn.cursor()
+    reference_pk = (
+        "BIGSERIAL PRIMARY KEY"
+        if IS_POSTGRES
+        else "INTEGER PRIMARY KEY AUTOINCREMENT"
+    )
+    reference_fk_type = "BIGINT" if IS_POSTGRES else "INTEGER"
+    boolean_type = "BOOLEAN" if IS_POSTGRES else "INTEGER"
+    false_default = "FALSE" if IS_POSTGRES else "0"
+    true_value = "TRUE" if IS_POSTGRES else "1"
+    false_value = "FALSE" if IS_POSTGRES else "0"
+    bool_suffix = "" if IS_POSTGRES else " CHECK ({name} IN (0, 1))"
+
+    def boolean_column(name, *, default=false_default):
+        suffix = bool_suffix.format(name=name)
+        return f"{boolean_type} NOT NULL DEFAULT {default}{suffix}"
+
+    try:
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS referenze (
+                id {reference_pk},
+                utente_id INTEGER NOT NULL,
+                categoria_slug TEXT NOT NULL,
+                tipo_rapporto TEXT NOT NULL CHECK (tipo_rapporto IN (
+                    'famiglia', 'datore_lavoro', 'cliente',
+                    'struttura', 'altro'
+                )),
+                anno_inizio INTEGER,
+                anno_fine INTEGER,
+                durata_fascia TEXT CHECK (
+                    durata_fascia IS NULL OR durata_fascia IN (
+                        'meno_3_mesi', '3_6_mesi', '6_12_mesi',
+                        '1_2_anni', 'oltre_2_anni'
+                    )
+                ),
+                esperienza_diretta {
+                    boolean_column('esperienza_diretta')
+                },
+                testo_referente TEXT,
+                stato_risposta TEXT NOT NULL DEFAULT 'in_attesa' CHECK (
+                    stato_risposta IN (
+                        'in_attesa', 'risposta_ricevuta', 'rifiutata',
+                        'scaduta', 'revocata', 'cancellata'
+                    )
+                ),
+                stato_verifica TEXT NOT NULL DEFAULT 'non_esaminata' CHECK (
+                    stato_verifica IN (
+                        'non_esaminata', 'in_coda', 'verificata',
+                        'non_confermata', 'non_verificabile', 'revocata'
+                    )
+                ),
+                autorizza_pubblicazione {
+                    boolean_column('autorizza_pubblicazione')
+                },
+                autorizza_testo_pubblico {
+                    boolean_column('autorizza_testo_pubblico')
+                },
+                autorizza_contatto_verifica {
+                    boolean_column('autorizza_contatto_verifica')
+                },
+                pubblicazione_approvata_admin {
+                    boolean_column('pubblicazione_approvata_admin')
+                },
+                pubblicazione_approvata_at {dt_col()},
+                pubblicazione_approvata_da_admin_id INTEGER,
+                visibile_profilo {
+                    boolean_column('visibile_profilo', default=(
+                        'TRUE' if IS_POSTGRES else '1'
+                    ))
+                },
+                consenso_versione TEXT,
+                consenso_trattamento_at {dt_col()},
+                autorizzazione_pubblica_at {dt_col()},
+                autorizzazione_testo_at {dt_col()},
+                autorizzazione_contatto_at {dt_col()},
+                risposta_at {dt_col()},
+                verificata_at {dt_col()},
+                revocata_at {dt_col()},
+                cancellata_at {dt_col()},
+                verificata_da_admin_id INTEGER,
+                metodo_verifica TEXT NOT NULL DEFAULT 'nessuno' CHECK (
+                    metodo_verifica IN (
+                        'nessuno', 'email', 'telefono', 'altro'
+                    )
+                ),
+                nota_admin TEXT,
+                nota_pubblica TEXT,
+                versione INTEGER NOT NULL DEFAULT 1 CHECK (versione >= 1),
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE,
+                FOREIGN KEY (verificata_da_admin_id)
+                    REFERENCES utenti(id) ON DELETE SET NULL,
+                FOREIGN KEY (pubblicazione_approvata_da_admin_id)
+                    REFERENCES utenti(id) ON DELETE SET NULL,
+                CHECK (TRIM(categoria_slug) <> ''),
+                CHECK (anno_inizio IS NULL OR anno_inizio BETWEEN 1900 AND 2200),
+                CHECK (anno_fine IS NULL OR anno_fine BETWEEN 1900 AND 2200),
+                CHECK (
+                    anno_fine IS NULL OR anno_inizio IS NULL
+                    OR anno_fine >= anno_inizio
+                ),
+                CHECK (
+                    stato_risposta <> 'risposta_ricevuta'
+                    OR risposta_at IS NOT NULL
+                ),
+                CHECK (
+                    stato_verifica <> 'verificata'
+                    OR (
+                        verificata_at IS NOT NULL
+                        AND stato_risposta = 'risposta_ricevuta'
+                    )
+                ),
+                CHECK (
+                    autorizza_pubblicazione = {false_value}
+                    OR (
+                        stato_risposta = 'risposta_ricevuta'
+                        AND consenso_trattamento_at IS NOT NULL
+                        AND autorizzazione_pubblica_at IS NOT NULL
+                    )
+                ),
+                CHECK (
+                    autorizza_testo_pubblico = {false_value}
+                    OR (
+                        autorizza_pubblicazione = {true_value}
+                        AND testo_referente IS NOT NULL
+                        AND TRIM(testo_referente) <> ''
+                        AND autorizzazione_testo_at IS NOT NULL
+                    )
+                ),
+                CHECK (
+                    pubblicazione_approvata_admin = {false_value}
+                    OR (
+                        stato_risposta = 'risposta_ricevuta'
+                        AND autorizza_pubblicazione = {true_value}
+                        AND stato_verifica NOT IN (
+                            'non_confermata', 'revocata'
+                        )
+                        AND pubblicazione_approvata_at IS NOT NULL
+                        AND pubblicazione_approvata_da_admin_id IS NOT NULL
+                    )
+                ),
+                CHECK (
+                    revocata_at IS NULL OR stato_risposta = 'revocata'
+                ),
+                CHECK (
+                    cancellata_at IS NULL OR stato_risposta = 'cancellata'
+                )
+            );
+        """))
+
+        if IS_POSTGRES:
+            c.execute(sql("""
+                ALTER TABLE referenze
+                ADD COLUMN IF NOT EXISTS autorizza_contatto_verifica
+                BOOLEAN NOT NULL DEFAULT FALSE;
+            """))
+            c.execute(sql("""
+                ALTER TABLE referenze
+                ADD COLUMN IF NOT EXISTS autorizzazione_contatto_at
+                TIMESTAMPTZ;
+            """))
+            c.execute(sql("""
+                ALTER TABLE referenze
+                ADD COLUMN IF NOT EXISTS pubblicazione_approvata_admin
+                BOOLEAN NOT NULL DEFAULT FALSE;
+            """))
+            c.execute(sql("""
+                ALTER TABLE referenze
+                ADD COLUMN IF NOT EXISTS pubblicazione_approvata_at
+                TIMESTAMPTZ;
+            """))
+            c.execute(sql("""
+                ALTER TABLE referenze
+                ADD COLUMN IF NOT EXISTS pubblicazione_approvata_da_admin_id
+                INTEGER REFERENCES utenti(id) ON DELETE SET NULL;
+            """))
+            c.execute(sql("""
+                ALTER TABLE referenze
+                ADD COLUMN IF NOT EXISTS visibile_profilo
+                BOOLEAN NOT NULL DEFAULT TRUE;
+            """))
+        else:
+            c.execute("PRAGMA table_info(referenze)")
+            reference_columns = {row[1] for row in c.fetchall()}
+            if "autorizza_contatto_verifica" not in reference_columns:
+                c.execute("""
+                    ALTER TABLE referenze
+                    ADD COLUMN autorizza_contatto_verifica INTEGER
+                    NOT NULL DEFAULT 0 CHECK (
+                        autorizza_contatto_verifica IN (0, 1)
+                    )
+                """)
+            if "autorizzazione_contatto_at" not in reference_columns:
+                c.execute("""
+                    ALTER TABLE referenze
+                    ADD COLUMN autorizzazione_contatto_at TEXT
+                """)
+            additive_reference_columns = {
+                "pubblicazione_approvata_admin": (
+                    "INTEGER NOT NULL DEFAULT 0 CHECK "
+                    "(pubblicazione_approvata_admin IN (0, 1))"
+                ),
+                "pubblicazione_approvata_at": "TEXT",
+                "pubblicazione_approvata_da_admin_id": (
+                    "INTEGER REFERENCES utenti(id) ON DELETE SET NULL"
+                ),
+                "visibile_profilo": (
+                    "INTEGER NOT NULL DEFAULT 1 CHECK "
+                    "(visibile_profilo IN (0, 1))"
+                ),
+            }
+            for column_name, column_type in additive_reference_columns.items():
+                if column_name not in reference_columns:
+                    c.execute(
+                        f"ALTER TABLE referenze ADD COLUMN "
+                        f"{column_name} {column_type}"
+                    )
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS referenze_contatti (
+                id {reference_pk},
+                referenza_id {reference_fk_type} NOT NULL UNIQUE,
+                email_cifrata TEXT,
+                email_nonce TEXT,
+                email_tag TEXT,
+                email_key_id TEXT,
+                email_hash TEXT,
+                nome_cifrato TEXT,
+                nome_nonce TEXT,
+                nome_tag TEXT,
+                messaggio_invito_cifrato TEXT,
+                messaggio_invito_nonce TEXT,
+                messaggio_invito_tag TEXT,
+                token_hash TEXT UNIQUE,
+                token_expires_at {dt_col()},
+                token_consumed_at {dt_col()},
+                ultimo_invio_at {dt_col()},
+                numero_invii INTEGER NOT NULL DEFAULT 0
+                    CHECK (numero_invii >= 0),
+                aperto_at {dt_col()},
+                ultimo_errore_invio TEXT,
+                contatto_purge_at {dt_col()},
+                contatto_purged_at {dt_col()},
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (referenza_id)
+                    REFERENCES referenze(id) ON DELETE CASCADE,
+                CHECK (
+                    (
+                        email_cifrata IS NOT NULL AND email_nonce IS NOT NULL
+                        AND email_tag IS NOT NULL AND email_key_id IS NOT NULL
+                        AND email_hash IS NOT NULL
+                    )
+                    OR
+                    (
+                        email_cifrata IS NULL AND email_nonce IS NULL
+                        AND email_tag IS NULL AND email_key_id IS NULL
+                        AND email_hash IS NULL
+                    )
+                ),
+                CHECK (
+                    (
+                        nome_cifrato IS NOT NULL AND nome_nonce IS NOT NULL
+                        AND nome_tag IS NOT NULL
+                    )
+                    OR
+                    (
+                        nome_cifrato IS NULL AND nome_nonce IS NULL
+                        AND nome_tag IS NULL
+                    )
+                ),
+                CHECK (
+                    (
+                        messaggio_invito_cifrato IS NOT NULL
+                        AND messaggio_invito_nonce IS NOT NULL
+                        AND messaggio_invito_tag IS NOT NULL
+                    )
+                    OR
+                    (
+                        messaggio_invito_cifrato IS NULL
+                        AND messaggio_invito_nonce IS NULL
+                        AND messaggio_invito_tag IS NULL
+                    )
+                ),
+                CHECK (
+                    (token_hash IS NOT NULL AND token_expires_at IS NOT NULL)
+                    OR (token_hash IS NULL AND token_expires_at IS NULL)
+                )
+            );
+        """))
+
+        if IS_POSTGRES:
+            c.execute(sql("""
+                ALTER TABLE referenze_contatti
+                ADD COLUMN IF NOT EXISTS ultimo_errore_invio TEXT;
+            """))
+            c.execute(sql(f"""
+                ALTER TABLE referenze_contatti
+                ADD COLUMN IF NOT EXISTS contatto_purge_at {dt_col()};
+            """))
+            c.execute(sql(f"""
+                ALTER TABLE referenze_contatti
+                ADD COLUMN IF NOT EXISTS contatto_purged_at {dt_col()};
+            """))
+        else:
+            c.execute("PRAGMA table_info(referenze_contatti)")
+            contact_columns = {row[1] for row in c.fetchall()}
+            additive_contact_columns = {
+                "ultimo_errore_invio": "TEXT",
+                "contatto_purge_at": dt_col(),
+                "contatto_purged_at": dt_col(),
+            }
+            for column_name, column_type in additive_contact_columns.items():
+                if column_name not in contact_columns:
+                    c.execute(
+                        f"ALTER TABLE referenze_contatti "
+                        f"ADD COLUMN {column_name} {column_type}"
+                    )
+
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS referenze_eventi (
+                id {reference_pk},
+                referenza_id {reference_fk_type} NOT NULL,
+                tipo_evento TEXT NOT NULL,
+                attore_tipo TEXT NOT NULL CHECK (
+                    attore_tipo IN ('utente', 'referente', 'admin', 'sistema')
+                ),
+                attore_utente_id INTEGER,
+                dettagli_snapshot TEXT,
+                created_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (referenza_id)
+                    REFERENCES referenze(id) ON DELETE CASCADE,
+                FOREIGN KEY (attore_utente_id)
+                    REFERENCES utenti(id) ON DELETE SET NULL,
+                CHECK (TRIM(tipo_evento) <> '')
+            );
+        """))
+
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_utente
+            ON referenze (utente_id, stato_risposta, created_at DESC);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_coda_admin
+            ON referenze (stato_verifica, risposta_at DESC);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_pubbliche
+            ON referenze (
+                utente_id, autorizza_pubblicazione,
+                pubblicazione_approvata_admin, visibile_profilo,
+                stato_risposta, created_at DESC
+            );
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_contatti_email_hash
+            ON referenze_contatti (email_hash);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_contatti_scadenza
+            ON referenze_contatti (token_expires_at, token_consumed_at);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_contatti_purge
+            ON referenze_contatti (contatto_purge_at, contatto_purged_at);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_eventi_storico
+            ON referenze_eventi (referenza_id, created_at DESC);
+        """))
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+        conn.close()
+
+    print("✅ Tabelle referenze, contatti cifrati e audit pronte.")
+
+
 def semina_catalogo_qualifiche():
     """Inserisce soltanto le voci mancanti del catalogo iniziale.
 
@@ -2606,6 +3002,7 @@ def inizializza_database():
     semina_catalogo_qualifiche()
     crea_tabelle_disponibilita_servizi()
     crea_tabelle_richieste_disponibilita()
+    crea_tabelle_referenze()
 
     crea_tabella_operatori()
     crea_tabella_annunci()

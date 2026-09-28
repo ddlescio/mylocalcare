@@ -95,7 +95,6 @@
         {% set schede_esperienze = (schede_pubbliche.get('esperienza_1', []) or []) + (schede_pubbliche.get('esperienza_2', []) or []) + (schede_pubbliche.get('esperienza_3', []) or []) %}
         {% set schede_formazioni = (schede_pubbliche.get('studio_1', []) or []) + (schede_pubbliche.get('studio_2', []) or []) + (schede_pubbliche.get('studio_3', []) or []) %}
         {% set schede_certificazioni = schede_pubbliche.get('certificazioni', []) or [] %}
-
         {% if (esperienze_presenti|length == 0) and (formazioni_presenti|length == 0) and (not certificazioni) and (schede_esperienze|length == 0) and (schede_formazioni|length == 0) and (schede_certificazioni|length == 0) %}
           <p class="info-empty-block">{{ tr('profile.empty_experience_full') }}</p>
         {% else %}
@@ -228,6 +227,7 @@
         </div>
 
         {% endif %}
+
       </section>
 
       <!-- ✅ CONTATTI -->

@@ -134,6 +134,22 @@
         </span>
       </a>
 
+      <a href="{{ url_for('admin_referenze') }}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl
+                {% if current.startswith('/admin/referenze') %}
+                   bg-slate-900 text-white shadow-sm
+                {% else %}
+                   text-slate-700 hover:bg-slate-100
+                {% endif %}">
+        <span>🤝</span>
+        <span>Referenze</span>
+
+        <span id="badge-referenze"
+              class="ml-auto inline-flex items-center justify-center rounded-full min-w-[1.5rem]
+                     h-6 text-xs font-semibold bg-violet-100 text-violet-700 hidden">
+        </span>
+      </a>
+
       <a href="{{ url_for('admin_acquisti') }}"
          class="flex items-center gap-2 px-3 py-2 rounded-xl
                 {% if current.startswith('/admin/acquisti') %}
@@ -314,6 +330,12 @@ document.addEventListener('DOMContentLoaded', function () {
         bSchede.classList.remove('hidden');
       }
 
+      const bReferenze = document.getElementById('badge-referenze');
+      if (bReferenze && data.referenze_da_verificare && data.referenze_da_verificare > 0) {
+        bReferenze.textContent = data.referenze_da_verificare;
+        bReferenze.classList.remove('hidden');
+      }
+
     })
     .catch(() => {});
 });
@@ -338,6 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const bRec = document.getElementById("badge-recensioni");
                 const bRev = document.getElementById("badge-revisioni-profilo");
                 const bSchede = document.getElementById("badge-schede-profilo");
+                const bReferenze = document.getElementById("badge-referenze");
 
                 if (bAnn) {
                     if (data.annunci > 0) {
@@ -372,6 +395,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         bSchede.classList.remove("hidden");
                     } else {
                         bSchede.classList.add("hidden");
+                    }
+                }
+
+                if (bReferenze) {
+                    if (data.referenze_da_verificare > 0) {
+                        bReferenze.textContent = data.referenze_da_verificare;
+                        bReferenze.classList.remove("hidden");
+                    } else {
+                        bReferenze.classList.add("hidden");
                     }
                 }
 

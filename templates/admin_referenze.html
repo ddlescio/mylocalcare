@@ -1,0 +1,456 @@
+{% extends "layout_admin.html" %}
+{% set admin_container_class = "max-w-7xl" %}
+
+{% block admin_content %}
+<div class="pb-12">
+  <section class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Fiducia e sicurezza</p>
+        <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Referenze utenti</h1>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+          Controlla le risposte inviate dai referenti e registra soltanto il riscontro realmente
+          effettuato. I recapiti del referente sono dati riservati all’amministrazione e non
+          vengono mostrati nel profilo pubblico.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
+          <div class="text-2xl font-black text-amber-700">{{ conteggi.get('da_gestire', conteggi.get('attenzione', 0)) }}</div>
+          <div class="text-[11px] font-bold uppercase tracking-wide text-amber-700/75">Da gestire</div>
+        </div>
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+          <div class="text-2xl font-black text-emerald-700">{{ conteggi.get('verificate', 0) }}</div>
+          <div class="text-[11px] font-bold uppercase tracking-wide text-emerald-700/75">Verificate</div>
+        </div>
+        <div class="col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center sm:col-span-1">
+          <div class="text-2xl font-black text-slate-700">{{ conteggi.get('totale', 0) }}</div>
+          <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Totali</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-5 rounded-[1.5rem] border border-blue-200 bg-blue-50/70 p-4 shadow-sm sm:p-5">
+    <div class="flex items-start gap-3">
+      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm ring-1 ring-blue-100" aria-hidden="true">🤝</div>
+      <div>
+        <h2 class="font-black text-blue-950">Cosa significa verificare una referenza</h2>
+        <p class="mt-1 text-sm leading-6 text-blue-950/75">
+          La risposta attesta ciò che il referente dichiara. Prima di segnare la referenza come
+          verificata, contattalo usando uno dei recapiti riservati e conferma che abbia risposto
+          personalmente e avuto un’esperienza diretta con l’utente. Non pubblicare recapiti,
+          informazioni di terzi o dettagli non autorizzati.
+        </p>
+        <p class="mt-2 text-sm font-semibold leading-6 text-blue-950/75">
+          L’esito del contatto e l’approvazione editoriale alla pubblicazione
+          sono due decisioni distinte: anche una referenza non verificabile può
+          essere pubblicata come semplice “Referenza ricevuta”, se il referente
+          l’ha autorizzato e il contenuto è adatto al profilo pubblico.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <form method="get" class="mt-5 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_210px_210px_auto_auto] lg:items-end">
+      <label class="block">
+        <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Utente o referente</span>
+        <input type="search" name="q" value="{{ filtri.get('q', '') }}"
+               placeholder="Username, nome o email…"
+               class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+      </label>
+
+      <label class="block">
+        <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Stato</span>
+        {% set stato_attuale = filtri.get('stato', 'da_gestire') %}
+        <select name="stato" class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+          <option value="da_gestire" {% if stato_attuale == 'da_gestire' %}selected{% endif %}>Da gestire</option>
+          <option value="tutti" {% if stato_attuale == 'tutti' %}selected{% endif %}>Tutti</option>
+          <option value="invitata" {% if stato_attuale == 'invitata' %}selected{% endif %}>Invito inviato</option>
+          <option value="risposta_ricevuta" {% if stato_attuale == 'risposta_ricevuta' %}selected{% endif %}>Risposta ricevuta</option>
+          <option value="verificata" {% if stato_attuale == 'verificata' %}selected{% endif %}>Verificate</option>
+          <option value="non_confermata" {% if stato_attuale == 'non_confermata' %}selected{% endif %}>Non confermate</option>
+          <option value="non_verificabile" {% if stato_attuale == 'non_verificabile' %}selected{% endif %}>Non verificabili</option>
+          <option value="scaduta" {% if stato_attuale == 'scaduta' %}selected{% endif %}>Scadute</option>
+          <option value="revocata" {% if stato_attuale == 'revocata' %}selected{% endif %}>Revocate</option>
+        </select>
+      </label>
+
+      <label class="block">
+        <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Categoria</span>
+        {% set categoria_attuale = filtri.get('categoria', 'tutte') %}
+        <select name="categoria" class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+          <option value="tutte" {% if categoria_attuale == 'tutte' %}selected{% endif %}>Tutte</option>
+          {% for categoria in categorie_referenze|default([], true) %}
+            <option value="{{ categoria.get('slug') }}" {% if categoria_attuale == categoria.get('slug') %}selected{% endif %}>
+              {{ categoria.get('label') or categoria.get('nome') or categoria.get('slug')|replace('-', ' ')|title }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <button class="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-sm transition hover:bg-blue-700">Filtra</button>
+      <a href="{{ url_for('admin_referenze') }}"
+         class="flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50">Reset</a>
+    </div>
+  </form>
+
+  {% if not referenze %}
+    <div class="mt-5 rounded-[1.75rem] border border-dashed border-slate-300 bg-white px-5 py-14 text-center shadow-sm">
+      <div class="text-4xl" aria-hidden="true">✓</div>
+      <h2 class="mt-3 text-lg font-black text-slate-800">Nessuna referenza per questi filtri</h2>
+      <p class="mt-1 text-sm text-slate-500">Le nuove risposte dei referenti compariranno qui.</p>
+    </div>
+  {% else %}
+    <div class="mt-5 grid gap-4 lg:grid-cols-2">
+      {% for referenza in referenze %}
+        {% set stato = referenza.get('stato_verifica') or 'non_esaminata' %}
+        {% set risposta = referenza.get('stato_risposta') or 'invitata' %}
+        {% set da_gestire = risposta == 'risposta_ricevuta' and stato in ('non_esaminata', 'in_coda', 'da_gestire', 'richiesta') %}
+        {% set contatto_autorizzato = referenza.get('contatto_verifica_autorizzato') or referenza.get('autorizza_contatto_verifica') %}
+        {% set contatto_rimosso = referenza.get('contatto_purged_at') %}
+        {% set contatto_disponibile = risposta == 'risposta_ricevuta' and contatto_autorizzato and referenza.get('referente_email') and not contatto_rimosso %}
+        <article class="overflow-hidden rounded-[1.65rem] border {% if da_gestire %}border-amber-300{% else %}border-slate-200{% endif %} bg-white shadow-sm">
+          <div class="p-4 sm:p-5">
+            <div class="flex items-start gap-3">
+              <a href="{{ url_for('profilo_pubblico', id=referenza.get('utente_id')) }}"
+                 class="shrink-0" aria-label="Apri il profilo di {{ referenza.get('username') or 'utente' }}">
+                <img src="{% if referenza.get('foto_profilo') %}{{ url_for('static', filename=referenza.get('foto_profilo')) }}{% else %}{{ url_for('static', filename='img/user_default.png') }}{% endif %}"
+                     alt="" class="h-12 w-12 rounded-full border-2 border-white object-cover shadow ring-1 ring-slate-200">
+              </a>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <a href="{{ url_for('profilo_pubblico', id=referenza.get('utente_id')) }}"
+                     class="truncate font-black text-slate-900 hover:text-blue-600">
+                    @{{ referenza.get('username') or ('utente' ~ referenza.get('utente_id')) }}
+                  </a>
+                  {% if stato == 'verificata' %}
+                    <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-emerald-700">Verificata</span>
+                  {% elif risposta == 'rifiutata' %}
+                    <span class="rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-rose-700">Non confermata dal referente</span>
+                  {% elif stato == 'non_confermata' %}
+                    <span class="rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-rose-700">Non confermata</span>
+                  {% elif stato == 'non_verificabile' %}
+                    <span class="rounded-full bg-orange-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-orange-700">Non verificabile</span>
+                  {% elif risposta == 'scaduta' %}
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-slate-600">Invito scaduto</span>
+                  {% elif risposta in ('revocata', 'cancellata') %}
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-slate-600">Revocata</span>
+                  {% elif risposta == 'in_attesa' and referenza.get('aperto_at') %}
+                    <span class="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-blue-700">Invito aperto</span>
+                  {% elif risposta == 'in_attesa' or risposta == 'invitata' %}
+                    <span class="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-blue-700">Invito inviato</span>
+                  {% elif da_gestire %}
+                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700">Da gestire</span>
+                  {% else %}
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-slate-600">Referenza ricevuta</span>
+                  {% endif %}
+                </div>
+                <h2 class="mt-2 text-lg font-black leading-tight text-slate-900">
+                  {{ referenza.get('categoria_label') or referenza.get('categoria_slug')|default('Referenza', true)|replace('-', ' ')|title }}
+                </h2>
+                <p class="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400">
+                  Referenza #{{ referenza.get('id') }} · {{ (referenza.get('tipo_rapporto') or 'Rapporto non indicato')|replace('_', ' ')|title }}
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-violet-200 bg-violet-50/70 p-3.5">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-xs font-black uppercase tracking-wide text-violet-800">Dati riservati del referente</p>
+                <span class="rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase tracking-wide text-violet-700 ring-1 ring-violet-200">Solo admin</span>
+              </div>
+              {% if contatto_rimosso %}
+                <div class="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold leading-5 text-slate-600" data-contact-status="removed">
+                  🔒 I dati identificativi e il recapito del referente sono stati rimossi alla
+                  scadenza del periodo di conservazione. Non è più possibile ricontattarlo.
+                  {% if referenza.get('contatto_purged_at') %}
+                    <span class="mt-1 block text-slate-400">Rimossi il {{ referenza.get('contatto_purged_at')|fmt_it_smart }}.</span>
+                  {% endif %}
+                </div>
+              {% else %}
+                <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt class="text-xs font-bold text-violet-600/75">Nome</dt>
+                    <dd class="mt-1 font-semibold text-violet-950" data-no-translate>{{ referenza.get('referente_nome') or '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold text-violet-600/75">Email</dt>
+                    <dd class="mt-1 break-all font-semibold text-violet-950" data-no-translate>
+                      {% if contatto_disponibile %}{{ referenza.get('referente_email') }}{% else %}Non utilizzabile per la verifica{% endif %}
+                    </dd>
+                  </div>
+                </dl>
+              {% endif %}
+
+              {% if risposta in ('in_attesa', 'invitata') %}
+                <div class="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-900" data-contact-status="pending">
+                  ⏳ Il referente non ha ancora risposto: il consenso a un successivo contatto
+                  di verifica non è stato ancora espresso.
+                </div>
+              {% elif not contatto_rimosso and not contatto_autorizzato %}
+                <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-900" data-contact-status="denied">
+                  ⚠️ Il referente non ha autorizzato MyLocalCare a ricontattarlo per la
+                  verifica. Il suo recapito non deve essere utilizzato e l’unico esito
+                  registrabile è <strong>Non verificabile</strong>.
+                </div>
+              {% elif not contatto_rimosso and contatto_autorizzato and not referenza.get('referente_email') %}
+                <div class="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs font-semibold leading-5 text-orange-900" data-contact-status="unavailable">
+                  ⚠️ Il ricontatto era stato autorizzato, ma il recapito non è disponibile.
+                  Registra la referenza come <strong>Non verificabile</strong>.
+                </div>
+              {% elif contatto_disponibile %}
+                <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold leading-5 text-emerald-900" data-contact-status="available">
+                  ✓ Il referente ha autorizzato il ricontatto ai soli fini della verifica.
+                  {% if referenza.get('contatto_purge_at') %}
+                    <span class="mt-1 block text-emerald-700/75">Conservazione prevista fino al {{ referenza.get('contatto_purge_at')|fmt_it_smart }}.</span>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              {% if contatto_disponibile %}
+                <a href="mailto:{{ referenza.get('referente_email')|urlencode }}?subject=Verifica%20referenza%20MyLocalCare%20%23{{ referenza.get('id') }}"
+                   class="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-white px-3 text-xs font-extrabold text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100">
+                  ✉️ Contatta il referente
+                </a>
+              {% endif %}
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <div class="rounded-xl bg-slate-50 p-3">
+                <div class="text-[10px] font-black uppercase tracking-wide text-slate-400">Periodo</div>
+                <div class="mt-1 font-semibold text-slate-700">
+                  {% if referenza.get('anno_inizio') %}{{ referenza.get('anno_inizio') }}{% else %}—{% endif %}
+                  {% if referenza.get('anno_fine') %} → {{ referenza.get('anno_fine') }}{% endif %}
+                </div>
+              </div>
+              <div class="rounded-xl bg-slate-50 p-3">
+                <div class="text-[10px] font-black uppercase tracking-wide text-slate-400">Durata</div>
+                <div class="mt-1 font-semibold text-slate-700">{{ referenza.get('durata_fascia') or '—' }}</div>
+              </div>
+              <div class="col-span-2 rounded-xl bg-slate-50 p-3">
+                <div class="text-[10px] font-black uppercase tracking-wide text-slate-400">Esperienza diretta</div>
+                <div class="mt-1 font-semibold {% if risposta == 'risposta_ricevuta' and referenza.get('esperienza_diretta') %}text-emerald-700{% elif risposta == 'rifiutata' %}text-rose-700{% else %}text-slate-500{% endif %}">
+                  {% if risposta == 'risposta_ricevuta' and referenza.get('esperienza_diretta') %}
+                    Confermata dal referente
+                  {% elif risposta == 'rifiutata' %}
+                    Non confermata dal referente
+                  {% else %}
+                    In attesa della risposta del referente
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <details class="group mt-3 rounded-2xl border border-slate-200 bg-slate-50/70" {% if da_gestire %}open{% endif %}>
+              <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-extrabold text-slate-700">
+                <span>Risposta, consensi e decisione</span>
+                <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+              </summary>
+
+              <div class="border-t border-slate-200 px-4 pb-4 pt-3">
+                {% if risposta not in ('risposta_ricevuta', 'rifiutata') %}
+                  <p class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-900">
+                    La risposta e i consensi del referente non sono ancora disponibili.
+                  </p>
+                {% elif referenza.get('testo_referente') %}
+                  <div>
+                    <p class="text-xs font-black uppercase tracking-wide text-slate-400">Testo facoltativo del referente</p>
+                    <div class="mt-2 rounded-xl bg-white p-3 text-sm leading-6 text-slate-700 ring-1 ring-slate-200" data-no-translate>
+                      {{ referenza.get('testo_referente') }}
+                    </div>
+                  </div>
+                {% else %}
+                  <p class="rounded-xl bg-white p-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">Il referente non ha aggiunto un testo libero.</p>
+                {% endif %}
+
+                {% if risposta in ('risposta_ricevuta', 'rifiutata') %}
+                  <div class="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                    <div class="rounded-xl border {% if referenza.get('autorizza_pubblicazione') %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-slate-200 bg-white text-slate-500{% endif %} p-3 font-bold">
+                      {% if referenza.get('autorizza_pubblicazione') %}✓{% else %}—{% endif %}
+                      Pubblicazione dati sintetici autorizzata
+                    </div>
+                    <div class="rounded-xl border {% if referenza.get('autorizza_testo_pubblico') %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-slate-200 bg-white text-slate-500{% endif %} p-3 font-bold">
+                      {% if referenza.get('autorizza_testo_pubblico') %}✓{% else %}—{% endif %}
+                      Pubblicazione testo libero autorizzata
+                    </div>
+                  </div>
+                {% endif %}
+
+                <div class="mt-4">
+                  <p class="text-xs font-black uppercase tracking-wide text-slate-400">Cronologia</p>
+                  <ol class="mt-2 space-y-2 border-l-2 border-slate-200 pl-4">
+                    {% for evento in referenza.get('timeline', []) %}
+                      <li class="relative rounded-xl bg-white p-3 text-xs text-slate-600 ring-1 ring-slate-200">
+                        <span class="absolute -left-[1.34rem] top-4 h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-slate-50" aria-hidden="true"></span>
+                        <div class="font-extrabold text-slate-800">{{ evento.get('titolo') or evento.get('label') or evento.get('stato')|default('Aggiornamento', true)|replace('_', ' ')|title }}</div>
+                        {% if evento.get('data') or evento.get('created_at') %}<div class="mt-0.5 text-slate-400">{{ evento.get('data') or evento.get('created_at') }}</div>{% endif %}
+                        {% if evento.get('dettaglio') %}<div class="mt-1" data-no-translate>{{ evento.get('dettaglio') }}</div>{% endif %}
+                      </li>
+                    {% else %}
+                      <li class="text-xs font-semibold text-slate-400">Nessun evento registrato.</li>
+                    {% endfor %}
+                  </ol>
+                </div>
+
+                {% if referenza.get('nota_admin') %}
+                  <div class="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs leading-5 text-violet-900">
+                    <strong>Nota admin precedente:</strong> <span data-no-translate>{{ referenza.get('nota_admin') }}</span>
+                  </div>
+                {% endif %}
+
+                {% if referenza.get('nota_pubblica') %}
+                  <div class="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950">
+                    <strong>Nota pubblica attuale:</strong> <span data-no-translate>{{ referenza.get('nota_pubblica') }}</span>
+                  </div>
+                {% endif %}
+
+                {% if risposta == 'risposta_ricevuta' %}
+                <form method="post" action="{{ url_for('admin_referenza_verifica', referenza_id=referenza.get('id')) }}"
+                      class="admin-reference-action mt-4 space-y-3"
+                      data-contact-available="{{ '1' if contatto_disponibile else '0' }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="versione" value="{{ referenza.get('versione') or 1 }}">
+
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-extrabold text-slate-500">Esito</span>
+                    <select name="stato_verifica" class="admin-reference-state min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" required>
+                      <option value="">Scegli…</option>
+                      <option value="verificata" {% if stato == 'verificata' %}selected{% endif %} {% if not contatto_disponibile %}disabled{% endif %}>Referenza verificata</option>
+                      <option value="non_confermata" {% if stato == 'non_confermata' %}selected{% endif %} {% if not contatto_disponibile %}disabled{% endif %}>Non confermata</option>
+                      <option value="non_verificabile" {% if stato == 'non_verificabile' or not contatto_disponibile %}selected{% endif %}>Non verificabile</option>
+                    </select>
+                  </label>
+
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-extrabold text-slate-500">Metodo di contatto</span>
+                    {% if not contatto_disponibile %}<input type="hidden" name="metodo_verifica" value="nessuno">{% endif %}
+                    <select {% if contatto_disponibile %}name="metodo_verifica"{% endif %} class="admin-reference-method min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500" {% if not contatto_disponibile %}disabled aria-disabled="true"{% endif %} required>
+                      <option value="">Scegli…</option>
+                      <option value="nessuno" {% if referenza.get('metodo_verifica') == 'nessuno' or not contatto_disponibile %}selected{% endif %}>Nessun contatto</option>
+                      <option value="email" {% if referenza.get('metodo_verifica') == 'email' %}selected{% endif %}>Email</option>
+                      <option value="altro" {% if referenza.get('metodo_verifica') == 'altro' %}selected{% endif %}>Altro</option>
+                    </select>
+                  </label>
+
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-extrabold text-slate-500">Nota interna</span>
+                    <textarea name="nota_admin" maxlength="2000" rows="2" class="admin-reference-note w-full rounded-xl border border-slate-200 bg-white p-3 text-sm" placeholder="Motivo del controllo o dell’esito. Non sarà pubblicata.">{{ referenza.get('nota_admin') or '' }}</textarea>
+                    <span class="mt-1.5 block text-[11px] leading-4 text-slate-400">Obbligatoria per “Non verificabile” e “Non confermata”. Non inserire dati personali non necessari.</span>
+                  </label>
+
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-extrabold text-slate-500">Nota pubblica facoltativa</span>
+                    <textarea name="nota_pubblica" maxlength="500" rows="2" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm" placeholder="Formula sintetica e neutra visibile nel profilo.">{{ referenza.get('nota_pubblica') or '' }}</textarea>
+                    <span class="mt-1.5 block text-[11px] leading-4 text-slate-400">Non inserire email, telefono, link o altri recapiti. La presenza di un nome nel testo della referenza non ne blocca la valutazione.</span>
+                  </label>
+
+                  <label class="admin-reference-publication flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-3.5"
+                         data-public-consent="{{ '1' if referenza.get('autorizza_pubblicazione') else '0' }}">
+                    <input type="checkbox"
+                           name="pubblicazione_approvata_admin"
+                           value="1"
+                           class="admin-reference-publication-checkbox mt-0.5 h-5 w-5 rounded border-blue-300 text-blue-600"
+                           {% if referenza.get('pubblicazione_approvata_admin') %}checked{% endif %}
+                           {% if not referenza.get('autorizza_pubblicazione') or stato in ('non_confermata', 'revocata') %}disabled{% endif %}>
+                    <span class="min-w-0">
+                      <strong class="block text-sm text-blue-950">Approva la visualizzazione pubblica</strong>
+                      <span class="mt-1 block text-xs leading-5 text-blue-900/75">
+                        Decisione editoriale finale, distinta dall’esito del contatto.
+                        Se approvata, il proprietario potrà mostrare o nascondere
+                        la referenza dal proprio profilo. Il nominativo e il recapito
+                        raccolti per l’invito restano riservati; l’eventuale testo
+                        libero autorizzato sarà mostrato così come è stato scritto.
+                      </span>
+                      {% if not referenza.get('autorizza_pubblicazione') %}
+                        <span class="mt-1 block text-xs font-bold text-amber-700">
+                          Il referente non ha autorizzato la pubblicazione.
+                        </span>
+                      {% endif %}
+                    </span>
+                  </label>
+
+                  <button class="min-h-11 w-full rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white hover:bg-blue-700">Registra esito</button>
+                </form>
+                {% elif risposta in ('in_attesa', 'invitata') %}
+                  <p class="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-900">
+                    Nessun esito amministrativo disponibile finché il referente non risponde.
+                  </p>
+                {% endif %}
+              </div>
+            </details>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".admin-reference-action").forEach((form) => {
+    const state = form.querySelector(".admin-reference-state");
+    const method = form.querySelector(".admin-reference-method");
+    const note = form.querySelector(".admin-reference-note");
+    const publication = form.querySelector(".admin-reference-publication-checkbox");
+    const publicationContainer = form.querySelector(".admin-reference-publication");
+    const contactAvailable = form.dataset.contactAvailable === "1";
+    const publicConsent = publicationContainer?.dataset.publicConsent === "1";
+    const contactOutcomes = ["verificata", "non_confermata"];
+
+    const syncRequirements = () => {
+      if (!contactAvailable) {
+        if (state) state.value = "non_verificabile";
+        if (method) {
+          method.value = "nessuno";
+          method.required = false;
+          method.disabled = true;
+        }
+      } else if (method) {
+        method.disabled = false;
+        method.required = contactOutcomes.includes(state?.value || "");
+        if (contactOutcomes.includes(state?.value || "") && method.value === "nessuno") {
+          method.value = "";
+        } else if (state?.value === "non_verificabile" && !method.value) {
+          method.value = "nessuno";
+        }
+      }
+      if (note) note.required = ["non_confermata", "non_verificabile"].includes(state?.value || "");
+      if (publication) {
+        const blockedByOutcome = state?.value === "non_confermata";
+        publication.disabled = !publicConsent || blockedByOutcome;
+        if (publication.disabled) publication.checked = false;
+      }
+    };
+    state?.addEventListener("change", syncRequirements);
+    syncRequirements();
+
+    form.addEventListener("submit", (event) => {
+      if (!contactAvailable && state?.value !== "non_verificabile") {
+        event.preventDefault();
+        window.alert("Senza un recapito autorizzato puoi registrare soltanto l’esito Non verificabile.");
+        return;
+      }
+      if (contactAvailable && contactOutcomes.includes(state?.value || "") && !["email", "altro"].includes(method?.value || "")) {
+        event.preventDefault();
+        method?.focus();
+        window.alert("Indica come hai contattato il referente.");
+        return;
+      }
+      if (["non_confermata", "non_verificabile"].includes(state?.value || "") && !note?.value.trim()) {
+        event.preventDefault();
+        note?.focus();
+        window.alert("Spiega nella nota interna il motivo dell’esito.");
+        return;
+      }
+      if (!window.confirm("Confermi l’esito della verifica della referenza?")) {
+        event.preventDefault();
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{# Card pubbliche e popup: il backend deve passare esclusivamente dati autorizzati. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/referenze.css') }}">
+
+{% set referenze_elenco = referenze_pubbliche|default([], true) %}
+
+{% if referenze_elenco %}
+<section class="reference-public-section" aria-labelledby="reference-public-title">
+  <header class="reference-public-section__head">
+    <span class="reference-public-section__icon" aria-hidden="true">🤝</span>
+    <div>
+      <h3 id="reference-public-title">{{ tr('reference.title') }}</h3>
+      <p>{{ tr('reference.public.subtitle') }}</p>
+    </div>
+    <span class="reference-count">{{ referenze_elenco|length }}</span>
+  </header>
+
+  <div class="reference-public-list">
+    {% for referenza in referenze_elenco %}
+      {% set verificata = referenza.get('verificata') %}
+      {% set categoria_label = referenza.get('categoria_label') or (referenza.get('categoria_slug') or '')|replace('-', ' ')|title %}
+      {% set stato_pubblico = referenza.get('stato_label') %}
+      {% set details_id = 'reference-public-details-' ~ loop.index %}
+      <button
+        type="button"
+        class="reference-public-card"
+        data-reference-public-open="{{ details_id }}"
+        aria-haspopup="dialog"
+        aria-controls="reference-public-dialog">
+        <span class="reference-public-card__mark" aria-hidden="true">“</span>
+        <span class="reference-public-card__main">
+          <strong>{{ tr_text(categoria_label) if categoria_label else tr('reference.public.professional_experience') }}</strong>
+          <span>
+            {{ tr_text(referenza.get('tipo_rapporto_label')) if referenza.get('tipo_rapporto_label') else tr('reference.public.relationship') }}
+            {% if referenza.get('periodo_label') %} · <span data-no-translate>{{ referenza.get('periodo_label') }}</span>{% endif %}
+          </span>
+          <span class="reference-public-card__status {% if verificata %}is-verified{% endif %}">
+            {{ tr_text(stato_pubblico) if stato_pubblico else (tr('reference.status.checked') if verificata else tr('reference.status.received')) }}
+          </span>
+          {% if verificata %}
+            <span>{{ tr('reference.public.limited_check') }}</span>
+          {% endif %}
+        </span>
+        <span class="reference-public-card__action">{{ tr('reference.public.view_details') }} <b aria-hidden="true">›</b></span>
+      </button>
+
+      <template id="{{ details_id }}">
+        <article class="reference-public-details">
+          <div class="reference-public-details__hero">
+            <span class="reference-public-details__hero-icon" aria-hidden="true">🤝</span>
+            <div>
+              <p>{{ tr('reference.public.eyebrow') }}</p>
+              <h4>{{ tr_text(categoria_label) if categoria_label else tr('reference.public.professional_experience') }}</h4>
+              <span class="reference-public-card__status {% if verificata %}is-verified{% endif %}">
+                {{ tr_text(stato_pubblico) if stato_pubblico else (tr('reference.status.checked') if verificata else tr('reference.status.received')) }}
+              </span>
+              {% if verificata %}
+                <span class="reference-public-details__scope">{{ tr('reference.public.limited_check') }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <dl class="reference-public-details__grid">
+            <div><dt>{{ tr('reference.scope') }}</dt><dd>{{ tr_text(categoria_label) if categoria_label else tr('reference.public.professional_experience') }}</dd></div>
+            <div><dt>{{ tr('reference.relationship') }}</dt><dd>{{ tr_text(referenza.get('tipo_rapporto_label')) if referenza.get('tipo_rapporto_label') else tr('reference.public.relationship') }}</dd></div>
+            <div><dt>{{ tr('reference.public.period_hint') }}</dt><dd>{% if referenza.get('periodo_label') %}<span data-no-translate>{{ referenza.get('periodo_label') }}</span>{% else %}{{ tr('reference.not_indicated_m') }}{% endif %}</dd></div>
+            <div><dt>{{ tr('reference.duration') }}</dt><dd>{{ tr_text(referenza.get('durata_label')) if referenza.get('durata_label') else tr('reference.not_indicated_f') }}</dd></div>
+            <div><dt>{{ tr('reference.public.direct_experience') }}</dt><dd>{{ tr('reference.public.declared_by_referee') }}</dd></div>
+          </dl>
+
+          {% if referenza.get('testo_referente_pubblico') %}
+            <blockquote class="reference-public-details__comment" data-no-translate>
+              “{{ referenza.get('testo_referente_pubblico') }}”
+            </blockquote>
+          {% endif %}
+
+          {% if referenza.get('nota_pubblica') %}
+            <p class="reference-public-details__admin-note">
+              <strong>{{ tr('reference.public.check_note') }}</strong> <span data-no-translate>{{ referenza.get('nota_pubblica') }}</span>
+            </p>
+          {% endif %}
+
+          <p class="reference-public-details__privacy">{{ tr('reference.public.disclaimer') }}</p>
+        </article>
+      </template>
+    {% endfor %}
+  </div>
+</section>
+
+<div id="reference-public-dialog" class="reference-dialog hidden" aria-hidden="true">
+  <button
+    type="button"
+    class="reference-dialog__backdrop"
+    data-reference-public-close
+    aria-label="{{ tr('reference.public.close_details') }}">
+  </button>
+  <section
+    class="reference-dialog__sheet reference-dialog__sheet--public"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="reference-public-dialog-title">
+    <div class="reference-dialog__handle" aria-hidden="true"></div>
+    <header class="reference-dialog__header">
+      <span class="reference-dialog__icon" aria-hidden="true">🤝</span>
+      <div class="reference-dialog__heading">
+        <p class="reference-dialog__eyebrow">{{ tr('reference.public.authorised_details') }}</p>
+        <h2 id="reference-public-dialog-title">{{ tr('reference.title') }}</h2>
+        <p>{{ tr('reference.public.authorised_info') }}</p>
+      </div>
+      <button type="button" class="reference-dialog__close" data-reference-public-close aria-label="{{ tr('language.close') }}">
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+    <div id="reference-public-dialog-content" class="reference-public-dialog__content"></div>
+  </section>
+</div>
+
+<script src="{{ url_for('static', filename='js/referenze.js') }}" defer></script>
+{% endif %}

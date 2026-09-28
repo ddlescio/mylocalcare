@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="{{ current_language_code|default('it') }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{{ tr('reference.response.page_title') }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind-output.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/referenze.css') }}">
+</head>
+<body class="reference-response-page">
+  <main class="reference-response-shell">
+    {% include "partials/legal_language_control.html" %}
+    <header class="reference-response-brand">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="MyLocalCare">
+      <span>{{ tr('reference.response.protected') }}</span>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="reference-response-messages" aria-live="polite">
+          {% for category, message in messages %}
+            <p
+              class="reference-message {% if category == 'error' %}reference-message--error{% else %}reference-message--success{% endif %}"
+              {% if category == 'error' %}role="alert"{% else %}role="status"{% endif %}>
+              {{ message }}
+            </p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if referenza %}
+      <section class="reference-response-card" aria-labelledby="reference-response-title">
+        <div class="reference-response-card__intro">
+          <span class="reference-response-card__icon" aria-hidden="true">🤝</span>
+          <p class="reference-response-card__eyebrow">{{ tr('reference.response.eyebrow') }}</p>
+          <h1 id="reference-response-title">
+            {% if referenza.get('utente_username') %}
+              {{ tr('reference.response.named_title', username='@' ~ referenza.get('utente_username')) }}
+            {% else %}
+              {{ tr('reference.response.generic_title') }}
+            {% endif %}
+          </h1>
+          <p>{{ tr('reference.response.intro') }}</p>
+        </div>
+
+        <section class="reference-response-summary" aria-labelledby="reference-response-summary-title">
+          <h2 id="reference-response-summary-title">{{ tr('reference.response.collaboration') }}</h2>
+          <dl>
+            <div><dt>{{ tr('reference.scope') }}</dt><dd>{{ tr_text(referenza.get('categoria_label') or referenza.get('categoria_slug')|replace('-', ' ')|title) if (referenza.get('categoria_label') or referenza.get('categoria_slug')) else tr('reference.not_indicated_m') }}</dd></div>
+            <div><dt>{{ tr('reference.relationship') }}</dt><dd>{{ tr_text(referenza.get('tipo_rapporto_label')) if referenza.get('tipo_rapporto_label') else tr('reference.not_indicated_m') }}</dd></div>
+            <div><dt>{{ tr('reference.period') }}</dt><dd>{% if referenza.get('periodo_label') %}<span data-no-translate>{{ referenza.get('periodo_label') }}</span>{% else %}{{ tr('reference.not_indicated_m') }}{% endif %}</dd></div>
+            <div><dt>{{ tr('reference.duration') }}</dt><dd>{{ tr_text(referenza.get('durata_label')) if referenza.get('durata_label') else tr('reference.not_indicated_f') }}</dd></div>
+          </dl>
+          {% if referenza.get('messaggio_invito') %}
+            <div class="reference-response-summary__message">
+              <strong>{{ tr('reference.response.received_message') }}</strong>
+              <p data-no-translate>{{ referenza.get('messaggio_invito') }}</p>
+            </div>
+          {% endif %}
+        </section>
+
+        <form
+          class="reference-response-form"
+          method="post"
+          action="{{ url_for('referenza_rispondi') }}"
+          data-reference-response-form>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="token_form" value="{{ token_form }}">
+
+          <fieldset class="reference-response-question">
+            <legend>{{ tr('reference.response.direct_question') }} <span aria-hidden="true">*</span></legend>
+            <div class="reference-segmented-choice">
+              <label>
+                <input type="radio" name="esperienza_diretta" value="1" required>
+                <span>✓ {{ tr('reference.response.yes') }}</span>
+              </label>
+              <label>
+                <input type="radio" name="esperienza_diretta" value="0" required>
+                <span>{{ tr('reference.response.no') }}</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="reference-field">
+            <label for="reference-response-scope">{{ tr('reference.scope') }}</label>
+            {% set categoria = referenza.get('categoria_slug') or '' %}
+            <select id="reference-response-scope" name="categoria_slug" required>
+              {% for voce in categorie_referenze|default([], true) %}
+                {% set valore = voce.get('slug') if voce is mapping else voce %}
+                {% set etichetta = voce.get('label') if voce is mapping else voce %}
+                <option value="{{ valore }}" {% if categoria == valore %}selected{% endif %}>{{ tr_text(etichetta) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="reference-field">
+            <label for="reference-response-relationship">{{ tr('reference.relationship') }}</label>
+            <select id="reference-response-relationship" name="tipo_rapporto">
+              {% set rapporto = referenza.get('tipo_rapporto') or '' %}
+              <option value="famiglia" {% if rapporto == 'famiglia' %}selected{% endif %}>{{ tr('reference.relationship.family') }}</option>
+              <option value="datore_lavoro" {% if rapporto == 'datore_lavoro' %}selected{% endif %}>{{ tr('reference.relationship.employer') }}</option>
+              <option value="cliente" {% if rapporto == 'cliente' %}selected{% endif %}>{{ tr('reference.relationship.client') }}</option>
+              <option value="struttura" {% if rapporto == 'struttura' %}selected{% endif %}>{{ tr('reference.relationship.organisation') }}</option>
+              <option value="altro" {% if rapporto == 'altro' %}selected{% endif %}>{{ tr('reference.relationship.other') }}</option>
+            </select>
+          </div>
+
+          <div class="reference-field">
+            <label for="reference-response-start-year">{{ tr('reference.start_year') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
+            <input
+              id="reference-response-start-year"
+              name="anno_inizio"
+              type="number"
+              min="1950"
+              max="2100"
+              inputmode="numeric"
+              value="{{ referenza.get('anno_inizio') or '' }}"
+              data-no-translate>
+          </div>
+
+          <div class="reference-field">
+            <label for="reference-response-end-year">{{ tr('reference.end_year') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
+            <input
+              id="reference-response-end-year"
+              name="anno_fine"
+              type="number"
+              min="1950"
+              max="2100"
+              inputmode="numeric"
+              value="{{ referenza.get('anno_fine') or '' }}"
+              data-no-translate>
+          </div>
+
+          <div class="reference-field reference-field--wide">
+            <label for="reference-response-duration">{{ tr('reference.duration') }}</label>
+            {% set durata = referenza.get('durata_fascia') or '' %}
+            <select id="reference-response-duration" name="durata_fascia" required>
+              <option value="meno_3_mesi" {% if durata == 'meno_3_mesi' %}selected{% endif %}>{{ tr('reference.duration.under_3') }}</option>
+              <option value="3_6_mesi" {% if durata == '3_6_mesi' %}selected{% endif %}>{{ tr('reference.duration.3_6') }}</option>
+              <option value="6_12_mesi" {% if durata == '6_12_mesi' %}selected{% endif %}>{{ tr('reference.duration.6_12') }}</option>
+              <option value="1_2_anni" {% if durata == '1_2_anni' %}selected{% endif %}>{{ tr('reference.duration.1_2') }}</option>
+              <option value="oltre_2_anni" {% if durata == 'oltre_2_anni' %}selected{% endif %}>{{ tr('reference.duration.over_2') }}</option>
+            </select>
+          </div>
+
+          <div class="reference-field reference-field--wide">
+            <label for="reference-response-comment">{{ tr('reference.response.comment') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
+            <textarea
+              id="reference-response-comment"
+              name="testo_referente"
+              rows="5"
+              maxlength="1500"
+              placeholder="{{ tr('reference.response.comment_placeholder') }}"
+              data-reference-counted
+              data-no-translate></textarea>
+            <small><span data-reference-character-count>0</span>/1500 {{ tr('reference.characters') }}</small>
+          </div>
+
+          <label class="reference-consent reference-field--wide">
+            <input type="checkbox" name="consenso_trattamento" value="1" required>
+            <span>{{ tr('reference.response.processing_consent') }}</span>
+          </label>
+
+          <label class="reference-consent reference-field--wide">
+            <input type="checkbox" name="consenso_contatto" value="1">
+            <span>{{ tr('reference.response.contact_consent') }}</span>
+          </label>
+
+          <label class="reference-consent reference-field--wide">
+            <input type="checkbox" name="autorizza_pubblicazione" value="1">
+            <span>{{ tr('reference.response.public_consent') }}</span>
+          </label>
+
+          <label class="reference-consent reference-field--wide">
+            <input type="checkbox" name="autorizza_testo_pubblico" value="1">
+            <span>{{ tr('reference.response.text_consent') }}</span>
+          </label>
+
+          <aside class="reference-response-privacy" aria-labelledby="reference-response-privacy-title">
+            <h2 id="reference-response-privacy-title">{{ tr('reference.response.privacy_title') }}</h2>
+            <ul>
+              <li>{{ tr('reference.response.privacy_identity') }}</li>
+              <li>{{ tr('reference.response.privacy_choice') }}</li>
+              <li>{{ tr('reference.response.privacy_warning') }}</li>
+            </ul>
+            <p>
+              {{ tr('reference.response.more_privacy') }}<a href="{{ url_for('privacy') }}" target="_blank" rel="noopener">{{ tr('register.privacy') }}</a>.
+            </p>
+          </aside>
+
+          <button type="submit" class="reference-primary-button reference-response-submit">
+            {{ tr('reference.response.send') }}
+          </button>
+        </form>
+      </section>
+    {% else %}
+      <section class="reference-response-card reference-response-card--unavailable" role="status">
+        <span aria-hidden="true">🔒</span>
+        <h1>{{ tr('reference.response.unavailable_title') }}</h1>
+        <p>{{ tr('reference.response.unavailable_body') }}</p>
+        <a href="{{ url_for('landing') }}">{{ tr('reference.response.go') }}</a>
+      </section>
+    {% endif %}
+  </main>
+
+  <script src="{{ url_for('static', filename='js/referenze.js') }}" defer></script>
+</body>
+</html>

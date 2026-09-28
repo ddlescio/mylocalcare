@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="{{ current_language_code|default('it') }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{{ tr('reference.result.page_title') }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind-output.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/referenze.css') }}">
+</head>
+<body class="reference-response-page">
+  <main class="reference-response-shell">
+    {% include "partials/legal_language_control.html" %}
+    <header class="reference-response-brand">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="MyLocalCare">
+      <span>{{ tr('reference.response.protected') }}</span>
+    </header>
+    <section class="reference-response-card reference-response-card--unavailable" role="status">
+      <span aria-hidden="true">{{ '✓' if confermata else '✉️' }}</span>
+      <h1>{{ tr('reference.result.thanks') }}</h1>
+      <p>
+        {% if confermata %}
+          {{ tr('reference.result.confirmed') }}
+        {% else %}
+          {{ tr('reference.result.not_confirmed') }}
+        {% endif %}
+      </p>
+      <p>{{ tr('reference.result.link_used') }}</p>
+      <a href="{{ url_for('landing') }}">{{ tr('reference.response.go') }}</a>
+    </section>
+  </main>
+</body>
+</html>

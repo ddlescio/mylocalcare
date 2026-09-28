@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 from i18n_catalog import PATTERN_ROWS, PHRASE_ROWS
+from i18n_references import REFERENCE_TRANSLATIONS
 
 SUPPORTED_LANGUAGES = {
     "it": {"label": "Italiano", "flag": "🇮🇹", "short": "IT"},
@@ -19,7 +20,7 @@ SUPPORTED_LANGUAGES = {
     "fil": {"label": "Filipino", "flag": "🇵🇭", "short": "FIL"},
 }
 
-LEGAL_DOCUMENT_VERSION = "mylocalcare_privacy_termini_2026_v2"
+LEGAL_DOCUMENT_VERSION = "mylocalcare_privacy_termini_2026_v3"
 
 
 TRANSLATIONS = {
@@ -2940,6 +2941,11 @@ TRANSLATIONS = {
         "uk": "Спорт", "fil": "Sports",
     },
 }
+
+# Modulo separato: la funzione referenze ha un flusso completo (utente,
+# referente esterno, profilo pubblico ed email) e deve restare tradotta in
+# tutte le lingue supportate senza mescolare contenuti scritti dagli utenti.
+TRANSLATIONS.update(REFERENCE_TRANSLATIONS)
 
 
 BASE_LANGUAGE_ORDER = ("it", "en", "fr", "es", "de")

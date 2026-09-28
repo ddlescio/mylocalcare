@@ -3,11 +3,40 @@
 {% set body_class = "offset-navbar" %}
 {% block head_extra %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/disponibilita-servizi-display.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/referenze.css') }}">
 {% endblock %}
 {% block content %}
 {% from "partials/interesse_annuncio_button.html" import interesse_annuncio_icon with context %}
 {% from "partials/disponibilita_servizi_display.html" import availability_badge, availability_intro with context %}
 {% set pubblico = pubblico|default(False) %}
+
+{#
+  I contatori del centro feedback rispettano il contesto: sul profilo
+  pubblico arrivano soltanto le referenze gia approvate e visibili; nella
+  dashboard privata contiamo come referenze le risposte effettivamente
+  ricevute, non i semplici inviti ancora pendenti.
+#}
+{% if pubblico %}
+  {% set feedback_review_rows = recensioni_ricevute|default([], true) %}
+  {% set feedback_reviews_count = feedback_review_rows|length if feedback_review_rows else totale_recensioni|default(0)|int %}
+  {% set feedback_references = referenze_pubbliche|default([], true) %}
+{% else %}
+  {% set feedback_received_rows = recensioni_ricevute|default([], true) %}
+  {% set feedback_written_rows = recensioni_scritte|default([], true) %}
+  {% set feedback_received_count = feedback_received_rows|length if feedback_received_rows else totale_recensioni|default(0)|int %}
+  {% set feedback_reviews_count = feedback_received_count + (feedback_written_rows|length) %}
+  {% set feedback_references = [] %}
+  {% for referenza in referenze_private|default([], true) %}
+    {% if referenza.get('stato_risposta') == 'risposta_ricevuta'
+          and referenza.get('stato_verifica') != 'revocata'
+          and not referenza.get('revocata_at')
+          and not referenza.get('cancellata_at') %}
+      {% set _ = feedback_references.append(referenza) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% set feedback_references_count = feedback_references|length %}
+{% set feedback_total_count = feedback_reviews_count + feedback_references_count %}
 
 
   <div class="profilo-content-wrapper max-w-6xl mx-auto bg-white rounded-2xl shadow p-0 mt-2 sm:mt-3 overflow-hidden">
@@ -273,13 +302,15 @@
   <!-- 🌟 BARRA TABS RINNOVATA -->
   <div class="sticky top-16 sm:top-14 z-[60] bg-transparent relative">
     <div class="w-full px-0 sm:px-0">
-      <nav class="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 p-1.5">
+      <nav class="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 p-1.5"
+           role="tablist"
+           aria-label="{{ tr('profile.reviews') }}">
 
         {% set tabs = [
           ('annunci', tr('profile.announcements')),
           ('info', tr('profile.info')),
-          ('foto', tr('profile.photos')),
-          ('recensioni', tr('profile.reviews'))
+          ('recensioni', tr('profile.reviews')),
+          ('foto', tr('profile.photos'))
         ] %}
 
         {% for key,label in tabs %}
@@ -291,8 +322,17 @@
                      text-gray-600 hover:text-blue-700 hover:bg-blue-50
                    {% endif %}"
             data-tab="{{ key }}"
+            id="profile-tab-{{ key }}"
+            role="tab"
+            aria-controls="tab-{{ key }}"
+            aria-selected="{{ 'true' if key == 'annunci' else 'false' }}"
+            tabindex="{{ '0' if key == 'annunci' else '-1' }}"
             type="button">
-            {{ label }}
+            <span>{{ label }}</span>
+            {% if key == 'recensioni' and feedback_total_count > 0 %}
+              <span class="profile-tab-count" aria-hidden="true">{{ feedback_total_count }}</span>
+              <span class="sr-only">{{ feedback_total_count }}</span>
+            {% endif %}
             <span class="tab-underline absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] bg-blue-500 rounded-full transition-all duration-300 ease-out
               {% if key=='annunci' %}w-2/3 opacity-100{% else %}w-0 opacity-0{% endif %}"></span>
           </button>
@@ -306,7 +346,7 @@
   <section>
 
     <!-- 🟦 TAB: ANNUNCI (default) -->
-    <div id="tab-annunci" class="tab-pane">
+    <div id="tab-annunci" class="tab-pane" role="tabpanel" aria-labelledby="profile-tab-annunci">
       <!-- Shell in stile app iOS: sfondo soft + contenuto centrato -->
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div class="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-6 lg:gap-7 items-start">
@@ -377,6 +417,21 @@
                 feature_available=disponibilita_servizi_disponibile|default(false),
                 utente_offre_servizi=utente_offre_servizi|default(false)
               ) }}
+
+              {% if referenze_disponibili|default(false) and (not pubblico or feedback_references_count > 0) %}
+                <a href="#referenze"
+                   data-feedback-jump="references"
+                   class="profile-reference-shortcut"
+                   aria-label="{{ tr('reference.title') }}: {{ feedback_references_count }}">
+                  <span class="profile-reference-shortcut__icon" aria-hidden="true">🤝</span>
+                  <span class="profile-reference-shortcut__copy">
+                    <strong>{{ tr('reference.title') }}</strong>
+                    <small>{{ tr('reference.manage_or_invite') if not pubblico and feedback_references_count > 0 else tr('reference.manager.title') if not pubblico else tr('reference.public.view') }}</small>
+                  </span>
+                  <span class="profile-reference-shortcut__count" aria-hidden="true">{{ feedback_references_count }}</span>
+                  <span class="profile-reference-shortcut__arrow" aria-hidden="true">›</span>
+                </a>
+              {% endif %}
 
               <!-- 🔹 Attività Offro / Cerco -->
               {% set categorie = [
@@ -772,7 +827,7 @@
     </div>
 
     <!-- 🟩 TAB: INFO -->
-    <div id="tab-info" class="tab-pane hidden">
+    <div id="tab-info" class="tab-pane hidden" role="tabpanel" aria-labelledby="profile-tab-info" hidden>
       <div class="tab-info-shell max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div class="tab-info-panel">
           {% if pubblico %}
@@ -792,18 +847,75 @@
       {% include 'partials/disponibilita_servizi_dialog.html' %}
     {% endif %}
 
-    <!-- 🟨 TAB: FOTO -->
-    <div id="tab-foto" class="tab-pane hidden">
-      {% include 'partials/tab_foto_privato.html' %}
+    <!-- 🟧 TAB: RECENSIONI -->
+    <div id="tab-recensioni" class="tab-pane hidden" role="tabpanel" aria-labelledby="profile-tab-recensioni" hidden>
+      <div class="feedback-hub" data-feedback-hub>
+        <div class="feedback-section-switch" role="tablist" aria-label="{{ tr('profile.reviews') }}">
+          <button type="button"
+                  id="feedback-tab-reviews"
+                  class="feedback-section-button is-active"
+                  data-feedback-section="reviews"
+                  role="tab"
+                  aria-controls="feedback-panel-reviews"
+                  aria-label="{{ tr('profile.reviews') }}: {{ feedback_reviews_count }}"
+                  aria-selected="true"
+                  tabindex="0">
+            <span>{{ tr('profile.reviews') }}</span>
+            <span class="feedback-section-count" aria-hidden="true">{{ feedback_reviews_count }}</span>
+          </button>
+          <button type="button"
+                  id="feedback-tab-references"
+                  class="feedback-section-button"
+                  data-feedback-section="references"
+                  role="tab"
+                  aria-controls="feedback-panel-references"
+                  aria-label="{{ tr('reference.title') }}: {{ feedback_references_count }}"
+                  aria-selected="false"
+                  tabindex="-1">
+            <span>{{ tr('reference.title') }}</span>
+            <span class="feedback-section-count" aria-hidden="true">{{ feedback_references_count }}</span>
+          </button>
+        </div>
+
+        <section id="feedback-panel-reviews"
+                 class="feedback-section-panel"
+                 data-feedback-panel="reviews"
+                 role="tabpanel"
+                 aria-labelledby="feedback-tab-reviews">
+          {% if pubblico %}
+            {% include 'partials/tab_recensioni_pubblico.html' %}
+          {% else %}
+            {% include 'partials/tab_recensioni_privato.html' %}
+          {% endif %}
+        </section>
+
+        <section id="feedback-panel-references"
+                 class="feedback-section-panel hidden"
+                 data-feedback-panel="references"
+                 role="tabpanel"
+                 aria-labelledby="feedback-tab-references"
+                 hidden>
+          {% if pubblico %}
+            {% if feedback_references_count > 0 %}
+              {% include 'partials/referenze_pubbliche.html' %}
+            {% else %}
+              <div class="feedback-reference-empty">
+                <span aria-hidden="true">🤝</span>
+                <strong>{{ tr('reference.none_yet') }}</strong>
+              </div>
+            {% endif %}
+          {% else %}
+            {% if referenze_disponibili|default(false) %}
+              {% include 'partials/referenze_dialog.html' %}
+            {% endif %}
+          {% endif %}
+        </section>
+      </div>
     </div>
 
-    <!-- 🟧 TAB: RECENSIONI -->
-    <div id="tab-recensioni" class="tab-pane hidden">
-      {% if pubblico %}
-        {% include 'partials/tab_recensioni_pubblico.html' %}
-      {% else %}
-        {% include 'partials/tab_recensioni_privato.html' %}
-      {% endif %}
+    <!-- 🟨 TAB: FOTO -->
+    <div id="tab-foto" class="tab-pane hidden" role="tabpanel" aria-labelledby="profile-tab-foto" hidden>
+      {% include 'partials/tab_foto_privato.html' %}
     </div>
 
     </section>
@@ -5777,6 +5889,23 @@ nav::before {
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".tab-btn");
   const panes = document.querySelectorAll(".tab-pane");
+  const feedbackButtons = document.querySelectorAll("[data-feedback-section]");
+  const feedbackPanels = document.querySelectorAll("[data-feedback-panel]");
+
+  const attivaFeedbackSezione = (section) => {
+    const requested = section === "references" ? "references" : "reviews";
+    feedbackButtons.forEach(button => {
+      const active = button.dataset.feedbackSection === requested;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    feedbackPanels.forEach(panel => {
+      const active = panel.dataset.feedbackPanel === requested;
+      panel.classList.toggle("hidden", !active);
+      panel.hidden = !active;
+    });
+  };
 
   const attivaTab = (key) => {
     tabs.forEach(b => {
@@ -5788,6 +5917,8 @@ document.addEventListener("DOMContentLoaded", () => {
       b.classList.toggle("text-gray-600", !attivo);
       b.classList.toggle("hover:text-blue-700", !attivo);
       b.classList.toggle("hover:bg-blue-50", !attivo);
+      b.setAttribute("aria-selected", String(attivo));
+      b.tabIndex = attivo ? 0 : -1;
 
       const underline = b.querySelector(".tab-underline");
       if (underline) {
@@ -5799,52 +5930,88 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     panes.forEach(p => {
-      p.classList.toggle("hidden", p.id !== `tab-${key}`);
+      const active = p.id === `tab-${key}`;
+      p.classList.toggle("hidden", !active);
+      p.hidden = !active;
     });
+  };
+
+  const openReferences = (updateUrl = true) => {
+    attivaTab("recensioni");
+    attivaFeedbackSezione("references");
+    if (updateUrl) updateProfileUrl("referenze");
+  };
+
+  const updateProfileUrl = (hash) => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("tab");
+    url.searchParams.delete("section");
+    url.searchParams.delete("sottosezione");
+    url.hash = hash;
+    history.replaceState(null, "", url.pathname + url.search + url.hash);
+  };
+
+  const requestedLocation = () => {
+    const hash = window.location.hash.slice(1).toLowerCase();
+    const params = new URLSearchParams(window.location.search);
+    const queryTab = (params.get("tab") || "").toLowerCase();
+    const querySection = (params.get("section") || params.get("sottosezione") || "").toLowerCase();
+    const knownTabs = Array.from(tabs, tab => tab.dataset.tab);
+    if (["referenze", "references"].includes(hash)) return { tab: "recensioni", section: "references" };
+    if (knownTabs.includes(hash)) return { tab: hash, section: "reviews" };
+    if (["referenze", "references"].includes(queryTab)
+        || (queryTab === "recensioni" && ["referenze", "references"].includes(querySection))) {
+      return { tab: "recensioni", section: "references" };
+    }
+    if (knownTabs.includes(queryTab)) return { tab: queryTab, section: "reviews" };
+    return null;
   };
 
   // 🔹 Se arriviamo da pagine recensioni o da URL con #recensioni, riapri la tab corretta
   const tabRichiestaSession = sessionStorage.getItem("lc_profilo_tab_da_aprire");
   sessionStorage.removeItem("lc_profilo_tab_da_aprire");
 
-  const tabRichiestaHash = window.location.hash
-    ? window.location.hash.replace("#", "").trim()
-    : "";
-
-  const tabRichiestaQuery = new URLSearchParams(
-    window.location.search
-  ).get("tab") || "";
-
-  const tabRichiesta =
-    tabRichiestaHash && document.querySelector(`.tab-btn[data-tab="${tabRichiestaHash}"]`)
-      ? tabRichiestaHash
-      : (
-          tabRichiestaQuery
-          && document.querySelector(`.tab-btn[data-tab="${tabRichiestaQuery}"]`)
-            ? tabRichiestaQuery
-            : tabRichiestaSession
-        );
-
-  const tabIniziale =
-    tabRichiesta && document.querySelector(`.tab-btn[data-tab="${tabRichiesta}"]`)
-      ? tabRichiesta
-      : "annunci";
-
-  attivaTab(tabIniziale);
+  const locationRequest = requestedLocation();
+  const initialTab = locationRequest?.tab || (tabRichiestaSession === "referenze" ? "recensioni" : tabRichiestaSession);
+  attivaTab(Array.from(tabs).some(tab => tab.dataset.tab === initialTab) ? initialTab : "annunci");
+  attivaFeedbackSezione(locationRequest?.section || (tabRichiestaSession === "referenze" ? "references" : "reviews"));
 
   // 🔹 Cambio tab e aggiorno l'URL, così tornando indietro resta la tab corretta
   tabs.forEach(btn => {
     btn.addEventListener("click", () => {
       const tab = btn.dataset.tab;
       attivaTab(tab);
+      if (tab === "recensioni") attivaFeedbackSezione("reviews");
 
-      if (tab === "annunci") {
-        history.replaceState(null, "", window.location.pathname + window.location.search);
-      } else {
-        history.replaceState(null, "", "#" + tab);
-      }
+      updateProfileUrl(tab === "annunci" ? "" : tab);
     });
   });
+
+  feedbackButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      const section = button.dataset.feedbackSection;
+      attivaTab("recensioni");
+      attivaFeedbackSezione(section);
+      updateProfileUrl(section === "references" ? "referenze" : "recensioni");
+    });
+  });
+
+  document.querySelectorAll("[data-feedback-jump='references'], [data-reference-manager-open], [data-reference-open]").forEach(link => {
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      openReferences();
+    });
+  });
+
+  window.addEventListener("hashchange", () => {
+    const requested = requestedLocation();
+    if (!requested) return;
+    attivaTab(requested.tab);
+    attivaFeedbackSezione(requested.section);
+  });
+
+  window.addEventListener("profile:open-references", () => openReferences());
+  window.addEventListener("feedback:open-references", () => openReferences());
 });
 </script>
 <script>

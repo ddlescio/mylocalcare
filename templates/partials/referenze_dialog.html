@@ -1,0 +1,347 @@
+{# Gestione privata delle referenze nella sottosezione del profilo. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/referenze.css') }}">
+
+{% set referenze_elenco = referenze_private|default([], true) %}
+{% set categorie_elenco = categorie_referenze|default([], true) %}
+
+<div id="reference-manager" class="reference-manager">
+  <section
+    class="reference-manager__panel"
+    aria-labelledby="reference-manager-title">
+
+    <header class="reference-dialog__header">
+      <span class="reference-dialog__icon" aria-hidden="true">🤝</span>
+      <div class="reference-dialog__heading">
+        <p class="reference-dialog__eyebrow">{{ tr('reference.manager.eyebrow') }}</p>
+        <h2 id="reference-manager-title">{{ tr('reference.manager.title') if categorie_elenco else tr('reference.title') }}</h2>
+        <p id="reference-manager-subtitle">
+          {{ tr('reference.manager.subtitle') if categorie_elenco else tr('reference.manager.existing_only') }}
+        </p>
+      </div>
+    </header>
+
+    <div class="reference-manager__body">
+      {% if categorie_elenco %}
+        <section class="reference-explainer" aria-labelledby="reference-explainer-title">
+          <span class="reference-explainer__shield" aria-hidden="true">🛡️</span>
+          <div>
+            <h3 id="reference-explainer-title">{{ tr('reference.how.title') }}</h3>
+            <p>{{ tr('reference.how.body') }}</p>
+          </div>
+        </section>
+
+        <details class="reference-invite" data-reference-invite-panel {% if not referenze_elenco %}open{% endif %}>
+        <summary>
+          <span>
+            <strong>{{ tr('reference.invite.new') }}</strong>
+            <small>{{ tr('reference.invite.data_subtitle') }}</small>
+          </span>
+          <span class="reference-invite__summary-action">{{ tr('reference.invite.fill') }} <b aria-hidden="true">＋</b></span>
+        </summary>
+
+        <form
+          id="reference-invite-form"
+          class="reference-form"
+          method="post"
+          action="{{ url_for('api_referenze_crea') }}"
+          data-reference-create-endpoint="{{ url_for('api_referenze_crea') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="reference-field reference-field--wide">
+            <label for="reference-contact-name">{{ tr('reference.contact.name') }} <span aria-hidden="true">*</span></label>
+            <input
+              id="reference-contact-name"
+              name="referente_nome"
+              type="text"
+              maxlength="120"
+              autocomplete="name"
+              required
+              data-no-translate>
+            <small>{{ tr('reference.contact.name_help') }}</small>
+          </div>
+
+          <div class="reference-field reference-field--wide">
+            <label for="reference-contact-email">{{ tr('reference.contact.email') }} <span aria-hidden="true">*</span></label>
+            <input
+              id="reference-contact-email"
+              name="referente_email"
+              type="email"
+              maxlength="254"
+              autocomplete="email"
+              inputmode="email"
+              required
+              data-no-translate>
+            <small>{{ tr('reference.contact.email_help') }}</small>
+          </div>
+
+          <div class="reference-field">
+            <label for="reference-scope">{{ tr('reference.scope') }} <span aria-hidden="true">*</span></label>
+            <select id="reference-scope" name="categoria_slug" required>
+              <option value="">{{ tr('reference.scope.select') }}</option>
+              {% for categoria in categorie_elenco %}
+                {% set categoria_valore = categoria.get('slug') if categoria is mapping else categoria %}
+                {% set categoria_label = categoria.get('label') if categoria is mapping else categoria %}
+                <option value="{{ categoria_valore }}">{{ tr_text(categoria_label) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="reference-field">
+            <label for="reference-relationship">{{ tr('reference.relationship') }} <span aria-hidden="true">*</span></label>
+            <select id="reference-relationship" name="tipo_rapporto" required>
+              <option value="">{{ tr('reference.relationship.select') }}</option>
+              <option value="famiglia">{{ tr('reference.relationship.family') }}</option>
+              <option value="datore_lavoro">{{ tr('reference.relationship.employer') }}</option>
+              <option value="cliente">{{ tr('reference.relationship.client') }}</option>
+              <option value="struttura">{{ tr('reference.relationship.organisation') }}</option>
+              <option value="altro">{{ tr('reference.relationship.other') }}</option>
+            </select>
+          </div>
+
+          <div class="reference-field">
+            <label for="reference-start-year">{{ tr('reference.start_year') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
+            <input
+              id="reference-start-year"
+              name="anno_inizio"
+              type="number"
+              min="1950"
+              max="2100"
+              inputmode="numeric"
+              placeholder="{{ tr('reference.example_year', year=2024) }}"
+              data-no-translate>
+          </div>
+
+          <div class="reference-field">
+            <label for="reference-end-year">{{ tr('reference.end_year') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
+            <input
+              id="reference-end-year"
+              name="anno_fine"
+              type="number"
+              min="1950"
+              max="2100"
+              inputmode="numeric"
+              placeholder="{{ tr('reference.example_year', year=2025) }}"
+              data-no-translate>
+          </div>
+
+          <div class="reference-field reference-field--wide">
+            <label for="reference-duration">{{ tr('reference.duration') }} <span aria-hidden="true">*</span></label>
+            <select id="reference-duration" name="durata_fascia" required>
+              <option value="">{{ tr('reference.duration.select') }}</option>
+              <option value="meno_3_mesi">{{ tr('reference.duration.under_3') }}</option>
+              <option value="3_6_mesi">{{ tr('reference.duration.3_6') }}</option>
+              <option value="6_12_mesi">{{ tr('reference.duration.6_12') }}</option>
+              <option value="1_2_anni">{{ tr('reference.duration.1_2') }}</option>
+              <option value="oltre_2_anni">{{ tr('reference.duration.over_2') }}</option>
+            </select>
+          </div>
+
+          <div class="reference-field reference-field--wide">
+            <label for="reference-message">{{ tr('reference.invite.message') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
+            <textarea
+              id="reference-message"
+              name="messaggio_invito"
+              rows="3"
+              maxlength="500"
+              placeholder="{{ tr('reference.invite.message_placeholder') }}"
+              data-reference-counted
+              data-no-translate></textarea>
+            <small><span data-reference-character-count>0</span>/500 {{ tr('reference.characters') }}</small>
+          </div>
+
+          <label class="reference-consent reference-field--wide">
+            <input type="checkbox" name="conferma_condivisione_recapito" value="1" required>
+            <span>{{ tr('reference.invite.contact_consent') }}</span>
+          </label>
+
+          <p class="reference-privacy-note reference-field--wide">{{ tr('reference.invite.privacy_note') }}</p>
+
+          <div id="reference-form-error" class="reference-message reference-message--error hidden reference-field--wide" role="alert"></div>
+          <div id="reference-form-success" class="reference-message reference-message--success hidden reference-field--wide" role="status" aria-live="polite"></div>
+
+          <footer class="reference-form__actions reference-field--wide">
+            <button type="submit" class="reference-primary-button" data-reference-submit>
+              {{ tr('reference.invite.send') }}
+            </button>
+          </footer>
+        </form>
+        </details>
+      {% endif %}
+
+      <section class="reference-list" aria-labelledby="reference-list-title">
+        <div class="reference-list__head">
+          <div>
+            <h3 id="reference-list-title">{{ tr('reference.requests.title') }}</h3>
+            <p>{{ tr('reference.requests.subtitle') }}</p>
+          </div>
+          {% if referenze_elenco %}
+            <span class="reference-count">{{ referenze_elenco|length }}</span>
+          {% endif %}
+        </div>
+
+        {% if referenze_elenco %}
+          <div class="reference-list__items">
+            {% for referenza in referenze_elenco %}
+              {% set stato_risposta = referenza.get('stato_risposta') or 'in_attesa' %}
+              {% set stato_verifica = referenza.get('stato_verifica') or 'non_verificata' %}
+              {% set stato = referenza.get('stato') or ('verificata' if stato_verifica == 'verificata' else stato_risposta) %}
+              <article class="reference-private-card" data-reference-id="{{ referenza.get('id') }}">
+                <div class="reference-private-card__top">
+                  <span class="reference-private-card__icon" aria-hidden="true">🤝</span>
+                  <div class="reference-private-card__copy">
+                    <h4>{{ tr_text(referenza.get('categoria_label') or referenza.get('ambito_servizio')) if (referenza.get('categoria_label') or referenza.get('ambito_servizio')) else tr('reference.professional') }}</h4>
+                    <p>
+                      {% if referenza.get('referente_nome') %}<span data-no-translate>{{ referenza.get('referente_nome') }}</span>{% else %}{{ tr('reference.referee') }}{% endif %}
+                      {% if referenza.get('tipo_rapporto_label') %} · {{ tr_text(referenza.get('tipo_rapporto_label')) }}{% endif %}
+                    </p>
+                  </div>
+                  <span class="reference-status reference-status--{{ stato|replace('_', '-') }}">
+                    {% if stato == 'inviata' %}{{ tr('reference.status.invited') }}
+                    {% elif stato == 'aperta' %}{{ tr('reference.status.opened') }}
+                    {% elif stato == 'errore_invio' %}{{ tr('reference.status.email_failed') }}
+                    {% elif stato == 'risposta_ricevuta' %}{{ tr('reference.status.reply_received') }}
+                    {% elif stato == 'in_verifica' %}{{ tr('reference.status.checking') }}
+                    {% elif stato == 'verificata' %}{{ tr('reference.status.verified_short') }}
+                    {% elif stato == 'non_confermata' %}{{ tr('reference.status.not_confirmed') }}
+                    {% elif stato == 'non_verificabile' %}{{ tr('reference.status.not_verifiable') }}
+                    {% elif stato == 'archiviata' %}{{ tr('reference.status.contact_removed') }}
+                    {% elif stato == 'revocata' %}{{ tr('reference.status.revoked') }}
+                    {% elif stato == 'scaduta' %}{{ tr('reference.status.expired') }}
+                    {% else %}{{ stato|replace('_', ' ')|capitalize }}{% endif %}
+                  </span>
+                </div>
+
+                <dl class="reference-private-card__meta">
+                  {% if referenza.get('periodo_label') %}
+                    <div><dt>{{ tr('reference.period') }}</dt><dd data-no-translate>{{ referenza.get('periodo_label') }}</dd></div>
+                  {% endif %}
+                  {% if referenza.get('inviata_at') %}
+                    <div><dt>{{ tr('reference.invited_on') }}</dt><dd>{{ referenza.get('inviata_at')|fmt_it_date }}</dd></div>
+                  {% endif %}
+                </dl>
+
+                {% if stato_risposta in ['risposta_ricevuta', 'rifiutata'] %}
+                  <details class="reference-private-details">
+                    <summary>
+                      <span>{{ tr('reference.details.open') }}</span>
+                      <span aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="reference-private-details__body">
+                      <dl class="reference-private-details__grid">
+                        <div>
+                          <dt>{{ tr('reference.relationship') }}</dt>
+                          <dd>{{ tr_text(referenza.get('tipo_rapporto_label')) if referenza.get('tipo_rapporto_label') else '—' }}</dd>
+                        </div>
+                        <div>
+                          <dt>{{ tr('reference.period') }}</dt>
+                          <dd data-no-translate>{{ referenza.get('periodo_label') or '—' }}</dd>
+                        </div>
+                        <div>
+                          <dt>{{ tr('reference.details.duration') }}</dt>
+                          <dd>{{ tr_text(referenza.get('durata_label')) if referenza.get('durata_label') else '—' }}</dd>
+                        </div>
+                        <div>
+                          <dt>{{ tr('reference.details.public_card') }}</dt>
+                          <dd>{{ tr('reference.details.yes') if referenza.get('autorizza_pubblicazione') else tr('reference.details.no') }}</dd>
+                        </div>
+                        <div>
+                          <dt>{{ tr('reference.details.public_comment') }}</dt>
+                          <dd>{{ tr('reference.details.yes') if referenza.get('autorizza_testo_pubblico') else tr('reference.details.no') }}</dd>
+                        </div>
+                        <div>
+                          <dt>{{ tr('reference.status.checked') }}</dt>
+                          <dd>
+                            {% if stato_verifica == 'verificata' %}{{ tr('reference.status.checked') }}
+                            {% elif stato_verifica == 'non_confermata' %}{{ tr('reference.status.not_confirmed') }}
+                            {% elif stato_verifica == 'non_verificabile' %}{{ tr('reference.status.not_verifiable') }}
+                            {% elif stato_verifica == 'in_coda' %}{{ tr('reference.status.checking') }}
+                            {% else %}{{ tr('reference.status.reply_received') }}{% endif %}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      <div class="reference-private-details__comment">
+                        <strong>{{ tr('reference.details.comment') }}</strong>
+                        {% if referenza.get('testo_referente') %}
+                          <p data-no-translate>{{ referenza.get('testo_referente') }}</p>
+                        {% else %}
+                          <p>{{ tr('reference.details.no_comment') }}</p>
+                        {% endif %}
+                      </div>
+
+                      <div class="reference-private-visibility-state {% if referenza.get('effettivamente_visibile') %}is-visible{% endif %}">
+                        {% if referenza.get('effettivamente_visibile') %}
+                          <strong>{{ tr('reference.approved_for_publication') }}</strong>
+                          <span>{{ tr('reference.show_on_profile') }}</span>
+                        {% elif referenza.get('pubblicazione_approvata_admin') and not referenza.get('visibile_profilo') %}
+                          <strong>{{ tr('reference.hidden_by_you') }}</strong>
+                        {% elif referenza.get('autorizza_pubblicazione') %}
+                          <strong>{{ tr('reference.waiting_admin_approval') }}</strong>
+                        {% else %}
+                          <strong>{{ tr('reference.details.public_card') }}: {{ tr('reference.details.no') }}</strong>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </details>
+                {% endif %}
+
+                {% if referenza.get('ultimo_errore_invio') and stato == 'errore_invio' %}
+                  <p class="reference-message reference-message--error" role="alert">
+                    {{ tr('reference.status.email_failed_help') }}
+                  </p>
+                {% endif %}
+
+                {% if stato != 'revocata' %}
+                  <div class="reference-private-card__actions">
+                    {% if stato_risposta == 'risposta_ricevuta'
+                          and referenza.get('autorizza_pubblicazione')
+                          and referenza.get('pubblicazione_approvata_admin')
+                          and stato_verifica not in ['non_confermata', 'revocata'] %}
+                      <button
+                        type="button"
+                        class="reference-secondary-button reference-visibility-button"
+                        data-reference-visibility
+                        data-endpoint="{{ url_for('api_referenza_visibilita', referenza_id=referenza.get('id')) }}"
+                        data-version="{{ referenza.get('versione') or 1 }}"
+                        data-visible="{{ '1' if referenza.get('visibile_profilo') else '0' }}">
+                        {% if referenza.get('visibile_profilo') %}
+                          {{ tr('reference.hide_from_profile') }}
+                        {% else %}
+                          {{ tr('reference.show_on_profile') }}
+                        {% endif %}
+                      </button>
+                    {% endif %}
+                    {% if stato in ['inviata', 'aperta', 'scaduta', 'errore_invio'] %}
+                      <button
+                        type="button"
+                        class="reference-secondary-button"
+                        data-reference-resend
+                        data-endpoint="{{ url_for('api_referenza_reinvia', referenza_id=referenza.get('id')) }}">
+                        {{ tr('reference.resend') }}
+                      </button>
+                    {% endif %}
+                    <button
+                      type="button"
+                      class="reference-danger-button"
+                      data-reference-revoke
+                      data-endpoint="{{ url_for('api_referenza_revoca', referenza_id=referenza.get('id')) }}">
+                      {{ tr('reference.revoke') }}
+                    </button>
+                  </div>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="reference-empty-state">
+            <span aria-hidden="true">✉️</span>
+            <strong>{{ tr('reference.empty.title') }}</strong>
+            <p>{{ tr('reference.empty.body') }}</p>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+  </section>
+</div>
+
+<script src="{{ url_for('static', filename='js/referenze.js') }}" defer></script>

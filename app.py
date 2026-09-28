@@ -128,6 +128,27 @@ from richieste_disponibilita import (
     normalizza_stato_richiesta_disponibilita,
     valida_limiti_anti_abuso,
 )
+from referenze import (
+    DURATION_LABELS as REFERENCE_DURATION_LABELS,
+    REFERENCE_CONSENT_VERSION,
+    REFERENCE_DURATION_RANGES,
+    REFERENCE_KEY_ID,
+    REFERENCE_RELATION_TYPES,
+    REFERENCE_VERIFICATION_STATES,
+    RELATION_LABELS as REFERENCE_RELATION_LABELS,
+    contains_direct_contact as reference_contains_direct_contact,
+    decrypt_invitation_message,
+    decrypt_reference_email,
+    decrypt_reference_name,
+    encrypt_invitation_message,
+    encrypt_reference_email,
+    encrypt_reference_name,
+    generate_reference_token,
+    hash_reference_token,
+    normalize_reference_payload,
+    reference_email_fingerprint,
+    serialize_public_reference,
+)
 from i18n import (
     LEGAL_DOCUMENT_VERSION,
     SUPPORTED_LANGUAGES,
@@ -5217,6 +5238,24 @@ def admin_counters():
                 production=True,
             )
 
+        step = "referenze"
+        try:
+            referenze_da_verificare = get_count(cur, """
+                SELECT COUNT(*) AS valore
+                FROM referenze
+                WHERE stato_risposta = 'risposta_ricevuta'
+                  AND stato_verifica IN ('non_esaminata', 'in_coda')
+            """, step=step)
+        except Exception as e:
+            # Rollout tollerante: la dashboard resta disponibile anche se la
+            # migrazione delle referenze non è stata ancora applicata.
+            referenze_da_verificare = 0
+            log_exception_safe(
+                "Referenze non ancora disponibili nei contatori admin",
+                e,
+                production=True,
+            )
+
         step = "utenti"
 
         try:
@@ -5407,12 +5446,14 @@ def admin_counters():
             "risposte": pending_risposte,
             "revisioni_profilo": pending_revisioni_profilo,
             "schede_profilo_da_verificare": schede_profilo_da_verificare,
+            "referenze_da_verificare": referenze_da_verificare,
             "messaggi": messaggi_non_letti,
             "totale": (
                 pending_annunci
                 + pending_recensioni_totali
                 + pending_revisioni_profilo
                 + schede_profilo_da_verificare
+                + referenze_da_verificare
             ),
             "video_minuti": video_minuti,
             "acquisti_attivi": acquisti_attivi,
@@ -5458,6 +5499,7 @@ def admin_counters():
             "risposte": 0,
             "revisioni_profilo": 0,
             "schede_profilo_da_verificare": 0,
+            "referenze_da_verificare": 0,
             "messaggi": 0,
             "totale": 0,
             "video_minuti": 0,
@@ -6206,6 +6248,606 @@ def admin_interessi():
             conn.close()
         except Exception:
             pass
+
+
+# ==========================================================
+# 🤝 ADMIN — REFERENZE PROFESSIONALI
+# ==========================================================
+REFERENCE_ADMIN_FILTER_STATES = {
+    "da_gestire",
+    "tutti",
+    "invitata",
+    "risposta_ricevuta",
+    "verificata",
+    "non_confermata",
+    "non_verificabile",
+    "scaduta",
+    "revocata",
+}
+REFERENCE_ADMIN_DECISION_STATES = {
+    "verificata",
+    "non_confermata",
+    "non_verificabile",
+}
+REFERENCE_ADMIN_CONTACT_METHODS = {"email", "altro"}
+REFERENCE_ADMIN_METHODS = REFERENCE_ADMIN_CONTACT_METHODS | {"nessuno"}
+
+
+def _referenza_admin_filter_clause(stato, categoria):
+    """Restituisce la parte WHERE sicura per la coda referenze admin."""
+
+    normalized_state = str(stato or "da_gestire").strip().lower()
+    if normalized_state not in REFERENCE_ADMIN_FILTER_STATES:
+        normalized_state = "da_gestire"
+
+    normalized_category = str(categoria or "tutte").strip().lower()
+    if normalized_category != "tutte" and normalized_category not in {
+        str(slug).strip().lower() for slug in CATEGORIE_SERVIZI
+    }:
+        normalized_category = "tutte"
+
+    where = ["r.stato_risposta <> 'cancellata'"]
+    params = []
+    if normalized_state == "da_gestire":
+        where.append("""
+            r.stato_risposta = 'risposta_ricevuta'
+            AND r.stato_verifica IN ('non_esaminata', 'in_coda')
+        """)
+    elif normalized_state == "invitata":
+        where.append("""
+            r.stato_risposta = 'in_attesa'
+            AND (
+                c.token_expires_at IS NULL
+                OR c.token_expires_at > CURRENT_TIMESTAMP
+            )
+        """)
+    elif normalized_state == "risposta_ricevuta":
+        where.append("r.stato_risposta = 'risposta_ricevuta'")
+    elif normalized_state in {
+        "verificata", "non_confermata", "non_verificabile"
+    }:
+        where.append("r.stato_verifica = ?")
+        params.append(normalized_state)
+    elif normalized_state == "scaduta":
+        where.append("""
+            (
+                r.stato_risposta = 'scaduta'
+                OR (
+                    r.stato_risposta = 'in_attesa'
+                    AND c.token_expires_at IS NOT NULL
+                    AND c.token_expires_at <= CURRENT_TIMESTAMP
+                )
+            )
+        """)
+    elif normalized_state == "revocata":
+        where.append("""
+            (
+                r.stato_risposta = 'revocata'
+                OR r.stato_verifica = 'revocata'
+            )
+        """)
+
+    if normalized_category != "tutte":
+        where.append("r.categoria_slug = ?")
+        params.append(normalized_category)
+
+    return {
+        "stato": normalized_state,
+        "categoria": normalized_category,
+        "sql": " AND ".join(f"({clause.strip()})" for clause in where),
+        "params": tuple(params),
+    }
+
+
+def _referenza_admin_validate_decision(
+    reference,
+    *,
+    stato,
+    metodo,
+    nota_admin,
+    nota_pubblica,
+    approva_pubblicazione=False,
+):
+    """Valida un esito admin senza affidarsi ai controlli del browser."""
+
+    item = dict(reference or {})
+    normalized_state = str(stato or "").strip().lower()
+    normalized_method = str(metodo or "").strip().lower() or "nessuno"
+    internal_note = str(nota_admin or "").strip()
+    public_note = str(nota_pubblica or "").strip()
+    publication_requested = str(
+        approva_pubblicazione or ""
+    ).strip().casefold() in {"1", "true", "on", "yes", "si", "sì"}
+
+    if normalized_state not in REFERENCE_ADMIN_DECISION_STATES:
+        raise ValueError("Esito del controllo non valido.")
+    if normalized_method not in REFERENCE_ADMIN_METHODS:
+        raise ValueError("Metodo di controllo non valido.")
+    if item.get("stato_risposta") != "risposta_ricevuta":
+        raise ValueError("Puoi controllare soltanto una referenza ricevuta.")
+
+    contact_allowed = bool(item.get("autorizza_contatto_verifica"))
+    contact_available = bool(
+        item.get(
+            "contatto_disponibile",
+            not bool(item.get("contatto_purged_at")),
+        )
+    )
+    if normalized_state in {"verificata", "non_confermata"}:
+        if not contact_allowed:
+            raise ValueError(
+                "Il referente non ha autorizzato il contatto: registra "
+                "la referenza come non verificabile."
+            )
+        if not contact_available:
+            raise ValueError(
+                "I dati di contatto del referente sono stati rimossi: "
+                "registra la referenza come non verificabile."
+            )
+        if normalized_method not in REFERENCE_ADMIN_CONTACT_METHODS:
+            raise ValueError("Indica come hai contattato il referente.")
+    elif (
+        not contact_allowed or not contact_available
+    ) and normalized_method != "nessuno":
+        raise ValueError(
+            "Il contatto non è autorizzato o non è più disponibile. "
+            "Non utilizzare recapiti per la verifica."
+        )
+
+    if normalized_state == "verificata" and not bool(
+        item.get("esperienza_diretta")
+    ):
+        raise ValueError(
+            "La referenza non può essere verificata: il referente non ha "
+            "confermato un’esperienza diretta."
+        )
+    if normalized_state in {"non_confermata", "non_verificabile"} and not (
+        internal_note
+    ):
+        raise ValueError("Spiega nella nota interna il motivo dell’esito.")
+    if len(internal_note) > 2000:
+        raise ValueError("La nota interna supera la lunghezza consentita.")
+    if len(public_note) > 500:
+        raise ValueError("La nota pubblica supera la lunghezza consentita.")
+    if public_note and reference_contains_direct_contact(public_note):
+        raise ValueError(
+            "La nota pubblica non può contenere email, telefono o link."
+        )
+    publication_allowed = bool(
+        publication_requested
+        and item.get("autorizza_pubblicazione")
+        and normalized_state != "non_confermata"
+        and item.get("stato_risposta") == "risposta_ricevuta"
+        and not item.get("revocata_at")
+        and not item.get("cancellata_at")
+    )
+    return {
+        "stato": normalized_state,
+        "metodo": normalized_method,
+        "nota_admin": internal_note or None,
+        "nota_pubblica": public_note or None,
+        "pubblicazione_approvata_admin": publication_allowed,
+    }
+
+
+def _referenza_admin_evento_presentato(row):
+    item = dict(row or {})
+    event_type = str(item.get("tipo_evento") or "aggiornamento")
+    labels = {
+        "invito_creato": "Invito inviato",
+        "invito_inviato": "Invito inviato",
+        "invito_reinviato": "Invito reinviato",
+        "invito_aperto": "Invito aperto dal referente",
+        "risposta_ricevuta": "Risposta ricevuta",
+        "rifiutata_referente": "Collaborazione non confermata",
+        "consenso_revocato": "Consenso revocato",
+        "verifica_admin_registrata": "Esito admin registrato",
+        "pubblicazione_admin_approvata": "Pubblicazione approvata",
+        "pubblicazione_admin_revocata": "Pubblicazione non approvata",
+        "visibilita_profilo_aggiornata": "Visibilità nel profilo aggiornata",
+        "contatti_rimossi_retention": "Dati di contatto rimossi",
+    }
+    detail = ""
+    raw_snapshot = item.get("dettagli_snapshot")
+    if raw_snapshot:
+        try:
+            snapshot = (
+                raw_snapshot
+                if isinstance(raw_snapshot, dict)
+                else json.loads(raw_snapshot)
+            )
+            if event_type == "verifica_admin_registrata":
+                state = str(snapshot.get("stato_nuovo") or "").replace(
+                    "_", " "
+                )
+                method = str(snapshot.get("metodo") or "").replace("_", " ")
+                parts = []
+                if state:
+                    parts.append(f"Esito: {state}")
+                if method and method != "nessuno":
+                    parts.append(f"Metodo: {method}")
+                detail = " · ".join(parts)
+        except (TypeError, ValueError):
+            detail = ""
+    return {
+        "titolo": labels.get(event_type, event_type.replace("_", " ").title()),
+        "data": _referenze_iso(item.get("created_at")),
+        "dettaglio": detail,
+    }
+
+
+@app.route("/admin/referenze")
+@admin_required
+def admin_referenze():
+    stato = (request.args.get("stato") or "da_gestire").strip().lower()
+    categoria = (request.args.get("categoria") or "tutte").strip().lower()
+    ricerca = " ".join((request.args.get("q") or "").strip().split())
+    filters = _referenza_admin_filter_clause(stato, categoria)
+    references = []
+    counts = {"da_gestire": 0, "verificate": 0, "totale": 0}
+    categories = [
+        {"slug": slug, "label": _referenze_categoria_label(slug)}
+        for slug in CATEGORIE_SERVIZI
+    ]
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        if not _referenze_tables_exist(cur):
+            flash(
+                "La sezione referenze non è ancora disponibile. "
+                "Esegui prima la migrazione del database.",
+                "warning",
+            )
+        else:
+            cur.execute(sql("""
+                SELECT
+                    COUNT(*) AS totale,
+                    SUM(CASE WHEN stato_risposta = 'risposta_ricevuta'
+                        AND stato_verifica IN ('non_esaminata', 'in_coda')
+                        THEN 1 ELSE 0 END) AS da_gestire,
+                    SUM(CASE WHEN stato_verifica = 'verificata'
+                        THEN 1 ELSE 0 END) AS verificate
+                FROM referenze
+                WHERE stato_risposta <> 'cancellata'
+            """))
+            count_row = cur.fetchone()
+            if count_row:
+                counts = {
+                    "totale": int(count_row["totale"] or 0),
+                    "da_gestire": int(count_row["da_gestire"] or 0),
+                    "verificate": int(count_row["verificate"] or 0),
+                }
+
+            cur.execute(sql(f"""
+                SELECT
+                    r.*,
+                    c.email_cifrata, c.email_nonce, c.email_tag,
+                    c.email_key_id, c.nome_cifrato, c.nome_nonce, c.nome_tag,
+                    c.messaggio_invito_cifrato,
+                    c.messaggio_invito_nonce, c.messaggio_invito_tag,
+                    c.token_expires_at, c.numero_invii, c.aperto_at,
+                    c.ultimo_invio_at, c.contatto_purge_at,
+                    c.contatto_purged_at,
+                    u.username, u.nome, u.cognome, u.email AS utente_email,
+                    u.foto_profilo
+                FROM referenze r
+                JOIN referenze_contatti c ON c.referenza_id = r.id
+                JOIN utenti u ON u.id = r.utente_id
+                WHERE {filters['sql']}
+                ORDER BY
+                    CASE
+                        WHEN r.stato_risposta = 'risposta_ricevuta'
+                         AND r.stato_verifica IN ('non_esaminata', 'in_coda')
+                        THEN 0 ELSE 1
+                    END,
+                    COALESCE(r.risposta_at, r.created_at) DESC,
+                    r.id DESC
+            """), filters["params"])
+            rows = [dict(row) for row in cur.fetchall()]
+
+            events_by_reference = {}
+            reference_ids = [int(row["id"]) for row in rows]
+            if reference_ids:
+                placeholders = ", ".join("?" for _ in reference_ids)
+                cur.execute(sql(f"""
+                    SELECT referenza_id, tipo_evento, dettagli_snapshot,
+                           created_at, id
+                    FROM referenze_eventi
+                    WHERE referenza_id IN ({placeholders})
+                    ORDER BY created_at DESC, id DESC
+                """), tuple(reference_ids))
+                for event_row in cur.fetchall():
+                    ref_id = int(event_row["referenza_id"])
+                    events_by_reference.setdefault(ref_id, []).append(
+                        _referenza_admin_evento_presentato(event_row)
+                    )
+
+            needle = ricerca.casefold()
+            for row in rows:
+                item = _referenza_presenta_privata(row)
+                item["timeline"] = events_by_reference.get(int(item["id"]), [])
+                item["contatto_verifica_autorizzato"] = bool(
+                    item.get("autorizza_contatto_verifica")
+                )
+                if not item["contatto_verifica_autorizzato"]:
+                    item["referente_email"] = ""
+                if needle:
+                    searchable = " ".join(str(item.get(field) or "") for field in (
+                        "username",
+                        "nome",
+                        "cognome",
+                        "utente_email",
+                        "referente_nome",
+                        "referente_email",
+                    )).casefold()
+                    if needle not in searchable:
+                        continue
+                references.append(item)
+
+    except Exception as exc:
+        log_exception_safe(
+            "Errore caricamento admin referenze",
+            exc,
+            {
+                "stato": filters["stato"],
+                "categoria": filters["categoria"],
+                "ricerca": ricerca,
+            },
+            production=True,
+        )
+        flash(
+            "Non è stato possibile caricare la coda delle referenze.",
+            "error",
+        )
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return render_template(
+        "admin_referenze.html",
+        referenze=references,
+        conteggi=counts,
+        filtri={
+            "stato": filters["stato"],
+            "categoria": filters["categoria"],
+            "q": ricerca,
+        },
+        categorie_referenze=categories,
+    )
+
+
+@app.route("/admin/referenze/<int:referenza_id>/verifica", methods=["POST"])
+@admin_required
+def admin_referenza_verifica(referenza_id):
+    verify_csrf()
+    try:
+        expected_version = int(request.form.get("versione") or 0)
+    except (TypeError, ValueError):
+        expected_version = 0
+    if expected_version < 1:
+        flash("Versione della referenza non valida. Ricarica la pagina.", "error")
+        return redirect(url_for("admin_referenze", stato="da_gestire"))
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    owner_id = None
+    transaction_open = False
+    try:
+        if not _referenze_tables_exist(cur):
+            flash("La funzione referenze non è ancora disponibile.", "error")
+            return redirect(url_for("admin_referenze"))
+
+        _schede_profilo_begin(cur)
+        transaction_open = True
+        lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+        cur.execute(sql(f"""
+            SELECT r.*, c.contatto_purged_at,
+                   COALESCE(owner.lingua_interfaccia, 'it') AS utente_lingua_interfaccia,
+                   c.email_cifrata, c.email_nonce, c.email_tag,
+                   c.email_key_id, c.nome_cifrato, c.nome_nonce, c.nome_tag,
+                   CASE
+                       WHEN c.contatto_purged_at IS NULL
+                        AND c.email_cifrata IS NOT NULL
+                        AND c.email_nonce IS NOT NULL
+                        AND c.email_tag IS NOT NULL
+                       THEN TRUE ELSE FALSE
+                   END AS contatto_disponibile
+            FROM referenze r
+            JOIN referenze_contatti c ON c.referenza_id = r.id
+            JOIN utenti owner ON owner.id = r.utente_id
+            WHERE r.id = ?
+            LIMIT 1{lock_suffix}
+        """), (int(referenza_id),))
+        reference = cur.fetchone()
+        if not reference:
+            _schede_profilo_rollback(cur)
+            transaction_open = False
+            flash("Referenza non trovata.", "error")
+            return redirect(url_for("admin_referenze"))
+
+        reference = _referenza_decrypt_contact(reference)
+        owner_id = int(reference["utente_id"])
+        decision = _referenza_admin_validate_decision(
+            reference,
+            stato=request.form.get("stato_verifica"),
+            metodo=request.form.get("metodo_verifica"),
+            nota_admin=request.form.get("nota_admin"),
+            nota_pubblica=request.form.get("nota_pubblica"),
+            approva_pubblicazione=request.form.get(
+                "pubblicazione_approvata_admin"
+            ),
+        )
+        previous_state = str(reference.get("stato_verifica") or "non_esaminata")
+        previous_publication_approval = bool(
+            reference.get("pubblicazione_approvata_admin")
+        )
+
+        cur.execute(sql("""
+            UPDATE referenze
+            SET stato_verifica = ?,
+                verificata_at = CASE
+                    WHEN ? = 'verificata' THEN CURRENT_TIMESTAMP
+                    ELSE NULL
+                END,
+                verificata_da_admin_id = ?,
+                metodo_verifica = ?,
+                nota_admin = ?,
+                nota_pubblica = ?,
+                pubblicazione_approvata_admin = ?,
+                pubblicazione_approvata_at = CASE
+                    WHEN ? THEN COALESCE(
+                        pubblicazione_approvata_at, CURRENT_TIMESTAMP
+                    )
+                    ELSE NULL
+                END,
+                pubblicazione_approvata_da_admin_id = CASE
+                    WHEN ? THEN ?
+                    ELSE NULL
+                END,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND versione = ?
+              AND stato_risposta = 'risposta_ricevuta'
+              AND revocata_at IS NULL
+              AND cancellata_at IS NULL
+        """), (
+            decision["stato"],
+            decision["stato"],
+            int(g.utente["id"]),
+            decision["metodo"],
+            decision["nota_admin"],
+            decision["nota_pubblica"],
+            decision["pubblicazione_approvata_admin"],
+            decision["pubblicazione_approvata_admin"],
+            decision["pubblicazione_approvata_admin"],
+            int(g.utente["id"]),
+            int(referenza_id),
+            expected_version,
+        ))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            transaction_open = False
+            flash(
+                "La referenza è cambiata mentre la controllavi. "
+                "Ricarica la pagina e verifica i dati aggiornati.",
+                "warning",
+            )
+            return redirect(url_for("admin_referenze", stato="da_gestire"))
+
+        _referenza_evento(
+            cur,
+            int(referenza_id),
+            "verifica_admin_registrata",
+            "admin",
+            attore_utente_id=int(g.utente["id"]),
+            dettagli={
+                "stato_precedente": previous_state,
+                "stato_nuovo": decision["stato"],
+                "metodo": decision["metodo"],
+                "pubblicazione_approvata_admin": decision[
+                    "pubblicazione_approvata_admin"
+                ],
+                "versione_precedente": expected_version,
+            },
+        )
+        publication_approval_changed = (
+            previous_publication_approval
+            != decision["pubblicazione_approvata_admin"]
+        )
+        if publication_approval_changed:
+            _referenza_evento(
+                cur,
+                int(referenza_id),
+                (
+                    "pubblicazione_admin_approvata"
+                    if decision["pubblicazione_approvata_admin"]
+                    else "pubblicazione_admin_revocata"
+                ),
+                "admin",
+                attore_utente_id=int(g.utente["id"]),
+                dettagli={
+                    "approvata": decision[
+                        "pubblicazione_approvata_admin"
+                    ],
+                    "versione_precedente": expected_version,
+                },
+            )
+        _schede_profilo_commit(cur)
+        transaction_open = False
+        invalidate_admin_counters()
+
+        owner_language = normalize_language(
+            reference.get("utente_lingua_interfaccia")
+        )
+        category_label = translate_source(
+            _referenze_categoria_label(reference.get("categoria_slug")),
+            owner_language,
+        )
+        messages = {
+            "verificata": translate(
+                "reference.notification.checked", owner_language,
+                category=category_label,
+            ),
+            "non_confermata": translate(
+                "reference.notification.not_confirmed", owner_language,
+                category=category_label,
+            ),
+            "non_verificabile": translate(
+                "reference.notification.not_verifiable", owner_language,
+                category=category_label,
+            ),
+        }
+        try:
+            _crea_notifica(
+                owner_id,
+                translate("reference.notification.title", owner_language),
+                messages[decision["stato"]],
+                tipo="profilo",
+                link=url_for("dashboard") + "#referenze",
+            )
+            emit_update_notifications(owner_id)
+        except Exception as notification_exc:
+            log_exception_safe(
+                "Esito referenza salvato ma notifica utente non inviata",
+                notification_exc,
+                {"referenza_id": referenza_id, "utente_id": owner_id},
+                production=True,
+            )
+        flash("Esito della referenza registrato.", "success")
+
+    except ValueError as exc:
+        if transaction_open:
+            _schede_profilo_rollback(cur)
+        flash(str(exc), "error")
+    except Exception as exc:
+        if transaction_open:
+            _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore verifica admin referenza",
+            exc,
+            {"referenza_id": referenza_id, "utente_id": owner_id},
+            production=True,
+        )
+        flash("Non è stato possibile registrare il controllo.", "error")
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return redirect(url_for("admin_referenze", stato="da_gestire"))
 
 
 # ==========================================================
@@ -13694,6 +14336,7 @@ def _invia_email(
     action_url=None,
     action_label=None,
     language=None,
+    redact_recipient=False,
     **kwargs
 ):
 
@@ -13713,6 +14356,8 @@ def _invia_email(
 
     postmark_token = os.getenv("POSTMARK_SERVER_TOKEN", "").strip()
 
+    destinazione_log = "[recapito-riservato]" if redact_recipient else destinazione
+
     if not destinazione or not str(destinazione).strip():
         security_log(
             "❌ Invio email annullato: destinatario mancante",
@@ -13727,7 +14372,7 @@ def _invia_email(
         security_log(
             "❌ Invio email annullato: oggetto mancante",
             {
-                "destinazione": destinazione
+                "destinazione": destinazione_log
             },
             production=True
         )
@@ -13737,7 +14382,7 @@ def _invia_email(
         security_log(
             "❌ POSTMARK_SERVER_TOKEN mancante",
             {
-                "destinazione": destinazione,
+                "destinazione": destinazione_log,
                 "oggetto": oggetto
             },
             production=True
@@ -13813,7 +14458,7 @@ def _invia_email(
                     e,
                     {
                         "html_template": html_template,
-                        "destinazione": destinazione,
+                        "destinazione": destinazione_log,
                         "oggetto": oggetto
                     },
                     production=True
@@ -13861,7 +14506,7 @@ def _invia_email(
             security_log(
                 "❌ Invio email annullato: contenuto vuoto",
                 {
-                    "destinazione": destinazione,
+                    "destinazione": destinazione_log,
                     "oggetto": oggetto,
                     "html_template": html_template
                 },
@@ -13907,14 +14552,28 @@ def _invia_email(
                 "raw": response.text[:500]
             }
 
+        # Alcuni errori Postmark includono il destinatario direttamente nel
+        # campo Message/Raw. Per i flussi che dichiarano il recapito riservato
+        # non basta quindi mascherare la sola chiave "destinazione".
+        result_log = result
+        if redact_recipient:
+            result_log = {
+                "ErrorCode": (
+                    result.get("ErrorCode")
+                    if isinstance(result, dict)
+                    else None
+                ),
+                "Message": "[REDACTED]",
+            }
+
         if response.status_code != 200:
             security_log(
                 "❌ Errore invio email tramite Postmark",
                 {
                     "status_code": response.status_code,
-                    "destinazione": destinazione,
+                    "destinazione": destinazione_log,
                     "oggetto": oggetto,
-                    "result": result
+                    "result": result_log
                 },
                 production=True
             )
@@ -13923,7 +14582,7 @@ def _invia_email(
         security_log(
             "✅ Email inviata tramite Postmark",
             {
-                "destinazione": destinazione,
+                "destinazione": destinazione_log,
                 "oggetto": oggetto,
                 "message_id": result.get("MessageID") if isinstance(result, dict) else None
             },
@@ -13937,7 +14596,7 @@ def _invia_email(
             "❌ Timeout invio email tramite Postmark",
             e,
             {
-                "destinazione": destinazione,
+                "destinazione": destinazione_log,
                 "oggetto": oggetto
             },
             production=True
@@ -13949,7 +14608,7 @@ def _invia_email(
             "❌ Eccezione invio email tramite Postmark",
             e,
             {
-                "destinazione": destinazione,
+                "destinazione": destinazione_log,
                 "oggetto": oggetto
             },
             production=True
@@ -15659,6 +16318,184 @@ def pulisci_notifiche_vecchie(giorni=None):
             pass
 
 
+def pulisci_referenze_scadute_e_contatti(batch_size=250):
+    """Scade gli inviti e rimuove i recapiti cifrati a retention conclusa.
+
+    La scheda anonima eventualmente autorizzata resta disponibile, mentre
+    email, nome, messaggio di invito e token vengono eliminati insieme.
+    """
+
+    try:
+        batch_size = max(1, min(int(batch_size), 1000))
+    except (TypeError, ValueError):
+        batch_size = 250
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+
+        if app.config.get("IS_POSTGRES"):
+            cur.execute(sql("""
+                SELECT to_regclass('public.referenze') AS referenze,
+                       to_regclass('public.referenze_contatti') AS contatti,
+                       to_regclass('public.referenze_eventi') AS eventi
+            """))
+            tables = cur.fetchone()
+            if not (
+                tables and tables["referenze"] and tables["contatti"]
+                and tables["eventi"]
+            ):
+                return {"scadute": 0, "contatti_rimossi": 0}
+            expired_condition = "c.token_expires_at < CURRENT_TIMESTAMP"
+            expired_condition_direct = (
+                "token_expires_at < CURRENT_TIMESTAMP"
+            )
+            purge_condition = "c.contatto_purge_at <= CURRENT_TIMESTAMP"
+            fallback_purge = (
+                "CURRENT_TIMESTAMP + INTERVAL '30 days'"
+            )
+        else:
+            cur.execute(sql("""
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name IN (
+                    'referenze', 'referenze_contatti', 'referenze_eventi'
+                  )
+            """))
+            if len(cur.fetchall()) != 3:
+                return {"scadute": 0, "contatti_rimossi": 0}
+            expired_condition = (
+                "datetime(c.token_expires_at) < CURRENT_TIMESTAMP"
+            )
+            expired_condition_direct = (
+                "datetime(token_expires_at) < CURRENT_TIMESTAMP"
+            )
+            purge_condition = (
+                "datetime(c.contatto_purge_at) <= CURRENT_TIMESTAMP"
+            )
+            fallback_purge = "datetime(CURRENT_TIMESTAMP, '+30 days')"
+
+        cur.execute(sql(f"""
+            UPDATE referenze
+            SET stato_risposta = 'scaduta',
+                updated_at = CURRENT_TIMESTAMP,
+                versione = versione + 1
+            WHERE stato_risposta = 'in_attesa'
+              AND EXISTS (
+                SELECT 1
+                FROM referenze_contatti c
+                WHERE c.referenza_id = referenze.id
+                  AND {expired_condition}
+              )
+        """))
+        expired_count = max(int(cur.rowcount or 0), 0)
+
+        # Copre anche inviti creati durante una versione precedente del
+        # rollout, quando la data di eliminazione non veniva ancora salvata.
+        cur.execute(sql(f"""
+            UPDATE referenze_contatti
+            SET contatto_purge_at = {fallback_purge},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE contatto_purge_at IS NULL
+              AND token_expires_at IS NOT NULL
+              AND {expired_condition_direct}
+        """))
+
+        cur.execute(sql(f"""
+            SELECT c.referenza_id
+            FROM referenze_contatti c
+            WHERE c.contatto_purged_at IS NULL
+              AND c.contatto_purge_at IS NOT NULL
+              AND {purge_condition}
+            ORDER BY c.contatto_purge_at ASC
+            LIMIT ?
+        """), (batch_size,))
+        reference_ids = [int(row["referenza_id"]) for row in cur.fetchall()]
+
+        for reference_id in reference_ids:
+            cur.execute(sql("""
+                UPDATE referenze_contatti
+                SET email_cifrata = NULL,
+                    email_nonce = NULL,
+                    email_tag = NULL,
+                    email_key_id = NULL,
+                    email_hash = NULL,
+                    nome_cifrato = NULL,
+                    nome_nonce = NULL,
+                    nome_tag = NULL,
+                    messaggio_invito_cifrato = NULL,
+                    messaggio_invito_nonce = NULL,
+                    messaggio_invito_tag = NULL,
+                    token_hash = NULL,
+                    token_expires_at = NULL,
+                    token_consumed_at = NULL,
+                    contatto_purged_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE referenza_id = ?
+                  AND contatto_purged_at IS NULL
+            """), (reference_id,))
+            if cur.rowcount == 1:
+                cur.execute(sql("""
+                    UPDATE referenze
+                    SET stato_verifica = 'non_verificabile',
+                        metodo_verifica = 'nessuno',
+                        nota_admin = COALESCE(
+                            NULLIF(TRIM(nota_admin), ''),
+                            'Recapito rimosso alla scadenza del periodo di conservazione.'
+                        ),
+                        versione = versione + 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                      AND stato_risposta = 'risposta_ricevuta'
+                      AND stato_verifica IN ('non_esaminata', 'in_coda')
+                """), (reference_id,))
+                cur.execute(sql("""
+                    INSERT INTO referenze_eventi (
+                        referenza_id, tipo_evento, attore_tipo,
+                        dettagli_snapshot
+                    ) VALUES (?, 'contatti_rimossi_retention', 'sistema', ?)
+                """), (
+                    reference_id,
+                    json.dumps(
+                        {"motivo": "retention_conclusa"},
+                        ensure_ascii=False,
+                    ),
+                ))
+
+        conn.commit()
+        return {
+            "scadute": expired_count,
+            "contatti_rimossi": len(reference_ids),
+        }
+    except Exception as exc:
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        log_exception_safe(
+            "Errore pulizia retention referenze",
+            exc,
+            {"batch_size": batch_size},
+            production=True,
+        )
+        return {"scadute": 0, "contatti_rimossi": 0}
+    finally:
+        if cur:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def pulizia_notifiche_background_loop():
     """
     Pulizia automatica periodica delle notifiche lette.
@@ -15690,6 +16527,7 @@ def pulizia_notifiche_background_loop():
             if lock_acquisito:
                 with app.app_context():
                     pulisci_notifiche_vecchie()
+                    pulisci_referenze_scadute_e_contatti()
 
         except Exception as e:
             log_exception_safe(
@@ -16904,6 +17742,310 @@ def _schede_profilo_context(cur, utente_id, *, pubblico=False):
             production=True,
         )
         return [], group_cards_by_legacy_key([]), [], False
+
+
+# ==========================================================
+# 🤝 REFERENZE PROFESSIONALI
+# ==========================================================
+REFERENCE_INVITE_DAYS = 14
+REFERENCE_MAX_SENDS = 3  # invio iniziale + due solleciti
+REFERENCE_DAILY_INVITE_LIMIT = 5
+
+
+def _referenze_tables_exist(cur):
+    """Controllo rollout: i profili continuano a funzionare pre-migrazione."""
+
+    if app.config.get("IS_POSTGRES"):
+        cur.execute(sql("""
+            SELECT
+                to_regclass('public.referenze') AS referenze,
+                to_regclass('public.referenze_contatti') AS contatti,
+                to_regclass('public.referenze_eventi') AS eventi
+        """))
+        row = cur.fetchone()
+        return bool(
+            row
+            and row["referenze"]
+            and row["contatti"]
+            and row["eventi"]
+        )
+
+    cur.execute(sql("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name IN ('referenze', 'referenze_contatti', 'referenze_eventi')
+    """))
+    return len(cur.fetchall()) == 3
+
+
+def _referenze_iso(value):
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def _referenze_datetime(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _referenze_categoria_label(categoria_slug):
+    return _disponibilita_categoria_label(categoria_slug)
+
+
+def _referenze_categorie(cur, utente_id=None):
+    if utente_id is None:
+        slugs = CATEGORIE_SERVIZI
+    else:
+        return _categorie_disponibilita_offerte(cur, int(utente_id))
+    return [
+        {"slug": slug, "label": _referenze_categoria_label(slug)}
+        for slug in slugs
+    ]
+
+
+def _referenza_periodo_label(row):
+    start = row.get("anno_inizio")
+    end = row.get("anno_fine")
+    if start and end:
+        return str(start) if int(start) == int(end) else f"{start}–{end}"
+    if start:
+        return f"Dal {start}"
+    if end:
+        return f"Fino al {end}"
+    return None
+
+
+def _referenza_private_state(row):
+    response_state = row.get("stato_risposta") or "in_attesa"
+    verification_state = row.get("stato_verifica") or "non_esaminata"
+    if response_state in {"revocata", "cancellata", "scaduta", "rifiutata"}:
+        return response_state
+    if verification_state in {
+        "verificata", "non_confermata", "non_verificabile", "revocata"
+    }:
+        return verification_state
+    if row.get("contatto_purged_at"):
+        return "archiviata"
+    if response_state == "in_attesa":
+        expires = _referenze_datetime(row.get("token_expires_at"))
+        if expires and expires <= datetime.now(timezone.utc):
+            return "scaduta"
+        if row.get("ultimo_errore_invio"):
+            return "errore_invio"
+        return "aperta" if row.get("aperto_at") else "inviata"
+    if verification_state == "in_coda":
+        return "in_verifica"
+    return "risposta_ricevuta"
+
+
+def _referenza_decrypt_contact(row):
+    item = dict(row or {})
+    if item.get("contatto_purged_at") or not item.get("email_cifrata"):
+        item["referente_email"] = ""
+        item["referente_nome"] = (
+            "Dati rimossi" if item.get("contatto_purged_at") else "Referente"
+        )
+        item["messaggio_invito"] = ""
+        return item
+    try:
+        item["referente_email"] = decrypt_reference_email(
+            item.get("email_cifrata"),
+            item.get("email_nonce"),
+            item.get("email_tag"),
+            MASTER_SECRET,
+            key_id=item.get("email_key_id") or REFERENCE_KEY_ID,
+        )
+        item["referente_nome"] = decrypt_reference_name(
+            item.get("nome_cifrato"),
+            item.get("nome_nonce"),
+            item.get("nome_tag"),
+            MASTER_SECRET,
+            key_id=item.get("email_key_id") or REFERENCE_KEY_ID,
+        )
+    except Exception as exc:
+        item["referente_email"] = ""
+        item["referente_nome"] = "Referente"
+        log_exception_safe(
+            "Dati referente non decifrabili",
+            exc,
+            {"referenza_id": item.get("id")},
+            production=True,
+        )
+    item["messaggio_invito"] = ""
+    if item.get("messaggio_invito_cifrato"):
+        try:
+            item["messaggio_invito"] = decrypt_invitation_message(
+                item.get("messaggio_invito_cifrato"),
+                item.get("messaggio_invito_nonce"),
+                item.get("messaggio_invito_tag"),
+                MASTER_SECRET,
+                key_id=item.get("email_key_id") or REFERENCE_KEY_ID,
+            )
+        except Exception:
+            item["messaggio_invito"] = ""
+    return item
+
+
+def _referenza_presenta_privata(row):
+    item = _referenza_decrypt_contact(row)
+    item["categoria_label"] = _referenze_categoria_label(
+        item.get("categoria_slug")
+    )
+    item["tipo_rapporto_label"] = REFERENCE_RELATION_LABELS.get(
+        item.get("tipo_rapporto"), "Rapporto professionale"
+    )
+    item["durata_label"] = REFERENCE_DURATION_LABELS.get(
+        item.get("durata_fascia")
+    )
+    item["periodo"] = _referenza_periodo_label(item)
+    item["periodo_label"] = item["periodo"]
+    item["stato"] = _referenza_private_state(item)
+    item["inviata_at"] = item.get("ultimo_invio_at") or item.get("created_at")
+    item["effettivamente_visibile"] = bool(
+        item.get("stato_risposta") == "risposta_ricevuta"
+        and item.get("autorizza_pubblicazione")
+        and item.get("pubblicazione_approvata_admin")
+        and item.get("visibile_profilo")
+        and item.get("stato_verifica") not in {
+            "non_confermata", "revocata",
+        }
+        and not item.get("revocata_at")
+        and not item.get("cancellata_at")
+    )
+    return item
+
+
+def _carica_referenze_private(cur, utente_id):
+    if not _referenze_tables_exist(cur):
+        return []
+    cur.execute(sql("""
+        SELECT r.*, c.email_cifrata, c.email_nonce, c.email_tag,
+               c.email_key_id, c.nome_cifrato, c.nome_nonce, c.nome_tag,
+               c.messaggio_invito_cifrato, c.messaggio_invito_nonce,
+               c.messaggio_invito_tag, c.token_expires_at,
+               c.numero_invii, c.aperto_at, c.ultimo_invio_at,
+               c.ultimo_errore_invio, c.contatto_purged_at
+        FROM referenze r
+        JOIN referenze_contatti c ON c.referenza_id = r.id
+        WHERE r.utente_id = ?
+          AND r.stato_risposta <> 'cancellata'
+        ORDER BY r.created_at DESC, r.id DESC
+    """), (int(utente_id),))
+    return [_referenza_presenta_privata(row) for row in cur.fetchall()]
+
+
+def _carica_referenze_pubbliche(cur, utente_id):
+    if not _referenze_tables_exist(cur):
+        return []
+    cur.execute(sql("""
+        SELECT *
+        FROM referenze
+        WHERE utente_id = ?
+          AND stato_risposta = 'risposta_ricevuta'
+          AND autorizza_pubblicazione = TRUE
+          AND pubblicazione_approvata_admin = TRUE
+          AND visibile_profilo = TRUE
+          AND stato_verifica NOT IN ('revocata', 'non_confermata')
+          AND revocata_at IS NULL
+          AND cancellata_at IS NULL
+        ORDER BY
+          CASE WHEN stato_verifica = 'verificata' THEN 0 ELSE 1 END,
+          risposta_at DESC,
+          id DESC
+    """), (int(utente_id),))
+    public_rows = []
+    for row in cur.fetchall():
+        item = serialize_public_reference(row)
+        if not item:
+            continue
+        item["categoria_label"] = _referenze_categoria_label(
+            item.get("categoria_slug")
+        )
+        item["verificata"] = bool(item.get("verificata_da_mylocalcare"))
+        item["periodo_label"] = item.get("periodo")
+        item["stato_label"] = item.get("stato_verifica_label")
+        item["testo_referente_pubblico"] = item.get("testo_referente")
+        public_rows.append(item)
+    return public_rows
+
+
+def _referenze_context(cur, utente_id, *, pubblico=False):
+    try:
+        if not _referenze_tables_exist(cur):
+            return [], [], False
+        references = (
+            _carica_referenze_pubbliche(cur, utente_id)
+            if pubblico
+            else _carica_referenze_private(cur, utente_id)
+        )
+        categories = [] if pubblico else _referenze_categorie(cur, utente_id)
+        return references, categories, True
+    except Exception as exc:
+        log_exception_safe(
+            "Referenze non disponibili",
+            exc,
+            {"utente_id": int(utente_id), "pubblico": bool(pubblico)},
+            production=True,
+        )
+        return [], [], False
+
+
+def _referenza_evento(
+    cur,
+    referenza_id,
+    tipo_evento,
+    attore_tipo,
+    *,
+    attore_utente_id=None,
+    dettagli=None,
+):
+    snapshot = None
+    if dettagli:
+        snapshot = json.dumps(dettagli, ensure_ascii=False, sort_keys=True)
+    cur.execute(sql("""
+        INSERT INTO referenze_eventi (
+            referenza_id, tipo_evento, attore_tipo,
+            attore_utente_id, dettagli_snapshot
+        ) VALUES (?, ?, ?, ?, ?)
+    """), (
+        int(referenza_id),
+        str(tipo_evento),
+        str(attore_tipo),
+        int(attore_utente_id) if attore_utente_id else None,
+        snapshot,
+    ))
+
+
+def _referenza_access_row(cur, referenza_id, token_hash):
+    cur.execute(sql("""
+        SELECT r.*, u.username AS utente_username,
+               COALESCE(u.lingua_interfaccia, 'it') AS utente_lingua_interfaccia,
+               c.email_cifrata, c.email_nonce, c.email_tag,
+               c.email_key_id, c.nome_cifrato, c.nome_nonce, c.nome_tag,
+               c.messaggio_invito_cifrato, c.messaggio_invito_nonce,
+               c.messaggio_invito_tag, c.token_hash, c.token_expires_at,
+               c.token_consumed_at, c.aperto_at
+        FROM referenze r
+        JOIN referenze_contatti c ON c.referenza_id = r.id
+        JOIN utenti u ON u.id = r.utente_id
+        WHERE r.id = ? AND c.token_hash = ?
+        LIMIT 1
+    """), (int(referenza_id), str(token_hash)))
+    return cur.fetchone()
 
 
 def _disponibilita_servizi_iso(value):
@@ -18723,6 +19865,968 @@ def api_utente_riconferma_disponibilita_servizi():
         }), 503
 
 
+def _referenza_request_payload():
+    if request.is_json:
+        return request.get_json(silent=True) or {}
+    return request.form.to_dict()
+
+
+def _referenza_bool(value):
+    return str(value or "").strip().lower() in {
+        "1", "true", "on", "yes", "si", "sì"
+    }
+
+
+def _referenza_ui_message(source, language=None):
+    """Localizza gli errori e gli esiti del flusso referenze utente."""
+    return translate_source(
+        source,
+        language or get_interface_language(),
+    )
+
+
+def _invia_invito_referenza(email, nome_referente, username, raw_token, *, language=None):
+    # Non usare l'Host della richiesta per un link che contiene un token:
+    # APP_BASE_URL è il dominio canonico configurato dal servizio.
+    email_language = normalize_language(language)
+    link = build_external_url(
+        "referenza_accesso",
+        token=raw_token,
+        lang=email_language,
+    )
+    corpo = (
+        f"{translate('reference.email.greeting', email_language, name=nome_referente)}\n\n"
+        f"{translate('reference.email.request', email_language, username='@' + username)}\n\n"
+        f"{translate('reference.email.privacy', email_language)}\n\n"
+        f"{translate('reference.email.expiry', email_language, days=REFERENCE_INVITE_DAYS)}"
+    )
+    return _invia_email(
+        email,
+        translate("reference.email.subject", email_language),
+        corpo=corpo,
+        action_url=link,
+        action_label=translate("reference.email.action", email_language),
+        language=email_language,
+        redact_recipient=True,
+    )
+
+
+def _registra_fallimento_email_referenza(cur, referenza_id):
+    """Rende persistente il fallimento anche dopo il commit dell'invito.
+
+    L'invio email avviene necessariamente fuori dalla transazione che crea il
+    token. Senza una seconda transazione l'UPDATE resterebbe non confermato su
+    SQLite e verrebbe perso alla chiusura della connessione.
+    """
+
+    try:
+        _schede_profilo_begin(cur)
+        cur.execute(sql("""
+            UPDATE referenze_contatti
+            SET ultimo_errore_invio = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE referenza_id = ?
+        """), ("Invio email non riuscito", int(referenza_id)))
+        _referenza_evento(
+            cur,
+            int(referenza_id),
+            "invio_email_fallito",
+            "sistema",
+        )
+        _schede_profilo_commit(cur)
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore registrazione fallimento email referenza",
+            exc,
+            {"referenza_id": int(referenza_id)},
+            production=True,
+        )
+
+
+@app.route("/api/utente/referenze", methods=["POST"])
+@login_required
+def api_referenze_crea():
+    verify_csrf()
+    payload = _referenza_request_payload()
+    if not _referenza_bool(payload.get("conferma_condivisione_recapito")):
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "Conferma di poter comunicare il recapito del referente."
+            ),
+        }), 400
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    user_id = int(g.utente["id"])
+    raw_token = None
+    reference_id = None
+    email = ""
+    name = ""
+    username = ""
+    language = get_interface_language()
+
+    try:
+        if not _referenze_tables_exist(cur):
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "La funzione referenze non è ancora disponibile.", language
+                ),
+            }), 503
+
+        name = " ".join(str(payload.get("referente_nome") or "").split())
+        email = str(payload.get("referente_email") or "").strip()
+        structured = normalize_reference_payload({
+            "categoria_slug": payload.get("categoria_slug"),
+            "tipo_rapporto": payload.get("tipo_rapporto"),
+            "anno_inizio": payload.get("anno_inizio"),
+            "anno_fine": payload.get("anno_fine"),
+            "durata_fascia": payload.get("durata_fascia"),
+            "esperienza_diretta": False,
+            "autorizza_pubblicazione": False,
+            "autorizza_testo_pubblico": False,
+        })
+        categories = {
+            item["slug"] for item in _referenze_categorie(cur, user_id)
+        }
+        if structured["categoria_slug"] not in categories:
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Puoi chiedere referenze soltanto per i servizi che offri.",
+                    language,
+                ),
+            }), 400
+
+        encrypted_email = encrypt_reference_email(email, MASTER_SECRET)
+        encrypted_name = encrypt_reference_name(name, MASTER_SECRET)
+        encrypted_message = encrypt_invitation_message(
+            payload.get("messaggio_invito") or "",
+            MASTER_SECRET,
+        ) or {
+            "messaggio_invito_cifrato": None,
+            "messaggio_invito_nonce": None,
+            "messaggio_invito_tag": None,
+        }
+
+        cur.execute(sql("""
+            SELECT username, email
+            FROM utenti
+            WHERE id = ?
+            LIMIT 1
+        """), (user_id,))
+        owner = cur.fetchone()
+        username = (owner["username"] if owner else "") or f"utente{user_id}"
+        if owner and str(owner["email"] or "").strip().casefold() == email.casefold():
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Non puoi indicare il tuo stesso indirizzo email.", language
+                ),
+            }), 400
+
+        # Serializza gli inviti dello stesso account: il limite giornaliero e
+        # il controllo duplicati devono restare validi anche con due richieste
+        # quasi simultanee (doppi tap o piu schede del browser).
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        if app.config.get("IS_POSTGRES"):
+            invite_window_clause = "created_at >= ?"
+            invite_window_value = cutoff.isoformat()
+        else:
+            # SQLite salva CURRENT_TIMESTAMP come ``YYYY-MM-DD HH:MM:SS``.
+            # Normalizziamo entrambi i valori con datetime(): il confronto
+            # testuale diretto con una stringa ISO contenente ``T`` potrebbe
+            # altrimenti dimenticare gli inviti fatti prima di mezzanotte.
+            invite_window_clause = "datetime(created_at) >= datetime(?)"
+            invite_window_value = cutoff.strftime("%Y-%m-%d %H:%M:%S")
+        cur.execute(sql(f"""
+            SELECT COUNT(*) AS valore
+            FROM referenze
+            WHERE utente_id = ? AND {invite_window_clause}
+        """), (user_id, invite_window_value))
+        if int(cur.fetchone()["valore"] or 0) >= REFERENCE_DAILY_INVITE_LIMIT:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Hai raggiunto il limite giornaliero di inviti.", language
+                ),
+            }), 429
+
+        cur.execute(sql("""
+            SELECT r.id
+            FROM referenze r
+            JOIN referenze_contatti c ON c.referenza_id = r.id
+            WHERE r.utente_id = ?
+              AND r.categoria_slug = ?
+              AND c.email_hash = ?
+            LIMIT 1
+        """), (
+            user_id,
+            structured["categoria_slug"],
+            encrypted_email["email_hash"],
+        ))
+        if cur.fetchone():
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": (
+                    _referenza_ui_message(
+                        "Esiste già una richiesta recente per questa persona "
+                        "e questo servizio. Usa la richiesta esistente.",
+                        language,
+                    )
+                ),
+            }), 409
+
+        raw_token = generate_reference_token()
+        token_hash = hash_reference_token(raw_token)
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            days=REFERENCE_INVITE_DAYS
+        )
+
+        reference_id = insert_and_get_id(cur, """
+            INSERT INTO referenze (
+                utente_id, categoria_slug, tipo_rapporto,
+                anno_inizio, anno_fine, durata_fascia,
+                esperienza_diretta, stato_risposta, stato_verifica,
+                autorizza_pubblicazione, autorizza_testo_pubblico,
+                versione
+            ) VALUES (?, ?, ?, ?, ?, ?, FALSE, 'in_attesa',
+                      'non_esaminata', FALSE, FALSE, 1)
+        """, (
+            user_id,
+            structured["categoria_slug"],
+            structured["tipo_rapporto"],
+            structured["anno_inizio"],
+            structured["anno_fine"],
+            structured["durata_fascia"],
+        ))
+        cur.execute(sql("""
+            INSERT INTO referenze_contatti (
+                referenza_id,
+                email_cifrata, email_nonce, email_tag, email_key_id, email_hash,
+                nome_cifrato, nome_nonce, nome_tag,
+                messaggio_invito_cifrato, messaggio_invito_nonce,
+                messaggio_invito_tag,
+                token_hash, token_expires_at, ultimo_invio_at, numero_invii,
+                contatto_purge_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                      CURRENT_TIMESTAMP, 1, ?)
+        """), (
+            reference_id,
+            encrypted_email["email_cifrata"],
+            encrypted_email["email_nonce"],
+            encrypted_email["email_tag"],
+            encrypted_email["email_key_id"],
+            encrypted_email["email_hash"],
+            encrypted_name["nome_cifrato"],
+            encrypted_name["nome_nonce"],
+            encrypted_name["nome_tag"],
+            encrypted_message["messaggio_invito_cifrato"],
+            encrypted_message["messaggio_invito_nonce"],
+            encrypted_message["messaggio_invito_tag"],
+            token_hash,
+            expires_at.isoformat(),
+            (expires_at + timedelta(days=30)).isoformat(),
+        ))
+        _referenza_evento(
+            cur,
+            reference_id,
+            "invito_inviato",
+            "utente",
+            attore_utente_id=user_id,
+            dettagli={"categoria_slug": structured["categoria_slug"]},
+        )
+        _schede_profilo_commit(cur)
+    except ValueError as exc:
+        _schede_profilo_rollback(cur)
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(str(exc), language),
+        }), 400
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore creazione invito referenza",
+            exc,
+            {"utente_id": user_id},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "Non è stato possibile creare la richiesta.", language
+            ),
+        }), 503
+
+    email_sent = _invia_invito_referenza(
+        email, name, username, raw_token, language=language
+    )
+    if not email_sent:
+        _registra_fallimento_email_referenza(cur, reference_id)
+
+    return jsonify({
+        "ok": True,
+        "referenza_id": reference_id,
+        "email_inviata": bool(email_sent),
+        "message": (
+            _referenza_ui_message("Invito inviato al referente.", language)
+            if email_sent
+            else _referenza_ui_message(
+                "Richiesta salvata, ma l’email non è partita. Puoi reinviarla.",
+                language,
+            )
+        ),
+    })
+
+
+@app.route("/api/utente/referenze/<int:referenza_id>/reinvia", methods=["POST"])
+@login_required
+def api_referenza_reinvia(referenza_id):
+    verify_csrf()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    user_id = int(g.utente["id"])
+    language = get_interface_language()
+    try:
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+        lock_suffix = " FOR UPDATE OF r, c" if app.config.get("IS_POSTGRES") else ""
+        cur.execute(sql(f"""
+            SELECT r.*, u.username,
+                   c.email_cifrata, c.email_nonce, c.email_tag, c.email_key_id,
+                   c.nome_cifrato, c.nome_nonce, c.nome_tag,
+                   c.numero_invii, c.contatto_purged_at
+            FROM referenze r
+            JOIN referenze_contatti c ON c.referenza_id = r.id
+            JOIN utenti u ON u.id = r.utente_id
+            WHERE r.id = ? AND r.utente_id = ?
+            LIMIT 1{lock_suffix}
+        """), (referenza_id, user_id))
+        row = cur.fetchone()
+        if not row:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message("Richiesta non trovata.", language),
+            }), 404
+        item = _referenza_decrypt_contact(row)
+        if row["stato_risposta"] not in {"in_attesa", "scaduta"}:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Questa richiesta non può essere reinviata.", language
+                ),
+            }), 409
+        if int(row["numero_invii"] or 0) >= REFERENCE_MAX_SENDS:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Hai già utilizzato i due solleciti disponibili.", language
+                ),
+            }), 429
+        if row["contatto_purged_at"] or not item.get("referente_email"):
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": (
+                    _referenza_ui_message(
+                        "I dati di contatto del referente sono stati rimossi e "
+                        "l'invito non può più essere reinviato.",
+                        language,
+                    )
+                ),
+            }), 410
+
+        raw_token = generate_reference_token()
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            days=REFERENCE_INVITE_DAYS
+        )
+        cur.execute(sql("""
+            UPDATE referenze_contatti
+            SET token_hash = ?, token_expires_at = ?, token_consumed_at = NULL,
+                aperto_at = NULL, ultimo_invio_at = CURRENT_TIMESTAMP,
+                numero_invii = numero_invii + 1, ultimo_errore_invio = NULL,
+                contatto_purge_at = ?, contatto_purged_at = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE referenza_id = ?
+        """), (
+            hash_reference_token(raw_token),
+            expires_at.isoformat(),
+            (expires_at + timedelta(days=30)).isoformat(),
+            referenza_id,
+        ))
+        cur.execute(sql("""
+            UPDATE referenze
+            SET stato_risposta = 'in_attesa', updated_at = CURRENT_TIMESTAMP,
+                versione = versione + 1
+            WHERE id = ?
+        """), (referenza_id,))
+        _referenza_evento(
+            cur, referenza_id, "invito_reinviato", "utente",
+            attore_utente_id=user_id,
+        )
+        _schede_profilo_commit(cur)
+        email_sent = _invia_invito_referenza(
+            item["referente_email"],
+            item["referente_nome"],
+            row["username"] or f"utente{user_id}",
+            raw_token,
+            language=language,
+        )
+        if not email_sent:
+            _registra_fallimento_email_referenza(cur, referenza_id)
+        return jsonify({
+            "ok": True,
+            "email_inviata": bool(email_sent),
+            "message": (
+                _referenza_ui_message("Invito reinviato.", language)
+                if email_sent else
+                _referenza_ui_message(
+                    "Invito aggiornato, ma l’email non è partita.", language
+                )
+            ),
+        })
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore reinvio referenza", exc,
+            {"referenza_id": referenza_id, "utente_id": user_id},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message("Reinvio non riuscito.", language),
+        }), 503
+
+
+@app.route(
+    "/api/utente/referenze/<int:referenza_id>/visibilita",
+    methods=["POST"],
+)
+@login_required
+def api_referenza_visibilita(referenza_id):
+    """Permette al proprietario di mostrare o nascondere una referenza.
+
+    La preferenza dell'utente non sostituisce i due controlli precedenti:
+    consenso del referente e approvazione editoriale dell'admin.
+    """
+
+    verify_csrf()
+    payload = request.get_json(silent=True) or request.form
+    desired_raw = payload.get("visibile_profilo")
+    desired_text = str(
+        desired_raw if desired_raw is not None else ""
+    ).strip().casefold()
+    desired = desired_text in {
+        "1", "true", "on", "yes", "si", "sì",
+    }
+    if desired_text not in {
+        "0", "1", "false", "true", "off", "on", "no", "yes",
+        "si", "sì",
+    }:
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "Scelta di visibilità non valida.", get_interface_language()
+            ),
+        }), 400
+    try:
+        expected_version = int(payload.get("versione") or 0)
+    except (TypeError, ValueError):
+        expected_version = 0
+    if expected_version < 1:
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "La referenza è stata aggiornata. Ricarica la pagina.",
+                get_interface_language(),
+            ),
+        }), 409
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    user_id = int(g.utente["id"])
+    language = get_interface_language()
+    try:
+        _schede_profilo_begin(cur)
+        lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+        cur.execute(sql(f"""
+            SELECT id, versione, stato_risposta, stato_verifica,
+                   autorizza_pubblicazione,
+                   pubblicazione_approvata_admin,
+                   visibile_profilo, revocata_at, cancellata_at
+            FROM referenze
+            WHERE id = ? AND utente_id = ?
+            LIMIT 1{lock_suffix}
+        """), (int(referenza_id), user_id))
+        reference = cur.fetchone()
+        if not reference:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Referenza non trovata.", language
+                ),
+            }), 404
+        if int(reference["versione"] or 0) != expected_version:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "La referenza è stata aggiornata. Ricarica la pagina.",
+                    language,
+                ),
+            }), 409
+
+        can_choose_visibility = bool(
+            reference["stato_risposta"] == "risposta_ricevuta"
+            and reference["stato_verifica"] not in {
+                "non_confermata", "revocata",
+            }
+            and reference["autorizza_pubblicazione"]
+            and reference["pubblicazione_approvata_admin"]
+            and not reference["revocata_at"]
+            and not reference["cancellata_at"]
+        )
+        if not can_choose_visibility:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Potrai scegliere la visibilità dopo l'approvazione "
+                    "finale di MyLocalCare.",
+                    language,
+                ),
+            }), 409
+
+        previous_visibility = bool(reference["visibile_profilo"])
+        cur.execute(sql("""
+            UPDATE referenze
+            SET visibile_profilo = ?,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND utente_id = ? AND versione = ?
+              AND pubblicazione_approvata_admin = TRUE
+              AND autorizza_pubblicazione = TRUE
+              AND stato_risposta = 'risposta_ricevuta'
+              AND stato_verifica NOT IN ('non_confermata', 'revocata')
+              AND revocata_at IS NULL
+              AND cancellata_at IS NULL
+        """), (
+            desired,
+            int(referenza_id),
+            user_id,
+            expected_version,
+        ))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "La referenza è stata aggiornata. Ricarica la pagina.",
+                    language,
+                ),
+            }), 409
+        _referenza_evento(
+            cur,
+            int(referenza_id),
+            "visibilita_profilo_aggiornata",
+            "utente",
+            attore_utente_id=user_id,
+            dettagli={
+                "visibile_precedente": previous_visibility,
+                "visibile": desired,
+                "versione_precedente": expected_version,
+            },
+        )
+        _schede_profilo_commit(cur)
+        return jsonify({
+            "ok": True,
+            "visibile_profilo": desired,
+            "versione": expected_version + 1,
+            "message": _referenza_ui_message(
+                (
+                    "La referenza è ora visibile nel profilo."
+                    if desired
+                    else "La referenza è stata nascosta dal profilo."
+                ),
+                language,
+            ),
+        })
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore aggiornamento visibilità referenza",
+            exc,
+            {"referenza_id": referenza_id, "utente_id": user_id},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "Non è stato possibile aggiornare la visibilità.", language
+            ),
+        }), 503
+
+
+@app.route("/api/utente/referenze/<int:referenza_id>/revoca", methods=["POST"])
+@login_required
+def api_referenza_revoca(referenza_id):
+    verify_csrf()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    user_id = int(g.utente["id"])
+    language = get_interface_language()
+    try:
+        _schede_profilo_begin(cur)
+        cur.execute(sql("""
+            UPDATE referenze
+            SET stato_risposta = 'revocata', stato_verifica = 'revocata',
+                autorizza_pubblicazione = FALSE,
+                autorizza_testo_pubblico = FALSE,
+                autorizza_contatto_verifica = FALSE,
+                pubblicazione_approvata_admin = FALSE,
+                pubblicazione_approvata_at = NULL,
+                pubblicazione_approvata_da_admin_id = NULL,
+                visibile_profilo = FALSE,
+                autorizzazione_contatto_at = NULL,
+                revocata_at = CURRENT_TIMESTAMP,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND utente_id = ?
+              AND stato_risposta NOT IN ('revocata', 'cancellata')
+        """), (referenza_id, user_id))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Richiesta non trovata o già revocata.", language
+                ),
+            }), 404
+        cur.execute(sql("""
+            UPDATE referenze_contatti
+            SET token_consumed_at = CURRENT_TIMESTAMP,
+                contatto_purge_at = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE referenza_id = ?
+        """), (
+            (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+            referenza_id,
+        ))
+        _referenza_evento(
+            cur, referenza_id, "consenso_revocato", "utente",
+            attore_utente_id=user_id,
+        )
+        _schede_profilo_commit(cur)
+        return jsonify({
+            "ok": True,
+            "message": _referenza_ui_message("Referenza revocata.", language),
+        })
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore revoca referenza", exc,
+            {"referenza_id": referenza_id, "utente_id": user_id},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message("Revoca non riuscita.", language),
+        }), 503
+
+
+@app.route("/referenze/accesso/<token>")
+def referenza_accesso(token):
+    requested_language = request.args.get("lang")
+    if requested_language:
+        session["lingua_interfaccia"] = normalize_language(requested_language)
+    digest = hash_reference_token(token)
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    if not _referenze_tables_exist(cur):
+        response = app.make_response(render_template(
+            "referenza_risposta.html", referenza=None
+        ))
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cache-Control"] = "no-store"
+        return response, 503
+    cur.execute(sql("""
+        SELECT r.id, r.stato_risposta, c.token_expires_at,
+               c.token_consumed_at, c.aperto_at
+        FROM referenze r
+        JOIN referenze_contatti c ON c.referenza_id = r.id
+        WHERE c.token_hash = ?
+        LIMIT 1
+    """), (digest,))
+    row = cur.fetchone()
+    expires = _referenze_datetime(row["token_expires_at"]) if row else None
+    if (
+        not row
+        or row["token_consumed_at"]
+        or row["stato_risposta"] != "in_attesa"
+        or not expires
+        or expires <= datetime.now(timezone.utc)
+    ):
+        session.pop("referenza_access", None)
+        response = render_template("referenza_risposta.html", referenza=None)
+        response = app.make_response(response)
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cache-Control"] = "no-store"
+        return response, 410
+
+    session["referenza_access"] = {
+        "id": int(row["id"]),
+        "token_hash": digest,
+    }
+    if not row["aperto_at"]:
+        try:
+            _schede_profilo_begin(cur)
+            cur.execute(sql("""
+                UPDATE referenze_contatti
+                SET aperto_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE referenza_id = ? AND aperto_at IS NULL
+            """), (int(row["id"]),))
+            _referenza_evento(
+                cur, int(row["id"]), "invito_aperto", "referente"
+            )
+            _schede_profilo_commit(cur)
+        except Exception:
+            _schede_profilo_rollback(cur)
+    response = redirect(url_for("referenza_rispondi"))
+    # Il token grezzo compare soltanto nell'URL di ingresso: impediamo che il
+    # browser lo inoltri come Referer alla pagina successiva o ad altre risorse.
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _referenza_session_row(cur):
+    access = session.get("referenza_access") or {}
+    reference_id = access.get("id")
+    token_hash = access.get("token_hash")
+    if not reference_id or not token_hash:
+        return None
+    row = _referenza_access_row(cur, reference_id, token_hash)
+    if not row:
+        return None
+    expires = _referenze_datetime(row["token_expires_at"])
+    if (
+        row["stato_risposta"] != "in_attesa"
+        or row["token_consumed_at"]
+        or not expires
+        or expires <= datetime.now(timezone.utc)
+    ):
+        return None
+    return row
+
+
+@app.route("/referenze/rispondi", methods=["GET", "POST"])
+def referenza_rispondi():
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    row = _referenza_session_row(cur)
+    if not row:
+        session.pop("referenza_access", None)
+        response = app.make_response(render_template(
+            "referenza_risposta.html", referenza=None
+        ))
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cache-Control"] = "no-store"
+        return response, 410
+
+    item = _referenza_presenta_privata(row)
+    item["utente_username"] = row["utente_username"]
+    # Il referente può correggere l'ambito soltanto tra i servizi realmente
+    # offerti dalla persona. Manteniamo comunque l'ambito originario se nel
+    # frattempo è stato tolto dal profilo, così un invito già inviato resta
+    # compilabile senza aprire la porta a categorie estranee.
+    categories = _referenze_categorie(cur, int(row["utente_id"]))
+    category_slugs = {item["slug"] for item in categories}
+    original_category = str(row["categoria_slug"] or "").strip().lower()
+    if original_category and original_category not in category_slugs:
+        categories.append({
+            "slug": original_category,
+            "label": _referenze_categoria_label(original_category),
+        })
+        category_slugs.add(original_category)
+    if request.method == "GET":
+        response = app.make_response(render_template(
+            "referenza_risposta.html",
+            referenza=item,
+            categorie_referenze=categories,
+        ))
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    verify_csrf()
+    if not _referenza_bool(request.form.get("consenso_trattamento")):
+        flash(_referenza_ui_message(
+            "Devi accettare l’informativa per inviare la risposta."
+        ), "error")
+        return redirect(url_for("referenza_rispondi"))
+
+    reference_id = int(row["id"])
+    owner_id = int(row["utente_id"])
+    try:
+        direct_answer = str(
+            request.form.get("esperienza_diretta") or ""
+        ).strip()
+        if direct_answer not in {"0", "1"}:
+            raise ValueError(
+                "Indica esplicitamente se hai avuto un’esperienza diretta."
+            )
+        structured = normalize_reference_payload(request.form)
+        if structured["categoria_slug"] not in category_slugs:
+            raise ValueError("Ambito del servizio non valido.")
+        direct = bool(structured["esperienza_diretta"])
+        if not direct:
+            structured["autorizza_pubblicazione"] = False
+            structured["autorizza_testo_pubblico"] = False
+
+        _schede_profilo_begin(cur)
+        token_not_expired = (
+            "c.token_expires_at > CURRENT_TIMESTAMP"
+            if app.config.get("IS_POSTGRES")
+            else "datetime(c.token_expires_at) > CURRENT_TIMESTAMP"
+        )
+        cur.execute(sql(f"""
+            UPDATE referenze
+            SET categoria_slug = ?, tipo_rapporto = ?,
+                anno_inizio = ?, anno_fine = ?, durata_fascia = ?,
+                esperienza_diretta = ?, testo_referente = ?,
+                stato_risposta = ?, stato_verifica = ?,
+                autorizza_pubblicazione = ?,
+                autorizza_testo_pubblico = ?,
+                autorizza_contatto_verifica = ?,
+                consenso_versione = ?,
+                consenso_trattamento_at = CURRENT_TIMESTAMP,
+                autorizzazione_pubblica_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END,
+                autorizzazione_testo_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END,
+                autorizzazione_contatto_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END,
+                risposta_at = CURRENT_TIMESTAMP,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND stato_risposta = 'in_attesa'
+              AND EXISTS (
+                  SELECT 1
+                  FROM referenze_contatti c
+                  WHERE c.referenza_id = referenze.id
+                    AND c.token_hash = ?
+                    AND c.token_consumed_at IS NULL
+                    AND {token_not_expired}
+              )
+        """), (
+            structured["categoria_slug"],
+            structured["tipo_rapporto"],
+            structured["anno_inizio"],
+            structured["anno_fine"],
+            structured["durata_fascia"],
+            direct,
+            structured["testo_referente"],
+            "risposta_ricevuta" if direct else "rifiutata",
+            "in_coda" if direct else "non_confermata",
+            structured["autorizza_pubblicazione"],
+            structured["autorizza_testo_pubblico"],
+            structured["autorizza_contatto_verifica"],
+            REFERENCE_CONSENT_VERSION,
+            structured["autorizza_pubblicazione"],
+            structured["autorizza_testo_pubblico"],
+            structured["autorizza_contatto_verifica"],
+            reference_id,
+            row["token_hash"],
+        ))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            session.pop("referenza_access", None)
+            return redirect(url_for("referenza_rispondi"))
+        cur.execute(sql("""
+            UPDATE referenze_contatti
+            SET token_consumed_at = CURRENT_TIMESTAMP,
+                contatto_purge_at = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE referenza_id = ? AND token_consumed_at IS NULL
+        """), (
+            (datetime.now(timezone.utc) + timedelta(days=90)).isoformat(),
+            reference_id,
+        ))
+        _referenza_evento(
+            cur,
+            reference_id,
+            "risposta_ricevuta" if direct else "rifiutata_referente",
+            "referente",
+            dettagli={
+                "consenso_versione": REFERENCE_CONSENT_VERSION,
+                "pubblicazione_autorizzata": bool(
+                    structured["autorizza_pubblicazione"]
+                ),
+                "testo_pubblico_autorizzato": bool(
+                    structured["autorizza_testo_pubblico"]
+                ),
+                "contatto_verifica_autorizzato": bool(
+                    structured["autorizza_contatto_verifica"]
+                ),
+            },
+        )
+        _schede_profilo_commit(cur)
+        session.pop("referenza_access", None)
+        invalidate_admin_counters()
+
+        try:
+            owner_language = normalize_language(
+                row.get("utente_lingua_interfaccia")
+            )
+            _crea_notifica(
+                owner_id,
+                translate("reference.notification.title", owner_language),
+                (
+                    translate("reference.notification.received", owner_language)
+                    if direct else
+                    translate("reference.notification.declined", owner_language)
+                ),
+                tipo="profilo",
+                link=url_for("dashboard") + "#referenze",
+            )
+            emit_update_notifications(owner_id)
+        except Exception as notification_exc:
+            log_exception_safe(
+                "Referenza salvata ma notifica non inviata",
+                notification_exc,
+                {"referenza_id": reference_id, "utente_id": owner_id},
+                production=True,
+            )
+
+        response = app.make_response(render_template(
+            "referenza_risposta_esito.html", confermata=direct
+        ))
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    except ValueError as exc:
+        _schede_profilo_rollback(cur)
+        flash(_referenza_ui_message(str(exc)), "error")
+        return redirect(url_for("referenza_rispondi"))
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore risposta referenza",
+            exc,
+            {"referenza_id": reference_id},
+            production=True,
+        )
+        flash(_referenza_ui_message(
+            "Non è stato possibile salvare la risposta."
+        ), "error")
+        return redirect(url_for("referenza_rispondi"))
+
+
 # --- Dashboard: carica anche i nuovi campi (sostituisci la tua dashboard() attuale) ---
 @app.route('/utente/dashboard')
 @login_required
@@ -18822,6 +20926,11 @@ def dashboard():
         disponibilita_servizi_disponibile,
         utente_offre_servizi,
     ) = _disponibilita_servizi_context(c, utente["id"], pubblica=False)
+    (
+        referenze_private,
+        categorie_referenze,
+        referenze_disponibili,
+    ) = _referenze_context(c, utente["id"], pubblico=False)
     assegna_disponibilita_annunci(c, annunci)
     disponibilita_servizi_private = next(
         (
@@ -18851,6 +20960,9 @@ def dashboard():
         ),
         disponibilita_servizi_disponibile=disponibilita_servizi_disponibile,
         utente_offre_servizi=utente_offre_servizi,
+        referenze_private=referenze_private,
+        categorie_referenze=categorie_referenze,
+        referenze_disponibili=referenze_disponibili,
         pubblico=False,
         page="profilo"
     )
@@ -28916,6 +31028,16 @@ def elimina_account_step2():
                     WHERE utente_id = ?
                 """), (user_id,))
 
+            # Le referenze contengono anche i recapiti cifrati di persone
+            # esterne alla piattaforma. L'account viene anonimizzato, non
+            # cancellato fisicamente: eliminiamo quindi esplicitamente la
+            # referenza; contatti e audit cadono tramite ON DELETE CASCADE.
+            if _referenze_tables_exist(cur):
+                cur.execute(sql("""
+                    DELETE FROM referenze
+                    WHERE utente_id = ?
+                """), (user_id,))
+
             # La riga utente viene anonimizzata anziché eliminata: rimuoviamo
             # esplicitamente sia l'agenda generale (i cui figli puntano
             # direttamente a utenti) sia le eventuali eccezioni per categoria.
@@ -30124,6 +32246,11 @@ def profilo_pubblico(id):
         disponibilita_servizi_disponibile,
         utente_offre_servizi,
     ) = _disponibilita_servizi_context(c, utente["id"], pubblica=True)
+    (
+        referenze_pubbliche,
+        _categorie_referenze,
+        referenze_disponibili,
+    ) = _referenze_context(c, utente["id"], pubblico=True)
     assegna_disponibilita_annunci(c, annunci)
     disponibilita_servizi_public = next(
         (
@@ -30181,6 +32308,8 @@ def profilo_pubblico(id):
         ),
         disponibilita_servizi_disponibile=disponibilita_servizi_disponibile,
         utente_offre_servizi=utente_offre_servizi,
+        referenze_pubbliche=referenze_pubbliche,
+        referenze_disponibili=referenze_disponibili,
 
         offro_presenti=offro_presenti,
         cerco_presenti=cerco_presenti,
