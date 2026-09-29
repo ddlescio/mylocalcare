@@ -189,6 +189,11 @@
   line-height: 1.5;
 }
 
+.reference-explainer__action {
+  margin-top: 0.75rem;
+  text-decoration: none;
+}
+
 .reference-invite {
   overflow: hidden;
   border: 1px solid var(--reference-line);

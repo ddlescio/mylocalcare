@@ -20,6 +20,9 @@ class ReferenceTranslationsTest(unittest.TestCase):
         keys = (
             "reference.manager.title",
             "reference.manager.existing_only",
+            "reference.no_listing.title",
+            "reference.no_listing.body",
+            "reference.no_listing.action",
             "reference.response.processing_consent",
             "reference.response.contact_consent",
             "reference.response.public_consent",

@@ -167,6 +167,19 @@
           </footer>
         </form>
         </details>
+      {% else %}
+        <section class="reference-explainer reference-explainer--action" aria-labelledby="reference-no-listing-title">
+          <span class="reference-explainer__shield" aria-hidden="true">📣</span>
+          <div>
+            <h3 id="reference-no-listing-title">{{ tr('reference.no_listing.title') }}</h3>
+            <p>{{ tr('reference.no_listing.body') }}</p>
+            <a
+              href="{{ url_for('nuovo_annuncio') }}"
+              class="reference-primary-button reference-explainer__action">
+              {{ tr('reference.no_listing.action') }}
+            </a>
+          </div>
+        </section>
       {% endif %}
 
       <section class="reference-list" aria-labelledby="reference-list-title">
@@ -292,7 +305,24 @@
                   </p>
                 {% endif %}
 
-                {% if stato != 'revocata' %}
+                {% if stato == 'revocata' %}
+                  <div class="reference-private-card__actions">
+                    <button
+                      type="button"
+                      class="reference-secondary-button"
+                      data-reference-restore
+                      data-endpoint="{{ url_for('api_referenza_ripristina', referenza_id=referenza.get('id')) }}">
+                      {{ tr('reference.restore_and_resend') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="reference-danger-button"
+                      data-reference-delete
+                      data-endpoint="{{ url_for('api_referenza_elimina', referenza_id=referenza.get('id')) }}">
+                      {{ tr('reference.delete_request') }}
+                    </button>
+                  </div>
+                {% else %}
                   <div class="reference-private-card__actions">
                     {% if stato_risposta == 'risposta_ricevuta'
                           and referenza.get('autorizza_pubblicazione')
@@ -318,7 +348,7 @@
                         class="reference-secondary-button"
                         data-reference-resend
                         data-endpoint="{{ url_for('api_referenza_reinvia', referenza_id=referenza.get('id')) }}">
-                        {{ tr('reference.resend') }}
+                        {{ tr('reference.send_new_link') }}
                       </button>
                     {% endif %}
                     <button

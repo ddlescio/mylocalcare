@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from flask import Flask, flash, redirect, request, session
+from flask import Flask, flash, g, jsonify, redirect, request, session
 
 from referenze import (
     REFERENCE_CONSENT_VERSION,
@@ -117,6 +117,76 @@ class ReferenceFlowSecuritySourceTest(unittest.TestCase):
         self.assertIn("_registra_fallimento_email_referenza", resend)
         self.assertIn("FOR UPDATE OF r, c", resend)
 
+    def test_invite_contact_sharing_consent_is_enforced_server_side(self):
+        flask_app = Flask(__name__)
+        database_touched = []
+        route = load_function("api_referenze_crea", {
+            "verify_csrf": lambda: None,
+            "_referenza_request_payload": lambda: request.form.to_dict(),
+            "_referenza_bool": lambda value: str(value or "").casefold() in {
+                "1", "true", "on", "yes", "si", "sì",
+            },
+            "jsonify": jsonify,
+            "_referenza_ui_message": lambda message, language=None: message,
+            "get_db_connection": lambda: database_touched.append(True),
+        })
+        with flask_app.test_request_context(
+            "/api/utente/referenze",
+            method="POST",
+            data={"referente_email": "ref@example.test"},
+        ):
+            response, status = route()
+
+        self.assertEqual(status, 400)
+        self.assertFalse(response.get_json()["ok"])
+        self.assertIn("Conferma", response.get_json()["message"])
+        self.assertEqual(database_touched, [])
+        creation = function_source("api_referenze_crea")
+        self.assertIn('payload.get("conferma_condivisione_recapito")', creation)
+        self.assertIn('"conferma_condivisione_recapito": True', creation)
+
+    def test_resend_and_restore_require_fresh_contact_confirmation(self):
+        flask_app = Flask(__name__)
+        for function_name in (
+            "api_referenza_reinvia",
+            "api_referenza_ripristina",
+        ):
+            database_touched = []
+            route = load_function(function_name, {
+                "verify_csrf": lambda: None,
+                "_referenza_request_payload": lambda: request.get_json(
+                    silent=True
+                ) or {},
+                "_referenza_bool": lambda value: str(
+                    value or ""
+                ).casefold() in {"1", "true", "on", "yes", "si", "sì"},
+                "jsonify": jsonify,
+                "_referenza_ui_message": (
+                    lambda message, language=None: message
+                ),
+                "get_db_connection": lambda: database_touched.append(True),
+            })
+            with flask_app.test_request_context(
+                "/api/utente/referenze/9/action",
+                method="POST",
+                json={},
+            ):
+                response, status = route(9)
+
+            self.assertEqual(status, 400, function_name)
+            self.assertFalse(response.get_json()["ok"], function_name)
+            self.assertEqual(database_touched, [], function_name)
+
+            source = function_source(function_name)
+            self.assertIn(
+                'payload.get("conferma_condivisione_recapito")',
+                source,
+            )
+            self.assertIn(
+                'dettagli={"conferma_condivisione_recapito": True}',
+                source,
+            )
+
     def test_sqlite_daily_limit_uses_normalized_datetime_comparison(self):
         creation = function_source("api_referenze_crea")
         self.assertIn(
@@ -153,12 +223,227 @@ class ReferenceFlowSecuritySourceTest(unittest.TestCase):
         self.assertIn("autorizza_contatto_verifica = FALSE", revoke)
         self.assertIn("autorizzazione_contatto_at = NULL", revoke)
 
+    def test_restore_creates_a_new_one_time_link_and_requires_fresh_consent(self):
+        restore = function_source("api_referenza_ripristina")
+        self.assertIn("_schede_profilo_lock_user(cur, user_id)", restore)
+        self.assertIn('row["stato_risposta"] != "revocata"', restore)
+        self.assertIn("raw_token = generate_reference_token()", restore)
+        self.assertIn("token_consumed_at = NULL", restore)
+        self.assertIn("token_hash = ?", restore)
+        self.assertIn("stato_risposta = 'in_attesa'", restore)
+        self.assertIn("autorizza_pubblicazione = FALSE", restore)
+        self.assertIn("autorizza_contatto_verifica = FALSE", restore)
+        self.assertIn("risposta_at = NULL", restore)
+        self.assertIn('"invito_ripristinato"', restore)
+        self.assertIn("_invia_invito_referenza", restore)
+
+    def test_delete_is_soft_delete_with_immediate_contact_purge(self):
+        delete = function_source("api_referenza_elimina")
+        self.assertIn('row["stato_risposta"] != "revocata"', delete)
+        self.assertIn("stato_risposta = 'cancellata'", delete)
+        self.assertIn("email_cifrata = NULL", delete)
+        self.assertIn("email_hash = NULL", delete)
+        self.assertIn("telefono_cifrato = NULL", delete)
+        self.assertIn("token_hash = NULL", delete)
+        self.assertIn("contatto_purged_at = CURRENT_TIMESTAMP", delete)
+        self.assertIn('"richiesta_cancellata_utente"', delete)
+
     def test_reference_notifications_open_reviews_reference_section(self):
         for name in ("admin_referenza_verifica", "referenza_rispondi"):
             self.assertIn(
                 'url_for("dashboard") + "#referenze"',
                 function_source(name),
             )
+
+
+class ReferenceRequestLifecycleTest(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False)
+        temporary.close()
+        self.database_path = Path(temporary.name)
+        setup_connection = sqlite3.connect(self.database_path)
+        setup_connection.execute("""
+            CREATE TABLE utenti (
+                id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL
+            )
+        """)
+        setup_connection.commit()
+        setup_connection.close()
+
+        load_reference_bootstrap(
+            lambda: sqlite3.connect(self.database_path)
+        )()
+        self.connection = sqlite3.connect(self.database_path)
+        self.connection.row_factory = sqlite3.Row
+        self.connection.execute("PRAGMA foreign_keys = ON")
+        self.connection.execute(
+            "INSERT INTO utenti (id, username) VALUES (?, ?)",
+            (7, "utente7"),
+        )
+        self.connection.execute("""
+            INSERT INTO referenze (
+                id, utente_id, categoria_slug, tipo_rapporto,
+                stato_risposta, stato_verifica, revocata_at
+            ) VALUES (?, ?, ?, ?, 'revocata', 'revocata', CURRENT_TIMESTAMP)
+        """, (31, 7, "babysitter", "famiglia"))
+        self.connection.execute("""
+            INSERT INTO referenze_contatti (
+                referenza_id, token_hash, token_expires_at,
+                numero_invii, ultimo_invio_at
+            ) VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)
+        """, (31, "old-hash", "2099-01-01T00:00:00+00:00"))
+        self.connection.commit()
+
+        self.app = Flask(__name__)
+        self.app.config.update(SECRET_KEY="test", IS_POSTGRES=False)
+        self.sent_tokens = []
+
+        def rollback(cursor):
+            try:
+                cursor.execute("ROLLBACK")
+            except sqlite3.OperationalError:
+                pass
+
+        def event(
+            cursor,
+            reference_id,
+            event_type,
+            actor_type,
+            *,
+            attore_utente_id=None,
+            dettagli=None,
+        ):
+            cursor.execute("""
+                INSERT INTO referenze_eventi (
+                    referenza_id, tipo_evento, attore_tipo,
+                    attore_utente_id, dettagli_snapshot
+                ) VALUES (?, ?, ?, ?, ?)
+            """, (
+                reference_id,
+                event_type,
+                actor_type,
+                attore_utente_id,
+                json.dumps(dettagli) if dettagli else None,
+            ))
+
+        namespace = {
+            "app": self.app,
+            "g": g,
+            "jsonify": jsonify,
+            "verify_csrf": lambda: None,
+            "_referenza_request_payload": lambda: request.get_json(
+                silent=True
+            ) or {},
+            "_referenza_bool": lambda value: str(
+                value or ""
+            ).casefold() in {"1", "true", "on", "yes", "si", "sì"},
+            "get_db_connection": lambda: self.connection,
+            "get_cursor": lambda connection: connection.cursor(),
+            "get_interface_language": lambda: "it",
+            "_schede_profilo_begin": (
+                lambda cursor: cursor.execute("BEGIN IMMEDIATE")
+            ),
+            "_schede_profilo_lock_user": lambda cursor, user_id: None,
+            "_schede_profilo_commit": lambda cursor: cursor.execute("COMMIT"),
+            "_schede_profilo_rollback": rollback,
+            "_referenza_decrypt_contact": lambda row: {
+                **dict(row),
+                "referente_email": "ref@example.test",
+                "referente_nome": "Referente",
+            },
+            "generate_reference_token": lambda: "new-raw-token",
+            "hash_reference_token": lambda token: f"hash:{token}",
+            "REFERENCE_INVITE_DAYS": 14,
+            "REFERENCE_MAX_SENDS": 3,
+            "datetime": datetime,
+            "timezone": timezone,
+            "timedelta": timedelta,
+            "sql": lambda query: query,
+            "_referenza_evento": event,
+            "_referenza_ui_message": lambda message, language=None: message,
+            "_invia_invito_referenza": (
+                lambda email, name, username, token, language=None: (
+                    self.sent_tokens.append(token) or True
+                )
+            ),
+            "_registra_fallimento_email_referenza": lambda *args: None,
+            "log_exception_safe": lambda *args, **kwargs: None,
+        }
+        self.restore = load_function("api_referenza_ripristina", namespace)
+        self.delete = load_function("api_referenza_elimina", namespace)
+
+    def tearDown(self):
+        self.connection.close()
+        self.database_path.unlink(missing_ok=True)
+
+    def call_as_owner(self, function, *, contact_confirmation=False):
+        payload = (
+            {"conferma_condivisione_recapito": True}
+            if contact_confirmation else {}
+        )
+        with self.app.test_request_context("/", method="POST", json=payload):
+            g.utente = {"id": 7}
+            return function(31)
+
+    def test_restore_replaces_token_and_clears_old_reply_state(self):
+        response = self.call_as_owner(
+            self.restore,
+            contact_confirmation=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+        reference = self.connection.execute(
+            "SELECT * FROM referenze WHERE id = 31"
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = 31"
+        ).fetchone()
+        events = self.connection.execute(
+            "SELECT tipo_evento FROM referenze_eventi WHERE referenza_id = 31"
+        ).fetchall()
+
+        self.assertEqual(reference["stato_risposta"], "in_attesa")
+        self.assertEqual(reference["stato_verifica"], "non_esaminata")
+        self.assertIsNone(reference["revocata_at"])
+        self.assertEqual(contact["token_hash"], "hash:new-raw-token")
+        self.assertIsNone(contact["token_consumed_at"])
+        self.assertEqual(contact["numero_invii"], 2)
+        self.assertEqual(self.sent_tokens, ["new-raw-token"])
+        self.assertIn(
+            "invito_ripristinato",
+            {row["tipo_evento"] for row in events},
+        )
+
+    def test_delete_hides_request_and_purges_contact_bundle(self):
+        self.connection.execute("""
+            UPDATE referenze_contatti
+            SET email_cifrata = 'cipher', email_nonce = 'nonce',
+                email_tag = 'tag', email_key_id = 'v1',
+                email_hash = 'hash', nome_cifrato = 'name',
+                nome_nonce = 'nonce', nome_tag = 'tag'
+            WHERE referenza_id = 31
+        """)
+        self.connection.commit()
+
+        response = self.call_as_owner(self.delete)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+        reference = self.connection.execute(
+            "SELECT * FROM referenze WHERE id = 31"
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = 31"
+        ).fetchone()
+        self.assertEqual(reference["stato_risposta"], "cancellata")
+        self.assertIsNone(reference["revocata_at"])
+        self.assertIsNotNone(reference["cancellata_at"])
+        for column in (
+            "email_cifrata", "email_hash", "nome_cifrato",
+            "telefono_cifrato", "messaggio_invito_cifrato", "token_hash",
+        ):
+            self.assertIsNone(contact[column])
+        self.assertIsNotNone(contact["contatto_purged_at"])
 
 
 class ReferenceEmailFailurePersistenceTest(unittest.TestCase):
@@ -361,19 +646,21 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
         self,
         *,
         direct="1",
+        processing_consent="on",
         consent="on",
         phone="+39 333 123 4567",
         publication=None,
         legacy_text_consent=None,
     ):
         data = {
-            "consenso_trattamento": "on",
             "categoria_slug": "babysitter",
             "tipo_rapporto": "famiglia",
             "durata_fascia": "6_12_mesi",
             "esperienza_diretta": direct,
             "testo_referente": "Collaborazione confermata.",
         }
+        if processing_consent is not None:
+            data["consenso_trattamento"] = processing_consent
         if phone is not None:
             data["referente_telefono"] = phone
         if consent is not None:
@@ -392,6 +679,24 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
                 "token_hash": "reply-token-hash",
             }
             return self.route()
+
+    def test_senza_consenso_privacy_la_risposta_non_viene_salvata(self):
+        response = self.submit(processing_consent=None)
+        self.assertEqual(response.status_code, 302)
+        reference = self.connection.execute(
+            "SELECT stato_risposta, consenso_trattamento_at "
+            "FROM referenze WHERE id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT token_consumed_at FROM referenze_contatti "
+            "WHERE referenza_id = ?",
+            (self.reference_id,),
+        ).fetchone()
+
+        self.assertEqual(reference["stato_risposta"], "in_attesa")
+        self.assertIsNone(reference["consenso_trattamento_at"])
+        self.assertIsNone(contact["token_consumed_at"])
 
     def test_post_salva_telefono_solo_cifrato_e_consuma_token(self):
         response = self.submit()

@@ -165,8 +165,13 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn('data-no-global-loader', rendered)
         self.assertIn('data-endpoint="/api_referenza_reinvia/9"', rendered)
         self.assertIn('data-endpoint="/api_referenza_revoca/9"', rendered)
+        self.assertIn("reference.send_new_link", rendered)
         self.assertIn('name="referente_email"', rendered)
         self.assertNotIn('name="referente_telefono"', rendered)
+        self.assertIn(
+            'name="conferma_condivisione_recapito" value="1" required',
+            rendered,
+        )
         self.assertIn('name="anno_inizio"', rendered)
         self.assertIn('name="anno_fine"', rendered)
         self.assertIn('name="durata_fascia"', rendered)
@@ -175,11 +180,61 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn("reference.status.email_failed", self.private_source)
         self.assertIn("reference.status.email_failed_help", self.private_source)
         self.assertIn("'errore_invio'", self.private_source)
-        self.assertIn("{% if stato != 'revocata' %}", self.private_source)
+        self.assertIn("{% if stato == 'revocata' %}", self.private_source)
+        self.assertIn("data-reference-restore", self.private_source)
+        self.assertIn("data-reference-delete", self.private_source)
+        self.assertIn("api_referenza_ripristina", self.private_source)
+        self.assertIn("api_referenza_elimina", self.private_source)
         self.assertNotIn(
             "{% if stato in ['inviata', 'aperta', 'scaduta'] %}",
             self.private_source,
         )
+
+    def test_revoked_request_can_be_restored_or_deleted(self):
+        rendered = self.environment.get_template(
+            "partials/referenze_dialog.html"
+        ).render(
+            referenze_private=[{
+                "id": 12,
+                "referente_nome": "Referente test",
+                "categoria_label": "Babysitter",
+                "stato_risposta": "revocata",
+                "stato_verifica": "revocata",
+                "stato": "revocata",
+            }],
+            categorie_referenze=[{"slug": "babysitter", "label": "Babysitter"}],
+            csrf_token=lambda: "csrf-test",
+            url_for=lambda endpoint, **kwargs: (
+                f"/static/{kwargs['filename']}"
+                if endpoint == "static"
+                else f"/{endpoint}/{kwargs.get('referenza_id', '')}".rstrip("/")
+            ),
+        )
+
+        self.assertIn('data-endpoint="/api_referenza_ripristina/12"', rendered)
+        self.assertIn('data-endpoint="/api_referenza_elimina/12"', rendered)
+        self.assertNotIn('data-endpoint="/api_referenza_reinvia/12"', rendered)
+        self.assertNotIn('data-endpoint="/api_referenza_revoca/12"', rendered)
+
+    def test_user_without_offered_listing_gets_explanation_and_create_link(self):
+        rendered = self.environment.get_template(
+            "partials/referenze_dialog.html"
+        ).render(
+            referenze_private=[],
+            categorie_referenze=[],
+            csrf_token=lambda: "csrf-test",
+            url_for=lambda endpoint, **kwargs: (
+                f"/static/{kwargs['filename']}"
+                if endpoint == "static"
+                else f"/{endpoint}"
+            ),
+        )
+
+        self.assertIn("reference.no_listing.title", rendered)
+        self.assertIn("reference.no_listing.body", rendered)
+        self.assertIn("reference.no_listing.action", rendered)
+        self.assertIn('href="/nuovo_annuncio"', rendered)
+        self.assertNotIn('id="reference-invite-form"', rendered)
 
     def test_owner_sees_full_details_and_controls_approved_visibility(self):
         for marker in (

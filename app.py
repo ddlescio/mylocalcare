@@ -6451,10 +6451,12 @@ def _referenza_admin_evento_presentato(row):
         "invito_creato": "Invito inviato",
         "invito_inviato": "Invito inviato",
         "invito_reinviato": "Invito reinviato",
+        "invito_ripristinato": "Invito ripristinato e reinviato",
         "invito_aperto": "Invito aperto dal referente",
         "risposta_ricevuta": "Risposta ricevuta",
         "rifiutata_referente": "Collaborazione non confermata",
         "consenso_revocato": "Consenso revocato",
+        "richiesta_cancellata_utente": "Richiesta eliminata dall’utente",
         "verifica_admin_registrata": "Esito admin registrato",
         "pubblicazione_admin_approvata": "Pubblicazione approvata",
         "pubblicazione_admin_revocata": "Pubblicazione non approvata",
@@ -20752,7 +20754,10 @@ def api_referenze_crea():
             "invito_inviato",
             "utente",
             attore_utente_id=user_id,
-            dettagli={"categoria_slug": structured["categoria_slug"]},
+            dettagli={
+                "categoria_slug": structured["categoria_slug"],
+                "conferma_condivisione_recapito": True,
+            },
         )
         _schede_profilo_commit(cur)
     except ValueError as exc:
@@ -20801,6 +20806,15 @@ def api_referenze_crea():
 @login_required
 def api_referenza_reinvia(referenza_id):
     verify_csrf()
+    payload = _referenza_request_payload()
+    if not _referenza_bool(payload.get("conferma_condivisione_recapito")):
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "Conferma di poter ancora usare il recapito del referente."
+            ),
+        }), 400
+
     conn = get_db_connection()
     cur = get_cursor(conn)
     user_id = int(g.utente["id"])
@@ -20884,6 +20898,7 @@ def api_referenza_reinvia(referenza_id):
         _referenza_evento(
             cur, referenza_id, "invito_reinviato", "utente",
             attore_utente_id=user_id,
+            dettagli={"conferma_condivisione_recapito": True},
         )
         _schede_profilo_commit(cur)
         email_sent = _invia_invito_referenza(
@@ -21152,6 +21167,322 @@ def api_referenza_revoca(referenza_id):
         return jsonify({
             "ok": False,
             "message": _referenza_ui_message("Revoca non riuscita.", language),
+        }), 503
+
+
+@app.route(
+    "/api/utente/referenze/<int:referenza_id>/ripristina",
+    methods=["POST"],
+)
+@login_required
+def api_referenza_ripristina(referenza_id):
+    """Riattiva una richiesta revocata e spedisce un link personale nuovo.
+
+    Una risposta eventualmente ricevuta in precedenza non viene ripubblicata:
+    il referente deve autorizzare nuovamente dati e visibilita tramite il nuovo
+    collegamento. Il vecchio token resta quindi definitivamente inutilizzabile.
+    """
+
+    verify_csrf()
+    payload = _referenza_request_payload()
+    if not _referenza_bool(payload.get("conferma_condivisione_recapito")):
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "Conferma di poter ancora usare il recapito del referente."
+            ),
+        }), 400
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    user_id = int(g.utente["id"])
+    language = get_interface_language()
+    try:
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+        lock_suffix = " FOR UPDATE OF r, c" if app.config.get("IS_POSTGRES") else ""
+        cur.execute(sql(f"""
+            SELECT r.*, u.username,
+                   c.email_cifrata, c.email_nonce, c.email_tag, c.email_key_id,
+                   c.nome_cifrato, c.nome_nonce, c.nome_tag,
+                   c.numero_invii, c.contatto_purged_at
+            FROM referenze r
+            JOIN referenze_contatti c ON c.referenza_id = r.id
+            JOIN utenti u ON u.id = r.utente_id
+            WHERE r.id = ? AND r.utente_id = ?
+            LIMIT 1{lock_suffix}
+        """), (int(referenza_id), user_id))
+        row = cur.fetchone()
+        if not row:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Richiesta non trovata.", language
+                ),
+            }), 404
+        if row["stato_risposta"] != "revocata":
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Puoi ripristinare soltanto una richiesta revocata.",
+                    language,
+                ),
+            }), 409
+
+        item = _referenza_decrypt_contact(row)
+        if row["contatto_purged_at"] or not item.get("referente_email"):
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "I dati di contatto del referente sono stati rimossi e "
+                    "la richiesta non può più essere ripristinata.",
+                    language,
+                ),
+            }), 410
+        if int(row["numero_invii"] or 0) >= REFERENCE_MAX_SENDS:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Hai già utilizzato i due solleciti disponibili.", language
+                ),
+            }), 429
+
+        raw_token = generate_reference_token()
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            days=REFERENCE_INVITE_DAYS
+        )
+        cur.execute(sql("""
+            UPDATE referenze_contatti
+            SET token_hash = ?, token_expires_at = ?, token_consumed_at = NULL,
+                aperto_at = NULL, ultimo_invio_at = CURRENT_TIMESTAMP,
+                numero_invii = numero_invii + 1, ultimo_errore_invio = NULL,
+                contatto_purge_at = ?, contatto_purged_at = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE referenza_id = ?
+        """), (
+            hash_reference_token(raw_token),
+            expires_at.isoformat(),
+            (expires_at + timedelta(days=30)).isoformat(),
+            int(referenza_id),
+        ))
+        cur.execute(sql("""
+            UPDATE referenze
+            SET stato_risposta = 'in_attesa',
+                stato_verifica = 'non_esaminata',
+                esperienza_diretta = FALSE,
+                testo_referente = NULL,
+                autorizza_pubblicazione = FALSE,
+                autorizza_testo_pubblico = FALSE,
+                autorizza_contatto_verifica = FALSE,
+                pubblicazione_approvata_admin = FALSE,
+                pubblicazione_approvata_at = NULL,
+                pubblicazione_approvata_da_admin_id = NULL,
+                visibile_profilo = TRUE,
+                consenso_versione = NULL,
+                consenso_trattamento_at = NULL,
+                autorizzazione_pubblica_at = NULL,
+                autorizzazione_testo_at = NULL,
+                autorizzazione_contatto_at = NULL,
+                risposta_at = NULL,
+                verificata_at = NULL,
+                verificata_da_admin_id = NULL,
+                metodo_verifica = 'nessuno',
+                nota_admin = NULL,
+                nota_pubblica = NULL,
+                revocata_at = NULL,
+                cancellata_at = NULL,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND utente_id = ?
+              AND stato_risposta = 'revocata'
+        """), (int(referenza_id), user_id))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "La richiesta è cambiata. Ricarica la pagina.", language
+                ),
+            }), 409
+        _referenza_evento(
+            cur,
+            int(referenza_id),
+            "invito_ripristinato",
+            "utente",
+            attore_utente_id=user_id,
+            dettagli={"conferma_condivisione_recapito": True},
+        )
+        _schede_profilo_commit(cur)
+
+        email_sent = _invia_invito_referenza(
+            item["referente_email"],
+            item["referente_nome"],
+            row["username"] or f"utente{user_id}",
+            raw_token,
+            language=language,
+        )
+        if not email_sent:
+            _registra_fallimento_email_referenza(cur, int(referenza_id))
+        return jsonify({
+            "ok": True,
+            "email_inviata": bool(email_sent),
+            "message": _referenza_ui_message(
+                (
+                    "Richiesta ripristinata: è stato inviato un nuovo link."
+                    if email_sent
+                    else "Richiesta ripristinata, ma l’email non è partita."
+                ),
+                language,
+            ),
+        })
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore ripristino referenza",
+            exc,
+            {"referenza_id": referenza_id, "utente_id": user_id},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "Ripristino non riuscito.", language
+            ),
+        }), 503
+
+
+@app.route(
+    "/api/utente/referenze/<int:referenza_id>/elimina",
+    methods=["POST"],
+)
+@login_required
+def api_referenza_elimina(referenza_id):
+    """Elimina dall'elenco una richiesta revocata e ne purga i recapiti."""
+
+    verify_csrf()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    user_id = int(g.utente["id"])
+    language = get_interface_language()
+    try:
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+        lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+        cur.execute(sql(f"""
+            SELECT id, stato_risposta
+            FROM referenze
+            WHERE id = ? AND utente_id = ?
+            LIMIT 1{lock_suffix}
+        """), (int(referenza_id), user_id))
+        row = cur.fetchone()
+        if not row:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Richiesta non trovata.", language
+                ),
+            }), 404
+        if row["stato_risposta"] != "revocata":
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "Revoca la richiesta prima di eliminarla.", language
+                ),
+            }), 409
+
+        cur.execute(sql("""
+            UPDATE referenze
+            SET stato_risposta = 'cancellata',
+                stato_verifica = 'revocata',
+                esperienza_diretta = FALSE,
+                testo_referente = NULL,
+                autorizza_pubblicazione = FALSE,
+                autorizza_testo_pubblico = FALSE,
+                autorizza_contatto_verifica = FALSE,
+                pubblicazione_approvata_admin = FALSE,
+                pubblicazione_approvata_at = NULL,
+                pubblicazione_approvata_da_admin_id = NULL,
+                visibile_profilo = FALSE,
+                consenso_versione = NULL,
+                consenso_trattamento_at = NULL,
+                autorizzazione_pubblica_at = NULL,
+                autorizzazione_testo_at = NULL,
+                autorizzazione_contatto_at = NULL,
+                risposta_at = NULL,
+                verificata_at = NULL,
+                verificata_da_admin_id = NULL,
+                metodo_verifica = 'nessuno',
+                nota_admin = NULL,
+                nota_pubblica = NULL,
+                revocata_at = NULL,
+                cancellata_at = CURRENT_TIMESTAMP,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND utente_id = ?
+              AND stato_risposta = 'revocata'
+        """), (int(referenza_id), user_id))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "La richiesta è cambiata. Ricarica la pagina.", language
+                ),
+            }), 409
+
+        # La richiesta cancellata resta come record tecnico minimo per audit,
+        # ma nome, email, telefono, messaggio e token vengono rimossi subito.
+        cur.execute(sql("""
+            UPDATE referenze_contatti
+            SET email_cifrata = NULL, email_nonce = NULL, email_tag = NULL,
+                email_key_id = NULL, email_hash = NULL,
+                nome_cifrato = NULL, nome_nonce = NULL, nome_tag = NULL,
+                telefono_cifrato = NULL, telefono_nonce = NULL,
+                telefono_tag = NULL,
+                messaggio_invito_cifrato = NULL,
+                messaggio_invito_nonce = NULL,
+                messaggio_invito_tag = NULL,
+                token_hash = NULL, token_expires_at = NULL,
+                token_consumed_at = CURRENT_TIMESTAMP,
+                aperto_at = NULL, ultimo_errore_invio = NULL,
+                contatto_purge_at = CURRENT_TIMESTAMP,
+                contatto_purged_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE referenza_id = ?
+        """), (int(referenza_id),))
+        _referenza_evento(
+            cur,
+            int(referenza_id),
+            "richiesta_cancellata_utente",
+            "utente",
+            attore_utente_id=user_id,
+        )
+        _schede_profilo_commit(cur)
+        return jsonify({
+            "ok": True,
+            "message": _referenza_ui_message(
+                "Richiesta eliminata.", language
+            ),
+        })
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore eliminazione richiesta referenza",
+            exc,
+            {"referenza_id": referenza_id, "utente_id": user_id},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "Eliminazione non riuscita.", language
+            ),
         }), 503
 
 
@@ -30032,10 +30363,8 @@ Gestione lingua:
 
 Gestione azione:
 - Prima rileva sempre la lingua effettiva del testo originale.
-- Se "lingua_scelta" è "it" e la lingua effettiva del testo originale NON è italiano, traduci e migliora titolo e descrizione in italiano, anche se l'azione ricevuta è "improve" o "translate_it".
-- Se "lingua_scelta" è "it" e la lingua effettiva del testo originale è italiano, migliora titolo e descrizione in italiano.
-- Se "lingua_scelta" è diversa da "it" e l'azione è "improve", migliora titolo e descrizione mantenendo la lingua effettiva del testo originale.
-- Se "lingua_scelta" è diversa da "it" e l'azione è "translate_it", NON tradurre ancora in italiano: migliora titolo e descrizione mantenendo la lingua effettiva del testo originale.
+- Se l'azione è "improve" o "translate_it", restituisci sempre titolo e descrizione nella "lingua_scelta". Se il testo originale è in un'altra lingua o contiene più lingue, traducilo e adattalo alla "lingua_scelta" mentre lo migliori.
+- Con "improve" o "translate_it" non tradurre mai in italiano, a meno che "lingua_scelta" sia "it".
 - Se l'azione è "final_translate_it", traduci e migliora titolo e descrizione in italiano.
 - Se l'azione è "final_translate_it" ma il testo è già completamente in italiano e "testo_misto" è false, puoi semplicemente migliorarlo in italiano senza traduzione artificiale.
 

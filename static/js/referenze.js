@@ -147,13 +147,26 @@
   async function postReferenceAction(button, action) {
     const endpoint = button.dataset.endpoint;
     if (!endpoint) return;
-    if (action === "revoke" && !global.confirm(translate("Vuoi revocare questo invito? Il link non sarà più utilizzabile."))) {
+    const confirmations = {
+      resend: "Confermi di poter ancora usare il recapito del referente e di inviare un nuovo link? Quello precedente non sarà più utilizzabile.",
+      revoke: "Vuoi revocare questo invito? Il link non sarà più utilizzabile.",
+      restore: "Confermi di poter ancora usare il recapito del referente, ripristinare la richiesta e inviare un nuovo link?",
+      delete: "Eliminare definitivamente questa richiesta? I recapiti salvati saranno rimossi e non potrai ripristinarla."
+    };
+    const confirmation = confirmations[action];
+    if (confirmation && !global.confirm(translate(confirmation))) {
       return;
     }
 
     button.disabled = true;
     const original = button.textContent;
-    button.textContent = action === "revoke" ? translate("Revoca…") : translate("Invio…");
+    const progressLabels = {
+      resend: "Invio del nuovo link…",
+      revoke: "Revoca…",
+      restore: "Ripristino e invio…",
+      delete: "Eliminazione…"
+    };
+    button.textContent = translate(progressLabels[action] || "Operazione in corso…");
 
     try {
       const response = await fetch(endpoint, {
@@ -165,7 +178,11 @@
           "X-Requested-With": "XMLHttpRequest",
           "X-CSRF-Token": csrfToken()
         },
-        body: JSON.stringify({})
+        body: JSON.stringify(
+          action === "resend" || action === "restore"
+            ? { conferma_condivisione_recapito: true }
+            : {}
+        )
       });
       const data = await parseResponse(response);
       if (!response.ok || data.ok === false) {
@@ -325,6 +342,20 @@
     if (revoke) {
       event.preventDefault();
       postReferenceAction(revoke, "revoke");
+      return;
+    }
+
+    const restore = event.target.closest("[data-reference-restore]");
+    if (restore) {
+      event.preventDefault();
+      postReferenceAction(restore, "restore");
+      return;
+    }
+
+    const remove = event.target.closest("[data-reference-delete]");
+    if (remove) {
+      event.preventDefault();
+      postReferenceAction(remove, "delete");
       return;
     }
 

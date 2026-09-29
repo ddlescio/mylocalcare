@@ -778,7 +778,7 @@
           id="ai-writing-subtitle"
           class="mt-2 text-sm text-slate-600"
         >
-          Puoi scrivere una bozza anche in un’altra lingua: poi ti aiutiamo a migliorarla e, se vuoi, a tradurla in italiano.
+          Scrivi nella lingua che preferisci: la proposta resterà in quella lingua.
         </p>
       </div>
 
@@ -923,19 +923,11 @@
         Scrivi cosa vuoi comunicare su di te e su quello che offri o cerchi. Puoi scrivere in modo semplice: penseremo noi a renderlo più chiaro.
       </div>
 
-      <!-- AZIONE -->
-      <div class="space-y-2">
-        <label for="ai-writing-action" id="ai-writing-action-label" class="text-sm font-bold text-slate-800">
-          Cosa vuoi fare?
-        </label>
-
-        <select
-          id="ai-writing-action"
-          class="w-full border-2 border-slate-200 rounded-2xl p-3 text-slate-900 bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500"
-        >
-          <option value="translate_it" selected>Migliora ora e traduciamo in italiano alla fine</option>
-          <option value="improve">Migliora ora e lasciamo nella tua lingua</option>
-        </select>
+      <div
+        id="ai-writing-translation-note"
+        class="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-900 leading-relaxed"
+      >
+        La proposta resta nella lingua scelta. Nell’annuncio sarà inserita in italiano.
       </div>
 
       <!-- DESCRIZIONE PRIMA DEL TITOLO -->
@@ -1389,8 +1381,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const languageHelp = document.getElementById("ai-writing-language-help");
 
-  const actionSelect = document.getElementById("ai-writing-action");
-  const actionLabel = document.getElementById("ai-writing-action-label");
+  const translationNote = document.getElementById("ai-writing-translation-note");
 
   const aiTitleInput = document.getElementById("ai-writing-title-input");
   const aiDescriptionInput = document.getElementById("ai-writing-description-input");
@@ -1429,16 +1420,11 @@ document.addEventListener("DOMContentLoaded", function () {
   let lastDetectedLanguage = "";
   let lastGeneratedWasMixedText = false;
 
-  let lastUseIntent = {
-    action: "improve",
-    language: "it"
-  };
-
   let texts = {
     it: {
       badge: "Aiuto scrittura",
       title: "Migliora il testo del tuo annuncio",
-      subtitle: "Puoi scrivere un testo anche in un’altra lingua: poi ti aiutiamo a migliorarlo e, se vuoi, a tradurlo in italiano.",
+      subtitle: "Scrivi nella lingua che preferisci: la proposta resterà in quella lingua.",
       languageLabel: "Scegli la tua lingua",
       languageNote: "La guida continuerà nella lingua scelta.",
       warningTitle: "Prima di continuare",
@@ -1447,9 +1433,7 @@ document.addEventListener("DOMContentLoaded", function () {
       cancel: "Annulla",
       continue: "Ho capito, continua",
       help: "Scrivi cosa vuoi comunicare su di te e su quello che offri o cerchi. Puoi scrivere in modo semplice: penseremo noi a renderlo più chiaro.",
-      actionLabel: "Cosa vuoi fare?",
-      improve: "Migliora ora e lasciamo nella tua lingua",
-      translate: "Migliora ora e traduciamo in italiano alla fine",
+      translationNote: "La proposta resta nella lingua scelta. Nell’annuncio sarà inserita in italiano.",
       descriptionLabel: "Descrizione",
       descriptionPlaceholder: "Scrivi qui il tuo testo, anche in modo semplice.",
       titleLabel: "Titolo o idea titolo",
@@ -1584,16 +1568,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (confirmBtn) confirmBtn.textContent = t.continue;
 
     if (languageHelp) languageHelp.textContent = t.help;
-
-    if (actionLabel) actionLabel.textContent = t.actionLabel;
-
-    if (actionSelect) {
-      const improveOption = actionSelect.querySelector('option[value="improve"]');
-      const translateOption = actionSelect.querySelector('option[value="translate_it"]');
-
-      if (improveOption) improveOption.textContent = t.improve;
-      if (translateOption) translateOption.textContent = t.translate;
-    }
+    if (translationNote) translationNote.textContent = t.translationNote;
 
     if (aiDescriptionLabel) aiDescriptionLabel.textContent = t.descriptionLabel;
     if (aiDescriptionInput) aiDescriptionInput.placeholder = t.descriptionPlaceholder;
@@ -1667,10 +1642,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     setProposalMode(false);
     updateAttemptsNote();
-
-    if (actionSelect) {
-      actionSelect.value = "translate_it";
-    }
 
     if (realTitleInput && aiTitleInput) {
       aiTitleInput.value = realTitleInput.value || "";
@@ -1772,18 +1743,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const titolo = (aiTitleInput?.value || "").trim();
       const descrizione = (aiDescriptionInput?.value || "").trim();
-      const selectedAction = actionSelect ? actionSelect.value : "translate_it";
       const selectedLanguage = uiLanguageSelect ? uiLanguageSelect.value : "it";
 
       /*
         IMPORTANTE:
         - "Genera" deve SOLO migliorare il testo nella lingua scelta.
-        - La traduzione in italiano avverrà eventualmente solo quando l'utente clicca "Usa questo testo".
+        - Se la lingua scelta non è italiano, la traduzione avviene solo
+          quando l'utente clicca "Usa questo testo".
       */
       const previewAction = "improve";
-
-      const finalUseAction =
-        selectedLanguage === "it" ? "improve" : selectedAction;
 
       if (!descrizione) {
         alert(t.emptyDescription);
@@ -1814,11 +1782,6 @@ document.addEventListener("DOMContentLoaded", function () {
       lastDraftBeforeProposal = {
         title: titolo,
         description: descrizione
-      };
-
-      lastUseIntent = {
-        action: finalUseAction,
-        language: selectedLanguage
       };
 
       const originalButtonText = generateBtn.textContent;
@@ -1909,16 +1872,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const selectedLanguage = uiLanguageSelect ? uiLanguageSelect.value : "it";
 
-      /*
-        Regola finale:
-        - se l'utente ha scelto "Migliora e traduciamo in italiano alla fine"
-        - e la lingua scelta NON è italiano
-        allora, quando clicca "Usa questo testo", traduciamo in italiano
-        e inseriamo nella scheda principale il testo italiano.
-      */
-      const shouldTranslateBeforeUse =
-        lastUseIntent.action === "translate_it" &&
-        selectedLanguage !== "it";
+      // La proposta resta modificabile nella lingua scelta e viene tradotta
+      // in italiano soltanto quando entra nell'annuncio.
+      const shouldTranslateBeforeUse = selectedLanguage !== "it";
 
       if (!shouldTranslateBeforeUse) {
         if (realTitleInput && titolo) {
