@@ -30,6 +30,18 @@ class ReferenceTranslationsTest(unittest.TestCase):
             "reference.response.consents_help",
             "reference.response.accept_all",
             "reference.response.incomplete_confirm",
+            "reference.response.relationship_question",
+            "reference.response.relationship_help",
+            "reference.response.relationship.family",
+            "reference.response.relationship.employer",
+            "reference.response.relationship.client",
+            "reference.response.relationship.organisation",
+            "reference.response.relationship.other",
+            "reference.invite.relationship_question",
+            "reference.invite.relationship_help",
+            "reference.response.comment_title",
+            "reference.response.comment_help",
+            "reference.response.phone_title",
             "reference.response.phone_label",
             "reference.response.phone_help",
             "reference.response.privacy_identity",
@@ -54,9 +66,9 @@ class ReferenceTranslationsTest(unittest.TestCase):
         self.assertNotIn("email", consent.casefold())
         self.assertIn("telefonicamente", consent)
         self.assertIn("Facoltativo", phone_help)
-        self.assertIn("autorizza anche il ricontatto telefonico", phone_help)
-        self.assertIn("solo da MyLocalCare", phone_help)
-        self.assertIn("non sarà mai mostrato pubblicamente", phone_help)
+        self.assertIn("mai pubblico", phone_help)
+        self.assertIn("più affidabile", phone_help)
+        self.assertIn("seleziona anche l’autorizzazione", phone_help)
         self.assertIn("resteranno riservati", privacy)
         self.assertIn("profilo pubblico", privacy)
 

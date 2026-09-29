@@ -111,8 +111,8 @@
           </div>
 
           <div class="reference-field">
-            <label for="reference-relationship">{{ tr('reference.relationship') }} <span aria-hidden="true">*</span></label>
-            <select id="reference-relationship" name="tipo_rapporto" required>
+            <label for="reference-relationship">{{ tr('reference.invite.relationship_question') }} <span aria-hidden="true">*</span></label>
+            <select id="reference-relationship" name="tipo_rapporto" aria-describedby="reference-invite-relationship-help" required>
               <option value="">{{ tr('reference.relationship.select') }}</option>
               <option value="famiglia">{{ tr('reference.relationship.family') }}</option>
               <option value="datore_lavoro">{{ tr('reference.relationship.employer') }}</option>
@@ -120,6 +120,7 @@
               <option value="struttura">{{ tr('reference.relationship.organisation') }}</option>
               <option value="altro">{{ tr('reference.relationship.other') }}</option>
             </select>
+            <small id="reference-invite-relationship-help">{{ tr('reference.invite.relationship_help') }}</small>
           </div>
 
           <div class="reference-field">
@@ -206,7 +207,7 @@
       {% endif %}
 
       {% for gruppo in gruppi_referenze %}
-      {% if gruppo.get('key') == 'requests' or gruppo.get('items') %}
+      {% if gruppo.get('items') %}
       <section class="reference-list reference-list--{{ gruppo.get('key') }}" aria-labelledby="reference-list-{{ gruppo.get('key') }}-title">
         <div class="reference-list__head">
           <div>
@@ -218,141 +219,46 @@
           {% endif %}
         </div>
 
-        {% if gruppo.get('items') %}
-          <div class="reference-list__items">
+        <div class="reference-list__items">
             {% for referenza in gruppo.get('items') %}
               {% set stato_risposta = referenza.get('stato_risposta') or 'in_attesa' %}
               {% set stato_verifica = referenza.get('stato_verifica') or 'non_verificata' %}
               {% set stato = referenza.get('stato') or ('verificata' if stato_verifica == 'verificata' else stato_risposta) %}
-              <article class="reference-private-card" data-reference-id="{{ referenza.get('id') }}">
-                <div class="reference-private-card__top">
-                  <span class="reference-private-card__icon" aria-hidden="true">🤝</span>
-                  <div class="reference-private-card__copy">
-                    <h4>{{ tr_text(referenza.get('categoria_label') or referenza.get('ambito_servizio')) if (referenza.get('categoria_label') or referenza.get('ambito_servizio')) else tr('reference.professional') }}</h4>
-                    <p>
-                      {% if referenza.get('referente_nome') %}<span data-no-translate>{{ referenza.get('referente_nome') }}</span>{% else %}{{ tr('reference.referee') }}{% endif %}
-                      {% if referenza.get('tipo_rapporto_label') %} · {{ tr_text(referenza.get('tipo_rapporto_label')) }}{% endif %}
-                    </p>
-                  </div>
-                  <span class="reference-status reference-status--{{ stato|replace('_', '-') }}">
-                    {% if stato == 'inviata' %}{{ tr('reference.status.invited') }}
-                    {% elif stato == 'aperta' %}{{ tr('reference.status.opened') }}
-                    {% elif stato == 'errore_invio' %}{{ tr('reference.status.email_failed') }}
-                    {% elif stato == 'risposta_ricevuta' %}{{ tr('reference.status.reply_received') }}
-                    {% elif stato == 'in_verifica' %}{{ tr('reference.status.checking') }}
-                    {% elif stato == 'verificata' %}{{ tr('reference.status.verified_short') }}
-                    {% elif stato == 'non_confermata' %}{{ tr('reference.status.not_confirmed') }}
-                    {% elif stato == 'non_verificabile' %}{{ tr('reference.status.not_verifiable') }}
-                    {% elif stato == 'archiviata' %}{{ tr('reference.status.contact_removed') }}
-                    {% elif stato == 'revocata' %}{{ tr('reference.status.revoked') }}
-                    {% elif stato == 'scaduta' %}{{ tr('reference.status.expired') }}
-                    {% else %}{{ stato|replace('_', ' ')|capitalize }}{% endif %}
-                  </span>
-                </div>
-
-                <dl class="reference-private-card__meta">
-                  {% if referenza.get('periodo_label') %}
-                    <div><dt>{{ tr('reference.period') }}</dt><dd data-no-translate>{{ referenza.get('periodo_label') }}</dd></div>
-                  {% endif %}
-                  {% if referenza.get('inviata_at') %}
-                    <div><dt>{{ tr('reference.invited_on') }}</dt><dd>{{ referenza.get('inviata_at')|fmt_it_date }}</dd></div>
-                  {% endif %}
-                </dl>
-
-                {% if stato_risposta in ['risposta_ricevuta', 'rifiutata'] %}
-                  <details class="reference-private-details">
-                    <summary>
-                      <span>{{ tr('reference.details.open') }}</span>
-                      <span aria-hidden="true">⌄</span>
-                    </summary>
-                    <div class="reference-private-details__body">
-                      <dl class="reference-private-details__grid">
-                        <div>
-                          <dt>{{ tr('reference.relationship') }}</dt>
-                          <dd>{{ tr_text(referenza.get('tipo_rapporto_label')) if referenza.get('tipo_rapporto_label') else '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ tr('reference.period') }}</dt>
-                          <dd data-no-translate>{{ referenza.get('periodo_label') or '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ tr('reference.details.duration') }}</dt>
-                          <dd>{{ tr_text(referenza.get('durata_label')) if referenza.get('durata_label') else '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ tr('reference.details.public_card') }}</dt>
-                          <dd>{{ tr('reference.details.yes') if referenza.get('autorizza_pubblicazione') else tr('reference.details.no') }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ tr('reference.details.public_comment') }}</dt>
-                          <dd>{{ tr('reference.details.yes') if referenza.get('autorizza_testo_pubblico') else tr('reference.details.no') }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ tr('reference.status.checked') }}</dt>
-                          <dd>
-                            {% if stato_verifica == 'verificata' %}{{ tr('reference.status.checked') }}
-                            {% elif stato_verifica == 'non_confermata' %}{{ tr('reference.status.not_confirmed') }}
-                            {% elif stato_verifica == 'non_verificabile' %}{{ tr('reference.status.not_verifiable') }}
-                            {% elif stato_verifica == 'in_coda' %}{{ tr('reference.status.checking') }}
-                            {% else %}{{ tr('reference.status.reply_received') }}{% endif %}
-                          </dd>
-                        </div>
-                      </dl>
-
-                      <div class="reference-private-details__comment">
-                        <strong>{{ tr('reference.details.comment') }}</strong>
-                        {% if referenza.get('testo_referente') %}
-                          <p data-no-translate>{{ referenza.get('testo_referente') }}</p>
-                        {% else %}
-                          <p>{{ tr('reference.details.no_comment') }}</p>
-                        {% endif %}
-                      </div>
-
-                      <div class="reference-private-visibility-state {% if referenza.get('effettivamente_visibile') %}is-visible{% endif %}">
-                        {% if referenza.get('effettivamente_visibile') %}
-                          <strong>{{ tr('reference.approved_for_publication') }}</strong>
-                          <span>{{ tr('reference.show_on_profile') }}</span>
-                        {% elif referenza.get('pubblicazione_approvata_admin') and not referenza.get('visibile_profilo') %}
-                          <strong>{{ tr('reference.hidden_by_you') }}</strong>
-                        {% elif referenza.get('autorizza_pubblicazione') %}
-                          <strong>{{ tr('reference.waiting_admin_approval') }}</strong>
-                        {% else %}
-                          <strong>{{ tr('reference.details.public_card') }}: {{ tr('reference.details.no') }}</strong>
-                        {% endif %}
-                      </div>
+              {% if referenza.get('sezione_privata') == 'ricevuta' %}
+                <article class="reference-private-card reference-private-card--received" data-reference-id="{{ referenza.get('id') }}">
+                  <div class="reference-private-card__top">
+                    <span class="reference-private-card__icon" aria-hidden="true">“</span>
+                    <div class="reference-private-card__copy">
+                      <h4>{{ tr_text(referenza.get('categoria_label') or referenza.get('ambito_servizio')) if (referenza.get('categoria_label') or referenza.get('ambito_servizio')) else tr('reference.professional') }}</h4>
+                      <p>
+                        {% if referenza.get('referente_nome') %}<span data-no-translate>{{ referenza.get('referente_nome') }}</span>{% else %}{{ tr('reference.referee') }}{% endif %}
+                        {% if referenza.get('tipo_rapporto_label') %} · {{ tr_text(referenza.get('tipo_rapporto_label')) }}{% endif %}
+                      </p>
                     </div>
-                  </details>
-                {% endif %}
-
-                {% if referenza.get('ultimo_errore_invio') and stato == 'errore_invio' %}
-                  <p class="reference-message reference-message--error" role="alert">
-                    {{ tr('reference.status.email_failed_help') }}
-                  </p>
-                {% endif %}
-
-                {% if stato == 'revocata' %}
-                  <div class="reference-private-card__actions">
-                    <button
-                      type="button"
-                      class="reference-secondary-button"
-                      data-reference-restore
-                      data-endpoint="{{ url_for('api_referenza_ripristina', referenza_id=referenza.get('id')) }}">
-                      {{ tr('reference.restore_and_resend') }}
-                    </button>
-                    <button
-                      type="button"
-                      class="reference-danger-button"
-                      data-reference-delete
-                      data-reference-delete-kind="request"
-                      data-version="{{ referenza.get('versione') or 1 }}"
-                      data-endpoint="{{ url_for('api_referenza_elimina', referenza_id=referenza.get('id')) }}">
-                      {{ tr('reference.delete_request') }}
-                    </button>
+                    {% if stato_verifica == 'verificata' %}
+                      <span class="reference-status reference-status--verified">✓ {{ tr('reference.status.verified_short') }}</span>
+                    {% endif %}
                   </div>
-                {% else %}
-                  <div class="reference-private-card__actions">
-                    {% if stato_risposta == 'risposta_ricevuta'
-                          and referenza.get('autorizza_pubblicazione')
+
+                  {% if referenza.get('testo_referente') %}
+                    <blockquote class="reference-private-card__quote" data-no-translate>
+                      {{ referenza.get('testo_referente') }}
+                    </blockquote>
+                  {% else %}
+                    <p class="reference-private-card__quote reference-private-card__quote--empty">{{ tr('reference.details.no_comment') }}</p>
+                  {% endif %}
+
+                  <dl class="reference-private-card__facts">
+                    {% if referenza.get('periodo_label') %}
+                      <div><dt>{{ tr('reference.period') }}</dt><dd data-no-translate>{{ referenza.get('periodo_label') }}</dd></div>
+                    {% endif %}
+                    {% if referenza.get('durata_label') %}
+                      <div><dt>{{ tr('reference.details.duration') }}</dt><dd>{{ tr_text(referenza.get('durata_label')) }}</dd></div>
+                    {% endif %}
+                  </dl>
+
+                  <div class="reference-private-card__actions reference-private-card__actions--received">
+                    {% if referenza.get('autorizza_pubblicazione')
                           and referenza.get('pubblicazione_approvata_admin')
                           and stato_verifica not in ['non_confermata', 'revocata'] %}
                       <button
@@ -369,45 +275,100 @@
                         {% endif %}
                       </button>
                     {% endif %}
-                    {% if referenza.get('sezione_privata') == 'ricevuta' %}
+                    <button
+                      type="button"
+                      class="reference-danger-button"
+                      data-reference-delete
+                      data-reference-delete-kind="reference"
+                      data-version="{{ referenza.get('versione') or 1 }}"
+                      data-endpoint="{{ url_for('api_referenza_elimina', referenza_id=referenza.get('id')) }}">
+                      {{ tr('reference.delete_reference') }}
+                    </button>
+                  </div>
+                </article>
+              {% else %}
+                <article class="reference-private-card reference-private-card--request" data-reference-id="{{ referenza.get('id') }}">
+                  <div class="reference-private-card__top">
+                    <span class="reference-private-card__icon" aria-hidden="true">✉️</span>
+                    <div class="reference-private-card__copy">
+                      <h4>{{ tr_text(referenza.get('categoria_label') or referenza.get('ambito_servizio')) if (referenza.get('categoria_label') or referenza.get('ambito_servizio')) else tr('reference.professional') }}</h4>
+                      <p>
+                        {% if referenza.get('referente_nome') %}<span data-no-translate>{{ referenza.get('referente_nome') }}</span>{% else %}{{ tr('reference.referee') }}{% endif %}
+                        {% if referenza.get('tipo_rapporto_label') %} · {{ tr_text(referenza.get('tipo_rapporto_label')) }}{% endif %}
+                      </p>
+                    </div>
+                    <span class="reference-status reference-status--{{ stato|replace('_', '-') }}">
+                      {% if stato == 'inviata' %}{{ tr('reference.status.invited') }}
+                      {% elif stato == 'aperta' %}{{ tr('reference.status.opened') }}
+                      {% elif stato == 'errore_invio' %}{{ tr('reference.status.email_failed') }}
+                      {% elif stato == 'risposta_ricevuta' %}{{ tr('reference.status.reply_received') }}
+                      {% elif stato == 'in_verifica' %}{{ tr('reference.status.checking') }}
+                      {% elif stato == 'non_confermata' %}{{ tr('reference.status.not_confirmed') }}
+                      {% elif stato == 'archiviata' %}{{ tr('reference.status.contact_removed') }}
+                      {% elif stato == 'revocata' %}{{ tr('reference.status.revoked') }}
+                      {% elif stato == 'scaduta' %}{{ tr('reference.status.expired') }}
+                      {% else %}{{ stato|replace('_', ' ')|capitalize }}{% endif %}
+                    </span>
+                  </div>
+
+                  <dl class="reference-private-card__meta">
+                    {% if referenza.get('periodo_label') %}
+                      <div><dt>{{ tr('reference.period') }}</dt><dd data-no-translate>{{ referenza.get('periodo_label') }}</dd></div>
+                    {% endif %}
+                    {% if referenza.get('inviata_at') %}
+                      <div><dt>{{ tr('reference.invited_on') }}</dt><dd>{{ referenza.get('inviata_at')|fmt_it_date }}</dd></div>
+                    {% endif %}
+                  </dl>
+
+                  {% if referenza.get('ultimo_errore_invio') and stato == 'errore_invio' %}
+                    <p class="reference-message reference-message--error" role="alert">
+                      {{ tr('reference.status.email_failed_help') }}
+                    </p>
+                  {% endif %}
+
+                  {% if stato == 'revocata' %}
+                    <div class="reference-private-card__actions">
+                      <button
+                        type="button"
+                        class="reference-secondary-button"
+                        data-reference-restore
+                        data-endpoint="{{ url_for('api_referenza_ripristina', referenza_id=referenza.get('id')) }}">
+                        {{ tr('reference.restore_and_resend') }}
+                      </button>
                       <button
                         type="button"
                         class="reference-danger-button"
                         data-reference-delete
-                        data-reference-delete-kind="reference"
+                        data-reference-delete-kind="request"
                         data-version="{{ referenza.get('versione') or 1 }}"
                         data-endpoint="{{ url_for('api_referenza_elimina', referenza_id=referenza.get('id')) }}">
-                        {{ tr('reference.delete_reference') }}
+                        {{ tr('reference.delete_request') }}
                       </button>
-                    {% endif %}
-                    {% if stato in ['inviata', 'aperta', 'scaduta', 'errore_invio'] %}
+                    </div>
+                  {% else %}
+                    <div class="reference-private-card__actions">
+                      {% if stato in ['inviata', 'aperta', 'scaduta', 'errore_invio'] %}
+                        <button
+                          type="button"
+                          class="reference-secondary-button"
+                          data-reference-resend
+                          data-endpoint="{{ url_for('api_referenza_reinvia', referenza_id=referenza.get('id')) }}">
+                          {{ tr('reference.send_new_link') }}
+                        </button>
+                      {% endif %}
                       <button
                         type="button"
-                        class="reference-secondary-button"
-                        data-reference-resend
-                        data-endpoint="{{ url_for('api_referenza_reinvia', referenza_id=referenza.get('id')) }}">
-                        {{ tr('reference.send_new_link') }}
+                        class="reference-danger-button"
+                        data-reference-revoke
+                        data-endpoint="{{ url_for('api_referenza_revoca', referenza_id=referenza.get('id')) }}">
+                        {{ tr('reference.revoke') }}
                       </button>
-                    {% endif %}
-                    <button
-                      type="button"
-                      class="reference-danger-button"
-                      data-reference-revoke
-                      data-endpoint="{{ url_for('api_referenza_revoca', referenza_id=referenza.get('id')) }}">
-                      {{ tr('reference.revoke') }}
-                    </button>
-                  </div>
-                {% endif %}
-              </article>
+                    </div>
+                  {% endif %}
+                </article>
+              {% endif %}
             {% endfor %}
-          </div>
-        {% else %}
-          <div class="reference-empty-state">
-            <span aria-hidden="true">✉️</span>
-            <strong>{{ tr('reference.empty.title') }}</strong>
-            <p>{{ tr('reference.empty.body') }}</p>
-          </div>
-        {% endif %}
+        </div>
       </section>
       {% endif %}
       {% endfor %}

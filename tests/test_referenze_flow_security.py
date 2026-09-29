@@ -76,21 +76,23 @@ def load_reference_bootstrap(connect):
 
 
 class ReferenceFlowSecuritySourceTest(unittest.TestCase):
-    def test_verified_reference_moves_out_of_sent_requests(self):
+    def test_completed_reference_moves_out_of_sent_requests(self):
         classify = load_function("_referenza_private_section", {})
 
-        self.assertEqual(
-            classify({
-                "stato_risposta": "risposta_ricevuta",
-                "stato_verifica": "verificata",
-                "pubblicazione_approvata_admin": 0,
-                "visibile_profilo": 0,
-                "revocata_at": None,
-                "cancellata_at": None,
-            }),
-            "ricevuta",
-        )
-        for state in ("non_esaminata", "in_coda", "non_verificabile", "non_confermata"):
+        for state in ("verificata", "non_verificabile"):
+            with self.subTest(state=state):
+                self.assertEqual(
+                    classify({
+                        "stato_risposta": "risposta_ricevuta",
+                        "stato_verifica": state,
+                        "pubblicazione_approvata_admin": 0,
+                        "visibile_profilo": 0,
+                        "revocata_at": None,
+                        "cancellata_at": None,
+                    }),
+                    "ricevuta",
+                )
+        for state in ("non_esaminata", "in_coda", "non_confermata"):
             with self.subTest(state=state):
                 self.assertEqual(
                     classify({
@@ -272,7 +274,8 @@ class ReferenceFlowSecuritySourceTest(unittest.TestCase):
     def test_delete_is_soft_delete_with_immediate_contact_purge(self):
         delete = function_source("api_referenza_elimina")
         self.assertIn('row["stato_risposta"] == "revocata"', delete)
-        self.assertIn('row["stato_verifica"] == "verificata"', delete)
+        self.assertIn('row["stato_verifica"] in {', delete)
+        self.assertIn('"verificata", "non_verificabile"', delete)
         self.assertIn('expected_version = int(payload.get("versione")', delete)
         self.assertIn("AND versione = ?", delete)
         self.assertIn("stato_risposta = 'cancellata'", delete)

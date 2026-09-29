@@ -66,6 +66,7 @@
           method="post"
           action="{{ url_for('referenza_rispondi') }}"
           data-reference-response-form
+          data-reference-sending-label="{{ tr('reference.js.sending') }}"
           data-reference-incomplete-confirm="{{ tr('reference.response.incomplete_confirm') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -83,6 +84,29 @@
             </div>
           </fieldset>
 
+          <section class="reference-response-story reference-field--wide" aria-labelledby="reference-response-story-title">
+            <div class="reference-response-story__head">
+              <span class="reference-response-story__icon" aria-hidden="true">“</span>
+              <div>
+                <p>{{ tr('reference.response.comment_kicker') }}</p>
+                <h2 id="reference-response-story-title">{{ tr('reference.response.comment_title') }}</h2>
+              </div>
+            </div>
+            <p class="reference-response-story__help">{{ tr('reference.response.comment_help') }}</p>
+            <div class="reference-field">
+              <label for="reference-response-comment">{{ tr('reference.response.comment') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
+              <textarea
+                id="reference-response-comment"
+                name="testo_referente"
+                rows="6"
+                maxlength="1500"
+                placeholder="{{ tr('reference.response.comment_placeholder') }}"
+                data-reference-counted
+                data-no-translate></textarea>
+              <small><span data-reference-character-count>0</span>/1500 {{ tr('reference.characters') }}</small>
+            </div>
+          </section>
+
           <div class="reference-field">
             <label for="reference-response-scope">{{ tr('reference.scope') }}</label>
             {% set categoria = referenza.get('categoria_slug') or '' %}
@@ -96,15 +120,21 @@
           </div>
 
           <div class="reference-field">
-            <label for="reference-response-relationship">{{ tr('reference.relationship') }}</label>
-            <select id="reference-response-relationship" name="tipo_rapporto">
+            <label for="reference-response-relationship">{{ tr('reference.response.relationship_question') }}</label>
+            <select
+              id="reference-response-relationship"
+              name="tipo_rapporto"
+              aria-describedby="reference-response-relationship-help"
+              required>
               {% set rapporto = referenza.get('tipo_rapporto') or '' %}
-              <option value="famiglia" {% if rapporto == 'famiglia' %}selected{% endif %}>{{ tr('reference.relationship.family') }}</option>
-              <option value="datore_lavoro" {% if rapporto == 'datore_lavoro' %}selected{% endif %}>{{ tr('reference.relationship.employer') }}</option>
-              <option value="cliente" {% if rapporto == 'cliente' %}selected{% endif %}>{{ tr('reference.relationship.client') }}</option>
-              <option value="struttura" {% if rapporto == 'struttura' %}selected{% endif %}>{{ tr('reference.relationship.organisation') }}</option>
-              <option value="altro" {% if rapporto == 'altro' %}selected{% endif %}>{{ tr('reference.relationship.other') }}</option>
+              <option value="" {% if not rapporto %}selected{% endif %}>{{ tr('reference.relationship.select') }}</option>
+              <option value="famiglia" {% if rapporto == 'famiglia' %}selected{% endif %}>{{ tr('reference.response.relationship.family') }}</option>
+              <option value="datore_lavoro" {% if rapporto == 'datore_lavoro' %}selected{% endif %}>{{ tr('reference.response.relationship.employer') }}</option>
+              <option value="cliente" {% if rapporto == 'cliente' %}selected{% endif %}>{{ tr('reference.response.relationship.client') }}</option>
+              <option value="struttura" {% if rapporto == 'struttura' %}selected{% endif %}>{{ tr('reference.response.relationship.organisation') }}</option>
+              <option value="altro" {% if rapporto == 'altro' %}selected{% endif %}>{{ tr('reference.response.relationship.other') }}</option>
             </select>
+            <small id="reference-response-relationship-help">{{ tr('reference.response.relationship_help') }}</small>
           </div>
 
           <div class="reference-field">
@@ -145,17 +175,29 @@
             </select>
           </div>
 
-          <div class="reference-field reference-field--wide">
-            <label for="reference-response-comment">{{ tr('reference.response.comment') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
-            <textarea
-              id="reference-response-comment"
-              name="testo_referente"
-              rows="5"
-              maxlength="1500"
-              placeholder="{{ tr('reference.response.comment_placeholder') }}"
-              data-reference-counted
-              data-no-translate></textarea>
-            <small><span data-reference-character-count>0</span>/1500 {{ tr('reference.characters') }}</small>
+          <div
+            id="reference-response-contact-details"
+            class="reference-field reference-contact-details reference-response-phone reference-field--wide"
+            data-reference-contact-details>
+            <div class="reference-response-phone__head">
+              <span aria-hidden="true">📞</span>
+              <strong>{{ tr('reference.response.phone_title') }}</strong>
+            </div>
+            <label for="reference-response-phone">
+              {{ tr('reference.response.phone_label') }}
+              <span class="reference-optional">{{ tr('reference.optional') }}</span>
+            </label>
+            <input
+              id="reference-response-phone"
+              name="referente_telefono"
+              type="tel"
+              inputmode="tel"
+              autocomplete="tel"
+              maxlength="40"
+              aria-describedby="reference-response-phone-help"
+              placeholder="+39 333 123 4567"
+              data-no-translate>
+            <small id="reference-response-phone-help">{{ tr('reference.response.phone_help') }}</small>
           </div>
 
           <aside class="reference-response-privacy" aria-labelledby="reference-response-privacy-title">
@@ -194,39 +236,17 @@
               <span>{{ tr('reference.response.processing_consent') }}</span>
             </label>
 
-            <div class="reference-contact-consent">
-              <div
-                id="reference-response-contact-details"
-                class="reference-field reference-contact-details"
-                data-reference-contact-details>
-                <label for="reference-response-phone">
-                  {{ tr('reference.response.phone_label') }}
-                  <span class="reference-optional">{{ tr('reference.optional') }}</span>
-                </label>
-                <input
-                  id="reference-response-phone"
-                  name="referente_telefono"
-                  type="tel"
-                  inputmode="tel"
-                  autocomplete="tel"
-                  maxlength="40"
-                  aria-describedby="reference-response-phone-help"
-                  placeholder="+39 333 123 4567"
-                  data-no-translate>
-                <small id="reference-response-phone-help">{{ tr('reference.response.phone_help') }}</small>
-              </div>
-              <label class="reference-consent">
-                <input
-                  id="reference-response-contact-consent"
-                  type="checkbox"
-                  name="consenso_contatto"
-                  value="1"
-                  aria-controls="reference-response-contact-details"
-                  data-reference-contact-consent
-                  data-reference-consent-option>
-                <span>{{ tr('reference.response.contact_consent') }}</span>
-              </label>
-            </div>
+            <label class="reference-consent">
+              <input
+                id="reference-response-contact-consent"
+                type="checkbox"
+                name="consenso_contatto"
+                value="1"
+                aria-controls="reference-response-contact-details"
+                data-reference-contact-consent
+                data-reference-consent-option>
+              <span>{{ tr('reference.response.contact_consent') }}</span>
+            </label>
 
             <label class="reference-consent">
               <input

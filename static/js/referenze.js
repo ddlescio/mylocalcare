@@ -247,16 +247,6 @@
     }
   }
 
-  function openPublicDetails(trigger) {
-    const dialog = document.getElementById("reference-public-dialog");
-    const content = document.getElementById("reference-public-dialog-content");
-    const template = document.getElementById(trigger.dataset.referencePublicOpen || "");
-    if (!dialog || !content || !template || template.tagName !== "TEMPLATE") return;
-
-    content.replaceChildren(template.content.cloneNode(true));
-    openDialog(dialog, trigger);
-  }
-
   function updateCounters(root) {
     root.querySelectorAll("[data-reference-counted]").forEach((field) => {
       const counter = field.parentElement?.querySelector("[data-reference-character-count]");
@@ -327,20 +317,6 @@
       return;
     }
 
-    const publicTrigger = event.target.closest("[data-reference-public-open]");
-    if (publicTrigger) {
-      event.preventDefault();
-      openPublicDetails(publicTrigger);
-      return;
-    }
-
-    const publicClose = event.target.closest("[data-reference-public-close]");
-    if (publicClose) {
-      event.preventDefault();
-      closeDialog(publicClose.closest(".reference-dialog"));
-      return;
-    }
-
     const resend = event.target.closest("[data-reference-resend]");
     if (resend) {
       event.preventDefault();
@@ -388,6 +364,10 @@
   document.addEventListener("submit", (event) => {
     const responseForm = event.target.closest("[data-reference-response-form]");
     if (responseForm) {
+      if (responseForm.dataset.referenceSubmitting === "1") {
+        event.preventDefault();
+        return;
+      }
       const missingConsent = enabledConsentOptions(responseForm).some(
         (input) => !input.checked
       );
@@ -395,7 +375,22 @@
         const message = responseForm.dataset.referenceIncompleteConfirm || "";
         if (!global.confirm(message)) {
           event.preventDefault();
+          return;
         }
+      }
+
+      // Il link personale è monouso: su mobile un doppio tap non deve
+      // generare due POST concorrenti, con il secondo che trova il token già
+      // consumato. Lasciamo il submit nativo, ma blocchiamo ulteriori invii.
+      responseForm.dataset.referenceSubmitting = "1";
+      responseForm.setAttribute("aria-busy", "true");
+      const submitButton = responseForm.querySelector("button[type='submit']");
+      if (submitButton) {
+        submitButton.dataset.originalLabel = submitButton.textContent;
+        submitButton.textContent = (
+          responseForm.dataset.referenceSendingLabel || "Invio in corso…"
+        );
+        submitButton.disabled = true;
       }
       return;
     }
@@ -432,6 +427,20 @@
     const responseForm = document.querySelector("[data-reference-response-form]");
     updateDirectExperienceState(responseForm);
     updateContactConsentState(responseForm);
+  });
+
+  global.addEventListener("pageshow", () => {
+    const responseForm = document.querySelector("[data-reference-response-form]");
+    if (!responseForm) return;
+    delete responseForm.dataset.referenceSubmitting;
+    responseForm.removeAttribute("aria-busy");
+    const submitButton = responseForm.querySelector("button[type='submit']");
+    if (submitButton) {
+      submitButton.disabled = false;
+      if (submitButton.dataset.originalLabel) {
+        submitButton.textContent = submitButton.dataset.originalLabel;
+      }
+    }
   });
 
   global.MyLocalCareReferences = {

@@ -313,21 +313,37 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn('href="/nuovo_annuncio"', rendered)
         self.assertNotIn('id="reference-invite-form"', rendered)
 
-    def test_owner_sees_full_details_and_controls_approved_visibility(self):
+    def test_owner_received_reference_is_a_content_first_premium_card(self):
         for marker in (
-            "reference.details.open",
-            "reference.details.duration",
-            "reference.details.comment",
+            "reference-private-card--received",
+            "reference-private-card__quote",
             "referenza.get('testo_referente')",
-            "reference.details.public_card",
-            "reference.details.public_comment",
-            "reference.waiting_admin_approval",
-            "reference.hidden_by_you",
+            "reference-private-card__actions--received",
             "data-reference-visibility",
             "api_referenza_visibilita",
             "data-version=",
         ):
             self.assertIn(marker, self.private_source)
+
+        self.assertNotIn("reference.details.public_card", self.private_source)
+        self.assertNotIn("reference.details.public_comment", self.private_source)
+        self.assertNotIn("reference.status.not_verifiable", self.private_source)
+        self.assertNotIn(
+            "gruppo.get('key') == 'requests' or gruppo.get('items')",
+            self.private_source,
+        )
+
+        comment_position = self.private_source.index(
+            "referenza.get('testo_referente')"
+        )
+        metadata_position = self.private_source.index(
+            "reference-private-card__meta"
+        )
+        actions_position = self.private_source.index(
+            "reference-private-card__actions--received"
+        )
+        self.assertLess(comment_position, metadata_position)
+        self.assertLess(comment_position, actions_position)
 
         for marker in (
             "postReferenceVisibility",
@@ -336,6 +352,67 @@ class ReferenzeUiTest(unittest.TestCase):
             "[data-reference-visibility]",
         ):
             self.assertIn(marker, self.script_source)
+
+    def test_received_reference_shows_verification_badge_only_when_verified(self):
+        template = self.environment.get_template(
+            "partials/referenze_dialog.html"
+        )
+        common = {
+            "categoria_label": "Babysitter",
+            "stato_risposta": "risposta_ricevuta",
+            "stato": "risposta_ricevuta",
+            "sezione_privata": "ricevuta",
+            "testo_referente": "Persona puntuale, affidabile e molto attenta.",
+            "versione": 1,
+        }
+        render_kwargs = {
+            "categorie_referenze": [],
+            "csrf_token": lambda: "csrf-test",
+            "url_for": lambda endpoint, **kwargs: (
+                f"/static/{kwargs['filename']}"
+                if endpoint == "static"
+                else f"/{endpoint}/{kwargs.get('referenza_id', '')}".rstrip("/")
+            ),
+        }
+
+        unverified = template.render(
+            referenze_private=[{
+                **common,
+                "id": 31,
+                "stato_verifica": "non_verificabile",
+            }],
+            **render_kwargs,
+        )
+        verified = template.render(
+            referenze_private=[{
+                **common,
+                "id": 32,
+                "stato_verifica": "verificata",
+                "stato": "verificata",
+            }],
+            **render_kwargs,
+        )
+
+        self.assertNotIn("reference.status.not_verifiable", unverified)
+        self.assertNotIn("reference-status--verified", unverified)
+        self.assertNotIn('<details class="reference-private-details"', unverified)
+        self.assertIn("reference-status--verified", verified)
+        self.assertIn("reference.status.verified_short", verified)
+
+    def test_received_reference_actions_share_one_aligned_row(self):
+        self.assertIn(
+            ".reference-private-card__actions--received",
+            self.style_source,
+        )
+        actions_css = self.style_source.split(
+            ".reference-private-card__actions--received", 1
+        )[1].split("}", 1)[0]
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", actions_css)
+
+        visibility_css = self.style_source.split(
+            ".reference-visibility-button", 1
+        )[1].split("}", 1)[0]
+        self.assertNotIn("grid-column: 1 / -1", visibility_css)
 
     def test_duration_enum_matches_domain(self):
         expected = {
@@ -394,7 +471,16 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn("data-reference-accept-all", self.response_source)
         self.assertIn("reference.response.accept_all", self.response_source)
         self.assertIn("data-reference-incomplete-confirm", self.response_source)
+        self.assertIn("data-reference-sending-label", self.response_source)
         self.assertEqual(self.response_source.count('name="csrf_token"'), 1)
+        self.assertIn(
+            'responseForm.dataset.referenceSubmitting === "1"',
+            self.script_source,
+        )
+        self.assertIn(
+            'responseForm.setAttribute("aria-busy", "true")',
+            self.script_source,
+        )
 
     def test_response_categories_come_from_the_current_service_catalog(self):
         self.assertIn(
@@ -403,6 +489,56 @@ class ReferenzeUiTest(unittest.TestCase):
         )
         self.assertNotIn('<option value="operatori-benessere"', self.response_source)
 
+    def test_relationship_selector_explains_whose_role_is_requested(self):
+        self.assertIn(
+            "reference.response.relationship_question",
+            self.response_source,
+        )
+        self.assertIn(
+            "reference.response.relationship_help",
+            self.response_source,
+        )
+        relationship_select = self.response_source.split(
+            'id="reference-response-relationship"', 1
+        )[1].split("</select>", 1)[0]
+        self.assertIn("reference.relationship.select", relationship_select)
+        self.assertIn('value=""', relationship_select)
+        self.assertIn("required", relationship_select)
+        for option_key in (
+            "reference.response.relationship.family",
+            "reference.response.relationship.employer",
+            "reference.response.relationship.client",
+            "reference.response.relationship.organisation",
+            "reference.response.relationship.other",
+        ):
+            self.assertIn(option_key, relationship_select)
+
+    def test_external_response_prioritises_story_and_explains_optional_phone(self):
+        for marker in (
+            "reference-response-story",
+            "reference.response.comment_kicker",
+            "reference.response.comment_title",
+            "reference.response.comment_help",
+            "reference-response-phone",
+            "reference.response.phone_title",
+        ):
+            self.assertIn(marker, self.response_source)
+
+        self.assertLess(
+            self.response_source.index('name="testo_referente"'),
+            self.response_source.index('name="categoria_slug"'),
+        )
+        self.assertLess(
+            self.response_source.index('name="referente_telefono"'),
+            self.response_source.index('name="consenso_trattamento"'),
+        )
+
+        story_css = self.style_source.split(
+            ".reference-response-story {", 1
+        )[1].split("}", 1)[0]
+        self.assertIn("linear-gradient", story_css)
+        self.assertIn("box-shadow", story_css)
+
     def test_public_partial_exposes_only_public_serializer_fields(self):
         for key in (
             "categoria_slug",
@@ -410,7 +546,6 @@ class ReferenzeUiTest(unittest.TestCase):
             "tipo_rapporto_label",
             "periodo_label",
             "durata_label",
-            "stato_label",
             "testo_referente_pubblico",
             "verificata",
         ):
@@ -424,16 +559,83 @@ class ReferenzeUiTest(unittest.TestCase):
         ):
             self.assertNotIn(private_key, self.public_source)
 
-        self.assertIn("reference.public.authorised_info", self.public_source)
         self.assertIn("reference.public.declared_by_referee", self.public_source)
         self.assertIn("reference.public.limited_check", self.public_source)
         self.assertIn("reference.public.disclaimer", self.public_source)
         self.assertNotIn("Rapporto confermato da MyLocalCare", self.public_source)
         self.assertNotIn("Esperienze confermate direttamente", self.public_source)
-        self.assertIn('data-reference-public-open=', self.public_source)
-        self.assertIn('aria-haspopup="dialog"', self.public_source)
+        self.assertNotIn("reference.status.not_verifiable", self.public_source)
 
-    def test_dialogs_are_mobile_first_and_accessible(self):
+    def test_public_references_are_inline_content_first_social_cards(self):
+        for marker in (
+            "reference-social-card",
+            "reference-social-card__quote",
+            "referenza.get('testo_referente_pubblico')",
+        ):
+            self.assertIn(marker, self.public_source)
+
+        for obsolete_popup_marker in (
+            "data-reference-public-open",
+            'aria-haspopup="dialog"',
+            "reference-public-dialog",
+            "<template",
+            'role="dialog"',
+        ):
+            self.assertNotIn(obsolete_popup_marker, self.public_source)
+
+        self.assertIn(
+            ".reference-social-card__quote--empty::before",
+            self.style_source,
+        )
+        self.assertIn("content: none;", self.style_source)
+
+        comment_position = self.public_source.index(
+            "referenza.get('testo_referente_pubblico')"
+        )
+        relationship_position = self.public_source.index(
+            "referenza.get('tipo_rapporto_label')"
+        )
+        self.assertLess(comment_position, relationship_position)
+
+    def test_public_card_shows_verified_badge_only_for_verified_reference(self):
+        template = self.environment.get_template(
+            "partials/referenze_pubbliche.html"
+        )
+        common = {
+            "categoria_slug": "babysitter",
+            "categoria_label": "Babysitter",
+            "tipo_rapporto_label": "Famiglia",
+            "periodo_label": "2025",
+            "durata_label": "6–12 mesi",
+            "testo_referente_pubblico": "Un aiuto affidabile per tutta la famiglia.",
+        }
+        render_kwargs = {
+            "url_for": lambda endpoint, **kwargs: f"/static/{kwargs['filename']}",
+        }
+
+        unverified = template.render(
+            referenze_pubbliche=[{
+                **common,
+                "verificata": False,
+                "stato_label": "Non verificabile",
+            }],
+            **render_kwargs,
+        )
+        verified = template.render(
+            referenze_pubbliche=[{
+                **common,
+                "verificata": True,
+                "stato_label": "Verificata",
+            }],
+            **render_kwargs,
+        )
+
+        self.assertNotIn("Non verificabile", unverified)
+        self.assertNotIn("reference-social-card__verified", unverified)
+        self.assertIn("reference-social-card__verified", verified)
+        self.assertIn("reference.status.verified_short", verified)
+
+    def test_reference_management_is_mobile_first_and_accessible(self):
         for marker in (
             'aria-labelledby="reference-manager-title"',
             'role="alert"',
@@ -441,20 +643,7 @@ class ReferenzeUiTest(unittest.TestCase):
         ):
             self.assertIn(marker, self.private_source)
 
-        self.assertIn('role="dialog"', self.public_source)
-        self.assertIn('aria-modal="true"', self.public_source)
-
-        for marker in (
-            'event.key === "Escape"',
-            'event.key !== "Tab"',
-            'classList.add("reference-dialog-open")',
-            "returnFocusTo.focus",
-            "template.content.cloneNode(true)",
-        ):
-            self.assertIn(marker, self.script_source)
-
-        self.assertIn("max-height: 92vh;", self.style_source)
-        self.assertIn("max-height: min(92dvh, 58rem);", self.style_source)
+        self.assertNotIn("template.content.cloneNode(true)", self.script_source)
         self.assertIn("@media (min-width: 520px)", self.style_source)
         self.assertIn("min-height: 2.75rem", self.style_source)
 

@@ -6833,27 +6833,25 @@ def admin_referenza_verifica(referenza_id):
                 "reference.notification.not_confirmed", owner_language,
                 category=category_label,
             ),
-            "non_verificabile": translate(
-                "reference.notification.not_verifiable", owner_language,
-                category=category_label,
-            ),
         }
-        try:
-            _crea_notifica(
-                owner_id,
-                translate("reference.notification.title", owner_language),
-                messages[decision["stato"]],
-                tipo="profilo",
-                link=url_for("dashboard") + "#referenze",
-            )
-            emit_update_notifications(owner_id)
-        except Exception as notification_exc:
-            log_exception_safe(
-                "Esito referenza salvato ma notifica utente non inviata",
-                notification_exc,
-                {"referenza_id": referenza_id, "utente_id": owner_id},
-                production=True,
-            )
+        notification_message = messages.get(decision["stato"])
+        if notification_message:
+            try:
+                _crea_notifica(
+                    owner_id,
+                    translate("reference.notification.title", owner_language),
+                    notification_message,
+                    tipo="profilo",
+                    link=url_for("dashboard") + "#referenze",
+                )
+                emit_update_notifications(owner_id)
+            except Exception as notification_exc:
+                log_exception_safe(
+                    "Esito referenza salvato ma notifica utente non inviata",
+                    notification_exc,
+                    {"referenza_id": referenza_id, "utente_id": owner_id},
+                    production=True,
+                )
         flash("Esito della referenza registrato.", "success")
 
     except ValueError as exc:
@@ -18079,15 +18077,16 @@ def _referenza_private_section(row):
     """Separa gli inviti dalla referenze effettivamente ricevute.
 
     Una risposta resta nella cronologia delle richieste finche MyLocalCare non
-    l'ha verificata. Dopo l'esito positivo dell'admin diventa invece una
-    referenza ricevuta, anche quando il referente non ne ha autorizzato la
-    pubblicazione o il proprietario ha scelto di non mostrarla nel profilo.
+    conclude la revisione. Sia l'esito ``verificata`` sia l'esito interno
+    ``non_verificabile`` rappresentano comunque una referenza ricevuta. Il
+    secondo esito serve alla sola gestione admin e non deve trasformare la
+    testimonianza in una richiesta ancora pendente nell'interfaccia utente.
     """
 
     item = dict(row or {})
     is_received = bool(
         item.get("stato_risposta") == "risposta_ricevuta"
-        and item.get("stato_verifica") == "verificata"
+        and item.get("stato_verifica") in {"verificata", "non_verificabile"}
         and not item.get("revocata_at")
         and not item.get("cancellata_at")
     )
@@ -21519,7 +21518,7 @@ def api_referenza_ripristina(referenza_id):
 )
 @login_required
 def api_referenza_elimina(referenza_id):
-    """Elimina una richiesta revocata o una referenza ricevuta verificata.
+    """Elimina una richiesta revocata o una referenza ricevuta conclusa.
 
     Il record minimo e gli eventi restano disponibili per audit, mentre dati
     pubblici, consensi e recapiti cifrati vengono rimossi nella stessa
@@ -21566,7 +21565,9 @@ def api_referenza_elimina(referenza_id):
         is_revoked_request = row["stato_risposta"] == "revocata"
         is_received_reference = bool(
             row["stato_risposta"] == "risposta_ricevuta"
-            and row["stato_verifica"] == "verificata"
+            and row["stato_verifica"] in {
+                "verificata", "non_verificabile",
+            }
         )
         if not (is_revoked_request or is_received_reference):
             _schede_profilo_rollback(cur)
@@ -21574,7 +21575,7 @@ def api_referenza_elimina(referenza_id):
                 "ok": False,
                 "message": _referenza_ui_message(
                     "Puoi eliminare soltanto una richiesta revocata o una "
-                    "referenza verificata.",
+                    "referenza ricevuta.",
                     language,
                 ),
             }), 409
@@ -21620,7 +21621,7 @@ def api_referenza_elimina(referenza_id):
                     stato_risposta = 'revocata'
                     OR (
                         stato_risposta = 'risposta_ricevuta'
-                        AND stato_verifica = 'verificata'
+                        AND stato_verifica IN ('verificata', 'non_verificabile')
                     )
               )
         """), (int(referenza_id), user_id, expected_version))

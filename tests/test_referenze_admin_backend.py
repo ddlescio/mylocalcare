@@ -652,6 +652,12 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
             tuple(updated),
             ("non_verificabile", "nessuno", 3),
         )
+        self.assertEqual(
+            self.notifications,
+            [],
+            "L'esito interno non verificabile non deve essere mostrato "
+            "all'utente tramite notifica.",
+        )
 
 
 class ReferenzeAdminRouteContractTest(unittest.TestCase):
