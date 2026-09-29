@@ -101,6 +101,8 @@ class ReferenzeUiTest(unittest.TestCase):
             "Nome, indirizzo email, numero di telefono, messaggio di invito e altri recapiti del referente restano riservati",
             "può scegliere volontariamente di indicare un nome",
             "non aggiunge automaticamente al contenuto pubblico il nome",
+            "con un’unica scelta facoltativa",
+            "Se non desidera condividere un commento, può semplicemente non compilarlo",
             "nessuna referenza viene resa pubblica automaticamente",
             "MyLocalCare deve prima approvarne la pubblicazione",
             "può scegliere se mostrarla o nasconderla",
@@ -126,6 +128,7 @@ class ReferenzeUiTest(unittest.TestCase):
             "esperienza diretta",
             "può scegliere di indicare un nome",
             "non aggiunge automaticamente al contenuto pubblico il nome",
+            "quando il referente autorizza la pubblicazione della scheda anonima",
             "approvazione finale di MyLocalCare",
             "può scegliere se mostrarla o nasconderla",
             "non costituisce conferma dei fatti, certificazione o garanzia",
@@ -218,7 +221,7 @@ class ReferenzeUiTest(unittest.TestCase):
             self.assertNotIn(f'value="{legacy}"', self.private_source)
             self.assertNotIn(f'value="{legacy}"', self.response_source)
 
-    def test_response_form_can_correct_structured_fields_and_has_separate_consent(self):
+    def test_response_form_has_exactly_three_clear_consents(self):
         self.assertIn("action=\"{{ url_for('referenza_rispondi') }}\"", self.response_source)
         self.assertNotIn('name="token_form"', self.response_source)
         for name in (
@@ -244,13 +247,22 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertNotIn("details.hidden =", self.script_source)
         self.assertNotIn("phone.disabled = !contactAllowed", self.script_source)
         self.assertIn("phone.disabled = cannotConfirm;", self.script_source)
-        self.assertIn('name="autorizza_pubblicazione" value="1"', self.response_source)
+        self.assertIn('name="autorizza_pubblicazione"', self.response_source)
         publication_input = self.response_source.split(
             'name="autorizza_pubblicazione"', 1
         )[1].split(">", 1)[0]
         self.assertNotIn("required", publication_input)
         self.assertIn("reference.response.public_consent", self.response_source)
-        self.assertIn('name="autorizza_testo_pubblico" value="1"', self.response_source)
+        self.assertNotIn('name="autorizza_testo_pubblico"', self.response_source)
+        self.assertEqual(self.response_source.count('type="checkbox"'), 3)
+        self.assertEqual(
+            self.response_source.count("data-reference-consent-option"),
+            3,
+        )
+        self.assertIn("data-reference-accept-all", self.response_source)
+        self.assertIn("reference.response.accept_all", self.response_source)
+        self.assertIn("data-reference-incomplete-confirm", self.response_source)
+        self.assertEqual(self.response_source.count('name="csrf_token"'), 1)
 
     def test_response_categories_come_from_the_current_service_catalog(self):
         self.assertIn(
@@ -337,13 +349,18 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn("reference.response.privacy_warning", self.response_source)
         self.assertIn("get_flashed_messages(with_categories=true)", self.response_source)
         self.assertIn('role="alert"', self.response_source)
+        self.assertLess(
+            self.response_source.index('class="reference-response-privacy"'),
+            self.response_source.index('name="consenso_trattamento"'),
+        )
 
-    def test_public_comment_consent_depends_on_optional_card_consent(self):
-        self.assertIn("const publicTextAllowed = (", self.script_source)
-        self.assertIn("&& publication.checked", self.script_source)
-        self.assertIn("&& Boolean(statement?.value.trim())", self.script_source)
-        self.assertIn("publicText.disabled = !publicTextAllowed;", self.script_source)
+    def test_public_comment_follows_single_publication_consent(self):
+        self.assertNotIn("const publicTextAllowed = (", self.script_source)
+        self.assertNotIn("publicText.disabled", self.script_source)
         self.assertIn("input[name='autorizza_pubblicazione']", self.script_source)
+        self.assertIn("function enabledConsentOptions(form)", self.script_source)
+        self.assertIn("function acceptAllConsents(form)", self.script_source)
+        self.assertIn("global.confirm(message)", self.script_source)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js non disponibile")
     def test_javascript_syntax(self):

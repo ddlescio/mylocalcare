@@ -345,6 +345,55 @@
   gap: 0.55rem;
 }
 
+.reference-response-consents {
+  display: grid;
+  gap: 0.62rem;
+  padding: 0.78rem;
+  border: 1px solid #dbeafe;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.reference-response-consents__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.reference-response-consents__heading h2 {
+  margin: 0;
+  color: var(--reference-ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.reference-response-consents__heading p {
+  margin: 0.18rem 0 0;
+  color: #64748b;
+  font-size: 0.65rem;
+  line-height: 1.4;
+}
+
+.reference-consent-all {
+  flex: 0 0 auto;
+  min-height: 2.15rem;
+  border: 1px solid #93c5fd;
+  border-radius: 9999px;
+  background: #eff6ff;
+  padding: 0.42rem 0.68rem;
+  color: #1d4ed8;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.reference-consent-all:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.24);
+  outline-offset: 2px;
+}
+
 .reference-contact-details {
   padding: 0.75rem;
   border: 1px solid #bfdbfe;

@@ -128,6 +128,13 @@ from richieste_disponibilita import (
     normalizza_stato_richiesta_disponibilita,
     valida_limiti_anti_abuso,
 )
+from annuncio_disponibilita import (
+    deserialize_sought_availability,
+    listing_availability_from_form,
+    request_to_service_availability,
+    serialize_sought_availability,
+    sought_availability_for_display,
+)
 from referenze import (
     DURATION_LABELS as REFERENCE_DURATION_LABELS,
     REFERENCE_CONSENT_VERSION,
@@ -16042,9 +16049,14 @@ def admin_annuncio_tipo(id):
 
         cur.execute(sql("""
             UPDATE annunci
-            SET tipo_annuncio = ?
+            SET tipo_annuncio = ?,
+                disponibilita_cercata_json = CASE
+                    WHEN tipo_annuncio = 'cerco' AND ? = 'cerco'
+                    THEN disponibilita_cercata_json
+                    ELSE NULL
+                END
             WHERE id = ?
-        """), (tipo_annuncio, id))
+        """), (tipo_annuncio, tipo_annuncio, id))
         conn.commit()
     except Exception:
         conn.rollback()
@@ -16983,6 +16995,26 @@ def modifica_annuncio(id):
             flash("Devi specificare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
 
+        # La disponibilita cercata vive soltanto sull'annuncio ``cerco``.
+        # Un campo vuoto la azzera esplicitamente; passando a ``offro`` viene
+        # sempre rimossa, anche se il browser invia un payload rimasto nel form.
+        disponibilita_cercata_json = None
+        if tipo_annuncio == "cerco":
+            try:
+                disponibilita_annuncio_input = (
+                    listing_availability_from_form(request.form)
+                )
+            except ValueError as errore_disponibilita:
+                flash(str(errore_disponibilita), "warning")
+                return redirect(url_for("modifica_annuncio", id=id))
+
+            if disponibilita_annuncio_input:
+                disponibilita_cercata_json = (
+                    serialize_sought_availability(
+                        disponibilita_annuncio_input
+                    )
+                )
+
         if modalita_servizio != "online":
 
             zona_precedente = (annuncio["zona"] or "").strip()
@@ -17225,6 +17257,7 @@ def modifica_annuncio(id):
                     foto_card = ?,
                     filtri_categoria = ?,
                     copertura_quartieri = ?,
+                    disponibilita_cercata_json = ?,
                     stato = 'in_attesa'
                 WHERE id = ?
             """), (
@@ -17243,6 +17276,7 @@ def modifica_annuncio(id):
                 foto_card,
                 ",".join(filtri),
                 copertura_quartieri,
+                disponibilita_cercata_json,
                 id
             ))
 
@@ -17374,12 +17408,19 @@ def modifica_annuncio(id):
         for riga in c.fetchall()
     ]
 
+    listing_availability_initial = None
+    if str(annuncio["tipo_annuncio"] or "").lower() == "cerco":
+        listing_availability_initial = deserialize_sought_availability(
+            annuncio["disponibilita_cercata_json"]
+        )
+
     return render_template(
         "modifica_annuncio.html",
         modalita="modifica",
         annuncio=annuncio,
         filtri_per_categoria=get_filtri_categoria_da_db(),
-        quartieri_selezionati=quartieri_selezionati
+        quartieri_selezionati=quartieri_selezionati,
+        listing_availability_initial=listing_availability_initial,
     )
 
 # ==========================================================
@@ -18630,6 +18671,39 @@ def _categorie_disponibilita_offerte(cur, utente_id):
     ]
 
 
+def _annunci_attivi_disponibilita_categoria(cur, utente_id, categoria_slug):
+    """Elenca solo gli annunci pubblici offerti nello specifico ambito.
+
+    Il risultato alimenta la scelta successiva al salvataggio di uno stato
+    ``non_disponibile``. Non viene mai richiamato per il profilo generale e
+    non espone annunci di altri utenti o annunci non piu attivi.
+    """
+
+    categoria_slug = to_slug(categoria_slug)
+    if not categoria_slug:
+        return []
+
+    cur.execute(sql("""
+        SELECT id, titolo, categoria
+        FROM annunci
+        WHERE utente_id = ?
+          AND tipo_annuncio = 'offro'
+          AND stato = 'approvato'
+        ORDER BY id DESC
+    """), (int(utente_id),))
+
+    annunci = []
+    for row in cur.fetchall():
+        if to_slug(row["categoria"]) != categoria_slug:
+            continue
+        annunci.append({
+            "id": int(row["id"]),
+            "titolo": str(row["titolo"] or "").strip() or "Annuncio senza titolo",
+            "categoria_slug": categoria_slug,
+        })
+    return annunci
+
+
 DISPONIBILITA_PROMEMORIA_BATCH_DEFAULT = 100
 DISPONIBILITA_PROMEMORIA_BATCH_MAX = 1000
 # I profili generale e per categoria possono essere confermati in giorni
@@ -19694,6 +19768,20 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
         )
 
 
+def assegna_disponibilita_cercata_annunci(*liste_annunci):
+    """Annota gli annunci ``cerco`` senza accedere nuovamente al database."""
+
+    for lista_annunci in liste_annunci:
+        for annuncio in lista_annunci or []:
+            if str(annuncio.get("tipo_annuncio") or "").lower() != "cerco":
+                continue
+            annuncio["disponibilita_cercata"] = (
+                sought_availability_for_display(
+                    annuncio.get("disponibilita_cercata_json")
+                )
+            )
+
+
 def _disponibilita_servizi_request_version(payload):
     try:
         version = int((payload or {}).get("versione") or 0)
@@ -20000,6 +20088,8 @@ def _salva_disponibilita_categoria(
     categoria_slug,
     normalized,
     submitted_version,
+    *,
+    preserve_calendar_exceptions=False,
 ):
     if not _disponibilita_categoria_table_exists(cur):
         raise RuntimeError("category_tables_missing")
@@ -20055,11 +20145,13 @@ def _salva_disponibilita_categoria(
             raise RuntimeError("category_profile_insert_failed")
         profile_id = int(profile_id)
 
-    for table in (
-        "disponibilita_settimanale_categoria",
-        "disponibilita_date_speciali_categoria",
-        "disponibilita_assenze_categoria",
-    ):
+    tables_to_replace = ["disponibilita_settimanale_categoria"]
+    if not preserve_calendar_exceptions:
+        tables_to_replace.extend((
+            "disponibilita_date_speciali_categoria",
+            "disponibilita_assenze_categoria",
+        ))
+    for table in tables_to_replace:
         cur.execute(
             sql(f"DELETE FROM {table} WHERE profilo_categoria_id = ?"),
             (profile_id,),
@@ -20102,7 +20194,7 @@ def _salva_disponibilita_categoria(
             )
             for row in normalized["settimanale_intervalli"]
         ])
-    if normalized["date_speciali"]:
+    if normalized["date_speciali"] and not preserve_calendar_exceptions:
         cur.executemany(sql("""
             INSERT INTO disponibilita_date_speciali_categoria (
                 profilo_categoria_id, data, tipo, fasce,
@@ -20117,7 +20209,7 @@ def _salva_disponibilita_categoria(
             )
             for row in normalized["date_speciali"]
         ])
-    if normalized["assenze"]:
+    if normalized["assenze"] and not preserve_calendar_exceptions:
         cur.executemany(sql("""
             INSERT INTO disponibilita_assenze_categoria (
                 profilo_categoria_id, data_inizio, data_fine,
@@ -20177,6 +20269,18 @@ def _risposta_disponibilita_servizi(cur, user_id, *, categoria_slug=None):
         "scope_categoria_disponibile": scope_categoria_disponibile,
         "utente_offre_servizi": bool(categorie_effettivamente_offerte),
         "categoria_slug": categoria_slug,
+        # Per il profilo generale resta sempre vuoto: non deve mai comparire
+        # una proposta di cancellazione multipla. Per una categoria specifica
+        # include invece soltanto annunci pubblici e cancellabili singolarmente.
+        "annunci_attivi_categoria": (
+            _annunci_attivi_disponibilita_categoria(
+                cur,
+                user_id,
+                categoria_slug,
+            )
+            if categoria_slug
+            else []
+        ),
     }
 
 
@@ -21423,7 +21527,7 @@ def dashboard():
     c = get_cursor(conn)
     c.execute(sql("""
         SELECT id, utente_id, titolo, categoria, tipo_annuncio, descrizione, zona,
-               filtri_categoria,
+               filtri_categoria, disponibilita_cercata_json,
                data_pubblicazione, stato,
                COALESCE((
                    SELECT COUNT(*)
@@ -21462,6 +21566,7 @@ def dashboard():
         referenze_disponibili,
     ) = _referenze_context(c, utente["id"], pubblico=False)
     assegna_disponibilita_annunci(c, annunci)
+    assegna_disponibilita_cercata_annunci(annunci)
     disponibilita_servizi_private = next(
         (
             profile for profile in disponibilita_servizi_profili_private
@@ -23450,6 +23555,119 @@ def elimina_annuncio(id):
 
     flash("Annuncio eliminato con successo.", "success")
     return redirect(url_for("dashboard"))
+
+
+@app.route('/api/annunci/<int:id>/elimina', methods=["DELETE"])
+@login_required
+def elimina_annuncio_api(id):
+    """Elimina un solo annuncio attivo posseduto dall'utente autenticato.
+
+    Endpoint JSON usato dopo il salvataggio della disponibilita per categoria.
+    La verifica CSRF e il controllo di proprieta sono intenzionalmente eseguiti
+    prima di qualsiasi modifica; l'id arriva dalla scelta esplicita dell'utente.
+    """
+
+    verify_csrf()
+    user_id = int(g.utente["id"])
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    percorsi_immagini_annuncio = []
+
+    try:
+        cur.execute(sql("""
+            SELECT id, utente_id, titolo, stato, media, foto_card
+            FROM annunci
+            WHERE id = ?
+            LIMIT 1
+        """), (int(id),))
+        annuncio = cur.fetchone()
+
+        # La stessa risposta evita di rivelare se esista un annuncio altrui.
+        if not annuncio or int(annuncio["utente_id"]) != user_id:
+            return jsonify({
+                "ok": False,
+                "message": "Annuncio non trovato.",
+            }), 404
+
+        if str(annuncio["stato"] or "").strip().lower() != "approvato":
+            return jsonify({
+                "ok": False,
+                "message": "Questo annuncio non e piu attivo.",
+            }), 409
+
+        titolo = str(annuncio["titolo"] or "").strip()
+        percorsi_immagini_annuncio = [
+            percorso.strip()
+            for percorso in (annuncio["media"] or "").split(",")
+            if percorso and percorso.strip()
+        ]
+        foto_card_annuncio = str(annuncio["foto_card"] or "").strip()
+        if (
+            foto_card_annuncio
+            and foto_card_annuncio not in percorsi_immagini_annuncio
+        ):
+            percorsi_immagini_annuncio.append(foto_card_annuncio)
+
+        cur.execute(sql("""
+            UPDATE annunci
+            SET stato = ?, media = ?, foto_card = ?
+            WHERE id = ?
+              AND utente_id = ?
+              AND stato = 'approvato'
+        """), ("eliminato", "", None, int(id), user_id))
+        if int(cur.rowcount or 0) != 1:
+            conn.rollback()
+            return jsonify({
+                "ok": False,
+                "message": "L'annuncio e cambiato. Aggiorna la pagina e riprova.",
+            }), 409
+
+        cur.execute(sql(f"""
+            UPDATE interessi_annunci
+            SET attivo = FALSE,
+                updated_at = {now_sql()},
+                disattivato_at = {now_sql()}
+            WHERE annuncio_id = ?
+              AND attivo = TRUE
+        """), (int(id),))
+        conn.commit()
+
+    except Exception as exc:
+        conn.rollback()
+        log_exception_safe(
+            "Errore eliminazione singolo annuncio da disponibilita",
+            exc,
+            {"utente_id": user_id, "annuncio_id": int(id)},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": "Impossibile eliminare l'annuncio. Riprova.",
+        }), 500
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    # Il DB e gia coerente: un eventuale problema sul filesystem non deve
+    # trasformare la cancellazione riuscita in un falso errore per l'utente.
+    if percorsi_immagini_annuncio:
+        try:
+            elimina_percorsi_immagine_locale(percorsi_immagini_annuncio)
+        except Exception as errore_pulizia:
+            app.logger.warning(
+                "Impossibile eliminare tutti i file dell'annuncio %s: %s",
+                id,
+                errore_pulizia,
+            )
+
+    invalidate_admin_counters()
+    return jsonify({
+        "ok": True,
+        "annuncio_id": int(id),
+        "titolo": titolo,
+    })
 
 # --- Foto Profilo ---
 
@@ -29686,6 +29904,7 @@ def cerca():
             )
 
     assegna_disponibilita_annunci(c, annunci, annunci_vetrina)
+    assegna_disponibilita_cercata_annunci(annunci, annunci_vetrina)
 
     return render_template(
         "cerca.html",
@@ -32111,6 +32330,41 @@ def nuovo_annuncio():
             flash("Devi selezionare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("nuovo_annuncio"))
 
+        # La stessa selezione compatta assume un significato diverso in base
+        # al tipo di annuncio: per ``offro`` aggiorna la disponibilita del
+        # professionista per questa categoria; per ``cerco`` indica quando il
+        # servizio e richiesto ed e salvata direttamente sull'annuncio.
+        try:
+            disponibilita_annuncio_input = (
+                listing_availability_from_form(request.form)
+            )
+        except ValueError as errore_disponibilita:
+            flash(str(errore_disponibilita), "warning")
+            return redirect(url_for("nuovo_annuncio"))
+
+        disponibilita_cercata_json = None
+        disponibilita_offerta = None
+        if disponibilita_annuncio_input:
+            if tipo_annuncio == "cerco":
+                disponibilita_cercata_json = (
+                    serialize_sought_availability(
+                        disponibilita_annuncio_input
+                    )
+                )
+            else:
+                disponibilita_offerta = normalize_disponibilita_payload(
+                    request_to_service_availability(
+                        disponibilita_annuncio_input
+                    )
+                )
+                if not _disponibilita_categoria_table_exists(c):
+                    flash(
+                        "La disponibilità non può essere salvata in questo "
+                        "momento. Riprova tra poco.",
+                        "warning",
+                    )
+                    return redirect(url_for("nuovo_annuncio"))
+
         if modalita_servizio != "online":
 
             zona_valida, zona_corretta, provincia_corretta = valida_zona_annuncio(
@@ -32300,11 +32554,12 @@ def nuovo_annuncio():
                     prezzo,
                     telefono,
                     email,
+                    disponibilita_cercata_json,
                     copertura_quartieri,
                     stato
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     'in_attesa'
                 )
             """
@@ -32329,6 +32584,7 @@ def nuovo_annuncio():
                 prezzo,
                 telefono,
                 email,
+                disponibilita_cercata_json,
                 copertura_quartieri
             ))
 
@@ -32372,6 +32628,28 @@ def nuovo_annuncio():
                     )
                     for quartiere_id in quartieri_ids
                 ])
+
+            if disponibilita_offerta:
+                c.execute(sql("""
+                    SELECT versione
+                    FROM disponibilita_profili_categoria
+                    WHERE utente_id = ? AND categoria_slug = ?
+                    LIMIT 1
+                """), (int(utente["id"]), categoria))
+                profilo_categoria_corrente = c.fetchone()
+                versione_corrente = (
+                    int(profilo_categoria_corrente["versione"] or 1)
+                    if profilo_categoria_corrente
+                    else 0
+                )
+                _salva_disponibilita_categoria(
+                    c,
+                    int(utente["id"]),
+                    categoria,
+                    disponibilita_offerta,
+                    versione_corrente,
+                    preserve_calendar_exceptions=True,
+                )
 
             # Dal momento in cui il commit inizia, conserviamo
             # prudentemente i file anche se il database restituisce errore.
@@ -32650,6 +32928,10 @@ def visualizza_annuncio_pubblico(id):
                 {"annuncio_id": int(id)},
                 production=True,
             )
+    elif annuncio["tipo_annuncio"] == "cerco":
+        disponibilita_annuncio = sought_availability_for_display(
+            annuncio.get("disponibilita_cercata_json")
+        )
 
     # 🔁 Gestione intelligente del tasto “Torna”
     ref = request.referrer or ""
@@ -32775,7 +33057,7 @@ def profilo_pubblico(id):
     # 🔹 Annunci
     c.execute(sql("""
         SELECT id, utente_id, titolo, categoria, tipo_annuncio, zona, prezzo,
-               descrizione,
+               descrizione, disponibilita_cercata_json,
                media AS media_img, data_pubblicazione, filtri_categoria
         FROM annunci
         WHERE utente_id = ? AND stato = 'approvato'
@@ -32800,6 +33082,7 @@ def profilo_pubblico(id):
         referenze_disponibili,
     ) = _referenze_context(c, utente["id"], pubblico=True)
     assegna_disponibilita_annunci(c, annunci)
+    assegna_disponibilita_cercata_annunci(annunci)
     disponibilita_servizi_public = next(
         (
             profile for profile in disponibilita_servizi_profili_public

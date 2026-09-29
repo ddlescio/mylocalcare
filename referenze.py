@@ -101,7 +101,7 @@ VERIFICATION_METHOD_LABELS = {
     "altro": "Altro riscontro",
 }
 
-REFERENCE_CONSENT_VERSION = "references_2026_v2"
+REFERENCE_CONSENT_VERSION = "references_2026_v3"
 REFERENCE_KEY_ID = "references-pii-v1"
 REFERENCE_TOKEN_BYTES = 32
 
@@ -521,11 +521,11 @@ def normalize_reference_payload(
         raise ValueError("Il testo della referenza non può contenere recapiti.")
 
     publish = _as_bool(payload.get("autorizza_pubblicazione"))
-    publish_statement = _as_bool(payload.get("autorizza_testo_pubblico"))
-    if publish_statement and (not publish or not statement):
-        raise ValueError(
-            "La pubblicazione del testo richiede una referenza pubblicabile."
-        )
+    # Un unico consenso governa la scheda anonima e l'eventuale commento:
+    # se il referente non vuole rendere pubblico un testo puo semplicemente
+    # non compilarlo.  Derivare il flag lato server evita stati incoerenti
+    # (e violazioni dei vincoli DB) inviati da browser o pagine in cache.
+    publish_statement = bool(publish and statement)
 
     direct_experience = _as_bool(payload.get("esperienza_diretta"))
     contact_allowed = _as_bool(

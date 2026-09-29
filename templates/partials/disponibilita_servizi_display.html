@@ -273,6 +273,88 @@
   {% endif %}
 {%- endmacro %}
 
+{% macro sought_availability_badge(disponibilita, extra_class='') -%}
+  {% if disponibilita %}
+    <span class="availability-card-badge is-limited sought-availability-badge {{ extra_class }}">
+      <span aria-hidden="true">🗓️</span>
+      <span>{{ tr('listing.sought_availability_badge') }}</span>
+    </span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro sought_availability_listing(disponibilita) -%}
+  {% if disponibilita %}
+    {% set giorni = [
+      tr('availability.day_monday'), tr('availability.day_tuesday'),
+      tr('availability.day_wednesday'), tr('availability.day_thursday'),
+      tr('availability.day_friday'), tr('availability.day_saturday'),
+      tr('availability.day_sunday')
+    ] %}
+    <section class="availability-listing sought-availability-listing"
+             aria-label="{{ tr('listing.sought_availability_title') }}">
+      <div class="availability-listing__panel">
+        <header class="availability-listing__head">
+          <span class="availability-listing__icon" aria-hidden="true">🗓️</span>
+          <div>
+            <h2>{{ tr('listing.sought_availability_title') }}</h2>
+            <p>{{ tr('listing.sought_availability_subtitle') }}</p>
+          </div>
+        </header>
+
+        <article class="availability-detail is-compact">
+          {% if disponibilita.get('a_chiamata', false) %}
+            <div class="availability-detail__head">
+              {{ availability_on_call_badge(disponibilita) }}
+            </div>
+          {% endif %}
+
+          {% if disponibilita.get('settimanale') or disponibilita.get('settimanale_intervalli') %}
+            <div class="availability-detail__section">
+              <h4>{{ tr('availability.weekly_title') }}</h4>
+              <div class="availability-detail__week">
+                {% for giorno in range(1, 8) %}
+                  {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+                  {% set intervalli_giorno = disponibilita.get('settimanale_intervalli', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+                  {% if fasce_giorno or intervalli_giorno %}
+                    <div class="availability-detail__day">
+                      <strong>{{ giorni[giorno - 1] }}</strong>
+                      <span class="availability-detail__day-times">
+                        {% if fasce_giorno %}
+                          <span class="availability-detail__slots">
+                            {% for elemento in fasce_giorno %}
+                              {% if elemento.get('fascia') == 'mattina' %}{{ tr('availability.slot_morning') }}{% endif %}
+                              {% if elemento.get('fascia') == 'pomeriggio' %}{{ tr('availability.slot_afternoon') }}{% endif %}
+                              {% if elemento.get('fascia') == 'sera' %}{{ tr('availability.slot_evening') }}{% endif %}
+                              {% if elemento.get('fascia') == 'notte' %}{{ tr('availability.slot_night') }}{% endif %}
+                              {% if not loop.last %}<em>·</em>{% endif %}
+                            {% endfor %}
+                          </span>
+                        {% endif %}
+                        {% if intervalli_giorno %}
+                          <span class="availability-detail__exact-times">
+                            {% for intervallo in intervalli_giorno %}
+                              <span class="availability-detail__exact-time">
+                                {{ tr('availability.exact_interval_range', start=intervallo.get('ora_inizio'), end=intervallo.get('ora_fine')) }}
+                                {% if intervallo.get('giorno_successivo') %}
+                                  <small>({{ tr('availability.next_day_short') }})</small>
+                                {% endif %}
+                              </span>
+                            {% endfor %}
+                          </span>
+                        {% endif %}
+                      </span>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </article>
+      </div>
+    </section>
+  {% endif %}
+{%- endmacro %}
+
 {% macro availability_listing(disponibilita, can_request=false) -%}
   <section class="availability-listing-section">
     <div class="availability-listing-shell{% if can_request %} is-requestable{% endif %}">

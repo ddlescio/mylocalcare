@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 
+{% block head_extra %}
+  {{ super() }}
+  {% if modalita != 'modifica' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/richiesta-disponibilita.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/annuncio-disponibilita.css') }}">
+  {% endif %}
+{% endblock %}
+
 {% block title %}
 
   {{ "Modifica annuncio" if modalita == "modifica" else "Nuovo annuncio" }}
@@ -8,13 +16,13 @@
 
 {% block content %}
 
-<div class="max-w-5xl mx-auto mt-4 sm:mt-10 px-2 sm:px-0">
+<div class="new-listing-page max-w-5xl mx-auto mt-4 sm:mt-10 px-2 sm:px-0">
 
   <!-- 🔙 FRECCIA TORNA INDIETRO -->
 
   <a href="javascript:history.back()"
 
-     class="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 mb-4">
+     class="new-listing-back inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 mb-4">
 
     <span class="text-xl">←</span>
 
@@ -22,10 +30,10 @@
 
   </a>
 
-  <div class="bg-white shadow-md rounded-3xl p-5 sm:p-8 border border-gray-100">
+  <div class="new-listing-shell bg-white shadow-md rounded-3xl p-5 sm:p-8 border border-gray-100">
 
     <!-- HEADER PAGINA COMPATTO -->
-    <div class="mb-5 flex items-center justify-center gap-3 text-center">
+    <div class="new-listing-heading mb-5 flex items-center justify-center gap-3 text-center">
 
       <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-100">
 
@@ -72,7 +80,7 @@
           method="POST"
           enctype="multipart/form-data"
           action="{{ url_for('modifica_annuncio', id=annuncio['id']) if modalita == 'modifica' else url_for('nuovo_annuncio') }}"
-          class="space-y-5 sm:space-y-8"
+          class="new-listing-form space-y-5 sm:space-y-8"
           data-no-global-loader
           novalidate>
 
@@ -84,9 +92,9 @@
 
       <!-- SEZIONE 1 -->
 
-      <div class="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
+      <div class="listing-form-section bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
 
-        <div class="flex flex-col gap-2">
+        <div class="listing-section-heading flex flex-col gap-2">
 
           <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold uppercase tracking-wide">
 
@@ -162,7 +170,7 @@
 
           </div>
 
-          <p class="text-sm text-slate-500">
+          <p class="listing-secondary-help text-sm text-slate-500">
 
             Seleziona se stai offrendo qualcosa o se stai cercando.
 
@@ -413,9 +421,9 @@
 
       <!-- SEZIONE 2 -->
 
-      <div class="bg-gradient-to-br from-blue-50/60 to-indigo-50/40 border border-blue-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
+      <div class="listing-form-section bg-gradient-to-br from-blue-50/60 to-indigo-50/40 border border-blue-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
 
-        <div class="flex flex-col gap-2">
+        <div class="listing-section-heading flex flex-col gap-2">
 
           <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-bold uppercase tracking-wide">
 
@@ -429,7 +437,7 @@
 
         <div class="space-y-2">
 
-          <div class="flex flex-row items-center justify-between gap-3">
+          <div class="listing-title-row flex flex-row items-center justify-between gap-3">
 
             <label for="titolo" class="flex items-center gap-1.5 text-base font-bold text-slate-800">
 
@@ -489,7 +497,7 @@
           </p>
           {% endif %}
 
-          <textarea id="descrizione" name="descrizione" rows="5" required
+          <textarea id="descrizione" name="descrizione" rows="4" required
 
                     class="block w-full border-2 border-blue-200 rounded-2xl p-3.5 text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white shadow-sm"
 
@@ -502,9 +510,9 @@
 
       <!-- SEZIONE 3 -->
 
-      <div class="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 border border-emerald-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
+      <div class="listing-form-section bg-gradient-to-br from-emerald-50/60 to-teal-50/40 border border-emerald-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
 
-        <div class="flex flex-col gap-2">
+        <div class="listing-section-heading flex flex-col gap-2">
 
           <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold uppercase tracking-wide">
 
@@ -588,11 +596,15 @@
 
       </div>
 
+      {% if modalita != 'modifica' %}
+        {% include 'partials/annuncio_disponibilita_picker.html' %}
+      {% endif %}
+
       <!-- SEZIONE 4 -->
 
-      <div class="bg-gradient-to-br from-amber-50/60 to-orange-50/40 border border-amber-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
+      <div class="listing-form-section listing-media-section bg-gradient-to-br from-amber-50/60 to-orange-50/40 border border-amber-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
 
-        <div class="flex flex-col gap-2">
+        <div class="listing-section-heading flex flex-col gap-2">
 
           <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-bold uppercase tracking-wide">
             4 · Media
@@ -610,7 +622,7 @@
             <strong>Cerca</strong>, al posto della foto profilo.
           </p>
 
-          <div class="mt-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 shadow-sm">
+          <div class="new-listing-media-safety mt-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 shadow-sm">
             <div class="flex items-start gap-3">
               <div class="shrink-0 w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
                 🔒
@@ -998,6 +1010,59 @@
 </div>
 
 <style>
+.new-listing-page,
+.new-listing-shell,
+.new-listing-form,
+.listing-form-section {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/*
+ * Evita lo scorrimento laterale durante la compilazione su Safari mobile.
+ * La dimensione minima a 16px impedisce inoltre lo zoom automatico di iOS
+ * quando un campo riceve il focus.
+ */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
+.new-listing-page {
+  overflow-x: clip;
+}
+
+#annuncio-form,
+#annuncio-form * {
+  min-width: 0;
+}
+
+#annuncio-form input:not([type="radio"]):not([type="checkbox"]),
+#annuncio-form textarea,
+#annuncio-form select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+#annuncio-form textarea {
+  overflow-wrap: anywhere;
+  resize: vertical;
+}
+
+.listing-title-row > label {
+  min-width: 0;
+}
+
 .contatti-annuncio-note {
   margin-top: -0.3rem;
   padding: 0.62rem 0.75rem;
@@ -1018,10 +1083,159 @@
 }
 
 @media (max-width: 640px) {
+  .new-listing-page {
+    width: 100%;
+    margin-top: 0.55rem;
+    padding-inline: 0.45rem;
+  }
+
+  .new-listing-back {
+    margin: 0 0 0.5rem 0.2rem;
+  }
+
+  .new-listing-shell {
+    padding: 0.85rem;
+    border-radius: 1.25rem;
+  }
+
+  .new-listing-heading {
+    justify-content: flex-start;
+    gap: 0.45rem;
+    margin-bottom: 0.75rem;
+    text-align: left;
+  }
+
+  .new-listing-heading > :first-child {
+    padding: 0.38rem 0.7rem;
+  }
+
+  #annuncio-form {
+    --tw-space-y-reverse: 0;
+  }
+
+  #annuncio-form > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.85rem;
+    margin-bottom: 0;
+  }
+
+  #annuncio-form > .listing-form-section {
+    padding: 0.9rem;
+    border-radius: 1.25rem;
+  }
+
+  .listing-form-section > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.9rem;
+    margin-bottom: 0;
+  }
+
+  .listing-section-heading {
+    gap: 0.3rem;
+  }
+
+  .listing-section-heading > span {
+    padding: 0.25rem 0.65rem;
+  }
+
+  .listing-section-heading > h3 {
+    font-size: 1.25rem;
+    line-height: 1.55rem;
+  }
+
+  .listing-section-heading > p,
+  .listing-secondary-help {
+    font-size: 0.78rem;
+    line-height: 1.15rem;
+  }
+
+  #annuncio-form input:not([type="radio"]):not([type="checkbox"]),
+  #annuncio-form textarea,
+  #annuncio-form select {
+    padding: 0.68rem 0.78rem;
+    font-size: 16px !important;
+    line-height: 1.35;
+  }
+
+  #annuncio-form input[type="file"] {
+    overflow: hidden;
+  }
+
+  #annuncio-form label {
+    overflow-wrap: anywhere;
+  }
+
+  #modalita-ripetizioni-box,
+  #quartieri-section,
+  #foto-card-help {
+    border-radius: 1rem;
+  }
+
+  #modalita-ripetizioni-box {
+    padding: 0.8rem;
+  }
+
+  #modalita-ripetizioni-box label > span {
+    padding: 0.75rem;
+  }
+
+  #quartieri-toggle,
+  #quartieri-panel {
+    padding: 0.8rem;
+  }
+
+  .listing-title-row {
+    gap: 0.5rem;
+  }
+
+  #open-ai-writing-helper {
+    padding: 0.55rem 0.7rem;
+    white-space: nowrap;
+  }
+
+  .new-listing-media-safety {
+    margin-top: 0.55rem;
+    padding: 0.75rem;
+    border-radius: 1rem;
+  }
+
+  .new-listing-media-safety > div {
+    gap: 0.65rem;
+  }
+
+  .new-listing-media-safety .w-10.h-10 {
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 0.75rem;
+  }
+
+  .new-listing-media-safety p {
+    font-size: 0.78rem;
+    line-height: 1.25rem;
+  }
+
+  .new-listing-media-safety .mt-3 {
+    margin-top: 0.55rem;
+  }
+
   .contatti-annuncio-note {
     font-size: 0.72rem;
     padding: 0.58rem 0.65rem;
     border-radius: 0.82rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .new-listing-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .listing-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #open-ai-writing-helper {
+    align-self: flex-start;
   }
 }
 </style>
@@ -2028,6 +2242,15 @@ document.addEventListener("DOMContentLoaded", function () {
         errori.push("Non inserire telefono, email o altri contatti nella descrizione. Usa i campi Telefono ed Email nella sezione Dettagli e contatti.");
       }
 
+      const disponibilitaValida = (
+        !window.MyLocalCareListingAvailability
+        || window.MyLocalCareListingAvailability.validateBeforeSubmit()
+      );
+
+      if (!disponibilitaValida) {
+        errori.push("Completa giorni e orari della disponibilità oppure azzera la selezione.");
+      }
+
       if (errori.length > 0) {
         alert("Per pubblicare l'annuncio completa questi campi obbligatori:\n\n- " + errori.join("\n- "));
 
@@ -2041,7 +2264,8 @@ document.addEventListener("DOMContentLoaded", function () {
           (categoriaHaFiltri && !almenoUnFiltroSelezionato && filtriContainer) ||
           (!isServizioOnline && !zona?.value.trim() && zona) ||
           (!titolo?.value.trim() && titolo) ||
-          (!descrizione?.value.trim() && descrizione);
+          (!descrizione?.value.trim() && descrizione) ||
+          (!disponibilitaValida && document.querySelector('.listing-availability__summary'));
 
         if (primoCampo) {
           primoCampo.scrollIntoView({
@@ -2355,5 +2579,10 @@ document.addEventListener("DOMContentLoaded", () => {
   aggiornaContatoreTitolo();
 });
 </script>
+
+{% if modalita != 'modifica' %}
+  <script src="{{ url_for('static', filename='js/richiesta-disponibilita.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/annuncio-disponibilita.js') }}" defer></script>
+{% endif %}
 
 {% endblock %}

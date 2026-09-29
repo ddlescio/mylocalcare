@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% set body_class = "offset-navbar" %}
+{% block head_extra %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/richiesta-disponibilita.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/annuncio-disponibilita.css') }}">
+{% endblock %}
 {% block title %}
   {{ "Modifica annuncio" if modalita == "modifica" else "Nuovo annuncio" }}
 {% endblock %}
@@ -479,6 +484,9 @@
         </p>
       </div>
 
+      {% set listing_availability_sought_only = true %}
+      {% include 'partials/annuncio_disponibilita_picker.html' %}
+
       <!-- SEZIONE 4 -->
       <div class="bg-gradient-to-br from-amber-50/60 to-orange-50/40 border border-amber-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">
 
@@ -926,6 +934,8 @@
 <script src="{{ url_for('static', filename='js/filtri.js') }}"></script>
 <script src="{{ url_for('static', filename='js/autocomplete_zona.js') }}"></script>
 <script src="{{ url_for('static', filename='js/quartieri_annuncio.js') }}"></script>
+<script src="{{ url_for('static', filename='js/richiesta-disponibilita.js') }}"></script>
+<script src="{{ url_for('static', filename='js/annuncio-disponibilita.js') }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const categoria = document.getElementById("categoria");
@@ -1919,6 +1929,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (descrizione && contieneContattiNelTesto(descrizione.value)) {
         errori.push("Non inserire telefono, email o altri contatti nella descrizione. Usa i campi Telefono ed Email nella sezione Dettagli e contatti.");
+      }
+
+      const disponibilitaValida = (
+        !window.MyLocalCareListingAvailability
+        || window.MyLocalCareListingAvailability.validateBeforeSubmit()
+      );
+
+      if (!disponibilitaValida) {
+        errori.push("Completa giorni e orari della disponibilità oppure azzera la selezione.");
       }
 
       if (errori.length > 0) {

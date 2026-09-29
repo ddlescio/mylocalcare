@@ -241,6 +241,7 @@ def crea_tabella_annunci():
         prezzo TEXT,
         telefono TEXT,
         email TEXT,
+        disponibilita_cercata_json TEXT,
         data_pubblicazione {dt_col(True)},
         stato TEXT DEFAULT 'in_attesa',
         urgente INTEGER DEFAULT 0,
@@ -3132,6 +3133,15 @@ def aggiorna_colonne_mancanti():
             );
         """)
         print("✅ Colonna 'copertura_quartieri' aggiunta a annunci.")
+
+    if "disponibilita_cercata_json" not in colonne_annunci:
+        c.execute(
+            "ALTER TABLE annunci "
+            "ADD COLUMN disponibilita_cercata_json TEXT;"
+        )
+        print(
+            "✅ Colonna 'disponibilita_cercata_json' aggiunta a annunci."
+        )
 
     c.execute("""
         UPDATE annunci

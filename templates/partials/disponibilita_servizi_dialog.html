@@ -452,6 +452,58 @@
         </button>
       </footer>
     </form>
+
+    <section
+      id="service-availability-listing-choice"
+      class="service-availability-listing-choice service-availability-hidden"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="service-availability-listing-choice-title"
+      aria-describedby="service-availability-listing-choice-description">
+      <span class="service-availability-listing-choice-icon" aria-hidden="true">✓</span>
+      <p class="service-availability-dialog-eyebrow">
+        {{ tr('availability.listing_choice_eyebrow') }}
+      </p>
+      <h3
+        id="service-availability-listing-choice-title"
+        class="service-availability-listing-choice-title">
+        {{ tr('availability.listing_choice_title') }}
+      </h3>
+      <p
+        id="service-availability-listing-choice-description"
+        class="service-availability-listing-choice-description">
+        {{ tr('availability.listing_choice_description') }}
+      </p>
+
+      <fieldset class="service-availability-listing-choice-fieldset">
+        <legend id="service-availability-listing-choice-legend">
+          {{ tr('availability.listing_choice_select') }}
+        </legend>
+        <div
+          id="service-availability-listing-choice-list"
+          class="service-availability-listing-choice-list"></div>
+      </fieldset>
+
+      <p
+        id="service-availability-listing-choice-error"
+        class="service-availability-message service-availability-message--error service-availability-hidden"
+        role="alert"></p>
+
+      <div class="service-availability-listing-choice-actions">
+        <button
+          type="button"
+          id="service-availability-listing-keep"
+          class="service-availability-secondary-button">
+          {{ tr('availability.listing_choice_keep') }}
+        </button>
+        <button
+          type="button"
+          id="service-availability-listing-delete"
+          class="service-availability-listing-delete-button">
+          {{ tr('availability.listing_choice_delete') }}
+        </button>
+      </div>
+    </section>
   </section>
 </div>
 
@@ -2025,6 +2077,137 @@
     color:#166534;
   }
 
+  .service-availability-listing-choice{
+    display:grid;
+    gap:.72rem;
+    padding:.95rem .15rem .2rem;
+    text-align:center;
+  }
+
+  .service-availability-listing-choice-icon{
+    width:3rem;
+    height:3rem;
+    display:grid;
+    place-items:center;
+    margin:0 auto;
+    border:1px solid #86efac;
+    border-radius:1rem;
+    background:linear-gradient(145deg, #f0fdf4, #dcfce7);
+    color:#15803d;
+    font-size:1.3rem;
+    font-weight:900;
+    box-shadow:0 10px 24px rgba(22,163,74,.12);
+  }
+
+  .service-availability-listing-choice .service-availability-dialog-eyebrow{
+    margin:0;
+  }
+
+  .service-availability-listing-choice-title{
+    margin:0;
+    color:#0f172a;
+    font-size:1.05rem;
+    line-height:1.2;
+    font-weight:900;
+    letter-spacing:-.025em;
+  }
+
+  .service-availability-listing-choice-description{
+    margin:0 auto;
+    max-width:34rem;
+    color:#64748b;
+    font-size:.75rem;
+    line-height:1.45;
+  }
+
+  .service-availability-listing-choice-fieldset{
+    min-width:0;
+    display:grid;
+    gap:.5rem;
+    margin:.15rem 0 0;
+    padding:.72rem;
+    border:1px solid #dbeafe;
+    border-radius:1rem;
+    background:rgba(239,246,255,.58);
+    text-align:left;
+  }
+
+  .service-availability-listing-choice-fieldset legend{
+    padding:0 .25rem;
+    color:#334155;
+    font-size:.68rem;
+    line-height:1.25;
+    font-weight:850;
+  }
+
+  .service-availability-listing-choice-list{
+    display:grid;
+    gap:.45rem;
+  }
+
+  .service-availability-listing-choice-option{
+    min-width:0;
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    align-items:center;
+    gap:.55rem;
+    padding:.66rem .72rem;
+    border:1px solid #dbe3ee;
+    border-radius:.86rem;
+    background:#fff;
+    color:#334155;
+    cursor:pointer;
+  }
+
+  .service-availability-listing-choice-option:has(input:checked){
+    border-color:#60a5fa;
+    background:#eff6ff;
+    box-shadow:0 0 0 3px rgba(96,165,250,.13);
+  }
+
+  .service-availability-listing-choice-option input{
+    width:1rem;
+    height:1rem;
+    accent-color:#2563eb;
+  }
+
+  .service-availability-listing-choice-option span{
+    min-width:0;
+    overflow-wrap:anywhere;
+    font-size:.74rem;
+    line-height:1.3;
+    font-weight:820;
+  }
+
+  .service-availability-listing-choice-actions{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:.5rem;
+    margin-top:.2rem;
+  }
+
+  .service-availability-listing-delete-button{
+    min-height:2.75rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.7rem .85rem;
+    border:1px solid #fecaca;
+    border-radius:9999px;
+    background:#fff7f7;
+    color:#b91c1c;
+    font:inherit;
+    font-size:.74rem;
+    line-height:1;
+    font-weight:880;
+    cursor:pointer;
+  }
+
+  .service-availability-listing-delete-button:disabled{
+    cursor:wait;
+    opacity:.58;
+  }
+
   .service-availability-dialog-actions{
     position:sticky;
     bottom:calc(-.82rem - env(safe-area-inset-bottom));
@@ -2115,6 +2298,10 @@
     .service-availability-delete-panel{
       grid-template-columns:minmax(0, 1fr) auto;
       align-items:center;
+    }
+
+    .service-availability-listing-choice-actions{
+      grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
     }
 
     .service-availability-status-option{
@@ -2259,6 +2446,11 @@
     deleteProfileCategoryFallback: {{ tr('availability.delete_profile_category_fallback')|tojson }},
     deleting: {{ tr('availability.deleting')|tojson }},
     deleted: {{ tr('availability.deleted')|tojson }},
+    listingChoiceDescription: {{ tr('availability.listing_choice_description')|tojson }},
+    listingChoiceConfirm: {{ tr('availability.listing_choice_confirm')|tojson }},
+    listingChoiceSelectError: {{ tr('availability.listing_choice_select_error')|tojson }},
+    listingDeleting: {{ tr('availability.listing_choice_deleting')|tojson }},
+    listingDeleted: {{ tr('availability.listing_choice_deleted')|tojson }},
     slotMorning: {{ tr('availability.slot_morning')|tojson }},
     slotAfternoon: {{ tr('availability.slot_afternoon')|tojson }},
     slotEvening: {{ tr('availability.slot_evening')|tojson }},
@@ -2333,6 +2525,12 @@
   const errorElement = document.getElementById("service-availability-error");
   const successElement = document.getElementById("service-availability-success");
   const globalMessage = document.getElementById("service-availability-global-message");
+  const listingChoice = document.getElementById("service-availability-listing-choice");
+  const listingChoiceDescription = document.getElementById("service-availability-listing-choice-description");
+  const listingChoiceList = document.getElementById("service-availability-listing-choice-list");
+  const listingChoiceError = document.getElementById("service-availability-listing-choice-error");
+  const listingKeepButton = document.getElementById("service-availability-listing-keep");
+  const listingDeleteButton = document.getElementById("service-availability-listing-delete");
   const weeklyEditor = document.getElementById("service-availability-week");
   const dayPickerInputs = Array.from(
     dialog.querySelectorAll("[data-service-availability-day-picker]")
@@ -2356,6 +2554,7 @@
   let userOffersServices = false;
   let toastTimer = 0;
   let intervalCounter = 0;
+  let pendingActiveListings = [];
 
   function setHidden(element, hidden) {
     if (element) element.classList.toggle("service-availability-hidden", Boolean(hidden));
@@ -2571,6 +2770,153 @@
     globalMessage.classList.toggle("is-error", Boolean(isError));
     setHidden(globalMessage, false);
     toastTimer = window.setTimeout(() => setHidden(globalMessage, true), 4200);
+  }
+
+  function interpolateCopy(template, values) {
+    return Object.entries(values || {}).reduce(
+      (result, [key, value]) => result
+        .split(`{${key}}`)
+        .join(String(value ?? "")),
+      String(template || "")
+    );
+  }
+
+  function normalizeActiveListings(value) {
+    const seen = new Set();
+    return asArray(value).map(item => ({
+      id: Number(item && item.id),
+      titolo: String((item && item.titolo) || "").trim()
+    })).filter(item => {
+      if (!Number.isInteger(item.id) || item.id < 1 || !item.titolo || seen.has(item.id)) {
+        return false;
+      }
+      seen.add(item.id);
+      return true;
+    });
+  }
+
+  function selectedListingForDeletion() {
+    const selected = listingChoiceList && listingChoiceList.querySelector(
+      '[name="service-availability-listing-choice"]:checked'
+    );
+    if (!selected) return null;
+    const selectedId = Number(selected.value);
+    return pendingActiveListings.find(item => item.id === selectedId) || null;
+  }
+
+  function resetListingChoice() {
+    pendingActiveListings = [];
+    if (listingChoiceList) listingChoiceList.replaceChildren();
+    if (listingChoiceError) {
+      listingChoiceError.textContent = "";
+      setHidden(listingChoiceError, true);
+    }
+    if (listingDeleteButton) {
+      listingDeleteButton.disabled = false;
+      listingDeleteButton.textContent = {{ tr('availability.listing_choice_delete')|tojson }};
+    }
+    if (listingKeepButton) listingKeepButton.disabled = false;
+    setHidden(listingChoice, true);
+  }
+
+  function showListingChoice(apiData, categorySlug) {
+    const normalizedCategory = normalizeCategorySlug(categorySlug);
+    const listings = normalizeActiveListings(
+      apiData && apiData.annunci_attivi_categoria
+    );
+    if (!normalizedCategory || !listings.length || !listingChoice || !listingChoiceList) {
+      return false;
+    }
+
+    pendingActiveListings = listings;
+    listingChoiceList.replaceChildren();
+    if (listingChoiceError) {
+      listingChoiceError.textContent = "";
+      setHidden(listingChoiceError, true);
+    }
+
+    const categoryLabel = categoryLabels[normalizedCategory] || normalizedCategory;
+    if (listingChoiceDescription) {
+      listingChoiceDescription.textContent = interpolateCopy(
+        copy.listingChoiceDescription,
+        { category: categoryLabel }
+      );
+    }
+
+    listings.forEach((listing, index) => {
+      const label = createElement("label", "service-availability-listing-choice-option");
+      const input = createElement("input");
+      input.type = "radio";
+      input.name = "service-availability-listing-choice";
+      input.value = String(listing.id);
+      input.checked = listings.length === 1 && index === 0;
+      label.append(input, createElement("span", "", listing.titolo));
+      listingChoiceList.appendChild(label);
+    });
+
+    setHidden(loading, true);
+    setHidden(form, true);
+    setHidden(listingChoice, false);
+    if (sheet) sheet.scrollTop = 0;
+    window.requestAnimationFrame(() => {
+      const target = listingChoiceList.querySelector("input:checked")
+        || listingChoiceList.querySelector("input")
+        || listingKeepButton;
+      if (target) target.focus({ preventScroll: true });
+    });
+    return true;
+  }
+
+  async function deleteChosenListing() {
+    if (busy) return;
+    const listing = selectedListingForDeletion();
+    if (!listing) {
+      if (listingChoiceError) {
+        listingChoiceError.textContent = copy.listingChoiceSelectError;
+        setHidden(listingChoiceError, false);
+      }
+      return;
+    }
+
+    const confirmation = interpolateCopy(
+      copy.listingChoiceConfirm,
+      { title: listing.titolo }
+    );
+    if (!window.confirm(confirmation)) return;
+
+    busy = true;
+    if (listingKeepButton) listingKeepButton.disabled = true;
+    if (listingDeleteButton) {
+      listingDeleteButton.disabled = true;
+      listingDeleteButton.textContent = copy.listingDeleting;
+    }
+    if (listingChoiceError) setHidden(listingChoiceError, true);
+
+    try {
+      const response = await fetch(`/api/annunci/${listing.id}/elimina`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+      await parseResponse(response, copy.errorSave);
+      showToast(copy.listingDeleted, false);
+      window.setTimeout(() => window.location.reload(), 450);
+    } catch (error) {
+      busy = false;
+      if (listingKeepButton) listingKeepButton.disabled = false;
+      if (listingDeleteButton) {
+        listingDeleteButton.disabled = false;
+        listingDeleteButton.textContent = {{ tr('availability.listing_choice_delete')|tojson }};
+      }
+      if (listingChoiceError) {
+        listingChoiceError.textContent = error.message || copy.errorSave;
+        setHidden(listingChoiceError, false);
+      }
+    }
   }
 
   function selectedProfile() {
@@ -3387,8 +3733,23 @@
     if (sheet) sheet.scrollTop = 0;
   }
 
+  function listingChoiceRequiresReload() {
+    return Boolean(
+      listingChoice
+      && pendingActiveListings.length > 0
+      && !listingChoice.classList.contains("service-availability-hidden")
+    );
+  }
+
   function closeDialog() {
     if (busy) return;
+    // La disponibilita e gia stata salvata sul server. Uscire con X,
+    // backdrop o Escape equivale quindi a mantenere l'annuncio e deve
+    // aggiornare subito tutte le card, senza lasciare lo stato precedente.
+    if (listingChoiceRequiresReload()) {
+      window.location.reload();
+      return;
+    }
     requestSequence += 1;
     dialog.classList.add("service-availability-hidden");
     dialog.setAttribute("aria-hidden", "true");
@@ -3403,6 +3764,7 @@
     const sequence = ++requestSequence;
     openDialog(trigger);
     clearMessages();
+    resetListingChoice();
     setHidden(form, true);
     setHidden(loading, false);
 
@@ -3493,9 +3855,23 @@
         },
         body: JSON.stringify(payload)
       });
-      await parseResponse(response, copy.errorSave);
+      const data = await parseResponse(response, copy.errorSave);
       successElement.textContent = copy.saved;
       setHidden(successElement, false);
+      setBusy(false);
+      saveButton.textContent = copy.save;
+
+      const savedUnavailableCategory = Boolean(
+        payload.categoria_slug
+        && payload.disponibilita
+        && payload.disponibilita.stato === "non_disponibile"
+      );
+      if (
+        savedUnavailableCategory
+        && showListingChoice(data, payload.categoria_slug)
+      ) {
+        return;
+      }
       window.setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       showError(error.message || copy.errorSave);
@@ -3639,6 +4015,12 @@
     input.addEventListener("change", syncPositiveDetailsState);
   });
   if (deleteButton) deleteButton.addEventListener("click", deleteAvailability);
+  if (listingKeepButton) {
+    listingKeepButton.addEventListener("click", closeDialog);
+  }
+  if (listingDeleteButton) {
+    listingDeleteButton.addEventListener("click", deleteChosenListing);
+  }
   dialog.querySelectorAll("[data-service-availability-add-interval]").forEach(button => {
     button.addEventListener("click", () => {
       if (busy) return;

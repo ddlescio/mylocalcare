@@ -1,0 +1,159 @@
+{% set listing_days = [
+  (1, tr('availability.day_monday'), tr('availability.day_monday_short')),
+  (2, tr('availability.day_tuesday'), tr('availability.day_tuesday_short')),
+  (3, tr('availability.day_wednesday'), tr('availability.day_wednesday_short')),
+  (4, tr('availability.day_thursday'), tr('availability.day_thursday_short')),
+  (5, tr('availability.day_friday'), tr('availability.day_friday_short')),
+  (6, tr('availability.day_saturday'), tr('availability.day_saturday_short')),
+  (7, tr('availability.day_sunday'), tr('availability.day_sunday_short'))
+] %}
+{% set listing_slots = [
+  ('mattina', tr('availability.slot_morning'), '☀️'),
+  ('pomeriggio', tr('availability.slot_afternoon'), '🌤️'),
+  ('sera', tr('availability.slot_evening'), '🌆'),
+  ('notte', tr('availability.slot_night'), '🌙')
+] %}
+{% set listing_availability_is_sought_only = listing_availability_sought_only | default(false) %}
+{% set listing_availability_initial_value = listing_availability_initial | default(none) %}
+{% set listing_availability_initial_days = listing_availability_initial_value.get('giorni', []) if listing_availability_initial_value else [] %}
+{% set listing_availability_reference_day = listing_availability_initial_days[0] if listing_availability_initial_days else none %}
+{% set listing_availability_initial_slots = listing_availability_reference_day.get('fasce', []) if listing_availability_reference_day else [] %}
+{% set listing_availability_initial_intervals = listing_availability_reference_day.get('intervalli', []) if listing_availability_reference_day else [] %}
+{% set listing_availability_initial_interval = listing_availability_initial_intervals[0] if listing_availability_initial_intervals|length == 1 else none %}
+
+<details class="listing-availability"
+         data-listing-availability
+         data-listing-availability-sought-only="{{ 'true' if listing_availability_is_sought_only else 'false' }}"
+         {% if listing_availability_is_sought_only and current_tipo_annuncio == 'offro' %}hidden{% endif %}
+         {% if listing_availability_initial_value %}open{% endif %}>
+  <summary class="listing-availability__summary">
+    <span class="listing-availability__icon" aria-hidden="true">🗓️</span>
+    <span class="listing-availability__summary-copy">
+      <strong>{{ tr('listing.availability_optional') }}</strong>
+      <small data-listing-availability-summary>
+        {{ tr('listing.offer_availability_hint') if current_tipo_annuncio == 'offro' else tr('listing.seek_availability_hint') }}
+      </small>
+    </span>
+    <span class="listing-availability__summary-action">
+      {{ tr('listing.add_availability') }}
+    </span>
+  </summary>
+
+  <div class="listing-availability__body">
+    <input type="hidden"
+           name="disponibilita_annuncio_json"
+           value=""
+           data-listing-availability-json>
+
+    <script type="application/json" data-listing-availability-initial>
+      {{ listing_availability_initial_value | tojson }}
+    </script>
+
+    <div class="listing-availability__intro">
+      <strong data-listing-availability-title>
+        {{ tr('availability.title') if current_tipo_annuncio == 'offro' else tr('search.availability_detail_title') }}
+      </strong>
+      <p data-listing-availability-hint>
+        {{ tr('listing.offer_availability_hint') if current_tipo_annuncio == 'offro' else tr('listing.seek_availability_hint') }}
+      </p>
+    </div>
+
+    <fieldset class="availability-request-group">
+      <legend>{{ tr('search.availability_days_title') }}</legend>
+      <div class="availability-request-days">
+        {% for day_number, day_label, day_short in listing_days %}
+          <label class="availability-request-chip availability-request-chip--day"
+                 title="{{ day_label }}">
+            <input type="checkbox"
+                   name="disponibilita_annuncio_giorni"
+                   value="{{ day_number }}"
+                   {% if listing_availability_initial_days | selectattr('giorno_settimana', 'equalto', day_number) | list %}checked{% endif %}
+                   data-listing-availability-day>
+            <span aria-hidden="true">{{ day_short }}</span>
+            <span class="sr-only">{{ day_label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset class="availability-request-group">
+      <legend>{{ tr('availability.slots') }}</legend>
+      <div class="availability-request-slots">
+        {% for slot_value, slot_label, slot_icon in listing_slots %}
+          <label class="availability-request-chip availability-request-chip--slot">
+            <input type="checkbox"
+                   name="disponibilita_annuncio_fasce"
+                   value="{{ slot_value }}"
+                   {% if slot_value in listing_availability_initial_slots %}checked{% endif %}
+                   data-listing-availability-slot>
+            <span aria-hidden="true">{{ slot_icon }}</span>
+            <span>{{ slot_label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <label class="availability-request-on-call listing-availability__on-call">
+      <input type="checkbox"
+             name="disponibilita_annuncio_a_chiamata"
+             value="1"
+             {% if listing_availability_initial_value and listing_availability_initial_value.get('a_chiamata') %}checked{% endif %}
+             data-listing-availability-on-call>
+      <span class="availability-request-on-call-icon" aria-hidden="true">📞</span>
+      <span class="availability-request-on-call-copy">
+        <strong>{{ tr('availability.on_call_label') }}</strong>
+        <small>{{ tr('availability_request.on_call_help') }}</small>
+      </span>
+      <span class="availability-request-on-call-check" aria-hidden="true">✓</span>
+    </label>
+
+    <fieldset class="availability-request-group availability-request-time-group">
+      <legend>{{ tr('search.availability_exact_time_title') }}</legend>
+      <div class="availability-request-time-grid">
+        <label class="availability-request-time-field">
+          <span>{{ tr('availability.from') }}</span>
+          <input type="time"
+                 step="60"
+                 name="disponibilita_annuncio_dalle"
+                 value="{{ listing_availability_initial_interval.get('ora_inizio', '') if listing_availability_initial_interval else '' }}"
+                 data-listing-availability-start>
+        </label>
+        <label class="availability-request-time-field">
+          <span>{{ tr('availability.to') }}</span>
+          <input type="time"
+                 step="60"
+                 name="disponibilita_annuncio_alle"
+                 value="{{ listing_availability_initial_interval.get('ora_fine', '') if listing_availability_initial_interval else '' }}"
+                 data-listing-availability-end>
+        </label>
+      </div>
+      <p class="listing-availability__next-day"
+         data-listing-availability-next-day
+         hidden>{{ tr('availability_request.next_day_help') }}</p>
+    </fieldset>
+
+    <p class="listing-availability__error"
+       data-listing-availability-error
+       role="alert"
+       hidden></p>
+
+    <button type="button"
+            class="listing-availability__reset"
+            data-listing-availability-reset>
+      {{ tr('listing.clear_availability') }}
+    </button>
+  </div>
+</details>
+
+<script id="listing-availability-copy" type="application/json">{{ {
+  'offerTitle': tr('availability.title'),
+  'offerHint': tr('listing.offer_availability_hint'),
+  'seekTitle': tr('search.availability_detail_title'),
+  'seekHint': tr('listing.seek_availability_hint'),
+  'selectDay': tr('availability_request.error_select_day'),
+  'emptyDay': tr('availability_request.error_empty_day'),
+  'incompleteInterval': tr('availability_request.error_incomplete_interval'),
+  'invalidInterval': tr('availability_request.error_invalid_interval'),
+  'invalidNightInterval': tr('availability_request.error_invalid_night_interval'),
+  'generic': tr('availability_request.error_generic')
+}|tojson }}</script>

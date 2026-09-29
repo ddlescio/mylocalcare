@@ -7,7 +7,7 @@
 {% endblock %}
 {% block content %}
 {% from "partials/interesse_annuncio_button.html" import interesse_annuncio_icon with context %}
-{% from "partials/disponibilita_servizi_display.html" import availability_badge, availability_intro with context %}
+{% from "partials/disponibilita_servizi_display.html" import availability_badge, availability_intro, sought_availability_badge with context %}
 {% set pubblico = pubblico|default(False) %}
 
 {#
@@ -706,6 +706,10 @@
                         {% if a.get('tipo_annuncio') == 'offro' %}
                           <div class="profile-annuncio-availability">
                             {{ availability_badge(a.get('disponibilita_servizi')) }}
+                          </div>
+                        {% elif a.get('tipo_annuncio') == 'cerco' and a.get('disponibilita_cercata') %}
+                          <div class="profile-annuncio-availability">
+                            {{ sought_availability_badge(a.get('disponibilita_cercata')) }}
                           </div>
                         {% endif %}
 

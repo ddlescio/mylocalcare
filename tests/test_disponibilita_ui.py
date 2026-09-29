@@ -154,7 +154,7 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
             ),
         )
 
-    def test_public_listing_has_expandable_details_only_for_offers(self):
+    def test_public_listing_distinguishes_offered_and_sought_availability(self):
         listing = self.read_template("annuncio_pubblico.html")
         display = self.read_template("partials/disponibilita_servizi_display.html")
 
@@ -171,12 +171,16 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
                 r"\s*disponibilita_annuncio\|default\(None\),"
                 r"\s*can_request=puo_richiedere_disponibilita"
                 r"\s*\) \}\}"
+                r"\s*\{% elif annuncio\.get\('tipo_annuncio'\) == 'cerco' %\}"
+                r"\s*\{\{ sought_availability_listing\("
+                r"disponibilita_annuncio\|default\(None\)\) \}\}"
                 r"\s*\{% endif %\}",
                 flags=re.DOTALL,
             ),
         )
         self.assertIn('<details class="availability-listing-details">', display)
         self.assertIn("{{ availability_details(disponibilita) }}", display)
+        self.assertIn("{% macro sought_availability_listing", display)
 
     def test_new_display_components_have_mobile_first_styles(self):
         css = (
@@ -203,6 +207,74 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         self.assertIn('input.type = "time"', dialog)
         self.assertIn('input.step = "60"', dialog)
         self.assertNotIn('input.step = "900"', dialog)
+
+    def test_unavailable_category_offers_single_listing_choice_after_save(self):
+        dialog = self.read_template(
+            "partials/disponibilita_servizi_dialog.html"
+        )
+
+        self.assertIn('id="service-availability-listing-choice"', dialog)
+        self.assertIn('id="service-availability-listing-keep"', dialog)
+        self.assertIn('id="service-availability-listing-delete"', dialog)
+        self.assertIn("payload.categoria_slug", dialog)
+        self.assertIn(
+            'payload.disponibilita.stato === "non_disponibile"',
+            dialog,
+        )
+        self.assertIn("apiData && apiData.annunci_attivi_categoria", dialog)
+
+    def test_listing_deletion_is_individual_and_requires_title_confirmation(self):
+        dialog = self.read_template(
+            "partials/disponibilita_servizi_dialog.html"
+        )
+
+        self.assertIn("selectedListingForDeletion()", dialog)
+        self.assertIn("{ title: listing.titolo }", dialog)
+        self.assertIn("window.confirm(confirmation)", dialog)
+        self.assertIn(
+            "fetch(`/api/annunci/${listing.id}/elimina`",
+            dialog,
+        )
+        self.assertIn('method: "DELETE"', dialog)
+        self.assertIn('"X-CSRF-Token": csrfToken', dialog)
+
+    def test_every_choice_exit_keeps_listing_and_refreshes_saved_state(self):
+        dialog = self.read_template(
+            "partials/disponibilita_servizi_dialog.html"
+        )
+
+        close_start = dialog.index("function closeDialog()")
+        close_end = dialog.index("async function loadAvailability", close_start)
+        close_body = dialog[close_start:close_end]
+        self.assertIn("listingChoiceRequiresReload()", close_body)
+        self.assertIn("window.location.reload()", close_body)
+        self.assertLess(
+            close_body.index("listingChoiceRequiresReload()"),
+            close_body.index('dialog.classList.add("service-availability-hidden")'),
+        )
+        self.assertIn(
+            'listingKeepButton.addEventListener("click", closeDialog)',
+            dialog,
+        )
+        self.assertIn(
+            'dialog.querySelectorAll("[data-service-availability-close]")',
+            dialog,
+        )
+        self.assertIn('if (event.key === "Escape")', dialog)
+        self.assertIn("closeDialog();", dialog)
+
+    def test_listing_delete_api_checks_csrf_owner_and_active_state(self):
+        app_source = (ROOT / "app.py").read_text(encoding="utf-8")
+        start = app_source.index("def elimina_annuncio_api(id):")
+        end = app_source.index("# --- Foto Profilo ---", start)
+        route = app_source[start:end]
+
+        self.assertIn("verify_csrf()", route)
+        self.assertIn('int(annuncio["utente_id"]) != user_id', route)
+        self.assertIn('annuncio["stato"]', route)
+        self.assertIn("AND utente_id = ?", route)
+        self.assertIn("AND stato = 'approvato'", route)
+        self.assertIn("int(cur.rowcount or 0) != 1", route)
 
 
 if __name__ == "__main__":

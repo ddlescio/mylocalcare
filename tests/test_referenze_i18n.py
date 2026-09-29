@@ -22,6 +22,11 @@ class ReferenceTranslationsTest(unittest.TestCase):
             "reference.manager.existing_only",
             "reference.response.processing_consent",
             "reference.response.contact_consent",
+            "reference.response.public_consent",
+            "reference.response.consents_title",
+            "reference.response.consents_help",
+            "reference.response.accept_all",
+            "reference.response.incomplete_confirm",
             "reference.response.phone_label",
             "reference.response.phone_help",
             "reference.response.privacy_identity",
@@ -75,7 +80,7 @@ class ReferenceTranslationsTest(unittest.TestCase):
             "Oltre 2 anni",
             "Struttura",
             "Indica esplicitamente se hai avuto un’esperienza diretta.",
-            "La pubblicazione del testo richiede una referenza pubblicabile.",
+            "Consenso al ricontatto telefonico e numero di telefono devono essere indicati insieme.",
             "Richiesta salvata, ma l’email non è partita. Puoi reinviarla.",
         )
         for source in sources:

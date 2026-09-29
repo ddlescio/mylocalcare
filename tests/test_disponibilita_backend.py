@@ -32,6 +32,24 @@ def availability_payload(**overrides):
     return normalize_disponibilita_payload(payload)
 
 
+def load_app_function(function_name, namespace):
+    """Carica una singola route senza avviare l'intera applicazione."""
+
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    function = next(
+        node for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == function_name
+    )
+    function.decorator_list = []
+    exec(
+        compile(ast.Module(body=[function], type_ignores=[]), "app.py", "exec"),
+        namespace,
+    )
+    return namespace[function_name]
+
+
 def load_backend_functions():
     """Carica le funzioni pure/DB senza importare l'intera applicazione web."""
 
@@ -51,6 +69,7 @@ def load_backend_functions():
         "elenca_disponibilita_servizi",
         "risolvi_disponibilita_servizi_annuncio",
         "_categorie_disponibilita_offerte",
+        "_annunci_attivi_disponibilita_categoria",
         "_riepilogo_pubblico_disponibilita",
         "assegna_disponibilita_annunci",
         "_disponibilita_categoria_esistente",
@@ -145,9 +164,19 @@ class DisponibilitaBackendTest(unittest.TestCase):
             CREATE TABLE annunci (
                 id INTEGER PRIMARY KEY,
                 utente_id INTEGER NOT NULL,
+                titolo TEXT,
                 categoria TEXT,
                 tipo_annuncio TEXT,
-                stato TEXT
+                stato TEXT,
+                media TEXT,
+                foto_card TEXT
+            );
+            CREATE TABLE interessi_annunci (
+                id INTEGER PRIMARY KEY,
+                annuncio_id INTEGER NOT NULL,
+                attivo INTEGER NOT NULL DEFAULT 1,
+                updated_at TEXT,
+                disattivato_at TEXT
             );
             CREATE TABLE disponibilita_profili (
                 utente_id INTEGER PRIMARY KEY,
@@ -292,6 +321,61 @@ class DisponibilitaBackendTest(unittest.TestCase):
         self.assertEqual(updated["settimanale"], second["settimanale"])
         self.assertEqual(updated["date_speciali"], [])
         self.assertEqual(updated["assenze"], [])
+
+    def test_aggiornamento_compatto_conserva_date_speciali_e_assenze(self):
+        save = self.backend["_salva_disponibilita_categoria"]
+        load = self.backend["carica_disponibilita_servizi_categoria"]
+        existing = availability_payload(
+            stato="limitata",
+            settimanale=[
+                {"giorno_settimana": 2, "fascia": "pomeriggio"},
+            ],
+            date_speciali=[{
+                "data": "2026-10-10",
+                "tipo": "disponibile",
+                "fasce": ["sera"],
+            }],
+            assenze=[{
+                "data_inizio": "2026-12-20",
+                "data_fine": "2026-12-27",
+            }],
+        )
+        save(self.cursor, 71, "babysitter", existing, 0)
+
+        compact_update = availability_payload(
+            stato="disponibile",
+            a_chiamata=True,
+            settimanale=[
+                {"giorno_settimana": 5, "fascia": "mattina"},
+            ],
+            settimanale_intervalli=[{
+                "giorno_settimana": 5,
+                "ora_inizio": "09:00",
+                "ora_fine": "12:00",
+                "giorno_successivo": False,
+            }],
+            date_speciali=[],
+            assenze=[],
+        )
+        save(
+            self.cursor,
+            71,
+            "babysitter",
+            compact_update,
+            1,
+            preserve_calendar_exceptions=True,
+        )
+
+        updated = load(self.cursor, 71, "babysitter", pubblica=False)
+        self.assertEqual(updated["versione"], 2)
+        self.assertTrue(updated["a_chiamata"])
+        self.assertEqual(updated["settimanale"], compact_update["settimanale"])
+        self.assertEqual(
+            updated["settimanale_intervalli"],
+            compact_update["settimanale_intervalli"],
+        )
+        self.assertEqual(updated["date_speciali"], existing["date_speciali"])
+        self.assertEqual(updated["assenze"], existing["assenze"])
 
     def test_salva_e_rilegge_a_chiamata_generale_senza_fasce(self):
         save = self.backend["_salva_disponibilita_generale"]
@@ -686,6 +770,164 @@ class DisponibilitaBackendTest(unittest.TestCase):
         self.assertEqual(
             {item["categoria_slug"] for item in public},
             {"babysitter"},
+        )
+
+    def test_annunci_attivi_categoria_esclude_altri_utenti_e_stati(self):
+        self.cursor.executemany("""
+            INSERT INTO annunci (
+                id, utente_id, titolo, categoria, tipo_annuncio, stato
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, [
+            (1, 7, "Babysitter serale", "Babysitter", "offro", "approvato"),
+            (2, 7, "Aiuto weekend", "babysitter", "offro", "approvato"),
+            (3, 7, "Cerco babysitter", "babysitter", "cerco", "approvato"),
+            (4, 7, "In attesa", "babysitter", "offro", "in_attesa"),
+            (5, 8, "Di un altro utente", "babysitter", "offro", "approvato"),
+            (6, 7, "Pet sitter", "pet-sitter", "offro", "approvato"),
+        ])
+
+        listings = self.backend[
+            "_annunci_attivi_disponibilita_categoria"
+        ](self.cursor, 7, "BABYSITTER")
+
+        self.assertEqual([item["id"] for item in listings], [2, 1])
+        self.assertEqual(
+            [item["titolo"] for item in listings],
+            ["Aiuto weekend", "Babysitter serale"],
+        )
+        self.assertTrue(all(
+            item["categoria_slug"] == "babysitter"
+            for item in listings
+        ))
+
+    def test_risposta_generale_non_propone_cancellazioni_annunci(self):
+        self.cursor.execute("INSERT INTO utenti (id, offro_4) VALUES (7, 1)")
+        self.cursor.execute("""
+            INSERT INTO annunci (
+                id, utente_id, titolo, categoria, tipo_annuncio, stato
+            ) VALUES (1, 7, 'Babysitter serale', 'babysitter', 'offro', 'approvato')
+        """)
+
+        response = self.backend["_risposta_disponibilita_servizi"](
+            self.cursor,
+            7,
+        )
+
+        self.assertEqual(response["annunci_attivi_categoria"], [])
+
+    def test_risposta_categoria_propone_solo_annunci_attivi_dell_ambito(self):
+        self.cursor.execute("INSERT INTO utenti (id, offro_4) VALUES (7, 1)")
+        self.cursor.executemany("""
+            INSERT INTO annunci (
+                id, utente_id, titolo, categoria, tipo_annuncio, stato
+            ) VALUES (?, 7, ?, ?, 'offro', ?)
+        """, [
+            (1, "Babysitter serale", "babysitter", "approvato"),
+            (2, "Pet sitter", "pet-sitter", "approvato"),
+            (3, "Vecchio annuncio", "babysitter", "eliminato"),
+        ])
+
+        response = self.backend["_risposta_disponibilita_servizi"](
+            self.cursor,
+            7,
+            categoria_slug="babysitter",
+        )
+
+        self.assertEqual(
+            response["annunci_attivi_categoria"],
+            [{
+                "id": 1,
+                "titolo": "Babysitter serale",
+                "categoria_slug": "babysitter",
+            }],
+        )
+
+    def test_endpoint_elimina_solo_annuncio_attivo_del_proprietario(self):
+        self.cursor.executemany("""
+            INSERT INTO annunci (
+                id, utente_id, titolo, categoria, tipo_annuncio, stato,
+                media, foto_card
+            ) VALUES (?, ?, ?, 'babysitter', 'offro', ?, ?, ?)
+        """, [
+            (1, 7, "Babysitter serale", "approvato", "a.jpg,b.jpg", "a.jpg"),
+            (2, 7, "Secondo annuncio", "approvato", "c.jpg", "c.jpg"),
+            (3, 8, "Annuncio altrui", "approvato", "d.jpg", "d.jpg"),
+        ])
+        self.cursor.execute(
+            "INSERT INTO interessi_annunci (id, annuncio_id) VALUES (10, 1)"
+        )
+        self.connection.commit()
+
+        class NonClosingConnection:
+            def __init__(self, connection):
+                self.connection = connection
+
+            def cursor(self):
+                return self.connection.cursor()
+
+            def close(self):
+                return None
+
+            def __getattr__(self, name):
+                return getattr(self.connection, name)
+
+        csrf_calls = []
+        deleted_paths = []
+        invalidations = []
+        namespace = {
+            "g": SimpleNamespace(utente={"id": 7}),
+            "verify_csrf": lambda: csrf_calls.append(True),
+            "get_db_connection": lambda: NonClosingConnection(self.connection),
+            "get_cursor": lambda connection: connection.cursor(),
+            "sql": lambda query: query,
+            "now_sql": lambda: "CURRENT_TIMESTAMP",
+            "jsonify": lambda payload: payload,
+            "log_exception_safe": lambda *args, **kwargs: None,
+            "elimina_percorsi_immagine_locale": (
+                lambda paths: deleted_paths.extend(paths)
+            ),
+            "invalidate_admin_counters": lambda: invalidations.append(True),
+            "app": SimpleNamespace(
+                logger=SimpleNamespace(warning=lambda *args, **kwargs: None)
+            ),
+        }
+        route = load_app_function("elimina_annuncio_api", namespace)
+
+        response = route(1)
+
+        self.assertEqual(response["ok"], True)
+        self.assertEqual(response["annuncio_id"], 1)
+        self.assertEqual(csrf_calls, [True])
+        self.assertEqual(deleted_paths, ["a.jpg", "b.jpg"])
+        self.assertEqual(invalidations, [True])
+        deleted = self.cursor.execute(
+            "SELECT stato, media, foto_card FROM annunci WHERE id = 1"
+        ).fetchone()
+        untouched = self.cursor.execute(
+            "SELECT stato, media FROM annunci WHERE id = 2"
+        ).fetchone()
+        interest = self.cursor.execute(
+            "SELECT attivo FROM interessi_annunci WHERE id = 10"
+        ).fetchone()
+        self.assertEqual(dict(deleted), {
+            "stato": "eliminato",
+            "media": "",
+            "foto_card": None,
+        })
+        self.assertEqual(dict(untouched), {
+            "stato": "approvato",
+            "media": "c.jpg",
+        })
+        self.assertEqual(interest["attivo"], 0)
+
+        foreign_response, status = route(3)
+        self.assertEqual(status, 404)
+        self.assertFalse(foreign_response["ok"])
+        self.assertEqual(
+            self.cursor.execute(
+                "SELECT stato FROM annunci WHERE id = 3"
+            ).fetchone()["stato"],
+            "approvato",
         )
 
     def test_risposta_rollout_senza_tabelle_categoria(self):

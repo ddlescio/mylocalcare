@@ -357,7 +357,15 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
         self.connection.close()
         self.database_path.unlink(missing_ok=True)
 
-    def submit(self, *, direct="1", consent="on", phone="+39 333 123 4567"):
+    def submit(
+        self,
+        *,
+        direct="1",
+        consent="on",
+        phone="+39 333 123 4567",
+        publication=None,
+        legacy_text_consent=None,
+    ):
         data = {
             "consenso_trattamento": "on",
             "categoria_slug": "babysitter",
@@ -370,6 +378,10 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
             data["referente_telefono"] = phone
         if consent is not None:
             data["autorizza_contatto_verifica"] = consent
+        if publication is not None:
+            data["autorizza_pubblicazione"] = publication
+        if legacy_text_consent is not None:
+            data["autorizza_testo_pubblico"] = legacy_text_consent
         with self.app.test_request_context(
             "/referenze/rispondi",
             method="POST",
@@ -398,7 +410,7 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
 
         self.assertEqual(reference["stato_risposta"], "risposta_ricevuta")
         self.assertEqual(reference["stato_verifica"], "in_coda")
-        self.assertEqual(reference["consenso_versione"], "references_2026_v2")
+        self.assertEqual(reference["consenso_versione"], "references_2026_v3")
         self.assertNotIn("333", contact["telefono_cifrato"])
         self.assertEqual(
             decrypt_reference_phone(
@@ -413,6 +425,28 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
         self.assertIsNotNone(contact["token_consumed_at"])
         self.assertEqual(event["attore_tipo"], "referente")
         self.assertIsNotNone(event["created_at"])
+
+    def test_unico_consenso_pubblica_scheda_e_testo_compilato(self):
+        response = self.submit(publication="on")
+        self.assertEqual(response.status_code, 200)
+        reference = self.connection.execute(
+            "SELECT autorizza_pubblicazione, autorizza_testo_pubblico "
+            "FROM referenze WHERE id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        self.assertEqual(reference["autorizza_pubblicazione"], 1)
+        self.assertEqual(reference["autorizza_testo_pubblico"], 1)
+
+    def test_client_obsoleto_non_crea_consensi_pubblici_incoerenti(self):
+        response = self.submit(legacy_text_consent="on")
+        self.assertEqual(response.status_code, 200)
+        reference = self.connection.execute(
+            "SELECT autorizza_pubblicazione, autorizza_testo_pubblico "
+            "FROM referenze WHERE id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        self.assertEqual(reference["autorizza_pubblicazione"], 0)
+        self.assertEqual(reference["autorizza_testo_pubblico"], 0)
 
     def test_rifiuto_azzera_consenso_e_non_salva_telefono(self):
         response = self.submit(direct="0", consent="on")

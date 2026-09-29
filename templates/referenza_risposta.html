@@ -65,7 +65,8 @@
           class="reference-response-form"
           method="post"
           action="{{ url_for('referenza_rispondi') }}"
-          data-reference-response-form>
+          data-reference-response-form
+          data-reference-incomplete-confirm="{{ tr('reference.response.incomplete_confirm') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <fieldset class="reference-response-question">
@@ -157,54 +158,6 @@
             <small><span data-reference-character-count>0</span>/1500 {{ tr('reference.characters') }}</small>
           </div>
 
-          <label class="reference-consent reference-field--wide">
-            <input type="checkbox" name="consenso_trattamento" value="1" required>
-            <span>{{ tr('reference.response.processing_consent') }}</span>
-          </label>
-
-          <div class="reference-contact-consent reference-field--wide">
-            <div
-              id="reference-response-contact-details"
-              class="reference-field reference-contact-details"
-              data-reference-contact-details>
-              <label for="reference-response-phone">
-                {{ tr('reference.response.phone_label') }}
-                <span class="reference-optional">{{ tr('reference.optional') }}</span>
-              </label>
-              <input
-                id="reference-response-phone"
-                name="referente_telefono"
-                type="tel"
-                inputmode="tel"
-                autocomplete="tel"
-                maxlength="40"
-                aria-describedby="reference-response-phone-help"
-                placeholder="+39 333 123 4567"
-                data-no-translate>
-              <small id="reference-response-phone-help">{{ tr('reference.response.phone_help') }}</small>
-            </div>
-            <label class="reference-consent">
-              <input
-                id="reference-response-contact-consent"
-                type="checkbox"
-                name="consenso_contatto"
-                value="1"
-                aria-controls="reference-response-contact-details"
-                data-reference-contact-consent>
-              <span>{{ tr('reference.response.contact_consent') }}</span>
-            </label>
-          </div>
-
-          <label class="reference-consent reference-field--wide">
-            <input type="checkbox" name="autorizza_pubblicazione" value="1">
-            <span>{{ tr('reference.response.public_consent') }}</span>
-          </label>
-
-          <label class="reference-consent reference-field--wide">
-            <input type="checkbox" name="autorizza_testo_pubblico" value="1">
-            <span>{{ tr('reference.response.text_consent') }}</span>
-          </label>
-
           <aside class="reference-response-privacy" aria-labelledby="reference-response-privacy-title">
             <h2 id="reference-response-privacy-title">{{ tr('reference.response.privacy_title') }}</h2>
             <ul>
@@ -216,6 +169,74 @@
               {{ tr('reference.response.more_privacy') }}<a href="{{ url_for('privacy') }}" target="_blank" rel="noopener">{{ tr('register.privacy') }}</a>.
             </p>
           </aside>
+
+          <section class="reference-response-consents reference-field--wide" aria-labelledby="reference-response-consents-title">
+            <div class="reference-response-consents__heading">
+              <div>
+                <h2 id="reference-response-consents-title">{{ tr('reference.response.consents_title') }}</h2>
+                <p>{{ tr('reference.response.consents_help') }}</p>
+              </div>
+              <button
+                type="button"
+                class="reference-consent-all"
+                data-reference-accept-all>
+                ✓ {{ tr('reference.response.accept_all') }}
+              </button>
+            </div>
+
+            <label class="reference-consent">
+              <input
+                type="checkbox"
+                name="consenso_trattamento"
+                value="1"
+                required
+                data-reference-consent-option>
+              <span>{{ tr('reference.response.processing_consent') }}</span>
+            </label>
+
+            <div class="reference-contact-consent">
+              <div
+                id="reference-response-contact-details"
+                class="reference-field reference-contact-details"
+                data-reference-contact-details>
+                <label for="reference-response-phone">
+                  {{ tr('reference.response.phone_label') }}
+                  <span class="reference-optional">{{ tr('reference.optional') }}</span>
+                </label>
+                <input
+                  id="reference-response-phone"
+                  name="referente_telefono"
+                  type="tel"
+                  inputmode="tel"
+                  autocomplete="tel"
+                  maxlength="40"
+                  aria-describedby="reference-response-phone-help"
+                  placeholder="+39 333 123 4567"
+                  data-no-translate>
+                <small id="reference-response-phone-help">{{ tr('reference.response.phone_help') }}</small>
+              </div>
+              <label class="reference-consent">
+                <input
+                  id="reference-response-contact-consent"
+                  type="checkbox"
+                  name="consenso_contatto"
+                  value="1"
+                  aria-controls="reference-response-contact-details"
+                  data-reference-contact-consent
+                  data-reference-consent-option>
+                <span>{{ tr('reference.response.contact_consent') }}</span>
+              </label>
+            </div>
+
+            <label class="reference-consent">
+              <input
+                type="checkbox"
+                name="autorizza_pubblicazione"
+                value="1"
+                data-reference-consent-option>
+              <span>{{ tr('reference.response.public_consent') }}</span>
+            </label>
+          </section>
 
           <button type="submit" class="reference-primary-button reference-response-submit">
             {{ tr('reference.response.send') }}

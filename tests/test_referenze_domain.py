@@ -149,7 +149,7 @@ class ReferenceValidationTest(unittest.TestCase):
             "+39 333 123 4567",
         )
         self.assertTrue(normalized["autorizza_testo_pubblico"])
-        self.assertEqual(REFERENCE_CONSENT_VERSION, "references_2026_v2")
+        self.assertEqual(REFERENCE_CONSENT_VERSION, "references_2026_v3")
 
     def test_telefono_e_validato_e_richiede_consenso_abbinato(self):
         base = {
@@ -245,17 +245,34 @@ class ReferenceValidationTest(unittest.TestCase):
         )
         self.assertIn("Maria Rossi", normalized["testo_referente"])
 
-    def test_testo_non_puo_essere_autorizzato_senza_pubblicazione(self):
-        with self.assertRaises(ValueError):
-            normalize_reference_payload(
-                {
-                    "categoria_slug": "caregiver",
-                    "tipo_rapporto": "datore_lavoro",
-                    "testo_referente": "Rapporto confermato.",
-                    "autorizza_testo_pubblico": True,
-                },
-                current_year=2026,
-            )
+    def test_consenso_scheda_governa_anche_il_testo_facoltativo(self):
+        base = {
+            "categoria_slug": "caregiver",
+            "tipo_rapporto": "datore_lavoro",
+            "durata_fascia": "6_12_mesi",
+            "esperienza_diretta": True,
+            "testo_referente": "Rapporto confermato.",
+        }
+        private = normalize_reference_payload(
+            {**base, "autorizza_testo_pubblico": True},
+            current_year=2026,
+        )
+        public = normalize_reference_payload(
+            {**base, "autorizza_pubblicazione": True},
+            current_year=2026,
+        )
+        empty = normalize_reference_payload(
+            {
+                **base,
+                "testo_referente": "",
+                "autorizza_pubblicazione": True,
+            },
+            current_year=2026,
+        )
+
+        self.assertFalse(private["autorizza_testo_pubblico"])
+        self.assertTrue(public["autorizza_testo_pubblico"])
+        self.assertFalse(empty["autorizza_testo_pubblico"])
 
     def test_serializzazione_pubblica_e_allowlist(self):
         row = {

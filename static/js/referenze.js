@@ -240,26 +240,32 @@
   function updateDirectExperienceState(form) {
     const selected = form?.querySelector("input[name='esperienza_diretta']:checked")?.value;
     const publication = form?.querySelector("input[name='autorizza_pubblicazione']");
-    const publicText = form?.querySelector("input[name='autorizza_testo_pubblico']");
-    const statement = form?.querySelector("textarea[name='testo_referente']");
-    if (!publication || !publicText) return;
+    if (!publication) return;
 
     const cannotConfirm = selected === "0";
     publication.disabled = cannotConfirm;
     if (cannotConfirm) {
       publication.checked = false;
     }
-
-    const publicTextAllowed = (
-      !cannotConfirm
-      && publication.checked
-      && Boolean(statement?.value.trim())
-    );
-    publicText.disabled = !publicTextAllowed;
-    if (!publicTextAllowed) {
-      publicText.checked = false;
-    }
     updateContactConsentState(form);
+  }
+
+  function enabledConsentOptions(form) {
+    return Array.from(
+      form?.querySelectorAll("[data-reference-consent-option]") || []
+    ).filter((input) => !input.disabled);
+  }
+
+  function acceptAllConsents(form) {
+    enabledConsentOptions(form).forEach((input) => {
+      input.checked = true;
+    });
+    updateContactConsentState(form);
+
+    const phone = form?.querySelector("input[name='referente_telefono']");
+    if (phone?.required && !phone.value.trim()) {
+      phone.focus({ preventScroll: false });
+    }
   }
 
   function updateContactConsentState(form) {
@@ -287,6 +293,13 @@
   }
 
   document.addEventListener("click", (event) => {
+    const acceptAll = event.target.closest("[data-reference-accept-all]");
+    if (acceptAll) {
+      event.preventDefault();
+      acceptAllConsents(acceptAll.closest("form"));
+      return;
+    }
+
     const publicTrigger = event.target.closest("[data-reference-public-open]");
     if (publicTrigger) {
       event.preventDefault();
@@ -332,6 +345,20 @@
   });
 
   document.addEventListener("submit", (event) => {
+    const responseForm = event.target.closest("[data-reference-response-form]");
+    if (responseForm) {
+      const missingConsent = enabledConsentOptions(responseForm).some(
+        (input) => !input.checked
+      );
+      if (missingConsent) {
+        const message = responseForm.dataset.referenceIncompleteConfirm || "";
+        if (!global.confirm(message)) {
+          event.preventDefault();
+        }
+      }
+      return;
+    }
+
     const form = event.target.closest("#reference-invite-form");
     if (!form || !global.fetch || !global.FormData) return;
     event.preventDefault();
@@ -342,9 +369,6 @@
   document.addEventListener("input", (event) => {
     if (event.target.matches("[data-reference-counted]")) {
       updateCounters(event.target.parentElement);
-      if (event.target.matches("textarea[name='testo_referente']")) {
-        updateDirectExperienceState(event.target.closest("form"));
-      }
     }
     if (event.target.matches("input[name='referente_telefono']")) {
       updateContactConsentState(event.target.closest("form"));
@@ -353,7 +377,7 @@
 
   document.addEventListener("change", (event) => {
     if (event.target.matches(
-      "input[name='esperienza_diretta'], input[name='autorizza_pubblicazione']"
+      "input[name='esperienza_diretta']"
     )) {
       updateDirectExperienceState(event.target.closest("form"));
     }
@@ -373,6 +397,7 @@
     openDialog,
     closeDialog,
     updateDirectExperienceState,
-    updateContactConsentState
+    updateContactConsentState,
+    acceptAllConsents
   };
 })(window);

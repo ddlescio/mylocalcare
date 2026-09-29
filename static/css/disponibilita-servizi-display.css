@@ -374,6 +374,96 @@
   color: #475569;
 }
 
+.sought-availability-listing {
+  margin: 1rem calc(50% - 50vw + 1mm) 0;
+}
+
+.sought-availability-listing .availability-listing__panel {
+  overflow: hidden;
+  border: 1px solid rgba(147, 197, 253, .88);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at 92% 0, rgba(196, 181, 253, .22), transparent 32%),
+    linear-gradient(145deg, rgba(255, 255, 255, .99), rgba(239, 246, 255, .93));
+  box-shadow: 0 14px 34px rgba(30, 64, 175, .09), inset 0 1px 0 #fff;
+}
+
+.sought-availability-listing .availability-listing__head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .76rem;
+  padding: .9rem 1rem;
+  border-bottom: 1px solid rgba(191, 219, 254, .78);
+  background: rgba(255, 255, 255, .54);
+}
+
+.sought-availability-listing .availability-listing__icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(147, 197, 253, .92);
+  border-radius: .95rem;
+  background: linear-gradient(145deg, #eff6ff, #fff);
+  font-size: 1.15rem;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, .08), inset 0 1px 0 #fff;
+}
+
+.sought-availability-listing .availability-listing__head > div {
+  min-width: 0;
+  display: grid;
+  gap: .22rem;
+}
+
+.sought-availability-listing .availability-listing__head h2,
+.sought-availability-listing .availability-listing__head p {
+  margin: 0;
+}
+
+.sought-availability-listing .availability-listing__head h2 {
+  color: #0f172a;
+  font-size: .94rem;
+  line-height: 1.2;
+  font-weight: 880;
+  letter-spacing: -.012em;
+}
+
+.sought-availability-listing .availability-listing__head p {
+  color: #64748b;
+  font-size: .69rem;
+  line-height: 1.4;
+  font-weight: 650;
+}
+
+.sought-availability-listing .availability-detail.is-compact {
+  gap: .62rem;
+  margin: .75rem;
+  padding: .78rem;
+  border-color: rgba(191, 219, 254, .94);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 8px 22px rgba(30, 64, 175, .055);
+}
+
+.sought-availability-listing .availability-detail__head {
+  justify-content: flex-start;
+}
+
+.sought-availability-listing .availability-detail__section h4 {
+  color: #1d4ed8;
+}
+
+.sought-availability-listing .availability-detail__week {
+  border-color: #dbeafe;
+  background: rgba(248, 250, 252, .9);
+}
+
+.sought-availability-listing .availability-detail__day {
+  border-color: #dbeafe;
+}
+
 .availability-listing-section {
   margin: 1rem calc(50% - 50vw + 1mm) 0;
 }
@@ -489,7 +579,8 @@
 }
 
 @media (min-width: 640px) {
-  .availability-listing-section {
+  .availability-listing-section,
+  .sought-availability-listing {
     margin-right: 0;
     margin-left: 0;
   }
@@ -511,5 +602,21 @@
 
   .availability-listing-details__action {
     grid-column: 2;
+  }
+
+  .sought-availability-listing .availability-listing__head {
+    align-items: start;
+    padding: .78rem;
+  }
+
+  .sought-availability-listing .availability-listing__icon {
+    width: 2.45rem;
+    height: 2.45rem;
+    border-radius: .82rem;
+  }
+
+  .sought-availability-listing .availability-detail.is-compact {
+    margin: .62rem;
+    padding: .68rem;
   }
 }
