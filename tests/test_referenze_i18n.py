@@ -72,6 +72,15 @@ class ReferenceTranslationsTest(unittest.TestCase):
         self.assertIn("resteranno riservati", privacy)
         self.assertIn("profilo pubblico", privacy)
 
+    def test_private_invitation_explainer_is_concise(self):
+        body = translate("reference.how.body", "it")
+
+        self.assertLessEqual(len(body.split()), 14)
+        self.assertIn("link personale", body)
+        self.assertIn("restano privati", body)
+        self.assertNotIn("dopo la sua risposta", body.casefold())
+        self.assertNotIn("mostrata sul tuo profilo", body.casefold())
+
     def test_email_and_notification_placeholders_are_formatted(self):
         for language in SUPPORTED_LANGUAGES:
             greeting = translate(

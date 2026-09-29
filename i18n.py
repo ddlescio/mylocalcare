@@ -20,7 +20,7 @@ SUPPORTED_LANGUAGES = {
     "fil": {"label": "Filipino", "flag": "🇵🇭", "short": "FIL"},
 }
 
-LEGAL_DOCUMENT_VERSION = "mylocalcare_privacy_termini_2026_v3"
+LEGAL_DOCUMENT_VERSION = "mylocalcare_privacy_termini_2026_v4"
 
 
 TRANSLATIONS = {
@@ -402,6 +402,12 @@ TRANSLATIONS = {
     "profile.info": {"it": "Info", "en": "Info", "fr": "Infos", "es": "Info", "de": "Info"},
     "profile.photos": {"it": "Foto", "en": "Photos", "fr": "Photos", "es": "Fotos", "de": "Fotos"},
     "profile.reviews": {"it": "Recensioni", "en": "Reviews", "fr": "Avis", "es": "Reseñas", "de": "Bewertungen"},
+    "profile.sections": {
+        "it": "Sezioni del profilo", "en": "Profile sections",
+        "fr": "Sections du profil", "es": "Secciones del perfil",
+        "de": "Profilbereiche", "ro": "Secțiunile profilului",
+        "uk": "Розділи профілю", "fil": "Mga seksyon ng profile",
+    },
     "profile.write_chat": {"it": "Scrivi in chat", "en": "Send a message", "fr": "Écrire un message", "es": "Escribir por chat", "de": "Nachricht schreiben"},
     "profile.create_listing": {"it": "Crea annuncio", "en": "Create listing", "fr": "Créer une annonce", "es": "Crear anuncio", "de": "Anzeige erstellen"},
     "profile.gallery": {"it": "Galleria personale", "en": "Personal gallery", "fr": "Galerie personnelle", "es": "Galería personal", "de": "Persönliche Galerie"},

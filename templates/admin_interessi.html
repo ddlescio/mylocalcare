@@ -10,14 +10,98 @@
     </div>
 
     <div>
-      <span class="admin-interest-eyebrow">FUNZIONE MI INTERESSA</span>
-      <h1>Interessi annunci</h1>
-      <p>
-        Classifica degli annunci ordinata per interessi attivi, con chat e
-        messaggi scambiati tra proprietario e persone interessate.
-      </p>
+      <span class="admin-interest-eyebrow">INTERESSI E DISPONIBILITÀ</span>
+      <h1>Interazioni annunci</h1>
+      <p>Interessi, richieste di disponibilità e contatti avviati sugli annunci.</p>
     </div>
   </header>
+
+  <section class="admin-access-panel" aria-labelledby="admin-access-title">
+    <div class="admin-access-heading">
+      <div>
+        <span class="admin-interest-panel-kicker">ACCESSI AUTENTICATI</span>
+        <h2 id="admin-access-title">Collegamenti a MyLocalCare</h2>
+        <p>Utenti unici collegati; dati conservati soltanto per gli ultimi 30 giorni.</p>
+      </div>
+      <span class="admin-access-privacy" title="Nessun IP o accesso anonimo viene registrato">Dati minimizzati</span>
+    </div>
+
+    {% if accessi_disponibili %}
+      <div class="admin-access-layout">
+        <div class="admin-access-main">
+          <div class="admin-access-metrics" aria-label="Riepilogo collegamenti">
+            <article>
+              <span>Oggi</span>
+              <strong>{{ statistiche_accessi.oggi }}</strong>
+              <small>utenti unici</small>
+            </article>
+            <article>
+              <span>Ultimi 7 giorni</span>
+              <strong>{{ statistiche_accessi.settimana }}</strong>
+              <small>utenti unici</small>
+            </article>
+            <article>
+              <span>Ultimi 30 giorni</span>
+              <strong>{{ statistiche_accessi.mese }}</strong>
+              <small>utenti unici</small>
+            </article>
+          </div>
+
+          <div class="admin-access-chart-wrap">
+            <div class="admin-access-chart-title">
+              <strong>Andamento mensile</strong>
+              <span>un valore per giorno</span>
+            </div>
+            <div class="admin-access-chart" role="img" aria-label="Grafico degli utenti unici collegati negli ultimi 30 giorni">
+              {% for punto in statistiche_accessi.serie %}
+                {% set altezza = ((punto.valore / statistiche_accessi.picco * 100) if statistiche_accessi.picco else 0) %}
+                <span
+                  class="admin-access-bar{% if punto.data == statistiche_accessi.serie[-1].data %} is-today{% endif %}"
+                  style="--bar-height: {{ altezza }}%"
+                  title="{{ punto.etichetta }}: {{ punto.valore }} {{ 'utente' if punto.valore == 1 else 'utenti' }}">
+                  <i></i>
+                  {% if loop.first or loop.index == 8 or loop.index == 15 or loop.index == 22 or loop.last %}
+                    <small>{{ punto.etichetta }}</small>
+                  {% endif %}
+                </span>
+              {% endfor %}
+            </div>
+            <ul class="sr-only" aria-label="Valori giornalieri del grafico collegamenti">
+              {% for punto in statistiche_accessi.serie %}
+                <li>{{ punto.etichetta }}: {{ punto.valore }} {{ 'utente' if punto.valore == 1 else 'utenti' }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+
+        <aside class="admin-access-zones" aria-label="Distribuzione degli accessi per zona">
+          <div class="admin-access-chart-title">
+            <strong>Zone</strong>
+            <span>ultimi 30 giorni</span>
+          </div>
+          {% if statistiche_accessi.zone %}
+            <div class="admin-access-zone-list">
+              {% for zona in statistiche_accessi.zone %}
+                <div class="admin-access-zone-row">
+                  <div>
+                    <span>{{ zona.nome }}</span>
+                    <strong>{{ zona.percentuale }}%</strong>
+                  </div>
+                  <i><b style="--zone-width: {{ zona.percentuale }}%"></b></i>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="admin-access-empty">Le percentuali appariranno con i primi accessi.</p>
+          {% endif %}
+        </aside>
+      </div>
+    {% else %}
+      <div class="admin-access-empty is-warning">
+        Il rilevamento inizierà appena sarà applicato l’aggiornamento del database.
+      </div>
+    {% endif %}
+  </section>
 
   <section class="admin-interest-metrics" aria-label="Riepilogo interessi">
     <article class="admin-interest-metric is-primary">
@@ -93,6 +177,7 @@
                   {% if annuncio.proprietario_username %}
                     · @{{ annuncio.proprietario_username }}
                   {% endif %}
+                  · 📍 {{ annuncio.zona_annuncio }}
                 </small>
               </span>
 
@@ -140,7 +225,7 @@
                         <span class="admin-interest-person-fullname">{{ persona.nome }}</span>
                       {% endif %}
 
-                      <span class="admin-interest-person-zone">📍 {{ persona.citta }}</span>
+                      <span class="admin-interest-person-zone">📍 Zona persona: {{ persona.citta }}</span>
                     </div>
 
                     <div class="admin-interest-person-chat">
@@ -168,11 +253,364 @@
       </div>
     {% endif %}
   </section>
+
+  <section class="admin-interest-panel admin-availability-panel">
+    <div class="admin-interest-panel-heading admin-availability-heading">
+      <div>
+        <span class="admin-interest-panel-kicker">DISPONIBILITÀ</span>
+        <h2>Richieste inviate</h2>
+        <p>Chi ha chiesto disponibilità, a chi e per quale annuncio.</p>
+      </div>
+
+      <strong class="admin-availability-total">
+        {{ statistiche_richieste.totale }}
+        <small>totali</small>
+      </strong>
+    </div>
+
+    <div class="admin-availability-metrics" aria-label="Riepilogo richieste di disponibilità">
+      <span>
+        <strong>{{ statistiche_richieste.in_attesa }}</strong>
+        In attesa
+      </span>
+      <span>
+        <strong>{{ statistiche_richieste.con_risposta }}</strong>
+        Con risposta
+      </span>
+      <span>
+        <strong>{{ statistiche_richieste.disponibili }}</strong>
+        Disponibili
+      </span>
+      <span>
+        <strong>{{ statistiche_richieste.annunci_coinvolti }}</strong>
+        Annunci coinvolti
+      </span>
+    </div>
+
+    <div class="admin-availability-breakdown" aria-label="Esiti delle richieste">
+      <span>Non disponibili: <strong>{{ statistiche_richieste.non_disponibili }}</strong></span>
+      <span>Servono informazioni: <strong>{{ statistiche_richieste.informazioni }}</strong></span>
+      <span>Scadute: <strong>{{ statistiche_richieste.scadute }}</strong></span>
+    </div>
+
+    {% if richieste_disponibilita %}
+      <p class="admin-availability-list-note">
+        Ultime {{ richieste_disponibilita|length }} richieste · i conteggi sopra comprendono tutto lo storico.
+      </p>
+      <div class="admin-availability-list">
+        {% for richiesta in richieste_disponibilita %}
+          <article class="admin-availability-request">
+            <div class="admin-availability-request-head">
+              <div class="admin-availability-listing">
+                {% if richiesta.annuncio_stato == 'approvato' %}
+                  <a href="{{ url_for('visualizza_annuncio_pubblico', id=richiesta.annuncio_id) }}">
+                    {{ richiesta.annuncio_titolo }}
+                  </a>
+                {% else %}
+                  <strong>{{ richiesta.annuncio_titolo }}</strong>
+                  <small class="admin-availability-listing-state">
+                    Annuncio {{ richiesta.annuncio_stato|replace('_', ' ') }}
+                  </small>
+                {% endif %}
+                <span>
+                  Richiesta #{{ richiesta.id }} · Annuncio #{{ richiesta.annuncio_id }}
+                  · 📍 {{ richiesta.annuncio_zona }}
+                  {% if richiesta.a_chiamata %} · A chiamata{% endif %}
+                </span>
+              </div>
+
+              <div class="admin-availability-request-state">
+                <span class="admin-availability-status {{ richiesta.stato_css }}">
+                  {{ richiesta.stato_label }}
+                </span>
+                <small>
+                  {% if richiesta.created_at %}
+                    Inviata {{ richiesta.created_at|dt_roma_admin }}
+                  {% else %}
+                    Data non disponibile
+                  {% endif %}
+                </small>
+              </div>
+            </div>
+
+            <div class="admin-availability-people">
+              <a class="admin-availability-person" href="{{ richiesta.richiedente.profilo_url }}">
+                <img src="{{ richiesta.richiedente.avatar_url }}" alt="" loading="lazy">
+                <span>
+                  <small>Ha chiesto</small>
+                  <strong>
+                    {% if richiesta.richiedente.username %}
+                      @{{ richiesta.richiedente.username }}
+                    {% else %}
+                      {{ richiesta.richiedente.nome or 'Utente MyLocalCare' }}
+                    {% endif %}
+                  </strong>
+                  <em>📍 {{ richiesta.richiedente.zona }}</em>
+                </span>
+              </a>
+
+              <span class="admin-availability-arrow" aria-hidden="true">→</span>
+
+              <a class="admin-availability-person" href="{{ richiesta.offerente.profilo_url }}">
+                <img src="{{ richiesta.offerente.avatar_url }}" alt="" loading="lazy">
+                <span>
+                  <small>Ha ricevuto</small>
+                  <strong>
+                    {% if richiesta.offerente.username %}
+                      @{{ richiesta.offerente.username }}
+                    {% else %}
+                      {{ richiesta.offerente.nome or 'Utente MyLocalCare' }}
+                    {% endif %}
+                  </strong>
+                  <em>📍 {{ richiesta.offerente.zona }}</em>
+                </span>
+              </a>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="admin-interest-empty">
+        Nessuna richiesta di disponibilità inviata.
+      </div>
+    {% endif %}
+  </section>
 </div>
 
 <style>
   .admin-interest-page {
     color: #0f172a;
+  }
+
+  .admin-access-panel {
+    margin-bottom: 18px;
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 24px;
+    background: #ffffff;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.055);
+  }
+
+  .admin-access-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 17px 19px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #f8fbff, #ffffff 62%, #fdf4ff);
+  }
+
+  .admin-access-heading h2 {
+    margin: 2px 0 0;
+    color: #172033;
+    font-size: 1.1rem;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+  }
+
+  .admin-access-heading p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 640;
+  }
+
+  .admin-access-privacy {
+    flex: 0 0 auto;
+    padding: 6px 9px;
+    border: 1px solid #dbeafe;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #64748b;
+    font-size: 0.61rem;
+    font-weight: 800;
+  }
+
+  .admin-access-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(220px, 0.8fr);
+  }
+
+  .admin-access-main {
+    min-width: 0;
+    border-right: 1px solid #e2e8f0;
+  }
+
+  .admin-access-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .admin-access-metrics article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 9px;
+    padding: 12px 15px;
+    border-right: 1px solid #eef2f7;
+  }
+
+  .admin-access-metrics article:last-child {
+    border-right: 0;
+  }
+
+  .admin-access-metrics span,
+  .admin-access-metrics small {
+    color: #64748b;
+    font-size: 0.64rem;
+    font-weight: 740;
+  }
+
+  .admin-access-metrics strong {
+    grid-row: span 2;
+    align-self: center;
+    color: #2563eb;
+    font-size: 1.45rem;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .admin-access-chart-wrap,
+  .admin-access-zones {
+    padding: 14px 16px 17px;
+  }
+
+  .admin-access-chart-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .admin-access-chart-title strong {
+    color: #334155;
+    font-size: 0.73rem;
+    font-weight: 860;
+  }
+
+  .admin-access-chart-title span {
+    color: #94a3b8;
+    font-size: 0.6rem;
+    font-weight: 700;
+  }
+
+  .admin-access-chart {
+    display: grid;
+    height: 112px;
+    grid-template-columns: repeat(30, minmax(3px, 1fr));
+    align-items: end;
+    gap: clamp(2px, 0.35vw, 5px);
+    padding-top: 6px;
+    border-bottom: 1px solid #cbd5e1;
+  }
+
+  .admin-access-bar {
+    position: relative;
+    display: flex;
+    height: 100%;
+    align-items: flex-end;
+  }
+
+  .admin-access-bar i {
+    display: block;
+    width: 100%;
+    min-height: 3px;
+    height: max(3px, var(--bar-height));
+    border-radius: 5px 5px 1px 1px;
+    background: linear-gradient(180deg, #60a5fa, #2563eb);
+    opacity: 0.78;
+  }
+
+  .admin-access-bar.is-today i {
+    background: linear-gradient(180deg, #c084fc, #7c3aed);
+    opacity: 1;
+  }
+
+  .admin-access-bar small {
+    position: absolute;
+    bottom: -17px;
+    left: 50%;
+    color: #94a3b8;
+    font-size: 0.49rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+
+  .admin-access-zone-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .admin-access-zone-row > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: #475569;
+    font-size: 0.65rem;
+    font-weight: 760;
+  }
+
+  .admin-access-zone-row > div span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-access-zone-row > div strong {
+    color: #2563eb;
+    font-weight: 900;
+  }
+
+  .admin-access-zone-row > i {
+    display: block;
+    height: 5px;
+    margin-top: 4px;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: #e2e8f0;
+  }
+
+  .admin-access-zone-row > i b {
+    display: block;
+    width: var(--zone-width);
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #3b82f6, #a855f7);
+  }
+
+  .admin-access-empty {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.68rem;
+    font-weight: 680;
+  }
+
+  .admin-access-empty.is-warning {
+    padding: 18px;
+    color: #92400e;
+    background: #fffbeb;
+  }
+
+  .admin-availability-list-note {
+    margin: 12px 0 8px;
+    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+
+  .admin-availability-listing-state {
+    display: inline-flex;
+    margin-left: 5px;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: capitalize;
   }
 
   .admin-interest-hero {
@@ -605,7 +1043,274 @@
     font-weight: 700;
   }
 
+  .admin-availability-panel {
+    margin-top: 18px;
+  }
+
+  .admin-availability-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .admin-availability-total {
+    display: inline-flex;
+    min-width: 82px;
+    min-height: 54px;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 1.25rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .admin-availability-total small {
+    margin-top: 4px;
+    font-size: 0.62rem;
+    font-weight: 800;
+  }
+
+  .admin-availability-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #e2e8f0;
+  }
+
+  .admin-availability-metrics > span {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 7px;
+    padding: 13px 17px;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 750;
+  }
+
+  .admin-availability-metrics strong {
+    color: #172033;
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  .admin-availability-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+
+  .admin-availability-breakdown span {
+    padding: 5px 9px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 0.64rem;
+    font-weight: 720;
+  }
+
+  .admin-availability-breakdown strong {
+    color: #334155;
+    font-weight: 900;
+  }
+
+  .admin-availability-list {
+    display: grid;
+    gap: 9px;
+    padding: 12px;
+    background: #f8fafc;
+  }
+
+  .admin-availability-request {
+    padding: 13px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.025);
+  }
+
+  .admin-availability-request-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eef2f7;
+  }
+
+  .admin-availability-listing {
+    min-width: 0;
+  }
+
+  .admin-availability-listing a,
+  .admin-availability-listing span {
+    display: block;
+  }
+
+  .admin-availability-listing a {
+    overflow: hidden;
+    color: #172033;
+    font-size: 0.82rem;
+    font-weight: 870;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-availability-listing a:hover {
+    color: #2563eb;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .admin-availability-listing span,
+  .admin-availability-request-state small {
+    margin-top: 3px;
+    color: #94a3b8;
+    font-size: 0.64rem;
+    font-weight: 680;
+  }
+
+  .admin-availability-request-state {
+    flex: 0 0 auto;
+    text-align: right;
+  }
+
+  .admin-availability-request-state small {
+    display: block;
+  }
+
+  .admin-availability-status {
+    display: inline-flex;
+    min-height: 24px;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.62rem;
+    font-weight: 850;
+  }
+
+  .admin-availability-status.is-pending {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .admin-availability-status.is-positive {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .admin-availability-status.is-negative {
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+
+  .admin-availability-status.is-info {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .admin-availability-people {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding-top: 11px;
+  }
+
+  .admin-availability-person {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    color: #172033;
+  }
+
+  .admin-availability-person img {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #ffffff;
+    border-radius: 13px;
+    background: #e2e8f0;
+    box-shadow: 0 0 0 2px #bfdbfe;
+    object-fit: cover;
+  }
+
+  .admin-availability-person span {
+    min-width: 0;
+  }
+
+  .admin-availability-person small,
+  .admin-availability-person strong,
+  .admin-availability-person em {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-availability-person small {
+    color: #94a3b8;
+    font-size: 0.59rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .admin-availability-person strong {
+    margin-top: 1px;
+    font-size: 0.75rem;
+    font-weight: 870;
+  }
+
+  .admin-availability-person em {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 0.63rem;
+    font-style: normal;
+    font-weight: 650;
+  }
+
+  .admin-availability-person:hover strong {
+    color: #2563eb;
+  }
+
+  .admin-availability-arrow {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 0.8rem;
+    font-weight: 900;
+  }
+
   @media (max-width: 1000px) {
+    .admin-access-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .admin-access-main {
+      border-right: 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
     .admin-interest-metrics {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -613,9 +1318,42 @@
     .admin-interest-people {
       grid-template-columns: 1fr;
     }
+
+    .admin-availability-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 680px) {
+    .admin-access-heading {
+      padding: 14px;
+    }
+
+    .admin-access-heading p {
+      max-width: 250px;
+    }
+
+    .admin-access-privacy {
+      display: none;
+    }
+
+    .admin-access-metrics article {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 11px 9px;
+    }
+
+    .admin-access-metrics strong {
+      order: -1;
+      font-size: 1.25rem;
+    }
+
+    .admin-access-chart-wrap,
+    .admin-access-zones {
+      padding-inline: 12px;
+    }
+
     .admin-interest-hero {
       align-items: flex-start;
       padding: 19px;
@@ -703,6 +1441,27 @@
       min-width: 0;
       text-align: left;
     }
+
+    .admin-availability-list {
+      padding: 8px;
+    }
+
+    .admin-availability-request {
+      padding: 12px;
+      border-radius: 16px;
+    }
+
+    .admin-availability-people {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .admin-availability-arrow {
+      width: 24px;
+      height: 24px;
+      margin-left: 8px;
+      transform: rotate(90deg);
+    }
   }
 
   @media (max-width: 440px) {
@@ -724,6 +1483,26 @@
 
     .admin-interest-ranking-detail {
       padding-left: 13px;
+    }
+
+    .admin-availability-heading,
+    .admin-availability-request-head {
+      align-items: flex-start;
+    }
+
+    .admin-availability-total {
+      min-width: 65px;
+    }
+
+    .admin-availability-metrics > span {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 2px;
+      padding: 11px 12px;
+    }
+
+    .admin-availability-request-state {
+      max-width: 125px;
     }
   }
 </style>

@@ -3,40 +3,40 @@
 
 {% block admin_content %}
 <div class="pb-12">
-  <section class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-      <div>
+  <section class="admin-compact-header rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="min-w-0">
         <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Fiducia e sicurezza</p>
-        <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Referenze utenti</h1>
-        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+        <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-900">Referenze utenti</h1>
+      </div>
+
+      <dl class="admin-compact-stats flex flex-wrap gap-2" aria-label="Riepilogo referenze">
+        <div class="flex min-h-10 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+          <dt class="text-[11px] font-bold uppercase tracking-wide text-amber-700/75">Da gestire</dt>
+          <dd class="text-lg font-black leading-none text-amber-700">{{ conteggi.get('da_gestire', conteggi.get('attenzione', 0)) }}</dd>
+        </div>
+        <div class="flex min-h-10 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+          <dt class="text-[11px] font-bold uppercase tracking-wide text-emerald-700/75">Verificate</dt>
+          <dd class="text-lg font-black leading-none text-emerald-700">{{ conteggi.get('verificate', 0) }}</dd>
+        </div>
+        <div class="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+          <dt class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Totali</dt>
+          <dd class="text-lg font-black leading-none text-slate-700">{{ conteggi.get('totale', 0) }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <details class="admin-guidance group mt-3 border-t border-slate-200 pt-1" data-admin-guide="referenze">
+      <summary class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-2 text-sm font-extrabold text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200">
+        <span>Come verificare una referenza</span>
+        <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="mt-1 rounded-xl bg-blue-50 px-3 py-3 text-blue-950/75">
+        <p class="text-sm leading-6">
           Controlla le risposte inviate dai referenti e registra soltanto il riscontro realmente
           effettuato. I recapiti del referente sono dati riservati all’amministrazione e non
           vengono mostrati nel profilo pubblico.
         </p>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
-          <div class="text-2xl font-black text-amber-700">{{ conteggi.get('da_gestire', conteggi.get('attenzione', 0)) }}</div>
-          <div class="text-[11px] font-bold uppercase tracking-wide text-amber-700/75">Da gestire</div>
-        </div>
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
-          <div class="text-2xl font-black text-emerald-700">{{ conteggi.get('verificate', 0) }}</div>
-          <div class="text-[11px] font-bold uppercase tracking-wide text-emerald-700/75">Verificate</div>
-        </div>
-        <div class="col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center sm:col-span-1">
-          <div class="text-2xl font-black text-slate-700">{{ conteggi.get('totale', 0) }}</div>
-          <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Totali</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="mt-5 rounded-[1.5rem] border border-blue-200 bg-blue-50/70 p-4 shadow-sm sm:p-5">
-    <div class="flex items-start gap-3">
-      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm ring-1 ring-blue-100" aria-hidden="true">🤝</div>
-      <div>
-        <h2 class="font-black text-blue-950">Cosa significa verificare una referenza</h2>
         <p class="mt-1 text-sm leading-6 text-blue-950/75">
           La risposta attesta ciò che il referente dichiara. Prima di segnare la referenza come
           verificata, chiamalo al numero telefonico autorizzato e conferma che abbia risposto
@@ -50,11 +50,23 @@
           l’ha autorizzato e il contenuto è adatto al profilo pubblico.
         </p>
       </div>
-    </div>
+    </details>
   </section>
 
-  <form method="get" class="mt-5 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_210px_210px_auto_auto] lg:items-end">
+  {% set stato_filtro_referenze = filtri.get('stato', 'da_gestire') %}
+  {% set filtri_referenze_personalizzati = filtri.get('q') or filtri.get('categoria', 'tutte') != 'tutte' %}
+  <details class="group mt-3 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm" data-admin-filters="referenze">
+    <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-extrabold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
+      <span>
+        Filtri · {{ stato_filtro_referenze|replace('_', ' ')|title }}
+        {% if filtri_referenze_personalizzati %}
+          <small class="ml-1 rounded-full bg-blue-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-blue-700">personalizzati</small>
+        {% endif %}
+      </span>
+      <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+    </summary>
+    <form method="get" class="border-t border-slate-200 p-4">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_210px_210px_auto_auto] lg:items-end">
       <label class="block">
         <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Utente o referente</span>
         <input type="search" name="q" value="{{ filtri.get('q', '') }}"
@@ -64,7 +76,7 @@
 
       <label class="block">
         <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Stato</span>
-        {% set stato_attuale = filtri.get('stato', 'da_gestire') %}
+        {% set stato_attuale = stato_filtro_referenze %}
         <select name="stato" class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
           <option value="da_gestire" {% if stato_attuale == 'da_gestire' %}selected{% endif %}>Da gestire</option>
           <option value="tutti" {% if stato_attuale == 'tutti' %}selected{% endif %}>Tutti</option>
@@ -94,8 +106,9 @@
       <button class="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-sm transition hover:bg-blue-700">Filtra</button>
       <a href="{{ url_for('admin_referenze') }}"
          class="flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50">Reset</a>
-    </div>
-  </form>
+      </div>
+    </form>
+  </details>
 
   {% if not referenze %}
     <div class="mt-5 rounded-[1.75rem] border border-dashed border-slate-300 bg-white px-5 py-14 text-center shadow-sm">
@@ -164,13 +177,19 @@
                 <span class="rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase tracking-wide text-violet-700 ring-1 ring-violet-200">Solo admin</span>
               </div>
               {% if contatto_rimosso %}
-                <div class="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold leading-5 text-slate-600" data-contact-status="removed">
-                  🔒 I dati identificativi e il recapito del referente sono stati rimossi alla
-                  scadenza del periodo di conservazione. Non è più possibile ricontattarlo.
-                  {% if referenza.get('contatto_purged_at') %}
-                    <span class="mt-1 block text-slate-400">Rimossi il {{ referenza.get('contatto_purged_at')|dt_roma_admin }}.</span>
-                  {% endif %}
-                </div>
+                <details class="group mt-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-600" data-contact-status="removed">
+                  <summary class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <span>🔒 Dati del referente rimossi</span>
+                    <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                  </summary>
+                  <p class="border-t border-slate-200 p-3 font-semibold leading-5">
+                    I dati identificativi e il recapito del referente sono stati rimossi alla
+                    scadenza del periodo di conservazione. Non è più possibile ricontattarlo.
+                    {% if referenza.get('contatto_purged_at') %}
+                      <span class="mt-1 block text-slate-400">Rimossi il {{ referenza.get('contatto_purged_at')|dt_roma_admin }}.</span>
+                    {% endif %}
+                  </p>
+                </details>
               {% else %}
                 <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2">
                   <div>
@@ -187,29 +206,53 @@
               {% endif %}
 
               {% if risposta in ('in_attesa', 'invitata') %}
-                <div class="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-900" data-contact-status="pending">
-                  ⏳ Il referente non ha ancora risposto: il consenso a un successivo contatto
-                  di verifica non è stato ancora espresso.
-                </div>
+                <details class="group mt-2 rounded-xl border border-blue-200 bg-blue-50 text-xs text-blue-900" data-contact-status="pending">
+                  <summary class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <span>⏳ In attesa di risposta e consenso</span>
+                    <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                  </summary>
+                  <p class="border-t border-blue-200 p-3 font-semibold leading-5">
+                    Il referente non ha ancora risposto: il consenso a un successivo contatto
+                    di verifica non è stato ancora espresso.
+                  </p>
+                </details>
               {% elif not contatto_rimosso and not contatto_autorizzato %}
-                <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-900" data-contact-status="denied">
-                  ⚠️ Il referente non ha autorizzato MyLocalCare a ricontattarlo per la
-                  verifica. Il suo recapito non deve essere utilizzato e l’unico esito
-                  registrabile è <strong>Non verificabile</strong>.
-                </div>
+                <details class="group mt-2 rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-900" data-contact-status="denied">
+                  <summary class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <span>⚠️ Contatto non autorizzato · Solo “Non verificabile”</span>
+                    <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                  </summary>
+                  <p class="border-t border-amber-200 p-3 font-semibold leading-5">
+                    Il referente non ha autorizzato MyLocalCare a ricontattarlo per la
+                    verifica. Il suo recapito non deve essere utilizzato e l’unico esito
+                    registrabile è <strong>Non verificabile</strong>.
+                  </p>
+                </details>
               {% elif not contatto_rimosso and contatto_autorizzato and not referenza.get('referente_telefono') %}
-                <div class="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs font-semibold leading-5 text-orange-900" data-contact-status="unavailable">
-                  ⚠️ Il ricontatto era stato autorizzato, ma il recapito non è disponibile.
-                  Registra la referenza come <strong>Non verificabile</strong>.
-                </div>
+                <details class="group mt-2 rounded-xl border border-orange-200 bg-orange-50 text-xs text-orange-900" data-contact-status="unavailable">
+                  <summary class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <span>⚠️ Recapito non disponibile · Solo “Non verificabile”</span>
+                    <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                  </summary>
+                  <p class="border-t border-orange-200 p-3 font-semibold leading-5">
+                    Il ricontatto era stato autorizzato, ma il recapito non è disponibile.
+                    Registra la referenza come <strong>Non verificabile</strong>.
+                  </p>
+                </details>
               {% elif contatto_disponibile %}
-                <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold leading-5 text-emerald-900" data-contact-status="available">
-                  ✓ Il referente ha indicato il numero e autorizzato il ricontatto telefonico
-                  ai soli fini della verifica. Dopo la chiamata registra l’esito del controllo.
-                  {% if referenza.get('contatto_purge_at') %}
-                    <span class="mt-1 block text-emerald-700/75">Conservazione prevista fino al {{ referenza.get('contatto_purge_at')|dt_roma_admin }}.</span>
-                  {% endif %}
-                </div>
+                <details class="group mt-2 rounded-xl border border-emerald-200 bg-emerald-50 text-xs text-emerald-900" data-contact-status="available">
+                  <summary class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <span>✓ Ricontatto telefonico autorizzato</span>
+                    <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                  </summary>
+                  <p class="border-t border-emerald-200 p-3 font-semibold leading-5">
+                    Il referente ha indicato il numero e autorizzato il ricontatto telefonico
+                    ai soli fini della verifica. Dopo la chiamata registra l’esito del controllo.
+                    {% if referenza.get('contatto_purge_at') %}
+                      <span class="mt-1 block text-emerald-700/75">Conservazione prevista fino al {{ referenza.get('contatto_purge_at')|dt_roma_admin }}.</span>
+                    {% endif %}
+                  </p>
+                </details>
               {% endif %}
 
               {% if contatto_disponibile %}
@@ -285,21 +328,26 @@
                   </div>
                 {% endif %}
 
-                <div class="mt-4">
-                  <p class="text-xs font-black uppercase tracking-wide text-slate-400">Cronologia</p>
-                  <ol class="mt-2 space-y-2 border-l-2 border-slate-200 pl-4">
-                    {% for evento in referenza.get('timeline', []) %}
-                      <li class="relative rounded-xl bg-white p-3 text-xs text-slate-600 ring-1 ring-slate-200">
-                        <span class="absolute -left-[1.34rem] top-4 h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-slate-50" aria-hidden="true"></span>
-                        <div class="font-extrabold text-slate-800">{{ evento.get('titolo') or evento.get('label') or evento.get('stato')|default('Aggiornamento', true)|replace('_', ' ')|title }}</div>
-                        {% if evento.get('data') or evento.get('created_at') %}<div class="mt-0.5 text-slate-400">{{ (evento.get('data') or evento.get('created_at'))|dt_roma_admin }}</div>{% endif %}
-                        {% if evento.get('dettaglio') %}<div class="mt-1" data-no-translate>{{ evento.get('dettaglio') }}</div>{% endif %}
-                      </li>
-                    {% else %}
-                      <li class="text-xs font-semibold text-slate-400">Nessun evento registrato.</li>
-                    {% endfor %}
-                  </ol>
-                </div>
+                <details class="admin-audit-history group mt-3 rounded-xl border border-slate-200 bg-white" data-admin-audit-history>
+                  <summary class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 text-xs font-extrabold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <span>Cronologia</span>
+                    <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                  </summary>
+                  <div class="border-t border-slate-200 px-3 py-3">
+                    <ol class="space-y-2 border-l-2 border-slate-200 pl-4">
+                      {% for evento in referenza.get('timeline', []) %}
+                        <li class="relative rounded-xl bg-slate-50 p-3 text-xs text-slate-600 ring-1 ring-slate-200">
+                          <span class="absolute -left-[1.34rem] top-4 h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-white" aria-hidden="true"></span>
+                          <div class="font-extrabold text-slate-800">{{ evento.get('titolo') or evento.get('label') or evento.get('stato')|default('Aggiornamento', true)|replace('_', ' ')|title }}</div>
+                          {% if evento.get('data') or evento.get('created_at') %}<div class="mt-0.5 text-slate-400">{{ (evento.get('data') or evento.get('created_at'))|dt_roma_admin }}</div>{% endif %}
+                          {% if evento.get('dettaglio') %}<div class="mt-1" data-no-translate>{{ evento.get('dettaglio') }}</div>{% endif %}
+                        </li>
+                      {% else %}
+                        <li class="text-xs font-semibold text-slate-400">Nessun evento registrato.</li>
+                      {% endfor %}
+                    </ol>
+                  </div>
+                </details>
 
                 {% if referenza.get('nota_admin') %}
                   <div class="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs leading-5 text-violet-900">
@@ -353,30 +401,36 @@
                     <span class="mt-1.5 block text-[11px] leading-4 text-slate-400">Non inserire email, telefono, link o altri recapiti. La presenza di un nome nel testo della referenza non ne blocca la valutazione.</span>
                   </label>
 
-                  <label class="admin-reference-publication flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-3.5"
-                         data-public-consent="{{ '1' if referenza.get('autorizza_pubblicazione') else '0' }}">
-                    <input type="checkbox"
-                           name="pubblicazione_approvata_admin"
-                           value="1"
-                           class="admin-reference-publication-checkbox mt-0.5 h-5 w-5 rounded border-blue-300 text-blue-600"
-                           {% if referenza.get('pubblicazione_approvata_admin') %}checked{% endif %}
-                           {% if not referenza.get('autorizza_pubblicazione') or stato in ('non_confermata', 'revocata') %}disabled{% endif %}>
-                    <span class="min-w-0">
-                      <strong class="block text-sm text-blue-950">Approva la visualizzazione pubblica</strong>
-                      <span class="mt-1 block text-xs leading-5 text-blue-900/75">
+                  <div class="admin-reference-publication rounded-2xl border border-blue-200 bg-blue-50 p-3.5"
+                       data-public-consent="{{ '1' if referenza.get('autorizza_pubblicazione') else '0' }}">
+                    <label class="flex items-start gap-3">
+                      <input type="checkbox"
+                             name="pubblicazione_approvata_admin"
+                             value="1"
+                             class="admin-reference-publication-checkbox mt-0.5 h-5 w-5 rounded border-blue-300 text-blue-600"
+                             {% if referenza.get('pubblicazione_approvata_admin') %}checked{% endif %}
+                             {% if not referenza.get('autorizza_pubblicazione') or stato in ('non_confermata', 'revocata') %}disabled{% endif %}>
+                      <strong class="block min-w-0 text-sm text-blue-950">Approva la visualizzazione pubblica</strong>
+                    </label>
+                    {% if not referenza.get('autorizza_pubblicazione') %}
+                      <p class="mt-1 pl-4 text-xs font-bold text-amber-700">
+                        Il referente non ha autorizzato la pubblicazione.
+                      </p>
+                    {% endif %}
+                    <details class="group mt-2 border-t border-blue-200 pt-1" data-admin-publication-guide>
+                      <summary class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 text-xs font-extrabold text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                        <span>Come funziona la pubblicazione</span>
+                        <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                      </summary>
+                      <p class="px-1 pb-1 pt-1 text-xs leading-5 text-blue-900/75">
                         Decisione editoriale finale, distinta dall’esito del contatto.
                         Se approvata, il proprietario potrà mostrare o nascondere
                         la referenza dal proprio profilo. Il nominativo e il recapito
                         raccolti per l’invito restano riservati; l’eventuale testo
                         libero autorizzato sarà mostrato così come è stato scritto.
-                      </span>
-                      {% if not referenza.get('autorizza_pubblicazione') %}
-                        <span class="mt-1 block text-xs font-bold text-amber-700">
-                          Il referente non ha autorizzato la pubblicazione.
-                        </span>
-                      {% endif %}
-                    </span>
-                  </label>
+                      </p>
+                    </details>
+                  </div>
 
                   <button type="submit"
                           class="admin-reference-submit min-h-11 w-full rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white hover:bg-blue-700 disabled:cursor-wait disabled:opacity-65"

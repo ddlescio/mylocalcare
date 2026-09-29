@@ -77,13 +77,13 @@
 
       <a href="{{ url_for('admin_interessi') }}"
          class="flex items-center gap-2 px-3 py-2 rounded-xl
-                {% if current.startswith('/admin/interessi') %}
+                {% if current.startswith('/admin/interazioni') or current.startswith('/admin/interessi') %}
                    bg-slate-900 text-white shadow-sm
                 {% else %}
                    text-slate-700 hover:bg-slate-100
                 {% endif %}">
-        <span>💗</span>
-        <span>Interessi annunci</span>
+        <span>🔄</span>
+        <span>Interazioni annunci</span>
       </a>
 
       <a href="{{ url_for('admin_recensioni') }}"
@@ -141,7 +141,7 @@
                 {% else %}
                    text-slate-700 hover:bg-slate-100
                 {% endif %}">
-        <span>🤝</span>
+        <span>👍</span>
         <span>Referenze</span>
 
         <span id="badge-referenze"

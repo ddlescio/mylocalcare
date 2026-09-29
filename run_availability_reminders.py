@@ -44,13 +44,34 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
-    from app import app, processa_promemoria_disponibilita
+    from accessi_utenti import elimina_accessi_scaduti
+    from app import (
+        app,
+        get_db_connection,
+        processa_promemoria_disponibilita,
+    )
 
     with app.app_context():
         result = processa_promemoria_disponibilita(
             limite=args.limit,
             dry_run=args.dry_run,
         )
+        if not args.dry_run:
+            conn = None
+            try:
+                conn = get_db_connection()
+                result["accessi_eliminati"] = elimina_accessi_scaduti(conn)
+            except Exception as exc:
+                # Il promemoria principale non deve fallire se il deploy
+                # precede la migrazione della tabella statistiche.
+                result["accessi_eliminati"] = None
+                result["accessi_cleanup_errore"] = str(exc)
+            finally:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     return 0 if result.get("ok") else 1
 

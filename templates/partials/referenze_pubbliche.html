@@ -6,7 +6,7 @@
 {% if referenze_elenco %}
 <section class="reference-public-section" aria-labelledby="reference-public-title">
   <header class="reference-public-section__head">
-    <span class="reference-public-section__icon" aria-hidden="true">🤝</span>
+    <span class="reference-public-section__icon" aria-hidden="true">👍</span>
     <div>
       <h3 id="reference-public-title">{{ tr('reference.title') }}</h3>
       <p>{{ tr('reference.public.subtitle') }}</p>
@@ -20,7 +20,7 @@
       {% set categoria_label = referenza.get('categoria_label') or (referenza.get('categoria_slug') or '')|replace('-', ' ')|title %}
       <article class="reference-social-card">
         <header class="reference-social-card__header">
-          <span class="reference-social-card__avatar" aria-hidden="true">🤝</span>
+          <span class="reference-social-card__avatar" aria-hidden="true">👍</span>
           <div class="reference-social-card__identity">
             <p>{{ tr('reference.public.eyebrow') }}</p>
             <h4>{{ tr_text(categoria_label) if categoria_label else tr('reference.public.professional_experience') }}</h4>

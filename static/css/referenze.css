@@ -203,10 +203,10 @@
 }
 
 .reference-invite > summary {
-  display: flex;
-  min-height: 4.2rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 4.5rem;
   align-items: center;
-  justify-content: space-between;
   gap: 0.8rem;
   padding: 0.8rem 0.9rem;
   list-style: none;
@@ -217,21 +217,59 @@
   display: none;
 }
 
-.reference-invite > summary strong,
-.reference-invite > summary small {
+.reference-invite__summary-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.reference-invite__summary-icon {
+  display: inline-flex;
+  width: 2.15rem;
+  height: 2.15rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dbeafe;
+  border-radius: 0.78rem;
+  background: linear-gradient(180deg, #fff, #eff6ff);
+  box-shadow: 0 5px 12px rgba(37, 99, 235, 0.08);
+  font-size: 0.95rem;
+}
+
+.reference-invite__summary-copy {
+  display: block;
+  min-width: 0;
+}
+
+.reference-invite__summary-kicker,
+.reference-invite__summary-copy strong,
+.reference-invite__summary-copy small {
   display: block;
 }
 
-.reference-invite > summary strong {
+.reference-invite__summary-kicker {
+  margin-bottom: 0.08rem;
+  color: var(--reference-blue);
+  font-size: 0.56rem;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reference-invite__summary-copy strong {
   color: var(--reference-ink);
   font-size: 0.88rem;
   font-weight: 900;
 }
 
-.reference-invite > summary small {
+.reference-invite__summary-copy small {
   margin-top: 0.14rem;
   color: var(--reference-muted);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
 }
 
 .reference-invite__summary-action {
@@ -1789,12 +1827,44 @@ body.reference-dialog-open {
 }
 
 .profile-tab-count {
+  flex: 0 0 auto;
   background: rgba(37, 99, 235, 0.12);
   color: #1d4ed8;
 }
 
-.tab-btn.active .profile-tab-count { background: rgba(255, 255, 255, 0.22); color: #fff; }
-.tab-btn[data-tab] { display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; padding-inline: 0.65rem; white-space: nowrap; }
+.tab-btn.active .profile-tab-count {
+  border-color: #bfdbfe;
+  background: #fff;
+  color: #1d4ed8;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.16);
+}
+.tab-btn[data-tab] { display: inline-flex; min-width: 0; align-items: center; justify-content: center; gap: 0.3rem; padding-inline: 0.65rem; white-space: nowrap; }
+
+@media (max-width: 480px) {
+  .profile-tabs-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+
+  .profile-tabs-nav .tab-btn[data-tab] {
+    width: 100%;
+    padding-inline: 0.25rem;
+    gap: 0.18rem;
+    font-size: 0.72rem;
+  }
+
+  .profile-tabs-nav .profile-tab-label {
+    min-width: 0;
+  }
+
+  .profile-tabs-nav .profile-tab-count {
+    min-width: 1.08rem;
+    height: 1.08rem;
+    padding-inline: 0.18rem;
+    font-size: 0.58rem;
+  }
+}
 
 .feedback-hub { max-width: 72rem; margin: 0 auto; padding: 1rem 0 1.5rem; }
 .feedback-section-switch {

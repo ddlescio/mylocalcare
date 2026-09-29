@@ -73,6 +73,46 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn('id="reference-manager" class="reference-manager"', self.private_source)
         self.assertNotIn('id="reference-manager-dialog"', self.private_source)
 
+    def test_private_reference_entry_points_use_like_icon(self):
+        self.assertIn(
+            '<span class="reference-dialog__icon" aria-hidden="true">👍</span>',
+            self.private_source,
+        )
+        self.assertIn(
+            '<span class="profile-reference-shortcut__icon" aria-hidden="true">👍</span>',
+            self.dashboard_source,
+        )
+        self.assertNotIn("🤝", self.private_source)
+        self.assertNotIn("🤝", self.dashboard_source)
+
+    def test_all_visible_reference_surfaces_use_like_icon(self):
+        for source in (
+            self.private_source,
+            self.public_source,
+            self.dashboard_source,
+            self.response_source,
+        ):
+            self.assertIn("👍", source)
+            self.assertNotIn("🤝", source)
+
+    def test_how_it_works_is_compact_inside_new_invitation(self):
+        self.assertNotIn(
+            '<section class="reference-explainer" aria-labelledby="reference-explainer-title">',
+            self.private_source,
+        )
+        summary = self.private_source.split(
+            '<details class="reference-invite"', 1
+        )[1].split("</summary>", 1)[0]
+        self.assertIn("reference-invite__summary-main", summary)
+        self.assertIn("reference.how.title", summary)
+        self.assertIn("reference.invite.new", summary)
+        self.assertIn("reference.how.body", summary)
+        self.assertLess(
+            summary.index("reference.how.title"),
+            summary.index("reference.invite.new"),
+        )
+        self.assertIn("grid-template-columns: minmax(0, 1fr) auto;", self.style_source)
+
     def test_feedback_counts_and_deep_link_contract(self):
         self.assertIn("('annunci', tr('profile.announcements'))", self.dashboard_source)
         self.assertLess(self.dashboard_source.index("('info', tr('profile.info'))"), self.dashboard_source.index("('recensioni', tr('profile.reviews'))"))
@@ -101,6 +141,24 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn('data-feedback-section="references"', self.dashboard_source)
         self.assertIn('window.addEventListener("hashchange"', self.dashboard_source)
         self.assertIn('window.addEventListener("profile:open-references"', self.dashboard_source)
+
+    def test_mobile_feedback_tabs_reserve_space_for_review_count(self):
+        self.assertIn('class="profile-tabs-nav ', self.dashboard_source)
+        self.assertIn('class="profile-tab-label"', self.dashboard_source)
+        self.assertIn("aria-label=\"{{ tr('profile.sections') }}\"", self.dashboard_source)
+        self.assertIn(
+            "grid-template-columns: repeat(4, minmax(0, 1fr));",
+            self.style_source,
+        )
+        self.assertIn(".profile-tabs-nav .profile-tab-count", self.style_source)
+        self.assertIn("flex: 0 0 auto;", self.style_source)
+        self.assertIn(
+            ".profile-tabs-nav .tab-btn[data-tab] {\n"
+            "    padding-left: 0.25rem !important;",
+            self.dashboard_source,
+        )
+        self.assertIn("text-overflow: ellipsis;", self.dashboard_source)
+        self.assertIn("background: #fff;\n  color: #1d4ed8;", self.style_source)
 
     def test_legal_pages_explain_reference_privacy_and_badge_scope(self):
         for marker in (

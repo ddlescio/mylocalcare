@@ -33,7 +33,7 @@
     aria-labelledby="reference-manager-title">
 
     <header class="reference-dialog__header">
-      <span class="reference-dialog__icon" aria-hidden="true">🤝</span>
+      <span class="reference-dialog__icon" aria-hidden="true">👍</span>
       <div class="reference-dialog__heading">
         <p class="reference-dialog__eyebrow">{{ tr('reference.manager.eyebrow') }}</p>
         <h2 id="reference-manager-title">{{ tr('reference.manager.title') if categorie_elenco else tr('reference.title') }}</h2>
@@ -45,19 +45,15 @@
 
     <div class="reference-manager__body">
       {% if categorie_elenco %}
-        <section class="reference-explainer" aria-labelledby="reference-explainer-title">
-          <span class="reference-explainer__shield" aria-hidden="true">🛡️</span>
-          <div>
-            <h3 id="reference-explainer-title">{{ tr('reference.how.title') }}</h3>
-            <p>{{ tr('reference.how.body') }}</p>
-          </div>
-        </section>
-
         <details class="reference-invite" data-reference-invite-panel {% if not referenze_elenco %}open{% endif %}>
         <summary>
-          <span>
-            <strong>{{ tr('reference.invite.new') }}</strong>
-            <small>{{ tr('reference.invite.data_subtitle') }}</small>
+          <span class="reference-invite__summary-main">
+            <span class="reference-invite__summary-icon" aria-hidden="true">🛡️</span>
+            <span class="reference-invite__summary-copy">
+              <span class="reference-invite__summary-kicker">{{ tr('reference.how.title') }}</span>
+              <strong>{{ tr('reference.invite.new') }}</strong>
+              <small>{{ tr('reference.how.body') }}</small>
+            </span>
           </span>
           <span class="reference-invite__summary-action">{{ tr('reference.invite.fill') }} <b aria-hidden="true">＋</b></span>
         </summary>

@@ -299,6 +299,41 @@ def crea_tabella_interessi_annunci():
     conn.close()
     print("✅ Tabella 'interessi_annunci' pronta.")
 
+
+def crea_tabella_accessi_utenti_giornalieri():
+    """Accessi autenticati aggregati per utente/giorno, senza dati tecnici."""
+
+    conn = get_conn()
+    c = conn.cursor()
+    giorno_col = "DATE" if IS_POSTGRES else "TEXT"
+
+    c.execute(sql(f"""
+        CREATE TABLE IF NOT EXISTS accessi_utenti_giornalieri (
+            id {pk_col()},
+            utente_id INTEGER NOT NULL,
+            giorno {giorno_col} NOT NULL,
+            zona TEXT NOT NULL DEFAULT 'Zona non indicata',
+            primo_accesso_at {dt_col(True)} NOT NULL,
+            ultimo_accesso_at {dt_col(True)} NOT NULL,
+            UNIQUE (utente_id, giorno),
+            FOREIGN KEY (utente_id)
+                REFERENCES utenti(id) ON DELETE CASCADE
+        );
+    """))
+
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_accessi_utenti_giorno
+        ON accessi_utenti_giornalieri(giorno DESC);
+    """))
+    c.execute(sql("""
+        CREATE INDEX IF NOT EXISTS idx_accessi_utenti_zona_giorno
+        ON accessi_utenti_giornalieri(zona, giorno DESC);
+    """))
+
+    conn.commit()
+    conn.close()
+    print("✅ Tabella 'accessi_utenti_giornalieri' pronta.")
+
 def crea_tabella_filtri_categoria():
     conn = get_conn()
     c = conn.cursor()
@@ -3476,6 +3511,7 @@ def inizializza_database():
     crea_tabella_operatori()
     crea_tabella_annunci()
     crea_tabella_interessi_annunci()
+    crea_tabella_accessi_utenti_giornalieri()
     crea_tabella_filtri_categoria()
     crea_tabelle_quartieri()
     crea_indici_annunci()

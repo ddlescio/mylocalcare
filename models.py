@@ -19,6 +19,7 @@ from Crypto.Cipher import AES
 from nacl.public import PrivateKey, PublicKey
 from flask_socketio import SocketIO
 from realtime import emit_update_notifications
+from accessi_utenti import elimina_accessi_utente
 from reference_cleanup import purge_user_reference_data
 
 
@@ -2300,6 +2301,14 @@ def elimina_utente(id):
         # La pulizia esplicita rimuove anche figli sensibili e audit senza
         # dipendere dalle cascade di una installazione legacy.
         purge_user_reference_data(
+            cur,
+            id,
+            postgres=is_postgres(),
+        )
+
+        # L'utente viene anonimizzato, non eliminato fisicamente: la FK non
+        # può attivare la cascade delle statistiche di presenza.
+        elimina_accessi_utente(
             cur,
             id,
             postgres=is_postgres(),

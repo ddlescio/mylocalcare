@@ -67,6 +67,13 @@ from flask import g
 from db import (insert_and_get_id)
 from realtime import emit_update_notifications
 from interessi_annunci import imposta_interesse_annuncio
+from accessi_utenti import (
+    carica_statistiche_accessi,
+    elimina_accessi_utente,
+    giorno_locale as giorno_locale_accessi,
+    normalizza_zona as normalizza_zona_accessi,
+    registra_accesso_giornaliero,
+)
 from socket_registry import (
     configure_socket_registry,
     SOCKET_TTL_SECONDS,
@@ -6060,9 +6067,10 @@ def admin_dashboard():
 
 
 @app.route("/admin/interessi")
+@app.route("/admin/interazioni")
 @admin_required
 def admin_interessi():
-    """Classifica amministrativa della funzione Mi interessa."""
+    """Panoramica admin di interessi e richieste di disponibilita."""
 
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -6166,6 +6174,8 @@ def admin_interessi():
             SELECT
                 i.annuncio_id,
                 a.titolo,
+                a.zona AS zona_annuncio,
+                a.provincia AS provincia_annuncio,
                 a.utente_id AS proprietario_id,
                 proprietario.username AS proprietario_username,
                 COUNT(*) AS interessi_attivi,
@@ -6198,6 +6208,8 @@ def admin_interessi():
             GROUP BY
                 i.annuncio_id,
                 a.titolo,
+                a.zona,
+                a.provincia,
                 a.utente_id,
                 proprietario.username
             ORDER BY
@@ -6306,10 +6318,199 @@ def admin_interessi():
                 [],
             )
 
+            zona_annuncio = (
+                annuncio.get("zona_annuncio")
+                or annuncio.get("provincia_annuncio")
+                or "Zona annuncio non indicata"
+            )
+            annuncio["zona_annuncio"] = str(zona_annuncio).strip()
+
+        cur.execute(sql("""
+            SELECT
+                COUNT(*) AS totale,
+                SUM(CASE WHEN stato = 'in_attesa' THEN 1 ELSE 0 END)
+                    AS in_attesa,
+                SUM(CASE WHEN stato = 'disponibile' THEN 1 ELSE 0 END)
+                    AS disponibili,
+                SUM(CASE WHEN stato = 'non_disponibile' THEN 1 ELSE 0 END)
+                    AS non_disponibili,
+                SUM(CASE WHEN stato = 'informazioni' THEN 1 ELSE 0 END)
+                    AS informazioni,
+                SUM(CASE WHEN stato = 'scaduta' THEN 1 ELSE 0 END)
+                    AS scadute,
+                COUNT(DISTINCT annuncio_id) AS annunci_coinvolti
+            FROM richieste_disponibilita
+        """))
+        richieste_stats_row = cur.fetchone()
+
+        def valore_richieste(nome):
+            if not richieste_stats_row:
+                return 0
+            return int(richieste_stats_row[nome] or 0)
+
+        statistiche_richieste = {
+            "totale": valore_richieste("totale"),
+            "in_attesa": valore_richieste("in_attesa"),
+            "disponibili": valore_richieste("disponibili"),
+            "non_disponibili": valore_richieste("non_disponibili"),
+            "informazioni": valore_richieste("informazioni"),
+            "scadute": valore_richieste("scadute"),
+            "annunci_coinvolti": valore_richieste("annunci_coinvolti"),
+        }
+        statistiche_richieste["con_risposta"] = (
+            statistiche_richieste["disponibili"]
+            + statistiche_richieste["non_disponibili"]
+            + statistiche_richieste["informazioni"]
+        )
+
+        cur.execute(sql("""
+            SELECT
+                rd.id,
+                rd.annuncio_id,
+                rd.stato,
+                rd.a_chiamata,
+                rd.created_at,
+                rd.updated_at,
+                rd.risposta_at,
+                a.titolo AS annuncio_titolo,
+                a.stato AS annuncio_stato,
+                a.zona AS annuncio_zona,
+                a.provincia AS annuncio_provincia,
+                richiedente.id AS richiedente_id,
+                richiedente.username AS richiedente_username,
+                richiedente.nome AS richiedente_nome,
+                richiedente.cognome AS richiedente_cognome,
+                richiedente.citta AS richiedente_citta,
+                richiedente.foto_profilo AS richiedente_foto_profilo,
+                offerente.id AS offerente_id,
+                offerente.username AS offerente_username,
+                offerente.nome AS offerente_nome,
+                offerente.cognome AS offerente_cognome,
+                offerente.citta AS offerente_citta,
+                offerente.foto_profilo AS offerente_foto_profilo
+            FROM richieste_disponibilita rd
+            JOIN annunci a
+              ON a.id = rd.annuncio_id
+            JOIN utenti richiedente
+              ON richiedente.id = rd.richiedente_id
+            JOIN utenti offerente
+              ON offerente.id = rd.offerente_id
+            ORDER BY rd.created_at DESC, rd.id DESC
+            LIMIT 100
+        """))
+
+        etichette_stato_richiesta = {
+            "in_attesa": ("In attesa", "is-pending"),
+            "disponibile": ("Disponibile", "is-positive"),
+            "non_disponibile": ("Non disponibile", "is-negative"),
+            "informazioni": ("Servono informazioni", "is-info"),
+            "scaduta": ("Scaduta", "is-expired"),
+        }
+
+        def partecipante_richiesta(record, prefisso):
+            utente_id = int(record[f"{prefisso}_id"])
+            nome_completo = " ".join(
+                parte.strip()
+                for parte in (
+                    record[f"{prefisso}_nome"] or "",
+                    record[f"{prefisso}_cognome"] or "",
+                )
+                if parte and parte.strip()
+            )
+            return {
+                "utente_id": utente_id,
+                "username": (
+                    record[f"{prefisso}_username"] or ""
+                ).strip(),
+                "nome": nome_completo,
+                "zona": (
+                    record[f"{prefisso}_citta"]
+                    or "Zona non indicata"
+                ).strip(),
+                "avatar_url": url_for(
+                    "static",
+                    filename=(
+                        record[f"{prefisso}_foto_profilo"]
+                        or "img/user_default.png"
+                    ),
+                ),
+                "profilo_url": url_for(
+                    "profilo_pubblico",
+                    id=utente_id,
+                ),
+            }
+
+        richieste_disponibilita = []
+        for record in cur.fetchall():
+            richiesta = dict(record)
+            stato = str(richiesta.get("stato") or "").strip()
+            stato_label, stato_css = etichette_stato_richiesta.get(
+                stato,
+                ("Stato non disponibile", "is-expired"),
+            )
+            zona_annuncio = (
+                richiesta.get("annuncio_zona")
+                or richiesta.get("annuncio_provincia")
+                or "Zona annuncio non indicata"
+            )
+            richieste_disponibilita.append({
+                "id": int(richiesta["id"]),
+                "annuncio_id": int(richiesta["annuncio_id"]),
+                "annuncio_titolo": (
+                    richiesta.get("annuncio_titolo")
+                    or "Annuncio senza titolo"
+                ).strip(),
+                "annuncio_stato": str(
+                    richiesta.get("annuncio_stato") or "non_disponibile"
+                ).strip().lower(),
+                "annuncio_zona": str(zona_annuncio).strip(),
+                "stato": stato,
+                "stato_label": stato_label,
+                "stato_css": stato_css,
+                "a_chiamata": bool(richiesta.get("a_chiamata")),
+                "created_at": richiesta.get("created_at"),
+                "updated_at": richiesta.get("updated_at"),
+                "risposta_at": richiesta.get("risposta_at"),
+                "richiedente": partecipante_richiesta(
+                    richiesta,
+                    "richiedente",
+                ),
+                "offerente": partecipante_richiesta(
+                    richiesta,
+                    "offerente",
+                ),
+            })
+
+        try:
+            statistiche_accessi = carica_statistiche_accessi(conn)
+            accessi_disponibili = True
+        except Exception as exc:
+            # La pagina admin resta utilizzabile anche nel breve intervallo
+            # tra deploy applicativo e applicazione della migrazione DB.
+            log_exception_safe(
+                "⚠️ Statistiche accessi non disponibili",
+                exc,
+                production=True,
+            )
+            statistiche_accessi = {
+                "oggi": 0,
+                "settimana": 0,
+                "mese": 0,
+                "serie": [],
+                "picco": 0,
+                "zone": [],
+                "giorni_con_dati": 0,
+            }
+            accessi_disponibili = False
+
         return render_template(
             "admin_interessi.html",
             statistiche=statistiche,
             annunci_piu_interessanti=annunci_piu_interessanti,
+            statistiche_richieste=statistiche_richieste,
+            richieste_disponibilita=richieste_disponibilita,
+            statistiche_accessi=statistiche_accessi,
+            accessi_disponibili=accessi_disponibili,
         )
 
     finally:
@@ -17066,7 +17267,6 @@ def pwa_badge_count():
 # ==========================================================
 # 🔹 CACHE per ADMIN COUNTERS
 # ==========================================================
-from time import time
 
 # Inizializza cache e TTL (5 secondi di durata)
 app.config.setdefault("_ADMIN_COUNTERS_CACHE", {"ts": 0, "payload": None})
@@ -17090,6 +17290,66 @@ def invalidate_admin_counters():
 # ==========================================================
 
 # --- Middleware per proteggere pagine riservate ---
+def _registra_accesso_utente_corrente(conn):
+    """Registra al massimo un accesso autenticato al giorno per sessione."""
+
+    utente = getattr(g, "utente", None)
+    if not utente:
+        return
+
+    try:
+        ruolo = str(utente["ruolo"] or "user").strip().lower()
+    except (KeyError, IndexError, TypeError):
+        ruolo = "user"
+
+    if ruolo == "admin":
+        return
+
+    oggi = giorno_locale_accessi()
+    marker = f"{int(utente['id'])}:{oggi.isoformat()}"
+    if session.get("_accesso_giornaliero") == marker:
+        return
+
+    retry_after = float(
+        app.config.get("_ACCESSI_UTENTI_RETRY_AFTER", 0) or 0
+    )
+    if time.monotonic() < retry_after:
+        return
+
+    def campo(nome):
+        try:
+            return utente[nome]
+        except (KeyError, IndexError, TypeError):
+            return None
+
+    zona = normalizza_zona_accessi(
+        campo("citta"),
+        campo("provincia"),
+        campo("regione"),
+    )
+
+    try:
+        registra_accesso_giornaliero(
+            conn,
+            utente_id=int(utente["id"]),
+            zona=zona,
+            giorno=oggi,
+        )
+    except Exception as exc:
+        # Il deploy del codice può precedere di pochi minuti la migrazione.
+        # Il sito continua a funzionare e riprova senza martellare il DB.
+        app.config["_ACCESSI_UTENTI_RETRY_AFTER"] = time.monotonic() + 300
+        log_exception_safe(
+            "⚠️ Registrazione accesso giornaliero non disponibile",
+            exc,
+            production=True,
+        )
+        return
+
+    app.config["_ACCESSI_UTENTI_RETRY_AFTER"] = 0
+    session["_accesso_giornaliero"] = marker
+
+
 @app.before_request
 def load_logged_in_user():
     # disponibile sempre nei template
@@ -17142,6 +17402,9 @@ def load_logged_in_user():
                     WHERE id = ?
                 """), (session_language, user_id))
                 conn.commit()
+
+        if g.utente:
+            _registra_accesso_utente_corrente(conn)
     except Exception as e:
         print(f"⚠️ load_logged_in_user errore: {e}")
         g.utente = None
@@ -22137,7 +22400,7 @@ def referenza_rispondi():
             owner_language,
         )
         owner_link = url_for("dashboard") + "#referenze"
-        admin_title = "Nuova referenza da controllare 🤝"
+        admin_title = "Nuova referenza da controllare 👍"
         admin_message = (
             f"@{row['utente_username']} ha ricevuto una nuova "
             "referenza da verificare."
@@ -32776,6 +33039,15 @@ def elimina_account_step2():
             # Purghiamo esplicitamente e nella stessa transazione referenze,
             # recapiti cifrati, token, testi, consensi ed eventi/audit.
             purge_user_reference_data(
+                cur,
+                user_id,
+                postgres=bool(app.config.get("IS_POSTGRES")),
+            )
+
+            # La riga dell'account viene anonimizzata e non cancellata:
+            # la FK non scatterebbe. Eliminiamo quindi esplicitamente anche
+            # le presenze giornaliere minimizzate, nella stessa transazione.
+            elimina_accessi_utente(
                 cur,
                 user_id,
                 postgres=bool(app.config.get("IS_POSTGRES")),
