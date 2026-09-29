@@ -13,6 +13,7 @@ PUBLIC_PARTIAL = TEMPLATES / "partials" / "referenze_pubbliche.html"
 PUBLIC_INFO_TAB = TEMPLATES / "partials" / "tab_info_pubblico.html"
 DASHBOARD = TEMPLATES / "dashboard.html"
 RESPONSE_PAGE = TEMPLATES / "referenza_risposta.html"
+RESULT_PAGE = TEMPLATES / "referenza_risposta_esito.html"
 PRIVACY_PAGE = TEMPLATES / "privacy.html"
 TERMS_PAGE = TEMPLATES / "termini.html"
 SCRIPT = ROOT / "static" / "js" / "referenze.js"
@@ -27,6 +28,7 @@ class ReferenzeUiTest(unittest.TestCase):
         cls.public_info_source = PUBLIC_INFO_TAB.read_text(encoding="utf-8")
         cls.dashboard_source = DASHBOARD.read_text(encoding="utf-8")
         cls.response_source = RESPONSE_PAGE.read_text(encoding="utf-8")
+        cls.result_source = RESULT_PAGE.read_text(encoding="utf-8")
         cls.privacy_source = PRIVACY_PAGE.read_text(encoding="utf-8")
         cls.terms_source = TERMS_PAGE.read_text(encoding="utf-8")
         cls.script_source = SCRIPT.read_text(encoding="utf-8")
@@ -49,10 +51,16 @@ class ReferenzeUiTest(unittest.TestCase):
             self.public_info_source,
             self.dashboard_source,
             self.response_source,
+            self.result_source,
             self.privacy_source,
             self.terms_source,
         ):
             self.environment.parse(source)
+
+    def test_external_response_pages_link_to_registered_home_endpoint(self):
+        for source in (self.response_source, self.result_source):
+            self.assertIn("url_for('home')", source)
+            self.assertNotIn("url_for('landing')", source)
 
     def test_references_live_in_feedback_tab_not_info(self):
         self.assertIn(
@@ -175,6 +183,75 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn('name="anno_inizio"', rendered)
         self.assertIn('name="anno_fine"', rendered)
         self.assertIn('name="durata_fascia"', rendered)
+
+    def test_verified_reference_is_managed_outside_sent_requests(self):
+        rendered = self.environment.get_template(
+            "partials/referenze_dialog.html"
+        ).render(
+            referenze_private=[
+                {
+                    "id": 21,
+                    "referente_nome": "Referente ricevuto",
+                    "categoria_label": "Babysitter",
+                    "stato_risposta": "risposta_ricevuta",
+                    "stato_verifica": "verificata",
+                    "stato": "verificata",
+                    "sezione_privata": "ricevuta",
+                    "versione": 4,
+                },
+                {
+                    "id": 22,
+                    "referente_nome": "Referente invitato",
+                    "categoria_label": "Caregiver",
+                    "stato_risposta": "in_attesa",
+                    "stato_verifica": "non_esaminata",
+                    "stato": "inviata",
+                    "sezione_privata": "richiesta",
+                },
+            ],
+            categorie_referenze=[],
+            csrf_token=lambda: "csrf-test",
+            url_for=lambda endpoint, **kwargs: (
+                f"/static/{kwargs['filename']}"
+                if endpoint == "static"
+                else f"/{endpoint}/{kwargs.get('referenza_id', '')}".rstrip("/")
+            ),
+        )
+
+        received = rendered.split(
+            'id="reference-list-received-title"', 1
+        )[1].split('id="reference-list-requests-title"', 1)[0]
+        requests = rendered.split(
+            'id="reference-list-requests-title"', 1
+        )[1]
+        self.assertIn('data-reference-id="21"', received)
+        self.assertNotIn('data-reference-id="22"', received)
+        self.assertIn('data-reference-id="22"', requests)
+        self.assertNotIn('data-reference-id="21"', requests)
+        self.assertIn("reference.received.title", rendered)
+        self.assertIn("reference.requests.title", rendered)
+        self.assertIn("reference.delete_reference", received)
+        self.assertIn('data-reference-delete-kind="reference"', received)
+        self.assertIn('data-version="4"', received)
+        self.assertNotIn("reference.delete_reference", requests)
+
+    def test_delete_copy_distinguishes_reference_from_request(self):
+        self.assertIn(
+            'button.dataset.referenceDeleteKind === "reference"',
+            self.script_source,
+        )
+        self.assertIn(
+            "Eliminare definitivamente questa referenza?",
+            self.script_source,
+        )
+        self.assertIn(
+            "Eliminare definitivamente questa richiesta?",
+            self.script_source,
+        )
+        self.assertIn(
+            'versione: Number.parseInt(button.dataset.version || "0", 10)',
+            self.script_source,
+        )
 
     def test_private_manager_surfaces_delivery_failure_and_can_revoke_completed(self):
         self.assertIn("reference.status.email_failed", self.private_source)

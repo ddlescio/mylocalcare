@@ -19,6 +19,9 @@ from Crypto.Cipher import AES
 from nacl.public import PrivateKey, PublicKey
 from flask_socketio import SocketIO
 from realtime import emit_update_notifications
+from reference_cleanup import purge_user_reference_data
+
+
 def fetchone_value(row):
     if row is None:
         return None
@@ -2114,6 +2117,7 @@ def elimina_utente(id):
     - push subscription
     - revisioni profilo
     - schede strutturate di esperienze, formazione e certificazioni
+    - referenze professionali, recapiti cifrati, token e relativo audit
     - disponibilità strutturata per i servizi
     - video call log
     - servizi attivi collegati all'utente o ai suoi annunci
@@ -2292,28 +2296,14 @@ def elimina_utente(id):
                     WHERE utente_id = ?
                 """), (id,))
 
-        # L'account viene anonimizzato, quindi la FK non scatterebbe. Le
-        # referenze dell'utente (insieme ai recapiti cifrati del referente e
-        # al relativo audit) devono essere eliminate esplicitamente.
-        if is_postgres():
-            cur.execute(sql(
-                "SELECT to_regclass('public.referenze') AS tabella"
-            ))
-            referenze_presenti = bool(fetchone_value(cur.fetchone()))
-        else:
-            cur.execute(sql("""
-                SELECT name
-                FROM sqlite_master
-                WHERE type = 'table' AND name = 'referenze'
-                LIMIT 1
-            """))
-            referenze_presenti = cur.fetchone() is not None
-
-        if referenze_presenti:
-            cur.execute(sql("""
-                DELETE FROM referenze
-                WHERE utente_id = ?
-            """), (id,))
+        # L'account viene anonimizzato, quindi la FK su utenti non scatta.
+        # La pulizia esplicita rimuove anche figli sensibili e audit senza
+        # dipendere dalle cascade di una installazione legacy.
+        purge_user_reference_data(
+            cur,
+            id,
+            postgres=is_postgres(),
+        )
 
         # Anche la disponibilità è collegata a una riga utente che viene
         # anonimizzata e non cancellata. La riga principale va quindi rimossa

@@ -565,6 +565,23 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
         self.assertEqual(len(self.invalidations), 1)
         self.assertEqual(self.notifications[0][0][0], 7)
 
+    def test_notification_failure_after_commit_still_redirects_with_success(self):
+        def fail_notification(*args, **kwargs):
+            raise RuntimeError("notification backend unavailable")
+
+        self.namespace["_crea_notifica"] = fail_notification
+        result = self.submit()
+
+        row = self.connection.execute(
+            "SELECT stato_verifica, versione FROM referenze WHERE id = 10"
+        ).fetchone()
+        self.assertEqual(result, "/admin_referenze")
+        self.assertEqual(tuple(row), ("verificata", 3))
+        self.assertIn(
+            ("Esito della referenza registrato.", "success"),
+            self.flashes,
+        )
+
     def test_admin_can_approve_publication_independently(self):
         self.connection.execute("""
             UPDATE referenze

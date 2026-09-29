@@ -168,7 +168,7 @@
                   🔒 I dati identificativi e il recapito del referente sono stati rimossi alla
                   scadenza del periodo di conservazione. Non è più possibile ricontattarlo.
                   {% if referenza.get('contatto_purged_at') %}
-                    <span class="mt-1 block text-slate-400">Rimossi il {{ referenza.get('contatto_purged_at')|fmt_it_smart }}.</span>
+                    <span class="mt-1 block text-slate-400">Rimossi il {{ referenza.get('contatto_purged_at')|dt_roma_admin }}.</span>
                   {% endif %}
                 </div>
               {% else %}
@@ -207,7 +207,7 @@
                   ✓ Il referente ha indicato il numero e autorizzato il ricontatto telefonico
                   ai soli fini della verifica. Dopo la chiamata registra l’esito del controllo.
                   {% if referenza.get('contatto_purge_at') %}
-                    <span class="mt-1 block text-emerald-700/75">Conservazione prevista fino al {{ referenza.get('contatto_purge_at')|fmt_it_smart }}.</span>
+                    <span class="mt-1 block text-emerald-700/75">Conservazione prevista fino al {{ referenza.get('contatto_purge_at')|dt_roma_admin }}.</span>
                   {% endif %}
                 </div>
               {% endif %}
@@ -292,7 +292,7 @@
                       <li class="relative rounded-xl bg-white p-3 text-xs text-slate-600 ring-1 ring-slate-200">
                         <span class="absolute -left-[1.34rem] top-4 h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-slate-50" aria-hidden="true"></span>
                         <div class="font-extrabold text-slate-800">{{ evento.get('titolo') or evento.get('label') or evento.get('stato')|default('Aggiornamento', true)|replace('_', ' ')|title }}</div>
-                        {% if evento.get('data') or evento.get('created_at') %}<div class="mt-0.5 text-slate-400">{{ evento.get('data') or evento.get('created_at') }}</div>{% endif %}
+                        {% if evento.get('data') or evento.get('created_at') %}<div class="mt-0.5 text-slate-400">{{ (evento.get('data') or evento.get('created_at'))|dt_roma_admin }}</div>{% endif %}
                         {% if evento.get('dettaglio') %}<div class="mt-1" data-no-translate>{{ evento.get('dettaglio') }}</div>{% endif %}
                       </li>
                     {% else %}
@@ -316,6 +316,7 @@
                 {% if risposta == 'risposta_ricevuta' %}
                 <form method="post" action="{{ url_for('admin_referenza_verifica', referenza_id=referenza.get('id')) }}"
                       class="admin-reference-action mt-4 space-y-3"
+                      data-no-global-loader
                       data-contact-available="{{ '1' if contatto_disponibile else '0' }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="versione" value="{{ referenza.get('versione') or 1 }}">
@@ -377,7 +378,10 @@
                     </span>
                   </label>
 
-                  <button class="min-h-11 w-full rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white hover:bg-blue-700">Registra esito</button>
+                  <button type="submit"
+                          class="admin-reference-submit min-h-11 w-full rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white hover:bg-blue-700 disabled:cursor-wait disabled:opacity-65"
+                          data-idle-label="Registra esito"
+                          data-pending-label="Registrazione in corso…">Registra esito</button>
                 </form>
                 {% elif risposta in ('in_attesa', 'invitata') %}
                   <p class="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-900">
@@ -401,6 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const note = form.querySelector(".admin-reference-note");
     const publication = form.querySelector(".admin-reference-publication-checkbox");
     const publicationContainer = form.querySelector(".admin-reference-publication");
+    const submitButton = form.querySelector(".admin-reference-submit");
     const contactAvailable = form.dataset.contactAvailable === "1";
     const publicConsent = publicationContainer?.dataset.publicConsent === "1";
     const contactOutcomes = ["verificata", "non_confermata"];
@@ -433,6 +438,10 @@ document.addEventListener("DOMContentLoaded", () => {
     syncRequirements();
 
     form.addEventListener("submit", (event) => {
+      if (form.dataset.submitting === "1") {
+        event.preventDefault();
+        return;
+      }
       if (!contactAvailable && state?.value !== "non_verificabile") {
         event.preventDefault();
         window.alert("Senza un recapito autorizzato puoi registrare soltanto l’esito Non verificabile.");
@@ -452,9 +461,30 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (!window.confirm("Confermi l’esito della verifica della referenza?")) {
         event.preventDefault();
+        return;
+      }
+
+      form.dataset.submitting = "1";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.setAttribute("aria-busy", "true");
+        submitButton.textContent = submitButton.dataset.pendingLabel || "Registrazione in corso…";
       }
     });
   });
+
+  const resetAdminReferenceForms = () => {
+    document.querySelectorAll(".admin-reference-action").forEach((form) => {
+      delete form.dataset.submitting;
+      const button = form.querySelector(".admin-reference-submit");
+      if (!button) return;
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.textContent = button.dataset.idleLabel || "Registra esito";
+    });
+  };
+
+  window.addEventListener("pageshow", resetAdminReferenceForms);
 });
 </script>
 {% endblock %}

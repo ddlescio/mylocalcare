@@ -158,6 +158,7 @@ from referenze import (
     reference_email_fingerprint,
     serialize_public_reference,
 )
+from reference_cleanup import purge_user_reference_data
 from i18n import (
     LEGAL_DOCUMENT_VERSION,
     SUPPORTED_LANGUAGES,
@@ -1920,6 +1921,7 @@ def dt_roma(value):
 
 @app.template_filter("dt_roma_admin")
 def dt_roma_admin(value):
+    """Formatta una data admin come ``gg/mm/aaaa hh:mm`` in ora italiana."""
     if not value:
         return ""
 
@@ -1934,7 +1936,7 @@ def dt_roma_admin(value):
 
         return dt.astimezone(
             ZoneInfo("Europe/Rome")
-        ).strftime("%d/%m/%Y %H:%M").lstrip("0").replace("/0", "/")
+        ).strftime("%d/%m/%Y %H:%M")
 
     except Exception:
         return str(value)
@@ -6457,6 +6459,7 @@ def _referenza_admin_evento_presentato(row):
         "rifiutata_referente": "Collaborazione non confermata",
         "consenso_revocato": "Consenso revocato",
         "richiesta_cancellata_utente": "Richiesta eliminata dall’utente",
+        "referenza_cancellata_utente": "Referenza eliminata dall’utente",
         "verifica_admin_registrata": "Esito admin registrato",
         "pubblicazione_admin_approvata": "Pubblicazione approvata",
         "pubblicazione_admin_revocata": "Pubblicazione non approvata",
@@ -13169,12 +13172,21 @@ def _filtra_utenti(form):
     return rows
 
 
-def _crea_notifica(id_utente, titolo, messaggio, tipo="generica", link=None):
-    conn = get_db_connection()
+def _crea_notifica(
+    id_utente,
+    titolo,
+    messaggio,
+    tipo="generica",
+    link=None,
+    db_connection=None,
+):
+    """Salva una notifica senza chiudere connessioni ricevute dal chiamante."""
+    conn = db_connection or get_db_connection()
+    cur = None
     try:
-        c = get_cursor(conn)
+        cur = get_cursor(conn)
 
-        c.execute(sql("""
+        cur.execute(sql("""
             INSERT INTO notifiche (
                 id_utente,
                 titolo,
@@ -13189,8 +13201,18 @@ def _crea_notifica(id_utente, titolo, messaggio, tipo="generica", link=None):
 
     finally:
         try:
-            conn.close()
-        except:
+            if cur is not None:
+                cur.close()
+        except Exception:
+            pass
+
+        # Se la connessione appartiene alla request/chiamante, sara lui (o il
+        # teardown Flask) a rilasciarla. Questo evita di restituire al pool una
+        # connessione che la route sta ancora usando.
+        try:
+            if db_connection is None:
+                conn.close()
+        except Exception:
             pass
 
 def get_daily_matches_settings():
@@ -17937,6 +17959,25 @@ def _referenza_private_state(row):
     return "risposta_ricevuta"
 
 
+def _referenza_private_section(row):
+    """Separa gli inviti dalla referenze effettivamente ricevute.
+
+    Una risposta resta nella cronologia delle richieste finche MyLocalCare non
+    l'ha verificata. Dopo l'esito positivo dell'admin diventa invece una
+    referenza ricevuta, anche quando il referente non ne ha autorizzato la
+    pubblicazione o il proprietario ha scelto di non mostrarla nel profilo.
+    """
+
+    item = dict(row or {})
+    is_received = bool(
+        item.get("stato_risposta") == "risposta_ricevuta"
+        and item.get("stato_verifica") == "verificata"
+        and not item.get("revocata_at")
+        and not item.get("cancellata_at")
+    )
+    return "ricevuta" if is_received else "richiesta"
+
+
 def _referenza_decrypt_contact(
     row,
     *,
@@ -18046,6 +18087,7 @@ def _referenza_presenta_privata(
     item["periodo"] = _referenza_periodo_label(item)
     item["periodo_label"] = item["periodo"]
     item["stato"] = _referenza_private_state(item)
+    item["sezione_privata"] = _referenza_private_section(item)
     item["inviata_at"] = item.get("ultimo_invio_at") or item.get("created_at")
     item["effettivamente_visibile"] = bool(
         item.get("stato_risposta") == "risposta_ricevuta"
@@ -21361,19 +21403,37 @@ def api_referenza_ripristina(referenza_id):
 )
 @login_required
 def api_referenza_elimina(referenza_id):
-    """Elimina dall'elenco una richiesta revocata e ne purga i recapiti."""
+    """Elimina una richiesta revocata o una referenza ricevuta verificata.
+
+    Il record minimo e gli eventi restano disponibili per audit, mentre dati
+    pubblici, consensi e recapiti cifrati vengono rimossi nella stessa
+    transazione. La versione evita che una scheda aggiornata in un'altra
+    finestra venga eliminata usando dati non più attuali.
+    """
 
     verify_csrf()
+    payload = _referenza_request_payload()
+    try:
+        expected_version = int(payload.get("versione") or 0)
+    except (TypeError, ValueError):
+        expected_version = 0
     conn = get_db_connection()
     cur = get_cursor(conn)
     user_id = int(g.utente["id"])
     language = get_interface_language()
+    if expected_version < 1:
+        return jsonify({
+            "ok": False,
+            "message": _referenza_ui_message(
+                "La referenza è cambiata. Ricarica la pagina.", language
+            ),
+        }), 409
     try:
         _schede_profilo_begin(cur)
         _schede_profilo_lock_user(cur, user_id)
         lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
         cur.execute(sql(f"""
-            SELECT id, stato_risposta
+            SELECT id, stato_risposta, stato_verifica, versione
             FROM referenze
             WHERE id = ? AND utente_id = ?
             LIMIT 1{lock_suffix}
@@ -21384,15 +21444,30 @@ def api_referenza_elimina(referenza_id):
             return jsonify({
                 "ok": False,
                 "message": _referenza_ui_message(
-                    "Richiesta non trovata.", language
+                    "Referenza o richiesta non trovata.", language
                 ),
             }), 404
-        if row["stato_risposta"] != "revocata":
+        is_revoked_request = row["stato_risposta"] == "revocata"
+        is_received_reference = bool(
+            row["stato_risposta"] == "risposta_ricevuta"
+            and row["stato_verifica"] == "verificata"
+        )
+        if not (is_revoked_request or is_received_reference):
             _schede_profilo_rollback(cur)
             return jsonify({
                 "ok": False,
                 "message": _referenza_ui_message(
-                    "Revoca la richiesta prima di eliminarla.", language
+                    "Puoi eliminare soltanto una richiesta revocata o una "
+                    "referenza verificata.",
+                    language,
+                ),
+            }), 409
+        if int(row["versione"] or 0) != expected_version:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "message": _referenza_ui_message(
+                    "La referenza è cambiata. Ricarica la pagina.", language
                 ),
             }), 409
 
@@ -21424,9 +21499,15 @@ def api_referenza_elimina(referenza_id):
                 cancellata_at = CURRENT_TIMESTAMP,
                 versione = versione + 1,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND utente_id = ?
-              AND stato_risposta = 'revocata'
-        """), (int(referenza_id), user_id))
+            WHERE id = ? AND utente_id = ? AND versione = ?
+              AND (
+                    stato_risposta = 'revocata'
+                    OR (
+                        stato_risposta = 'risposta_ricevuta'
+                        AND stato_verifica = 'verificata'
+                    )
+              )
+        """), (int(referenza_id), user_id, expected_version))
         if cur.rowcount != 1:
             _schede_profilo_rollback(cur)
             return jsonify({
@@ -21459,15 +21540,33 @@ def api_referenza_elimina(referenza_id):
         _referenza_evento(
             cur,
             int(referenza_id),
-            "richiesta_cancellata_utente",
+            (
+                "referenza_cancellata_utente"
+                if is_received_reference
+                else "richiesta_cancellata_utente"
+            ),
             "utente",
             attore_utente_id=user_id,
+            dettagli={
+                "tipo": (
+                    "referenza_ricevuta"
+                    if is_received_reference
+                    else "richiesta_revocata"
+                ),
+                "versione_precedente": expected_version,
+            },
         )
         _schede_profilo_commit(cur)
         return jsonify({
             "ok": True,
+            "tipo": "referenza" if is_received_reference else "richiesta",
             "message": _referenza_ui_message(
-                "Richiesta eliminata.", language
+                (
+                    "Referenza eliminata."
+                    if is_received_reference
+                    else "Richiesta eliminata."
+                ),
+                language,
             ),
         })
     except Exception as exc:
@@ -21758,6 +21857,7 @@ def referenza_rispondi():
                 ),
                 tipo="profilo",
                 link=url_for("dashboard") + "#referenze",
+                db_connection=conn,
             )
             emit_update_notifications(owner_id)
         except Exception as notification_exc:
@@ -21767,6 +21867,34 @@ def referenza_rispondi():
                 {"referenza_id": reference_id, "utente_id": owner_id},
                 production=True,
             )
+
+        # Una risposta positiva entra subito nella coda di controllo. La
+        # notifica admin viene creata soltanto dopo il commit e non deve mai
+        # trasformare un salvataggio riuscito in un errore mostrato al
+        # referente.
+        if direct:
+            try:
+                notifica_admin_evento(
+                    "Nuova referenza da controllare 🤝",
+                    (
+                        f"@{row['utente_username']} ha ricevuto una nuova "
+                        "referenza da verificare."
+                    ),
+                    link=url_for("admin_referenze", stato="da_gestire"),
+                    push=True,
+                    defer_push=True,
+                    db_connection=conn,
+                )
+            except Exception as admin_notification_exc:
+                log_exception_safe(
+                    "Referenza salvata ma notifica admin non inviata",
+                    admin_notification_exc,
+                    {
+                        "referenza_id": reference_id,
+                        "utente_id": owner_id,
+                    },
+                    production=True,
+                )
 
         response = app.make_response(render_template(
             "referenza_risposta_esito.html", confermata=direct
@@ -25069,7 +25197,39 @@ def invia_push(user_id, title, body, url=None):
                 e
             )
 
-def notifica_admin_evento(titolo, messaggio, link=None, push=True):
+def _invia_push_admin_evento_differita(
+    admin_ids,
+    titolo,
+    messaggio,
+    push_url,
+):
+    """Invia le push best-effort fuori dalla risposta HTTP del referente."""
+    with app.app_context():
+        for admin_id in admin_ids:
+            try:
+                invia_push(
+                    admin_id,
+                    titolo,
+                    messaggio,
+                    url=push_url,
+                )
+            except Exception as exc:
+                log_exception_safe(
+                    "⚠️ Errore push admin differita",
+                    exc,
+                    {"admin_id": admin_id},
+                    production=True,
+                )
+
+
+def notifica_admin_evento(
+    titolo,
+    messaggio,
+    link=None,
+    push=True,
+    defer_push=False,
+    db_connection=None,
+):
     """
     Crea una notifica interna per tutti gli admin attivi
     e, se possibile, invia anche una push.
@@ -25077,11 +25237,13 @@ def notifica_admin_evento(titolo, messaggio, link=None, push=True):
     Non usa Postmark.
     Non invia email.
     """
-    conn = None
+    conn = db_connection
     cur = None
+    admin_ids = []
 
     try:
-        conn = get_db_connection()
+        if conn is None:
+            conn = get_db_connection()
         cur = get_cursor(conn)
 
         cur.execute(sql("""
@@ -25100,6 +25262,7 @@ def notifica_admin_evento(titolo, messaggio, link=None, push=True):
 
         for admin in admins:
             admin_id = int(admin["id"])
+            admin_ids.append(admin_id)
 
             try:
                 _crea_notifica(
@@ -25107,12 +25270,13 @@ def notifica_admin_evento(titolo, messaggio, link=None, push=True):
                     titolo,
                     messaggio,
                     tipo="admin",
-                    link=link
+                    link=link,
+                    db_connection=conn,
                 )
 
                 emit_update_notifications(admin_id)
 
-                if push:
+                if push and not defer_push:
                     invia_push(
                         admin_id,
                         titolo,
@@ -25127,6 +25291,14 @@ def notifica_admin_evento(titolo, messaggio, link=None, push=True):
                     {"admin_id": admin_id},
                     production=True
                 )
+
+        if push and defer_push and admin_ids:
+            push_url = link or url_for("admin_dashboard")
+            threading.Thread(
+                target=_invia_push_admin_evento_differita,
+                args=(tuple(admin_ids), titolo, messaggio, push_url),
+                daemon=True,
+            ).start()
 
     except Exception as e:
         log_exception_safe(
@@ -25143,7 +25315,7 @@ def notifica_admin_evento(titolo, messaggio, link=None, push=True):
             pass
 
         try:
-            if conn:
+            if conn and db_connection is None:
                 conn.close()
         except Exception:
             pass
@@ -32124,15 +32296,14 @@ def elimina_account_step2():
                     WHERE utente_id = ?
                 """), (user_id,))
 
-            # Le referenze contengono anche i recapiti cifrati di persone
-            # esterne alla piattaforma. L'account viene anonimizzato, non
-            # cancellato fisicamente: eliminiamo quindi esplicitamente la
-            # referenza; contatti e audit cadono tramite ON DELETE CASCADE.
-            if _referenze_tables_exist(cur):
-                cur.execute(sql("""
-                    DELETE FROM referenze
-                    WHERE utente_id = ?
-                """), (user_id,))
+            # L'account viene anonimizzato, quindi la FK su utenti non scatta.
+            # Purghiamo esplicitamente e nella stessa transazione referenze,
+            # recapiti cifrati, token, testi, consensi ed eventi/audit.
+            purge_user_reference_data(
+                cur,
+                user_id,
+                postgres=bool(app.config.get("IS_POSTGRES")),
+            )
 
             # La riga utente viene anonimizzata anziché eliminata: rimuoviamo
             # esplicitamente sia l'agenda generale (i cui figli puntano

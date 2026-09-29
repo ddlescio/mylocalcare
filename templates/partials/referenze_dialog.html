@@ -3,6 +3,29 @@
 
 {% set referenze_elenco = referenze_private|default([], true) %}
 {% set categorie_elenco = categorie_referenze|default([], true) %}
+{% set referenze_ricevute = [] %}
+{% set richieste_inviate = [] %}
+{% for referenza in referenze_elenco %}
+  {% if referenza.get('sezione_privata') == 'ricevuta' %}
+    {% set _ = referenze_ricevute.append(referenza) %}
+  {% else %}
+    {% set _ = richieste_inviate.append(referenza) %}
+  {% endif %}
+{% endfor %}
+{% set gruppi_referenze = [
+  {
+    'key': 'received',
+    'items': referenze_ricevute,
+    'title': 'reference.received.title',
+    'subtitle': 'reference.received.subtitle'
+  },
+  {
+    'key': 'requests',
+    'items': richieste_inviate,
+    'title': 'reference.requests.title',
+    'subtitle': 'reference.requests.subtitle'
+  }
+] %}
 
 <div id="reference-manager" class="reference-manager">
   <section
@@ -182,20 +205,22 @@
         </section>
       {% endif %}
 
-      <section class="reference-list" aria-labelledby="reference-list-title">
+      {% for gruppo in gruppi_referenze %}
+      {% if gruppo.get('key') == 'requests' or gruppo.get('items') %}
+      <section class="reference-list reference-list--{{ gruppo.get('key') }}" aria-labelledby="reference-list-{{ gruppo.get('key') }}-title">
         <div class="reference-list__head">
           <div>
-            <h3 id="reference-list-title">{{ tr('reference.requests.title') }}</h3>
-            <p>{{ tr('reference.requests.subtitle') }}</p>
+            <h3 id="reference-list-{{ gruppo.get('key') }}-title">{{ tr(gruppo.get('title')) }}</h3>
+            <p>{{ tr(gruppo.get('subtitle')) }}</p>
           </div>
-          {% if referenze_elenco %}
-            <span class="reference-count">{{ referenze_elenco|length }}</span>
+          {% if gruppo.get('items') %}
+            <span class="reference-count">{{ gruppo.get('items')|length }}</span>
           {% endif %}
         </div>
 
-        {% if referenze_elenco %}
+        {% if gruppo.get('items') %}
           <div class="reference-list__items">
-            {% for referenza in referenze_elenco %}
+            {% for referenza in gruppo.get('items') %}
               {% set stato_risposta = referenza.get('stato_risposta') or 'in_attesa' %}
               {% set stato_verifica = referenza.get('stato_verifica') or 'non_verificata' %}
               {% set stato = referenza.get('stato') or ('verificata' if stato_verifica == 'verificata' else stato_risposta) %}
@@ -318,6 +343,8 @@
                       type="button"
                       class="reference-danger-button"
                       data-reference-delete
+                      data-reference-delete-kind="request"
+                      data-version="{{ referenza.get('versione') or 1 }}"
                       data-endpoint="{{ url_for('api_referenza_elimina', referenza_id=referenza.get('id')) }}">
                       {{ tr('reference.delete_request') }}
                     </button>
@@ -340,6 +367,17 @@
                         {% else %}
                           {{ tr('reference.show_on_profile') }}
                         {% endif %}
+                      </button>
+                    {% endif %}
+                    {% if referenza.get('sezione_privata') == 'ricevuta' %}
+                      <button
+                        type="button"
+                        class="reference-danger-button"
+                        data-reference-delete
+                        data-reference-delete-kind="reference"
+                        data-version="{{ referenza.get('versione') or 1 }}"
+                        data-endpoint="{{ url_for('api_referenza_elimina', referenza_id=referenza.get('id')) }}">
+                        {{ tr('reference.delete_reference') }}
                       </button>
                     {% endif %}
                     {% if stato in ['inviata', 'aperta', 'scaduta', 'errore_invio'] %}
@@ -371,6 +409,8 @@
           </div>
         {% endif %}
       </section>
+      {% endif %}
+      {% endfor %}
     </div>
   </section>
 </div>

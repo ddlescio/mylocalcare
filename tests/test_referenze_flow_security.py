@@ -76,6 +76,38 @@ def load_reference_bootstrap(connect):
 
 
 class ReferenceFlowSecuritySourceTest(unittest.TestCase):
+    def test_verified_reference_moves_out_of_sent_requests(self):
+        classify = load_function("_referenza_private_section", {})
+
+        self.assertEqual(
+            classify({
+                "stato_risposta": "risposta_ricevuta",
+                "stato_verifica": "verificata",
+                "pubblicazione_approvata_admin": 0,
+                "visibile_profilo": 0,
+                "revocata_at": None,
+                "cancellata_at": None,
+            }),
+            "ricevuta",
+        )
+        for state in ("non_esaminata", "in_coda", "non_verificabile", "non_confermata"):
+            with self.subTest(state=state):
+                self.assertEqual(
+                    classify({
+                        "stato_risposta": "risposta_ricevuta",
+                        "stato_verifica": state,
+                    }),
+                    "richiesta",
+                )
+        self.assertEqual(
+            classify({
+                "stato_risposta": "risposta_ricevuta",
+                "stato_verifica": "verificata",
+                "revocata_at": "2026-09-29T10:00:00+00:00",
+            }),
+            "richiesta",
+        )
+
     def test_reference_email_recipient_is_redacted_from_application_logs(self):
         email_source = function_source("_invia_email")
         invite_source = function_source("_invia_invito_referenza")
@@ -239,7 +271,10 @@ class ReferenceFlowSecuritySourceTest(unittest.TestCase):
 
     def test_delete_is_soft_delete_with_immediate_contact_purge(self):
         delete = function_source("api_referenza_elimina")
-        self.assertIn('row["stato_risposta"] != "revocata"', delete)
+        self.assertIn('row["stato_risposta"] == "revocata"', delete)
+        self.assertIn('row["stato_verifica"] == "verificata"', delete)
+        self.assertIn('expected_version = int(payload.get("versione")', delete)
+        self.assertIn("AND versione = ?", delete)
         self.assertIn("stato_risposta = 'cancellata'", delete)
         self.assertIn("email_cifrata = NULL", delete)
         self.assertIn("email_hash = NULL", delete)
@@ -247,6 +282,7 @@ class ReferenceFlowSecuritySourceTest(unittest.TestCase):
         self.assertIn("token_hash = NULL", delete)
         self.assertIn("contatto_purged_at = CURRENT_TIMESTAMP", delete)
         self.assertIn('"richiesta_cancellata_utente"', delete)
+        self.assertIn('"referenza_cancellata_utente"', delete)
 
     def test_reference_notifications_open_reviews_reference_section(self):
         for name in ("admin_referenza_verifica", "referenza_rispondi"):
@@ -377,14 +413,22 @@ class ReferenceRequestLifecycleTest(unittest.TestCase):
         self.connection.close()
         self.database_path.unlink(missing_ok=True)
 
-    def call_as_owner(self, function, *, contact_confirmation=False):
-        payload = (
-            {"conferma_condivisione_recapito": True}
-            if contact_confirmation else {}
-        )
+    def call_as_owner(
+        self,
+        function,
+        *,
+        reference_id=31,
+        contact_confirmation=False,
+        version=None,
+    ):
+        payload = {}
+        if contact_confirmation:
+            payload["conferma_condivisione_recapito"] = True
+        if version is not None:
+            payload["versione"] = version
         with self.app.test_request_context("/", method="POST", json=payload):
             g.utente = {"id": 7}
-            return function(31)
+            return function(reference_id)
 
     def test_restore_replaces_token_and_clears_old_reply_state(self):
         response = self.call_as_owner(
@@ -426,7 +470,10 @@ class ReferenceRequestLifecycleTest(unittest.TestCase):
         """)
         self.connection.commit()
 
-        response = self.call_as_owner(self.delete)
+        version = self.connection.execute(
+            "SELECT versione FROM referenze WHERE id = 31"
+        ).fetchone()[0]
+        response = self.call_as_owner(self.delete, version=version)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.get_json()["ok"])
         reference = self.connection.execute(
@@ -444,6 +491,73 @@ class ReferenceRequestLifecycleTest(unittest.TestCase):
         ):
             self.assertIsNone(contact[column])
         self.assertIsNotNone(contact["contatto_purged_at"])
+
+    def test_owner_can_delete_verified_received_reference_directly(self):
+        self.connection.execute("""
+            INSERT INTO referenze (
+                id, utente_id, categoria_slug, tipo_rapporto,
+                stato_risposta, stato_verifica, esperienza_diretta,
+                visibile_profilo, risposta_at, verificata_at
+            ) VALUES (?, ?, ?, ?, 'risposta_ricevuta', 'verificata',
+                      1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """, (32, 7, "caregiver", "famiglia"))
+        self.connection.execute("""
+            INSERT INTO referenze_contatti (
+                referenza_id, email_cifrata, email_nonce, email_tag,
+                email_key_id, email_hash, nome_cifrato, nome_nonce, nome_tag,
+                token_hash, token_expires_at
+            ) VALUES (?, 'cipher', 'nonce', 'tag', 'v1', 'hash',
+                      'name', 'nonce', 'tag', 'token',
+                      '2099-01-01T00:00:00+00:00')
+        """, (32,))
+        self.connection.commit()
+        version = self.connection.execute(
+            "SELECT versione FROM referenze WHERE id = 32"
+        ).fetchone()[0]
+
+        response = self.call_as_owner(
+            self.delete,
+            reference_id=32,
+            version=version,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+        self.assertEqual(response.get_json()["tipo"], "referenza")
+        reference = self.connection.execute(
+            "SELECT * FROM referenze WHERE id = 32"
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = 32"
+        ).fetchone()
+        event = self.connection.execute(
+            "SELECT tipo_evento FROM referenze_eventi "
+            "WHERE referenza_id = 32 ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        self.assertEqual(reference["stato_risposta"], "cancellata")
+        self.assertEqual(reference["stato_verifica"], "revocata")
+        self.assertEqual(reference["visibile_profilo"], 0)
+        self.assertEqual(reference["pubblicazione_approvata_admin"], 0)
+        self.assertIsNotNone(reference["cancellata_at"])
+        self.assertIsNone(contact["email_cifrata"])
+        self.assertIsNone(contact["token_hash"])
+        self.assertIsNotNone(contact["contatto_purged_at"])
+        self.assertEqual(event["tipo_evento"], "referenza_cancellata_utente")
+
+    def test_delete_rejects_stale_version_without_changing_reference(self):
+        current = self.connection.execute(
+            "SELECT versione FROM referenze WHERE id = 31"
+        ).fetchone()[0]
+        response = self.call_as_owner(self.delete, version=current + 1)
+
+        response_body, status_code = response
+        self.assertEqual(status_code, 409)
+        self.assertFalse(response_body.get_json()["ok"])
+        row = self.connection.execute(
+            "SELECT stato_risposta, versione FROM referenze WHERE id = 31"
+        ).fetchone()
+        self.assertEqual(row["stato_risposta"], "revocata")
+        self.assertEqual(row["versione"], current)
 
 
 class ReferenceEmailFailurePersistenceTest(unittest.TestCase):
@@ -568,6 +682,7 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
         app.secret_key = "reference-reply-test-secret"
         app.config["IS_POSTGRES"] = False
         self.app = app
+        self.admin_notifications = []
 
         def session_row(cursor):
             cursor.execute("""
@@ -632,6 +747,11 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
             "translate": lambda key, language: key,
             "_crea_notifica": lambda *args, **kwargs: None,
             "emit_update_notifications": lambda user_id: None,
+            "notifica_admin_evento": (
+                lambda *args, **kwargs: self.admin_notifications.append(
+                    {"args": args, "kwargs": kwargs}
+                )
+            ),
             "log_exception_safe": lambda *args, **kwargs: None,
             "_referenza_ui_message": lambda message, language=None: message,
         }
@@ -730,6 +850,19 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
         self.assertIsNotNone(contact["token_consumed_at"])
         self.assertEqual(event["attore_tipo"], "referente")
         self.assertIsNotNone(event["created_at"])
+        self.assertEqual(len(self.admin_notifications), 1)
+        notification = self.admin_notifications[0]
+        self.assertIn("Nuova referenza", notification["args"][0])
+        self.assertEqual(
+            notification["kwargs"]["link"],
+            "/admin_referenze",
+        )
+        self.assertTrue(notification["kwargs"]["push"])
+        self.assertTrue(notification["kwargs"]["defer_push"])
+        self.assertIs(
+            notification["kwargs"]["db_connection"],
+            self.connection,
+        )
 
     def test_unico_consenso_pubblica_scheda_e_testo_compilato(self):
         response = self.submit(publication="on")
@@ -767,6 +900,7 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
         self.assertEqual(reference["autorizza_contatto_verifica"], 0)
         self.assertIsNone(reference["autorizzazione_contatto_at"])
         self.assertIsNone(contact["telefono_cifrato"])
+        self.assertEqual(self.admin_notifications, [])
 
     def test_senza_consenso_e_senza_telefono_invia_la_risposta(self):
         response = self.submit(consent=None, phone=None)

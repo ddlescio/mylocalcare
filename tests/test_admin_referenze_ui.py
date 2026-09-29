@@ -74,6 +74,14 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
         self.assertIn('name="nota_admin"', self.body)
         self.assertIn('name="nota_pubblica"', self.body)
 
+    def test_admin_decision_bypasses_global_loader_and_blocks_double_submit(self):
+        self.assertIn("data-no-global-loader", self.body)
+        self.assertIn("admin-reference-submit", self.body)
+        self.assertIn('form.dataset.submitting === "1"', self.body)
+        self.assertIn('form.dataset.submitting = "1"', self.body)
+        self.assertIn('submitButton.setAttribute("aria-busy", "true")', self.body)
+        self.assertIn('window.addEventListener("pageshow", resetAdminReferenceForms)', self.body)
+
     def test_publication_approval_is_separate_from_contact_outcome(self):
         self.assertIn('name="pubblicazione_approvata_admin"', self.body)
         self.assertIn("Approva la visualizzazione pubblica", self.body)
@@ -125,6 +133,25 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
             self.app,
         )
         self.assertIn('"contatti_rimossi_retention"', self.app)
+
+    def test_admin_dates_use_full_italian_day_month_year_and_time(self):
+        self.assertIn(
+            "referenza.get('contatto_purged_at')|dt_roma_admin",
+            self.body,
+        )
+        self.assertIn(
+            "referenza.get('contatto_purge_at')|dt_roma_admin",
+            self.body,
+        )
+        self.assertIn(
+            "(evento.get('data') or evento.get('created_at'))|dt_roma_admin",
+            self.body,
+        )
+        self.assertIn('.strftime("%d/%m/%Y %H:%M")', self.app)
+        self.assertNotIn(
+            '.strftime("%d/%m/%Y %H:%M").lstrip("0")',
+            self.app,
+        )
 
 
 if __name__ == "__main__":

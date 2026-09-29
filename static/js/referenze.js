@@ -147,11 +147,16 @@
   async function postReferenceAction(button, action) {
     const endpoint = button.dataset.endpoint;
     if (!endpoint) return;
+    const deletingReceivedReference = (
+      action === "delete" && button.dataset.referenceDeleteKind === "reference"
+    );
     const confirmations = {
       resend: "Confermi di poter ancora usare il recapito del referente e di inviare un nuovo link? Quello precedente non sarà più utilizzabile.",
       revoke: "Vuoi revocare questo invito? Il link non sarà più utilizzabile.",
       restore: "Confermi di poter ancora usare il recapito del referente, ripristinare la richiesta e inviare un nuovo link?",
-      delete: "Eliminare definitivamente questa richiesta? I recapiti salvati saranno rimossi e non potrai ripristinarla."
+      delete: deletingReceivedReference
+        ? "Eliminare definitivamente questa referenza? Sparirà dal tuo profilo e non potrai ripristinarla."
+        : "Eliminare definitivamente questa richiesta? I recapiti salvati saranno rimossi e non potrai ripristinarla."
     };
     const confirmation = confirmations[action];
     if (confirmation && !global.confirm(translate(confirmation))) {
@@ -178,11 +183,16 @@
           "X-Requested-With": "XMLHttpRequest",
           "X-CSRF-Token": csrfToken()
         },
-        body: JSON.stringify(
-          action === "resend" || action === "restore"
-            ? { conferma_condivisione_recapito: true }
-            : {}
-        )
+        body: JSON.stringify({
+          ...(
+            action === "resend" || action === "restore"
+              ? { conferma_condivisione_recapito: true }
+              : {}
+          ),
+          ...(action === "delete" ? {
+            versione: Number.parseInt(button.dataset.version || "0", 10)
+          } : {})
+        })
       });
       const data = await parseResponse(response);
       if (!response.ok || data.ok === false) {

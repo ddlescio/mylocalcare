@@ -506,6 +506,10 @@
 
         </div>
 
+        {% if modalita != 'modifica' %}
+          {% include 'partials/annuncio_disponibilita_picker.html' %}
+        {% endif %}
+
       </div>
 
       <!-- SEZIONE 3 -->
@@ -595,10 +599,6 @@
         </p>
 
       </div>
-
-      {% if modalita != 'modifica' %}
-        {% include 'partials/annuncio_disponibilita_picker.html' %}
-      {% endif %}
 
       <!-- SEZIONE 4 -->
 
