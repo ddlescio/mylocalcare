@@ -11,6 +11,7 @@ import json
 import re
 from typing import Any, Mapping
 
+from disponibilita_servizi import normalize_disponibilita_payload
 from richieste_disponibilita import normalize_richiesta_disponibilita_payload
 
 
@@ -159,6 +160,63 @@ def request_to_service_availability(
     }
 
 
+def service_to_request_availability(
+    payload: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Adatta una disponibilita di servizio al selettore dell'annuncio.
+
+    Il selettore compatto modifica soltanto settimana, intervalli e modalita
+    ``a chiamata``. Date speciali e assenze restano nel profilo disponibilita
+    e vengono conservate dal salvataggio backend.
+    """
+
+    if not payload:
+        return None
+
+    # I loader DB aggiungono metadati privati (versione, categoria, date di
+    # conferma). Il normalizzatore puro accetta invece soltanto i campi della
+    # disponibilita, quindi li estraiamo esplicitamente.
+    normalized = normalize_disponibilita_payload({
+        "stato": payload.get("stato"),
+        "a_chiamata": payload.get("a_chiamata", False),
+        "settimanale": payload.get("settimanale", []),
+        "settimanale_intervalli": payload.get(
+            "settimanale_intervalli",
+            [],
+        ),
+        "date_speciali": payload.get("date_speciali", []),
+        "assenze": payload.get("assenze", []),
+    })
+    days: dict[int, dict[str, Any]] = {}
+
+    def ensure_day(day_number: int) -> dict[str, Any]:
+        return days.setdefault(day_number, {
+            "giorno_settimana": day_number,
+            "fasce": [],
+            "intervalli": [],
+        })
+
+    for row in normalized["settimanale"]:
+        day = ensure_day(int(row["giorno_settimana"]))
+        day["fasce"].append(row["fascia"])
+
+    for row in normalized["settimanale_intervalli"]:
+        day = ensure_day(int(row["giorno_settimana"]))
+        day["intervalli"].append({
+            "ora_inizio": row["ora_inizio"],
+            "ora_fine": row["ora_fine"],
+            "giorno_successivo": bool(row["giorno_successivo"]),
+        })
+
+    converted = {
+        "a_chiamata": bool(normalized["a_chiamata"]),
+        "giorni": [days[number] for number in sorted(days)],
+    }
+    if not converted["a_chiamata"] and not converted["giorni"]:
+        return None
+    return normalize_richiesta_disponibilita_payload(converted)
+
+
 def serialize_sought_availability(payload: Mapping[str, Any]) -> str:
     normalized = normalize_richiesta_disponibilita_payload(payload)
     return json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
@@ -194,6 +252,7 @@ __all__ = [
     "listing_availability_from_form",
     "normalize_listing_availability",
     "request_to_service_availability",
+    "service_to_request_availability",
     "serialize_sought_availability",
     "sought_availability_for_display",
 ]

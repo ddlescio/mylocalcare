@@ -408,6 +408,8 @@
                     placeholder="{{ tr('availability.listing_description_placeholder') }}">{{ current_descrizione }}</textarea>
         </div>
 
+        {% include 'partials/annuncio_disponibilita_picker.html' %}
+
       </div>
 
       <!-- SEZIONE 3 -->
@@ -483,9 +485,6 @@
           * I contatti saranno visibili dopo pubblicazione solo con servizio <strong>Contatti</strong> attivo in <strong>Aumenta visibilità</strong>. Se già attivo su un altro annuncio, restano visibili. Altrimenti gli utenti possono scriverti gratis in chat.
         </p>
       </div>
-
-      {% set listing_availability_sought_only = true %}
-      {% include 'partials/annuncio_disponibilita_picker.html' %}
 
       <!-- SEZIONE 4 -->
       <div class="bg-gradient-to-br from-amber-50/60 to-orange-50/40 border border-amber-100 rounded-3xl p-5 sm:p-7 space-y-6 shadow-sm">

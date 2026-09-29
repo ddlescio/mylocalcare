@@ -36,6 +36,7 @@
     if (!container || !api) return;
 
     const hidden = container.querySelector("[data-listing-availability-json]");
+    const action = container.querySelector("[data-listing-availability-action]");
     const days = Array.from(container.querySelectorAll("[data-listing-availability-day]"));
     const slots = Array.from(container.querySelectorAll("[data-listing-availability-slot]"));
     const onCall = container.querySelector("[data-listing-availability-on-call]");
@@ -55,6 +56,11 @@
       && container.dataset.listingAvailabilitySoughtOnly === "true"
     );
     const typeInputs = Array.from(document.querySelectorAll('input[name="tipo_annuncio"]'));
+    const categoryInput = document.querySelector('select[name="categoria"]');
+    let currentTypeValue = (typeInputs.find(function (input) {
+      return input.checked;
+    }) || {}).value || "";
+    let currentCategoryValue = categoryInput ? categoryInput.value : "";
     const copyNode = document.getElementById("listing-availability-copy");
     let copy = {};
     let initialPayload = null;
@@ -64,6 +70,10 @@
     function selectedValues(inputs) {
       return inputs.filter(function (input) { return input.checked; })
         .map(function (input) { return input.value; });
+    }
+
+    function setAction(value) {
+      if (action) action.value = value;
     }
 
     function isCompletelyEmpty() {
@@ -132,6 +142,7 @@
       initialPayload = parsed;
       initialPristine = true;
       if (hidden) hidden.value = JSON.stringify(parsed);
+      setAction("keep");
       updateNextDay();
       return true;
     }
@@ -161,12 +172,26 @@
       );
     }
 
-    function sync() {
+    function sync(markAsChanged) {
       initialPristine = false;
+      if (markAsChanged !== false) setAction("update");
       clearError();
       updateNextDay();
       if (!hidden) return;
       hidden.value = isCompletelyEmpty() ? "" : JSON.stringify(payload());
+    }
+
+    function clearSelection(nextAction) {
+      initialPayload = null;
+      initialPristine = false;
+      days.concat(slots).forEach(function (input) { input.checked = false; });
+      if (onCall) onCall.checked = false;
+      if (start) start.value = "";
+      if (end) end.value = "";
+      if (hidden) hidden.value = "";
+      setAction(nextAction || "clear");
+      clearError();
+      updateNextDay();
     }
 
     function updateCopy() {
@@ -230,18 +255,30 @@
       input.addEventListener("input", sync);
     });
     typeInputs.forEach(function (input) {
-      input.addEventListener("change", updateCopy);
+      input.addEventListener("change", function () {
+        // Giorni e orari di un'offerta non devono diventare per errore i
+        // requisiti di una ricerca (o viceversa).
+        if (input.value !== currentTypeValue) {
+          clearSelection("clear");
+          currentTypeValue = input.value;
+        }
+        updateCopy();
+      });
     });
+    if (categoryInput) {
+      categoryInput.addEventListener("change", function () {
+        // La disponibilita appartiene alla categoria: cambiandola si parte
+        // da una selezione vuota, senza copiare l'agenda precedente.
+        if (categoryInput.value !== currentCategoryValue) {
+          clearSelection("clear");
+          currentCategoryValue = categoryInput.value;
+        }
+      });
+    }
 
     if (reset) {
       reset.addEventListener("click", function () {
-        initialPayload = null;
-        initialPristine = false;
-        days.concat(slots).forEach(function (input) { input.checked = false; });
-        if (onCall) onCall.checked = false;
-        if (start) start.value = "";
-        if (end) end.value = "";
-        sync();
+        clearSelection("clear");
       });
     }
 
@@ -250,7 +287,7 @@
       validateBeforeSubmit: validateBeforeSubmit
     };
     updateCopy();
-    if (!hydrateInitial()) sync();
+    if (!hydrateInitial()) sync(false);
   }
 
   if (document.readyState === "loading") {

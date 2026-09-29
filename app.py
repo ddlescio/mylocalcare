@@ -132,6 +132,7 @@ from annuncio_disponibilita import (
     deserialize_sought_availability,
     listing_availability_from_form,
     request_to_service_availability,
+    service_to_request_availability,
     serialize_sought_availability,
     sought_availability_for_display,
 )
@@ -17019,11 +17020,33 @@ def modifica_annuncio(id):
             flash("Devi specificare se l’annuncio è 'Offro' oppure 'Cerco'.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
 
-        # La disponibilita cercata vive soltanto sull'annuncio ``cerco``.
-        # Un campo vuoto la azzera esplicitamente; passando a ``offro`` viene
-        # sempre rimossa, anche se il browser invia un payload rimasto nel form.
-        disponibilita_cercata_json = None
-        if tipo_annuncio == "cerco":
+        # Il picker e condiviso fra ``offro`` e ``cerco``. L'azione separata
+        # evita che una normale modifica di titolo o descrizione riconfermi
+        # involontariamente la disponibilita del professionista.
+        disponibilita_azione = str(request.form.get(
+            "disponibilita_annuncio_azione",
+            "keep",
+        ) or "keep").strip().lower()
+        if disponibilita_azione not in {"keep", "update", "clear"}:
+            flash("Operazione sulla disponibilità non valida.", "warning")
+            return redirect(url_for("modifica_annuncio", id=id))
+
+        tipo_precedente = str(annuncio["tipo_annuncio"] or "").lower()
+        categoria_precedente = to_slug(annuncio["categoria"] or "")
+        tipo_cambiato = tipo_annuncio != tipo_precedente
+        categoria_cambiata = categoria != categoria_precedente
+
+        # Senza JavaScript il campo azione resta ``keep``. Non copiamo mai
+        # una vecchia agenda su un'altra categoria o tra ``cerco`` e
+        # ``offro``: il significato dei medesimi giorni sarebbe diverso.
+        if (
+            disponibilita_azione == "keep"
+            and (categoria_cambiata or tipo_cambiato)
+        ):
+            disponibilita_azione = "clear"
+
+        disponibilita_annuncio_input = None
+        if disponibilita_azione == "update":
             try:
                 disponibilita_annuncio_input = (
                     listing_availability_from_form(request.form)
@@ -17032,12 +17055,48 @@ def modifica_annuncio(id):
                 flash(str(errore_disponibilita), "warning")
                 return redirect(url_for("modifica_annuncio", id=id))
 
-            if disponibilita_annuncio_input:
+            if disponibilita_annuncio_input is None:
+                disponibilita_azione = "clear"
+
+        # La disponibilita cercata vive direttamente sull'annuncio. Per un
+        # salvataggio ``keep`` conserviamo il JSON esistente senza riscriverlo.
+        disponibilita_cercata_json = None
+        disponibilita_offerta = None
+        if tipo_annuncio == "cerco":
+            if (
+                disponibilita_azione == "keep"
+                and tipo_precedente == "cerco"
+            ):
+                disponibilita_cercata_json = annuncio[
+                    "disponibilita_cercata_json"
+                ]
+            elif (
+                disponibilita_azione == "update"
+                and disponibilita_annuncio_input
+            ):
                 disponibilita_cercata_json = (
                     serialize_sought_availability(
                         disponibilita_annuncio_input
                     )
                 )
+        elif disponibilita_azione == "update":
+            disponibilita_offerta = normalize_disponibilita_payload(
+                request_to_service_availability(
+                    disponibilita_annuncio_input
+                )
+            )
+
+        if (
+            tipo_annuncio == "offro"
+            and disponibilita_azione != "keep"
+            and not _disponibilita_categoria_table_exists(c)
+        ):
+            flash(
+                "La disponibilità non può essere salvata in questo momento. "
+                "Riprova tra poco.",
+                "warning",
+            )
+            return redirect(url_for("modifica_annuncio", id=id))
 
         if modalita_servizio != "online":
 
@@ -17304,6 +17363,40 @@ def modifica_annuncio(id):
                 id
             ))
 
+            if (
+                tipo_annuncio == "offro"
+                and disponibilita_azione in {"update", "clear"}
+            ):
+                c.execute(sql("""
+                    SELECT versione
+                    FROM disponibilita_profili_categoria
+                    WHERE utente_id = ? AND categoria_slug = ?
+                    LIMIT 1
+                """), (int(g.utente["id"]), categoria))
+                disponibilita_categoria_corrente = c.fetchone()
+                versione_disponibilita = (
+                    int(disponibilita_categoria_corrente["versione"] or 1)
+                    if disponibilita_categoria_corrente
+                    else 0
+                )
+
+                if disponibilita_azione == "update":
+                    _salva_disponibilita_categoria(
+                        c,
+                        int(g.utente["id"]),
+                        categoria,
+                        disponibilita_offerta,
+                        versione_disponibilita,
+                        preserve_calendar_exceptions=True,
+                    )
+                elif disponibilita_categoria_corrente:
+                    _elimina_disponibilita_categoria(
+                        c,
+                        int(g.utente["id"]),
+                        categoria,
+                        submitted_version=versione_disponibilita,
+                    )
+
             # Sostituisce atomicamente i precedenti collegamenti.
             # Se l'annuncio non specifica quartieri, la tabella
             # di collegamento deve restare vuota.
@@ -17437,6 +17530,29 @@ def modifica_annuncio(id):
         listing_availability_initial = deserialize_sought_availability(
             annuncio["disponibilita_cercata_json"]
         )
+    elif str(annuncio["tipo_annuncio"] or "").lower() == "offro":
+        try:
+            if _disponibilita_categoria_table_exists(c):
+                disponibilita_categoria = (
+                    carica_disponibilita_servizi_categoria(
+                        c,
+                        int(annuncio["utente_id"]),
+                        annuncio["categoria"],
+                        pubblica=False,
+                    )
+                )
+                listing_availability_initial = (
+                    service_to_request_availability(
+                        disponibilita_categoria
+                    )
+                )
+        except Exception as exc:
+            log_exception_safe(
+                "Disponibilita annuncio non caricabile in modifica",
+                exc,
+                {"annuncio_id": int(id)},
+                production=True,
+            )
 
     return render_template(
         "modifica_annuncio.html",
