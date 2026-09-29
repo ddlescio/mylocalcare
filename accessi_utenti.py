@@ -1,7 +1,9 @@
-"""Statistiche minimali sugli accessi autenticati a MyLocalCare.
+"""Statistiche minimali di utilizzo di MyLocalCare.
 
-Il tracciamento registra al massimo una riga per utente e giorno. Non salva
-indirizzi IP, user agent, pagine visitate o dati degli utenti anonimi.
+Per gli account registra al massimo una riga per utente e giorno. Per i
+visitatori anonimi conserva soltanto un totale giornaliero aggregato, contando
+al massimo una visita per sessione e giorno tramite la sessione tecnica già in
+uso. Non salva IP, user agent, URL visitati o identificatori anonimi nel DB.
 """
 
 from collections import Counter, defaultdict
@@ -46,6 +48,42 @@ def _timestamp_locale(value=None):
     else:
         value = value.astimezone(ACCESS_TIMEZONE)
     return value.isoformat(timespec="seconds")
+
+
+def _row_value(row, key, index):
+    try:
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return row[index]
+
+
+def _table_exists(cur, table_name, *, postgres=False):
+    """Controllo allowlist-safe usato durante deploy parziali."""
+
+    allowed = {
+        "accessi_utenti_giornalieri",
+        "accessi_anonimi_giornalieri",
+    }
+    if table_name not in allowed:
+        raise ValueError("Tabella statistiche non consentita")
+
+    if postgres:
+        cur.execute(
+            f"SELECT to_regclass('public.{table_name}') AS tabella"
+        )
+        row = cur.fetchone()
+        return bool(_row_value(row, "tabella", 0)) if row else False
+
+    cur.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = ?
+        LIMIT 1
+        """,
+        (table_name,),
+    )
+    return cur.fetchone() is not None
 
 
 def registra_accesso_giornaliero(
@@ -109,21 +147,73 @@ def registra_accesso_giornaliero(
     return giorno
 
 
-def elimina_accessi_scaduti(conn, *, giorno=None):
+def registra_visita_anonima_giornaliera(
+    conn,
+    *,
+    giorno=None,
+    istante=None,
+):
+    """Incrementa un totale aggregato; nessun visitatore viene identificato."""
+
+    giorno = giorno_locale(giorno or istante)
+    timestamp = _timestamp_locale(istante)
+    inizio_finestra = giorno - timedelta(days=ACCESS_WINDOW_DAYS - 1)
+
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO accessi_anonimi_giornalieri (
+                giorno,
+                visite_sessione,
+                primo_accesso_at,
+                ultimo_accesso_at
+            )
+            VALUES (?, 1, ?, ?)
+            ON CONFLICT (giorno)
+            DO UPDATE SET
+                visite_sessione =
+                    accessi_anonimi_giornalieri.visite_sessione + 1,
+                ultimo_accesso_at = excluded.ultimo_accesso_at
+            """,
+            (giorno.isoformat(), timestamp, timestamp),
+        )
+        cur.execute(
+            """
+            DELETE FROM accessi_anonimi_giornalieri
+            WHERE giorno < ?
+            """,
+            (inizio_finestra.isoformat(),),
+        )
+        conn.commit()
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+
+    return giorno
+
+
+def elimina_accessi_scaduti(conn, *, giorno=None, postgres=False):
     """Elimina definitivamente gli accessi fuori dalla finestra di 30 giorni."""
 
     giorno = giorno_locale(giorno)
     inizio_finestra = giorno - timedelta(days=ACCESS_WINDOW_DAYS - 1)
     cur = conn.cursor()
     try:
-        cur.execute(
-            """
-            DELETE FROM accessi_utenti_giornalieri
-            WHERE giorno < ?
-            """,
-            (inizio_finestra.isoformat(),),
-        )
-        eliminati = max(int(cur.rowcount or 0), 0)
+        eliminati = 0
+        for table_name in (
+            "accessi_utenti_giornalieri",
+            "accessi_anonimi_giornalieri",
+        ):
+            if not _table_exists(cur, table_name, postgres=postgres):
+                continue
+            cur.execute(
+                f"DELETE FROM {table_name} WHERE giorno < ?",
+                (inizio_finestra.isoformat(),),
+            )
+            eliminati += max(int(cur.rowcount or 0), 0)
         conn.commit()
         return eliminati
     finally:
@@ -141,23 +231,11 @@ def elimina_accessi_utente(cur, utente_id, *, postgres=False):
     sicuro anche durante il breve rollout precedente alla migrazione.
     """
 
-    if postgres:
-        cur.execute(
-            "SELECT to_regclass('public.accessi_utenti_giornalieri') AS tabella"
-        )
-        row = cur.fetchone()
-        presente = bool(_row_value(row, "tabella", 0)) if row else False
-    else:
-        cur.execute(
-            """
-            SELECT name
-            FROM sqlite_master
-            WHERE type = 'table'
-              AND name = 'accessi_utenti_giornalieri'
-            LIMIT 1
-            """
-        )
-        presente = cur.fetchone() is not None
+    presente = _table_exists(
+        cur,
+        "accessi_utenti_giornalieri",
+        postgres=postgres,
+    )
 
     if not presente:
         return 0
@@ -169,13 +247,6 @@ def elimina_accessi_utente(cur, utente_id, *, postgres=False):
     return max(int(cur.rowcount or 0), 0)
 
 
-def _row_value(row, key, index):
-    try:
-        return row[key]
-    except (KeyError, IndexError, TypeError):
-        return row[index]
-
-
 def _parse_day(value):
     if isinstance(value, datetime):
         return value.date()
@@ -184,7 +255,7 @@ def _parse_day(value):
     return date.fromisoformat(str(value)[:10])
 
 
-def carica_statistiche_accessi(conn, *, giorno=None):
+def carica_statistiche_accessi(conn, *, giorno=None, postgres=False):
     """Calcola riepilogo, serie mensile e distribuzione geografica."""
 
     giorno = giorno_locale(giorno)
@@ -204,6 +275,29 @@ def carica_statistiche_accessi(conn, *, giorno=None):
             (inizio_mese.isoformat(), giorno.isoformat()),
         )
         righe = list(cur.fetchall())
+
+        visite_anonime_per_giorno = {}
+        if _table_exists(
+            cur,
+            "accessi_anonimi_giornalieri",
+            postgres=postgres,
+        ):
+            cur.execute(
+                """
+                SELECT giorno, visite_sessione
+                FROM accessi_anonimi_giornalieri
+                WHERE giorno >= ?
+                  AND giorno <= ?
+                ORDER BY giorno ASC
+                """,
+                (inizio_mese.isoformat(), giorno.isoformat()),
+            )
+            visite_anonime_per_giorno = {
+                _parse_day(_row_value(row, "giorno", 0)): int(
+                    _row_value(row, "visite_sessione", 1) or 0
+                )
+                for row in cur.fetchall()
+            }
     finally:
         try:
             cur.close()
@@ -226,18 +320,27 @@ def carica_statistiche_accessi(conn, *, giorno=None):
 
     serie = []
     picco = 0
+    anonimi_settimana = 0
+    anonimi_mese = 0
     for indice in range(ACCESS_WINDOW_DAYS):
         data_grafico = inizio_mese + timedelta(days=indice)
         utenti = utenti_per_giorno.get(data_grafico, set())
         valore = len(utenti)
-        picco = max(picco, valore)
+        anonimi = int(visite_anonime_per_giorno.get(data_grafico, 0))
+        totale = valore + anonimi
+        picco = max(picco, totale)
         utenti_mese.update(utenti)
+        anonimi_mese += anonimi
         if data_grafico >= inizio_settimana:
             utenti_settimana.update(utenti)
+            anonimi_settimana += anonimi
         serie.append({
             "data": data_grafico.isoformat(),
             "etichetta": data_grafico.strftime("%d/%m"),
             "valore": valore,
+            "registrati": valore,
+            "anonimi": anonimi,
+            "totale": totale,
         })
 
     zone_counter = Counter(
@@ -269,8 +372,11 @@ def carica_statistiche_accessi(conn, *, giorno=None):
         "oggi": len(utenti_oggi),
         "settimana": len(utenti_settimana),
         "mese": len(utenti_mese),
+        "anonimi_oggi": int(visite_anonime_per_giorno.get(giorno, 0)),
+        "anonimi_settimana": anonimi_settimana,
+        "anonimi_mese": anonimi_mese,
         "serie": serie,
         "picco": picco,
         "zone": zone,
-        "giorni_con_dati": sum(1 for item in serie if item["valore"]),
+        "giorni_con_dati": sum(1 for item in serie if item["totale"]),
     }

@@ -16,50 +16,149 @@
     </div>
   </header>
 
+  <nav
+    class="admin-interaction-tabs"
+    role="tablist"
+    aria-label="Sezioni interazioni annunci">
+    <button
+      type="button"
+      class="admin-interaction-tab is-active"
+      id="admin-interaction-tab-accessi"
+      role="tab"
+      aria-selected="true"
+      aria-controls="admin-interaction-panel-accessi"
+      tabindex="0"
+      data-admin-interaction-tab="accessi">
+      <span class="admin-interaction-tab-icon" aria-hidden="true">↗</span>
+      <span>
+        <strong>Statistiche</strong>
+        <small>Accessi a MyLocalCare</small>
+      </span>
+    </button>
+
+    <button
+      type="button"
+      class="admin-interaction-tab"
+      id="admin-interaction-tab-interessi"
+      role="tab"
+      aria-selected="false"
+      aria-controls="admin-interaction-panel-interessi"
+      tabindex="-1"
+      data-admin-interaction-tab="interessi">
+      <span class="admin-interaction-tab-icon" aria-hidden="true">♥</span>
+      <span>
+        <strong>Interessi</strong>
+        <small>Annunci e chat</small>
+      </span>
+    </button>
+
+    <button
+      type="button"
+      class="admin-interaction-tab"
+      id="admin-interaction-tab-richieste-disponibilita"
+      role="tab"
+      aria-selected="false"
+      aria-controls="admin-interaction-panel-richieste-disponibilita"
+      tabindex="-1"
+      data-admin-interaction-tab="richieste-disponibilita">
+      <span class="admin-interaction-tab-icon" aria-hidden="true">◷</span>
+      <span>
+        <strong>Disponibilità</strong>
+        <small>Richieste e risposte</small>
+      </span>
+    </button>
+  </nav>
+
+  <div
+    class="admin-interaction-tab-panel"
+    id="admin-interaction-panel-accessi"
+    role="tabpanel"
+    aria-labelledby="admin-interaction-tab-accessi"
+    tabindex="0"
+    data-admin-interaction-panel="accessi">
   <section class="admin-access-panel" aria-labelledby="admin-access-title">
     <div class="admin-access-heading">
       <div>
-        <span class="admin-interest-panel-kicker">ACCESSI AUTENTICATI</span>
+        <span class="admin-interest-panel-kicker">ACCESSI A MYLOCALCARE</span>
         <h2 id="admin-access-title">Collegamenti a MyLocalCare</h2>
-        <p>Utenti unici collegati; dati conservati soltanto per gli ultimi 30 giorni.</p>
+        <p>Utenti registrati unici e visite anonime stimate; dati conservati soltanto per gli ultimi 30 giorni.</p>
       </div>
-      <span class="admin-access-privacy" title="Nessun IP o accesso anonimo viene registrato">Dati minimizzati</span>
+      <span class="admin-access-privacy" title="Conteggi aggregati senza mostrare dati tecnici identificativi">Dati aggregati</span>
     </div>
 
     {% if accessi_disponibili %}
       <div class="admin-access-layout">
         <div class="admin-access-main">
-          <div class="admin-access-metrics" aria-label="Riepilogo collegamenti">
-            <article>
-              <span>Oggi</span>
-              <strong>{{ statistiche_accessi.oggi }}</strong>
-              <small>utenti unici</small>
-            </article>
-            <article>
-              <span>Ultimi 7 giorni</span>
-              <strong>{{ statistiche_accessi.settimana }}</strong>
-              <small>utenti unici</small>
-            </article>
-            <article>
-              <span>Ultimi 30 giorni</span>
-              <strong>{{ statistiche_accessi.mese }}</strong>
-              <small>utenti unici</small>
-            </article>
+          <div class="admin-access-metric-group">
+            <div class="admin-access-metric-heading">
+              <strong>Utenti registrati</strong>
+              <span>persone uniche con account</span>
+            </div>
+            <div class="admin-access-metrics" aria-label="Utenti registrati unici">
+              <article>
+                <span>Oggi</span>
+                <strong>{{ statistiche_accessi.oggi }}</strong>
+                <small>utenti unici</small>
+              </article>
+              <article>
+                <span>Ultimi 7 giorni</span>
+                <strong>{{ statistiche_accessi.settimana }}</strong>
+                <small>utenti unici</small>
+              </article>
+              <article>
+                <span>Ultimi 30 giorni</span>
+                <strong>{{ statistiche_accessi.mese }}</strong>
+                <small>utenti unici</small>
+              </article>
+            </div>
           </div>
+
+          <div class="admin-access-metric-group is-anonymous">
+            <div class="admin-access-metric-heading">
+              <strong>Visitatori non registrati</strong>
+              <span>visite/sessioni stimate, non persone certe</span>
+            </div>
+            <div class="admin-access-metrics" aria-label="Visite anonime stimate">
+              <article>
+                <span>Oggi</span>
+                <strong>{{ statistiche_accessi.anonimi_oggi }}</strong>
+                <small>visite stimate</small>
+              </article>
+              <article>
+                <span>Ultimi 7 giorni</span>
+                <strong>{{ statistiche_accessi.anonimi_settimana }}</strong>
+                <small>visite stimate</small>
+              </article>
+              <article>
+                <span>Ultimi 30 giorni</span>
+                <strong>{{ statistiche_accessi.anonimi_mese }}</strong>
+                <small>visite stimate</small>
+              </article>
+            </div>
+          </div>
+
+          <p class="admin-access-method-note">
+            Le due metriche restano separate: chi visita il sito e poi accede può comparire in entrambe.
+          </p>
 
           <div class="admin-access-chart-wrap">
             <div class="admin-access-chart-title">
               <strong>Andamento mensile</strong>
-              <span>un valore per giorno</span>
+              <span class="admin-access-chart-legend" aria-hidden="true">
+                <i class="is-registered"></i> Registrati
+                <i class="is-anonymous"></i> Non registrati
+              </span>
             </div>
-            <div class="admin-access-chart" role="img" aria-label="Grafico degli utenti unici collegati negli ultimi 30 giorni">
+            <div class="admin-access-chart" role="img" aria-label="Grafico giornaliero degli utenti registrati unici e delle visite anonime stimate negli ultimi 30 giorni">
               {% for punto in statistiche_accessi.serie %}
                 {% set altezza = ((punto.valore / statistiche_accessi.picco * 100) if statistiche_accessi.picco else 0) %}
+                {% set altezza_anonimi = (((punto.anonimi|default(0, true)) / statistiche_accessi.picco * 100) if statistiche_accessi.picco else 0) %}
                 <span
                   class="admin-access-bar{% if punto.data == statistiche_accessi.serie[-1].data %} is-today{% endif %}"
-                  style="--bar-height: {{ altezza }}%"
-                  title="{{ punto.etichetta }}: {{ punto.valore }} {{ 'utente' if punto.valore == 1 else 'utenti' }}">
-                  <i></i>
+                  style="--bar-height: {{ altezza }}%; --anonymous-bar-height: {{ altezza_anonimi }}%"
+                  title="{{ punto.etichetta }}: {{ punto.valore }} {{ 'utente registrato' if punto.valore == 1 else 'utenti registrati' }}, {{ punto.anonimi|default(0, true) }} visite anonime stimate">
+                  <i class="is-registered"></i>
+                  <i class="is-anonymous"></i>
                   {% if loop.first or loop.index == 8 or loop.index == 15 or loop.index == 22 or loop.last %}
                     <small>{{ punto.etichetta }}</small>
                   {% endif %}
@@ -68,15 +167,15 @@
             </div>
             <ul class="sr-only" aria-label="Valori giornalieri del grafico collegamenti">
               {% for punto in statistiche_accessi.serie %}
-                <li>{{ punto.etichetta }}: {{ punto.valore }} {{ 'utente' if punto.valore == 1 else 'utenti' }}</li>
+                <li>{{ punto.etichetta }}: {{ punto.valore }} {{ 'utente registrato' if punto.valore == 1 else 'utenti registrati' }}, {{ punto.anonimi|default(0, true) }} visite anonime stimate</li>
               {% endfor %}
             </ul>
           </div>
         </div>
 
-        <aside class="admin-access-zones" aria-label="Distribuzione degli accessi per zona">
+        <aside class="admin-access-zones" aria-label="Distribuzione degli utenti registrati per zona">
           <div class="admin-access-chart-title">
-            <strong>Zone</strong>
+            <strong>Zone utenti registrati</strong>
             <span>ultimi 30 giorni</span>
           </div>
           {% if statistiche_accessi.zone %}
@@ -102,7 +201,16 @@
       </div>
     {% endif %}
   </section>
+  </div>
 
+  <div
+    class="admin-interaction-tab-panel"
+    id="admin-interaction-panel-interessi"
+    role="tabpanel"
+    aria-labelledby="admin-interaction-tab-interessi"
+    tabindex="0"
+    data-admin-interaction-panel="interessi"
+    hidden>
   <section class="admin-interest-metrics" aria-label="Riepilogo interessi">
     <article class="admin-interest-metric is-primary">
       <span class="admin-interest-metric-icon">♥</span>
@@ -253,7 +361,16 @@
       </div>
     {% endif %}
   </section>
+  </div>
 
+  <div
+    class="admin-interaction-tab-panel"
+    id="admin-interaction-panel-richieste-disponibilita"
+    role="tabpanel"
+    aria-labelledby="admin-interaction-tab-richieste-disponibilita"
+    tabindex="0"
+    data-admin-interaction-panel="richieste-disponibilita"
+    hidden>
   <section class="admin-interest-panel admin-availability-panel">
     <div class="admin-interest-panel-heading admin-availability-heading">
       <div>
@@ -375,11 +492,124 @@
       </div>
     {% endif %}
   </section>
+  </div>
 </div>
 
 <style>
   .admin-interest-page {
     color: #0f172a;
+  }
+
+  .admin-interaction-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    margin-bottom: 18px;
+    padding: 8px;
+    border: 1px solid #dbeafe;
+    border-radius: 22px;
+    background: rgba(248, 250, 252, 0.92);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045);
+  }
+
+  .admin-interaction-tab {
+    display: flex;
+    min-width: 0;
+    min-height: 58px;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 13px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    background: transparent;
+    color: #64748b;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      color 160ms ease,
+      border-color 160ms ease,
+      background 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .admin-interaction-tab:hover {
+    border-color: #dbeafe;
+    background: rgba(255, 255, 255, 0.8);
+    color: #334155;
+  }
+
+  .admin-interaction-tab.is-active,
+  .admin-interaction-tab[aria-selected="true"] {
+    border-color: #bfdbfe;
+    background: #ffffff;
+    color: #1d4ed8;
+    box-shadow:
+      0 8px 20px rgba(37, 99, 235, 0.1),
+      inset 0 1px 0 #ffffff;
+  }
+
+  .admin-interaction-tab:active {
+    transform: translateY(1px);
+  }
+
+  .admin-interaction-tab:focus-visible,
+  .admin-interaction-tab-panel:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.38);
+    outline-offset: 3px;
+  }
+
+  .admin-interaction-tab-icon {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 0.88rem;
+    font-weight: 900;
+  }
+
+  .admin-interaction-tab.is-active .admin-interaction-tab-icon,
+  .admin-interaction-tab[aria-selected="true"] .admin-interaction-tab-icon {
+    background: linear-gradient(145deg, #dbeafe, #f3e8ff);
+    color: #2563eb;
+  }
+
+  .admin-interaction-tab > span:last-child {
+    min-width: 0;
+  }
+
+  .admin-interaction-tab strong,
+  .admin-interaction-tab small {
+    display: block;
+  }
+
+  .admin-interaction-tab strong {
+    font-size: 0.77rem;
+    font-weight: 900;
+    line-height: 1.22;
+  }
+
+  .admin-interaction-tab small {
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 0.61rem;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .admin-interaction-tab-panel[hidden] {
+    display: none;
+  }
+
+  .admin-interaction-tab-panel > .admin-access-panel,
+  .admin-interaction-tab-panel > .admin-availability-panel {
+    margin-top: 0;
+    margin-bottom: 0;
   }
 
   .admin-access-panel {
@@ -435,6 +665,51 @@
   .admin-access-main {
     min-width: 0;
     border-right: 1px solid #e2e8f0;
+  }
+
+  .admin-access-metric-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 15px;
+    border-bottom: 1px solid #eef2f7;
+    background: #f8fbff;
+  }
+
+  .admin-access-metric-heading strong {
+    color: #1e3a8a;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+  }
+
+  .admin-access-metric-heading span {
+    color: #64748b;
+    font-size: 0.59rem;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .admin-access-metric-group.is-anonymous .admin-access-metric-heading {
+    background: #faf5ff;
+  }
+
+  .admin-access-metric-group.is-anonymous .admin-access-metric-heading strong,
+  .admin-access-metric-group.is-anonymous .admin-access-metrics strong {
+    color: #7e22ce;
+  }
+
+  .admin-access-method-note {
+    margin: 0;
+    padding: 8px 14px;
+    border-top: 1px solid #eef2f7;
+    color: #64748b;
+    background: #fbfdff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1.4;
   }
 
   .admin-access-metrics {
@@ -496,6 +771,29 @@
     font-weight: 700;
   }
 
+  .admin-access-chart-legend {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px 7px;
+  }
+
+  .admin-access-chart-legend i {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+  }
+
+  .admin-access-chart-legend i.is-registered {
+    background: #2563eb;
+  }
+
+  .admin-access-chart-legend i.is-anonymous {
+    background: #9333ea;
+  }
+
   .admin-access-chart {
     display: grid;
     height: 112px;
@@ -511,20 +809,35 @@
     display: flex;
     height: 100%;
     align-items: flex-end;
+    justify-content: center;
+    gap: 1px;
   }
 
   .admin-access-bar i {
     display: block;
-    width: 100%;
+    width: calc(50% - 0.5px);
     min-height: 3px;
-    height: max(3px, var(--bar-height));
     border-radius: 5px 5px 1px 1px;
-    background: linear-gradient(180deg, #60a5fa, #2563eb);
     opacity: 0.78;
   }
 
-  .admin-access-bar.is-today i {
+  .admin-access-bar i.is-registered {
+    height: max(3px, min(100%, var(--bar-height)));
+    background: linear-gradient(180deg, #60a5fa, #2563eb);
+  }
+
+  .admin-access-bar i.is-anonymous {
+    height: max(3px, min(100%, var(--anonymous-bar-height)));
+    background: linear-gradient(180deg, #c084fc, #9333ea);
+  }
+
+  .admin-access-bar.is-today i.is-registered {
     background: linear-gradient(180deg, #c084fc, #7c3aed);
+    opacity: 1;
+  }
+
+  .admin-access-bar.is-today i.is-anonymous {
+    background: linear-gradient(180deg, #f472b6, #db2777);
     opacity: 1;
   }
 
@@ -1325,6 +1638,29 @@
   }
 
   @media (max-width: 680px) {
+    .admin-interaction-tabs {
+      gap: 5px;
+      padding: 5px;
+      border-radius: 17px;
+    }
+
+    .admin-interaction-tab {
+      min-height: 52px;
+      justify-content: center;
+      padding: 8px 6px;
+      border-radius: 13px;
+      text-align: center;
+    }
+
+    .admin-interaction-tab-icon,
+    .admin-interaction-tab small {
+      display: none;
+    }
+
+    .admin-interaction-tab strong {
+      font-size: clamp(0.62rem, 2.8vw, 0.72rem);
+    }
+
     .admin-access-heading {
       padding: 14px;
     }
@@ -1347,6 +1683,17 @@
     .admin-access-metrics strong {
       order: -1;
       font-size: 1.25rem;
+    }
+
+    .admin-access-metric-heading {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 2px;
+      padding-inline: 12px;
+    }
+
+    .admin-access-metric-heading span {
+      text-align: left;
     }
 
     .admin-access-chart-wrap,
@@ -1505,10 +1852,114 @@
       max-width: 125px;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-interaction-tab,
+    .admin-interest-ranking-item,
+    .admin-interest-ranking-summary,
+    .admin-interest-ranking-chevron {
+      transition: none;
+    }
+  }
 </style>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  const tabList = document.querySelector(".admin-interaction-tabs");
+  const tabs = Array.from(
+    document.querySelectorAll("[data-admin-interaction-tab]")
+  );
+  const panels = Array.from(
+    document.querySelectorAll("[data-admin-interaction-panel]")
+  );
+
+  const tabNames = new Set(
+    tabs.map((tab) => tab.dataset.adminInteractionTab)
+  );
+
+  const tabFromHash = () => {
+    const hash = window.location.hash.replace(/^#/, "");
+    return tabNames.has(hash) ? hash : "accessi";
+  };
+
+  const updateHash = (tabName) => {
+    if (window.location.hash === `#${tabName}`) {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    url.hash = tabName;
+    window.history.pushState(null, "", url);
+  };
+
+  const activateTab = (tabName, options = {}) => {
+    if (!tabNames.has(tabName)) {
+      return;
+    }
+
+    tabs.forEach((tab) => {
+      const isActive = tab.dataset.adminInteractionTab === tabName;
+      tab.classList.toggle("is-active", isActive);
+      tab.setAttribute("aria-selected", String(isActive));
+      tab.tabIndex = isActive ? 0 : -1;
+
+      if (isActive && options.focusTab) {
+        tab.focus();
+      }
+    });
+
+    panels.forEach((panel) => {
+      panel.hidden = panel.dataset.adminInteractionPanel !== tabName;
+    });
+
+    if (options.persist) {
+      updateHash(tabName);
+    }
+  };
+
+  if (tabList && tabs.length && panels.length) {
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        activateTab(tab.dataset.adminInteractionTab, { persist: true });
+      });
+    });
+
+    tabList.addEventListener("keydown", (event) => {
+      const currentIndex = tabs.indexOf(event.target.closest("[role='tab']"));
+      if (currentIndex < 0) {
+        return;
+      }
+
+      let nextIndex = currentIndex;
+      if (event.key === "ArrowRight") {
+        nextIndex = (currentIndex + 1) % tabs.length;
+      } else if (event.key === "ArrowLeft") {
+        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      } else if (event.key === "Home") {
+        nextIndex = 0;
+      } else if (event.key === "End") {
+        nextIndex = tabs.length - 1;
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+      activateTab(tabs[nextIndex].dataset.adminInteractionTab, {
+        focusTab: true,
+        persist: true,
+      });
+    });
+
+    window.addEventListener("hashchange", () => {
+      activateTab(tabFromHash());
+    });
+    window.addEventListener("popstate", () => {
+      activateTab(tabFromHash());
+    });
+
+    activateTab(tabFromHash());
+  }
+
   document.querySelectorAll(".admin-interest-announcement-link")
     .forEach((link) => {
       link.addEventListener("click", (event) => {

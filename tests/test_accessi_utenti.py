@@ -15,6 +15,7 @@ from accessi_utenti import (
     giorno_locale,
     normalizza_zona,
     registra_accesso_giornaliero,
+    registra_visita_anonima_giornaliera,
 )
 
 
@@ -27,7 +28,14 @@ CREATE TABLE accessi_utenti_giornalieri (
     primo_accesso_at TEXT NOT NULL,
     ultimo_accesso_at TEXT NOT NULL,
     UNIQUE (utente_id, giorno)
-)
+);
+
+CREATE TABLE accessi_anonimi_giornalieri (
+    giorno TEXT PRIMARY KEY,
+    visite_sessione INTEGER NOT NULL DEFAULT 0,
+    primo_accesso_at TEXT NOT NULL,
+    ultimo_accesso_at TEXT NOT NULL
+);
 """
 
 
@@ -35,7 +43,7 @@ class AccessiUtentiTest(unittest.TestCase):
     def setUp(self):
         self.conn = sqlite3.connect(":memory:")
         self.conn.row_factory = sqlite3.Row
-        self.conn.execute(SCHEMA)
+        self.conn.executescript(SCHEMA)
 
     def tearDown(self):
         self.conn.close()
@@ -84,6 +92,47 @@ class AccessiUtentiTest(unittest.TestCase):
         ).fetchone()[0]
         self.assertEqual(rimasto, 2)
 
+    def test_visite_anonime_restano_un_solo_totale_giornaliero(self):
+        giorno = date(2026, 9, 29)
+        registra_visita_anonima_giornaliera(
+            self.conn,
+            giorno=giorno,
+            istante=datetime(2026, 9, 29, 8, 0),
+        )
+        registra_visita_anonima_giornaliera(
+            self.conn,
+            giorno=giorno,
+            istante=datetime(2026, 9, 29, 18, 0),
+        )
+
+        rows = self.conn.execute(
+            "SELECT * FROM accessi_anonimi_giornalieri"
+        ).fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["visite_sessione"], 2)
+        self.assertIn("18:00:00", rows[0]["ultimo_accesso_at"])
+
+    def test_retention_elimina_anche_i_totali_anonimi_scaduti(self):
+        oggi = date(2026, 9, 29)
+        self.conn.executemany(
+            """
+            INSERT INTO accessi_anonimi_giornalieri (
+                giorno, visite_sessione, primo_accesso_at, ultimo_accesso_at
+            ) VALUES (?, ?, ?, ?)
+            """,
+            [
+                ((oggi - timedelta(days=30)).isoformat(), 4, "x", "x"),
+                ((oggi - timedelta(days=29)).isoformat(), 3, "x", "x"),
+            ],
+        )
+        self.conn.commit()
+
+        self.assertEqual(elimina_accessi_scaduti(self.conn, giorno=oggi), 1)
+        rimasto = self.conn.execute(
+            "SELECT visite_sessione FROM accessi_anonimi_giornalieri"
+        ).fetchone()[0]
+        self.assertEqual(rimasto, 3)
+
     def test_metriche_grafico_e_percentuali_zone(self):
         oggi = date(2026, 9, 29)
         dati = [
@@ -100,13 +149,34 @@ class AccessiUtentiTest(unittest.TestCase):
                 giorno=giorno,
             )
 
+        self.conn.executemany(
+            """
+            INSERT INTO accessi_anonimi_giornalieri (
+                giorno, visite_sessione, primo_accesso_at, ultimo_accesso_at
+            ) VALUES (?, ?, 'x', 'x')
+            """,
+            [
+                (oggi.isoformat(), 5),
+                ((oggi - timedelta(days=2)).isoformat(), 4),
+                ((oggi - timedelta(days=8)).isoformat(), 3),
+            ],
+        )
+        self.conn.commit()
+
         statistiche = carica_statistiche_accessi(self.conn, giorno=oggi)
 
         self.assertEqual(statistiche["oggi"], 2)
         self.assertEqual(statistiche["settimana"], 2)
         self.assertEqual(statistiche["mese"], 3)
+        self.assertEqual(statistiche["anonimi_oggi"], 5)
+        self.assertEqual(statistiche["anonimi_settimana"], 9)
+        self.assertEqual(statistiche["anonimi_mese"], 12)
         self.assertEqual(len(statistiche["serie"]), ACCESS_WINDOW_DAYS)
         self.assertEqual(statistiche["serie"][-1]["valore"], 2)
+        self.assertEqual(statistiche["serie"][-1]["registrati"], 2)
+        self.assertEqual(statistiche["serie"][-1]["anonimi"], 5)
+        self.assertEqual(statistiche["serie"][-1]["totale"], 7)
+        self.assertEqual(statistiche["picco"], 7)
         self.assertEqual(statistiche["zone"][0]["nome"], "Milano")
         self.assertEqual(statistiche["zone"][0]["percentuale"], 66.7)
 
@@ -174,6 +244,23 @@ class AccessiUtentiIntegrationTest(unittest.TestCase):
         )
         cls.function_code = compile(module, str(cls.root / "app.py"), "exec")
 
+        anonymous_node = next(
+            item
+            for item in tree.body
+            if isinstance(item, ast.FunctionDef)
+            and item.name == "registra_visita_anonima_aggregata"
+        )
+        anonymous_node = copy.deepcopy(anonymous_node)
+        anonymous_node.decorator_list = []
+        anonymous_module = ast.fix_missing_locations(
+            ast.Module(body=[anonymous_node], type_ignores=[])
+        )
+        cls.anonymous_function_code = compile(
+            anonymous_module,
+            str(cls.root / "app.py"),
+            "exec",
+        )
+
     def build_function(self, user):
         calls = []
         session = {}
@@ -223,6 +310,67 @@ class AccessiUtentiIntegrationTest(unittest.TestCase):
         self.assertEqual(calls, [])
         self.assertEqual(session, {})
 
+    def build_anonymous_function(self, *, candidate=True, user=None):
+        calls = []
+        logs = []
+        session = {}
+        app = SimpleNamespace(config={})
+        namespace = {
+            "g": SimpleNamespace(
+                accesso_anonimo_candidato=candidate,
+                utente=user,
+            ),
+            "session": session,
+            "app": app,
+            "time": SimpleNamespace(monotonic=lambda: 100.0),
+            "giorno_locale_accessi": lambda: date(2026, 9, 29),
+            "get_db_connection": lambda: object(),
+            "registra_visita_anonima_giornaliera": (
+                lambda conn, **kwargs: calls.append(kwargs)
+            ),
+            "log_exception_safe": lambda *args, **kwargs: logs.append(args),
+        }
+        exec(self.anonymous_function_code, namespace)
+        return (
+            namespace["registra_visita_anonima_aggregata"],
+            session,
+            calls,
+            app,
+        )
+
+    def test_hook_anonimo_conta_una_sola_visita_html_per_giorno(self):
+        function, session, calls, _app = self.build_anonymous_function()
+        response = SimpleNamespace(status_code=200, mimetype="text/html")
+
+        self.assertIs(function(response), response)
+        self.assertIs(function(response), response)
+
+        self.assertEqual(calls, [{"giorno": date(2026, 9, 29)}])
+        self.assertEqual(
+            session["_visita_anonima_giornaliera"],
+            "2026-09-29",
+        )
+
+    def test_hook_anonimo_ignora_account_risposte_non_html_ed_errori(self):
+        response_json = SimpleNamespace(
+            status_code=200,
+            mimetype="application/json",
+        )
+        response_error = SimpleNamespace(status_code=404, mimetype="text/html")
+
+        function, session, calls, _app = self.build_anonymous_function()
+        function(response_json)
+        function(response_error)
+        self.assertEqual(calls, [])
+        self.assertEqual(session, {})
+
+        function, session, calls, _app = self.build_anonymous_function(
+            user={"id": 7}
+        )
+        function(SimpleNamespace(status_code=200, mimetype="text/html"))
+        self.assertEqual(calls, [])
+        self.assertEqual(session, {})
+
     def test_migration_minimizza_dati_e_cancella_con_account(self):
         migration = (
             self.root
@@ -231,7 +379,15 @@ class AccessiUtentiIntegrationTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("UNIQUE (utente_id, giorno)", migration)
         self.assertIn("REFERENCES utenti(id) ON DELETE CASCADE", migration)
-        for forbidden in ("ip_address", "user_agent", "pagina_visitata"):
+        self.assertIn("CREATE TABLE IF NOT EXISTS accessi_anonimi_giornalieri", migration)
+        self.assertIn("visite_sessione INTEGER", migration)
+        for forbidden in (
+            "ip_address",
+            "user_agent",
+            "pagina_visitata",
+            "session_id",
+            "visitor_id",
+        ):
             self.assertNotIn(forbidden, migration.lower())
 
     def test_app_non_sovrascrive_il_modulo_time_con_la_funzione_time(self):
@@ -245,7 +401,8 @@ class AccessiUtentiIntegrationTest(unittest.TestCase):
         )
         for marker in (
             "una sola presenza giornaliera",
-            "non riguarda i visitatori anonimi",
+            "visite anonime",
+            "non equivale al numero certo di persone uniche",
             "non più di 30 giorni",
             "eliminate insieme all’account",
             "distribuzioni territoriali aggregate",

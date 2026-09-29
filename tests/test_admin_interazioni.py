@@ -1,5 +1,6 @@
 import ast
 import copy
+import re
 import sqlite3
 import unittest
 from pathlib import Path
@@ -139,15 +140,23 @@ class AdminInterazioniTests(unittest.TestCase):
             return f"/{endpoint}"
 
         namespace = {
+            "app": type(
+                "FakeApp",
+                (),
+                {"config": {"IS_POSTGRES": False}},
+            )(),
             "get_db_connection": lambda: connection,
             "get_cursor": lambda conn: conn.cursor(),
             "sql": lambda query: query,
             "url_for": fake_url_for,
             "render_template": fake_render_template,
-            "carica_statistiche_accessi": lambda conn: {
+            "carica_statistiche_accessi": lambda conn, **kwargs: {
                 "oggi": 2,
                 "settimana": 5,
                 "mese": 9,
+                "anonimi_oggi": 3,
+                "anonimi_settimana": 8,
+                "anonimi_mese": 14,
                 "serie": [],
                 "picco": 2,
                 "zone": [],
@@ -186,6 +195,7 @@ class AdminInterazioniTests(unittest.TestCase):
         self.assertEqual(request_card["annuncio_stato"], "approvato")
         self.assertTrue(result["accessi_disponibili"])
         self.assertEqual(result["statistiche_accessi"]["mese"], 9)
+        self.assertEqual(result["statistiche_accessi"]["anonimi_mese"], 14)
 
     def test_page_and_navigation_use_broader_interactions_name(self):
         self.assertIn("Interazioni annunci", self.template_source)
@@ -231,7 +241,62 @@ class AdminInterazioniTests(unittest.TestCase):
             "statistiche_accessi.serie",
             "statistiche_accessi.zone",
             "ultimi 30 giorni",
-            "Dati minimizzati",
+            "Dati aggregati",
+        ):
+            self.assertIn(marker, self.template_source)
+
+    def test_page_has_three_accessible_persistent_tab_panels(self):
+        self.assertEqual(self.template_source.count('role="tab"'), 3)
+        self.assertEqual(self.template_source.count('role="tabpanel"'), 3)
+        self.assertEqual(self.template_source.count('type="button"'), 3)
+        for label in ("Statistiche", "Interessi", "Disponibilità"):
+            self.assertIn(f"<strong>{label}</strong>", self.template_source)
+
+        panel_openings = re.findall(
+            r'<div\s+class="admin-interaction-tab-panel".*?>',
+            self.template_source,
+            flags=re.DOTALL,
+        )
+        self.assertEqual(len(panel_openings), 3)
+        self.assertEqual(sum(" hidden" in panel for panel in panel_openings), 2)
+
+        for section in (
+            "accessi",
+            "interessi",
+            "richieste-disponibilita",
+        ):
+            tab_id = f"admin-interaction-tab-{section}"
+            panel_id = f"admin-interaction-panel-{section}"
+            self.assertIn(f'id="{tab_id}"', self.template_source)
+            self.assertIn(
+                f'aria-controls="{panel_id}"',
+                self.template_source,
+            )
+            self.assertIn(f'id="{panel_id}"', self.template_source)
+            self.assertIn(
+                f'aria-labelledby="{tab_id}"',
+                self.template_source,
+            )
+
+        self.assertIn('aria-selected="true"', self.template_source)
+        self.assertEqual(self.template_source.count('aria-selected="false"'), 2)
+        self.assertIn("window.history.pushState", self.template_source)
+        self.assertIn('window.addEventListener("hashchange"', self.template_source)
+        for keyboard_key in ("ArrowRight", "ArrowLeft", "Home", "End"):
+            self.assertIn(keyboard_key, self.template_source)
+
+    def test_access_panel_separates_registered_users_from_anonymous_estimates(self):
+        for marker in (
+            "Utenti registrati",
+            "persone uniche con account",
+            "Visitatori non registrati",
+            "visite/sessioni stimate, non persone certe",
+            "statistiche_accessi.anonimi_oggi",
+            "statistiche_accessi.anonimi_settimana",
+            "statistiche_accessi.anonimi_mese",
+            "punto.anonimi|default(0, true)",
+            "Zone utenti registrati",
+            "chi visita il sito e poi accede può comparire in entrambe",
         ):
             self.assertIn(marker, self.template_source)
 

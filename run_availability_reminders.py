@@ -60,7 +60,10 @@ def main(argv=None):
             conn = None
             try:
                 conn = get_db_connection()
-                result["accessi_eliminati"] = elimina_accessi_scaduti(conn)
+                result["accessi_eliminati"] = elimina_accessi_scaduti(
+                    conn,
+                    postgres=bool(app.config.get("IS_POSTGRES")),
+                )
             except Exception as exc:
                 # Il promemoria principale non deve fallire se il deploy
                 # precede la migrazione della tabella statistiche.

@@ -73,6 +73,7 @@ from accessi_utenti import (
     giorno_locale as giorno_locale_accessi,
     normalizza_zona as normalizza_zona_accessi,
     registra_accesso_giornaliero,
+    registra_visita_anonima_giornaliera,
 )
 from socket_registry import (
     configure_socket_registry,
@@ -6482,7 +6483,10 @@ def admin_interessi():
             })
 
         try:
-            statistiche_accessi = carica_statistiche_accessi(conn)
+            statistiche_accessi = carica_statistiche_accessi(
+                conn,
+                postgres=bool(app.config.get("IS_POSTGRES")),
+            )
             accessi_disponibili = True
         except Exception as exc:
             # La pagina admin resta utilizzabile anche nel breve intervallo
@@ -6496,6 +6500,9 @@ def admin_interessi():
                 "oggi": 0,
                 "settimana": 0,
                 "mese": 0,
+                "anonimi_oggi": 0,
+                "anonimi_settimana": 0,
+                "anonimi_mese": 0,
                 "serie": [],
                 "picco": 0,
                 "zone": [],
@@ -17355,6 +17362,7 @@ def load_logged_in_user():
     # disponibile sempre nei template
     g.path = request.path
     g.utente = None
+    g.accesso_anonimo_candidato = False
 
     # NON interrogare il DB per richieste statiche o infrastrutturali
     if request.endpoint == "static":
@@ -17376,6 +17384,11 @@ def load_logged_in_user():
 
     user_id = session.get("utente_id")
     if user_id is None:
+        g.accesso_anonimo_candidato = (
+            request.method == "GET"
+            and not request.path.startswith("/admin")
+            and not request.path.startswith("/api/")
+        )
         return
 
     try:
@@ -17408,6 +17421,46 @@ def load_logged_in_user():
     except Exception as e:
         print(f"⚠️ load_logged_in_user errore: {e}")
         g.utente = None
+
+
+@app.after_request
+def registra_visita_anonima_aggregata(response):
+    """Conta una visita anonima per sessione/giorno, senza identificatori DB."""
+
+    if not getattr(g, "accesso_anonimo_candidato", False):
+        return response
+    if getattr(g, "utente", None):
+        return response
+    if response.status_code >= 400 or response.mimetype != "text/html":
+        return response
+
+    oggi = giorno_locale_accessi()
+    marker = oggi.isoformat()
+    if session.get("_visita_anonima_giornaliera") == marker:
+        return response
+
+    retry_after = float(
+        app.config.get("_ACCESSI_ANONIMI_RETRY_AFTER", 0) or 0
+    )
+    if time.monotonic() < retry_after:
+        return response
+
+    try:
+        conn = get_db_connection()
+        registra_visita_anonima_giornaliera(conn, giorno=oggi)
+    except Exception as exc:
+        # Il deploy del codice può precedere l'applicazione della migrazione.
+        app.config["_ACCESSI_ANONIMI_RETRY_AFTER"] = time.monotonic() + 300
+        log_exception_safe(
+            "⚠️ Conteggio visita anonima non disponibile",
+            exc,
+            production=True,
+        )
+        return response
+
+    app.config["_ACCESSI_ANONIMI_RETRY_AFTER"] = 0
+    session["_visita_anonima_giornaliera"] = marker
+    return response
 
 # --- Dashboard Utente ---
 @app.route("/annuncio/<int:id>/modifica", methods=["GET", "POST"])

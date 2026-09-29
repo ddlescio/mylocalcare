@@ -20,7 +20,7 @@ SUPPORTED_LANGUAGES = {
     "fil": {"label": "Filipino", "flag": "🇵🇭", "short": "FIL"},
 }
 
-LEGAL_DOCUMENT_VERSION = "mylocalcare_privacy_termini_2026_v4"
+LEGAL_DOCUMENT_VERSION = "mylocalcare_privacy_termini_2026_v5"
 
 
 TRANSLATIONS = {

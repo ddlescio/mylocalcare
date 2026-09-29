@@ -301,7 +301,7 @@ def crea_tabella_interessi_annunci():
 
 
 def crea_tabella_accessi_utenti_giornalieri():
-    """Accessi autenticati aggregati per utente/giorno, senza dati tecnici."""
+    """Statistiche prime parti: account giornalieri e visite anonime aggregate."""
 
     conn = get_conn()
     c = conn.cursor()
@@ -330,9 +330,18 @@ def crea_tabella_accessi_utenti_giornalieri():
         ON accessi_utenti_giornalieri(zona, giorno DESC);
     """))
 
+    c.execute(sql(f"""
+        CREATE TABLE IF NOT EXISTS accessi_anonimi_giornalieri (
+            giorno {giorno_col} PRIMARY KEY,
+            visite_sessione INTEGER NOT NULL DEFAULT 0,
+            primo_accesso_at {dt_col(True)} NOT NULL,
+            ultimo_accesso_at {dt_col(True)} NOT NULL
+        );
+    """))
+
     conn.commit()
     conn.close()
-    print("✅ Tabella 'accessi_utenti_giornalieri' pronta.")
+    print("✅ Tabelle statistiche accessi giornalieri pronte.")
 
 def crea_tabella_filtri_categoria():
     conn = get_conn()

@@ -399,7 +399,7 @@ class InterfaceTranslationsTest(unittest.TestCase):
         self.assertIn('notice_version: "profile_cards_2026_v2"', dialog)
         self.assertEqual(
             LEGAL_DOCUMENT_VERSION,
-            "mylocalcare_privacy_termini_2026_v4",
+            "mylocalcare_privacy_termini_2026_v5",
         )
         self.assertIn("LEGAL_DOCUMENT_VERSION", app_source)
 

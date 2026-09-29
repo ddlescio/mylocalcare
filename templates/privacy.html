@@ -117,7 +117,7 @@
     <li>gestire messaggi, chat, notifiche, recensioni e interazioni interne alla piattaforma;</li>
     <li>gestire servizi attivati, acquisti e pagamenti effettuati tramite Stripe;</li>
     <li>inviare comunicazioni tecniche o di servizio;</li>
-    <li>misurare in forma limitata l’utilizzo effettivo del servizio tramite conteggi di utenti autenticati unici e distribuzioni territoriali aggregate;</li>
+    <li>misurare in forma limitata l’utilizzo effettivo del servizio, mantenendo separate le presenze giornaliere degli utenti registrati e le visite anonime giornaliere aggregate per sessione tecnica;</li>
     <li>prevenire abusi, usi impropri, frodi, accessi non autorizzati o violazioni dei termini di utilizzo;</li>
     <li>mantenere sicura e funzionante la piattaforma;</li>
     <li>adempiere a eventuali obblighi di legge, amministrativi o contabili.</li>
@@ -191,11 +191,19 @@
   </p>
 
   <p class="mb-4">
-    Per comprendere l’utilizzo effettivo del servizio, MyLocalCare registra inoltre una sola presenza giornaliera per ciascun utente autenticato, associandola all’identificativo dell’account, alla data e alla città o provincia già indicata nel profilo. Questa statistica interna non registra le pagine visitate, non aggiunge indirizzi IP o dati del dispositivo e non riguarda i visitatori anonimi. Serve esclusivamente a mostrare al gestore il numero di utenti unici collegati e una distribuzione territoriale aggregata.
+    Per comprendere l’utilizzo effettivo del servizio, MyLocalCare registra una sola presenza giornaliera per ciascun utente autenticato, associandola all’identificativo dell’account, alla data e alla città o provincia già indicata nel profilo. Questa metrica resta separata da quella anonima e serve a mostrare al gestore il numero di utenti registrati unici collegati e distribuzioni territoriali aggregate. Non registra le pagine visitate e non aggiunge indirizzi IP, user-agent o altri dati del dispositivo alla tabella statistica.
   </p>
 
   <p class="mb-4">
-    Le presenze giornaliere utilizzate per tali statistiche vengono cancellate automaticamente oltre gli ultimi 30 giorni e sono eliminate insieme all’account tramite il collegamento tecnico all’utente.
+    Per le visite effettuate senza autenticazione, MyLocalCare utilizza la sessione tecnica già necessaria al funzionamento del sito per conteggiare al massimo una visita anonima per quella sessione o browser in ciascun giorno. Nella tabella statistica anonima vengono salvati soltanto il giorno e il conteggio aggregato, senza indirizzo IP, user-agent, URL o pagine visitate e senza un identificatore anonimo o della sessione. Il solo indicatore che evita un nuovo conteggio nello stesso giorno resta nella sessione tecnica e non viene copiato nella tabella statistica.
+  </p>
+
+  <p class="mb-4">
+    Il numero delle visite anonime è una stima delle sessioni o dei browser transitati sulla piattaforma e non equivale al numero certo di persone uniche: la stessa persona può essere conteggiata più volte se usa sessioni o dispositivi diversi, elimina i dati del browser oppure torna in giorni differenti. Il dato non consente a MyLocalCare di riconoscere il visitatore anonimo né di ricostruirne il percorso di navigazione.
+  </p>
+
+  <p class="mb-4">
+    Le presenze giornaliere degli utenti registrati e i conteggi giornalieri anonimi vengono cancellati automaticamente oltre gli ultimi 30 giorni. Le presenze collegate a un utente registrato sono inoltre eliminate insieme all’account tramite il collegamento tecnico all’utente.
   </p>
 
   <h2 class="text-xl font-semibold mt-6 mb-2">12. Condivisione dei dati con fornitori tecnici</h2>
@@ -221,7 +229,7 @@
     <li>i dati dell’account vengono conservati finché l’account resta attivo o necessario alla gestione del servizio;</li>
     <li>i dati pubblicati volontariamente in profili e annunci restano visibili finché l’utente li mantiene pubblicati o finché l’account/annuncio resta attivo;</li>
     <li>i dati relativi ad acquisti, pagamenti e servizi attivati possono essere conservati per obblighi amministrativi, contabili o fiscali;</li>
-    <li>le presenze giornaliere degli utenti autenticati utilizzate per le statistiche interne sono conservate per non più di 30 giorni;</li>
+    <li>le presenze giornaliere degli utenti registrati e i conteggi giornalieri aggregati delle visite anonime utilizzati per le statistiche interne sono conservati per non più di 30 giorni;</li>
     <li>i log tecnici e di sicurezza vengono conservati per il tempo necessario alla sicurezza, manutenzione e protezione della piattaforma;</li>
     <li>alcuni dati possono essere conservati più a lungo se necessario per obblighi di legge, tutela dei diritti, prevenzione abusi o gestione di controversie.</li>
   </ul>

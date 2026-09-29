@@ -1,5 +1,6 @@
--- Accessi autenticati giornalieri, minimizzati e conservati per 30 giorni.
--- Non vengono memorizzati IP, user agent, pagine visitate o utenti anonimi.
+-- Statistiche giornaliere di prima parte, minimizzate e conservate 30 giorni.
+-- Non vengono memorizzati IP, user agent, pagine visitate o identificatori
+-- dei visitatori anonimi. Per questi ultimi resta solo un contatore aggregato.
 
 BEGIN;
 
@@ -20,11 +21,20 @@ CREATE INDEX IF NOT EXISTS idx_accessi_utenti_giorno
 CREATE INDEX IF NOT EXISTS idx_accessi_utenti_zona_giorno
     ON accessi_utenti_giornalieri (zona, giorno DESC);
 
+CREATE TABLE IF NOT EXISTS accessi_anonimi_giornalieri (
+    giorno DATE PRIMARY KEY,
+    visite_sessione INTEGER NOT NULL DEFAULT 0
+        CHECK (visite_sessione >= 0),
+    primo_accesso_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ultimo_accesso_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 DO $grants$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'localcare_app') THEN
         GRANT SELECT, INSERT, UPDATE, DELETE
-            ON TABLE accessi_utenti_giornalieri
+            ON TABLE accessi_utenti_giornalieri,
+                     accessi_anonimi_giornalieri
             TO localcare_app;
 
         GRANT USAGE, SELECT
@@ -41,3 +51,4 @@ COMMIT;
 
 -- Verifica post-migrazione:
 -- SELECT to_regclass('public.accessi_utenti_giornalieri');
+-- SELECT to_regclass('public.accessi_anonimi_giornalieri');
