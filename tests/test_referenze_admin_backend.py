@@ -660,6 +660,291 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
         )
 
 
+class ReferenzeAdminDeletePersistenceTest(unittest.TestCase):
+    def setUp(self):
+        self.connection = sqlite3.connect(":memory:")
+        self.connection.row_factory = sqlite3.Row
+        self.connection.executescript("""
+            CREATE TABLE referenze (
+                id INTEGER PRIMARY KEY,
+                utente_id INTEGER NOT NULL,
+                esperienza_diretta INTEGER NOT NULL DEFAULT 0,
+                testo_referente TEXT,
+                stato_risposta TEXT NOT NULL,
+                stato_verifica TEXT NOT NULL,
+                autorizza_pubblicazione INTEGER NOT NULL DEFAULT 0,
+                autorizza_testo_pubblico INTEGER NOT NULL DEFAULT 0,
+                autorizza_contatto_verifica INTEGER NOT NULL DEFAULT 0,
+                pubblicazione_approvata_admin INTEGER NOT NULL DEFAULT 0,
+                pubblicazione_approvata_at TEXT,
+                pubblicazione_approvata_da_admin_id INTEGER,
+                visibile_profilo INTEGER NOT NULL DEFAULT 1,
+                consenso_versione TEXT,
+                consenso_trattamento_at TEXT,
+                autorizzazione_pubblica_at TEXT,
+                autorizzazione_testo_at TEXT,
+                autorizzazione_contatto_at TEXT,
+                risposta_at TEXT,
+                verificata_at TEXT,
+                revocata_at TEXT,
+                cancellata_at TEXT,
+                verificata_da_admin_id INTEGER,
+                metodo_verifica TEXT NOT NULL DEFAULT 'nessuno',
+                nota_admin TEXT,
+                nota_pubblica TEXT,
+                versione INTEGER NOT NULL DEFAULT 1,
+                updated_at TEXT
+            );
+            CREATE TABLE referenze_contatti (
+                referenza_id INTEGER PRIMARY KEY,
+                email_cifrata TEXT,
+                email_nonce TEXT,
+                email_tag TEXT,
+                email_key_id TEXT,
+                email_hash TEXT,
+                nome_cifrato TEXT,
+                nome_nonce TEXT,
+                nome_tag TEXT,
+                telefono_cifrato TEXT,
+                telefono_nonce TEXT,
+                telefono_tag TEXT,
+                messaggio_invito_cifrato TEXT,
+                messaggio_invito_nonce TEXT,
+                messaggio_invito_tag TEXT,
+                token_hash TEXT,
+                token_expires_at TEXT,
+                token_consumed_at TEXT,
+                aperto_at TEXT,
+                ultimo_errore_invio TEXT,
+                contatto_purge_at TEXT,
+                contatto_purged_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE referenze_eventi (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referenza_id INTEGER NOT NULL,
+                tipo_evento TEXT NOT NULL,
+                attore_tipo TEXT NOT NULL,
+                attore_utente_id INTEGER,
+                dettagli_snapshot TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        self.connection.execute("""
+            INSERT INTO referenze (
+                id, utente_id, esperienza_diretta, testo_referente,
+                stato_risposta, stato_verifica,
+                autorizza_pubblicazione, autorizza_testo_pubblico,
+                autorizza_contatto_verifica,
+                pubblicazione_approvata_admin,
+                pubblicazione_approvata_at,
+                pubblicazione_approvata_da_admin_id,
+                visibile_profilo, consenso_versione,
+                consenso_trattamento_at, autorizzazione_pubblica_at,
+                autorizzazione_testo_at, autorizzazione_contatto_at,
+                risposta_at, verificata_at, verificata_da_admin_id,
+                metodo_verifica, nota_admin, nota_pubblica, versione
+            ) VALUES (
+                20, 7, 1, 'Contenuto pubblico da rimuovere',
+                'risposta_ricevuta', 'verificata',
+                1, 1, 1, 1, CURRENT_TIMESTAMP, 99, 1,
+                'references_2026_v3', CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 99,
+                'telefono', 'nota interna', 'nota pubblica', 7
+            )
+        """)
+        self.connection.execute("""
+            INSERT INTO referenze_contatti (
+                referenza_id,
+                email_cifrata, email_nonce, email_tag, email_key_id,
+                email_hash, nome_cifrato, nome_nonce, nome_tag,
+                telefono_cifrato, telefono_nonce, telefono_tag,
+                messaggio_invito_cifrato, messaggio_invito_nonce,
+                messaggio_invito_tag, token_hash, token_expires_at,
+                aperto_at, ultimo_errore_invio, contatto_purge_at
+            ) VALUES (
+                20,
+                'email', 'nonce', 'tag', 'key', 'hash',
+                'nome', 'nonce', 'tag', 'telefono', 'nonce', 'tag',
+                'messaggio', 'nonce', 'tag', 'token',
+                '2099-01-01T00:00:00+00:00', CURRENT_TIMESTAMP,
+                'vecchio errore', '2099-02-01T00:00:00+00:00'
+            )
+        """)
+        self.connection.commit()
+        self.flashes = []
+        self.invalidations = []
+        self.csrf_checks = []
+
+        class NonClosingConnection:
+            def __init__(self, connection):
+                self.connection = connection
+
+            def cursor(self):
+                return self.connection.cursor()
+
+            def close(self):
+                return None
+
+            def __getattr__(self, name):
+                return getattr(self.connection, name)
+
+        def event(cursor, reference_id, event_type, actor_type, **kwargs):
+            cursor.execute("""
+                INSERT INTO referenze_eventi (
+                    referenza_id, tipo_evento, attore_tipo,
+                    attore_utente_id, dettagli_snapshot
+                ) VALUES (?, ?, ?, ?, ?)
+            """, (
+                reference_id,
+                event_type,
+                actor_type,
+                kwargs.get("attore_utente_id"),
+                json.dumps(kwargs.get("dettagli") or {}, sort_keys=True),
+            ))
+
+        self.route_connection = NonClosingConnection(self.connection)
+        self.namespace = {
+            "request": SimpleNamespace(form={}),
+            "verify_csrf": lambda: self.csrf_checks.append(True),
+            "flash": lambda message, category: self.flashes.append(
+                (message, category)
+            ),
+            "url_for": lambda endpoint, **kwargs: f"/{endpoint}",
+            "redirect": lambda location: location,
+            "get_db_connection": lambda: self.route_connection,
+            "get_cursor": lambda connection: connection.cursor(),
+            "_referenze_tables_exist": lambda cursor: True,
+            "_schede_profilo_begin": (
+                lambda cursor: cursor.execute("BEGIN IMMEDIATE")
+            ),
+            "_schede_profilo_commit": lambda cursor: cursor.execute("COMMIT"),
+            "_schede_profilo_rollback": (
+                lambda cursor: cursor.execute("ROLLBACK")
+            ),
+            "app": SimpleNamespace(config={"IS_POSTGRES": False}),
+            "sql": lambda query: query,
+            "g": SimpleNamespace(utente={"id": 99}),
+            "_referenza_evento": event,
+            "invalidate_admin_counters": (
+                lambda: self.invalidations.append(True)
+            ),
+            "log_exception_safe": lambda *args, **kwargs: None,
+        }
+        exec(
+            compile(
+                ast.Module(
+                    body=[_app_node("admin_referenza_elimina")],
+                    type_ignores=[],
+                ),
+                "app.py",
+                "exec",
+            ),
+            self.namespace,
+        )
+
+    def tearDown(self):
+        self.connection.close()
+
+    def submit(self, *, version="7", confirmation="elimina"):
+        self.namespace["request"].form = {
+            "versione": version,
+            "conferma_eliminazione": confirmation,
+        }
+        return self.namespace["admin_referenza_elimina"](20)
+
+    def test_approved_reference_is_hidden_scrubbed_and_audited(self):
+        result = self.submit()
+        reference = self.connection.execute(
+            "SELECT * FROM referenze WHERE id = 20"
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT * FROM referenze_contatti WHERE referenza_id = 20"
+        ).fetchone()
+        event = self.connection.execute(
+            "SELECT * FROM referenze_eventi WHERE referenza_id = 20"
+        ).fetchone()
+        snapshot = json.loads(event["dettagli_snapshot"])
+
+        self.assertEqual(result, "/admin_referenze")
+        self.assertEqual(reference["stato_risposta"], "cancellata")
+        self.assertEqual(reference["stato_verifica"], "revocata")
+        self.assertEqual(reference["visibile_profilo"], 0)
+        self.assertEqual(reference["pubblicazione_approvata_admin"], 0)
+        self.assertEqual(reference["versione"], 8)
+        self.assertIsNotNone(reference["cancellata_at"])
+        for column in (
+            "testo_referente",
+            "consenso_versione",
+            "consenso_trattamento_at",
+            "nota_admin",
+            "nota_pubblica",
+        ):
+            self.assertIsNone(reference[column])
+        for column in (
+            "email_cifrata",
+            "email_hash",
+            "nome_cifrato",
+            "telefono_cifrato",
+            "messaggio_invito_cifrato",
+            "token_hash",
+        ):
+            self.assertIsNone(contact[column])
+        self.assertIsNotNone(contact["contatto_purged_at"])
+        self.assertEqual(event["tipo_evento"], "referenza_cancellata_admin")
+        self.assertEqual(event["attore_tipo"], "admin")
+        self.assertEqual(event["attore_utente_id"], 99)
+        self.assertTrue(snapshot["pubblicazione_approvata_precedente"])
+        self.assertEqual(snapshot["versione_precedente"], 7)
+        self.assertEqual(self.csrf_checks, [True])
+        self.assertEqual(self.invalidations, [True])
+        self.assertIn(
+            (
+                "Referenza eliminata. Contenuti e recapiti sono stati rimossi.",
+                "success",
+            ),
+            self.flashes,
+        )
+
+    def test_missing_explicit_confirmation_does_not_delete(self):
+        self.submit(confirmation="")
+        row = self.connection.execute(
+            "SELECT stato_risposta, versione FROM referenze WHERE id = 20"
+        ).fetchone()
+        events = self.connection.execute(
+            "SELECT COUNT(*) FROM referenze_eventi"
+        ).fetchone()[0]
+
+        self.assertEqual(tuple(row), ("risposta_ricevuta", 7))
+        self.assertEqual(events, 0)
+        self.assertEqual(self.invalidations, [])
+        self.assertTrue(any(category == "error" for _, category in self.flashes))
+
+    def test_stale_version_does_not_scrub_or_write_audit(self):
+        self.submit(version="6")
+        reference = self.connection.execute(
+            "SELECT stato_risposta, testo_referente, versione "
+            "FROM referenze WHERE id = 20"
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT email_cifrata, token_hash "
+            "FROM referenze_contatti WHERE referenza_id = 20"
+        ).fetchone()
+        events = self.connection.execute(
+            "SELECT COUNT(*) FROM referenze_eventi"
+        ).fetchone()[0]
+
+        self.assertEqual(
+            tuple(reference),
+            ("risposta_ricevuta", "Contenuto pubblico da rimuovere", 7),
+        )
+        self.assertEqual(tuple(contact), ("email", "token"))
+        self.assertEqual(events, 0)
+        self.assertEqual(self.invalidations, [])
+        self.assertTrue(any(category == "warning" for _, category in self.flashes))
+
+
 class ReferenzeAdminRouteContractTest(unittest.TestCase):
     def test_routes_keep_security_and_admin_side_effects(self):
         self.assertIn('@app.route("/admin/referenze")', APP_SOURCE)
@@ -697,6 +982,39 @@ class ReferenzeAdminRouteContractTest(unittest.TestCase):
             'url_for("dashboard") + "#referenze"',
         ):
             self.assertIn(marker, post_source)
+
+    def test_delete_route_is_admin_csrf_versioned_and_audited(self):
+        self.assertIn(
+            '@app.route(\n    "/admin/referenze/<int:referenza_id>/elimina",',
+            APP_SOURCE,
+        )
+        delete_node = next(
+            node for node in APP_TREE.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "admin_referenza_elimina"
+        )
+        delete_source = ast.get_source_segment(APP_SOURCE, delete_node)
+        decorator_names = {
+            decorator.id
+            for decorator in delete_node.decorator_list
+            if isinstance(decorator, ast.Name)
+        }
+        self.assertIn("admin_required", decorator_names)
+        for marker in (
+            "verify_csrf()",
+            'request.form.get("conferma_eliminazione") != "elimina"',
+            "AND versione = ?",
+            "stato_risposta = 'cancellata'",
+            "pubblicazione_approvata_admin = FALSE",
+            "visibile_profilo = FALSE",
+            "testo_referente = NULL",
+            "email_cifrata = NULL",
+            "telefono_cifrato = NULL",
+            "token_hash = NULL",
+            '"referenza_cancellata_admin"',
+            "invalidate_admin_counters()",
+        ):
+            self.assertIn(marker, delete_source)
 
 
 if __name__ == "__main__":

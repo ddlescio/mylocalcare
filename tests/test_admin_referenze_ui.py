@@ -90,6 +90,24 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
         self.assertIn("blockedByOutcome", self.body)
         self.assertIn("presenza di un nome", self.body)
 
+    def test_admin_delete_requires_explicit_confirmation_and_version(self):
+        self.assertIn(
+            "url_for('admin_referenza_elimina', "
+            "referenza_id=referenza.get('id'))",
+            self.body,
+        )
+        self.assertIn('class="admin-reference-delete', self.body)
+        self.assertIn('name="conferma_eliminazione"', self.body)
+        self.assertIn('value="elimina"', self.body)
+        self.assertIn("Confermo di voler eliminare definitivamente", self.body)
+        self.assertIn('name="versione"', self.body)
+        self.assertIn(
+            'window.confirm("Eliminare definitivamente la referenza?',
+            self.body,
+        )
+        self.assertIn("rimuove subito la referenza dal profilo pubblico", self.body)
+        self.assertIn("dal pannello dell’utente", self.body)
+
     def test_contact_consent_and_retention_are_explicit(self):
         self.assertIn('data-contact-status="pending"', self.body)
         self.assertIn('data-contact-status="denied"', self.body)

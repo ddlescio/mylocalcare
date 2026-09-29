@@ -390,6 +390,40 @@
                 {% endif %}
               </div>
             </details>
+
+            <details class="group mt-3 rounded-2xl border border-rose-200 bg-rose-50/70">
+              <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-extrabold text-rose-800">
+                <span>Elimina referenza</span>
+                <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+              </summary>
+              <div class="border-t border-rose-200 px-4 pb-4 pt-3">
+                <p class="text-xs font-semibold leading-5 text-rose-900/80">
+                  Questa operazione rimuove subito la referenza dal profilo pubblico e
+                  dal pannello dell’utente. Testo, consensi e recapiti del referente
+                  saranno cancellati in modo irreversibile; resterà soltanto una traccia
+                  tecnica minima nell’audit.
+                </p>
+                <form method="post"
+                      action="{{ url_for('admin_referenza_elimina', referenza_id=referenza.get('id')) }}"
+                      class="admin-reference-delete mt-3 space-y-3"
+                      data-no-global-loader>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="versione" value="{{ referenza.get('versione') or 1 }}">
+                  <label class="flex items-start gap-3 rounded-xl border border-rose-200 bg-white p-3 text-xs font-bold leading-5 text-rose-900">
+                    <input type="checkbox"
+                           name="conferma_eliminazione"
+                           value="elimina"
+                           class="admin-reference-delete-confirm mt-0.5 h-4 w-4 rounded border-rose-300 text-rose-600"
+                           required>
+                    <span>Confermo di voler eliminare definitivamente questa referenza.</span>
+                  </label>
+                  <button type="submit"
+                          class="admin-reference-delete-submit min-h-11 w-full rounded-xl bg-rose-700 px-4 text-sm font-extrabold text-white hover:bg-rose-800 disabled:cursor-wait disabled:opacity-65"
+                          data-idle-label="Elimina referenza"
+                          data-pending-label="Eliminazione in corso…">Elimina referenza</button>
+                </form>
+              </div>
+            </details>
           </div>
         </article>
       {% endfor %}
@@ -473,6 +507,35 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  document.querySelectorAll(".admin-reference-delete").forEach((form) => {
+    const confirmation = form.querySelector(".admin-reference-delete-confirm");
+    const submitButton = form.querySelector(".admin-reference-delete-submit");
+
+    form.addEventListener("submit", (event) => {
+      if (form.dataset.submitting === "1") {
+        event.preventDefault();
+        return;
+      }
+      if (!confirmation?.checked) {
+        event.preventDefault();
+        confirmation?.focus();
+        window.alert("Conferma esplicitamente la cancellazione della referenza.");
+        return;
+      }
+      if (!window.confirm("Eliminare definitivamente la referenza? Non potrai recuperare contenuti o recapiti.")) {
+        event.preventDefault();
+        return;
+      }
+
+      form.dataset.submitting = "1";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.setAttribute("aria-busy", "true");
+        submitButton.textContent = submitButton.dataset.pendingLabel || "Eliminazione in corso…";
+      }
+    });
+  });
+
   const resetAdminReferenceForms = () => {
     document.querySelectorAll(".admin-reference-action").forEach((form) => {
       delete form.dataset.submitting;
@@ -481,6 +544,14 @@ document.addEventListener("DOMContentLoaded", () => {
       button.disabled = false;
       button.removeAttribute("aria-busy");
       button.textContent = button.dataset.idleLabel || "Registra esito";
+    });
+    document.querySelectorAll(".admin-reference-delete").forEach((form) => {
+      delete form.dataset.submitting;
+      const button = form.querySelector(".admin-reference-delete-submit");
+      if (!button) return;
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.textContent = button.dataset.idleLabel || "Elimina referenza";
     });
   };
 

@@ -16,6 +16,9 @@ from referenze import (
     encrypt_reference_phone,
     normalize_reference_payload,
 )
+from reference_notification_outbox import (
+    enqueue_reference_response_notifications,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -646,10 +649,17 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
             CREATE TABLE utenti (
                 id INTEGER PRIMARY KEY,
                 username TEXT,
-                lingua_interfaccia TEXT
+                lingua_interfaccia TEXT,
+                ruolo TEXT DEFAULT 'user',
+                attivo INTEGER DEFAULT 1,
+                sospeso INTEGER DEFAULT 0,
+                disattivato_admin INTEGER DEFAULT 0
             );
             INSERT INTO utenti (id, username, lingua_interfaccia)
             VALUES (1, 'owner', 'it');
+            INSERT INTO utenti (
+                id, username, lingua_interfaccia, ruolo
+            ) VALUES (2, 'admin', 'it', 'admin');
         """)
         setup_connection.commit()
         setup_connection.close()
@@ -711,6 +721,7 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
             "app": app,
             "request": request,
             "session": session,
+            "g": g,
             "flash": flash,
             "redirect": redirect,
             "render_template": (
@@ -745,6 +756,9 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
             "_schede_profilo_rollback": rollback,
             "sql": lambda query: query,
             "json": json,
+            "enqueue_reference_response_notifications": (
+                enqueue_reference_response_notifications
+            ),
             "invalidate_admin_counters": lambda: None,
             "normalize_language": lambda value: value or "it",
             "translate": lambda key, language: key,
@@ -853,18 +867,74 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
         self.assertIsNotNone(contact["token_consumed_at"])
         self.assertEqual(event["attore_tipo"], "referente")
         self.assertIsNotNone(event["created_at"])
-        self.assertEqual(len(self.admin_notifications), 1)
-        notification = self.admin_notifications[0]
-        self.assertIn("Nuova referenza", notification["args"][0])
-        self.assertEqual(
-            notification["kwargs"]["link"],
-            "/admin_referenze",
-        )
-        self.assertTrue(notification["kwargs"]["push"])
-        self.assertTrue(notification["kwargs"]["defer_push"])
-        self.assertIs(
-            notification["kwargs"]["db_connection"],
-            self.connection,
+        queued = self.connection.execute("""
+            SELECT destinatario_id, destinatario_tipo, push_richiesta, link
+            FROM referenze_notifiche_outbox
+            ORDER BY destinatario_tipo DESC
+        """).fetchall()
+        self.assertEqual(len(queued), 2)
+        self.assertEqual(queued[0]["destinatario_tipo"], "owner")
+        self.assertEqual(queued[0]["destinatario_id"], 1)
+        self.assertEqual(queued[0]["push_richiesta"], 0)
+        self.assertEqual(queued[0]["link"], "/dashboard#referenze")
+        self.assertEqual(queued[1]["destinatario_tipo"], "admin")
+        self.assertEqual(queued[1]["destinatario_id"], 2)
+        self.assertEqual(queued[1]["push_richiesta"], 1)
+        self.assertEqual(queued[1]["link"], "/admin_referenze")
+
+    def test_outbox_fallita_fa_rollback_di_referenza_token_ed_evento(self):
+        def fail_enqueue(*args, **kwargs):
+            raise RuntimeError("outbox non disponibile")
+
+        self.route.__globals__[
+            "enqueue_reference_response_notifications"
+        ] = fail_enqueue
+
+        response = self.submit()
+        self.assertEqual(response.status_code, 302)
+        reference = self.connection.execute(
+            "SELECT stato_risposta, stato_verifica, risposta_at "
+            "FROM referenze WHERE id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        contact = self.connection.execute(
+            "SELECT token_consumed_at FROM referenze_contatti "
+            "WHERE referenza_id = ?",
+            (self.reference_id,),
+        ).fetchone()
+        event_count = self.connection.execute(
+            "SELECT COUNT(*) FROM referenze_eventi WHERE referenza_id = ?",
+            (self.reference_id,),
+        ).fetchone()[0]
+        outbox_count = self.connection.execute(
+            "SELECT COUNT(*) FROM referenze_notifiche_outbox"
+        ).fetchone()[0]
+
+        self.assertEqual(reference["stato_risposta"], "in_attesa")
+        self.assertEqual(reference["stato_verifica"], "non_esaminata")
+        self.assertIsNone(reference["risposta_at"])
+        self.assertIsNone(contact["token_consumed_at"])
+        self.assertEqual(event_count, 0)
+        self.assertEqual(outbox_count, 0)
+
+    def test_successo_non_invoca_realtime_push_o_notifiche_sincrone(self):
+        def forbidden(*args, **kwargs):
+            raise AssertionError("I/O esterno eseguito nel POST")
+
+        for name in (
+            "invalidate_admin_counters",
+            "emit_update_notifications",
+            "notifica_admin_evento",
+            "_crea_notifica",
+            "invia_push",
+        ):
+            self.route.__globals__[name] = forbidden
+
+        response = self.submit()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "g.skip_server_session_save = True",
+            function_source("referenza_rispondi"),
         )
 
     def test_unico_consenso_pubblica_scheda_e_testo_compilato(self):
@@ -903,7 +973,13 @@ class ReferenceReplyPersistenceTest(unittest.TestCase):
         self.assertEqual(reference["autorizza_contatto_verifica"], 0)
         self.assertIsNone(reference["autorizzazione_contatto_at"])
         self.assertIsNone(contact["telefono_cifrato"])
-        self.assertEqual(self.admin_notifications, [])
+        queued = self.connection.execute("""
+            SELECT destinatario_tipo, push_richiesta
+            FROM referenze_notifiche_outbox
+        """).fetchall()
+        self.assertEqual(len(queued), 1)
+        self.assertEqual(queued[0]["destinatario_tipo"], "owner")
+        self.assertEqual(queued[0]["push_richiesta"], 0)
 
     def test_senza_consenso_e_senza_telefono_invia_la_risposta(self):
         response = self.submit(consent=None, phone=None)

@@ -79,6 +79,12 @@ class ReferenceSchemaTest(unittest.TestCase):
             row[1]
             for row in conn.execute("PRAGMA table_info(referenze_contatti)")
         }
+        outbox_columns = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(referenze_notifiche_outbox)"
+            )
+        }
         indexes = {
             row[0]
             for row in conn.execute(
@@ -88,7 +94,10 @@ class ReferenceSchemaTest(unittest.TestCase):
         conn.close()
 
         self.assertTrue(
-            {"referenze", "referenze_contatti", "referenze_eventi"}
+            {
+                "referenze", "referenze_contatti", "referenze_eventi",
+                "referenze_notifiche_outbox",
+            }
             .issubset(tables)
         )
         self.assertTrue(
@@ -112,8 +121,17 @@ class ReferenceSchemaTest(unittest.TestCase):
                 "contatto_purge_at", "contatto_purged_at",
             }.issubset(contact_columns)
         )
+        self.assertTrue({
+            "event_key", "referenza_id", "destinatario_id",
+            "destinatario_tipo", "titolo", "messaggio", "link",
+            "push_richiesta", "notifica_creata_at", "tentativi",
+            "disponibile_at", "bloccata_at", "blocco_token",
+            "elaborata_at", "ultimo_errore",
+        }.issubset(outbox_columns))
         self.assertIn("idx_referenze_coda_admin", indexes)
         self.assertIn("idx_referenze_eventi_storico", indexes)
+        self.assertIn("idx_referenze_outbox_pending", indexes)
+        self.assertIn("idx_referenze_outbox_destinatario", indexes)
 
     def test_bootstrap_aggiunge_retention_a_tabella_contatti_precedente(self):
         conn = self.connect()
@@ -379,6 +397,20 @@ class ReferenceSchemaTest(unittest.TestCase):
             len(re.findall(r"^\s*LOOP\s*$", repair, re.MULTILINE)),
             len(re.findall(r"^\s*END LOOP;\s*$", repair, re.MULTILINE)),
         )
+
+        outbox = (
+            ROOT / "migrations" /
+            "20260929_referenze_notifiche_outbox.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "CREATE TABLE IF NOT EXISTS referenze_notifiche_outbox",
+            outbox,
+        )
+        self.assertIn("event_key TEXT NOT NULL UNIQUE", outbox)
+        self.assertIn("idx_referenze_outbox_pending", outbox)
+        self.assertIn("ON DELETE CASCADE", outbox)
+        self.assertIn("ON TABLE referenze_notifiche_outbox", outbox)
+        self.assertIn("referenze_notifiche_outbox_id_seq", outbox)
 
     def test_bootstrap_completo_invoca_referenze(self):
         source = (ROOT / "init_db.py").read_text(encoding="utf-8")

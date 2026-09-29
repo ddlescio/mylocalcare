@@ -16,6 +16,7 @@ _REFERENCE_TABLES = (
     "referenze",
     "referenze_contatti",
     "referenze_eventi",
+    "referenze_notifiche_outbox",
 )
 
 
@@ -44,7 +45,10 @@ def reference_tables_present(cursor, *, postgres: bool) -> set[str]:
             SELECT
                 to_regclass('public.referenze') AS referenze,
                 to_regclass('public.referenze_contatti') AS referenze_contatti,
-                to_regclass('public.referenze_eventi') AS referenze_eventi
+                to_regclass('public.referenze_eventi') AS referenze_eventi,
+                to_regclass(
+                    'public.referenze_notifiche_outbox'
+                ) AS referenze_notifiche_outbox
         """)
         row = cursor.fetchone()
         return {
@@ -57,7 +61,10 @@ def reference_tables_present(cursor, *, postgres: bool) -> set[str]:
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
-          AND name IN ('referenze', 'referenze_contatti', 'referenze_eventi')
+          AND name IN (
+              'referenze', 'referenze_contatti', 'referenze_eventi',
+              'referenze_notifiche_outbox'
+          )
     """)
     return {
         str(_row_value(row, "name"))
@@ -91,6 +98,20 @@ def purge_user_reference_data(
 
     if "referenze" not in tables:
         return deleted
+
+    if "referenze_notifiche_outbox" in tables:
+        cursor.execute("""
+            DELETE FROM referenze_notifiche_outbox
+            WHERE destinatario_id = ?
+               OR referenza_id IN (
+                    SELECT id
+                    FROM referenze
+                    WHERE utente_id = ?
+               )
+        """, (owner_id, owner_id))
+        deleted["referenze_notifiche_outbox"] = max(
+            int(cursor.rowcount or 0), 0
+        )
 
     for child_table in ("referenze_eventi", "referenze_contatti"):
         if child_table not in tables:

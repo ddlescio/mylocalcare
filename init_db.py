@@ -2833,6 +2833,44 @@ def crea_tabelle_referenze():
                         f"ADD COLUMN {column_name} {column_type}"
                     )
 
+        # Outbox transazionale: il POST del referente salva queste righe
+        # prima del COMMIT; push e realtime vengono eseguiti da un worker.
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS referenze_notifiche_outbox (
+                id {reference_pk},
+                event_key TEXT NOT NULL UNIQUE,
+                referenza_id {reference_fk_type} NOT NULL,
+                destinatario_id INTEGER NOT NULL,
+                destinatario_tipo TEXT NOT NULL CHECK (
+                    destinatario_tipo IN ('owner', 'admin')
+                ),
+                titolo TEXT NOT NULL,
+                messaggio TEXT NOT NULL,
+                tipo_notifica TEXT NOT NULL,
+                link TEXT,
+                push_richiesta {
+                    boolean_column('push_richiesta')
+                },
+                notifica_creata_at {dt_col()},
+                tentativi INTEGER NOT NULL DEFAULT 0 CHECK (tentativi >= 0),
+                disponibile_at {dt_col(True)} NOT NULL,
+                bloccata_at {dt_col()},
+                blocco_token TEXT,
+                elaborata_at {dt_col()},
+                ultimo_errore TEXT,
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (referenza_id)
+                    REFERENCES referenze(id) ON DELETE CASCADE,
+                FOREIGN KEY (destinatario_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE,
+                CHECK (
+                    (bloccata_at IS NULL AND blocco_token IS NULL)
+                    OR (bloccata_at IS NOT NULL AND blocco_token IS NOT NULL)
+                )
+            );
+        """))
+
         # Gli indici univoci nominati completano anche tabelle legacy create
         # senza i due UNIQUE inline del modello attuale.
         c.execute(sql("""
@@ -2877,6 +2915,16 @@ def crea_tabelle_referenze():
             CREATE INDEX IF NOT EXISTS idx_referenze_eventi_storico
             ON referenze_eventi (referenza_id, created_at DESC);
         """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_outbox_pending
+            ON referenze_notifiche_outbox (
+                elaborata_at, disponibile_at, bloccata_at, id
+            );
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_referenze_outbox_destinatario
+            ON referenze_notifiche_outbox (destinatario_id, created_at DESC);
+        """))
 
         conn.commit()
     except Exception:
@@ -2889,7 +2937,7 @@ def crea_tabelle_referenze():
             pass
         conn.close()
 
-    print("✅ Tabelle referenze, contatti cifrati e audit pronte.")
+    print("✅ Tabelle referenze, contatti cifrati, audit e outbox pronte.")
 
 
 def semina_catalogo_qualifiche():

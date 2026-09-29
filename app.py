@@ -10,7 +10,7 @@ elif RUNTIME_SERVICE in {"job", "cron"}:
 else:
     APP_RUNTIME_ROLE = "web"
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory, abort
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, g, send_from_directory, abort, has_request_context
 from whitenoise import WhiteNoise
 import os
 import sqlite3
@@ -160,6 +160,10 @@ from referenze import (
     serialize_public_reference,
 )
 from reference_cleanup import purge_user_reference_data
+from reference_notification_outbox import (
+    enqueue_reference_response_notifications,
+    process_reference_notification_outbox_once,
+)
 from i18n import (
     LEGAL_DOCUMENT_VERSION,
     SUPPORTED_LANGUAGES,
@@ -1731,6 +1735,25 @@ redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     raise RuntimeError("❌ REDIS_URL non configurata su Render")
 
+
+def _bounded_timeout_env(name, default, *, minimum=0.2, maximum=10.0):
+    try:
+        value = float(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        value = float(default)
+    return max(float(minimum), min(value, float(maximum)))
+
+
+REDIS_SESSION_CONNECT_TIMEOUT_SECONDS = _bounded_timeout_env(
+    "REDIS_SESSION_CONNECT_TIMEOUT_SECONDS", 2.0
+)
+REDIS_SESSION_SOCKET_TIMEOUT_SECONDS = _bounded_timeout_env(
+    "REDIS_SESSION_SOCKET_TIMEOUT_SECONDS", 2.0
+)
+SOCKETIO_REDIS_CONNECT_TIMEOUT_SECONDS = _bounded_timeout_env(
+    "SOCKETIO_REDIS_CONNECT_TIMEOUT_SECONDS", 2.0
+)
+
 SOCKET_ASYNC_MODE = "eventlet" if app.config["IS_REALTIME_SERVER"] else "threading"
 
 APP_ENV = os.getenv("APP_ENV", "production").strip().lower()
@@ -1748,12 +1771,22 @@ if APP_ENV in ("local", "development"):
         "http://localhost:5050",
     ])
 
+socketio_redis_manager = RedisManager(
+    redis_url,
+    channel="mylocalcare-socketio",
+    redis_options={
+        # Il listener pub/sub deve poter restare in attesa, quindi limitiamo
+        # il connect senza impostare un socket_timeout di lettura.
+        "socket_connect_timeout": SOCKETIO_REDIS_CONNECT_TIMEOUT_SECONDS,
+        "health_check_interval": 30,
+    },
+)
+
 socketio = SocketIO(
     app,
     async_mode=SOCKET_ASYNC_MODE,
     cors_allowed_origins=SOCKET_CORS_ORIGINS,
-    message_queue=redis_url,
-    channel="mylocalcare-socketio",
+    client_manager=socketio_redis_manager,
     allow_upgrades=True,
     ping_timeout=60,
     ping_interval=25,
@@ -2124,7 +2157,13 @@ import redis
 from flask_session import Session
 from datetime import timedelta
 
-redis_client = redis.from_url(os.environ["REDIS_URL"])
+redis_client = redis.from_url(
+    os.environ["REDIS_URL"],
+    socket_connect_timeout=REDIS_SESSION_CONNECT_TIMEOUT_SECONDS,
+    socket_timeout=REDIS_SESSION_SOCKET_TIMEOUT_SECONDS,
+    retry_on_timeout=False,
+    health_check_interval=30,
+)
 
 configure_socket_registry(redis_client, socketio)
 
@@ -2151,6 +2190,29 @@ app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
 app.config['SESSION_COOKIE_DOMAIN'] = ".mylocalcare.it"
 
 Session(app)
+
+# Il submit pubblico della referenza consuma il token nel DB. Per quella sola
+# risposta saltiamo il refresh della sessione Redis: un Redis lento/non
+# disponibile non deve trasformare un COMMIT riuscito in una pagina Safari
+# interrotta. La vecchia chiave di sessione e' innocua (il token risulta gia'
+# consumato) e scadra' normalmente.
+_default_save_server_session = app.session_interface.save_session
+
+
+def _save_server_session_with_reference_opt_out(
+    flask_app, session_data, response
+):
+    if (
+        has_request_context()
+        and getattr(g, "skip_server_session_save", False)
+    ):
+        if getattr(session_data, "accessed", False):
+            response.vary.add("Cookie")
+        return
+    return _default_save_server_session(flask_app, session_data, response)
+
+
+app.session_interface.save_session = _save_server_session_with_reference_opt_out
 
 @app.template_filter('safe_strip')
 def safe_strip(value):
@@ -6461,6 +6523,7 @@ def _referenza_admin_evento_presentato(row):
         "consenso_revocato": "Consenso revocato",
         "richiesta_cancellata_utente": "Richiesta eliminata dall’utente",
         "referenza_cancellata_utente": "Referenza eliminata dall’utente",
+        "referenza_cancellata_admin": "Referenza eliminata dall’amministrazione",
         "verifica_admin_registrata": "Esito admin registrato",
         "pubblicazione_admin_approvata": "Pubblicazione approvata",
         "pubblicazione_admin_revocata": "Pubblicazione non approvata",
@@ -6879,6 +6942,192 @@ def admin_referenza_verifica(referenza_id):
             pass
 
     return redirect(url_for("admin_referenze", stato="da_gestire"))
+
+
+@app.route(
+    "/admin/referenze/<int:referenza_id>/elimina",
+    methods=["POST"],
+)
+@admin_required
+def admin_referenza_elimina(referenza_id):
+    """Rimuove una referenza e ne conserva soltanto l'audit minimo.
+
+    La cancellazione amministrativa usa lo stesso scrub della cancellazione
+    richiesta dall'utente: testo, consensi, decisioni pubbliche, recapiti
+    cifrati e token vengono rimossi nella stessa transazione.  Il record
+    tecnico resta in stato ``cancellata`` per mantenere una traccia audit
+    priva dei contenuti della referenza.
+    """
+
+    verify_csrf()
+    if request.form.get("conferma_eliminazione") != "elimina":
+        flash(
+            "Conferma esplicitamente la cancellazione della referenza.",
+            "error",
+        )
+        return redirect(url_for("admin_referenze", stato="tutti"))
+
+    try:
+        expected_version = int(request.form.get("versione") or 0)
+    except (TypeError, ValueError):
+        expected_version = 0
+    if expected_version < 1:
+        flash(
+            "Versione della referenza non valida. Ricarica la pagina.",
+            "error",
+        )
+        return redirect(url_for("admin_referenze", stato="tutti"))
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    transaction_open = False
+    owner_id = None
+    try:
+        if not _referenze_tables_exist(cur):
+            flash("La funzione referenze non è ancora disponibile.", "error")
+            return redirect(url_for("admin_referenze"))
+
+        _schede_profilo_begin(cur)
+        transaction_open = True
+        lock_suffix = " FOR UPDATE" if app.config.get("IS_POSTGRES") else ""
+        cur.execute(sql(f"""
+            SELECT id, utente_id, stato_risposta, stato_verifica,
+                   pubblicazione_approvata_admin, versione
+            FROM referenze
+            WHERE id = ?
+            LIMIT 1{lock_suffix}
+        """), (int(referenza_id),))
+        reference = cur.fetchone()
+        if not reference:
+            _schede_profilo_rollback(cur)
+            transaction_open = False
+            flash("Referenza non trovata.", "error")
+            return redirect(url_for("admin_referenze", stato="tutti"))
+
+        owner_id = int(reference["utente_id"])
+        if reference["stato_risposta"] == "cancellata":
+            _schede_profilo_rollback(cur)
+            transaction_open = False
+            flash("La referenza è già stata eliminata.", "warning")
+            return redirect(url_for("admin_referenze", stato="tutti"))
+        if int(reference["versione"] or 0) != expected_version:
+            _schede_profilo_rollback(cur)
+            transaction_open = False
+            flash(
+                "La referenza è cambiata mentre la cancellavi. "
+                "Ricarica la pagina e riprova.",
+                "warning",
+            )
+            return redirect(url_for("admin_referenze", stato="tutti"))
+
+        previous_response_state = str(reference["stato_risposta"] or "")
+        previous_verification_state = str(reference["stato_verifica"] or "")
+        was_publication_approved = bool(
+            reference["pubblicazione_approvata_admin"]
+        )
+
+        cur.execute(sql("""
+            UPDATE referenze
+            SET stato_risposta = 'cancellata',
+                stato_verifica = 'revocata',
+                esperienza_diretta = FALSE,
+                testo_referente = NULL,
+                autorizza_pubblicazione = FALSE,
+                autorizza_testo_pubblico = FALSE,
+                autorizza_contatto_verifica = FALSE,
+                pubblicazione_approvata_admin = FALSE,
+                pubblicazione_approvata_at = NULL,
+                pubblicazione_approvata_da_admin_id = NULL,
+                visibile_profilo = FALSE,
+                consenso_versione = NULL,
+                consenso_trattamento_at = NULL,
+                autorizzazione_pubblica_at = NULL,
+                autorizzazione_testo_at = NULL,
+                autorizzazione_contatto_at = NULL,
+                risposta_at = NULL,
+                verificata_at = NULL,
+                verificata_da_admin_id = NULL,
+                metodo_verifica = 'nessuno',
+                nota_admin = NULL,
+                nota_pubblica = NULL,
+                revocata_at = NULL,
+                cancellata_at = CURRENT_TIMESTAMP,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND versione = ?
+              AND stato_risposta <> 'cancellata'
+        """), (int(referenza_id), expected_version))
+        if cur.rowcount != 1:
+            _schede_profilo_rollback(cur)
+            transaction_open = False
+            flash(
+                "La referenza è cambiata mentre la cancellavi. "
+                "Ricarica la pagina e riprova.",
+                "warning",
+            )
+            return redirect(url_for("admin_referenze", stato="tutti"))
+
+        cur.execute(sql("""
+            UPDATE referenze_contatti
+            SET email_cifrata = NULL, email_nonce = NULL, email_tag = NULL,
+                email_key_id = NULL, email_hash = NULL,
+                nome_cifrato = NULL, nome_nonce = NULL, nome_tag = NULL,
+                telefono_cifrato = NULL, telefono_nonce = NULL,
+                telefono_tag = NULL,
+                messaggio_invito_cifrato = NULL,
+                messaggio_invito_nonce = NULL,
+                messaggio_invito_tag = NULL,
+                token_hash = NULL, token_expires_at = NULL,
+                token_consumed_at = CURRENT_TIMESTAMP,
+                aperto_at = NULL, ultimo_errore_invio = NULL,
+                contatto_purge_at = CURRENT_TIMESTAMP,
+                contatto_purged_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE referenza_id = ?
+        """), (int(referenza_id),))
+        _referenza_evento(
+            cur,
+            int(referenza_id),
+            "referenza_cancellata_admin",
+            "admin",
+            attore_utente_id=int(g.utente["id"]),
+            dettagli={
+                "stato_risposta_precedente": previous_response_state,
+                "stato_verifica_precedente": previous_verification_state,
+                "pubblicazione_approvata_precedente": (
+                    was_publication_approved
+                ),
+                "versione_precedente": expected_version,
+            },
+        )
+        _schede_profilo_commit(cur)
+        transaction_open = False
+        invalidate_admin_counters()
+        flash(
+            "Referenza eliminata. Contenuti e recapiti sono stati rimossi.",
+            "success",
+        )
+    except Exception as exc:
+        if transaction_open:
+            _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore cancellazione admin referenza",
+            exc,
+            {"referenza_id": referenza_id, "utente_id": owner_id},
+            production=True,
+        )
+        flash("Non è stato possibile eliminare la referenza.", "error")
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return redirect(url_for("admin_referenze", stato="tutti"))
 
 
 # ==========================================================
@@ -17981,7 +18230,10 @@ def _referenze_tables_exist(cur):
             SELECT
                 to_regclass('public.referenze') AS referenze,
                 to_regclass('public.referenze_contatti') AS contatti,
-                to_regclass('public.referenze_eventi') AS eventi
+                to_regclass('public.referenze_eventi') AS eventi,
+                to_regclass(
+                    'public.referenze_notifiche_outbox'
+                ) AS notifiche_outbox
         """))
         row = cur.fetchone()
         return bool(
@@ -17989,15 +18241,19 @@ def _referenze_tables_exist(cur):
             and row["referenze"]
             and row["contatti"]
             and row["eventi"]
+            and row["notifiche_outbox"]
         )
 
     cur.execute(sql("""
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
-          AND name IN ('referenze', 'referenze_contatti', 'referenze_eventi')
+          AND name IN (
+              'referenze', 'referenze_contatti', 'referenze_eventi',
+              'referenze_notifiche_outbox'
+          )
     """))
-    return len(cur.fetchall()) == 3
+    return len(cur.fetchall()) == 4
 
 
 def _referenze_iso(value):
@@ -21867,6 +22123,32 @@ def referenza_rispondi():
                 key_id=row["email_key_id"] or REFERENCE_KEY_ID,
             )
 
+        owner_language = normalize_language(
+            row["utente_lingua_interfaccia"]
+        )
+        owner_title = translate(
+            "reference.notification.title", owner_language
+        )
+        owner_message = translate(
+            (
+                "reference.notification.received"
+                if direct else "reference.notification.declined"
+            ),
+            owner_language,
+        )
+        owner_link = url_for("dashboard") + "#referenze"
+        admin_title = "Nuova referenza da controllare 🤝"
+        admin_message = (
+            f"@{row['utente_username']} ha ricevuto una nuova "
+            "referenza da verificare."
+        )
+        admin_link = url_for("admin_referenze", stato="da_gestire")
+        success_response = app.make_response(render_template(
+            "referenza_risposta_esito.html", confermata=direct
+        ))
+        success_response.headers["Referrer-Policy"] = "no-referrer"
+        success_response.headers["Cache-Control"] = "no-store"
+
         _schede_profilo_begin(cur)
         token_not_expired = (
             "c.token_expires_at > CURRENT_TIMESTAMP"
@@ -21956,69 +22238,28 @@ def referenza_rispondi():
                 ),
             },
         )
+        enqueue_reference_response_notifications(
+            cur,
+            sql,
+            reference_id=reference_id,
+            reference_version=int(row["versione"] or 0) + 1,
+            owner_id=owner_id,
+            owner_title=owner_title,
+            owner_message=owner_message,
+            owner_link=owner_link,
+            direct=direct,
+            admin_title=admin_title,
+            admin_message=admin_message,
+            admin_link=admin_link,
+        )
         _schede_profilo_commit(cur)
+
+        # Da qui al ritorno non deve esserci I/O Redis/Socket.IO/push. Anche
+        # il refresh automatico di Flask-Session viene saltato per questa sola
+        # risposta: il token e' gia' consumato atomicamente nel database.
         session.pop("referenza_access", None)
-        invalidate_admin_counters()
-
-        try:
-            owner_language = normalize_language(
-                row["utente_lingua_interfaccia"]
-            )
-            _crea_notifica(
-                owner_id,
-                translate("reference.notification.title", owner_language),
-                (
-                    translate("reference.notification.received", owner_language)
-                    if direct else
-                    translate("reference.notification.declined", owner_language)
-                ),
-                tipo="profilo",
-                link=url_for("dashboard") + "#referenze",
-                db_connection=conn,
-            )
-            emit_update_notifications(owner_id)
-        except Exception as notification_exc:
-            log_exception_safe(
-                "Referenza salvata ma notifica non inviata",
-                notification_exc,
-                {"referenza_id": reference_id, "utente_id": owner_id},
-                production=True,
-            )
-
-        # Una risposta positiva entra subito nella coda di controllo. La
-        # notifica admin viene creata soltanto dopo il commit e non deve mai
-        # trasformare un salvataggio riuscito in un errore mostrato al
-        # referente.
-        if direct:
-            try:
-                notifica_admin_evento(
-                    "Nuova referenza da controllare 🤝",
-                    (
-                        f"@{row['utente_username']} ha ricevuto una nuova "
-                        "referenza da verificare."
-                    ),
-                    link=url_for("admin_referenze", stato="da_gestire"),
-                    push=True,
-                    defer_push=True,
-                    db_connection=conn,
-                )
-            except Exception as admin_notification_exc:
-                log_exception_safe(
-                    "Referenza salvata ma notifica admin non inviata",
-                    admin_notification_exc,
-                    {
-                        "referenza_id": reference_id,
-                        "utente_id": owner_id,
-                    },
-                    production=True,
-                )
-
-        response = app.make_response(render_template(
-            "referenza_risposta_esito.html", confermata=direct
-        ))
-        response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Cache-Control"] = "no-store"
-        return response
+        g.skip_server_session_save = True
+        return success_response
     except ValueError as exc:
         _schede_profilo_rollback(cur)
         flash(_referenza_ui_message(str(exc)), "error")
@@ -25006,7 +25247,7 @@ def invia_push(user_id, title, body, url=None):
                 {"user_id": user_id},
                 production=True
             )
-            return
+            return False
 
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
@@ -25015,7 +25256,7 @@ def invia_push(user_id, title, body, url=None):
                 {"user_id": user_id},
                 production=True
             )
-            return
+            return False
 
         conn = psycopg2.connect(
             database_url,
@@ -25043,7 +25284,9 @@ def invia_push(user_id, title, body, url=None):
                 "⚠️ [invia_push] nessuna subscription trovata",
                 {"user_id": user_id}
             )
-            return
+            # Nessun device registrato: non e' un errore transitorio da
+            # ritentare all'infinito.
+            return True
 
         push_language = normalize_language(subs[0].get("lingua_interfaccia"))
         localized_title = translate_source(title, push_language)
@@ -25173,6 +25416,7 @@ def invia_push(user_id, title, body, url=None):
             )
             pwa_badge_count = 1
 
+        delivery_ok = True
         for sub in subs:
             endpoint = sub["endpoint"]
 
@@ -25260,8 +25504,11 @@ def invia_push(user_id, title, body, url=None):
                         DELETE FROM push_subscriptions
                         WHERE endpoint = %s
                     """, (endpoint,))
+                else:
+                    delivery_ok = False
 
             except requests.exceptions.Timeout:
+                delivery_ok = False
                 security_log(
                     "⚠️ [invia_push] timeout",
                     {
@@ -25272,6 +25519,7 @@ def invia_push(user_id, title, body, url=None):
                 )
 
             except Exception as e:
+                delivery_ok = False
                 log_exception_safe(
                     "❌ [invia_push] errore generico",
                     e,
@@ -25286,6 +25534,7 @@ def invia_push(user_id, title, body, url=None):
             "🔔 [invia_push] END",
             {"user_id": user_id}
         )
+        return delivery_ok
 
     except Exception as e:
         log_exception_safe(
@@ -25294,6 +25543,7 @@ def invia_push(user_id, title, body, url=None):
             {"user_id": user_id},
             production=True
         )
+        return False
 
     finally:
         try:
@@ -25436,6 +25686,115 @@ def notifica_admin_evento(
                 conn.close()
         except Exception:
             pass
+
+
+# ==========================================================
+# 🤝 REFERENZE — OUTBOX NOTIFICHE PERSISTENTE
+# ==========================================================
+
+def _reference_outbox_env_int(name, default, minimum, maximum):
+    try:
+        value = int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        value = int(default)
+    return max(int(minimum), min(value, int(maximum)))
+
+
+REFERENCE_OUTBOX_BATCH_SIZE = _reference_outbox_env_int(
+    "REFERENCE_OUTBOX_BATCH_SIZE", 20, 1, 100
+)
+REFERENCE_OUTBOX_POLL_SECONDS = _reference_outbox_env_int(
+    "REFERENCE_OUTBOX_POLL_SECONDS", 2, 1, 60
+)
+REFERENCE_OUTBOX_LEASE_SECONDS = _reference_outbox_env_int(
+    "REFERENCE_OUTBOX_LEASE_SECONDS", 300, 30, 3600
+)
+REFERENCE_OUTBOX_RETRY_BASE_SECONDS = _reference_outbox_env_int(
+    "REFERENCE_OUTBOX_RETRY_BASE_SECONDS", 5, 1, 300
+)
+REFERENCE_OUTBOX_RETRY_MAX_SECONDS = _reference_outbox_env_int(
+    "REFERENCE_OUTBOX_RETRY_MAX_SECONDS", 900, 30, 21600
+)
+
+
+def _reference_outbox_connection():
+    """Restituisce una connessione di proprieta' esclusiva del worker."""
+
+    if app.config.get("IS_POSTGRES"):
+        return get_db_connection()
+
+    # get_db_connection() conserva SQLite in ``g`` per le request. Il worker
+    # apre/chiude piu' connessioni per separare claim, notifica e provider, per
+    # cui qui non deve riutilizzare una connessione gia' chiusa.
+    connection = sqlite3.connect("database.db", timeout=5)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON;")
+    connection.execute("PRAGMA journal_mode = WAL;")
+    connection.execute("PRAGMA synchronous = NORMAL;")
+    connection.execute("PRAGMA busy_timeout = 5000;")
+    return connection
+
+
+def _reference_outbox_emit_realtime(user_id, recipient_kind):
+    emit_update_notifications(int(user_id))
+    if recipient_kind == "admin":
+        invalidate_admin_counters()
+
+
+def processa_referenze_notifiche_outbox_once(limit=None):
+    """Elabora un batch; usato sia dal loop sia dai test/runner esterni."""
+
+    def log_outbox_error(message, exc):
+        log_exception_safe(
+            message,
+            exc,
+            production=True,
+        )
+
+    return process_reference_notification_outbox_once(
+        connect=_reference_outbox_connection,
+        cursor_factory=get_cursor,
+        sql=sql,
+        is_postgres=app.config.get("IS_POSTGRES"),
+        send_push=lambda user_id, title, body, link: invia_push(
+            user_id,
+            title,
+            body,
+            url=link,
+        ),
+        emit_realtime=_reference_outbox_emit_realtime,
+        limit=limit or REFERENCE_OUTBOX_BATCH_SIZE,
+        lease_seconds=REFERENCE_OUTBOX_LEASE_SECONDS,
+        retry_base_seconds=REFERENCE_OUTBOX_RETRY_BASE_SECONDS,
+        retry_max_seconds=REFERENCE_OUTBOX_RETRY_MAX_SECONDS,
+        log_error=log_outbox_error,
+    )
+
+
+def referenze_notifiche_outbox_background_loop():
+    """Consuma l'outbox; il DB rende innocui restart e worker multipli."""
+
+    socketio.sleep(1)
+    while True:
+        try:
+            with app.app_context():
+                result = processa_referenze_notifiche_outbox_once()
+            # Svuota velocemente un arretrato senza fare busy polling.
+            pause = 0.1 if result.get("claimed") else REFERENCE_OUTBOX_POLL_SECONDS
+        except Exception as exc:
+            log_exception_safe(
+                "Errore loop outbox notifiche referenze",
+                exc,
+                production=True,
+            )
+            pause = REFERENCE_OUTBOX_POLL_SECONDS
+        socketio.sleep(pause)
+
+
+if APP_RUNTIME_ROLE == "web":
+    socketio.start_background_task(
+        referenze_notifiche_outbox_background_loop
+    )
 
 
 # ==========================================================

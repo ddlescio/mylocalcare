@@ -49,6 +49,12 @@ class ReferenceAccountCleanupTest(unittest.TestCase):
                 tipo_evento TEXT,
                 dettagli_snapshot TEXT
             );
+            CREATE TABLE referenze_notifiche_outbox (
+                id INTEGER PRIMARY KEY,
+                referenza_id INTEGER NOT NULL,
+                destinatario_id INTEGER NOT NULL,
+                messaggio TEXT
+            );
         """)
         self.conn.executemany(
             """
@@ -88,6 +94,19 @@ class ReferenceAccountCleanupTest(unittest.TestCase):
                 (2000, 20, "invito_inviato", "audit-20"),
             ),
         )
+        self.conn.executemany(
+            """
+                INSERT INTO referenze_notifiche_outbox (
+                    id, referenza_id, destinatario_id, messaggio
+                ) VALUES (?, ?, ?, ?)
+            """,
+            (
+                (500, 10, 7, "owner 10"),
+                (501, 11, 2, "admin 11"),
+                (502, 20, 7, "owner destinatario da eliminare"),
+                (503, 20, 8, "da conservare"),
+            ),
+        )
         self.conn.commit()
 
     def tearDown(self):
@@ -107,6 +126,7 @@ class ReferenceAccountCleanupTest(unittest.TestCase):
         )
 
         self.assertEqual(deleted, {
+            "referenze_notifiche_outbox": 3,
             "referenze_eventi": 2,
             "referenze_contatti": 2,
             "referenze": 2,
@@ -114,6 +134,7 @@ class ReferenceAccountCleanupTest(unittest.TestCase):
         self.assertEqual(self._ids("referenze"), [20])
         self.assertEqual(self._ids("referenze_contatti"), [200])
         self.assertEqual(self._ids("referenze_eventi"), [2000])
+        self.assertEqual(self._ids("referenze_notifiche_outbox"), [503])
 
     def test_does_not_commit_outside_the_account_deletion_transaction(self):
         purge_user_reference_data(
@@ -126,6 +147,10 @@ class ReferenceAccountCleanupTest(unittest.TestCase):
         self.assertEqual(self._ids("referenze"), [10, 11, 20])
         self.assertEqual(self._ids("referenze_contatti"), [100, 101, 200])
         self.assertEqual(self._ids("referenze_eventi"), [1000, 1001, 2000])
+        self.assertEqual(
+            self._ids("referenze_notifiche_outbox"),
+            [500, 501, 502, 503],
+        )
 
     def test_propagates_errors_so_account_deletion_can_rollback_atomically(self):
         self.conn.executescript("""
@@ -150,6 +175,10 @@ class ReferenceAccountCleanupTest(unittest.TestCase):
         self.assertEqual(self._ids("referenze"), [10, 11, 20])
         self.assertEqual(self._ids("referenze_contatti"), [100, 101, 200])
         self.assertEqual(self._ids("referenze_eventi"), [1000, 1001, 2000])
+        self.assertEqual(
+            self._ids("referenze_notifiche_outbox"),
+            [500, 501, 502, 503],
+        )
 
 
 class ReferenceAccountCleanupRolloutTest(unittest.TestCase):
