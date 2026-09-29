@@ -2260,7 +2260,7 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 
 # ✅ Mittente unico e coerente per tutte le email automatiche
 MAIL_FROM_ADDRESS = os.getenv('MAIL_FROM_ADDRESS', 'info@mylocalcare.it')
-MAIL_FROM_NAME = os.getenv('MAIL_FROM_NAME', 'MyLocalCare')
+MAIL_FROM_NAME = 'MyLocalCare'
 
 app.config['MAIL_DEFAULT_SENDER'] = (MAIL_FROM_NAME, MAIL_FROM_ADDRESS)
 
@@ -14659,10 +14659,10 @@ def processa_match_nuovi_annunci(channel=None):
 # EMAIL TRANSAZIONALI — LAYOUT, FOOTER, COMPLIANCE
 # ==========================================================
 
-EMAIL_LEGAL_NAME = os.getenv(
-    "EMAIL_LEGAL_NAME",
-    "MyLocalCare - Davide Lescio"
-)
+EMAIL_FOOTER_BRAND = "MyLocalCare"
+EMAIL_FOOTER_CONTACT = "info@mylocalcare.it"
+EMAIL_FOOTER_TEXT_MARKER = "Comunicazione automatica di servizio"
+EMAIL_FOOTER_HTML_MARKER = 'data-mylocalcare-email-footer="true"'
 
 
 def _email_privacy_url():
@@ -14684,8 +14684,9 @@ def _email_footer_text():
     """
     return (
         "\n\n---\n"
-        "MyLocalCare\n"
-        f"{EMAIL_LEGAL_NAME}\n"
+        f"{EMAIL_FOOTER_BRAND}\n"
+        f"{EMAIL_FOOTER_TEXT_MARKER}\n"
+        f"{EMAIL_FOOTER_CONTACT}\n"
         "Informativa privacy disponibile sul sito MyLocalCare."
     )
 
@@ -14699,11 +14700,19 @@ def _email_footer_html():
     privacy_url = _email_privacy_url()
 
     return f"""
-      <div style="margin-top:28px;padding-top:18px;border-top:1px solid #e5e7eb;
+      <div {EMAIL_FOOTER_HTML_MARKER}
+           style="margin-top:28px;padding-top:18px;border-top:1px solid #e5e7eb;
                   font-size:12px;line-height:1.5;color:#64748b;">
-        <div style="font-weight:700;color:#334155;margin-bottom:4px;">MyLocalCare</div>
-        <div>{html_escape(EMAIL_LEGAL_NAME)}</div>
+        <div style="font-weight:700;color:#334155;margin-bottom:4px;">
+          {html_escape(EMAIL_FOOTER_BRAND)}
+        </div>
+        <div>{html_escape(EMAIL_FOOTER_TEXT_MARKER)}</div>
         <div style="margin-top:8px;">
+          <a href="mailto:{html_escape(EMAIL_FOOTER_CONTACT)}"
+             style="color:#2563eb;text-decoration:underline;">
+            {html_escape(EMAIL_FOOTER_CONTACT)}
+          </a>
+          <span aria-hidden="true"> · </span>
           <a href="{privacy_url}" style="color:#2563eb;text-decoration:underline;">
             Informativa privacy
           </a>
@@ -14804,7 +14813,7 @@ def _aggiungi_footer_text_se_manca(testo):
     if not testo:
         return ""
 
-    if EMAIL_LEGAL_NAME in testo:
+    if EMAIL_FOOTER_TEXT_MARKER in testo:
         return testo
 
     return testo + _email_footer_text()
@@ -14816,7 +14825,7 @@ def _aggiungi_footer_html_se_manca(html_finale):
     if not html_finale:
         return ""
 
-    if EMAIL_LEGAL_NAME in html_finale:
+    if EMAIL_FOOTER_HTML_MARKER in html_finale:
         return html_finale
 
     footer = _email_footer_html()
@@ -15015,7 +15024,7 @@ def _invia_email(
             return False
 
         from_address = os.getenv("MAIL_FROM_ADDRESS", MAIL_FROM_ADDRESS).strip()
-        from_name = os.getenv("MAIL_FROM_NAME", MAIL_FROM_NAME).strip() or "MyLocalCare"
+        from_name = MAIL_FROM_NAME
         message_stream = os.getenv("POSTMARK_MESSAGE_STREAM", "outbound").strip() or "outbound"
 
         mittente = f"{from_name} <{from_address}>"
