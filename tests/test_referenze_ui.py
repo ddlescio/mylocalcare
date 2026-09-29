@@ -69,7 +69,23 @@ class ReferenzeUiTest(unittest.TestCase):
         self.assertIn("('annunci', tr('profile.announcements'))", self.dashboard_source)
         self.assertLess(self.dashboard_source.index("('info', tr('profile.info'))"), self.dashboard_source.index("('recensioni', tr('profile.reviews'))"))
         self.assertLess(self.dashboard_source.index("('recensioni', tr('profile.reviews'))"), self.dashboard_source.index("('foto', tr('profile.photos'))"))
+        self.assertIn(
+            "feedback_review_rows = recensioni_ricevute|default([], true)",
+            self.dashboard_source,
+        )
+        self.assertIn(
+            "feedback_references = referenze_pubbliche|default([], true)",
+            self.dashboard_source,
+        )
         self.assertIn("feedback_total_count = feedback_reviews_count + feedback_references_count", self.dashboard_source)
+        self.assertIn(
+            "key == 'recensioni' and feedback_total_count > 0",
+            self.dashboard_source,
+        )
+        self.assertIn(
+            '<span class="profile-tab-count" aria-hidden="true">{{ feedback_total_count }}</span>',
+            self.dashboard_source,
+        )
         self.assertIn("feedback_received_count + (feedback_written_rows|length)", self.dashboard_source)
         self.assertIn("referenza.get('stato_risposta') == 'risposta_ricevuta'", self.dashboard_source)
         self.assertIn("referenze_pubbliche|default([], true)", self.dashboard_source)

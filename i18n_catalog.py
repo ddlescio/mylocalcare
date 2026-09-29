@@ -1168,7 +1168,6 @@ PHRASE_ROWS = [
     ("Accedi per rispondere alla richiesta.", "Sign in to respond to the request.", "Connectez-vous pour répondre à la demande.", "Inicia sesión para responder a la solicitud.", "Melde dich an, um auf die Anfrage zu antworten."),
     ("La risposta indicata non è valida.", "The selected response is not valid.", "La réponse sélectionnée n’est pas valide.", "La respuesta seleccionada no es válida.", "Die ausgewählte Antwort ist ungültig."),
     ("Non è stato possibile salvare la risposta. Riprova.", "The response could not be saved. Please try again.", "La réponse n’a pas pu être enregistrée. Réessayez.", "No se ha podido guardar la respuesta. Inténtalo de nuevo.", "Die Antwort konnte nicht gespeichert werden. Versuche es erneut."),
-    ("Via Pasubio, Abbiategrasso (MI), Italia", "Via Pasubio, Abbiategrasso (MI), Italy", "Via Pasubio, Abbiategrasso (MI), Italie", "Via Pasubio, Abbiategrasso (MI), Italia", "Via Pasubio, Abbiategrasso (MI), Italien"),
     ("(nessuna recensione)", "(no reviews)", "(aucun avis)", "(sin reseñas)", "(keine Bewertungen)"),
     ("Carica la tua", "Upload your", "Importez votre", "Sube tu", "Lade dein"),
     ("foto profilo", "profile photo", "photo de profil", "foto de perfil", "Profilfoto"),

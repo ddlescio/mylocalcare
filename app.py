@@ -14177,11 +14177,6 @@ EMAIL_LEGAL_NAME = os.getenv(
     "MyLocalCare - Davide Lescio"
 )
 
-EMAIL_PHYSICAL_ADDRESS = os.getenv(
-    "EMAIL_PHYSICAL_ADDRESS",
-    "Via Pasubio, Abbiategrasso (MI), Italia"
-)
-
 
 def _email_privacy_url():
     """
@@ -14204,7 +14199,6 @@ def _email_footer_text():
         "\n\n---\n"
         "MyLocalCare\n"
         f"{EMAIL_LEGAL_NAME}\n"
-        f"{EMAIL_PHYSICAL_ADDRESS}\n"
         "Informativa privacy disponibile sul sito MyLocalCare."
     )
 
@@ -14222,7 +14216,6 @@ def _email_footer_html():
                   font-size:12px;line-height:1.5;color:#64748b;">
         <div style="font-weight:700;color:#334155;margin-bottom:4px;">MyLocalCare</div>
         <div>{html_escape(EMAIL_LEGAL_NAME)}</div>
-        <div>{html_escape(EMAIL_PHYSICAL_ADDRESS)}</div>
         <div style="margin-top:8px;">
           <a href="{privacy_url}" style="color:#2563eb;text-decoration:underline;">
             Informativa privacy
