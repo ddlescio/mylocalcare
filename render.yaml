@@ -60,7 +60,7 @@ projects:
       disk:
         name: disk
         mountPath: /uploads
-        sizeGB: 1
+        sizeGB: 5
       autoDeployTrigger: commit
 
     - type: web
