@@ -102,12 +102,12 @@
         <div class="settings-row-left min-w-0">
           <span class="settings-row-icon">📧</span>
           <div class="min-w-0">
-            <div class="settings-row-title">Notifiche via email</div>
+            <div class="settings-row-title">{{ tr('settings.optional_email_title') }}</div>
             <div id="emailSettingsStatus" class="settings-row-desc">
               {% if email_notifiche %}
-                Notifiche email attive.
+                {{ tr('settings.optional_email_on') }}
               {% else %}
-                Notifiche email disattivate.
+                {{ tr('settings.optional_email_off') }}
               {% endif %}
             </div>
           </div>
@@ -120,15 +120,40 @@
         </button>
       </div>
 
+      <div class="settings-row settings-row-static settings-service-notice">
+        <div class="settings-row-left min-w-0">
+          <span class="settings-row-icon">🛡️</span>
+          <div class="min-w-0">
+            <div class="settings-row-title">
+              {{ tr('settings.essential_listing_email_title') }}
+            </div>
+            <div class="settings-row-desc">
+              {{ tr('settings.essential_listing_email_body') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 🔔 NOTIFICHE PUSH -->
-      <div class="settings-row settings-row-static">
+      <div class="settings-row settings-row-static"
+           id="pushSettingsRow"
+           data-server-enabled="{{ 1 if push_notifiche else 0 }}">
         <div class="settings-row-left min-w-0">
           <span class="settings-row-icon">🔔</span>
           <div class="min-w-0">
             <div class="settings-row-title">Notifiche push</div>
             <div id="pushSettingsStatus" class="settings-row-desc">
-              Controllo stato notifiche...
+              {% if push_notifiche %}
+                {{ tr('settings.push_account_on') }}
+              {% else %}
+                {{ tr('settings.push_account_off') }}
+              {% endif %}
             </div>
+            <button type="button"
+                    id="pushDeviceEnableBtn"
+                    class="hidden mt-2 text-xs font-extrabold text-blue-600 underline underline-offset-2">
+              {{ tr('settings.push_authorize_device') }}
+            </button>
           </div>
         </div>
 
@@ -647,8 +672,28 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("DOMContentLoaded", async () => {
   const btn = document.getElementById("pushSettingsBtn");
   const status = document.getElementById("pushSettingsStatus");
+  const row = document.getElementById("pushSettingsRow");
+  const deviceBtn = document.getElementById("pushDeviceEnableBtn");
 
-  if (!btn || !status) return;
+  if (!btn || !status || !row || !deviceBtn) return;
+
+  let serverEnabled = row.dataset.serverEnabled === "1";
+  const currentUserId = {{ session.get('utente_id')|tojson }};
+  const copy = {
+    serverOn: {{ tr('settings.push_account_on')|tojson }},
+    serverOff: {{ tr('settings.push_account_off')|tojson }},
+    unsupportedDevice: {{ tr_text('Le notifiche push non sono supportate su questo dispositivo.')|tojson }},
+    unsupportedBrowser: {{ tr_text('Le notifiche push non sono supportate in questo browser.')|tojson }},
+    httpsRequired: {{ tr_text('Le notifiche push richiedono una connessione sicura HTTPS.')|tojson }},
+    blocked: {{ tr_text('Notifiche bloccate. Riattivale dalle impostazioni del dispositivo/browser.')|tojson }},
+    deviceActive: {{ tr_text('Notifiche push attive su questo dispositivo.')|tojson }},
+    permissionPending: {{ tr_text('Attiva gli avvisi quando l’app è chiusa o in background.')|tojson }},
+    syncPending: {{ tr_text('Permesso concesso, ma notifiche non ancora sincronizzate.')|tojson }},
+    unavailable: {{ tr_text('Funzione di attivazione push non disponibile.')|tojson }},
+    enabling: {{ tr_text('Attivazione notifiche push in corso...')|tojson }},
+    enableFailed: {{ tr_text('Non è stato possibile attivare le notifiche push. Riprova.')|tojson }},
+    manageError: {{ tr_text('Errore durante la gestione delle notifiche push.')|tojson }}
+  };
 
   function setBtn(mode) {
     btn.disabled = false;
@@ -656,13 +701,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (mode === "active") {
       btn.textContent = "Disattiva";
       btn.className = "settings-push-btn settings-push-btn-danger";
-      return;
-    }
-
-    if (mode === "blocked") {
-      btn.textContent = "Bloccate";
-      btn.className = "settings-push-btn settings-push-btn-blocked";
-      btn.disabled = true;
       return;
     }
 
@@ -685,123 +723,123 @@ document.addEventListener("DOMContentLoaded", async () => {
     return await registration.pushManager.getSubscription();
   }
 
+  async function updateServerPreference(enabled) {
+    const response = await fetch("{{ url_for('aggiorna_preferenza_push') }}", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "{{ csrf_token() }}"
+      },
+      body: JSON.stringify({ attivo: enabled === true })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "push_preference_update_failed");
+    }
+    serverEnabled = data.push_notifiche === 1;
+    row.dataset.serverEnabled = serverEnabled ? "1" : "0";
+    window.myLocalCarePushPreferenceEnabled = serverEnabled;
+  }
+
   async function refreshPushState() {
-    setBtn("loading");
+    deviceBtn.classList.add("hidden");
+
+    if (!serverEnabled) {
+      status.textContent = copy.serverOff;
+      setBtn("inactive");
+      return;
+    }
+
+    setBtn("active");
 
     if (!("Notification" in window)) {
-      status.textContent = "Le notifiche push non sono supportate su questo dispositivo.";
-      setBtn("blocked");
+      status.textContent = `${copy.serverOn} ${copy.unsupportedDevice}`;
       return;
     }
 
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      status.textContent = "Le notifiche push non sono supportate in questo browser.";
-      setBtn("blocked");
+      status.textContent = `${copy.serverOn} ${copy.unsupportedBrowser}`;
       return;
     }
 
     if (!window.isSecureContext) {
-      status.textContent = "Le notifiche push richiedono una connessione sicura HTTPS.";
-      setBtn("blocked");
+      status.textContent = `${copy.serverOn} ${copy.httpsRequired}`;
       return;
     }
 
     if (Notification.permission === "denied") {
-      status.textContent = "Notifiche bloccate. Riattivale dalle impostazioni del dispositivo/browser.";
-      setBtn("blocked");
+      status.textContent = `${copy.serverOn} ${copy.blocked}`;
       return;
     }
 
     const subscription = await getCurrentSubscription();
 
     if (Notification.permission === "granted" && subscription) {
-      status.textContent = "Notifiche push attive su questo dispositivo.";
-      setBtn("active");
+      status.textContent = copy.deviceActive;
       return;
     }
 
     if (Notification.permission === "granted" && !subscription) {
-      status.textContent = "Permesso concesso, ma notifiche non ancora sincronizzate.";
-      setBtn("inactive");
-      return;
+      status.textContent = `${copy.serverOn} ${copy.syncPending}`;
+    } else {
+      status.textContent = `${copy.serverOn} ${copy.permissionPending}`;
     }
 
-    status.textContent = "Attiva gli avvisi quando l’app è chiusa o in background.";
-    setBtn("inactive");
+    deviceBtn.classList.remove("hidden");
   }
 
   btn.addEventListener("click", async () => {
     setBtn("loading");
 
     try {
-      const subscription = await getCurrentSubscription();
-
-      /*
-        Se esiste una subscription locale, il pulsante è in modalità Disattiva.
-        La eliminiamo dal browser e poi avvisiamo il backend.
-      */
-      if (subscription) {
-        const endpoint = subscription.endpoint;
-
-        await subscription.unsubscribe();
-
-        await fetch("/push/unsubscribe", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": "{{ csrf_token() }}"
-          },
-          body: JSON.stringify({ endpoint })
-        });
-
-        const currentUserId = {{ session.get('utente_id')|tojson }};
+      if (serverEnabled) {
+        await updateServerPreference(false);
+        const subscription = await getCurrentSubscription();
+        if (subscription) await subscription.unsubscribe();
+        if (currentUserId) {
+          localStorage.setItem(`lc_push_synced_user_${currentUserId}`, "disabled");
+        }
+      } else {
+        await updateServerPreference(true);
         if (currentUserId) {
           localStorage.removeItem(`lc_push_synced_user_${currentUserId}`);
         }
-
-        status.textContent = "Notifiche push disattivate su questo dispositivo.";
-        setBtn("inactive");
-        return;
-      }
-
-      /*
-        Se non esiste subscription, usiamo la funzione globale già presente in base.html.
-      */
-      if (typeof registerPush !== "function") {
-        status.textContent = "Funzione di attivazione push non disponibile.";
-        setBtn("inactive");
-        return;
-      }
-
-      status.textContent = "Attivazione notifiche push in corso...";
-
-      const ok = await registerPush();
-
-      if (ok === true) {
-        const currentUserId = {{ session.get('utente_id')|tojson }};
-        if (currentUserId) {
-          localStorage.setItem(`lc_push_synced_user_${currentUserId}`, new Date().toISOString());
+        if (("Notification" in window) && Notification.permission === "granted") {
+          await registerPush();
         }
-
-        status.textContent = "Notifiche push attive su questo dispositivo.";
-        setBtn("active");
-        return;
       }
-
-      if (Notification.permission === "denied") {
-        status.textContent = "Notifiche bloccate. Riattivale dalle impostazioni del dispositivo/browser.";
-        setBtn("blocked");
-        return;
-      }
-
-      status.textContent = "Non è stato possibile attivare le notifiche push. Riprova.";
-      setBtn("inactive");
-
+      await refreshPushState();
     } catch (err) {
       console.error("Errore gestione notifiche push:", err);
-      status.textContent = "Errore durante la gestione delle notifiche push.";
-      setBtn("inactive");
+      status.textContent = copy.manageError;
+      setBtn(serverEnabled ? "active" : "inactive");
+    }
+  });
+
+  deviceBtn.addEventListener("click", async () => {
+    deviceBtn.disabled = true;
+    status.textContent = copy.enabling;
+    try {
+      if (typeof registerPush !== "function") {
+        status.textContent = copy.unavailable;
+        return;
+      }
+      const ok = await registerPush();
+      if (ok === true && currentUserId) {
+        localStorage.setItem(
+          `lc_push_synced_user_${currentUserId}`,
+          new Date().toISOString()
+        );
+      } else if (Notification.permission !== "denied") {
+        status.textContent = copy.enableFailed;
+      }
+    } catch (err) {
+      console.error("Errore attivazione notifiche push:", err);
+      status.textContent = copy.manageError;
+    } finally {
+      deviceBtn.disabled = false;
+      await refreshPushState();
     }
   });
 
@@ -838,11 +876,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (data.email_notifiche === 1) {
-        status.textContent = "Notifiche email attive.";
+        status.textContent = {{ tr('settings.optional_email_on')|tojson }};
         btn.textContent = "Disattiva";
         btn.className = "settings-push-btn settings-push-btn-danger";
       } else {
-        status.textContent = "Notifiche email disattivate.";
+        status.textContent = {{ tr('settings.optional_email_off')|tojson }};
         btn.textContent = "Attiva";
         btn.className = "settings-push-btn settings-push-btn-active";
       }

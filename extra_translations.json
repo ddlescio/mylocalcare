@@ -6,9 +6,9 @@
       "uk": "{0} - {1} - {2}"
     },
     "(.+) Accedi a MyLocalCare per scoprire le novità e non perdere conversazioni che potrebbero interessarti\\.": {
-      "fil": "{0} Open MyLocalCare upang makita kung ano ang bago at iwasan ang nawawalang usapan na maaaring maging interesado ka.",
-      "ro": "{0} Deschide MyLocalCare pentru a vedea ce este nou și pentru a evita conversații lipsă care ar putea interesa.",
-      "uk": "{0} Відкрийте MyLocalCare, щоб побачити, що це нове і уникнути відсутніх розмов, які можуть зацікавити вас."
+      "fil": "{0} Buksan ang MyLocalCare para makita ang mga bago at hindi mapalampas ang mga usapang maaaring mahalaga sa iyo.",
+      "ro": "{0} Deschide MyLocalCare pentru a vedea noutățile și a nu rata conversațiile care te-ar putea interesa.",
+      "uk": "{0} Відкрийте MyLocalCare, щоб переглянути новини й не пропустити розмови, які можуть вас зацікавити."
     },
     "(.+) ti sta chiamando su MyLocalCare\\.": {
       "fil": "{0} ang tumatawag sa iyo sa MyLocalCare.",
@@ -45,10 +45,10 @@
       "ro": "{0} recenzii",
       "uk": "{0} відгуки"
     },
-    "(hai (?:un|\\d+) messaggi? non letti) su MyLocalCare\\.": {
+    "(hai (?:un messaggio non letto|\\d+ messaggi non letti)) su MyLocalCare\\.": {
       "fil": "{0} sa MyLocalCare.",
       "ro": "{0} pe MyLocalCare.",
-      "uk": "{0} на MyLocalCare."
+      "uk": "{0} у MyLocalCare."
     },
     "- (.+): (\\d+) nuovi annunci": {
       "fil": "- {0}: {1} bagong talaan",
@@ -235,20 +235,20 @@
       "ro": "({0} recenzii)",
       "uk": "({0} відгуків)"
     },
-    "dalla nostra ultima email (hai ricevuto (?:un|\\d+) nuovi? messaggi?)\\.": {
-      "fil": "mula noong huling email namin, {0}.",
-      "ro": "De la ultimul nostru e-mail, {0}.",
-      "uk": "з нашого останнього повідомлення, {0}."
+    "dalla nostra ultima email (hai ricevuto (?:un nuovo messaggio|\\d+ nuovi messaggi))\\.": {
+      "fil": "mula noong huli naming email, {0}.",
+      "ro": "de la ultimul nostru e-mail, {0}.",
+      "uk": "після нашого останнього листа {0}."
     },
     "hai (\\d+) messaggi non letti": {
-      "fil": "mayroon kang {0} di - binabasang mensahe",
-      "ro": "aveți {0} mesaje necitite",
-      "uk": "у вас є {0} Переглянути повідомлення"
+      "fil": "mayroon kang {0} hindi pa nababasang mensahe",
+      "ro": "ai {0} mesaje necitite",
+      "uk": "у вас є {0} непрочитаних повідомлень"
     },
     "hai ricevuto (\\d+) nuovi messaggi": {
       "fil": "nakatanggap ka ng {0} bagong mensahe",
-      "ro": "aţi primit {0} de mesaje noi",
-      "uk": "Ви отримали {0} нові повідомлення"
+      "ro": "ai primit {0} mesaje noi",
+      "uk": "ви отримали {0} нових повідомлень"
     },
     "su 5 — (\\d+) recensione": {
       "fil": "sa 5 - {0} review",
@@ -4832,15 +4832,75 @@
       "ro": "Ultima avertizare: reînnoiește disponibilitatea",
       "uk": "Останнє попередження: оновіть доступність"
     },
-    "La tua disponibilità è scaduta da 7 giorni e la priorità dei tuoi annunci è stata ridotta. Riconfermala ora per ripristinarla.": {
-      "fil": "Pitong araw nang expired ang iyong availability at ibinaba na ang priority ng iyong mga listing. Kumpirmahin itong muli ngayon para maibalik ang priority.",
-      "ro": "Disponibilitatea ta a expirat de 7 zile, iar prioritatea anunțurilor tale a fost redusă. Reconfirm-o acum pentru a restabili prioritatea.",
-      "uk": "Термін дії вашої доступності завершився 7 днів тому, і пріоритет ваших оголошень знижено. Підтвердьте її зараз, щоб відновити пріоритет."
+    "La tua disponibilità è scaduta da 7 giorni. I tuoi annunci ora risultano non disponibili e hanno priorità ridotta. Riconferma entro 7 giorni per evitare l’archiviazione automatica.": {
+      "fil": "Pitong araw nang expired ang iyong availability. Lumalabas na unavailable ang iyong mga listing at mas mababa na ang priority ng mga ito. Kumpirmahin itong muli sa loob ng 7 araw para maiwasan ang awtomatikong pag-archive.",
+      "ro": "Disponibilitatea ta a expirat acum 7 zile. Anunțurile tale apar acum ca indisponibile și au prioritate redusă. Reconfirmă în termen de 7 zile pentru a evita arhivarea automată.",
+      "uk": "Термін підтвердженої доступності завершився 7 днів тому. Ваші оголошення тепер позначені як недоступні та мають нижчий пріоритет. Повторно підтвердьте доступність протягом 7 днів, щоб уникнути автоматичного архівування."
     },
     "Controlla disponibilità": {
       "fil": "Suriin ang availability",
       "ro": "Verifică disponibilitatea",
       "uk": "Перевірити доступність"
+    },
+    "Nuova disponibilità: conferma i tuoi annunci": {
+      "fil": "Bagong availability: kumpirmahin ang iyong mga listing",
+      "ro": "Disponibilitate nouă: confirmă-ți anunțurile",
+      "uk": "Нова функція доступності: підтвердьте свої оголошення"
+    },
+    "MyLocalCare ha introdotto la disponibilità aggiornata per rendere le ricerche più affidabili e aumentare le tue possibilità di ricevere contatti. Controlla i dati dei tuoi servizi e confermali.": {
+      "fil": "Ipinakilala ng MyLocalCare ang updated availability para mas maging maaasahan ang paghahanap at mas malaki ang pagkakataon mong makontak. Suriin at kumpirmahin ang detalye ng iyong mga serbisyo.",
+      "ro": "MyLocalCare a introdus disponibilitatea actualizată pentru căutări mai fiabile și pentru a-ți crește șansele de a fi contactat. Verifică și confirmă datele serviciilor tale.",
+      "uk": "MyLocalCare запровадив актуальний статус доступності, щоб зробити пошук надійнішим і підвищити ваші шанси отримати звернення. Перевірте та підтвердьте дані про свої послуги."
+    },
+    "Promemoria: aggiorna la tua disponibilità": {
+      "fil": "Paalala: i-update ang iyong availability",
+      "ro": "Memento: actualizează-ți disponibilitatea",
+      "uk": "Нагадування: оновіть свою доступність"
+    },
+    "La disponibilità aggiornata rende MyLocalCare più affidabile e aumenta le possibilità di ricevere contatti. Conferma i tuoi annunci: bastano pochi secondi.": {
+      "fil": "Mas nagiging maaasahan ang MyLocalCare kapag updated ang availability at mas malaki ang pagkakataon mong makontak. Kumpirmahin ang iyong mga listing: ilang segundo lang.",
+      "ro": "Disponibilitatea actualizată face MyLocalCare mai fiabil și crește șansele de a fi contactat. Confirmă-ți anunțurile: durează doar câteva secunde.",
+      "uk": "Актуальна доступність робить MyLocalCare надійнішим і підвищує ваші шанси отримати звернення. Підтвердьте свої оголошення — це займе лише кілька секунд."
+    },
+    "Conferma la disponibilità per restare visibile": {
+      "fil": "Kumpirmahin ang availability para manatiling visible",
+      "ro": "Confirmă disponibilitatea pentru a rămâne vizibil",
+      "uk": "Підтвердьте доступність, щоб залишатися видимими"
+    },
+    "Per offrire ricerche più affidabili, MyLocalCare indica quali annunci hanno una disponibilità aggiornata. Conferma ora per mantenere i tuoi annunci visibili e aumentare le possibilità di ricevere contatti.": {
+      "fil": "Para mas maging maaasahan ang paghahanap, ipinapakita ng MyLocalCare kung aling mga listing ang may updated na availability. Kumpirmahin ngayon para manatiling visible ang iyong mga listing at mas malaki ang pagkakataon mong makontak.",
+      "ro": "Pentru căutări mai fiabile, MyLocalCare indică anunțurile cu disponibilitate actualizată. Confirmă acum pentru a-ți menține anunțurile vizibile și a-ți crește șansele de a fi contactat.",
+      "uk": "Щоб зробити пошук надійнішим, MyLocalCare показує, у яких оголошеннях доступність актуальна. Підтвердьте її зараз, щоб оголошення залишалися видимими та зросли ваші шанси отримати звернення."
+    },
+    "Ultimo avviso: conferma la disponibilità": {
+      "fil": "Huling paalala: kumpirmahin ang availability",
+      "ro": "Ultimul memento: confirmă disponibilitatea",
+      "uk": "Останнє нагадування: підтвердьте доступність"
+    },
+    "Per mantenere le ricerche affidabili, i tuoi annunci ora risultano non disponibili e hanno priorità ridotta. Conferma entro 7 giorni per riattivarli ed evitare l'archiviazione automatica.": {
+      "fil": "Para manatiling maaasahan ang paghahanap, lumalabas na unavailable ang iyong mga listing at mas mababa na ang priority ng mga ito. Kumpirmahin sa loob ng 7 araw para ma-reactivate ang mga ito at maiwasan ang awtomatikong pag-archive.",
+      "ro": "Pentru a menține căutările fiabile, anunțurile tale apar acum ca indisponibile și au prioritate redusă. Confirmă în termen de 7 zile pentru a le reactiva și a evita arhivarea automată.",
+      "uk": "Щоб зберегти надійність пошуку, ваші оголошення тепер позначені як недоступні та мають нижчий пріоритет. Підтвердьте доступність протягом 7 днів, щоб знову активувати їх і уникнути автоматичного архівування."
+    },
+    "Annuncio archiviato per disponibilità non confermata": {
+      "fil": "Na-archive ang listing dahil hindi nakumpirma ang availability",
+      "ro": "Anunț arhivat deoarece disponibilitatea nu a fost confirmată",
+      "uk": "Оголошення заархівовано через непідтверджену доступність"
+    },
+    "L'annuncio è stato archiviato e non compare più nei risultati. Contenuti e foto sono conservati: riconferma la disponibilità per riattivarlo.": {
+      "fil": "Na-archive na ang listing at hindi na ito lumalabas sa results. Naka-save ang content at mga larawan: kumpirmahing muli ang availability para ma-reactivate ito.",
+      "ro": "Anunțul a fost arhivat și nu mai apare în rezultate. Conținutul și fotografiile sunt păstrate: reconfirmă disponibilitatea pentru a-l reactiva.",
+      "uk": "Оголошення заархівовано, і воно більше не відображається в результатах. Вміст і фотографії збережено: повторно підтвердьте доступність, щоб активувати його."
+    },
+    "Controlla la disponibilità dei tuoi annunci": {
+      "fil": "Suriin ang availability ng iyong mga listing",
+      "ro": "Verifică disponibilitatea anunțurilor tale",
+      "uk": "Перевірте доступність своїх оголошень"
+    },
+    "Apri il tuo profilo e conferma la disponibilità aggiornata.": {
+      "fil": "Buksan ang iyong profile at kumpirmahin ang updated availability.",
+      "ro": "Deschide profilul și confirmă disponibilitatea actualizată.",
+      "uk": "Відкрийте свій профіль і підтвердьте актуальну доступність."
     },
     "Nuovo interesse": {
       "fil": "Bagong interes",
@@ -7251,6 +7311,51 @@
       "fil": "Pumunta sa iyong dashboard",
       "ro": "Mergi la panoul tău personal",
       "uk": "Перейти до особистої панелі"
+    },
+    "Comunicazione MyLocalCare": {
+      "fil": "Mensahe mula sa MyLocalCare",
+      "ro": "Mesaj MyLocalCare",
+      "uk": "Повідомлення MyLocalCare"
+    },
+    "Comunicazione automatica di servizio": {
+      "fil": "Awtomatikong mensahe ng serbisyo",
+      "ro": "Mesaj automat de serviciu",
+      "uk": "Автоматичне службове повідомлення"
+    },
+    "Apri MyLocalCare": {
+      "fil": "Buksan ang MyLocalCare",
+      "ro": "Deschide MyLocalCare",
+      "uk": "Відкрити MyLocalCare"
+    },
+    "per completare la registrazione su MyLocalCare, conferma il tuo account usando il pulsante presente in questa email.": {
+      "fil": "para makumpleto ang pagpaparehistro sa MyLocalCare, kumpirmahin ang iyong account gamit ang button sa email na ito.",
+      "ro": "pentru a finaliza înregistrarea pe MyLocalCare, confirmă-ți contul folosind butonul din acest e-mail.",
+      "uk": "щоб завершити реєстрацію в MyLocalCare, підтвердьте свій обліковий запис за допомогою кнопки в цьому листі."
+    },
+    "abbiamo ricevuto una richiesta per reimpostare la password del tuo account MyLocalCare.": {
+      "fil": "nakatanggap kami ng kahilingang i-reset ang password ng iyong MyLocalCare account.",
+      "ro": "am primit o solicitare de resetare a parolei contului tău MyLocalCare.",
+      "uk": "ми отримали запит на скидання пароля вашого облікового запису MyLocalCare."
+    },
+    "Per scegliere una nuova password, usa il pulsante presente in questa email.": {
+      "fil": "Gamitin ang button sa email na ito para pumili ng bagong password.",
+      "ro": "Pentru a alege o parolă nouă, folosește butonul din acest e-mail.",
+      "uk": "Щоб вибрати новий пароль, скористайтеся кнопкою в цьому листі."
+    },
+    "Il link è valido per 1 ora.": {
+      "fil": "May bisa ang link sa loob ng 1 oras.",
+      "ro": "Linkul este valabil timp de 1 oră.",
+      "uk": "Посилання дійсне протягом 1 години."
+    },
+    "Se non hai richiesto tu questa modifica, puoi ignorare questa email: la tua password resterà invariata.": {
+      "fil": "Kung hindi mo hiniling ang pagbabagong ito, maaari mong balewalain ang email na ito: hindi magbabago ang iyong password.",
+      "ro": "Dacă nu ai solicitat această modificare, poți ignora acest e-mail: parola ta va rămâne neschimbată.",
+      "uk": "Якщо ви не запитували цю зміну, можете проігнорувати цей лист: ваш пароль залишиться без змін."
+    },
+    "Aumento visibilità annuncio": {
+      "fil": "Pagpapataas ng visibility ng listing",
+      "ro": "Creșterea vizibilității anunțului",
+      "uk": "Підвищення видимості оголошення"
     }
   }
 }

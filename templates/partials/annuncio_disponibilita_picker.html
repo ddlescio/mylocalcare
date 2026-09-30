@@ -20,29 +20,34 @@
 {% set listing_availability_initial_slots = listing_availability_reference_day.get('fasce', []) if listing_availability_reference_day else [] %}
 {% set listing_availability_initial_intervals = listing_availability_reference_day.get('intervalli', []) if listing_availability_reference_day else [] %}
 {% set listing_availability_initial_interval = listing_availability_initial_intervals[0] if listing_availability_initial_intervals|length == 1 else none %}
+{% set listing_availability_offer_status = listing_availability_initial_status | default('disponibile', true) %}
+{% set listing_availability_action_value = listing_availability_initial_action | default('keep', true) %}
+{% set listing_availability_is_offer = current_tipo_annuncio == 'offro' %}
 
 <details class="listing-availability"
          data-listing-availability
          data-listing-availability-sought-only="{{ 'true' if listing_availability_is_sought_only else 'false' }}"
          {% if listing_availability_is_sought_only and current_tipo_annuncio == 'offro' %}hidden{% endif %}
-         {% if listing_availability_initial_value %}open{% endif %}>
+         {% if listing_availability_initial_value or listing_availability_is_offer %}open{% endif %}>
   <summary class="listing-availability__summary">
     <span class="listing-availability__icon" aria-hidden="true">🗓️</span>
     <span class="listing-availability__summary-copy">
-      <strong>{{ tr('listing.availability_optional') }}</strong>
+      <strong data-listing-availability-summary-title>
+        {{ tr('listing.offer_availability_title') if listing_availability_is_offer else tr('listing.availability_optional') }}
+      </strong>
       <small data-listing-availability-summary>
-        {{ tr('listing.offer_availability_hint') if current_tipo_annuncio == 'offro' else tr('listing.seek_availability_hint') }}
+        {{ tr('listing.offer_availability_confirmed_hint') if listing_availability_is_offer else tr('listing.seek_availability_hint') }}
       </small>
     </span>
     <span class="listing-availability__summary-action">
-      {{ tr('listing.add_availability') }}
+      {{ tr('availability.edit') if listing_availability_is_offer else tr('listing.add_availability') }}
     </span>
   </summary>
 
   <div class="listing-availability__body">
     <input type="hidden"
            name="disponibilita_annuncio_azione"
-           value="keep"
+           value="{{ listing_availability_action_value }}"
            data-listing-availability-action>
 
     <input type="hidden"
@@ -56,12 +61,55 @@
 
     <div class="listing-availability__intro">
       <strong data-listing-availability-title>
-        {{ tr('availability.title') if current_tipo_annuncio == 'offro' else tr('search.availability_detail_title') }}
+        {{ tr('listing.offer_availability_title') if listing_availability_is_offer else tr('search.availability_detail_title') }}
       </strong>
       <p data-listing-availability-hint>
-        {{ tr('listing.offer_availability_hint') if current_tipo_annuncio == 'offro' else tr('listing.seek_availability_hint') }}
+        {{ tr('listing.offer_availability_publish_notice') if listing_availability_is_offer else tr('listing.seek_availability_hint') }}
       </p>
     </div>
+
+    <fieldset class="listing-availability__status-group"
+              data-listing-availability-status-group
+              {% if not listing_availability_is_offer %}hidden{% endif %}>
+      <legend>{{ tr('availability.overall_status') }}</legend>
+      <div class="listing-availability__status-options">
+        <label class="listing-availability__status-option listing-availability__status-option--available">
+          <input type="radio"
+                 name="disponibilita_annuncio_stato"
+                 value="disponibile"
+                 {% if listing_availability_offer_status == 'disponibile' %}checked{% endif %}
+                 data-listing-availability-status>
+          <span class="listing-availability__status-dot" aria-hidden="true">✓</span>
+          <span>{{ tr('availability.status_available') }}</span>
+        </label>
+        <label class="listing-availability__status-option listing-availability__status-option--limited">
+          <input type="radio"
+                 name="disponibilita_annuncio_stato"
+                 value="limitata"
+                 {% if listing_availability_offer_status == 'limitata' %}checked{% endif %}
+                 data-listing-availability-status>
+          <span class="listing-availability__status-dot" aria-hidden="true">◐</span>
+          <span>{{ tr('availability.status_limited') }}</span>
+        </label>
+        <label class="listing-availability__status-option listing-availability__status-option--unavailable">
+          <input type="radio"
+                 name="disponibilita_annuncio_stato"
+                 value="non_disponibile"
+                 {% if listing_availability_offer_status == 'non_disponibile' %}checked{% endif %}
+                 data-listing-availability-status>
+          <span class="listing-availability__status-dot" aria-hidden="true">×</span>
+          <span>{{ tr('availability.status_unavailable') }}</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="listing-availability__optional-details"
+         data-listing-availability-positive-details
+         {% if listing_availability_is_offer and listing_availability_offer_status == 'non_disponibile' %}hidden{% endif %}>
+      <p class="listing-availability__optional-heading"
+         data-listing-availability-optional-heading>
+        {{ tr('listing.offer_availability_details_optional') if listing_availability_is_offer else tr('listing.seek_availability_details_optional') }}
+      </p>
 
     <fieldset class="availability-request-group">
       <legend>{{ tr('search.availability_days_title') }}</legend>
@@ -136,6 +184,13 @@
          data-listing-availability-next-day
          hidden>{{ tr('availability_request.next_day_help') }}</p>
     </fieldset>
+    </div>
+
+    <p class="listing-availability__unavailable-note"
+       data-listing-availability-unavailable-note
+       {% if not listing_availability_is_offer or listing_availability_offer_status != 'non_disponibile' %}hidden{% endif %}>
+      {{ tr('availability.status_unavailable_description') }}
+    </p>
 
     <p class="listing-availability__error"
        data-listing-availability-error
@@ -151,10 +206,18 @@
 </details>
 
 <script id="listing-availability-copy" type="application/json">{{ {
-  'offerTitle': tr('availability.title'),
-  'offerHint': tr('listing.offer_availability_hint'),
+  'offerTitle': tr('listing.offer_availability_title'),
+  'offerSummaryTitle': tr('listing.offer_availability_title'),
+  'offerHint': tr('listing.offer_availability_publish_notice'),
+  'offerSummary': tr('listing.offer_availability_confirmed_hint'),
+  'offerDetails': tr('listing.offer_availability_details_optional'),
   'seekTitle': tr('search.availability_detail_title'),
+  'seekSummaryTitle': tr('listing.availability_optional'),
   'seekHint': tr('listing.seek_availability_hint'),
+  'seekDetails': tr('listing.seek_availability_details_optional'),
+  'availableLabel': tr('availability.status_available'),
+  'limitedLabel': tr('availability.status_limited'),
+  'unavailableLabel': tr('availability.status_unavailable'),
   'selectDay': tr('availability_request.error_select_day'),
   'emptyDay': tr('availability_request.error_empty_day'),
   'incompleteInterval': tr('availability_request.error_incomplete_interval'),

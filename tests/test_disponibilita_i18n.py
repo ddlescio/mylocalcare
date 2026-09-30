@@ -122,11 +122,13 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         "availability.type",
         "availability.scope_all_services",
         "availability.card_unconfirmed",
+        "availability.action_to_confirm",
         "availability.card_confirmed_on",
         "availability.card_available_on",
         "availability.card_limited_on",
         "availability.card_unavailable_on",
         "availability.card_expired",
+        "availability.card_unavailable_reconfirmation",
         "availability.card_never_confirmed",
         "availability.unavailable_details",
         "availability.last_confirmed_full",
@@ -196,6 +198,16 @@ class DisponibilitaServiziTranslationsTest(unittest.TestCase):
         self.assertEqual(translate("availability.to", "it"), "Alle")
         self.assertEqual(translate("availability.from", "en"), "From")
         self.assertEqual(translate("availability.to", "en"), "To")
+
+    def test_confirmation_attention_action_is_short_and_translated(self):
+        self.assertEqual(
+            translate("availability.action_to_confirm", "it"),
+            "Da confermare",
+        )
+        for language in SUPPORTED_LANGUAGES:
+            self.assertTrue(
+                translate("availability.action_to_confirm", language).strip()
+            )
 
     def test_missing_photo_copy_points_to_personal_dashboard(self):
         for language in SUPPORTED_LANGUAGES:

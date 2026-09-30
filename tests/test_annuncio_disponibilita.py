@@ -7,6 +7,7 @@ from pathlib import Path
 from annuncio_disponibilita import (
     deserialize_sought_availability,
     listing_availability_from_form,
+    listing_offer_status_from_form,
     normalize_listing_availability,
     request_to_service_availability,
     serialize_sought_availability,
@@ -62,6 +63,43 @@ class ListingAvailabilityTests(unittest.TestCase):
             ],
         )
         self.assertEqual(result["settimanale_intervalli"][0]["ora_inizio"], "09:30")
+
+    def test_offer_status_defaults_to_available_and_accepts_all_three_states(self):
+        self.assertEqual(listing_offer_status_from_form({}), "disponibile")
+        for status in ("disponibile", "limitata", "non_disponibile"):
+            with self.subTest(status=status):
+                self.assertEqual(
+                    listing_offer_status_from_form({
+                        "disponibilita_annuncio_stato": status,
+                    }),
+                    status,
+                )
+        with self.assertRaisesRegex(ValueError, "stato"):
+            listing_offer_status_from_form({
+                "disponibilita_annuncio_stato": "inventato",
+            })
+
+    def test_offer_can_be_available_without_optional_schedule_details(self):
+        result = request_to_service_availability(
+            {"a_chiamata": False, "giorni": []},
+            stato="disponibile",
+        )
+        self.assertEqual(result, {
+            "stato": "disponibile",
+            "a_chiamata": False,
+            "settimanale": [],
+            "settimanale_intervalli": [],
+            "date_speciali": [],
+            "assenze": [],
+        })
+
+    def test_unavailable_offer_cannot_remain_on_call(self):
+        result = request_to_service_availability(
+            {"a_chiamata": True, "giorni": []},
+            stato="non_disponibile",
+        )
+        self.assertEqual(result["stato"], "non_disponibile")
+        self.assertFalse(result["a_chiamata"])
 
     def test_sought_round_trip_is_canonical(self):
         serialized = serialize_sought_availability(self.payload)
@@ -145,6 +183,27 @@ class ListingAvailabilityTests(unittest.TestCase):
             source,
         )
         self.assertIn("preserve_calendar_exceptions=True", source)
+
+    def test_new_offer_always_creates_default_available_category_profile(self):
+        source = (ROOT / "app.py").read_text(encoding="utf-8")
+        route_start = source.index("def nuovo_annuncio():")
+        route_end = source.index("\n@app.context_processor", route_start)
+        route = source[route_start:route_end]
+
+        self.assertIn("listing_offer_status_from_form(request.form)", route)
+        self.assertIn(
+            'disponibilita_annuncio_input or {\n'
+            '                        "a_chiamata": False,\n'
+            '                        "giorni": [],',
+            route,
+        )
+        self.assertIn("if disponibilita_offerta:", route)
+        self.assertIn("_salva_disponibilita_categoria(", route)
+        self.assertIn("_reset_ciclo_disponibilita_annunci(", route)
+        self.assertIn(
+            'stato_disponibilita=disponibilita_offerta["stato"]',
+            route,
+        )
 
     @unittest.skipUnless(shutil.which("node"), "Node.js non disponibile")
     def test_javascript_rejects_day_bound_values_without_a_day(self):

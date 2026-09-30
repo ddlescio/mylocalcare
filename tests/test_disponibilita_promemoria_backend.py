@@ -25,11 +25,14 @@ def load_reminder_backend():
         "_normalizza_limite_promemoria_disponibilita",
         "_disponibilita_promemoria_datetime",
         "_link_promemoria_disponibilita",
+        "_disponibilita_promemoria_outbox_table_exists",
         "_disponibilita_intervalli_table_exists",
         "_disponibilita_profilo_schedule_sql",
         "_disponibilita_filtro_cerca_sql",
         "_disponibilita_priorita_cerca_sql",
         "_piano_promemoria_disponibilita",
+        "_copy_promemoria_disponibilita",
+        "_consegna_promemoria_disponibilita_outbox",
         "processa_promemoria_disponibilita",
     }
     tree = ast.parse((ROOT / "app.py").read_text(encoding="utf-8"))
@@ -255,9 +258,9 @@ class DisponibilitaPromemoriaBackendTest(unittest.TestCase):
         )
         self.assertEqual(
             self.push_calls[0][2],
-            "La tua disponibilità è scaduta da 7 giorni e la priorità "
-            "dei tuoi annunci è stata ridotta. Riconfermala ora per "
-            "ripristinarla. [en]",
+            "La tua disponibilità è scaduta da 7 giorni. I tuoi annunci ora "
+            "risultano non disponibili e hanno priorità ridotta. Riconferma "
+            "entro 7 giorni per evitare l’archiviazione automatica. [en]",
         )
         # Generale e categoria sono alla stessa fase: il link deve aprire la
         # riconferma generale, non una categoria scelta arbitrariamente.
@@ -351,6 +354,100 @@ class DisponibilitaPromemoriaBackendTest(unittest.TestCase):
                 WHERE ultimo_promemoria_at IS NOT NULL
             """).fetchone()[0],
             0,
+        )
+        check.close()
+
+    def test_outbox_ritenta_solo_push_ed_email_senza_duplicare_notifica(self):
+        expired = (
+            datetime.now(timezone.utc) - timedelta(days=40)
+        ).isoformat()
+        conn = self._connect()
+        conn.executescript("""
+            CREATE TABLE disponibilita_promemoria_eventi (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                utente_id INTEGER NOT NULL,
+                fase TEXT NOT NULL,
+                titolo_sorgente TEXT NOT NULL,
+                messaggio_sorgente TEXT NOT NULL,
+                link TEXT NOT NULL,
+                notifica_interna_at TEXT,
+                push_inviata_at TEXT,
+                email_inviata_at TEXT,
+                notifica_tentativi INTEGER NOT NULL DEFAULT 0,
+                push_tentativi INTEGER NOT NULL DEFAULT 0,
+                email_tentativi INTEGER NOT NULL DEFAULT 0,
+                ultimo_errore TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.execute("""
+            INSERT INTO utenti (
+                id, email, username, email_notifiche, lingua_interfaccia,
+                attivo, sospeso, disattivato_admin, eliminato
+            ) VALUES (1, 'uno@example.test', 'UNO', 0, 'it', 1, 0, 0, 0)
+        """)
+        conn.execute("""
+            INSERT INTO disponibilita_profili (
+                utente_id, stato_generale, confermata_at,
+                ultimo_promemoria_at, versione
+            ) VALUES (1, 'disponibile', ?, NULL, 1)
+        """, (expired,))
+        conn.commit()
+        conn.close()
+        self.offerte = {1: ["babysitter"]}
+
+        push_results = iter((False, True))
+        email_results = iter((False, True))
+        self.backend["invia_push"] = (
+            lambda *args, **kwargs: next(push_results)
+        )
+        self.backend["_invia_email"] = (
+            lambda **kwargs: next(email_results)
+        )
+
+        first = self.backend["processa_promemoria_disponibilita"](
+            limite=25,
+            dry_run=False,
+        )
+        self.assertEqual(first["utenti_prenotati"], 1)
+        self.assertEqual(first["notifiche_create"], 1)
+        self.assertEqual(first["email_inviate"], 0)
+
+        check = self._connect()
+        event = check.execute(
+            "SELECT * FROM disponibilita_promemoria_eventi"
+        ).fetchone()
+        self.assertIsNotNone(event["notifica_interna_at"])
+        self.assertIsNone(event["push_inviata_at"])
+        self.assertIsNone(event["email_inviata_at"])
+        self.assertEqual(event["push_tentativi"], 1)
+        self.assertEqual(event["email_tentativi"], 1)
+        self.assertEqual(
+            check.execute("SELECT COUNT(*) FROM notifiche").fetchone()[0],
+            1,
+        )
+        check.close()
+
+        second = self.backend["processa_promemoria_disponibilita"](
+            limite=25,
+            dry_run=False,
+        )
+        self.assertEqual(second["utenti_prenotati"], 0)
+        self.assertEqual(second["notifiche_create"], 0)
+        self.assertEqual(second["email_inviate"], 1)
+
+        check = self._connect()
+        event = check.execute(
+            "SELECT * FROM disponibilita_promemoria_eventi"
+        ).fetchone()
+        self.assertIsNotNone(event["push_inviata_at"])
+        self.assertIsNotNone(event["email_inviata_at"])
+        self.assertEqual(event["push_tentativi"], 2)
+        self.assertEqual(event["email_tentativi"], 2)
+        self.assertEqual(
+            check.execute("SELECT COUNT(*) FROM notifiche").fetchone()[0],
+            1,
         )
         check.close()
 

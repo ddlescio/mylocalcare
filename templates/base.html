@@ -3742,6 +3742,8 @@ function urlBase64ToUint8Array(base64String) {
 }
 </script>
 <script>
+window.myLocalCarePushPreferenceEnabled = {{ push_notifiche_enabled|tojson }};
+
 async function pushDebug(step, ok = true, details = {}) {
   try {
     await fetch("/push/debug", {
@@ -3757,6 +3759,11 @@ async function pushDebug(step, ok = true, details = {}) {
 
 async function registerPush() {
   try {
+    if (window.myLocalCarePushPreferenceEnabled !== true) {
+      console.log("🔕 [registerPush] preferenza account disattivata");
+      return false;
+    }
+
     console.log("🔔 [registerPush] START", {
       href: window.location.href,
       permission: ("Notification" in window) ? Notification.permission : null,
@@ -4032,6 +4039,11 @@ window.addEventListener("load", async () => {
       return;
     }
 
+    if (window.myLocalCarePushPreferenceEnabled !== true) {
+      console.log("🔕 Push skip: preferenza account disattivata");
+      return;
+    }
+
     await navigator.serviceWorker.ready;
 
     const pagePath = window.location.pathname || "";
@@ -4175,7 +4187,7 @@ function showPushActivationPrompt(currentUserId, syncKey) {
         Attiva le notifiche
       </div>
       <div class="text-xs text-slate-500 leading-snug">
-        Ricevi avvisi per nuovi messaggi anche quando l’app è chiusa.
+        {{ tr('notifications.push_prompt_body') }}
       </div>
     </div>
 

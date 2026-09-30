@@ -134,6 +134,7 @@ def crea_tabella_utenti():
         disattivato_admin INTEGER DEFAULT 0,
         eliminato INTEGER DEFAULT 0,
         email_notifiche INTEGER DEFAULT 1,
+        push_notifiche INTEGER NOT NULL DEFAULT 1,
 
         -- ⭐ Riepilogo recensioni
         media_recensioni REAL DEFAULT 0,
@@ -298,6 +299,140 @@ def crea_tabella_interessi_annunci():
     conn.commit()
     conn.close()
     print("✅ Tabella 'interessi_annunci' pronta.")
+
+
+def crea_tabelle_ciclo_disponibilita_annunci():
+    """Crea stato e outbox del ciclo di riconferma degli annunci offro."""
+
+    conn = get_conn()
+    c = conn.cursor()
+    try:
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS annunci_disponibilita_ciclo (
+                annuncio_id INTEGER PRIMARY KEY,
+                utente_id INTEGER NOT NULL,
+                origine TEXT NOT NULL CHECK (
+                    origine IN ('ordinario', 'rollout')
+                ),
+                stato TEXT NOT NULL DEFAULT 'attivo' CHECK (stato IN (
+                    'attivo', 'non_disponibile_scadenza',
+                    'archiviato', 'completato'
+                )),
+                ciclo_versione INTEGER NOT NULL DEFAULT 1 CHECK (
+                    ciclo_versione >= 1
+                ),
+                ciclo_iniziato_at {dt_col()} NOT NULL,
+                confermata_at_snapshot {dt_col()},
+                non_disponibile_at {dt_col()},
+                archiviazione_prevista_at {dt_col()},
+                archiviato_at {dt_col()},
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (annuncio_id)
+                    REFERENCES annunci(id) ON DELETE CASCADE,
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE
+            );
+        """))
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS annunci_disponibilita_eventi (
+                id {pk_col()},
+                annuncio_id INTEGER NOT NULL,
+                utente_id INTEGER NOT NULL,
+                ciclo_versione INTEGER NOT NULL CHECK (ciclo_versione >= 1),
+                codice TEXT NOT NULL,
+                notifica_interna_at {dt_col()},
+                push_inviata_at {dt_col()},
+                email_inviata_at {dt_col()},
+                push_tentativi INTEGER NOT NULL DEFAULT 0 CHECK (
+                    push_tentativi >= 0
+                ),
+                email_tentativi INTEGER NOT NULL DEFAULT 0 CHECK (
+                    email_tentativi >= 0
+                ),
+                ultimo_errore TEXT,
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                UNIQUE (annuncio_id, ciclo_versione, codice),
+                FOREIGN KEY (annuncio_id)
+                    REFERENCES annunci(id) ON DELETE CASCADE,
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE
+            );
+        """))
+        c.execute(sql(f"""
+            CREATE TABLE IF NOT EXISTS disponibilita_promemoria_eventi (
+                id {pk_col()},
+                utente_id INTEGER NOT NULL,
+                fase TEXT NOT NULL CHECK (
+                    fase IN ('in_scadenza', 'scaduta', 'ultimo_avviso')
+                ),
+                titolo_sorgente TEXT NOT NULL,
+                messaggio_sorgente TEXT NOT NULL,
+                link TEXT NOT NULL,
+                notifica_interna_at {dt_col()},
+                push_inviata_at {dt_col()},
+                email_inviata_at {dt_col()},
+                notifica_tentativi INTEGER NOT NULL DEFAULT 0 CHECK (
+                    notifica_tentativi >= 0
+                ),
+                push_tentativi INTEGER NOT NULL DEFAULT 0 CHECK (
+                    push_tentativi >= 0
+                ),
+                email_tentativi INTEGER NOT NULL DEFAULT 0 CHECK (
+                    email_tentativi >= 0
+                ),
+                ultimo_errore TEXT,
+                created_at {dt_col(True)} NOT NULL,
+                updated_at {dt_col(True)} NOT NULL,
+                FOREIGN KEY (utente_id)
+                    REFERENCES utenti(id) ON DELETE CASCADE
+            );
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS
+                idx_annunci_disponibilita_ciclo_stato_scadenza
+            ON annunci_disponibilita_ciclo (
+                stato, archiviazione_prevista_at, ciclo_iniziato_at
+            );
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS idx_annunci_disponibilita_ciclo_utente
+            ON annunci_disponibilita_ciclo (utente_id, stato);
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS
+                idx_annunci_disponibilita_eventi_pendenti
+            ON annunci_disponibilita_eventi (
+                notifica_interna_at, push_inviata_at,
+                email_inviata_at, created_at
+            );
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS
+                idx_disponibilita_promemoria_eventi_pendenti
+            ON disponibilita_promemoria_eventi (
+                notifica_interna_at, push_inviata_at,
+                email_inviata_at, created_at
+            );
+        """))
+        c.execute(sql("""
+            CREATE INDEX IF NOT EXISTS
+                idx_disponibilita_promemoria_eventi_utente
+            ON disponibilita_promemoria_eventi (utente_id, created_at DESC);
+        """))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+        conn.close()
+
+    print("✅ Ciclo disponibilità annunci e outbox pronti.")
 
 
 def crea_tabella_accessi_utenti_giornalieri():
@@ -3118,6 +3253,7 @@ def aggiorna_colonne_mancanti():
         "disattivato_admin": "INTEGER DEFAULT 0",
         "eliminato": "INTEGER DEFAULT 0",
         "email_notifiche": "INTEGER DEFAULT 1",
+        "push_notifiche": "INTEGER NOT NULL DEFAULT 1",
 
         # Recensioni e tracking
         "media_recensioni": "REAL DEFAULT 0",
@@ -3519,6 +3655,7 @@ def inizializza_database():
 
     crea_tabella_operatori()
     crea_tabella_annunci()
+    crea_tabelle_ciclo_disponibilita_annunci()
     crea_tabella_interessi_annunci()
     crea_tabella_accessi_utenti_giornalieri()
     crea_tabella_filtri_categoria()

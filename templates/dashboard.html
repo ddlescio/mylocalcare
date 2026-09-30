@@ -671,6 +671,9 @@
                 {% elif a['stato'] == 'rifiutato' %}
                   {% set stato_label = 'Rifiutato' %}
                   {% set stato_class = 'is-rejected' %}
+                {% elif a['stato'] == 'archiviato_disponibilita' %}
+                  {% set stato_label = 'Archiviato · riconferma disponibilità' %}
+                  {% set stato_class = 'is-availability-archived' %}
                 {% endif %}
 
                 <article
@@ -773,6 +776,16 @@
                           class="profile-annuncio-boost-btn">
                           <span>🚀</span>
                           <span>Aumenta visibilità</span>
+                        </button>
+                      {% elif a['stato'] == 'archiviato_disponibilita' %}
+                        <button
+                          type="button"
+                          class="profile-annuncio-boost-btn"
+                          data-service-availability-reactivate
+                          data-annuncio-id="{{ a['id'] }}"
+                          data-service-availability-category="{{ a['categoria'] }}">
+                          <span>✓</span>
+                          <span>Riconferma e riattiva</span>
                         </button>
                       {% endif %}
 
@@ -3664,6 +3677,13 @@ nav::before {
     linear-gradient(180deg, rgba(255,241,242,0.96), rgba(255,255,255,0.94));
 }
 
+.profile-annuncio-premium-card.is-availability-archived {
+  border-color: rgba(100,116,139,0.38);
+  background:
+    radial-gradient(circle at top right, rgba(148,163,184,0.16), transparent 42%),
+    linear-gradient(180deg, rgba(248,250,252,0.98), rgba(241,245,249,0.92));
+}
+
 .profile-annuncio-premium-card:hover {
   transform: translateY(-1px);
   box-shadow:
@@ -3822,6 +3842,17 @@ nav::before {
   background:
     linear-gradient(180deg, rgba(254,242,242,0.98), rgba(254,226,226,0.86));
   border: 1px solid rgba(254,202,202,0.9);
+}
+
+.profile-annuncio-status.is-availability-archived {
+  max-width: 142px;
+  color: #475569;
+  background:
+    linear-gradient(180deg, rgba(248,250,252,0.98), rgba(226,232,240,0.88));
+  border: 1px solid rgba(148,163,184,0.72);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
 }
 
 .profile-annuncio-arrow {
@@ -4177,6 +4208,13 @@ nav::before {
   background:
     radial-gradient(circle at top right, rgba(244,63,94,0.12), transparent 40%),
     linear-gradient(180deg, rgba(255,241,242,0.955), rgba(255,255,255,0.948)) !important;
+}
+
+.profile-annuncio-premium-card.is-availability-archived {
+  border-color: rgba(100,116,139,0.36) !important;
+  background:
+    radial-gradient(circle at top right, rgba(148,163,184,0.14), transparent 40%),
+    linear-gradient(180deg, rgba(248,250,252,0.97), rgba(241,245,249,0.95)) !important;
 }
 
 /* Bordo interno premium, molto leggero */

@@ -48,6 +48,7 @@ def main(argv=None):
     from app import (
         app,
         get_db_connection,
+        processa_ciclo_disponibilita_annunci,
         processa_promemoria_disponibilita,
     )
 
@@ -55,6 +56,14 @@ def main(argv=None):
         result = processa_promemoria_disponibilita(
             limite=args.limit,
             dry_run=args.dry_run,
+        )
+        lifecycle_result = processa_ciclo_disponibilita_annunci(
+            limite=max(args.limit, 500),
+            dry_run=args.dry_run,
+        )
+        result["ciclo_annunci"] = lifecycle_result
+        result["ok"] = bool(
+            result.get("ok") and lifecycle_result.get("ok")
         )
         if not args.dry_run:
             conn = None

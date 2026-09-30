@@ -18,7 +18,8 @@
 {% set puo_richiedere_disponibilita = g.utente
     and g.utente['id'] != annuncio['utente_id']
     and not visitatore_admin
-    and annuncio.get('tipo_annuncio') == 'offro' %}
+    and annuncio.get('tipo_annuncio') == 'offro'
+    and disponibilita_annuncio_richiedibile|default(true) %}
 
 {% set zoom_foto_profilo_annuncio = url_for('static', filename=(annuncio['foto_profilo'] or 'img/user_default.png')) %}
 {% set zoom_foto_annuncio = [] %}

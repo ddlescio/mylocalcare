@@ -45,11 +45,102 @@
 }
 
 .intro-availability {
+  position: relative;
+  isolation: isolate;
   overflow: hidden;
   border: 1px solid rgba(191, 219, 254, .9);
   border-radius: 1rem;
   background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(239,246,255,.8));
   box-shadow: 0 8px 22px rgba(37, 99, 235, .07), inset 0 1px 0 #fff;
+}
+
+.intro-availability--needs-confirmation {
+  border-color: rgba(129, 140, 248, .86);
+  background:
+    radial-gradient(circle at 92% 8%, rgba(244, 114, 182, .12), transparent 36%),
+    linear-gradient(145deg, rgba(255,255,255,.99), rgba(238,242,255,.92));
+  box-shadow:
+    0 10px 28px rgba(79, 70, 229, .13),
+    0 0 0 1px rgba(129, 140, 248, .08),
+    inset 0 1px 0 #fff;
+  animation: availability-confirmation-glow 3.4s ease-in-out infinite;
+}
+
+.intro-availability--needs-confirmation::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -40% -28%;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255,255,255,.7) 49%,
+    rgba(196,181,253,.2) 53%,
+    transparent 66%
+  );
+  transform: translateX(-42%);
+  animation: availability-confirmation-sheen 5.6s ease-in-out infinite;
+}
+
+.intro-availability--needs-confirmation > summary,
+.intro-availability--needs-confirmation .intro-availability__body,
+.intro-availability--needs-confirmation.intro-availability--empty > * {
+  position: relative;
+  z-index: 1;
+}
+
+.intro-availability--needs-confirmation .intro-availability__icon {
+  border-color: rgba(129, 140, 248, .72);
+  background: linear-gradient(145deg, #eef2ff, #fff);
+  box-shadow: 0 5px 14px rgba(79, 70, 229, .12), inset 0 1px 0 #fff;
+}
+
+.intro-availability--needs-confirmation .intro-availability__action {
+  border-color: rgba(99, 102, 241, .68);
+  background: linear-gradient(135deg, #2563eb, #4f46e5 64%, #9333ea);
+  color: #fff;
+  box-shadow: 0 7px 17px rgba(79, 70, 229, .2), inset 0 1px 0 rgba(255,255,255,.28);
+}
+
+@keyframes availability-confirmation-glow {
+  0%, 100% {
+    box-shadow:
+      0 10px 28px rgba(79, 70, 229, .12),
+      0 0 0 1px rgba(129, 140, 248, .08),
+      inset 0 1px 0 #fff;
+  }
+  50% {
+    box-shadow:
+      0 13px 34px rgba(79, 70, 229, .19),
+      0 0 0 4px rgba(165, 180, 252, .13),
+      inset 0 1px 0 #fff;
+  }
+}
+
+@keyframes availability-confirmation-sheen {
+  0%, 62%, 100% {
+    opacity: 0;
+    transform: translateX(-42%);
+  }
+  72% {
+    opacity: .72;
+  }
+  88% {
+    opacity: 0;
+    transform: translateX(44%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-availability--needs-confirmation,
+  .intro-availability--needs-confirmation::before {
+    animation: none;
+  }
+
+  .intro-availability--needs-confirmation::before {
+    display: none;
+  }
 }
 
 .intro-availability > summary,

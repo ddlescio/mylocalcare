@@ -12,6 +12,10 @@ from richieste_disponibilita import (
     normalizza_stato_richiesta_disponibilita,
     valida_limiti_anti_abuso,
 )
+from disponibilita_servizi import (
+    CATEGORIE_SERVIZI,
+    calcola_freschezza_disponibilita,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +48,8 @@ def _url_for(endpoint, **values):
 def load_request_backend():
     wanted_functions = {
         "_disponibilita_promemoria_datetime",
+        "_profilo_disponibilita_effettivo_annuncio",
+        "_annuncio_bloccato_dalla_disponibilita",
         "_richiesta_disponibilita_account_attivo",
         "_richiesta_disponibilita_time",
         "_richiesta_disponibilita_bloccata",
@@ -112,6 +118,14 @@ def load_request_backend():
         "translate_source": (
             lambda source, language: f"{source} [{language}]"
         ),
+        "CATEGORIE_SERVIZI": CATEGORIE_SERVIZI,
+        "to_slug": lambda value: str(value or "").strip().lower(),
+        "calcola_freschezza_disponibilita": (
+            calcola_freschezza_disponibilita
+        ),
+        "_disponibilita_servizi_table_exists": lambda cur: True,
+        "_disponibilita_categoria_table_exists": lambda cur: True,
+        "_annunci_disponibilita_ciclo_tables_exist": lambda cur: True,
         "url_for": _url_for,
         "_scheda_profilo_bool": lambda value: bool(value),
         "_scheda_profilo_iso": (
@@ -165,6 +179,23 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
                 categoria TEXT,
                 tipo_annuncio TEXT,
                 stato TEXT
+            );
+            CREATE TABLE disponibilita_profili (
+                utente_id INTEGER PRIMARY KEY,
+                stato_generale TEXT NOT NULL,
+                confermata_at TEXT
+            );
+            CREATE TABLE disponibilita_profili_categoria (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                utente_id INTEGER NOT NULL,
+                categoria_slug TEXT NOT NULL,
+                stato_generale TEXT NOT NULL,
+                confermata_at TEXT,
+                UNIQUE (utente_id, categoria_slug)
+            );
+            CREATE TABLE annunci_disponibilita_ciclo (
+                annuncio_id INTEGER PRIMARY KEY,
+                stato TEXT NOT NULL
             );
             CREATE TABLE chat_blocchi (
                 bloccante_id INTEGER NOT NULL,
@@ -441,6 +472,111 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         ).fetchone()[0]
         conn.close()
         self.assertEqual(total, 0)
+
+    def test_disponibilita_volontariamente_non_disponibile_blocca_richiesta(self):
+        for scope in ("categoria", "generale"):
+            with self.subTest(scope=scope):
+                conn = self.connect()
+                conn.execute("DELETE FROM disponibilita_profili_categoria")
+                conn.execute("DELETE FROM disponibilita_profili")
+                if scope == "categoria":
+                    conn.execute("""
+                        INSERT INTO disponibilita_profili_categoria (
+                            utente_id, categoria_slug, stato_generale,
+                            confermata_at
+                        ) VALUES (2, 'babysitter', 'non_disponibile', ?)
+                    """, (datetime(2026, 9, 25, tzinfo=timezone.utc),))
+                else:
+                    conn.execute("""
+                        INSERT INTO disponibilita_profili (
+                            utente_id, stato_generale, confermata_at
+                        ) VALUES (2, 'non_disponibile', ?)
+                    """, (datetime(2026, 9, 25, tzinfo=timezone.utc),))
+                conn.commit()
+                cur = conn.cursor()
+                cur.execute("BEGIN IMMEDIATE")
+
+                with self.assertRaises(
+                    self.backend["RichiestaDisponibilitaError"]
+                ) as blocked:
+                    self.backend["_prenota_richiesta_disponibilita"](
+                        cur,
+                        annuncio_id=10,
+                        richiedente_id=1,
+                        calendario=self.calendar(),
+                        adesso=datetime(
+                            2026, 9, 25, 10, tzinfo=timezone.utc
+                        ),
+                    )
+
+                self.assertEqual(
+                    blocked.exception.code,
+                    "availability_unavailable",
+                )
+                self.assertEqual(blocked.exception.status, 409)
+                cur.execute("ROLLBACK")
+                conn.close()
+
+    def test_giorno_37_e_stato_ciclo_bloccano_nuove_richieste(self):
+        now = datetime(2026, 9, 25, 10, tzinfo=timezone.utc)
+        for reason in ("giorno_37", "ciclo"):
+            with self.subTest(reason=reason):
+                conn = self.connect()
+                conn.execute("DELETE FROM disponibilita_profili_categoria")
+                conn.execute("DELETE FROM annunci_disponibilita_ciclo")
+                confirmed_at = (
+                    now - timedelta(days=37)
+                    if reason == "giorno_37"
+                    else now - timedelta(days=1)
+                )
+                conn.execute("""
+                    INSERT INTO disponibilita_profili_categoria (
+                        utente_id, categoria_slug, stato_generale,
+                        confermata_at
+                    ) VALUES (2, 'babysitter', 'disponibile', ?)
+                """, (confirmed_at,))
+                if reason == "ciclo":
+                    conn.execute("""
+                        INSERT INTO annunci_disponibilita_ciclo (
+                            annuncio_id, stato
+                        ) VALUES (10, 'non_disponibile_scadenza')
+                    """)
+                conn.commit()
+                cur = conn.cursor()
+                cur.execute("BEGIN IMMEDIATE")
+
+                with self.assertRaises(
+                    self.backend["RichiestaDisponibilitaError"]
+                ) as blocked:
+                    self.backend["_prenota_richiesta_disponibilita"](
+                        cur,
+                        annuncio_id=10,
+                        richiedente_id=1,
+                        calendario=self.calendar(),
+                        adesso=now,
+                    )
+
+                self.assertEqual(
+                    blocked.exception.code,
+                    "availability_unavailable",
+                )
+                self.assertEqual(blocked.exception.status, 409)
+                cur.execute("ROLLBACK")
+                conn.close()
+
+    def test_giorno_36_consente_ancora_la_richiesta(self):
+        now = datetime(2026, 9, 25, 10, tzinfo=timezone.utc)
+        conn = self.connect()
+        conn.execute("""
+            INSERT INTO disponibilita_profili_categoria (
+                utente_id, categoria_slug, stato_generale, confermata_at
+            ) VALUES (2, 'babysitter', 'disponibile', ?)
+        """, (now - timedelta(days=36, hours=23, minutes=59),))
+        conn.commit()
+        conn.close()
+
+        dispatch = self.create_request(now=now)
+        self.assertEqual(dispatch["tipo_evento"], "richiesta")
 
     def test_scadenza_libera_pending_e_consente_nuova_richiesta(self):
         now = datetime(2026, 9, 25, 10, tzinfo=timezone.utc)

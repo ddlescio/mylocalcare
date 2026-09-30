@@ -130,6 +130,19 @@ from disponibilita_servizi import (
     risolvi_disponibilita_per_categoria,
     serializza_disponibilita_pubblica,
 )
+from ciclo_disponibilita_annunci import (
+    EVENTO_ARCHIVIATO,
+    EVENTO_ROLLOUT_INVITO,
+    EVENTO_ROLLOUT_PROMEMORIA_1,
+    EVENTO_ROLLOUT_PROMEMORIA_2,
+    EVENTO_ROLLOUT_ULTIMO_AVVISO,
+    ORIGINE_ORDINARIA,
+    ORIGINE_ROLLOUT,
+    STATO_ARCHIVIATO,
+    STATO_COMPLETATO,
+    pianifica_ciclo_annuncio,
+    utc_datetime as ciclo_disponibilita_datetime,
+)
 from richieste_disponibilita import (
     GIORNI_SCADENZA_RICHIESTA,
     normalize_richiesta_disponibilita_payload,
@@ -139,6 +152,7 @@ from richieste_disponibilita import (
 from annuncio_disponibilita import (
     deserialize_sought_availability,
     listing_availability_from_form,
+    listing_offer_status_from_form,
     request_to_service_availability,
     service_to_request_availability,
     serialize_sought_availability,
@@ -1424,6 +1438,13 @@ def inject_interface_language():
         "tr_text": lambda value: translate_source(value, language),
         "i18n_catalog_b64": frontend_source_catalog_b64(language),
         "i18n_patterns_b64": frontend_pattern_catalog_b64(language),
+        "push_notifiche_enabled": bool(
+            _valore_preferenza_notifica(
+                getattr(g, "utente", None),
+                "push_notifiche",
+                1,
+            )
+        ) if getattr(g, "utente", None) else False,
     }
 
 
@@ -2591,7 +2612,18 @@ def login_required(view):
     def wrapped_view(**kwargs):
         if g.utente is None:
             flash("Devi accedere per vedere questa pagina.")
-            return redirect(url_for('login'))
+            # Conserva anche query string e categoria del collegamento
+            # operativo. In questo modo email, push e campanella che puntano
+            # alla riconferma della disponibilita riaprono la stessa azione
+            # dopo il login, invece di fermarsi alla dashboard generica.
+            next_url = (
+                request.full_path
+                if request.query_string
+                else request.path
+            )
+            if next_url.endswith("?"):
+                next_url = next_url[:-1]
+            return redirect(url_for("login", next=next_url))
         return view(**kwargs)
     return wrapped_view
 
@@ -5992,8 +6024,15 @@ def toggle_annuncio(id):
         flash("Annuncio non trovato.", "error")
         return redirect(url_for("admin_annunci"))
 
-    nuovo_stato = "disattivato" if row["stato"] == "approvato" else "approvato"
-    c.execute(sql("UPDATE annunci SET stato = ? WHERE id = ?"), (nuovo_stato, id))
+    if row["stato"] == "approvato":
+        nuovo_stato = "disattivato"
+        c.execute(
+            sql("UPDATE annunci SET stato = ? WHERE id = ?"),
+            (nuovo_stato, id),
+        )
+    else:
+        approvazione = _approva_annuncio_con_disponibilita(c, id)
+        nuovo_stato = approvazione["stato"]
     conn.commit()
 
 
@@ -14677,27 +14716,41 @@ def _email_privacy_url():
         return f"{base}/privacy"
 
 
-def _email_footer_text():
+def _email_footer_text(language="it"):
     """
     Footer testuale per TextBody.
     Evitiamo URL lunghi visibili nel testo, ma identifichiamo chiaramente il mittente.
     """
+    language = normalize_language(language)
+    marker = translate_source(EMAIL_FOOTER_TEXT_MARKER, language)
+    privacy_notice = translate_source(
+        "Informativa privacy disponibile sul sito MyLocalCare.",
+        language,
+    )
+
     return (
         "\n\n---\n"
         f"{EMAIL_FOOTER_BRAND}\n"
-        f"{EMAIL_FOOTER_TEXT_MARKER}\n"
+        f"{marker}\n"
         f"{EMAIL_FOOTER_CONTACT}\n"
-        "Informativa privacy disponibile sul sito MyLocalCare."
+        f"{privacy_notice}"
     )
 
 
-def _email_footer_html():
+def _email_footer_html(language="it"):
     """
     Footer HTML identificativo per tutte le email transazionali.
     """
     from html import escape as html_escape
 
-    privacy_url = _email_privacy_url()
+    language = normalize_language(language)
+    privacy_url = html_escape(_email_privacy_url(), quote=True)
+    marker = html_escape(
+        translate_source(EMAIL_FOOTER_TEXT_MARKER, language)
+    )
+    privacy_label = html_escape(
+        translate_source("Informativa privacy", language)
+    )
 
     return f"""
       <div {EMAIL_FOOTER_HTML_MARKER}
@@ -14706,7 +14759,7 @@ def _email_footer_html():
         <div style="font-weight:700;color:#334155;margin-bottom:4px;">
           {html_escape(EMAIL_FOOTER_BRAND)}
         </div>
-        <div>{html_escape(EMAIL_FOOTER_TEXT_MARKER)}</div>
+        <div>{marker}</div>
         <div style="margin-top:8px;">
           <a href="mailto:{html_escape(EMAIL_FOOTER_CONTACT)}"
              style="color:#2563eb;text-decoration:underline;">
@@ -14714,7 +14767,7 @@ def _email_footer_html():
           </a>
           <span aria-hidden="true"> · </span>
           <a href="{privacy_url}" style="color:#2563eb;text-decoration:underline;">
-            Informativa privacy
+            {privacy_label}
           </a>
         </div>
       </div>
@@ -14757,7 +14810,13 @@ def _testo_email_in_html(corpo):
     )
 
 
-def _costruisci_html_email(oggetto, corpo=None, action_url=None, action_label=None):
+def _costruisci_html_email(
+    oggetto,
+    corpo=None,
+    action_url=None,
+    action_label=None,
+    language="it",
+):
     """
     Crea un HTML email semplice e pulito:
     - niente URL completo visibile;
@@ -14766,14 +14825,18 @@ def _costruisci_html_email(oggetto, corpo=None, action_url=None, action_label=No
     """
     from html import escape as html_escape
 
-    titolo = html_escape(str(oggetto or "Comunicazione MyLocalCare").strip())
+    language = normalize_language(language)
+    titolo = html_escape(str(
+        oggetto
+        or translate_source("Comunicazione MyLocalCare", language)
+    ).strip())
     corpo_html = _testo_email_in_html(corpo)
 
     bottone_html = ""
     if action_url and action_label:
         bottone_html = f"""
           <div style="margin:24px 0;">
-            <a href="{action_url}"
+            <a href="{html_escape(str(action_url), quote=True)}"
                style="display:inline-block;background:#2563eb;color:#ffffff;
                       text-decoration:none;font-weight:700;font-size:15px;
                       padding:12px 18px;border-radius:14px;">
@@ -14782,11 +14845,11 @@ def _costruisci_html_email(oggetto, corpo=None, action_url=None, action_label=No
           </div>
         """
 
-    footer_html = _email_footer_html()
+    footer_html = _email_footer_html(language)
 
     return f"""
     <!doctype html>
-    <html>
+    <html lang="{html_escape(language, quote=True)}">
       <body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
         <div style="max-width:560px;margin:0 auto;padding:24px;">
           <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:22px;
@@ -14807,19 +14870,28 @@ def _costruisci_html_email(oggetto, corpo=None, action_url=None, action_label=No
     """
 
 
-def _aggiungi_footer_text_se_manca(testo):
+def _aggiungi_footer_text_se_manca(testo, language="it"):
     testo = (testo or "").strip()
 
     if not testo:
         return ""
 
-    if EMAIL_FOOTER_TEXT_MARKER in testo:
+    language = normalize_language(language)
+    localized_marker = translate_source(
+        EMAIL_FOOTER_TEXT_MARKER,
+        language,
+    )
+
+    if (
+        EMAIL_FOOTER_TEXT_MARKER in testo
+        or localized_marker in testo
+    ):
         return testo
 
-    return testo + _email_footer_text()
+    return testo + _email_footer_text(language)
 
 
-def _aggiungi_footer_html_se_manca(html_finale):
+def _aggiungi_footer_html_se_manca(html_finale, language="it"):
     html_finale = (html_finale or "").strip()
 
     if not html_finale:
@@ -14828,12 +14900,89 @@ def _aggiungi_footer_html_se_manca(html_finale):
     if EMAIL_FOOTER_HTML_MARKER in html_finale:
         return html_finale
 
-    footer = _email_footer_html()
+    footer = _email_footer_html(language)
 
     if "</body>" in html_finale:
         return html_finale.replace("</body>", f"{footer}</body>")
 
     return html_finale + footer
+
+
+def _risolvi_lingua_email(destinazione, language=None):
+    """Restituisce la lingua email, anche nei job senza contesto Flask.
+
+    Una lingua esplicita ha la precedenza. Negli altri casi leggiamo
+    ``utenti.lingua_interfaccia`` senza chiudere una connessione gia in uso
+    dal chiamante. Se il dato manca, non e valido o il database non e
+    disponibile, il fallback resta l'italiano.
+    """
+
+    if language is not None:
+        return normalize_language(language)
+
+    email_language = "it"
+    language_conn = None
+    language_cur = None
+    close_language_conn = False
+    created_app_context = None
+
+    try:
+        from flask import has_app_context, has_request_context
+
+        if not has_app_context():
+            created_app_context = app.app_context()
+            created_app_context.push()
+
+        existing_conn = getattr(g, "db_conn", None)
+        language_conn = get_db_connection()
+        close_language_conn = (
+            not has_request_context()
+            and language_conn is not existing_conn
+        )
+        language_cur = get_cursor(language_conn)
+        language_cur.execute(sql("""
+            SELECT lingua_interfaccia
+            FROM utenti
+            WHERE LOWER(email) = LOWER(?)
+            ORDER BY id DESC
+            LIMIT 1
+        """), (str(destinazione).strip(),))
+        language_row = language_cur.fetchone()
+
+        if language_row:
+            email_language = normalize_language(
+                language_row["lingua_interfaccia"]
+            )
+
+    except Exception:
+        email_language = "it"
+
+    finally:
+        if language_cur is not None:
+            try:
+                language_cur.close()
+            except Exception:
+                pass
+
+        if close_language_conn and language_conn is not None:
+            try:
+                language_conn.close()
+            except Exception:
+                pass
+
+            try:
+                if getattr(g, "db_conn", None) is language_conn:
+                    g.db_conn = None
+            except Exception:
+                pass
+
+        if created_app_context is not None:
+            try:
+                created_app_context.pop()
+            except Exception:
+                pass
+
+    return email_language
 
 
 def _invia_email(
@@ -14899,51 +15048,10 @@ def _invia_email(
         return False
 
     try:
-        email_language = normalize_language(language)
-
-        if language is None:
-            language_conn = None
-            language_cur = None
-            close_language_conn = False
-
-            try:
-                from flask import has_request_context
-
-                language_conn = get_db_connection()
-                close_language_conn = not (
-                    has_request_context()
-                    and getattr(g, "db_conn", None) is language_conn
-                )
-                language_cur = get_cursor(language_conn)
-                language_cur.execute(sql("""
-                    SELECT lingua_interfaccia
-                    FROM utenti
-                    WHERE LOWER(email) = LOWER(?)
-                    ORDER BY id DESC
-                    LIMIT 1
-                """), (str(destinazione).strip(),))
-                language_row = language_cur.fetchone()
-
-                if language_row:
-                    email_language = normalize_language(
-                        language_row["lingua_interfaccia"]
-                    )
-
-            except Exception:
-                email_language = "it"
-
-            finally:
-                if language_cur is not None:
-                    try:
-                        language_cur.close()
-                    except Exception:
-                        pass
-
-                if close_language_conn and language_conn is not None:
-                    try:
-                        language_conn.close()
-                    except Exception:
-                        pass
+        email_language = _risolvi_lingua_email(
+            destinazione,
+            language,
+        )
 
         localized_subject = translate_source(oggetto, email_language)
         localized_action_label = translate_source(action_label, email_language)
@@ -14987,7 +15095,8 @@ def _invia_email(
                 oggetto=localized_subject,
                 corpo=localized_body,
                 action_url=action_url,
-                action_label=localized_action_label
+                action_label=localized_action_label,
+                language=email_language,
             )
 
         if html_finale and email_language != "it":
@@ -15000,16 +15109,28 @@ def _invia_email(
         text_finale = (localized_body or "").strip()
 
         if not text_finale and html_finale:
-            text_finale = (
-                "Hai ricevuto una comunicazione da MyLocalCare.\n\n"
-                "Apri questa email in formato HTML per visualizzarla correttamente."
-            )
+            text_finale = "\n\n".join((
+                translate_source(
+                    "Hai ricevuto una comunicazione da MyLocalCare.",
+                    email_language,
+                ),
+                translate_source(
+                    "Apri questa email in formato HTML per visualizzarla correttamente.",
+                    email_language,
+                ),
+            ))
 
         # ✅ Footer identificativo su TextBody e HtmlBody
-        text_finale = _aggiungi_footer_text_se_manca(text_finale)
+        text_finale = _aggiungi_footer_text_se_manca(
+            text_finale,
+            email_language,
+        )
 
         if html_finale:
-            html_finale = _aggiungi_footer_html_se_manca(html_finale)
+            html_finale = _aggiungi_footer_html_se_manca(
+                html_finale,
+                email_language,
+            )
 
         if not text_finale and not html_finale:
             security_log(
@@ -15123,6 +15244,44 @@ def _invia_email(
             production=True
         )
         return False
+
+
+def _copy_email_conferma_account(nome):
+    """Copy sorgente unico per primo invio e reinvio di conferma."""
+
+    nome_visualizzato = str(nome or "").strip() or "utente"
+    return {
+        "oggetto": "Conferma account MyLocalCare",
+        "corpo": (
+            f"Ciao {nome_visualizzato},\n\n"
+            "per completare la registrazione su MyLocalCare, conferma il "
+            "tuo account usando il pulsante presente in questa email.\n\n"
+            "Se non hai richiesto tu questa registrazione, puoi ignorare "
+            "questa email."
+        ),
+        "action_label": "Conferma account",
+    }
+
+
+def _copy_email_reset_password(nome):
+    """Copy sorgente unico dell'email per il recupero password."""
+
+    nome_visualizzato = str(nome or "").strip() or "utente"
+    return {
+        "oggetto": "Reimposta la password MyLocalCare",
+        "corpo": (
+            f"Ciao {nome_visualizzato},\n\n"
+            "abbiamo ricevuto una richiesta per reimpostare la password "
+            "del tuo account MyLocalCare.\n\n"
+            "Per scegliere una nuova password, usa il pulsante presente "
+            "in questa email.\n\n"
+            "Il link è valido per 1 ora.\n\n"
+            "Se non hai richiesto tu questa modifica, puoi ignorare questa "
+            "email: la tua password resterà invariata."
+        ),
+        "action_label": "Reimposta password",
+    }
+
 
 def _normalizza_lista(value):
     if not value:
@@ -16563,16 +16722,7 @@ def approva_annuncio(id):
 
     c = get_cursor(conn)
 
-    c.execute(sql(f"""
-        UPDATE annunci
-        SET stato = 'approvato',
-            approvato_il = {now_sql()},
-            match_da_processare = 1
-        WHERE id = ?
-    """), (id,))
-
-    c.execute(sql("SELECT utente_id FROM annunci WHERE id = ?"), (id,))
-    row = c.fetchone()
+    row = _approva_annuncio_con_disponibilita(c, id)
 
     utente_id = None
     if row:
@@ -16583,7 +16733,13 @@ def approva_annuncio(id):
 
 
     if utente_id:
-        messaggio_notifica = "Il tuo annuncio è stato approvato ed è ora visibile su MyLocalCare ✅"
+        if row["archiviato_per_disponibilita"]:
+            messaggio_notifica = (
+                "Il tuo annuncio è stato approvato. Resterà archiviato finché "
+                "non confermi di essere disponibile su MyLocalCare. ✅"
+            )
+        else:
+            messaggio_notifica = "Il tuo annuncio è stato approvato ed è ora visibile su MyLocalCare ✅"
         link_notifica = url_for("dashboard") + "?tab=annunci"
 
         crea_notifica(
@@ -17599,7 +17755,7 @@ def modifica_annuncio(id):
             "disponibilita_annuncio_azione",
             "keep",
         ) or "keep").strip().lower()
-        if disponibilita_azione not in {"keep", "update", "clear"}:
+        if disponibilita_azione not in {"keep", "update", "clear", "ensure"}:
             flash("Operazione sulla disponibilità non valida.", "warning")
             return redirect(url_for("modifica_annuncio", id=id))
 
@@ -17615,19 +17771,29 @@ def modifica_annuncio(id):
             disponibilita_azione == "keep"
             and (categoria_cambiata or tipo_cambiato)
         ):
-            disponibilita_azione = "clear"
+            disponibilita_azione = (
+                "ensure" if tipo_annuncio == "offro" else "clear"
+            )
 
         disponibilita_annuncio_input = None
+        disponibilita_annuncio_stato = "disponibile"
         if disponibilita_azione == "update":
             try:
                 disponibilita_annuncio_input = (
                     listing_availability_from_form(request.form)
                 )
+                if tipo_annuncio == "offro":
+                    disponibilita_annuncio_stato = (
+                        listing_offer_status_from_form(request.form)
+                    )
             except ValueError as errore_disponibilita:
                 flash(str(errore_disponibilita), "warning")
                 return redirect(url_for("modifica_annuncio", id=id))
 
-            if disponibilita_annuncio_input is None:
+            if (
+                tipo_annuncio == "cerco"
+                and disponibilita_annuncio_input is None
+            ):
                 disponibilita_azione = "clear"
 
         # La disponibilita cercata vive direttamente sull'annuncio. Per un
@@ -17651,24 +17817,46 @@ def modifica_annuncio(id):
                         disponibilita_annuncio_input
                     )
                 )
-        elif disponibilita_azione == "update":
-            disponibilita_offerta = normalize_disponibilita_payload(
-                request_to_service_availability(
-                    disponibilita_annuncio_input
+        else:
+            if not _disponibilita_categoria_table_exists(c):
+                flash(
+                    "La disponibilità non può essere salvata in questo momento. "
+                    "Riprova tra poco.",
+                    "warning",
+                )
+                return redirect(url_for("modifica_annuncio", id=id))
+
+            disponibilita_categoria_esistente = (
+                _disponibilita_categoria_esistente(
+                    c,
+                    int(g.utente["id"]),
+                    categoria,
                 )
             )
-
-        if (
-            tipo_annuncio == "offro"
-            and disponibilita_azione != "keep"
-            and not _disponibilita_categoria_table_exists(c)
-        ):
-            flash(
-                "La disponibilità non può essere salvata in questo momento. "
-                "Riprova tra poco.",
-                "warning",
-            )
-            return redirect(url_for("modifica_annuncio", id=id))
+            if disponibilita_azione == "update":
+                disponibilita_offerta = normalize_disponibilita_payload(
+                    request_to_service_availability(
+                        disponibilita_annuncio_input or {
+                            "a_chiamata": False,
+                            "giorni": [],
+                        },
+                        stato=disponibilita_annuncio_stato,
+                    )
+                )
+            elif not disponibilita_categoria_esistente:
+                # Gli annunci OFFRO senza una configurazione precedente
+                # ricevono il minimo utile: disponibile, senza vincoli di
+                # giorno o orario. Una normale modifica successiva non ne
+                # aggiorna la data di conferma.
+                disponibilita_offerta = normalize_disponibilita_payload(
+                    request_to_service_availability(
+                        {"a_chiamata": False, "giorni": []},
+                        stato="disponibile",
+                    )
+                )
+                disponibilita_azione = "update"
+            else:
+                disponibilita_azione = "keep"
 
         if modalita_servizio != "online":
 
@@ -17961,6 +18149,12 @@ def modifica_annuncio(id):
                         versione_disponibilita,
                         preserve_calendar_exceptions=True,
                     )
+                    _reset_ciclo_disponibilita_annunci(
+                        c,
+                        int(g.utente["id"]),
+                        categoria_slug=categoria,
+                        stato_disponibilita=disponibilita_offerta["stato"],
+                    )
                 elif disponibilita_categoria_corrente:
                     _elimina_disponibilita_categoria(
                         c,
@@ -18098,11 +18292,14 @@ def modifica_annuncio(id):
     ]
 
     listing_availability_initial = None
+    listing_availability_initial_status = "disponibile"
+    listing_availability_initial_action = "keep"
     if str(annuncio["tipo_annuncio"] or "").lower() == "cerco":
         listing_availability_initial = deserialize_sought_availability(
             annuncio["disponibilita_cercata_json"]
         )
     elif str(annuncio["tipo_annuncio"] or "").lower() == "offro":
+        listing_availability_initial_action = "ensure"
         try:
             if _disponibilita_categoria_table_exists(c):
                 disponibilita_categoria = (
@@ -18113,11 +18310,18 @@ def modifica_annuncio(id):
                         pubblica=False,
                     )
                 )
-                listing_availability_initial = (
-                    service_to_request_availability(
-                        disponibilita_categoria
+                if disponibilita_categoria:
+                    listing_availability_initial_status = str(
+                        disponibilita_categoria.get("stato")
+                        or disponibilita_categoria.get("stato_generale")
+                        or "disponibile"
                     )
-                )
+                    listing_availability_initial = (
+                        service_to_request_availability(
+                            disponibilita_categoria
+                        )
+                    )
+                    listing_availability_initial_action = "keep"
         except Exception as exc:
             log_exception_safe(
                 "Disponibilita annuncio non caricabile in modifica",
@@ -18133,6 +18337,12 @@ def modifica_annuncio(id):
         filtri_per_categoria=get_filtri_categoria_da_db(),
         quartieri_selezionati=quartieri_selezionati,
         listing_availability_initial=listing_availability_initial,
+        listing_availability_initial_status=(
+            listing_availability_initial_status
+        ),
+        listing_availability_initial_action=(
+            listing_availability_initial_action
+        ),
     )
 
 # ==========================================================
@@ -18327,6 +18537,48 @@ def _disponibilita_intervalli_table_exists(cur, *, categoria=False):
         if categoria
         else "disponibilita_intervalli"
     )
+    if app.config.get("IS_POSTGRES"):
+        cur.execute(
+            f"SELECT to_regclass('public.{table}') AS tabella"
+        )
+        return bool(fetchone_value(cur.fetchone()))
+    cur.execute(sql("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = ?
+        LIMIT 1
+    """), (table,))
+    return cur.fetchone() is not None
+
+
+def _annunci_disponibilita_ciclo_tables_exist(cur):
+    """Rollout sicuro: il sito continua a funzionare prima della migrazione."""
+
+    if app.config.get("IS_POSTGRES"):
+        cur.execute("""
+            SELECT
+                to_regclass('public.annunci_disponibilita_ciclo') AS ciclo,
+                to_regclass('public.annunci_disponibilita_eventi') AS eventi
+        """)
+        row = cur.fetchone()
+        return bool(row and row["ciclo"] and row["eventi"])
+
+    cur.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name IN (
+              'annunci_disponibilita_ciclo',
+              'annunci_disponibilita_eventi'
+          )
+    """)
+    return len(cur.fetchall()) == 2
+
+
+def _disponibilita_promemoria_outbox_table_exists(cur):
+    """Verifica l'outbox retry-safe dei promemoria 25/30/37."""
+
+    table = "disponibilita_promemoria_eventi"
     if app.config.get("IS_POSTGRES"):
         cur.execute(
             f"SELECT to_regclass('public.{table}') AS tabella"
@@ -18979,6 +19231,17 @@ def _serializza_profilo_disponibilita(
             availability,
             confermata_at=confirmed_at,
         )
+        freshness = availability.get("freschezza") or {}
+        if (
+            availability.get("stato") != "non_disponibile"
+            and freshness.get("priorita_ridotta", False)
+        ):
+            # Dal giorno 37 la dichiarazione non e piu abbastanza recente per
+            # promettere pubblicamente che la persona sia disponibile. I dati
+            # restano intatti nel profilo privato e tornano visibili appena
+            # l'utente riconferma; in pubblico mostriamo uno stato univoco.
+            availability["stato"] = "non_disponibile"
+            availability["non_disponibile_per_scadenza"] = True
         # Se la persona si dichiara non disponibile, il calendario conservato
         # resta utile per una futura riattivazione ma non deve suggerire al
         # pubblico fasce o date prenotabili in contraddizione con lo stato.
@@ -19372,6 +19635,133 @@ def risolvi_disponibilita_servizi_annuncio(
         [category] if category else [],
         categoria_slug,
     )
+
+
+def _profilo_disponibilita_effettivo_annuncio(
+    cur,
+    utente_id,
+    categoria_slug,
+):
+    """Legge stato e conferma effettivi, con override di categoria.
+
+    Il controllo e intenzionalmente leggero: viene usato sia quando un admin
+    approva un annuncio sia prima di creare una richiesta. Durante il rollout,
+    se le tabelle non sono ancora presenti, conserva il comportamento storico.
+    """
+
+    if not _disponibilita_servizi_table_exists(cur):
+        return None
+
+    categoria_slug = to_slug(categoria_slug)
+    if (
+        categoria_slug in CATEGORIE_SERVIZI
+        and _disponibilita_categoria_table_exists(cur)
+    ):
+        cur.execute(sql("""
+            SELECT stato_generale, confermata_at
+            FROM disponibilita_profili_categoria
+            WHERE utente_id = ? AND categoria_slug = ?
+            LIMIT 1
+        """), (int(utente_id), categoria_slug))
+        category = cur.fetchone()
+        if category:
+            return dict(category)
+
+    cur.execute(sql("""
+        SELECT stato_generale, confermata_at
+        FROM disponibilita_profili
+        WHERE utente_id = ?
+        LIMIT 1
+    """), (int(utente_id),))
+    general = cur.fetchone()
+    return dict(general) if general else None
+
+
+def _annuncio_bloccato_dalla_disponibilita(cur, annuncio, *, adesso=None):
+    """Indica se un OFFRO non puo essere pubblico o ricevere richieste."""
+
+    listing = dict(annuncio or {})
+    if str(listing.get("tipo_annuncio") or "").strip().lower() != "offro":
+        return False
+
+    profile = _profilo_disponibilita_effettivo_annuncio(
+        cur,
+        listing["utente_id"],
+        listing.get("categoria"),
+    )
+    if profile:
+        state = str(profile.get("stato_generale") or "").strip().lower()
+        if state == "non_disponibile":
+            return True
+
+        confirmed_at = profile.get("confermata_at")
+        if confirmed_at:
+            freshness = calcola_freschezza_disponibilita(
+                confirmed_at,
+                now=adesso,
+            )
+            if freshness.get("priorita_ridotta", False):
+                return True
+
+    if _annunci_disponibilita_ciclo_tables_exist(cur):
+        cur.execute(sql("""
+            SELECT stato
+            FROM annunci_disponibilita_ciclo
+            WHERE annuncio_id = ?
+            LIMIT 1
+        """), (int(listing["id"]),))
+        cycle = cur.fetchone()
+        if cycle and str(cycle["stato"] or "").strip().lower() in {
+            "non_disponibile_scadenza",
+            "archiviato",
+        }:
+            return True
+
+    return False
+
+
+def _approva_annuncio_con_disponibilita(cur, annuncio_id):
+    """Approva i contenuti senza pubblicare un'offerta non disponibile."""
+
+    cur.execute(sql("""
+        SELECT id, utente_id, categoria, tipo_annuncio, stato
+        FROM annunci
+        WHERE id = ?
+        LIMIT 1
+    """), (int(annuncio_id),))
+    row = cur.fetchone()
+    if not row:
+        return None
+
+    listing = dict(row)
+    archived = _annuncio_bloccato_dalla_disponibilita(cur, listing)
+    nuovo_stato = (
+        "archiviato_disponibilita" if archived else "approvato"
+    )
+    cur.execute(sql(f"""
+        UPDATE annunci
+        SET stato = ?,
+            approvato_il = {now_sql()},
+            match_da_processare = ?
+        WHERE id = ?
+    """), (
+        nuovo_stato,
+        0 if archived else 1,
+        int(annuncio_id),
+    ))
+
+    if archived:
+        _reset_ciclo_disponibilita_annunci(
+            cur,
+            int(listing["utente_id"]),
+            categoria_slug=to_slug(listing.get("categoria")),
+            stato_disponibilita="non_disponibile",
+            annuncio_id=int(annuncio_id),
+        )
+
+    listing["stato"] = nuovo_stato
+    listing["archiviato_per_disponibilita"] = archived
+    return listing
 
 
 def _categorie_disponibilita_offerte(cur, utente_id):
@@ -19814,7 +20204,7 @@ def _disponibilita_filtro_cerca_sql(cur, criteri=None):
     """Condizione per il filtro esplicito ``solo disponibili``.
 
     La disponibilita specifica della categoria prevale su quella generale.
-    Una conferma vecchia di 44 giorni, uno stato ``non_disponibile`` o
+    Una conferma vecchia di 37 giorni, uno stato ``non_disponibile`` o
     l'assenza di una conferma non soddisfano il filtro. La condizione viene
     applicata soltanto quando l'utente attiva il filtro: gli altri risultati
     della ricerca continuano a restare visibili normalmente.
@@ -19845,11 +20235,11 @@ def _disponibilita_filtro_cerca_sql(cur, criteri=None):
 
     soglia = (
         "CURRENT_TIMESTAMP - "
-        f"INTERVAL '{GIORNI_ESCLUSIONE_FILTRO} days'"
+        f"INTERVAL '{GIORNI_PRIORITA_RIDOTTA} days'"
         if app.config.get("IS_POSTGRES")
         else (
             "datetime('now', "
-            f"'-{GIORNI_ESCLUSIONE_FILTRO} days')"
+            f"'-{GIORNI_PRIORITA_RIDOTTA} days')"
         )
     )
     generale_inclusa = f"""
@@ -19963,6 +20353,14 @@ def _piano_promemoria_disponibilita(
     profili_dovuti = []
     promemoria_recenti = []
     for profile in profili_pertinenti:
+        # "Non disponibile" e una scelta volontaria, non una conferma
+        # dimenticata. Il relativo annuncio viene archiviato subito e questo
+        # profilo esce interamente dal ciclo ordinario 25/30/37/44.
+        if (
+            str(profile.get("stato_generale") or "").strip().lower()
+            == "non_disponibile"
+        ):
+            continue
         confermata_at = _disponibilita_promemoria_datetime(
             profile.get("confermata_at")
         )
@@ -20072,6 +20470,212 @@ def _piano_promemoria_disponibilita(
     }
 
 
+def _copy_promemoria_disponibilita(fase):
+    """Testi sorgente dei tre avvisi ordinari 25/30/37."""
+
+    if fase == "in_scadenza":
+        return (
+            "La tua disponibilità sta per scadere",
+            "La tua disponibilità scadrà tra 5 giorni. Controlla i dati "
+            "già salvati: puoi riconfermarli così come sono oppure "
+            "modificarli.",
+        )
+    if fase == "scaduta":
+        return (
+            "Rinnova la tua disponibilità",
+            "La tua disponibilità è scaduta. Riconferma i dati già "
+            "salvati oppure aggiornali per mantenerla attuale.",
+        )
+    return (
+        "Ultimo avviso: rinnova la disponibilità",
+        "La tua disponibilità è scaduta da 7 giorni. I tuoi annunci ora "
+        "risultano non disponibili e hanno priorità ridotta. Riconferma "
+        "entro 7 giorni per evitare l’archiviazione automatica.",
+    )
+
+
+def _consegna_promemoria_disponibilita_outbox(limite=500):
+    """Consegna con retry indipendente gli avvisi ordinari prenotati.
+
+    La prenotazione viene salvata nella stessa transazione che aggiorna
+    ``ultimo_promemoria_at``. Se Postmark o il servizio push non rispondono,
+    il relativo timestamp resta nullo e il job quotidiano ritenta il solo
+    canale mancante, senza duplicare la notifica interna già creata.
+    """
+
+    result = {
+        "notifiche": 0,
+        "push_tentate": 0,
+        "push_inviate": 0,
+        "email_inviate": 0,
+        "email_saltate": 0,
+        "errori": [],
+    }
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        if not _disponibilita_promemoria_outbox_table_exists(cur):
+            result["skipped"] = "outbox_table_missing"
+            return result
+        cur.execute(sql("""
+            SELECT
+                dpe.id, dpe.utente_id, dpe.fase,
+                dpe.titolo_sorgente, dpe.messaggio_sorgente, dpe.link,
+                dpe.notifica_interna_at, dpe.push_inviata_at,
+                dpe.email_inviata_at,
+                u.email,
+                COALESCE(u.lingua_interfaccia, 'it') AS lingua_interfaccia
+            FROM disponibilita_promemoria_eventi dpe
+            JOIN utenti u ON u.id = dpe.utente_id
+            WHERE (
+                dpe.notifica_interna_at IS NULL
+                OR dpe.push_inviata_at IS NULL
+                OR dpe.email_inviata_at IS NULL
+            )
+              AND COALESCE(u.eliminato, 0) = 0
+            ORDER BY dpe.created_at, dpe.id
+            LIMIT ?
+        """), (max(1, int(limite)),))
+        rows = [dict(row) for row in cur.fetchall()]
+        base_url = app.config.get(
+            "APP_BASE_URL", "https://www.mylocalcare.it"
+        ).rstrip("/")
+
+        for row in rows:
+            event_id = int(row["id"])
+            user_id = int(row["utente_id"])
+            language = normalize_language(row.get("lingua_interfaccia"))
+            source_title = str(row["titolo_sorgente"] or "")
+            source_message = str(row["messaggio_sorgente"] or "")
+            link = str(row["link"] or "/utente/dashboard")
+            title = translate_source(source_title, language)
+            message = translate_source(source_message, language)
+
+            if row.get("notifica_interna_at") is None:
+                try:
+                    cur.execute(sql("""
+                        INSERT INTO notifiche (
+                            id_utente, titolo, messaggio, link, tipo, letta
+                        ) VALUES (
+                            ?, ?, ?, ?, 'disponibilita_promemoria', 0
+                        )
+                    """), (user_id, title, message, link))
+                    cur.execute(sql("""
+                        UPDATE disponibilita_promemoria_eventi
+                        SET notifica_interna_at = CURRENT_TIMESTAMP,
+                            notifica_tentativi = notifica_tentativi + 1,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ? AND notifica_interna_at IS NULL
+                    """), (event_id,))
+                    conn.commit()
+                    result["notifiche"] += 1
+                    try:
+                        emit_update_notifications(user_id)
+                    except Exception:
+                        pass
+                except Exception as exc:
+                    conn.rollback()
+                    result["errori"].append({
+                        "utente_id": user_id,
+                        "fase": row.get("fase"),
+                        "canale": "notifica",
+                        "errore": type(exc).__name__,
+                    })
+                    log_exception_safe(
+                        "Errore notifica outbox disponibilita",
+                        exc,
+                        {"utente_id": user_id, "evento_id": event_id},
+                        production=True,
+                    )
+
+            if row.get("push_inviata_at") is None:
+                result["push_tentate"] += 1
+                try:
+                    pushed = bool(
+                        invia_push(user_id, title, message, url=link)
+                    )
+                except Exception as exc:
+                    pushed = False
+                    result["errori"].append({
+                        "utente_id": user_id,
+                        "fase": row.get("fase"),
+                        "canale": "push",
+                        "errore": type(exc).__name__,
+                    })
+                    log_exception_safe(
+                        "Errore push outbox disponibilita",
+                        exc,
+                        {"utente_id": user_id, "evento_id": event_id},
+                        production=True,
+                    )
+                cur.execute(sql("""
+                    UPDATE disponibilita_promemoria_eventi
+                    SET push_tentativi = push_tentativi + 1,
+                        push_inviata_at = CASE WHEN ?
+                            THEN CURRENT_TIMESTAMP ELSE push_inviata_at END,
+                        ultimo_errore = CASE WHEN ?
+                            THEN ultimo_errore ELSE 'push_non_consegnata' END,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND push_inviata_at IS NULL
+                """), (bool(pushed), bool(pushed), event_id))
+                conn.commit()
+                if pushed:
+                    result["push_inviate"] += 1
+
+            if row.get("email_inviata_at") is None:
+                email = str(row.get("email") or "").strip()
+                emailed = not bool(email)
+                try:
+                    if email:
+                        emailed = bool(_invia_email(
+                            destinazione=email,
+                            oggetto=source_title,
+                            corpo=f"{source_title}\n\n{source_message}",
+                            action_url=f"{base_url}{link}",
+                            action_label="Controlla disponibilità",
+                            language=language,
+                        ))
+                except Exception as exc:
+                    emailed = False
+                    result["errori"].append({
+                        "utente_id": user_id,
+                        "fase": row.get("fase"),
+                        "canale": "email",
+                        "errore": type(exc).__name__,
+                    })
+                    log_exception_safe(
+                        "Errore email outbox disponibilita",
+                        exc,
+                        {"utente_id": user_id, "evento_id": event_id},
+                        production=True,
+                    )
+                cur.execute(sql("""
+                    UPDATE disponibilita_promemoria_eventi
+                    SET email_tentativi = email_tentativi + 1,
+                        email_inviata_at = CASE WHEN ?
+                            THEN CURRENT_TIMESTAMP ELSE email_inviata_at END,
+                        ultimo_errore = CASE WHEN ?
+                            THEN ultimo_errore ELSE 'email_non_consegnata' END,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND email_inviata_at IS NULL
+                """), (bool(emailed), bool(emailed), event_id))
+                conn.commit()
+                if emailed and email:
+                    result["email_inviate"] += 1
+                elif not email:
+                    result["email_saltate"] += 1
+        return result
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
 def processa_promemoria_disponibilita(limite=100, dry_run=False):
     """Prenota e invia gli avvisi progressivi sulla disponibilita.
 
@@ -20096,10 +20700,12 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
         "push_tentate": 0,
         "email_inviate": 0,
         "email_saltate": 0,
+        "consegna": {},
         "errori": [],
     }
     conn = None
     cur = None
+    outbox_installata = False
 
     try:
         conn = get_db_connection()
@@ -20111,6 +20717,9 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                 "error": "availability_tables_missing",
             }
         categorie_installate = _disponibilita_categoria_table_exists(cur)
+        outbox_installata = (
+            _disponibilita_promemoria_outbox_table_exists(cur)
+        )
         category_due_clause = ""
         if categorie_installate:
             category_due_clause = """
@@ -20118,6 +20727,7 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                     SELECT 1
                     FROM disponibilita_profili_categoria dpc
                     WHERE dpc.utente_id = u.id
+                      AND dpc.stato_generale IN ('disponibile', 'limitata')
                       AND dpc.confermata_at IS NOT NULL
                       AND dpc.confermata_at <= ?
                 )
@@ -20143,6 +20753,9 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                           SELECT 1
                           FROM disponibilita_profili dp
                           WHERE dp.utente_id = u.id
+                            AND dp.stato_generale IN (
+                                'disponibile', 'limitata'
+                            )
                             AND dp.confermata_at IS NOT NULL
                             AND dp.confermata_at <= ?
                       )
@@ -20199,7 +20812,8 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                         )
                     ]
                     cur.execute(sql("""
-                        SELECT utente_id AS id, confermata_at,
+                        SELECT utente_id AS id, stato_generale,
+                               confermata_at,
                                ultimo_promemoria_at
                         FROM disponibilita_profili
                         WHERE utente_id = ?
@@ -20211,7 +20825,8 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                     category_profiles = []
                     if categorie_installate:
                         cur.execute(sql("""
-                            SELECT id, categoria_slug, confermata_at,
+                            SELECT id, categoria_slug, stato_generale,
+                                   confermata_at,
                                    ultimo_promemoria_at
                             FROM disponibilita_profili_categoria
                             WHERE utente_id = ?
@@ -20253,44 +20868,44 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                         """), (adesso, user_id, *category_ids))
 
                     language = normalize_language(user["lingua_interfaccia"])
-                    if plan["fase"] == "in_scadenza":
-                        titolo_sorgente = (
-                            "La tua disponibilità sta per scadere"
-                        )
-                        messaggio_sorgente = (
-                            "La tua disponibilità scadrà tra 5 giorni. "
-                            "Controlla i dati già salvati: puoi riconfermarli "
-                            "così come sono oppure modificarli."
-                        )
-                    elif plan["fase"] == "scaduta":
-                        titolo_sorgente = "Rinnova la tua disponibilità"
-                        messaggio_sorgente = (
-                            "La tua disponibilità è scaduta. Riconferma "
-                            "i dati già salvati oppure aggiornali per "
-                            "mantenerla attuale."
-                        )
-                    else:
-                        titolo_sorgente = (
-                            "Ultimo avviso: rinnova la disponibilità"
-                        )
-                        messaggio_sorgente = (
-                            "La tua disponibilità è scaduta da 7 giorni "
-                            "e la priorità dei tuoi annunci è stata ridotta. "
-                            "Riconfermala ora per ripristinarla."
-                        )
+                    titolo_sorgente, messaggio_sorgente = (
+                        _copy_promemoria_disponibilita(plan["fase"])
+                    )
                     titolo = translate_source(titolo_sorgente, language)
                     messaggio = translate_source(messaggio_sorgente, language)
                     link = _link_promemoria_disponibilita(
                         plan["categoria_link"]
                     )
-                    cur.execute(sql("""
-                        INSERT INTO notifiche (
-                            id_utente, titolo, messaggio, link, tipo, letta
-                        ) VALUES (?, ?, ?, ?, 'disponibilita_promemoria', 0)
-                    """), (user_id, titolo, messaggio, link))
+                    if outbox_installata:
+                        cur.execute(sql("""
+                            INSERT INTO disponibilita_promemoria_eventi (
+                                utente_id, fase, titolo_sorgente,
+                                messaggio_sorgente, link,
+                                created_at, updated_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """), (
+                            user_id,
+                            plan["fase"],
+                            titolo_sorgente,
+                            messaggio_sorgente,
+                            link,
+                            adesso,
+                            adesso,
+                        ))
+                    else:
+                        # Fallback transitorio per deploy in cui il codice
+                        # precede di pochi minuti la migrazione dell'outbox.
+                        cur.execute(sql("""
+                            INSERT INTO notifiche (
+                                id_utente, titolo, messaggio, link, tipo, letta
+                            ) VALUES (
+                                ?, ?, ?, ?, 'disponibilita_promemoria', 0
+                            )
+                        """), (user_id, titolo, messaggio, link))
                     _schede_profilo_commit(cur)
                     stats["utenti_prenotati"] += 1
-                    stats["notifiche_create"] += 1
+                    if not outbox_installata:
+                        stats["notifiche_create"] += 1
 
                 except Exception as exc:
                     _schede_profilo_rollback(cur)
@@ -20304,6 +20919,12 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                         {"utente_id": user_id},
                         production=True,
                     )
+                    continue
+
+                if outbox_installata:
+                    # La consegna avviene dopo aver prenotato tutto il batch:
+                    # ogni canale possiede un proprio timestamp e puo essere
+                    # ritentato nei job successivi senza duplicare gli altri.
                     continue
 
                 # Tutto cio che segue avviene dopo il COMMIT: una seconda
@@ -20333,9 +20954,11 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                         production=True,
                     )
 
-                if int(user.get("email_notifiche") or 0) == 1 and user.get(
-                    "email"
-                ):
+                # Avviso strettamente operativo sul ciclo di un annuncio:
+                # viene inviato anche se le email facoltative sono disattive.
+                # Non contiene promozioni e permette di evitare una riduzione
+                # di visibilita o l'archiviazione automatica.
+                if user.get("email"):
                     action_url = (
                         f"{app.config.get('APP_BASE_URL', 'https://www.mylocalcare.it').rstrip('/')}"
                         f"{link}"
@@ -20367,6 +20990,24 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                 else:
                     stats["email_saltate"] += 1
 
+        if outbox_installata and not dry_run:
+            delivery = _consegna_promemoria_disponibilita_outbox(
+                limite=max(limite * 3, 100),
+            )
+            stats["consegna"] = delivery
+            stats["notifiche_create"] += int(
+                delivery.get("notifiche") or 0
+            )
+            stats["push_tentate"] += int(
+                delivery.get("push_tentate") or 0
+            )
+            stats["email_inviate"] += int(
+                delivery.get("email_inviate") or 0
+            )
+            stats["email_saltate"] += int(
+                delivery.get("email_saltate") or 0
+            )
+            stats["errori"].extend(delivery.get("errori") or [])
         return stats
 
     except Exception as exc:
@@ -20393,6 +21034,543 @@ def processa_promemoria_disponibilita(limite=100, dry_run=False):
                 conn.close()
             except Exception:
                 pass
+
+
+DISPONIBILITA_ROLLOUT_PROVINCE = ("milano", "roma", "torino")
+DISPONIBILITA_CICLO_BATCH_DEFAULT = 500
+DISPONIBILITA_CICLO_BATCH_MAX = 2000
+def _normalizza_limite_ciclo_disponibilita(limite):
+    try:
+        value = int(limite)
+    except (TypeError, ValueError):
+        value = DISPONIBILITA_CICLO_BATCH_DEFAULT
+    return max(1, min(value, DISPONIBILITA_CICLO_BATCH_MAX))
+
+
+def _disponibilita_ciclo_effective_sql(cur):
+    """Frammenti SQL per l'override categoria con fallback generale."""
+
+    if _disponibilita_categoria_table_exists(cur):
+        return {
+            "join": """
+                LEFT JOIN disponibilita_profili_categoria dpc_ciclo
+                  ON dpc_ciclo.utente_id = a.utente_id
+                 AND dpc_ciclo.categoria_slug = a.categoria
+                LEFT JOIN disponibilita_profili dp_ciclo
+                  ON dp_ciclo.utente_id = a.utente_id
+            """,
+            "confirmed": """
+                CASE WHEN dpc_ciclo.id IS NOT NULL
+                     THEN dpc_ciclo.confermata_at
+                     ELSE dp_ciclo.confermata_at END
+            """,
+            "state": """
+                CASE WHEN dpc_ciclo.id IS NOT NULL
+                     THEN dpc_ciclo.stato_generale
+                     ELSE dp_ciclo.stato_generale END
+            """,
+        }
+    return {
+        "join": """
+            LEFT JOIN disponibilita_profili dp_ciclo
+              ON dp_ciclo.utente_id = a.utente_id
+        """,
+        "confirmed": "dp_ciclo.confermata_at",
+        "state": "dp_ciclo.stato_generale",
+    }
+
+
+def _semina_cicli_disponibilita_annunci(cur, limite, adesso):
+    """Crea cicli ordinari e il rollout nel perimetro iniziale.
+
+    Oltre alle tre province pilota, tutti gli annunci esclusivamente online
+    rientrano nel recupero legacy: non possiedono necessariamente una
+    provincia e non devono quindi essere esclusi dal solo filtro territoriale.
+    """
+
+    effective = _disponibilita_ciclo_effective_sql(cur)
+    province_placeholders = ", ".join(
+        "?" for _ in DISPONIBILITA_ROLLOUT_PROVINCE
+    )
+    cur.execute(sql(f"""
+        SELECT
+            a.id AS annuncio_id,
+            a.utente_id,
+            ({effective['confirmed']}) AS confermata_at,
+            ({effective['state']}) AS stato_disponibilita,
+            LOWER(TRIM(COALESCE(a.provincia, ''))) AS provincia
+        FROM annunci a
+        {effective['join']}
+        LEFT JOIN annunci_disponibilita_ciclo adc
+          ON adc.annuncio_id = a.id
+        WHERE adc.annuncio_id IS NULL
+          AND a.tipo_annuncio = 'offro'
+          AND a.stato = 'approvato'
+          AND (
+                ({effective['confirmed']}) IS NOT NULL
+                OR LOWER(TRIM(COALESCE(a.provincia, '')))
+                    IN ({province_placeholders})
+                OR LOWER(TRIM(COALESCE(a.modalita_servizio, '')))
+                    = 'online'
+          )
+        ORDER BY a.id
+        LIMIT ?
+    """), (*DISPONIBILITA_ROLLOUT_PROVINCE, int(limite)))
+    rows = [dict(row) for row in cur.fetchall()]
+    inserted = 0
+    for row in rows:
+        confirmed = ciclo_disponibilita_datetime(row.get("confermata_at"))
+        origin = ORIGINE_ORDINARIA if confirmed else ORIGINE_ROLLOUT
+        started = confirmed or adesso
+        cur.execute(sql("""
+            INSERT INTO annunci_disponibilita_ciclo (
+                annuncio_id, utente_id, origine, stato, ciclo_versione,
+                ciclo_iniziato_at, confermata_at_snapshot,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, 'attivo', 1, ?, ?, ?, ?)
+            ON CONFLICT (annuncio_id) DO NOTHING
+        """), (
+            int(row["annuncio_id"]),
+            int(row["utente_id"]),
+            origin,
+            started,
+            confirmed,
+            adesso,
+            adesso,
+        ))
+        inserted += max(int(cur.rowcount or 0), 0)
+    return inserted
+
+
+def _sincronizza_ciclo_con_conferma(cur, row, confirmed, adesso):
+    """Reset cron-safe quando la conferma e arrivata fuori dal normale form."""
+
+    snapshot = ciclo_disponibilita_datetime(
+        row.get("confermata_at_snapshot")
+    )
+    if not confirmed or (snapshot is not None and confirmed <= snapshot):
+        return False
+
+    if str(row.get("annuncio_stato") or "") == "archiviato_disponibilita":
+        cur.execute(sql("""
+            UPDATE annunci AS archived_listing
+            SET stato = 'approvato'
+            WHERE id = ?
+              AND stato = 'archiviato_disponibilita'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM annunci active_listing
+                  WHERE active_listing.utente_id = archived_listing.utente_id
+                    AND active_listing.categoria = archived_listing.categoria
+                    AND active_listing.id <> archived_listing.id
+                    AND active_listing.stato IN ('in_attesa', 'approvato')
+              )
+        """), (int(row["annuncio_id"]),))
+        # Non rendere attivo il ciclo se il controllo duplicati ha impedito
+        # la riattivazione dell'annuncio.
+        if cur.rowcount != 1:
+            return False
+
+    cur.execute(sql("""
+        UPDATE annunci_disponibilita_ciclo
+        SET origine = 'ordinario',
+            stato = 'attivo',
+            ciclo_versione = ciclo_versione + 1,
+            ciclo_iniziato_at = ?,
+            confermata_at_snapshot = ?,
+            non_disponibile_at = NULL,
+            archiviazione_prevista_at = NULL,
+            archiviato_at = NULL,
+            updated_at = ?
+        WHERE annuncio_id = ?
+    """), (confirmed, confirmed, adesso, int(row["annuncio_id"])))
+
+    return True
+
+
+def _inserisci_evento_ciclo_disponibilita(cur, row, code, adesso):
+    cur.execute(sql("""
+        INSERT INTO annunci_disponibilita_eventi (
+            annuncio_id, utente_id, ciclo_versione, codice,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT (annuncio_id, ciclo_versione, codice) DO NOTHING
+    """), (
+        int(row["annuncio_id"]),
+        int(row["utente_id"]),
+        int(row["ciclo_versione"]),
+        str(code),
+        adesso,
+        adesso,
+    ))
+    return max(int(cur.rowcount or 0), 0)
+
+
+def _copy_evento_ciclo_disponibilita(code):
+    copies = {
+        EVENTO_ROLLOUT_INVITO: (
+            "Nuova disponibilità: conferma i tuoi annunci",
+            "MyLocalCare ha introdotto la disponibilità aggiornata per "
+            "rendere le ricerche più affidabili e aumentare le tue possibilità "
+            "di ricevere contatti. Controlla i dati dei tuoi servizi e "
+            "confermali.",
+        ),
+        EVENTO_ROLLOUT_PROMEMORIA_1: (
+            "Promemoria: aggiorna la tua disponibilità",
+            "La disponibilità aggiornata rende MyLocalCare più affidabile e "
+            "aumenta le possibilità di ricevere contatti. Conferma i tuoi "
+            "annunci: bastano pochi secondi.",
+        ),
+        EVENTO_ROLLOUT_PROMEMORIA_2: (
+            "Conferma la disponibilità per restare visibile",
+            "Per offrire ricerche più affidabili, MyLocalCare indica quali "
+            "annunci hanno una disponibilità aggiornata. Conferma ora per "
+            "mantenere i tuoi annunci visibili e aumentare le possibilità "
+            "di ricevere contatti.",
+        ),
+        EVENTO_ROLLOUT_ULTIMO_AVVISO: (
+            "Ultimo avviso: conferma la disponibilità",
+            "Per mantenere le ricerche affidabili, i tuoi annunci ora "
+            "risultano non disponibili e hanno priorità ridotta. Conferma "
+            "entro 7 giorni per riattivarli ed evitare l'archiviazione "
+            "automatica.",
+        ),
+        EVENTO_ARCHIVIATO: (
+            "Annuncio archiviato per disponibilità non confermata",
+            "L'annuncio è stato archiviato e non compare più nei risultati. "
+            "Contenuti e foto sono conservati: riconferma la disponibilità "
+            "per riattivarlo.",
+        ),
+    }
+    return copies.get(code, (
+        "Controlla la disponibilità dei tuoi annunci",
+        "Apri il tuo profilo e conferma la disponibilità aggiornata.",
+    ))
+
+
+def _consegna_eventi_ciclo_disponibilita(limite=500):
+    """Outbox con retry indipendente per notifica, push ed email essenziale."""
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    result = {
+        "notifiche": 0,
+        "push": 0,
+        "email": 0,
+        "errori": [],
+    }
+    try:
+        if not _annunci_disponibilita_ciclo_tables_exist(cur):
+            return result
+        cur.execute(sql("""
+            SELECT
+                ade.id, ade.annuncio_id, ade.utente_id,
+                ade.ciclo_versione, ade.codice,
+                ade.notifica_interna_at, ade.push_inviata_at,
+                ade.email_inviata_at,
+                u.email, u.nome, u.username,
+                COALESCE(u.lingua_interfaccia, 'it') AS lingua_interfaccia
+            FROM annunci_disponibilita_eventi ade
+            JOIN annunci_disponibilita_ciclo adc
+              ON adc.annuncio_id = ade.annuncio_id
+             AND adc.ciclo_versione = ade.ciclo_versione
+            JOIN utenti u ON u.id = ade.utente_id
+            WHERE (
+                ade.notifica_interna_at IS NULL
+                OR ade.push_inviata_at IS NULL
+                OR ade.email_inviata_at IS NULL
+            )
+              AND COALESCE(u.eliminato, 0) = 0
+            ORDER BY ade.created_at, ade.id
+            LIMIT ?
+        """), (int(limite),))
+        rows = [dict(row) for row in cur.fetchall()]
+
+        groups = {}
+        for row in rows:
+            groups.setdefault(
+                (int(row["utente_id"]), str(row["codice"])),
+                [],
+            ).append(row)
+
+        link = "/utente/dashboard?disponibilita=riconferma"
+        base_url = app.config.get(
+            "APP_BASE_URL", "https://www.mylocalcare.it"
+        ).rstrip("/")
+        for (user_id, code), event_rows in groups.items():
+            ids = [int(row["id"]) for row in event_rows]
+            placeholders = ", ".join("?" for _ in ids)
+            source_title, source_message = _copy_evento_ciclo_disponibilita(
+                code
+            )
+            language = normalize_language(event_rows[0]["lingua_interfaccia"])
+            title = translate_source(source_title, language)
+            message = translate_source(source_message, language)
+
+            if any(row["notifica_interna_at"] is None for row in event_rows):
+                cur.execute(sql("""
+                    INSERT INTO notifiche (
+                        id_utente, titolo, messaggio, link, tipo, letta
+                    ) VALUES (?, ?, ?, ?, 'disponibilita_ciclo', 0)
+                """), (user_id, title, message, link))
+                cur.execute(sql(f"""
+                    UPDATE annunci_disponibilita_eventi
+                    SET notifica_interna_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id IN ({placeholders})
+                      AND notifica_interna_at IS NULL
+                """), tuple(ids))
+                conn.commit()
+                result["notifiche"] += 1
+                try:
+                    emit_update_notifications(user_id)
+                except Exception:
+                    pass
+
+            if any(row["push_inviata_at"] is None for row in event_rows):
+                try:
+                    pushed = bool(invia_push(
+                        user_id,
+                        title,
+                        message,
+                        url=link,
+                    ))
+                except Exception as exc:
+                    pushed = False
+                    result["errori"].append({
+                        "utente_id": user_id,
+                        "codice": code,
+                        "canale": "push",
+                        "errore": type(exc).__name__,
+                    })
+                cur.execute(sql(f"""
+                    UPDATE annunci_disponibilita_eventi
+                    SET push_tentativi = push_tentativi + 1,
+                        push_inviata_at = CASE WHEN ?
+                            THEN CURRENT_TIMESTAMP ELSE push_inviata_at END,
+                        ultimo_errore = CASE WHEN ?
+                            THEN ultimo_errore ELSE 'push_non_consegnata' END,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id IN ({placeholders})
+                      AND push_inviata_at IS NULL
+                """), (bool(pushed), bool(pushed), *ids))
+                conn.commit()
+                if pushed:
+                    result["push"] += 1
+
+            if any(row["email_inviata_at"] is None for row in event_rows):
+                email = event_rows[0].get("email")
+                emailed = not bool(email)
+                try:
+                    if email:
+                        emailed = bool(_invia_email(
+                            destinazione=email,
+                            oggetto=source_title,
+                            corpo=f"{source_title}\n\n{source_message}",
+                            action_url=f"{base_url}{link}",
+                            action_label="Controlla disponibilità",
+                            language=language,
+                        ))
+                except Exception as exc:
+                    emailed = False
+                    result["errori"].append({
+                        "utente_id": user_id,
+                        "codice": code,
+                        "canale": "email",
+                        "errore": type(exc).__name__,
+                    })
+                cur.execute(sql(f"""
+                    UPDATE annunci_disponibilita_eventi
+                    SET email_tentativi = email_tentativi + 1,
+                        email_inviata_at = CASE WHEN ?
+                            THEN CURRENT_TIMESTAMP ELSE email_inviata_at END,
+                        ultimo_errore = CASE WHEN ?
+                            THEN ultimo_errore ELSE 'email_non_consegnata' END,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id IN ({placeholders})
+                      AND email_inviata_at IS NULL
+                """), (bool(emailed), bool(emailed), *ids))
+                conn.commit()
+                if emailed and email:
+                    result["email"] += 1
+        return result
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def processa_ciclo_disponibilita_annunci(limite=500, dry_run=False):
+    """Rollout, stato non disponibile e archivio reversibile degli annunci."""
+
+    limit = _normalizza_limite_ciclo_disponibilita(limite)
+    now = datetime.now(timezone.utc)
+    stats = {
+        "ok": True,
+        "dry_run": bool(dry_run),
+        "limite": limit,
+        "cicli_creati": 0,
+        "cicli_esaminati": 0,
+        "eventi_creati": 0,
+        "annunci_archiviati": 0,
+        "consegna": {},
+        "errori": [],
+    }
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        if not _annunci_disponibilita_ciclo_tables_exist(cur):
+            return {
+                **stats,
+                "ok": True,
+                "skipped": "lifecycle_tables_missing",
+            }
+        if dry_run:
+            cur.execute(sql("""
+                SELECT COUNT(*) AS totale
+                FROM annunci
+                WHERE tipo_annuncio = 'offro' AND stato = 'approvato'
+            """))
+            stats["cicli_esaminati"] = int(cur.fetchone()["totale"] or 0)
+            return stats
+
+        _schede_profilo_begin(cur)
+        stats["cicli_creati"] = _semina_cicli_disponibilita_annunci(
+            cur, limit, now
+        )
+        effective = _disponibilita_ciclo_effective_sql(cur)
+        cur.execute(sql(f"""
+            SELECT
+                adc.*,
+                a.stato AS annuncio_stato,
+                a.categoria,
+                a.titolo,
+                ({effective['confirmed']}) AS confermata_effettiva,
+                ({effective['state']}) AS stato_disponibilita
+            FROM annunci_disponibilita_ciclo adc
+            JOIN annunci a ON a.id = adc.annuncio_id
+            {effective['join']}
+            WHERE a.tipo_annuncio = 'offro'
+              AND a.stato IN ('approvato', 'archiviato_disponibilita')
+              AND adc.stato NOT IN ('completato', 'archiviato')
+            -- Il batch deve ruotare anche quando gli annunci superano il
+            -- limite giornaliero: ordinando per ultimo controllo evitiamo che
+            -- i primi ID monopolizzino il job fino al giorno 44.
+            ORDER BY adc.updated_at ASC, adc.annuncio_id
+            LIMIT ?
+        """), (limit,))
+        rows = [dict(row) for row in cur.fetchall()]
+        stats["cicli_esaminati"] = len(rows)
+
+        for row in rows:
+            confirmed = ciclo_disponibilita_datetime(
+                row.get("confermata_effettiva")
+            )
+            availability_state = str(
+                row.get("stato_disponibilita") or ""
+            ).strip().lower()
+            if (
+                confirmed
+                and availability_state in {"disponibile", "limitata"}
+                and _sincronizza_ciclo_con_conferma(cur, row, confirmed, now)
+            ):
+                continue
+
+            cur.execute(sql("""
+                SELECT codice
+                FROM annunci_disponibilita_eventi
+                WHERE annuncio_id = ? AND ciclo_versione = ?
+            """), (
+                int(row["annuncio_id"]),
+                int(row["ciclo_versione"]),
+            ))
+            sent_codes = {str(item["codice"]) for item in cur.fetchall()}
+            plan = pianifica_ciclo_annuncio(
+                origine=str(row["origine"]),
+                iniziato_at=row["ciclo_iniziato_at"],
+                confermata_at=confirmed,
+                stato_disponibilita=availability_state,
+                now=now,
+                eventi_inviati=sent_codes,
+            )
+
+            if plan["rollout_completato"]:
+                cur.execute(sql("""
+                    UPDATE annunci_disponibilita_ciclo
+                    SET stato = 'completato', updated_at = ?
+                    WHERE annuncio_id = ?
+                """), (now, int(row["annuncio_id"])))
+                continue
+
+            for code in plan["eventi_dovuti"]:
+                stats["eventi_creati"] += _inserisci_evento_ciclo_disponibilita(
+                    cur, row, code, now
+                )
+
+            non_disponibile_at = (
+                row.get("non_disponibile_at")
+                or (now if plan["non_disponibile_effettiva"] else None)
+            )
+            archive_due = plan["archive_due_at"]
+            cur.execute(sql("""
+                UPDATE annunci_disponibilita_ciclo
+                SET stato = ?,
+                    non_disponibile_at = ?,
+                    archiviazione_prevista_at = ?,
+                    archiviato_at = CASE WHEN ?
+                        THEN COALESCE(archiviato_at, ?) ELSE archiviato_at END,
+                    updated_at = ?
+                WHERE annuncio_id = ?
+            """), (
+                plan["stato"],
+                non_disponibile_at,
+                archive_due,
+                bool(plan["archivia_ora"]),
+                now,
+                now,
+                int(row["annuncio_id"]),
+            ))
+            if plan["archivia_ora"]:
+                cur.execute(sql("""
+                    UPDATE annunci
+                    SET stato = 'archiviato_disponibilita'
+                    WHERE id = ? AND stato = 'approvato'
+                """), (int(row["annuncio_id"]),))
+                stats["annunci_archiviati"] += max(
+                    int(cur.rowcount or 0), 0
+                )
+
+        _schede_profilo_commit(cur)
+        stats["consegna"] = _consegna_eventi_ciclo_disponibilita(
+            limite=limit * 2
+        )
+        return stats
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore ciclo disponibilita annunci",
+            exc,
+            production=True,
+        )
+        return {
+            **stats,
+            "ok": False,
+            "error": type(exc).__name__,
+        }
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 def _disponibilita_servizi_context(cur, utente_id, *, pubblica=False):
@@ -20449,6 +21627,7 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
 
     offers = []
     user_ids = set()
+    listing_ids = set()
     for lista_annunci in liste_annunci:
         for annuncio in lista_annunci or []:
             tipo_annuncio = str(
@@ -20465,6 +21644,10 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
             annuncio["disponibilita_servizi"] = None
             offers.append((annuncio, user_id, categoria_slug))
             user_ids.add(user_id)
+            try:
+                listing_ids.add(int(annuncio["id"]))
+            except (KeyError, TypeError, ValueError):
+                pass
 
     if not offers or not _disponibilita_servizi_table_exists(cur):
         return
@@ -20498,14 +21681,76 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
                 categoria_slug=categoria_slug,
             )
 
+    lifecycle_by_listing = {}
+    if listing_ids and _annunci_disponibilita_ciclo_tables_exist(cur):
+        lifecycle_placeholders = ", ".join("?" for _ in listing_ids)
+        cur.execute(sql(f"""
+            SELECT annuncio_id, stato, non_disponibile_at,
+                   archiviazione_prevista_at
+            FROM annunci_disponibilita_ciclo
+            WHERE annuncio_id IN ({lifecycle_placeholders})
+        """), tuple(sorted(listing_ids)))
+        lifecycle_by_listing = {
+            int(row["annuncio_id"]): dict(row) for row in cur.fetchall()
+        }
+
     for annuncio, user_id, categoria_slug in offers:
-        annuncio["disponibilita_servizi"] = (
+        summary = (
             risolvi_disponibilita_per_categoria(
                 general_by_user.get(user_id),
                 category_by_user.get(user_id, {}),
                 categoria_slug,
             )
         )
+        lifecycle = lifecycle_by_listing.get(int(annuncio.get("id") or 0))
+        freshness_code = str(
+            ((summary or {}).get("freschezza") or {}).get("codice") or ""
+        )
+        voluntary_unavailable = bool(
+            summary
+            and str(summary.get("stato") or "").strip().lower()
+            == "non_disponibile"
+        )
+        system_unavailable = bool(
+            not voluntary_unavailable
+            and (
+                freshness_code in {"priorita_ridotta", "esclusa_filtro"}
+                or (
+                    lifecycle
+                    and lifecycle.get("stato") in {
+                        "non_disponibile_scadenza",
+                    }
+                )
+            )
+        )
+        if system_unavailable:
+            if summary is None:
+                summary = serializza_disponibilita_pubblica(
+                    {
+                        "stato": "non_disponibile",
+                        "a_chiamata": False,
+                        "settimanale": [],
+                        "settimanale_intervalli": [],
+                        "date_speciali": [],
+                        "assenze": [],
+                    },
+                    confermata_at=None,
+                )
+                summary.update({
+                    "configurata": True,
+                    "categoria_slug": categoria_slug,
+                    "categoria_label": _disponibilita_categoria_label(
+                        categoria_slug
+                    ),
+                })
+            else:
+                summary = dict(summary)
+                summary["stato"] = "non_disponibile"
+            summary["non_disponibile_per_scadenza"] = True
+            summary["archiviazione_prevista_at"] = _disponibilita_servizi_iso(
+                (lifecycle or {}).get("archiviazione_prevista_at")
+            )
+        annuncio["disponibilita_servizi"] = summary
 
 
 def assegna_disponibilita_cercata_annunci(*liste_annunci):
@@ -20961,6 +22206,449 @@ def _salva_disponibilita_categoria(
         ])
 
 
+def _annulla_promemoria_disponibilita_pendenti(
+    cur,
+    user_id,
+    *,
+    categoria_slug=None,
+):
+    """Scarta gli invii non ancora completati per il profilo disattivato.
+
+    Un evento puo essere gia stato prenotato dal job mentre l'utente sceglie
+    ``non_disponibile``. Rimuoverlo dalla outbox evita che email o push partano
+    dopo l'uscita volontaria dal ciclo. I link di categoria identificano gli
+    eventi specifici; quelli senza categoria appartengono al profilo generale.
+    """
+
+    if not _disponibilita_promemoria_outbox_table_exists(cur):
+        return 0
+
+    categoria_slug = str(categoria_slug or "").strip().lower()
+    if categoria_slug:
+        cur.execute(sql("""
+            DELETE FROM disponibilita_promemoria_eventi
+            WHERE utente_id = ?
+              AND link LIKE ?
+              AND (
+                  notifica_interna_at IS NULL
+                  OR push_inviata_at IS NULL
+                  OR email_inviata_at IS NULL
+              )
+        """), (int(user_id), f"%categoria={categoria_slug}%"))
+    else:
+        cur.execute(sql("""
+            DELETE FROM disponibilita_promemoria_eventi
+            WHERE utente_id = ?
+              AND link NOT LIKE '%categoria=%'
+              AND (
+                  notifica_interna_at IS NULL
+                  OR push_inviata_at IS NULL
+                  OR email_inviata_at IS NULL
+              )
+        """), (int(user_id),))
+    return max(int(cur.rowcount or 0), 0)
+
+
+def _reset_ciclo_disponibilita_annunci(
+    cur,
+    user_id,
+    *,
+    categoria_slug=None,
+    stato_disponibilita="disponibile",
+    annuncio_id=None,
+):
+    """Allinea annunci e ciclo alla disponibilita appena confermata.
+
+    Una conferma generale non deve sovrascrivere il ciclo di categorie che
+    possiedono gia un override specifico. La riattivazione e consentita solo
+    per l'archivio disponibilita e soltanto se non esiste nel frattempo un
+    altro annuncio attivo della stessa categoria. Una scelta volontaria
+    ``non_disponibile`` archivia invece subito e in modo reversibile ogni
+    OFFRO approvato nel perimetro, senza cancellarne contenuti o fotografie.
+    """
+
+    if not _annunci_disponibilita_ciclo_tables_exist(cur):
+        return 0
+
+    available = str(stato_disponibilita or "") in {
+        "disponibile",
+        "limitata",
+    }
+    if not available:
+        _annulla_promemoria_disponibilita_pendenti(
+            cur,
+            user_id,
+            categoria_slug=categoria_slug,
+        )
+
+    params = [int(user_id)]
+    category_clause = ""
+    listing_clause = ""
+    if annuncio_id is not None:
+        listing_clause = "AND a.id = ?"
+        params.append(int(annuncio_id))
+    if categoria_slug:
+        category_clause = "AND a.categoria = ?"
+        params.append(str(categoria_slug))
+    elif _disponibilita_categoria_table_exists(cur):
+        category_clause = """
+            AND NOT EXISTS (
+                SELECT 1
+                FROM disponibilita_profili_categoria dpc_reset
+                WHERE dpc_reset.utente_id = a.utente_id
+                  AND dpc_reset.categoria_slug = a.categoria
+            )
+        """
+
+    cur.execute(sql(f"""
+        SELECT a.id, a.categoria, a.stato
+        FROM annunci a
+        WHERE a.utente_id = ?
+          AND a.tipo_annuncio = 'offro'
+          AND a.stato IN ('approvato', 'archiviato_disponibilita')
+          {listing_clause}
+          {category_clause}
+        ORDER BY a.id
+    """), tuple(params))
+    listings = [dict(row) for row in cur.fetchall()]
+    if not listings:
+        return 0
+
+    updated = 0
+    for listing in listings:
+        listing_id = int(listing["id"])
+        if not available:
+            # Non usiamo mai il percorso di eliminazione dell'annuncio:
+            # media, foto e contenuti restano intatti e la riattivazione in
+            # un clic puo ripristinare lo stesso record.
+            if listing["stato"] == "approvato":
+                cur.execute(sql("""
+                    UPDATE annunci
+                    SET stato = 'archiviato_disponibilita'
+                    WHERE id = ? AND utente_id = ? AND stato = 'approvato'
+                """), (listing_id, int(user_id)))
+                updated += max(int(cur.rowcount or 0), 0)
+
+            cur.execute(sql("""
+                INSERT INTO annunci_disponibilita_ciclo (
+                    annuncio_id, utente_id, origine, stato, ciclo_versione,
+                    ciclo_iniziato_at, confermata_at_snapshot,
+                    non_disponibile_at, archiviazione_prevista_at,
+                    archiviato_at, created_at, updated_at
+                ) VALUES (
+                    ?, ?, 'ordinario', 'archiviato', 1,
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP, NULL, CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                ON CONFLICT (annuncio_id) DO UPDATE SET
+                    origine = 'ordinario',
+                    stato = 'archiviato',
+                    ciclo_versione =
+                        annunci_disponibilita_ciclo.ciclo_versione + 1,
+                    ciclo_iniziato_at = CURRENT_TIMESTAMP,
+                    confermata_at_snapshot = CURRENT_TIMESTAMP,
+                    non_disponibile_at = CURRENT_TIMESTAMP,
+                    archiviazione_prevista_at = NULL,
+                    archiviato_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+            """), (listing_id, int(user_id)))
+            continue
+
+        if listing["stato"] == "archiviato_disponibilita":
+            cur.execute(sql("""
+                UPDATE annunci AS archived_listing
+                SET stato = 'approvato'
+                WHERE id = ?
+                  AND stato = 'archiviato_disponibilita'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM annunci active_listing
+                      WHERE active_listing.utente_id = archived_listing.utente_id
+                        AND active_listing.categoria = archived_listing.categoria
+                        AND active_listing.id <> archived_listing.id
+                        AND active_listing.stato IN ('in_attesa', 'approvato')
+                  )
+            """), (listing_id,))
+            if cur.rowcount != 1:
+                # Il duplicato resta archiviato: anche il suo ciclo deve
+                # restare archiviato e non essere contato come riavviato.
+                continue
+
+        cur.execute(sql("""
+            INSERT INTO annunci_disponibilita_ciclo (
+                annuncio_id, utente_id, origine, stato, ciclo_versione,
+                ciclo_iniziato_at, confermata_at_snapshot,
+                non_disponibile_at, archiviazione_prevista_at,
+                archiviato_at, created_at, updated_at
+            ) VALUES (
+                ?, ?, 'ordinario', 'attivo', 1,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
+                NULL, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+            ON CONFLICT (annuncio_id) DO UPDATE SET
+                origine = 'ordinario',
+                stato = 'attivo',
+                ciclo_versione = annunci_disponibilita_ciclo.ciclo_versione + 1,
+                ciclo_iniziato_at = CURRENT_TIMESTAMP,
+                confermata_at_snapshot = CURRENT_TIMESTAMP,
+                non_disponibile_at = NULL,
+                archiviazione_prevista_at = NULL,
+                archiviato_at = NULL,
+                updated_at = CURRENT_TIMESTAMP
+        """), (listing_id, int(user_id)))
+        updated += 1
+    return updated
+
+
+def _categorie_annunci_disponibilita_rilevanti(cur, user_id):
+    """Categorie OFFRO che possono essere confermate in blocco."""
+
+    cur.execute(sql("""
+        SELECT DISTINCT categoria
+        FROM annunci
+        WHERE utente_id = ?
+          AND tipo_annuncio = 'offro'
+          AND stato IN ('in_attesa', 'approvato', 'archiviato_disponibilita')
+        ORDER BY categoria
+    """), (int(user_id),))
+    categories = []
+    seen = set()
+    for row in cur.fetchall():
+        category_slug = to_slug(row["categoria"])
+        if category_slug not in CATEGORIE_SERVIZI or category_slug in seen:
+            continue
+        seen.add(category_slug)
+        categories.append(category_slug)
+    return categories
+
+
+def _riconferma_o_crea_disponibilita_categoria(
+    cur,
+    user_id,
+    categoria_slug,
+    *,
+    forza_disponibile=False,
+):
+    """Riconferma una categoria senza alterarne agenda e preferenze."""
+
+    categoria_slug = to_slug(categoria_slug)
+    if categoria_slug not in CATEGORIE_SERVIZI:
+        raise ValueError("Categoria di servizio non valida.")
+
+    cur.execute(sql("""
+        SELECT id, stato_generale
+        FROM disponibilita_profili_categoria
+        WHERE utente_id = ? AND categoria_slug = ?
+        LIMIT 1
+    """), (int(user_id), categoria_slug))
+    existing = cur.fetchone()
+    if existing:
+        state = str(existing["stato_generale"] or "disponibile")
+        if forza_disponibile and state != "disponibile":
+            state = "disponibile"
+        cur.execute(sql("""
+            UPDATE disponibilita_profili_categoria
+            SET stato_generale = ?,
+                confermata_at = CURRENT_TIMESTAMP,
+                ultimo_promemoria_at = NULL,
+                versione = versione + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """), (state, int(existing["id"])))
+        return {"stato": state, "creata": False}
+
+    cur.execute(sql("""
+        SELECT stato_generale, a_chiamata, fuso_orario
+        FROM disponibilita_profili
+        WHERE utente_id = ?
+        LIMIT 1
+    """), (int(user_id),))
+    general = cur.fetchone()
+    # Un annuncio legacy senza profilo nasce esplicitamente disponibile:
+    # pubblicarlo significava dichiararsi disponibile, mentre giorni/orari
+    # eventualmente gia presenti nell'agenda generale vengono conservati.
+    state = "disponibile"
+    on_call = bool(general["a_chiamata"]) if general else False
+    timezone_name = str(general["fuso_orario"] or "Europe/Rome") if general else "Europe/Rome"
+
+    cur.execute(sql("""
+        INSERT INTO disponibilita_profili_categoria (
+            utente_id, categoria_slug, stato_generale, a_chiamata,
+            fuso_orario, confermata_at, ultimo_promemoria_at, versione,
+            created_at, updated_at
+        ) VALUES (
+            ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, NULL, 1,
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    """), (
+        int(user_id), categoria_slug, state, on_call, timezone_name,
+    ))
+    cur.execute(sql("""
+        SELECT id
+        FROM disponibilita_profili_categoria
+        WHERE utente_id = ? AND categoria_slug = ?
+        LIMIT 1
+    """), (int(user_id), categoria_slug))
+    profile = cur.fetchone()
+    if not profile:
+        raise RuntimeError("availability_profile_not_created")
+    profile_id = int(profile["id"])
+
+    if general:
+        cur.execute(sql("""
+            INSERT INTO disponibilita_settimanale_categoria (
+                profilo_categoria_id, giorno_settimana, fascia, created_at
+            )
+            SELECT ?, giorno_settimana, fascia, CURRENT_TIMESTAMP
+            FROM disponibilita_settimanale
+            WHERE utente_id = ?
+            ON CONFLICT (profilo_categoria_id, giorno_settimana, fascia)
+            DO NOTHING
+        """), (profile_id, int(user_id)))
+        if _disponibilita_intervalli_table_exists(cur, categoria=True):
+            cur.execute(sql("""
+                INSERT INTO disponibilita_intervalli_categoria (
+                    profilo_categoria_id, giorno_settimana,
+                    ora_inizio, ora_fine, giorno_successivo, created_at
+                )
+                SELECT ?, giorno_settimana, ora_inizio, ora_fine,
+                       giorno_successivo, CURRENT_TIMESTAMP
+                FROM disponibilita_intervalli
+                WHERE utente_id = ?
+                ON CONFLICT (
+                    profilo_categoria_id, giorno_settimana,
+                    ora_inizio, ora_fine, giorno_successivo
+                ) DO NOTHING
+            """), (profile_id, int(user_id)))
+        cur.execute(sql("""
+            INSERT INTO disponibilita_date_speciali_categoria (
+                profilo_categoria_id, data, tipo, fasce,
+                created_at, updated_at
+            )
+            SELECT ?, data, tipo, fasce, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            FROM disponibilita_date_speciali
+            WHERE utente_id = ?
+            ON CONFLICT (profilo_categoria_id, data) DO NOTHING
+        """), (profile_id, int(user_id)))
+        cur.execute(sql("""
+            INSERT INTO disponibilita_assenze_categoria (
+                profilo_categoria_id, data_inizio, data_fine,
+                created_at, updated_at
+            )
+            SELECT ?, data_inizio, data_fine,
+                   CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            FROM disponibilita_assenze
+            WHERE utente_id = ?
+            ON CONFLICT (profilo_categoria_id, data_inizio, data_fine)
+            DO NOTHING
+        """), (profile_id, int(user_id)))
+
+    return {"stato": state, "creata": True}
+
+
+def _riconferma_tutte_disponibilita_annunci(cur, user_id):
+    """Rende disponibili gli OFFRO, preservando calendari e preferenze."""
+
+    categories = _categorie_annunci_disponibilita_rilevanti(cur, user_id)
+    result = {
+        "categorie": categories,
+        "confermate": 0,
+        "create": 0,
+        "cicli_riavviati": 0,
+        "annunci_riattivati": 0,
+        "conflitti": 0,
+        "conflitti_annunci": [],
+    }
+    for category_slug in categories:
+        cur.execute(sql("""
+            SELECT id
+            FROM annunci
+            WHERE utente_id = ?
+              AND categoria = ?
+              AND tipo_annuncio = 'offro'
+              AND stato = 'archiviato_disponibilita'
+            ORDER BY id
+        """), (int(user_id), category_slug))
+        archived_before = {
+            int(row["id"])
+            for row in cur.fetchall()
+        }
+        confirmation = _riconferma_o_crea_disponibilita_categoria(
+            cur,
+            user_id,
+            category_slug,
+            forza_disponibile=True,
+        )
+        result["confermate"] += 1
+        result["create"] += int(bool(confirmation["creata"]))
+        result["cicli_riavviati"] += _reset_ciclo_disponibilita_annunci(
+            cur,
+            user_id,
+            categoria_slug=category_slug,
+            stato_disponibilita=confirmation["stato"],
+        )
+        if archived_before:
+            placeholders = ", ".join("?" for _ in archived_before)
+            cur.execute(sql(f"""
+                SELECT id
+                FROM annunci
+                WHERE utente_id = ?
+                  AND categoria = ?
+                  AND stato = 'archiviato_disponibilita'
+                  AND id IN ({placeholders})
+                ORDER BY id
+            """), (
+                int(user_id),
+                category_slug,
+                *sorted(archived_before),
+            ))
+            conflicts = [int(row["id"]) for row in cur.fetchall()]
+            result["annunci_riattivati"] += (
+                len(archived_before) - len(conflicts)
+            )
+            result["conflitti"] += len(conflicts)
+            result["conflitti_annunci"].extend({
+                "annuncio_id": listing_id,
+                "categoria_slug": category_slug,
+            } for listing_id in conflicts)
+    return result
+
+
+def _riconferma_disponibilita_acquisto(cur, user_id, annuncio_id):
+    """Un pagamento reale equivale a confermare la disponibilita corrente."""
+
+    if not annuncio_id or not _disponibilita_categoria_table_exists(cur):
+        return False
+    cur.execute(sql("""
+        SELECT id, categoria, tipo_annuncio
+        FROM annunci
+        WHERE id = ? AND utente_id = ?
+        LIMIT 1
+    """), (int(annuncio_id), int(user_id)))
+    listing = cur.fetchone()
+    if not listing or str(listing["tipo_annuncio"] or "") != "offro":
+        return False
+
+    categoria_slug = to_slug(listing["categoria"])
+    if categoria_slug not in CATEGORIE_SERVIZI:
+        return False
+
+    confirmation = _riconferma_o_crea_disponibilita_categoria(
+        cur,
+        int(user_id),
+        categoria_slug,
+        forza_disponibile=True,
+    )
+    _reset_ciclo_disponibilita_annunci(
+        cur,
+        int(user_id),
+        categoria_slug=categoria_slug,
+        stato_disponibilita=confirmation["stato"],
+    )
+    return True
+
+
 def _risposta_disponibilita_servizi(cur, user_id, *, categoria_slug=None):
     profiles = elenca_disponibilita_servizi(cur, user_id, pubblica=False)
     scope_categoria_disponibile = _disponibilita_categoria_table_exists(cur)
@@ -20970,6 +22658,11 @@ def _risposta_disponibilita_servizi(cur, user_id, *, categoria_slug=None):
     )
     categorie_offerte = (
         categorie_effettivamente_offerte
+        if scope_categoria_disponibile
+        else []
+    )
+    categorie_da_confermare = (
+        _categorie_annunci_disponibilita_rilevanti(cur, user_id)
         if scope_categoria_disponibile
         else []
     )
@@ -21008,6 +22701,8 @@ def _risposta_disponibilita_servizi(cur, user_id, *, categoria_slug=None):
         "categorie_offerte": categorie_offerte,
         "scope_categoria_disponibile": scope_categoria_disponibile,
         "utente_offre_servizi": bool(categorie_effettivamente_offerte),
+        "puo_confermare_tutte": bool(categorie_da_confermare),
+        "categorie_da_confermare": categorie_da_confermare,
         "categoria_slug": categoria_slug,
         # Per il profilo generale resta sempre vuoto: non deve mai comparire
         # una proposta di cancellazione multipla. Per una categoria specifica
@@ -21087,12 +22782,23 @@ def api_utente_disponibilita_servizi():
                     normalized,
                     submitted_version,
                 )
+                _reset_ciclo_disponibilita_annunci(
+                    cur,
+                    user_id,
+                    categoria_slug=categoria_slug,
+                    stato_disponibilita=normalized["stato"],
+                )
             else:
                 _salva_disponibilita_generale(
                     cur,
                     user_id,
                     normalized,
                     submitted_version,
+                )
+                _reset_ciclo_disponibilita_annunci(
+                    cur,
+                    user_id,
+                    stato_disponibilita=normalized["stato"],
                 )
 
         _schede_profilo_commit(cur)
@@ -21178,6 +22884,21 @@ def api_utente_riconferma_disponibilita_servizi():
                   AND categoria_slug = ?
                   AND versione = ?
             """), (user_id, categoria_slug, submitted_version))
+            updated_profiles = cur.rowcount
+            confirmed_state = None
+            if updated_profiles == 1:
+                cur.execute(sql("""
+                    SELECT stato_generale
+                    FROM disponibilita_profili_categoria
+                    WHERE utente_id = ? AND categoria_slug = ?
+                    LIMIT 1
+                """), (user_id, categoria_slug))
+                confirmed_profile = cur.fetchone()
+                confirmed_state = (
+                    confirmed_profile["stato_generale"]
+                    if confirmed_profile
+                    else None
+                )
         else:
             cur.execute(sql("""
                 UPDATE disponibilita_profili
@@ -21187,12 +22908,33 @@ def api_utente_riconferma_disponibilita_servizi():
                     updated_at = CURRENT_TIMESTAMP
                 WHERE utente_id = ? AND versione = ?
             """), (user_id, submitted_version))
-        if cur.rowcount != 1:
+            updated_profiles = cur.rowcount
+            confirmed_state = None
+            if updated_profiles == 1:
+                cur.execute(sql("""
+                    SELECT stato_generale
+                    FROM disponibilita_profili
+                    WHERE utente_id = ?
+                    LIMIT 1
+                """), (user_id,))
+                confirmed_profile = cur.fetchone()
+                confirmed_state = (
+                    confirmed_profile["stato_generale"]
+                    if confirmed_profile
+                    else None
+                )
+        if updated_profiles != 1:
             _schede_profilo_rollback(cur)
             return jsonify({
                 "ok": False,
                 "message": "La disponibilita e cambiata. Riaprila e riprova.",
             }), 409
+        _reset_ciclo_disponibilita_annunci(
+            cur,
+            user_id,
+            categoria_slug=categoria_slug,
+            stato_disponibilita=confirmed_state or "disponibile",
+        )
         _schede_profilo_commit(cur)
 
         return jsonify(_risposta_disponibilita_servizi(
@@ -21214,6 +22956,158 @@ def api_utente_riconferma_disponibilita_servizi():
         return jsonify({
             "ok": False,
             "message": "Non e stato possibile riconfermare la disponibilita.",
+        }), 503
+
+
+@app.route("/api/utente/disponibilita/riconferma-tutte", methods=["POST"])
+@login_required
+def api_utente_riconferma_tutte_disponibilita_servizi():
+    """Conferma in un gesto tutti gli OFFRO senza perdere i calendari."""
+
+    verify_csrf()
+    user_id = int(g.utente["id"])
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        if (
+            not _disponibilita_servizi_table_exists(cur)
+            or not _disponibilita_categoria_table_exists(cur)
+        ):
+            raise RuntimeError("category_tables_missing")
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+        result = _riconferma_tutte_disponibilita_annunci(cur, user_id)
+        if not result["confermate"]:
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "code": "no_offer_listings",
+                "message": "Non ci sono annunci di servizi da confermare.",
+            }), 400
+        _schede_profilo_commit(cur)
+        return jsonify({"ok": True, **result})
+    except ValueError as exc:
+        _schede_profilo_rollback(cur)
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore riconferma completa disponibilita servizi",
+            exc,
+            {"utente_id": user_id},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": "Non e stato possibile confermare tutte le disponibilita.",
+        }), 503
+
+
+@app.route(
+    "/api/annunci/<int:annuncio_id>/riattiva-disponibilita",
+    methods=["POST"],
+)
+@login_required
+def api_riattiva_annuncio_archiviato_disponibilita(annuncio_id):
+    """Riattiva subito e soltanto l'annuncio archiviato selezionato."""
+
+    verify_csrf()
+    user_id = int(g.utente["id"])
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        if (
+            not _disponibilita_servizi_table_exists(cur)
+            or not _disponibilita_categoria_table_exists(cur)
+            or not _annunci_disponibilita_ciclo_tables_exist(cur)
+        ):
+            raise RuntimeError("availability_tables_missing")
+
+        _schede_profilo_begin(cur)
+        _schede_profilo_lock_user(cur, user_id)
+        cur.execute(sql("""
+            SELECT id, categoria, tipo_annuncio, stato
+            FROM annunci
+            WHERE id = ? AND utente_id = ?
+            LIMIT 1
+        """), (int(annuncio_id), user_id))
+        listing = cur.fetchone()
+        if not listing or str(listing["tipo_annuncio"] or "") != "offro":
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "code": "listing_not_found",
+                "message": "Annuncio non trovato.",
+            }), 404
+        if str(listing["stato"] or "") != "archiviato_disponibilita":
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "code": "listing_not_archived",
+                "message": "L'annuncio non richiede una riattivazione.",
+            }), 409
+
+        category_slug = to_slug(listing["categoria"])
+        if category_slug not in CATEGORIE_SERVIZI:
+            raise ValueError("Categoria di servizio non valida.")
+        cur.execute(sql("""
+            SELECT 1
+            FROM annunci
+            WHERE utente_id = ?
+              AND categoria = ?
+              AND id <> ?
+              AND stato IN ('in_attesa', 'approvato')
+            LIMIT 1
+        """), (user_id, category_slug, int(annuncio_id)))
+        if cur.fetchone():
+            _schede_profilo_rollback(cur)
+            return jsonify({
+                "ok": False,
+                "code": "duplicate_active_listing",
+                "message": "Hai gia un altro annuncio attivo per questo servizio.",
+            }), 409
+
+        confirmation = _riconferma_o_crea_disponibilita_categoria(
+            cur,
+            user_id,
+            category_slug,
+            forza_disponibile=True,
+        )
+        restarted = _reset_ciclo_disponibilita_annunci(
+            cur,
+            user_id,
+            categoria_slug=category_slug,
+            stato_disponibilita=confirmation["stato"],
+            annuncio_id=int(annuncio_id),
+        )
+        cur.execute(sql("""
+            SELECT stato FROM annunci
+            WHERE id = ? AND utente_id = ?
+        """), (int(annuncio_id), user_id))
+        refreshed = cur.fetchone()
+        if restarted != 1 or not refreshed or refreshed["stato"] != "approvato":
+            raise RuntimeError("listing_not_reactivated")
+        _schede_profilo_commit(cur)
+        return jsonify({
+            "ok": True,
+            "annuncio_id": int(annuncio_id),
+            "stato": "approvato",
+            "disponibilita": confirmation["stato"],
+        })
+    except ValueError as exc:
+        _schede_profilo_rollback(cur)
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except Exception as exc:
+        _schede_profilo_rollback(cur)
+        log_exception_safe(
+            "Errore riattivazione annuncio disponibilita",
+            exc,
+            {"utente_id": user_id, "annuncio_id": int(annuncio_id)},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "message": "Non e stato possibile riattivare l'annuncio.",
         }), 503
 
 
@@ -25591,6 +27485,33 @@ def invia_push(user_id, title, body, url=None):
         conn.autocommit = True
         cur = conn.cursor()
 
+        # La preferenza e' attiva di default, ma l'utente puo' disattivarla
+        # per l'intero account. Il controllo dello schema mantiene il rollout
+        # compatibile nei pochi minuti tra deploy e migrazione.
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'utenti'
+                  AND column_name = 'push_notifiche'
+            ) AS disponibile
+        """)
+        preference_schema = cur.fetchone()
+        if preference_schema and preference_schema["disponibile"]:
+            cur.execute("""
+                SELECT COALESCE(push_notifiche, 1) AS push_notifiche
+                FROM utenti
+                WHERE id = %s
+            """, (user_id,))
+            preference_row = cur.fetchone()
+            if preference_row and int(preference_row["push_notifiche"] or 0) != 1:
+                security_log(
+                    "🔕 [invia_push] preferenza account disattivata",
+                    {"user_id": user_id},
+                )
+                return True
+
         cur.execute("""
             SELECT
                 ps.endpoint,
@@ -26469,6 +28390,17 @@ def push_subscribe():
         user_id = g.utente["id"]
         data = request.get_json(silent=True) or {}
 
+        if _valore_preferenza_notifica(
+            g.utente,
+            "push_notifiche",
+            1,
+        ) != 1:
+            return jsonify({
+                "ok": False,
+                "error": "Le notifiche push sono disattivate nelle impostazioni.",
+                "code": "push_preference_disabled",
+            }), 403
+
         endpoint = data.get("endpoint")
         keys = data.get("keys") or {}
         p256dh = keys.get("p256dh")
@@ -26606,13 +28538,17 @@ def push_unsubscribe():
         cur = get_cursor(conn)
 
         cur.execute(sql("""
+            UPDATE utenti
+            SET push_notifiche = 0
+            WHERE id = ?
+        """), (user_id,))
+
+        # La scelta e' una preferenza di account: rimuoviamo anche gli altri
+        # endpoint eventualmente registrati su dispositivi diversi.
+        cur.execute(sql("""
             DELETE FROM push_subscriptions
             WHERE utente_id = ?
-              AND endpoint = ?
-        """), (
-            user_id,
-            endpoint
-        ))
+        """), (user_id,))
 
         conn.commit()
 
@@ -27356,17 +29292,14 @@ def register():
 
         # 📧 Email conferma tramite Postmark
         link = build_external_url("conferma_email", token=token)
+        email_copy = _copy_email_conferma_account(nome)
 
         email_inviata = _invia_email(
             destinazione=email,
-            oggetto="Conferma account MyLocalCare",
-            corpo=(
-                f"Ciao {nome},\n\n"
-                "per completare la registrazione su MyLocalCare, conferma il tuo account usando il pulsante presente in questa email.\n\n"
-                "Se non hai richiesto tu questa registrazione, puoi ignorare questa email."
-            ),
+            oggetto=email_copy["oggetto"],
+            corpo=email_copy["corpo"],
             action_url=link,
-            action_label="Conferma account"
+            action_label=email_copy["action_label"],
         )
 
         if email_inviata:
@@ -27452,17 +29385,14 @@ def reinvia_conferma():
         conn.commit()
 
         link = build_external_url("conferma_email", token=nuovo_token)
+        email_copy = _copy_email_conferma_account(utente["nome"])
 
         email_inviata = _invia_email(
             destinazione=utente["email"],
-            oggetto="Conferma account MyLocalCare",
-            corpo=(
-                f"Ciao {utente['nome']},\n\n"
-                "per completare la registrazione su MyLocalCare, conferma il tuo account usando il pulsante presente in questa email.\n\n"
-                "Se non hai richiesto tu questa registrazione, puoi ignorare questa email."
-            ),
+            oggetto=email_copy["oggetto"],
+            corpo=email_copy["corpo"],
             action_url=link,
-            action_label="Conferma account"
+            action_label=email_copy["action_label"],
         )
 
         if email_inviata:
@@ -27830,19 +29760,14 @@ def password_dimenticata():
         conn.commit()
 
         nome = utente['nome'] if 'nome' in utente.keys() and utente['nome'] else utente['username']
+        email_copy = _copy_email_reset_password(nome)
 
         email_inviata = _invia_email(
             destinazione=email,
-            oggetto="Reimposta la password MyLocalCare",
-            corpo=(
-                f"Ciao {nome},\n\n"
-                "abbiamo ricevuto una richiesta per reimpostare la password del tuo account MyLocalCare.\n\n"
-                "Per scegliere una nuova password, usa il pulsante presente in questa email.\n\n"
-                "Il link è valido per 1 ora.\n\n"
-                "Se non hai richiesto tu questa modifica, puoi ignorare questa email: la tua password resterà invariata."
-            ),
+            oggetto=email_copy["oggetto"],
+            corpo=email_copy["corpo"],
             action_url=reset_url,
-            action_label="Reimposta password"
+            action_label=email_copy["action_label"],
         )
 
         if not email_inviata:
@@ -28619,7 +30544,7 @@ RICHIESTA_DISPONIBILITA_MESSAGGIO = (
 RICHIESTA_DISPONIBILITA_EMAIL_OGGETTO = (
     "Hai ricevuto una richiesta di disponibilità su MyLocalCare"
 )
-RICHIESTA_DISPONIBILITA_EMAIL_CTA = "Apri la chat"
+RICHIESTA_DISPONIBILITA_EMAIL_CTA = "Visualizza richiesta"
 RISPOSTA_DISPONIBILITA_TITOLO = "Risposta alla tua richiesta di disponibilità"
 RISPOSTA_DISPONIBILITA_MESSAGGI = {
     "disponibile": "L’utente ha confermato la disponibilità richiesta.",
@@ -28631,7 +30556,7 @@ RISPOSTA_DISPONIBILITA_MESSAGGI = {
 RISPOSTA_DISPONIBILITA_EMAIL_OGGETTO = (
     "Hai ricevuto una risposta su MyLocalCare"
 )
-RISPOSTA_DISPONIBILITA_EMAIL_CTA = "Apri la chat"
+RISPOSTA_DISPONIBILITA_EMAIL_CTA = "Visualizza risposta"
 
 
 class RichiestaDisponibilitaError(ValueError):
@@ -28788,6 +30713,7 @@ def _prenota_richiesta_disponibilita(
         SELECT
             a.id,
             a.utente_id,
+            a.categoria,
             a.tipo_annuncio,
             a.stato,
             proprietario.username AS proprietario_username,
@@ -28820,6 +30746,17 @@ def _prenota_richiesta_disponibilita(
             "Questo annuncio non è disponibile.",
             status=404,
             code="listing_unavailable",
+        )
+
+    if _annuncio_bloccato_dalla_disponibilita(
+        cur,
+        annuncio,
+        adesso=adesso,
+    ):
+        raise RichiestaDisponibilitaError(
+            "Questo annuncio non è disponibile.",
+            status=409,
+            code="availability_unavailable",
         )
 
     offerente_id = int(annuncio["utente_id"])
@@ -32436,6 +34373,17 @@ def gestisci_pagamento_confermato(payment_intent):
         else:
             raise Exception("Tipo acquisto non valido")
 
+        # Un acquisto reale riferito a un annuncio offro e una dichiarazione
+        # concreta di disponibilita: riconfermiamo la categoria senza
+        # cancellare giorni, fasce o orari gia impostati. Il ciclo 25/30/37/44
+        # riparte dal pagamento, nella stessa transazione delle attivazioni.
+        if annuncio_id:
+            _riconferma_disponibilita_acquisto(
+                cur,
+                utente_id,
+                annuncio_id,
+            )
+
         conn.commit()
 
         security_log(
@@ -32765,32 +34713,42 @@ def modifica_profilo():
 # IMPOSTAZIONI → PROFILO
 # ---------------------------
 
+def _valore_preferenza_notifica(utente, colonna, predefinito=1):
+    """Legge una preferenza anche durante il breve rollout della migrazione."""
+    if not utente:
+        return int(bool(predefinito))
+    try:
+        valore = utente[colonna]
+    except (KeyError, IndexError, TypeError):
+        return int(bool(predefinito))
+    if valore is None:
+        return int(bool(predefinito))
+    try:
+        return 1 if int(valore) == 1 else 0
+    except (TypeError, ValueError):
+        return int(bool(predefinito))
+
 @app.route("/impostazioni")
 @login_required
 def impostazioni():
     if not session.get("utente_id"):
         return redirect(url_for("login"))
 
-    conn = get_db_connection()
-    cur = get_cursor(conn)
-
-    utente = cur.execute(
-        sql("""
-            SELECT email_notifiche
-            FROM utenti
-            WHERE id = ?
-        """),
-        (session["utente_id"],)
-    ).fetchone()
-
-    email_notifiche = 1
-
-    if utente:
-        email_notifiche = int(utente["email_notifiche"] or 0)
+    email_notifiche = _valore_preferenza_notifica(
+        g.utente,
+        "email_notifiche",
+        1,
+    )
+    push_notifiche = _valore_preferenza_notifica(
+        g.utente,
+        "push_notifiche",
+        1,
+    )
 
     return render_template(
         "impostazioni.html",
-        email_notifiche=email_notifiche
+        email_notifiche=email_notifiche,
+        push_notifiche=push_notifiche,
     )
 
 @app.route("/impostazioni/modifica-username", methods=["GET", "POST"])
@@ -33416,6 +35374,57 @@ def toggle_email_notifiche():
         "email_notifiche": nuovo
     })
 
+
+@app.route("/impostazioni/notifiche-push", methods=["POST"])
+@login_required
+def aggiorna_preferenza_push():
+    """Aggiorna la preferenza account; il permesso resta al browser."""
+    verify_csrf()
+
+    payload = request.get_json(silent=True) or {}
+    attivo = payload.get("attivo")
+    if not isinstance(attivo, bool):
+        return jsonify({
+            "ok": False,
+            "error": "Preferenza push non valida.",
+        }), 400
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        cur.execute(sql("""
+            UPDATE utenti
+            SET push_notifiche = ?
+            WHERE id = ?
+        """), (1 if attivo else 0, session["utente_id"]))
+
+        # Disattivare la preferenza vale per tutto l'account, non soltanto
+        # per il browser corrente. Il dispositivo conserva comunque il
+        # controllo finale tramite il proprio permesso di sistema.
+        if not attivo:
+            cur.execute(sql("""
+                DELETE FROM push_subscriptions
+                WHERE utente_id = ?
+            """), (session["utente_id"],))
+
+        conn.commit()
+        return jsonify({
+            "ok": True,
+            "push_notifiche": 1 if attivo else 0,
+        })
+    except Exception as exc:
+        conn.rollback()
+        log_exception_safe(
+            "Errore aggiornamento preferenza push",
+            exc,
+            {"utente_id": session.get("utente_id")},
+            production=True,
+        )
+        return jsonify({
+            "ok": False,
+            "error": "Non è stato possibile aggiornare la preferenza push.",
+        }), 500
+
 # ---------------------------
 # IMPOSTAZIONI → FOTO PROFILO
 # ---------------------------
@@ -33648,32 +35657,44 @@ def nuovo_annuncio():
             disponibilita_annuncio_input = (
                 listing_availability_from_form(request.form)
             )
+            disponibilita_annuncio_stato = (
+                listing_offer_status_from_form(request.form)
+                if tipo_annuncio == "offro"
+                else None
+            )
         except ValueError as errore_disponibilita:
             flash(str(errore_disponibilita), "warning")
             return redirect(url_for("nuovo_annuncio"))
 
         disponibilita_cercata_json = None
         disponibilita_offerta = None
-        if disponibilita_annuncio_input:
-            if tipo_annuncio == "cerco":
+        if tipo_annuncio == "cerco":
+            if disponibilita_annuncio_input:
                 disponibilita_cercata_json = (
                     serialize_sought_availability(
                         disponibilita_annuncio_input
                     )
                 )
-            else:
-                disponibilita_offerta = normalize_disponibilita_payload(
-                    request_to_service_availability(
-                        disponibilita_annuncio_input
-                    )
+        else:
+            # Pubblicare un annuncio OFFRO equivale a dichiararsi disponibili
+            # per quella categoria. Giorni, fasce, orari e "a chiamata" sono
+            # dettagli facoltativi e possono quindi restare vuoti.
+            disponibilita_offerta = normalize_disponibilita_payload(
+                request_to_service_availability(
+                    disponibilita_annuncio_input or {
+                        "a_chiamata": False,
+                        "giorni": [],
+                    },
+                    stato=disponibilita_annuncio_stato,
                 )
-                if not _disponibilita_categoria_table_exists(c):
-                    flash(
-                        "La disponibilità non può essere salvata in questo "
-                        "momento. Riprova tra poco.",
-                        "warning",
-                    )
-                    return redirect(url_for("nuovo_annuncio"))
+            )
+            if not _disponibilita_categoria_table_exists(c):
+                flash(
+                    "La disponibilità non può essere salvata in questo "
+                    "momento. Riprova tra poco.",
+                    "warning",
+                )
+                return redirect(url_for("nuovo_annuncio"))
 
         if modalita_servizio != "online":
 
@@ -33960,6 +35981,12 @@ def nuovo_annuncio():
                     versione_corrente,
                     preserve_calendar_exceptions=True,
                 )
+                _reset_ciclo_disponibilita_annunci(
+                    c,
+                    int(utente["id"]),
+                    categoria_slug=categoria,
+                    stato_disponibilita=disponibilita_offerta["stato"],
+                )
 
             # Dal momento in cui il commit inizia, conserviamo
             # prudentemente i file anche se il database restituisce errore.
@@ -34220,6 +36247,7 @@ def visualizza_annuncio_pubblico(id):
         annuncio["telefono"] = ""
 
     disponibilita_annuncio = None
+    disponibilita_annuncio_richiedibile = True
     if annuncio["tipo_annuncio"] == "offro":
         try:
             if _disponibilita_servizi_table_exists(c):
@@ -34231,6 +36259,9 @@ def visualizza_annuncio_pubblico(id):
                         pubblica=True,
                     )
                 )
+            disponibilita_annuncio_richiedibile = not (
+                _annuncio_bloccato_dalla_disponibilita(c, annuncio)
+            )
         except Exception as exc:
             log_exception_safe(
                 "Disponibilita annuncio non disponibile",
@@ -34261,6 +36292,9 @@ def visualizza_annuncio_pubblico(id):
         proprietario_corrente=proprietario_corrente,
         interessati_annuncio=interessati_annuncio,
         disponibilita_annuncio=disponibilita_annuncio,
+        disponibilita_annuncio_richiedibile=(
+            disponibilita_annuncio_richiedibile
+        ),
         back_url=back_url
     )
 

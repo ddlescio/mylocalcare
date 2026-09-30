@@ -74,6 +74,7 @@ CREATE TABLE utenti (
         sospeso INTEGER DEFAULT 0,
         disattivato_admin INTEGER DEFAULT 0,
         email_notifiche INTEGER DEFAULT 1,
+        push_notifiche INTEGER NOT NULL DEFAULT 1,
 
         -- ⭐ Riepilogo recensioni
         media_recensioni REAL DEFAULT 0,
@@ -512,6 +513,66 @@ CREATE TABLE override_admin (
         FOREIGN KEY (utente_id) REFERENCES utenti(id),
         FOREIGN KEY (annuncio_id) REFERENCES annunci(id)
     );
+CREATE TABLE annunci_disponibilita_ciclo (
+        annuncio_id INTEGER PRIMARY KEY,
+        utente_id INTEGER NOT NULL,
+        origine TEXT NOT NULL CHECK (origine IN ('ordinario','rollout')),
+        stato TEXT NOT NULL DEFAULT 'attivo' CHECK (stato IN (
+            'attivo','non_disponibile_scadenza',
+            'archiviato','completato'
+        )),
+        ciclo_versione INTEGER NOT NULL DEFAULT 1 CHECK (ciclo_versione >= 1),
+        ciclo_iniziato_at TEXT NOT NULL,
+        confermata_at_snapshot TEXT,
+        non_disponibile_at TEXT,
+        archiviazione_prevista_at TEXT,
+        archiviato_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (annuncio_id) REFERENCES annunci(id) ON DELETE CASCADE,
+        FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+    );
+CREATE TABLE annunci_disponibilita_eventi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        annuncio_id INTEGER NOT NULL,
+        utente_id INTEGER NOT NULL,
+        ciclo_versione INTEGER NOT NULL CHECK (ciclo_versione >= 1),
+        codice TEXT NOT NULL,
+        notifica_interna_at TEXT,
+        push_inviata_at TEXT,
+        email_inviata_at TEXT,
+        push_tentativi INTEGER NOT NULL DEFAULT 0 CHECK (push_tentativi >= 0),
+        email_tentativi INTEGER NOT NULL DEFAULT 0 CHECK (email_tentativi >= 0),
+        ultimo_errore TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (annuncio_id, ciclo_versione, codice),
+        FOREIGN KEY (annuncio_id) REFERENCES annunci(id) ON DELETE CASCADE,
+        FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+    );
+CREATE TABLE disponibilita_promemoria_eventi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        utente_id INTEGER NOT NULL,
+        fase TEXT NOT NULL CHECK (
+            fase IN ('in_scadenza','scaduta','ultimo_avviso')
+        ),
+        titolo_sorgente TEXT NOT NULL,
+        messaggio_sorgente TEXT NOT NULL,
+        link TEXT NOT NULL,
+        notifica_interna_at TEXT,
+        push_inviata_at TEXT,
+        email_inviata_at TEXT,
+        notifica_tentativi INTEGER NOT NULL DEFAULT 0
+            CHECK (notifica_tentativi >= 0),
+        push_tentativi INTEGER NOT NULL DEFAULT 0
+            CHECK (push_tentativi >= 0),
+        email_tentativi INTEGER NOT NULL DEFAULT 0
+            CHECK (email_tentativi >= 0),
+        ultimo_errore TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+    );
 INSERT INTO sqlite_sequence VALUES('video_config',1);
 INSERT INTO sqlite_sequence VALUES('utenti',3);
 INSERT INTO sqlite_sequence VALUES('notifiche',2);
@@ -537,4 +598,22 @@ CREATE UNIQUE INDEX idx_acquisti_stripe_intent
         WHERE riferimento_esterno IS NOT NULL;
 CREATE INDEX idx_attivazioni_acquisto
         ON attivazioni_servizi(acquisto_id);
+CREATE INDEX idx_annunci_disponibilita_ciclo_stato_scadenza
+        ON annunci_disponibilita_ciclo (
+            stato, archiviazione_prevista_at, ciclo_iniziato_at
+        );
+CREATE INDEX idx_annunci_disponibilita_ciclo_utente
+        ON annunci_disponibilita_ciclo (utente_id, stato);
+CREATE INDEX idx_annunci_disponibilita_eventi_pendenti
+        ON annunci_disponibilita_eventi (
+            notifica_interna_at, push_inviata_at,
+            email_inviata_at, created_at
+        );
+CREATE INDEX idx_disponibilita_promemoria_eventi_pendenti
+        ON disponibilita_promemoria_eventi (
+            notifica_interna_at, push_inviata_at,
+            email_inviata_at, created_at
+        );
+CREATE INDEX idx_disponibilita_promemoria_eventi_utente
+        ON disponibilita_promemoria_eventi (utente_id, created_at DESC);
 COMMIT;

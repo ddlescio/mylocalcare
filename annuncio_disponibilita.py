@@ -16,6 +16,34 @@ from richieste_disponibilita import normalize_richiesta_disponibilita_payload
 
 
 _HHMM_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+_OFFER_AVAILABILITY_STATES = frozenset({
+    "disponibile",
+    "limitata",
+    "non_disponibile",
+})
+
+
+def listing_offer_status_from_form(
+    form: Any,
+    *,
+    default: str = "disponibile",
+) -> str:
+    """Legge lo stato dell'offerta senza accettare valori arbitrari.
+
+    Lo stato e obbligatorio soltanto per gli annunci ``offro``. Il default
+    esplicito rende sicuro anche l'invio senza JavaScript: pubblicare una
+    nuova offerta equivale a confermare di essere disponibili.
+    """
+
+    raw_value = _form_value(
+        form,
+        "disponibilita_annuncio_stato",
+        default,
+    )
+    normalized = str(raw_value or default).strip().lower()
+    if normalized not in _OFFER_AVAILABILITY_STATES:
+        raise ValueError("Lo stato della disponibilita non e valido.")
+    return normalized
 
 
 def _form_values(form: Any, field_name: str) -> list[Any]:
@@ -125,10 +153,23 @@ def normalize_listing_availability(raw_value: Any) -> dict[str, Any] | None:
 
 def request_to_service_availability(
     payload: Mapping[str, Any],
+    *,
+    stato: str = "disponibile",
 ) -> dict[str, Any]:
     """Converte il selettore compatto nel formato del profilo ``offro``."""
 
-    normalized = normalize_richiesta_disponibilita_payload(payload)
+    # Una richiesta puntuale deve indicare almeno un giorno o "a chiamata";
+    # una disponibilita di servizio, invece, puo legittimamente dichiarare
+    # soltanto lo stato generale. Questo e il default dei nuovi annunci.
+    if (
+        isinstance(payload, Mapping)
+        and set(payload).issubset({"a_chiamata", "giorni"})
+        and payload.get("a_chiamata", False) is False
+        and payload.get("giorni", []) == []
+    ):
+        normalized = {"a_chiamata": False, "giorni": []}
+    else:
+        normalized = normalize_richiesta_disponibilita_payload(payload)
     weekly: list[dict[str, Any]] = []
     intervals: list[dict[str, Any]] = []
     for day in normalized["giorni"]:
@@ -150,9 +191,16 @@ def request_to_service_availability(
             for interval in day["intervalli"]
         )
 
+    normalized_status = listing_offer_status_from_form(
+        {"disponibilita_annuncio_stato": stato}
+    )
     return {
-        "stato": "disponibile",
-        "a_chiamata": bool(normalized["a_chiamata"]),
+        "stato": normalized_status,
+        "a_chiamata": (
+            bool(normalized["a_chiamata"])
+            if normalized_status != "non_disponibile"
+            else False
+        ),
         "settimanale": weekly,
         "settimanale_intervalli": intervals,
         "date_speciali": [],
@@ -250,6 +298,7 @@ def sought_availability_for_display(
 __all__ = [
     "deserialize_sought_availability",
     "listing_availability_from_form",
+    "listing_offer_status_from_form",
     "normalize_listing_availability",
     "request_to_service_availability",
     "service_to_request_availability",

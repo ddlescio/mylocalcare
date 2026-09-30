@@ -6,7 +6,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
-from disponibilita_servizi import GIORNI_ESCLUSIONE_FILTRO
+from disponibilita_servizi import (
+    GIORNI_ESCLUSIONE_FILTRO,
+    GIORNI_PRIORITA_RIDOTTA,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +51,7 @@ def load_search_backend():
         "fetchone_value": lambda row: row[0] if row else None,
         "re": re,
         "GIORNI_ESCLUSIONE_FILTRO": GIORNI_ESCLUSIONE_FILTRO,
+        "GIORNI_PRIORITA_RIDOTTA": GIORNI_PRIORITA_RIDOTTA,
         "_DISPONIBILITA_CERCA_HHMM_RE": re.compile(
             r"^(?:[01]\d|2[0-3]):[0-5]\d$"
         ),

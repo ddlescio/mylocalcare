@@ -13,6 +13,28 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
     def read_template(self, relative_path):
         return (TEMPLATES / relative_path).read_text(encoding="utf-8")
 
+    def render_availability_intro(self, profiles, *, public=False, offers=True):
+        environment = Environment(loader=FileSystemLoader(str(TEMPLATES)))
+        environment.filters.update(
+            {
+                "fmt_day_month": lambda value: value or "",
+                "fmt_it_date": lambda value: value or "",
+                "datetimeformat": lambda value: value or "",
+            }
+        )
+        template = environment.get_template(
+            "partials/disponibilita_servizi_display.html"
+        )
+        module = template.make_module(
+            {"tr": lambda key, **kwargs: key}
+        )
+        return str(module.availability_intro(
+            profiles,
+            pubblico=public,
+            feature_available=True,
+            utente_offre_servizi=offers,
+        ))
+
     def test_display_partial_compiles_and_exposes_expected_macros(self):
         environment = Environment(loader=FileSystemLoader(str(TEMPLATES)))
         environment.filters.update(
@@ -34,6 +56,17 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         self.assertTrue(callable(module.availability_badge))
         self.assertTrue(callable(module.availability_intro))
         self.assertTrue(callable(module.availability_listing))
+
+    def test_display_partial_does_not_nest_duplicate_items_wrappers(self):
+        source = self.read_template("partials/disponibilita_servizi_display.html")
+
+        self.assertNotRegex(
+            source,
+            re.compile(
+                r'<div class="availability-detail__items">\s*'
+                r'<div class="availability-detail__items">'
+            ),
+        )
 
     def test_availability_was_removed_from_both_info_tabs(self):
         for template_name in (
@@ -71,9 +104,101 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         for key in (
             "availability.card_available_on", "availability.card_limited_on",
             "availability.card_unavailable_on", "availability.card_expired",
+            "availability.card_unavailable_reconfirmation",
             "availability.card_never_confirmed",
         ):
             self.assertIn(key, source)
+
+    def test_system_expiry_badge_has_exact_label_without_old_date(self):
+        environment = Environment(loader=FileSystemLoader(str(TEMPLATES)))
+        environment.filters.update(
+            {
+                "fmt_day_month": lambda value: value,
+                "fmt_it_date": lambda value: value,
+                "datetimeformat": lambda value: value,
+            }
+        )
+        template = environment.get_template(
+            "partials/disponibilita_servizi_display.html"
+        )
+        translations = {
+            "availability.card_unavailable_reconfirmation": (
+                "Non disponibile · conferma richiesta"
+            ),
+        }
+        module = template.make_module(
+            {
+                "tr": lambda key, **kwargs: translations.get(key, key),
+            }
+        )
+
+        badge = str(module.availability_badge({
+            "configurata": True,
+            "stato": "non_disponibile",
+            "non_disponibile_per_scadenza": True,
+            "confermata_at": "2026-08-01",
+            "freschezza": {
+                "codice": "priorita_ridotta",
+                "riconferma_richiesta": True,
+                "confermata_il": "2026-08-01",
+            },
+        }))
+
+        self.assertIn("Non disponibile · conferma richiesta", badge)
+        self.assertNotIn("2026-08-01", badge)
+        self.assertNotIn("availability.card_expired", badge)
+
+    def test_voluntary_unavailable_does_not_get_system_expiry_label(self):
+        environment = Environment(loader=FileSystemLoader(str(TEMPLATES)))
+        environment.filters.update(
+            {
+                "fmt_day_month": lambda value: value,
+                "fmt_it_date": lambda value: value,
+                "datetimeformat": lambda value: value,
+            }
+        )
+        template = environment.get_template(
+            "partials/disponibilita_servizi_display.html"
+        )
+        module = template.make_module({"tr": lambda key, **kwargs: key})
+
+        badge = str(module.availability_badge({
+            "configurata": True,
+            "stato": "non_disponibile",
+            "confermata_at": "2026-08-01",
+            "freschezza": {
+                "codice": "esclusa_filtro",
+                "riconferma_richiesta": True,
+                "confermata_il": "2026-08-01",
+            },
+        }))
+
+        self.assertIn("availability.card_unavailable_on", badge)
+        self.assertNotIn("availability.card_expired", badge)
+        self.assertNotIn(
+            "availability.card_unavailable_reconfirmation",
+            badge,
+        )
+
+    def test_status_pickers_use_distinct_non_colour_symbols(self):
+        templates = (
+            (
+                "partials/annuncio_disponibilita_picker.html",
+                "listing-availability__status-dot",
+            ),
+            (
+                "partials/disponibilita_servizi_dialog.html",
+                "service-availability-status-dot",
+            ),
+        )
+        for template_name, css_class in templates:
+            source = self.read_template(template_name)
+            with self.subTest(template=template_name):
+                for symbol in ("✓", "◐", "×"):
+                    self.assertIn(
+                        f'class="{css_class}" aria-hidden="true">{symbol}</span>',
+                        source,
+                    )
 
     def test_unavailable_state_does_not_show_schedule_sections(self):
         source = self.read_template("partials/disponibilita_servizi_display.html")
@@ -101,6 +226,129 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         self.assertIn("((not pubblico) and profili)", source)
         self.assertIn("data-service-availability-open", source)
         self.assertIn("data-service-availability-reconfirm", source)
+
+    def test_private_unconfirmed_availability_gets_premium_attention(self):
+        rendered = self.render_availability_intro([], public=False, offers=True)
+
+        self.assertIn("intro-availability--needs-confirmation", rendered)
+        self.assertIn('data-availability-needs-confirmation="true"', rendered)
+        self.assertIn("availability.action_to_confirm", rendered)
+
+    def test_private_reconfirmation_promotes_the_due_scope(self):
+        fresh = {
+            "configurata": True,
+            "stato": "disponibile",
+            "confermata_at": "2026-09-29",
+            "categoria_slug": "babysitter",
+            "freschezza": {"codice": "aggiornata"},
+        }
+        due = {
+            "configurata": True,
+            "stato": "limitata",
+            "confermata_at": "2026-08-20",
+            "categoria_slug": "pet-sitter",
+            "freschezza": {
+                "codice": "da_riconfermare",
+                "riconferma_richiesta": True,
+            },
+        }
+
+        rendered = self.render_availability_intro(
+            [fresh, due], public=False, offers=True
+        )
+
+        self.assertIn("intro-availability--needs-confirmation", rendered)
+        self.assertIn("availability.card_expired", rendered)
+        self.assertLess(
+            rendered.index("availability.card_expired"),
+            rendered.index("availability.card_available_on"),
+        )
+
+    def test_fresh_and_voluntary_unavailable_cards_do_not_pulse(self):
+        cases = (
+            {
+                "configurata": True,
+                "stato": "disponibile",
+                "confermata_at": "2026-09-29",
+                "freschezza": {"codice": "aggiornata"},
+            },
+            {
+                "configurata": True,
+                "stato": "non_disponibile",
+                "confermata_at": "2026-09-29",
+                "freschezza": {
+                    "codice": "esclusa_filtro",
+                    "riconferma_richiesta": True,
+                },
+            },
+        )
+
+        for profile in cases:
+            with self.subTest(state=profile["stato"]):
+                rendered = self.render_availability_intro(
+                    [profile], public=False, offers=True
+                )
+                self.assertNotIn(
+                    "intro-availability--needs-confirmation", rendered
+                )
+                self.assertNotIn("availability.action_to_confirm", rendered)
+
+    def test_public_profile_never_uses_private_confirmation_animation(self):
+        profile = {
+            "configurata": False,
+            "stato": "non_disponibile",
+            "freschezza": {"codice": "mai_confermata"},
+        }
+        rendered = self.render_availability_intro(
+            [profile], public=True, offers=True
+        )
+
+        self.assertNotIn("intro-availability--needs-confirmation", rendered)
+        self.assertNotIn("availability.action_to_confirm", rendered)
+
+    def test_confirmation_animation_respects_reduced_motion(self):
+        css = (
+            ROOT / "static" / "css" / "disponibilita-servizi-display.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("@keyframes availability-confirmation-glow", css)
+        self.assertIn("@keyframes availability-confirmation-sheen", css)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+        self.assertRegex(
+            css,
+            re.compile(
+                r"@media \(prefers-reduced-motion: reduce\).*?"
+                r"\.intro-availability--needs-confirmation.*?animation: none",
+                flags=re.DOTALL,
+            ),
+        )
+
+    def test_dialog_exposes_real_confirm_all_action(self):
+        source = self.read_template("partials/disponibilita_servizi_dialog.html")
+        self.assertIn("data-service-availability-confirm-all", source)
+        self.assertIn(
+            'fetch(\n        "/api/utente/disponibilita/riconferma-tutte"',
+            source,
+        )
+        self.assertIn("copy.confirmedAll", source)
+        self.assertIn("copy.confirmedAllWithConflicts", source)
+        self.assertIn("data.conflitti", source)
+
+    def test_archived_listing_uses_one_click_reactivation(self):
+        dashboard = self.read_template("dashboard.html")
+        self.assertIn("data-service-availability-reactivate", dashboard)
+        self.assertIn('data-annuncio-id="{{ a[\'id\'] }}"', dashboard)
+        self.assertNotIn(
+            "data-service-availability-open\n"
+            "                          data-service-availability-category",
+            dashboard,
+        )
+        dialog = self.read_template("partials/disponibilita_servizi_dialog.html")
+        self.assertIn(
+            "`/api/annunci/${listingId}/riattiva-disponibilita`",
+            dialog,
+        )
+        self.assertIn('code === "duplicate_active_listing"', dialog)
 
     def test_search_badge_is_present_in_all_three_cards_and_only_for_offers(self):
         search = self.read_template("cerca.html")
@@ -208,54 +456,28 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         self.assertIn('input.step = "60"', dialog)
         self.assertNotIn('input.step = "900"', dialog)
 
-    def test_unavailable_category_offers_single_listing_choice_after_save(self):
+    def test_unavailable_save_does_not_offer_permanent_listing_deletion(self):
         dialog = self.read_template(
             "partials/disponibilita_servizi_dialog.html"
         )
 
-        self.assertIn('id="service-availability-listing-choice"', dialog)
-        self.assertIn('id="service-availability-listing-keep"', dialog)
-        self.assertIn('id="service-availability-listing-delete"', dialog)
-        self.assertIn("payload.categoria_slug", dialog)
-        self.assertIn(
-            'payload.disponibilita.stato === "non_disponibile"',
-            dialog,
-        )
-        self.assertIn("apiData && apiData.annunci_attivi_categoria", dialog)
+        self.assertNotIn('id="service-availability-listing-choice"', dialog)
+        self.assertNotIn('id="service-availability-listing-keep"', dialog)
+        self.assertNotIn('id="service-availability-listing-delete"', dialog)
+        self.assertNotIn("selectedListingForDeletion()", dialog)
+        self.assertNotIn("showListingChoice(data", dialog)
+        self.assertNotIn("fetch(`/api/annunci/${listing.id}/elimina`", dialog)
 
-    def test_listing_deletion_is_individual_and_requires_title_confirmation(self):
+    def test_save_refreshes_after_automatic_archive_without_second_choice(self):
         dialog = self.read_template(
             "partials/disponibilita_servizi_dialog.html"
         )
 
-        self.assertIn("selectedListingForDeletion()", dialog)
-        self.assertIn("{ title: listing.titolo }", dialog)
-        self.assertIn("window.confirm(confirmation)", dialog)
-        self.assertIn(
-            "fetch(`/api/annunci/${listing.id}/elimina`",
-            dialog,
-        )
-        self.assertIn('method: "DELETE"', dialog)
-        self.assertIn('"X-CSRF-Token": csrfToken', dialog)
-
-    def test_every_choice_exit_keeps_listing_and_refreshes_saved_state(self):
-        dialog = self.read_template(
-            "partials/disponibilita_servizi_dialog.html"
-        )
-
-        close_start = dialog.index("function closeDialog()")
-        close_end = dialog.index("async function loadAvailability", close_start)
-        close_body = dialog[close_start:close_end]
-        self.assertIn("listingChoiceRequiresReload()", close_body)
-        self.assertIn("window.location.reload()", close_body)
-        self.assertLess(
-            close_body.index("listingChoiceRequiresReload()"),
-            close_body.index('dialog.classList.add("service-availability-hidden")'),
-        )
-        self.assertIn(
-            'listingKeepButton.addEventListener("click", closeDialog)',
-            dialog,
-        )
+        save_start = dialog.index("async function saveAvailability")
+        save_end = dialog.index("async function deleteAvailability", save_start)
+        save_body = dialog[save_start:save_end]
+        self.assertIn("window.location.reload()", save_body)
+        self.assertNotIn("showListingChoice", save_body)
         self.assertIn(
             'dialog.querySelectorAll("[data-service-availability-close]")',
             dialog,

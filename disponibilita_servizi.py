@@ -53,6 +53,10 @@ MAX_ASSENZE = 60
 GIORNI_PROMEMORIA_SCADENZA = 25
 GIORNI_RICONFERMA = 30
 GIORNI_PRIORITA_RIDOTTA = 37
+# Il codice di freschezza terminale resta distinto dal giorno 44, quando il
+# ciclo annunci archivia in modo reversibile il contenuto. Dal giorno 37,
+# tuttavia, la disponibilita e gia pubblicamente ``non disponibile`` e non
+# soddisfa piu il filtro esplicito delle persone disponibili.
 GIORNI_ESCLUSIONE_FILTRO = 44
 
 CODICE_FRESCA = "aggiornata"
@@ -474,8 +478,9 @@ def calcola_freschezza_disponibilita(
     """Calcola riconferma, riduzione priorita ed esclusione dal filtro.
 
     I confini sono inclusivi: esattamente a +30 giorni serve la riconferma,
-    a +37 la priorita e ridotta e a +44 il profilo non rientra piu nel filtro
-    delle persone disponibili.
+    a +37 la priorita e ridotta e il profilo non rientra piu nel filtro delle
+    persone disponibili. L'eventuale archiviazione dell'annuncio avviene a
+    +44 ed e gestita dal ciclo annunci.
     """
 
     current = (
@@ -529,7 +534,7 @@ def calcola_freschezza_disponibilita(
         "giorni_trascorsi": elapsed_days,
         "riconferma_richiesta": current >= boundaries["riconferma"],
         "priorita_ridotta": current >= boundaries["priorita_ridotta"],
-        "inclusa_filtro_disponibili": current < boundaries["esclusione_filtro"],
+        "inclusa_filtro_disponibili": current < boundaries["priorita_ridotta"],
         "confini_giorni": boundary_days,
         "confini_at": {
             key: _iso_utc(value) for key, value in boundaries.items()

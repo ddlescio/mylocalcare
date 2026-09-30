@@ -126,6 +126,20 @@
         <p class="service-availability-scope-note service-availability-sr-only">
           {{ tr('availability.only_offers_notice') }}
         </p>
+
+        <div
+          id="service-availability-confirm-all-panel"
+          class="service-availability-confirm-all service-availability-hidden">
+          <p>{{ tr('availability.confirm_all_help') }}</p>
+          <button
+            type="button"
+            id="service-availability-confirm-all"
+            class="service-availability-confirm-all-button"
+            data-service-availability-confirm-all>
+            <span aria-hidden="true">✓</span>
+            <span>{{ tr('availability.confirm_all') }}</span>
+          </button>
+        </div>
       </fieldset>
 
       <fieldset class="service-availability-section service-availability-status-section">
@@ -137,17 +151,17 @@
         <div class="service-availability-status-options">
           <label class="service-availability-status-option service-availability-status-option--available">
             <input type="radio" name="service-availability-status" value="disponibile">
-            <span class="service-availability-status-dot" aria-hidden="true"></span>
+            <span class="service-availability-status-dot" aria-hidden="true">✓</span>
             <span>{{ tr('availability.status_available') }}</span>
           </label>
           <label class="service-availability-status-option service-availability-status-option--limited">
             <input type="radio" name="service-availability-status" value="limitata">
-            <span class="service-availability-status-dot" aria-hidden="true"></span>
+            <span class="service-availability-status-dot" aria-hidden="true">◐</span>
             <span>{{ tr('availability.status_limited') }}</span>
           </label>
           <label class="service-availability-status-option service-availability-status-option--unavailable">
             <input type="radio" name="service-availability-status" value="non_disponibile">
-            <span class="service-availability-status-dot" aria-hidden="true"></span>
+            <span class="service-availability-status-dot" aria-hidden="true">×</span>
             <span>{{ tr('availability.status_unavailable') }}</span>
           </label>
         </div>
@@ -453,57 +467,6 @@
       </footer>
     </form>
 
-    <section
-      id="service-availability-listing-choice"
-      class="service-availability-listing-choice service-availability-hidden"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="service-availability-listing-choice-title"
-      aria-describedby="service-availability-listing-choice-description">
-      <span class="service-availability-listing-choice-icon" aria-hidden="true">✓</span>
-      <p class="service-availability-dialog-eyebrow">
-        {{ tr('availability.listing_choice_eyebrow') }}
-      </p>
-      <h3
-        id="service-availability-listing-choice-title"
-        class="service-availability-listing-choice-title">
-        {{ tr('availability.listing_choice_title') }}
-      </h3>
-      <p
-        id="service-availability-listing-choice-description"
-        class="service-availability-listing-choice-description">
-        {{ tr('availability.listing_choice_description') }}
-      </p>
-
-      <fieldset class="service-availability-listing-choice-fieldset">
-        <legend id="service-availability-listing-choice-legend">
-          {{ tr('availability.listing_choice_select') }}
-        </legend>
-        <div
-          id="service-availability-listing-choice-list"
-          class="service-availability-listing-choice-list"></div>
-      </fieldset>
-
-      <p
-        id="service-availability-listing-choice-error"
-        class="service-availability-message service-availability-message--error service-availability-hidden"
-        role="alert"></p>
-
-      <div class="service-availability-listing-choice-actions">
-        <button
-          type="button"
-          id="service-availability-listing-keep"
-          class="service-availability-secondary-button">
-          {{ tr('availability.listing_choice_keep') }}
-        </button>
-        <button
-          type="button"
-          id="service-availability-listing-delete"
-          class="service-availability-listing-delete-button">
-          {{ tr('availability.listing_choice_delete') }}
-        </button>
-      </div>
-    </section>
   </section>
 </div>
 
@@ -1145,6 +1108,53 @@
     line-height:1.45;
   }
 
+  .service-availability-confirm-all{
+    margin:.55rem 0 0;
+    padding:.52rem .58rem;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.55rem;
+    border:1px solid #bfdbfe;
+    border-radius:.76rem;
+    background:linear-gradient(135deg, #f8fbff, #eff6ff);
+  }
+
+  .service-availability-confirm-all p{
+    min-width:0;
+    margin:0;
+    color:#475569;
+    font-size:.61rem;
+    line-height:1.35;
+  }
+
+  .service-availability-confirm-all-button{
+    flex:0 0 auto;
+    min-height:2rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.3rem;
+    padding:.42rem .66rem;
+    border:1px solid #60a5fa;
+    border-radius:999px;
+    background:#fff;
+    color:#1d4ed8;
+    font-size:.64rem;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .service-availability-confirm-all-button:focus-visible{
+    outline:3px solid rgba(96,165,250,.3);
+    outline-offset:2px;
+  }
+
+  .service-availability-confirm-all-button:disabled{
+    cursor:wait;
+    opacity:.62;
+  }
+
   .service-availability-privacy-note{
     display:grid;
     grid-template-columns:auto minmax(0, 1fr);
@@ -1270,19 +1280,22 @@
 
   .service-availability-status-option{
     position:relative;
-    min-height:2.18rem;
+    min-width:0;
+    min-height:2.68rem;
     display:flex;
     align-items:center;
     justify-content:center;
     gap:.34rem;
-    padding:.4rem .32rem;
-    border:1px solid #dbe3ee;
+    padding:.48rem .28rem;
+    border:2px solid #dbe3ee;
     border-radius:.74rem;
     background:#fff;
     color:#334155;
-    font-size:.61rem;
-    line-height:1.25;
-    font-weight:820;
+    font-size:.64rem;
+    line-height:1.15;
+    font-weight:900;
+    text-align:center;
+    overflow-wrap:anywhere;
     cursor:pointer;
   }
 
@@ -1295,29 +1308,54 @@
   }
 
   .service-availability-status-dot{
-    width:.52rem;
-    height:.52rem;
+    width:1.08rem;
+    height:1.08rem;
     flex:0 0 auto;
+    display:grid;
+    place-items:center;
     border-radius:9999px;
-    background:#22c55e;
+    border:1px solid rgba(22,101,52,.26);
+    background:#dcfce7;
+    color:#166534;
+    font-size:.69rem;
+    line-height:1;
+    font-weight:950;
     box-shadow:0 0 0 3px rgba(34,197,94,.12);
   }
 
   .service-availability-status-option--limited .service-availability-status-dot{
-    background:#f59e0b;
+    border-color:rgba(146,64,14,.26);
+    background:#fef3c7;
+    color:#92400e;
     box-shadow:0 0 0 3px rgba(245,158,11,.13);
   }
 
   .service-availability-status-option--unavailable .service-availability-status-dot{
-    background:#94a3b8;
+    border-color:rgba(51,65,85,.24);
+    background:#e2e8f0;
+    color:#334155;
     box-shadow:0 0 0 3px rgba(148,163,184,.16);
   }
 
-  .service-availability-status-option:has(input:checked){
-    border-color:#60a5fa;
-    background:#eff6ff;
-    color:#1e40af;
-    box-shadow:0 0 0 3px rgba(96,165,250,.16);
+  .service-availability-status-option--available:has(input:checked){
+    border-color:#22c55e;
+    background:#f0fdf4;
+    color:#166534;
+    box-shadow:0 0 0 3px rgba(34,197,94,.16), 0 8px 18px rgba(34,197,94,.1);
+  }
+
+  .service-availability-status-option--limited:has(input:checked){
+    border-color:#f59e0b;
+    background:#fffbeb;
+    color:#92400e;
+    box-shadow:0 0 0 3px rgba(245,158,11,.16), 0 8px 18px rgba(245,158,11,.1);
+  }
+
+  .service-availability-status-option--unavailable:has(input:checked){
+    border-color:#64748b;
+    background:#f1f5f9;
+    color:#334155;
+    box-shadow:0 0 0 3px rgba(100,116,139,.16), 0 8px 18px rgba(100,116,139,.1);
   }
 
   .service-availability-status-option:has(input:focus-visible){
@@ -2441,16 +2479,18 @@
     scopeCategoryDisabled: {{ tr('availability.scope_category_disabled')|tojson }},
     saved: {{ tr('availability.saved')|tojson }},
     reconfirmed: {{ tr('availability.reconfirmed')|tojson }},
+    confirmAll: {{ tr('availability.confirm_all')|tojson }},
+    confirmingAll: {{ tr('availability.confirming_all')|tojson }},
+    confirmedAll: {{ tr('availability.confirmed_all')|tojson }},
+    confirmedAllWithConflicts: {{ tr('availability.confirmed_all_with_conflicts')|tojson }},
+    reactivatingListing: {{ tr('availability.reactivating_listing')|tojson }},
+    listingReactivated: {{ tr('availability.listing_reactivated')|tojson }},
+    duplicateActiveListing: {{ tr('availability.duplicate_active_listing')|tojson }},
     deleteProfile: {{ tr('availability.delete_profile')|tojson }},
     deleteProfileConfirm: {{ tr('availability.delete_profile_confirm')|tojson }},
     deleteProfileCategoryFallback: {{ tr('availability.delete_profile_category_fallback')|tojson }},
     deleting: {{ tr('availability.deleting')|tojson }},
     deleted: {{ tr('availability.deleted')|tojson }},
-    listingChoiceDescription: {{ tr('availability.listing_choice_description')|tojson }},
-    listingChoiceConfirm: {{ tr('availability.listing_choice_confirm')|tojson }},
-    listingChoiceSelectError: {{ tr('availability.listing_choice_select_error')|tojson }},
-    listingDeleting: {{ tr('availability.listing_choice_deleting')|tojson }},
-    listingDeleted: {{ tr('availability.listing_choice_deleted')|tojson }},
     slotMorning: {{ tr('availability.slot_morning')|tojson }},
     slotAfternoon: {{ tr('availability.slot_afternoon')|tojson }},
     slotEvening: {{ tr('availability.slot_evening')|tojson }},
@@ -2513,6 +2553,8 @@
   const categoryField = document.getElementById("service-availability-category-field");
   const categorySelect = document.getElementById("service-availability-category");
   const noCategoriesMessage = document.getElementById("service-availability-no-categories");
+  const confirmAllPanel = document.getElementById("service-availability-confirm-all-panel");
+  const confirmAllButton = document.getElementById("service-availability-confirm-all");
   const onCallInput = document.getElementById("service-availability-on-call");
   const positiveDetails = document.getElementById("service-availability-positive-details");
   const positiveDetailsHiddenMessage = document.getElementById("service-availability-positive-details-hidden");
@@ -2525,12 +2567,6 @@
   const errorElement = document.getElementById("service-availability-error");
   const successElement = document.getElementById("service-availability-success");
   const globalMessage = document.getElementById("service-availability-global-message");
-  const listingChoice = document.getElementById("service-availability-listing-choice");
-  const listingChoiceDescription = document.getElementById("service-availability-listing-choice-description");
-  const listingChoiceList = document.getElementById("service-availability-listing-choice-list");
-  const listingChoiceError = document.getElementById("service-availability-listing-choice-error");
-  const listingKeepButton = document.getElementById("service-availability-listing-keep");
-  const listingDeleteButton = document.getElementById("service-availability-listing-delete");
   const weeklyEditor = document.getElementById("service-availability-week");
   const dayPickerInputs = Array.from(
     dialog.querySelectorAll("[data-service-availability-day-picker]")
@@ -2552,9 +2588,9 @@
   let offeredCategories = [];
   let scopeCategoryAvailable = false;
   let userOffersServices = false;
+  let canConfirmAll = false;
   let toastTimer = 0;
   let intervalCounter = 0;
-  let pendingActiveListings = [];
 
   function setHidden(element, hidden) {
     if (element) element.classList.toggle("service-availability-hidden", Boolean(hidden));
@@ -2727,6 +2763,8 @@
       ?? data.scope_categoria_disponibile;
     const rawUserOffersServices = root.utente_offre_servizi
       ?? data.utente_offre_servizi;
+    const rawCanConfirmAll = root.puo_confermare_tutte
+      ?? data.puo_confermare_tutte;
 
     return {
       profiles,
@@ -2736,7 +2774,8 @@
         : rawScopeCategoryAvailable === true,
       userOffersServices: rawUserOffersServices === undefined
         ? categoryMap.size > 0
-        : rawUserOffersServices === true
+        : rawUserOffersServices === true,
+      canConfirmAll: rawCanConfirmAll === true
     };
   }
 
@@ -2770,153 +2809,6 @@
     globalMessage.classList.toggle("is-error", Boolean(isError));
     setHidden(globalMessage, false);
     toastTimer = window.setTimeout(() => setHidden(globalMessage, true), 4200);
-  }
-
-  function interpolateCopy(template, values) {
-    return Object.entries(values || {}).reduce(
-      (result, [key, value]) => result
-        .split(`{${key}}`)
-        .join(String(value ?? "")),
-      String(template || "")
-    );
-  }
-
-  function normalizeActiveListings(value) {
-    const seen = new Set();
-    return asArray(value).map(item => ({
-      id: Number(item && item.id),
-      titolo: String((item && item.titolo) || "").trim()
-    })).filter(item => {
-      if (!Number.isInteger(item.id) || item.id < 1 || !item.titolo || seen.has(item.id)) {
-        return false;
-      }
-      seen.add(item.id);
-      return true;
-    });
-  }
-
-  function selectedListingForDeletion() {
-    const selected = listingChoiceList && listingChoiceList.querySelector(
-      '[name="service-availability-listing-choice"]:checked'
-    );
-    if (!selected) return null;
-    const selectedId = Number(selected.value);
-    return pendingActiveListings.find(item => item.id === selectedId) || null;
-  }
-
-  function resetListingChoice() {
-    pendingActiveListings = [];
-    if (listingChoiceList) listingChoiceList.replaceChildren();
-    if (listingChoiceError) {
-      listingChoiceError.textContent = "";
-      setHidden(listingChoiceError, true);
-    }
-    if (listingDeleteButton) {
-      listingDeleteButton.disabled = false;
-      listingDeleteButton.textContent = {{ tr('availability.listing_choice_delete')|tojson }};
-    }
-    if (listingKeepButton) listingKeepButton.disabled = false;
-    setHidden(listingChoice, true);
-  }
-
-  function showListingChoice(apiData, categorySlug) {
-    const normalizedCategory = normalizeCategorySlug(categorySlug);
-    const listings = normalizeActiveListings(
-      apiData && apiData.annunci_attivi_categoria
-    );
-    if (!normalizedCategory || !listings.length || !listingChoice || !listingChoiceList) {
-      return false;
-    }
-
-    pendingActiveListings = listings;
-    listingChoiceList.replaceChildren();
-    if (listingChoiceError) {
-      listingChoiceError.textContent = "";
-      setHidden(listingChoiceError, true);
-    }
-
-    const categoryLabel = categoryLabels[normalizedCategory] || normalizedCategory;
-    if (listingChoiceDescription) {
-      listingChoiceDescription.textContent = interpolateCopy(
-        copy.listingChoiceDescription,
-        { category: categoryLabel }
-      );
-    }
-
-    listings.forEach((listing, index) => {
-      const label = createElement("label", "service-availability-listing-choice-option");
-      const input = createElement("input");
-      input.type = "radio";
-      input.name = "service-availability-listing-choice";
-      input.value = String(listing.id);
-      input.checked = listings.length === 1 && index === 0;
-      label.append(input, createElement("span", "", listing.titolo));
-      listingChoiceList.appendChild(label);
-    });
-
-    setHidden(loading, true);
-    setHidden(form, true);
-    setHidden(listingChoice, false);
-    if (sheet) sheet.scrollTop = 0;
-    window.requestAnimationFrame(() => {
-      const target = listingChoiceList.querySelector("input:checked")
-        || listingChoiceList.querySelector("input")
-        || listingKeepButton;
-      if (target) target.focus({ preventScroll: true });
-    });
-    return true;
-  }
-
-  async function deleteChosenListing() {
-    if (busy) return;
-    const listing = selectedListingForDeletion();
-    if (!listing) {
-      if (listingChoiceError) {
-        listingChoiceError.textContent = copy.listingChoiceSelectError;
-        setHidden(listingChoiceError, false);
-      }
-      return;
-    }
-
-    const confirmation = interpolateCopy(
-      copy.listingChoiceConfirm,
-      { title: listing.titolo }
-    );
-    if (!window.confirm(confirmation)) return;
-
-    busy = true;
-    if (listingKeepButton) listingKeepButton.disabled = true;
-    if (listingDeleteButton) {
-      listingDeleteButton.disabled = true;
-      listingDeleteButton.textContent = copy.listingDeleting;
-    }
-    if (listingChoiceError) setHidden(listingChoiceError, true);
-
-    try {
-      const response = await fetch(`/api/annunci/${listing.id}/elimina`, {
-        method: "DELETE",
-        credentials: "same-origin",
-        headers: {
-          "Accept": "application/json",
-          "X-CSRF-Token": csrfToken,
-          "X-Requested-With": "XMLHttpRequest"
-        }
-      });
-      await parseResponse(response, copy.errorSave);
-      showToast(copy.listingDeleted, false);
-      window.setTimeout(() => window.location.reload(), 450);
-    } catch (error) {
-      busy = false;
-      if (listingKeepButton) listingKeepButton.disabled = false;
-      if (listingDeleteButton) {
-        listingDeleteButton.disabled = false;
-        listingDeleteButton.textContent = {{ tr('availability.listing_choice_delete')|tojson }};
-      }
-      if (listingChoiceError) {
-        listingChoiceError.textContent = error.message || copy.errorSave;
-        setHidden(listingChoiceError, false);
-      }
-    }
   }
 
   function selectedProfile() {
@@ -2970,6 +2862,7 @@
     if (categorySelect) {
       categorySelect.disabled = busy || !(scopeCategoryInput && scopeCategoryInput.checked);
     }
+    if (confirmAllButton) confirmAllButton.disabled = busy || !canConfirmAll;
     dialog.querySelectorAll("[data-service-availability-remove]").forEach(button => {
       button.disabled = busy;
     });
@@ -3457,6 +3350,8 @@
     offeredCategories = state.categories;
     scopeCategoryAvailable = Boolean(state.scopeCategoryAvailable);
     userOffersServices = Boolean(state.userOffersServices);
+    canConfirmAll = Boolean(state.canConfirmAll);
+    setHidden(confirmAllPanel, !canConfirmAll);
     renderCategoryOptions();
 
     const triggerValue = trigger
@@ -3689,6 +3584,9 @@
     if (code === "invalid_category" || code === "category_not_offered") {
       return copy.errorInvalidData;
     }
+    if (code === "duplicate_active_listing") {
+      return copy.duplicateActiveListing;
+    }
     if (code === "duplicate_special_date") return copy.errorDuplicateDate;
     if (code === "missing_special_slots") return copy.errorSpecialSlots;
     return fallback;
@@ -3733,23 +3631,8 @@
     if (sheet) sheet.scrollTop = 0;
   }
 
-  function listingChoiceRequiresReload() {
-    return Boolean(
-      listingChoice
-      && pendingActiveListings.length > 0
-      && !listingChoice.classList.contains("service-availability-hidden")
-    );
-  }
-
   function closeDialog() {
     if (busy) return;
-    // La disponibilita e gia stata salvata sul server. Uscire con X,
-    // backdrop o Escape equivale quindi a mantenere l'annuncio e deve
-    // aggiornare subito tutte le card, senza lasciare lo stato precedente.
-    if (listingChoiceRequiresReload()) {
-      window.location.reload();
-      return;
-    }
     requestSequence += 1;
     dialog.classList.add("service-availability-hidden");
     dialog.setAttribute("aria-hidden", "true");
@@ -3764,7 +3647,6 @@
     const sequence = ++requestSequence;
     openDialog(trigger);
     clearMessages();
-    resetListingChoice();
     setHidden(form, true);
     setHidden(loading, false);
 
@@ -3861,17 +3743,6 @@
       setBusy(false);
       saveButton.textContent = copy.save;
 
-      const savedUnavailableCategory = Boolean(
-        payload.categoria_slug
-        && payload.disponibilita
-        && payload.disponibilita.stato === "non_disponibile"
-      );
-      if (
-        savedUnavailableCategory
-        && showListingChoice(data, payload.categoria_slug)
-      ) {
-        return;
-      }
       window.setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       showError(error.message || copy.errorSave);
@@ -3980,7 +3851,84 @@
     }
   }
 
+  async function confirmAllAvailability() {
+    if (!confirmAllButton || confirmAllButton.disabled || busy) return;
+    clearMessages();
+    setBusy(true);
+    confirmAllButton.textContent = copy.confirmingAll;
+    try {
+      const response = await fetch(
+        "/api/utente/disponibilita/riconferma-tutte",
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          body: "{}"
+        }
+      );
+      const data = await parseResponse(response, copy.errorSave);
+      const conflicts = Number(data.conflitti || 0);
+      showToast(
+        conflicts > 0
+          ? interpolateCopy(copy.confirmedAllWithConflicts, { count: conflicts })
+          : copy.confirmedAll,
+        false
+      );
+      window.setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      setBusy(false);
+      confirmAllButton.textContent = copy.confirmAll;
+      showError(error.message || copy.errorSave, confirmAllButton);
+    }
+  }
+
+  async function reactivateArchivedListing(button) {
+    if (!button || button.disabled) return;
+    const listingId = Number(button.dataset.annuncioId || 0);
+    if (!listingId) return;
+    const originalContent = button.innerHTML;
+    button.disabled = true;
+    button.textContent = copy.reactivatingListing;
+    try {
+      const response = await fetch(
+        `/api/annunci/${listingId}/riattiva-disponibilita`,
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          body: "{}"
+        }
+      );
+      await parseResponse(response, copy.errorSave);
+      showToast(copy.listingReactivated, false);
+      window.setTimeout(() => window.location.reload(), 450);
+    } catch (error) {
+      button.disabled = false;
+      button.innerHTML = originalContent;
+      showToast(error.message || copy.errorSave, true);
+    }
+  }
+
   document.addEventListener("click", event => {
+    const reactivateButton = event.target.closest(
+      "[data-service-availability-reactivate]"
+    );
+    if (reactivateButton) {
+      event.preventDefault();
+      reactivateArchivedListing(reactivateButton);
+      return;
+    }
+
     const openButton = event.target.closest("[data-service-availability-open]");
     if (openButton) {
       event.preventDefault();
@@ -4015,11 +3963,8 @@
     input.addEventListener("change", syncPositiveDetailsState);
   });
   if (deleteButton) deleteButton.addEventListener("click", deleteAvailability);
-  if (listingKeepButton) {
-    listingKeepButton.addEventListener("click", closeDialog);
-  }
-  if (listingDeleteButton) {
-    listingDeleteButton.addEventListener("click", deleteChosenListing);
+  if (confirmAllButton) {
+    confirmAllButton.addEventListener("click", confirmAllAvailability);
   }
   dialog.querySelectorAll("[data-service-availability-add-interval]").forEach(button => {
     button.addEventListener("click", () => {

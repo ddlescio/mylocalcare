@@ -39,6 +39,9 @@
     const action = container.querySelector("[data-listing-availability-action]");
     const days = Array.from(container.querySelectorAll("[data-listing-availability-day]"));
     const slots = Array.from(container.querySelectorAll("[data-listing-availability-slot]"));
+    const statusInputs = Array.from(
+      container.querySelectorAll("[data-listing-availability-status]")
+    );
     const onCall = container.querySelector("[data-listing-availability-on-call]");
     const start = container.querySelector("[data-listing-availability-start]");
     const end = container.querySelector("[data-listing-availability-end]");
@@ -48,6 +51,21 @@
     const title = container.querySelector("[data-listing-availability-title]");
     const hint = container.querySelector("[data-listing-availability-hint]");
     const summary = container.querySelector("[data-listing-availability-summary]");
+    const summaryTitle = container.querySelector(
+      "[data-listing-availability-summary-title]"
+    );
+    const statusGroup = container.querySelector(
+      "[data-listing-availability-status-group]"
+    );
+    const positiveDetails = container.querySelector(
+      "[data-listing-availability-positive-details]"
+    );
+    const unavailableNote = container.querySelector(
+      "[data-listing-availability-unavailable-note]"
+    );
+    const optionalHeading = container.querySelector(
+      "[data-listing-availability-optional-heading]"
+    );
     const initialNode = container.querySelector(
       "[data-listing-availability-initial]"
     );
@@ -65,6 +83,8 @@
     let copy = {};
     let initialPayload = null;
     let initialPristine = false;
+    let userChanged = false;
+    const initialAction = action && action.value ? action.value : "keep";
     try { copy = JSON.parse(copyNode ? copyNode.textContent : "{}"); } catch (error) {}
 
     function selectedValues(inputs) {
@@ -74,6 +94,41 @@
 
     function setAction(value) {
       if (action) action.value = value;
+    }
+
+    function selectedTypeValue() {
+      const selected = document.querySelector('input[name="tipo_annuncio"]:checked');
+      return selected ? selected.value : "";
+    }
+
+    function isOffer() {
+      return selectedTypeValue() === "offro";
+    }
+
+    function selectedStatus() {
+      const selected = statusInputs.find(function (input) {
+        return input.checked;
+      });
+      // Compatibilita prudente con pagine in cache che non hanno ancora i
+      // nuovi controlli: una nuova offerta nasce comunque disponibile.
+      return selected ? selected.value : "disponibile";
+    }
+
+    function selectAvailableStatus() {
+      statusInputs.forEach(function (input) {
+        input.checked = input.value === "disponibile";
+      });
+    }
+
+    function updateStatusChoices() {
+      statusInputs.forEach(function (input) {
+        const option = typeof input.closest === "function"
+          ? input.closest(".listing-availability__status-option")
+          : null;
+        if (option && option.classList) {
+          option.classList.toggle("is-selected", Boolean(input.checked));
+        }
+      });
     }
 
     function isCompletelyEmpty() {
@@ -142,7 +197,7 @@
       initialPayload = parsed;
       initialPristine = true;
       if (hidden) hidden.value = JSON.stringify(parsed);
-      setAction("keep");
+      setAction(initialAction);
       updateNextDay();
       return true;
     }
@@ -174,14 +229,17 @@
 
     function sync(markAsChanged) {
       initialPristine = false;
-      if (markAsChanged !== false) setAction("update");
+      if (markAsChanged !== false) {
+        userChanged = true;
+        setAction("update");
+      }
       clearError();
       updateNextDay();
       if (!hidden) return;
       hidden.value = isCompletelyEmpty() ? "" : JSON.stringify(payload());
     }
 
-    function clearSelection(nextAction) {
+    function clearOptionalDetails() {
       initialPayload = null;
       initialPristine = false;
       days.concat(slots).forEach(function (input) { input.checked = false; });
@@ -189,26 +247,79 @@
       if (start) start.value = "";
       if (end) end.value = "";
       if (hidden) hidden.value = "";
-      setAction(nextAction || "clear");
-      clearError();
       updateNextDay();
     }
 
+    function clearSelection(nextAction, resetStatus) {
+      clearOptionalDetails();
+      if (resetStatus !== false) selectAvailableStatus();
+      setAction(nextAction || "clear");
+      clearError();
+    }
+
     function updateCopy() {
-      const selected = document.querySelector('input[name="tipo_annuncio"]:checked');
-      const isOffer = selected && selected.value === "offro";
-      if (soughtOnly) container.hidden = Boolean(isOffer);
-      const nextTitle = isOffer ? copy.offerTitle : copy.seekTitle;
-      const nextHint = isOffer ? copy.offerHint : copy.seekHint;
+      const offerMode = isOffer();
+      if (soughtOnly) container.hidden = offerMode;
+      const nextTitle = offerMode ? copy.offerTitle : copy.seekTitle;
+      const nextHint = offerMode ? copy.offerHint : copy.seekHint;
       if (title) title.textContent = nextTitle || "";
       if (hint) hint.textContent = nextHint || "";
-      if (summary) summary.textContent = nextHint || "";
+      if (summaryTitle) {
+        summaryTitle.textContent = (
+          offerMode ? copy.offerSummaryTitle : copy.seekSummaryTitle
+        ) || "";
+      }
+      if (summary) {
+        if (offerMode) {
+          const statusLabels = {
+            disponibile: copy.availableLabel,
+            limitata: copy.limitedLabel,
+            non_disponibile: copy.unavailableLabel
+          };
+          const label = statusLabels[selectedStatus()] || copy.availableLabel || "";
+          summary.textContent = [label, copy.offerSummary]
+            .filter(Boolean)
+            .join(" · ");
+        } else {
+          summary.textContent = nextHint || "";
+        }
+      }
+      if (statusGroup) statusGroup.hidden = !offerMode;
+      if (optionalHeading) {
+        optionalHeading.textContent = (
+          offerMode ? copy.offerDetails : copy.seekDetails
+        ) || "";
+      }
+      const unavailable = offerMode && selectedStatus() === "non_disponibile";
+      if (positiveDetails) positiveDetails.hidden = unavailable;
+      if (unavailableNote) unavailableNote.hidden = !unavailable;
+      if (unavailable && onCall) onCall.checked = false;
+      updateStatusChoices();
+      if (offerMode) container.open = true;
     }
 
     function validateBeforeSubmit() {
       const selected = document.querySelector('input[name="tipo_annuncio"]:checked');
       if (soughtOnly && selected && selected.value === "offro") {
         clearError();
+        return true;
+      }
+      if (isOffer() && selectedStatus() === "non_disponibile") {
+        clearOptionalDetails();
+        clearError();
+        return true;
+      }
+      // Una disponibilita puo essere composta dal solo stato generale, senza
+      // giorni, fasce o orari. In quel caso non esiste un payload iniziale da
+      // idratare: una normale modifica di titolo, foto o descrizione deve
+      // comunque lasciare l'azione su ``keep`` e non riconfermare la data.
+      if (
+        !userChanged
+        && action
+        && action.value === "keep"
+      ) {
+        clearError();
+        updateNextDay();
         return true;
       }
       if (initialPristine && initialPayload) {
@@ -249,6 +360,15 @@
     days.concat(slots).forEach(function (input) {
       input.addEventListener("change", sync);
     });
+    statusInputs.forEach(function (input) {
+      input.addEventListener("change", function () {
+        if (input.checked && input.value === "non_disponibile") {
+          clearOptionalDetails();
+        }
+        sync();
+        updateCopy();
+      });
+    });
     [onCall, start, end].forEach(function (input) {
       if (!input) return;
       input.addEventListener("change", sync);
@@ -259,7 +379,7 @@
         // Giorni e orari di un'offerta non devono diventare per errore i
         // requisiti di una ricerca (o viceversa).
         if (input.value !== currentTypeValue) {
-          clearSelection("clear");
+          clearSelection(input.value === "offro" ? "update" : "clear");
           currentTypeValue = input.value;
         }
         updateCopy();
@@ -270,15 +390,17 @@
         // La disponibilita appartiene alla categoria: cambiandola si parte
         // da una selezione vuota, senza copiare l'agenda precedente.
         if (categoryInput.value !== currentCategoryValue) {
-          clearSelection("clear");
+          clearSelection(isOffer() ? "ensure" : "clear");
           currentCategoryValue = categoryInput.value;
+          updateCopy();
         }
       });
     }
 
     if (reset) {
       reset.addEventListener("click", function () {
-        clearSelection("clear");
+        clearSelection(isOffer() ? "update" : "clear");
+        updateCopy();
       });
     }
 

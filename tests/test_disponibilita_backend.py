@@ -59,6 +59,7 @@ def load_backend_functions():
         "_disponibilita_servizi_table_exists",
         "_disponibilita_categoria_table_exists",
         "_disponibilita_intervalli_table_exists",
+        "_annunci_disponibilita_ciclo_tables_exist",
         "_disponibilita_servizi_iso",
         "_disponibilita_servizi_time",
         "_disponibilita_categoria_label",
@@ -69,6 +70,7 @@ def load_backend_functions():
         "elenca_disponibilita_servizi",
         "risolvi_disponibilita_servizi_annuncio",
         "_categorie_disponibilita_offerte",
+        "_categorie_annunci_disponibilita_rilevanti",
         "_annunci_attivi_disponibilita_categoria",
         "_riepilogo_pubblico_disponibilita",
         "assegna_disponibilita_annunci",
@@ -548,6 +550,39 @@ class DisponibilitaBackendTest(unittest.TestCase):
             "pet-sitter",
         )
         self.assertNotIn("disponibilita_servizi", cards[2])
+
+    def test_scadenza_non_confonde_non_disponibilita_volontaria(self):
+        self.cursor.executemany("""
+            INSERT INTO disponibilita_profili (
+                utente_id, stato_generale, confermata_at, versione
+            ) VALUES (?, ?, '2020-01-01T00:00:00+00:00', 1)
+        """, [
+            (70, "disponibile"),
+            (71, "non_disponibile"),
+        ])
+        cards = [
+            {
+                "id": 170,
+                "utente_id": 70,
+                "tipo_annuncio": "offro",
+                "categoria": "babysitter",
+            },
+            {
+                "id": 171,
+                "utente_id": 71,
+                "tipo_annuncio": "offro",
+                "categoria": "babysitter",
+            },
+        ]
+
+        self.backend["assegna_disponibilita_annunci"](self.cursor, cards)
+
+        expired = cards[0]["disponibilita_servizi"]
+        voluntary = cards[1]["disponibilita_servizi"]
+        self.assertEqual(expired["stato"], "non_disponibile")
+        self.assertTrue(expired["non_disponibile_per_scadenza"])
+        self.assertEqual(voluntary["stato"], "non_disponibile")
+        self.assertNotIn("non_disponibile_per_scadenza", voluntary)
 
     def test_non_disponibile_conserva_calendario_privato_ma_non_pubblico(self):
         self.cursor.execute("""

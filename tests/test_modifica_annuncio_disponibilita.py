@@ -164,7 +164,7 @@ class ModificaAnnuncioDisponibilitaTest(unittest.TestCase):
             route_source,
         )
         self.assertIn(
-            'disponibilita_azione not in {"keep", "update", "clear"}',
+            'disponibilita_azione not in {"keep", "update", "clear", "ensure"}',
             route_source,
         )
         self.assertIn(
@@ -207,6 +207,14 @@ class ModificaAnnuncioDisponibilitaTest(unittest.TestCase):
         )
         self.assertIn(
             "listing_availability_initial=listing_availability_initial",
+            route_source,
+        )
+        self.assertIn(
+            "listing_availability_initial_status=(",
+            route_source,
+        )
+        self.assertIn(
+            "listing_availability_initial_action=(",
             route_source,
         )
 
@@ -252,7 +260,27 @@ class ModificaAnnuncioDisponibilitaTest(unittest.TestCase):
             route_source,
         )
         self.assertIn(
+            "_reset_ciclo_disponibilita_annunci",
+            route_source,
+        )
+        self.assertIn(
+            'stato_disponibilita=disponibilita_offerta["stato"]',
+            route_source,
+        )
+        self.assertIn(
             "preserve_calendar_exceptions=True",
+            route_source,
+        )
+        self.assertIn(
+            "listing_offer_status_from_form(request.form)",
+            route_source,
+        )
+        self.assertIn(
+            "_disponibilita_categoria_esistente(",
+            route_source,
+        )
+        self.assertIn(
+            'stato="disponibile"',
             route_source,
         )
         self.assertRegex(
@@ -391,6 +419,26 @@ class ModificaAnnuncioDisponibilitaTest(unittest.TestCase):
             rendered_offer,
             r'data-listing-availability-sought-only="true"[\s\S]*?\bhidden',
         )
+
+    def test_offer_picker_has_three_visible_status_choices_in_one_row(self):
+        partial = (
+            TEMPLATES / "partials" / "annuncio_disponibilita_picker.html"
+        ).read_text(encoding="utf-8")
+        css = (
+            ROOT / "static" / "css" / "annuncio-disponibilita.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(
+            partial.count('name="disponibilita_annuncio_stato"'),
+            3,
+        )
+        for status in ("disponibile", "limitata", "non_disponibile"):
+            self.assertIn(f'value="{status}"', partial)
+        self.assertIn(
+            "grid-template-columns: repeat(3, minmax(0, 1fr));",
+            css,
+        )
+        self.assertIn("listing.offer_availability_publish_notice", partial)
 
     def test_public_sought_detail_has_complete_scoped_styles(self):
         css = (
@@ -729,6 +777,103 @@ assert.strictEqual(day.checked, false);
 assert.strictEqual(slot.checked, false);
 assert.strictEqual(hidden.value, "");
 assert.strictEqual(title.textContent, "Cerco");
+"""
+        subprocess.run(
+            [shutil.which("node"), "-e", node_program, str(SCRIPT)],
+            check=True,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js non disponibile")
+    def test_editing_other_fields_does_not_reconfirm_status_only_availability(self):
+        """Uno stato senza agenda resta ``keep`` finche l'utente non lo cambia."""
+
+        node_program = r"""
+const assert = require("assert");
+const script = process.argv[1];
+function element(extra) {
+  return Object.assign({
+    checked: false, value: "", hidden: false, textContent: "", listeners: {},
+    addEventListener(name, callback) { this.listeners[name] = callback; },
+    scrollIntoView() {},
+    closest() { return { classList: { toggle() {} } }; }
+  }, extra || {});
+}
+const hidden = element();
+const action = element({ value: "keep" });
+const day = element({ value: "1" });
+const available = element({ value: "disponibile", checked: true });
+const onCall = element();
+const start = element();
+const end = element();
+const errorBox = element();
+const initialNode = element({ textContent: "null" });
+const selectors = new Map([
+  ["[data-listing-availability-json]", hidden],
+  ["[data-listing-availability-action]", action],
+  ["[data-listing-availability-on-call]", onCall],
+  ["[data-listing-availability-start]", start],
+  ["[data-listing-availability-end]", end],
+  ["[data-listing-availability-error]", errorBox],
+  ["[data-listing-availability-initial]", initialNode]
+]);
+const container = element({
+  open: true,
+  dataset: { listingAvailabilitySoughtOnly: "false" },
+  querySelector(selector) { return selectors.get(selector) || null; },
+  querySelectorAll(selector) {
+    if (selector === "[data-listing-availability-day]") return [day];
+    if (selector === "[data-listing-availability-slot]") return [];
+    if (selector === "[data-listing-availability-status]") return [available];
+    return [];
+  }
+});
+const offer = element({ value: "offro", checked: true });
+global.document = {
+  readyState: "complete",
+  querySelector(selector) {
+    if (selector === "[data-listing-availability]") return container;
+    if (selector === 'input[name="tipo_annuncio"]:checked') return offer;
+    return null;
+  },
+  querySelectorAll(selector) {
+    return selector === 'input[name="tipo_annuncio"]' ? [offer] : [];
+  },
+  getElementById() { return element({ textContent: "{}" }); }
+};
+global.window = {
+  MyLocalCareAvailabilityRequest: {
+    validatePayload(payload) {
+      return payload && (payload.a_chiamata || payload.giorni.length)
+        ? null : { code: "select_day" };
+    },
+    buildSharedPayload(dayNumbers, slots, from, to, aChiamata) {
+      return {
+        a_chiamata: aChiamata,
+        giorni: dayNumbers.map((number) => ({
+          giorno_settimana: number, fasce: slots.slice(), intervalli: []
+        }))
+      };
+    },
+    timeToMinutes() { return null; }
+  }
+};
+require(script);
+
+// Salvataggio di titolo/foto/descrizione: nessuna nuova conferma implicita.
+assert.strictEqual(window.MyLocalCareListingAvailability.validateBeforeSubmit(), true);
+assert.strictEqual(action.value, "keep");
+assert.strictEqual(hidden.value, "");
+
+// Appena l'utente modifica davvero l'agenda, il salvataggio diventa esplicito.
+day.checked = true;
+day.listeners.change();
+assert.strictEqual(action.value, "update");
+assert.strictEqual(window.MyLocalCareListingAvailability.validateBeforeSubmit(), true);
+assert.strictEqual(action.value, "update");
+assert.notStrictEqual(hidden.value, "");
 """
         subprocess.run(
             [shutil.which("node"), "-e", node_program, str(SCRIPT)],

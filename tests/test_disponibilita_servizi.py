@@ -602,7 +602,7 @@ class DisponibilitaFreshnessTest(unittest.TestCase):
         self.assertEqual(just_before["codice"], CODICE_RICONFERMA)
         self.assertEqual(at_boundary["codice"], CODICE_PRIORITA_RIDOTTA)
         self.assertTrue(at_boundary["priorita_ridotta"])
-        self.assertTrue(at_boundary["inclusa_filtro_disponibili"])
+        self.assertFalse(at_boundary["inclusa_filtro_disponibili"])
 
     def test_a_44_giorni_esclude_dal_filtro(self):
         just_before = self.freshness_at(days=44, seconds=-1)

@@ -1,5 +1,7 @@
 {% macro availability_status(disponibilita) -%}
-  {% if disponibilita.get('stato') == 'disponibile' %}
+  {% if disponibilita.get('non_disponibile_per_scadenza', false) %}
+    {{ tr('availability.card_unavailable_reconfirmation') }}
+  {% elif disponibilita.get('stato') == 'disponibile' %}
     {{ tr('availability.status_available') }}
   {% elif disponibilita.get('stato') == 'limitata' %}
     {{ tr('availability.status_limited') }}
@@ -37,23 +39,31 @@
   {% set freschezza = disponibilita.get('freschezza', {}) if configurata else {} %}
   {% set data_conferma = (disponibilita.get('confermata_at') or freschezza.get('confermata_il')) if configurata else none %}
   {% set codice_freschezza = freschezza.get('codice') %}
-  {% set mai_confermata = (not configurata) or codice_freschezza == 'mai_confermata' or not data_conferma %}
-  {% set scaduta = (not mai_confermata) and (freschezza.get('riconferma_richiesta', false) or codice_freschezza in ['da_riconfermare', 'priorita_ridotta', 'esclusa_filtro']) %}
   {% set stato = disponibilita.get('stato', 'non_disponibile') if configurata else 'non_disponibile' %}
-  {% set badge_class = 'is-never-confirmed' if mai_confermata else ('is-expired' if scaduta else ('is-limited' if stato == 'limitata' else ('is-unavailable' if stato == 'non_disponibile' else 'is-available'))) %}
+  {% set mai_confermata = (not configurata) or codice_freschezza == 'mai_confermata' or not data_conferma %}
+  {% set non_disponibile_per_scadenza = configurata and disponibilita.get('non_disponibile_per_scadenza', false) %}
+  {% set non_disponibile_volontaria = configurata and stato == 'non_disponibile' and not non_disponibile_per_scadenza %}
+  {% set scaduta = (stato != 'non_disponibile') and (not mai_confermata) and (not non_disponibile_per_scadenza) and (freschezza.get('riconferma_richiesta', false) or codice_freschezza in ['da_riconfermare', 'priorita_ridotta', 'esclusa_filtro']) %}
+  {% set badge_class = 'is-unavailable' if non_disponibile_per_scadenza or non_disponibile_volontaria else ('is-never-confirmed' if mai_confermata else ('is-expired' if scaduta else ('is-limited' if stato == 'limitata' else 'is-available'))) %}
   <span class="availability-card-badge {{ badge_class }} {{ extra_class }}">
     <span aria-hidden="true">
-      {% if mai_confermata %}◷{% elif scaduta %}↻{% elif stato == 'limitata' %}◐{% elif stato == 'non_disponibile' %}–{% else %}✓{% endif %}
+      {% if non_disponibile_per_scadenza or non_disponibile_volontaria %}–{% elif mai_confermata %}◷{% elif scaduta %}↻{% elif stato == 'limitata' %}◐{% else %}✓{% endif %}
     </span>
     <span>
-      {% if mai_confermata %}
+      {% if non_disponibile_per_scadenza %}
+        {{ tr('availability.card_unavailable_reconfirmation') }}
+      {% elif non_disponibile_volontaria %}
+        {% if data_conferma %}
+          {{ tr('availability.card_unavailable_on', date=(data_conferma|fmt_day_month)) }}
+        {% else %}
+          {{ tr('availability.status_unavailable') }}
+        {% endif %}
+      {% elif mai_confermata %}
         {{ tr('availability.card_never_confirmed') }}
       {% elif scaduta %}
         {{ tr('availability.card_expired') }}
       {% elif stato == 'limitata' %}
         {{ tr('availability.card_limited_on', date=(data_conferma|fmt_day_month)) }}
-      {% elif stato == 'non_disponibile' %}
-        {{ tr('availability.card_unavailable_on', date=(data_conferma|fmt_day_month)) }}
       {% else %}
         {{ tr('availability.card_available_on', date=(data_conferma|fmt_day_month)) }}
       {% endif %}
@@ -178,7 +188,10 @@
       </div>
     {% endif %}
 
-    {% if freschezza.get('riconferma_richiesta', false) %}
+    {% if disponibilita.get('non_disponibile_per_scadenza', false) %}
+      {# Lo stato pubblico e gia espresso dal badge: niente vecchia data di
+         conferma o inviti destinati al proprietario nella vista visitatore. #}
+    {% elif disponibilita.get('stato') != 'non_disponibile' and freschezza.get('riconferma_richiesta', false) %}
       <p class="availability-detail__notice is-due">{{ tr('availability.freshness_due') }}</p>
     {% elif data_conferma %}
       <p class="availability-detail__notice">
@@ -218,10 +231,38 @@
   #}
   {% set mostra_disponibilita = utente_offre_servizi or ((not pubblico) and profili) %}
   {% if feature_available and mostra_disponibilita %}
+    {#
+      Il richiamo visivo appartiene soltanto alla dashboard privata. Se ci
+      sono piu ambiti, portiamo in primo piano il primo che richiede davvero
+      una conferma. Un "Non disponibile" scelto dall'utente non e una
+      scadenza e non deve attirare l'attenzione.
+    #}
+    {% set attenzione = namespace(richiesta=(not pubblico and not profili), profilo=none) %}
+    {% if not pubblico %}
+      {% for profilo in profili %}
+        {% set configurata = profilo.get('configurata', true) %}
+        {% set freschezza = profilo.get('freschezza', {}) if configurata else {} %}
+        {% set data_conferma = (profilo.get('confermata_at') or freschezza.get('confermata_il')) if configurata else none %}
+        {% set codice_freschezza = freschezza.get('codice') %}
+        {% set stato = profilo.get('stato', 'non_disponibile') if configurata else 'non_disponibile' %}
+        {% set non_disponibile_per_scadenza = configurata and profilo.get('non_disponibile_per_scadenza', false) %}
+        {% set non_disponibile_volontaria = configurata and stato == 'non_disponibile' and not non_disponibile_per_scadenza %}
+        {% set mai_confermata = (not configurata) or codice_freschezza == 'mai_confermata' or not data_conferma %}
+        {% set da_riconfermare = stato != 'non_disponibile' and (freschezza.get('riconferma_richiesta', false) or codice_freschezza in ['da_riconfermare', 'priorita_ridotta', 'esclusa_filtro']) %}
+        {% if not non_disponibile_volontaria and (mai_confermata or da_riconfermare or non_disponibile_per_scadenza) %}
+          {% set attenzione.richiesta = true %}
+          {% if attenzione.profilo is none %}
+            {% set attenzione.profilo = profilo %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
     <section class="intro-availability-wrap" aria-label="{{ tr('availability.title') }}">
       {% if profili %}
-        {% set primo = profili[0] %}
-        <details class="intro-availability">
+        {% set primo = attenzione.profilo or profili[0] %}
+        <details
+          class="intro-availability{% if attenzione.richiesta %} intro-availability--needs-confirmation{% endif %}"
+          {% if attenzione.richiesta %}data-availability-needs-confirmation="true"{% endif %}>
           <summary>
             <span class="intro-availability__icon" aria-hidden="true">🗓️</span>
             <span class="intro-availability__copy">
@@ -235,7 +276,11 @@
               {% endif %}
             </span>
             <span class="intro-availability__action">
-              {{ tr('availability.view') if pubblico else tr('availability.edit') }}
+              {% if attenzione.richiesta %}
+                {{ tr('availability.action_to_confirm') }}
+              {% else %}
+                {{ tr('availability.view') if pubblico else tr('availability.edit') }}
+              {% endif %}
             </span>
           </summary>
           <div class="intro-availability__body">
@@ -253,7 +298,9 @@
           </div>
         </details>
       {% else %}
-        <div class="intro-availability intro-availability--empty">
+        <div
+          class="intro-availability intro-availability--empty{% if attenzione.richiesta %} intro-availability--needs-confirmation{% endif %}"
+          {% if attenzione.richiesta %}data-availability-needs-confirmation="true"{% endif %}>
           <span class="intro-availability__icon" aria-hidden="true">🗓️</span>
           <span class="intro-availability__copy">
             <strong>{{ tr('availability.title') }}</strong>
@@ -264,7 +311,7 @@
               type="button"
               class="intro-availability__action"
               data-service-availability-open>
-              {{ tr('availability.setup') }}
+              {{ tr('availability.action_to_confirm') if attenzione.richiesta else tr('availability.setup') }}
             </button>
           {% endif %}
         </div>

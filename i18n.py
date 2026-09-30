@@ -20,10 +20,67 @@ SUPPORTED_LANGUAGES = {
     "fil": {"label": "Filipino", "flag": "🇵🇭", "short": "FIL"},
 }
 
-LEGAL_DOCUMENT_VERSION = "mylocalcare_privacy_termini_2026_v5"
+LEGAL_DOCUMENT_VERSION = "mylocalcare_privacy_termini_2026_v6"
 
 
 TRANSLATIONS = {
+    "legal.essential_listing_email_privacy": {
+        "it": "La preferenza sulle notifiche email riguarda soltanto gli avvisi facoltativi. Le comunicazioni essenziali relative a pubblicazione, disponibilità, scadenza, cambio di stato, limitazione, archiviazione o rimozione degli annunci possono essere inviate anche quando gli avvisi facoltativi sono disattivati, perché necessarie a gestire il servizio richiesto e non promozionali.",
+        "en": "The email notification preference applies only to optional alerts. Essential communications about publishing, availability, expiry, status changes, restrictions, archiving or removal of listings may still be sent when optional alerts are disabled because they are required to manage the requested service and are not promotional.",
+        "fr": "La préférence relative aux notifications par e-mail concerne uniquement les alertes facultatives. Les communications essentielles concernant la publication, la disponibilité, l’expiration, les changements de statut, les limitations, l’archivage ou la suppression des annonces peuvent être envoyées même lorsque les alertes facultatives sont désactivées, car elles sont nécessaires à la gestion du service demandé et ne sont pas promotionnelles.",
+        "es": "La preferencia de notificaciones por correo solo se aplica a los avisos opcionales. Las comunicaciones esenciales sobre publicación, disponibilidad, vencimiento, cambios de estado, limitaciones, archivo o retirada de anuncios pueden enviarse aunque los avisos opcionales estén desactivados, porque son necesarias para gestionar el servicio solicitado y no son promocionales.",
+        "de": "Die Einstellung für E-Mail-Benachrichtigungen gilt nur für optionale Hinweise. Wesentliche Mitteilungen über Veröffentlichung, Verfügbarkeit, Ablauf, Statusänderungen, Einschränkung, Archivierung oder Entfernung von Anzeigen können auch bei deaktivierten optionalen Hinweisen versandt werden, da sie für die Verwaltung des angeforderten Dienstes erforderlich und nicht werblich sind.",
+        "ro": "Preferința privind notificările prin e-mail se aplică numai alertelor opționale. Comunicările esențiale despre publicarea, disponibilitatea, expirarea, schimbarea stării, limitarea, arhivarea sau eliminarea anunțurilor pot fi trimise chiar dacă alertele opționale sunt dezactivate, deoarece sunt necesare pentru gestionarea serviciului solicitat și nu sunt promoționale.",
+        "uk": "Налаштування електронних сповіщень стосується лише необов’язкових повідомлень. Важливі службові листи про публікацію, доступність, закінчення строку, зміну статусу, обмеження, архівування або видалення оголошень можуть надсилатися навіть після вимкнення необов’язкових сповіщень, оскільки вони потрібні для надання запитаного сервісу й не є рекламою.",
+        "fil": "Ang email notification preference ay para lamang sa mga opsyonal na alert. Maaari pa ring ipadala ang mahahalagang komunikasyon tungkol sa pag-publish, availability, pag-expire, pagbabago ng status, limitasyon, pag-archive o pagtanggal ng listing kahit naka-off ang opsyonal na alerts dahil kailangan ang mga ito upang pamahalaan ang hiniling na serbisyo at hindi ito promotional.",
+    },
+    "legal.essential_listing_email_terms": {
+        "it": "Per gestire correttamente gli annunci, MyLocalCare può inviare comunicazioni operative essenziali relative a pubblicazione, disponibilità, scadenza, cambio di stato, limitazione, archiviazione o rimozione. Queste comunicazioni di servizio possono essere inviate anche se l’utente disattiva gli avvisi email facoltativi e non includono contenuti promozionali.",
+        "en": "To manage listings correctly, MyLocalCare may send essential operational communications about publishing, availability, expiry, status changes, restrictions, archiving or removal. These service communications may be sent even if the user disables optional email alerts and do not include promotional content.",
+        "fr": "Pour gérer correctement les annonces, MyLocalCare peut envoyer des communications opérationnelles essentielles concernant la publication, la disponibilité, l’expiration, les changements de statut, les limitations, l’archivage ou la suppression. Ces communications de service peuvent être envoyées même si l’utilisateur désactive les alertes facultatives par e-mail et ne contiennent aucun contenu promotionnel.",
+        "es": "Para gestionar correctamente los anuncios, MyLocalCare puede enviar comunicaciones operativas esenciales sobre publicación, disponibilidad, vencimiento, cambios de estado, limitaciones, archivo o retirada. Estas comunicaciones de servicio pueden enviarse aunque el usuario desactive los avisos opcionales por correo y no incluyen contenido promocional.",
+        "de": "Zur ordnungsgemäßen Verwaltung von Anzeigen kann MyLocalCare wesentliche betriebliche Mitteilungen über Veröffentlichung, Verfügbarkeit, Ablauf, Statusänderungen, Einschränkung, Archivierung oder Entfernung senden. Diese Service-Mitteilungen können auch bei deaktivierten optionalen E-Mail-Hinweisen versandt werden und enthalten keine Werbung.",
+        "ro": "Pentru gestionarea corectă a anunțurilor, MyLocalCare poate trimite comunicări operaționale esențiale despre publicare, disponibilitate, expirare, schimbarea stării, limitare, arhivare sau eliminare. Aceste comunicări de serviciu pot fi trimise chiar dacă utilizatorul dezactivează alertele opționale prin e-mail și nu includ conținut promoțional.",
+        "uk": "Для належного керування оголошеннями MyLocalCare може надсилати важливі службові повідомлення про публікацію, доступність, закінчення строку, зміну статусу, обмеження, архівування або видалення. Такі повідомлення можуть надсилатися навіть після вимкнення необов’язкових електронних сповіщень і не містять реклами.",
+        "fil": "Upang maayos na mapamahalaan ang mga listing, maaaring magpadala ang MyLocalCare ng mahahalagang operational communication tungkol sa pag-publish, availability, pag-expire, pagbabago ng status, limitasyon, pag-archive o pagtanggal. Maaari itong ipadala kahit i-off ng user ang opsyonal na email alerts at wala itong promotional content.",
+    },
+    "legal.push_preference_privacy": {
+        "it": "Le notifiche push sono abilitate come preferenza dell’account per impostazione predefinita, ma possono essere consegnate soltanto dopo l’autorizzazione del browser o del dispositivo e la creazione della relativa subscription. L’utente può disattivare la preferenza push nelle impostazioni; la disattivazione rimuove le subscription associate all’account.",
+        "en": "Push notifications are enabled as an account preference by default, but can be delivered only after the browser or device grants permission and the related subscription is created. Users can disable the push preference in settings; doing so removes subscriptions associated with the account.",
+        "fr": "Les notifications push sont activées par défaut comme préférence du compte, mais ne peuvent être envoyées qu’après l’autorisation du navigateur ou de l’appareil et la création de la souscription correspondante. L’utilisateur peut désactiver la préférence push dans les paramètres ; cette désactivation supprime les souscriptions associées au compte.",
+        "es": "Las notificaciones push están activadas por defecto como preferencia de la cuenta, pero solo pueden entregarse después de que el navegador o dispositivo conceda permiso y se cree la suscripción correspondiente. El usuario puede desactivar la preferencia push en los ajustes; al hacerlo se eliminan las suscripciones asociadas a la cuenta.",
+        "de": "Push-Benachrichtigungen sind als Kontoeinstellung standardmäßig aktiviert, können aber erst nach Zustimmung des Browsers oder Geräts und Erstellung der zugehörigen Subscription zugestellt werden. Nutzer können Push in den Einstellungen deaktivieren; dabei werden die mit dem Konto verbundenen Subscriptions entfernt.",
+        "ro": "Notificările push sunt activate implicit ca preferință a contului, dar pot fi livrate numai după autorizarea browserului sau a dispozitivului și crearea abonamentului aferent. Utilizatorul poate dezactiva preferința push din setări; dezactivarea elimină abonamentele asociate contului.",
+        "uk": "Push-сповіщення за замовчуванням увімкнені як налаштування облікового запису, але можуть доставлятися лише після дозволу браузера або пристрою та створення відповідної підписки. Користувач може вимкнути push у налаштуваннях; після цього підписки, пов’язані з обліковим записом, видаляються.",
+        "fil": "Naka-on bilang default account preference ang push notifications, ngunit maihahatid lamang ang mga ito matapos payagan ng browser o device at magawa ang kaugnay na subscription. Maaaring i-off ng user ang push preference sa settings; aalisin nito ang subscriptions na nauugnay sa account.",
+    },
+    "settings.optional_email_title": {
+        "it": "Avvisi email facoltativi", "en": "Optional email alerts", "fr": "Alertes e-mail facultatives", "es": "Avisos opcionales por correo", "de": "Optionale E-Mail-Hinweise", "ro": "Alerte opționale prin e-mail", "uk": "Необов’язкові сповіщення електронною поштою", "fil": "Opsyonal na email alerts",
+    },
+    "settings.optional_email_on": {
+        "it": "Messaggi e aggiornamenti facoltativi via email attivi.", "en": "Optional messages and updates by email are on.", "fr": "Les messages et mises à jour facultatifs par e-mail sont activés.", "es": "Los mensajes y actualizaciones opcionales por correo están activos.", "de": "Optionale Nachrichten und Aktualisierungen per E-Mail sind aktiviert.", "ro": "Mesajele și actualizările opționale prin e-mail sunt active.", "uk": "Необов’язкові повідомлення й оновлення електронною поштою ввімкнено.", "fil": "Naka-on ang opsyonal na mensahe at update sa email.",
+    },
+    "settings.optional_email_off": {
+        "it": "Messaggi e aggiornamenti facoltativi via email disattivati.", "en": "Optional messages and updates by email are off.", "fr": "Les messages et mises à jour facultatifs par e-mail sont désactivés.", "es": "Los mensajes y actualizaciones opcionales por correo están desactivados.", "de": "Optionale Nachrichten und Aktualisierungen per E-Mail sind deaktiviert.", "ro": "Mesajele și actualizările opționale prin e-mail sunt dezactivate.", "uk": "Необов’язкові повідомлення й оновлення електронною поштою вимкнено.", "fil": "Naka-off ang opsyonal na mensahe at update sa email.",
+    },
+    "settings.essential_listing_email_title": {
+        "it": "Comunicazioni essenziali sugli annunci", "en": "Essential listing communications", "fr": "Communications essentielles sur les annonces", "es": "Comunicaciones esenciales sobre anuncios", "de": "Wesentliche Mitteilungen zu Anzeigen", "ro": "Comunicări esențiale despre anunțuri", "uk": "Важливі повідомлення про оголошення", "fil": "Mahahalagang listing communication",
+    },
+    "settings.essential_listing_email_body": {
+        "it": "Scadenze, cambi di stato e archiviazione vengono comunicati comunque via email. Sono messaggi di servizio, non promozionali.", "en": "Expiry, status changes and archiving are always communicated by email. These are service messages, not promotions.", "fr": "Les expirations, changements de statut et archivages sont toujours communiqués par e-mail. Il s’agit de messages de service, non promotionnels.", "es": "Los vencimientos, cambios de estado y archivos se comunican siempre por correo. Son mensajes de servicio, no promocionales.", "de": "Ablauf, Statusänderungen und Archivierung werden immer per E-Mail mitgeteilt. Es handelt sich um Service- und nicht um Werbenachrichten.", "ro": "Expirările, schimbările de stare și arhivarea sunt comunicate întotdeauna prin e-mail. Sunt mesaje de serviciu, nu promoționale.", "uk": "Про закінчення строку, зміну статусу й архівування завжди повідомляється електронною поштою. Це службові, а не рекламні повідомлення.", "fil": "Palaging ipinapaalam sa email ang pag-expire, pagbabago ng status at pag-archive. Service messages ito, hindi promotions.",
+    },
+    "settings.push_account_on": {
+        "it": "Preferenza push attiva. Serve anche l’autorizzazione del dispositivo.", "en": "Push preference is on. Device permission is also required.", "fr": "La préférence push est activée. L’autorisation de l’appareil est également nécessaire.", "es": "La preferencia push está activa. También se necesita permiso del dispositivo.", "de": "Push ist im Konto aktiviert. Zusätzlich ist die Geräteberechtigung erforderlich.", "ro": "Preferința push este activă. Este necesară și autorizarea dispozitivului.", "uk": "Push-сповіщення в обліковому записі ввімкнено. Також потрібен дозвіл пристрою.", "fil": "Naka-on ang push preference. Kailangan din ang pahintulot ng device.",
+    },
+    "settings.push_account_off": {
+        "it": "Notifiche push disattivate per il tuo account.", "en": "Push notifications are off for your account.", "fr": "Les notifications push sont désactivées pour votre compte.", "es": "Las notificaciones push están desactivadas para tu cuenta.", "de": "Push-Benachrichtigungen sind für dein Konto deaktiviert.", "ro": "Notificările push sunt dezactivate pentru contul tău.", "uk": "Push-сповіщення для вашого облікового запису вимкнено.", "fil": "Naka-off ang push notifications para sa account mo.",
+    },
+    "settings.push_authorize_device": {
+        "it": "Autorizza questo dispositivo", "en": "Allow this device", "fr": "Autoriser cet appareil", "es": "Autorizar este dispositivo", "de": "Dieses Gerät autorisieren", "ro": "Autorizează acest dispozitiv", "uk": "Дозволити на цьому пристрої", "fil": "Payagan ang device na ito",
+    },
+    "notifications.push_prompt_body": {
+        "it": "Ricevi avvisi per nuovi messaggi e aggiornamenti importanti sugli annunci anche quando l’app è chiusa.", "en": "Get alerts for new messages and important listing updates even when the app is closed.", "fr": "Recevez des alertes pour les nouveaux messages et les mises à jour importantes des annonces, même lorsque l’application est fermée.", "es": "Recibe avisos de nuevos mensajes y actualizaciones importantes de anuncios incluso con la app cerrada.", "de": "Erhalte Hinweise auf neue Nachrichten und wichtige Anzeigen-Updates, auch wenn die App geschlossen ist.", "ro": "Primește alerte pentru mesaje noi și actualizări importante ale anunțurilor chiar și când aplicația este închisă.", "uk": "Отримуйте сповіщення про нові повідомлення та важливі оновлення оголошень, навіть коли застосунок закритий.", "fil": "Makatanggap ng alert para sa bagong mensahe at mahalagang listing updates kahit sarado ang app.",
+    },
     "legal.official_language_notice": {
         "it": "Il testo legale ufficiale è quello in italiano.",
         "en": "Courtesy translation. In case of discrepancies, the official Italian text prevails.",
@@ -635,6 +692,52 @@ TRANSLATIONS = {
         "ro": "Indică acum când ești disponibil pentru acest serviciu.",
         "uk": "Одразу вкажіть, коли ви доступні для цієї послуги.",
         "fil": "Ilagay ngayon kung kailan ka available para sa serbisyong ito.",
+    },
+    "listing.offer_availability_title": {
+        "it": "Disponibilità per questo servizio", "en": "Availability for this service",
+        "fr": "Disponibilité pour ce service", "es": "Disponibilidad para este servicio",
+        "de": "Verfügbarkeit für diesen Service", "ro": "Disponibilitate pentru acest serviciu",
+        "uk": "Доступність для цієї послуги", "fil": "Availability para sa serbisyong ito",
+    },
+    "listing.offer_availability_publish_notice": {
+        "it": "Pubblicando confermi lo stato scelto. Giorni, fasce e orari restano facoltativi.",
+        "en": "By publishing, you confirm the selected status. Days and times remain optional.",
+        "fr": "En publiant, vous confirmez le statut choisi. Les jours et horaires restent facultatifs.",
+        "es": "Al publicar, confirmas el estado elegido. Los días y horarios siguen siendo opcionales.",
+        "de": "Mit der Veröffentlichung bestätigst du den gewählten Status. Tage und Zeiten bleiben optional.",
+        "ro": "Prin publicare, confirmi starea aleasă. Zilele și orele rămân opționale.",
+        "uk": "Публікуючи, ви підтверджуєте вибраний статус. Дні та години залишаються необов’язковими.",
+        "fil": "Sa pag-publish, kinukumpirma mo ang napiling status. Opsyonal pa rin ang mga araw at oras.",
+    },
+    "listing.offer_availability_confirmed_hint": {
+        "it": "La pubblicazione conferma questo stato; i dettagli sono facoltativi.",
+        "en": "Publishing confirms this status; details are optional.",
+        "fr": "La publication confirme ce statut ; les détails sont facultatifs.",
+        "es": "La publicación confirma este estado; los detalles son opcionales.",
+        "de": "Die Veröffentlichung bestätigt diesen Status; Details sind optional.",
+        "ro": "Publicarea confirmă această stare; detaliile sunt opționale.",
+        "uk": "Публікація підтверджує цей статус; деталі необов’язкові.",
+        "fil": "Kinukumpirma ng pag-publish ang status na ito; opsyonal ang detalye.",
+    },
+    "listing.offer_availability_details_optional": {
+        "it": "Dettagli facoltativi: a chiamata, giorni, fasce oppure orari precisi.",
+        "en": "Optional details: on call, days, time slots or exact times.",
+        "fr": "Détails facultatifs : sur appel, jours, créneaux ou horaires précis.",
+        "es": "Detalles opcionales: a demanda, días, franjas u horarios exactos.",
+        "de": "Optionale Details: auf Abruf, Tage, Zeitfenster oder genaue Uhrzeiten.",
+        "ro": "Detalii opționale: la cerere, zile, intervale sau ore exacte.",
+        "uk": "Необов’язкові деталі: за викликом, дні, періоди або точний час.",
+        "fil": "Opsyonal na detalye: on call, mga araw, time slot o eksaktong oras.",
+    },
+    "listing.seek_availability_details_optional": {
+        "it": "Facoltativo: specifica uno o più giorni e aggiungi fasce oppure orari precisi.",
+        "en": "Optional: choose one or more days and add time slots or exact times.",
+        "fr": "Facultatif : choisissez un ou plusieurs jours et ajoutez des créneaux ou horaires précis.",
+        "es": "Opcional: elige uno o más días y añade franjas u horarios exactos.",
+        "de": "Optional: Wähle einen oder mehrere Tage und ergänze Zeitfenster oder genaue Uhrzeiten.",
+        "ro": "Opțional: alege una sau mai multe zile și adaugă intervale sau ore exacte.",
+        "uk": "Необов’язково: виберіть один чи кілька днів і додайте періоди або точний час.",
+        "fil": "Opsyonal: pumili ng isa o higit pang araw at magdagdag ng time slot o eksaktong oras.",
     },
     "listing.seek_availability_hint": {
         "it": "Indica subito in quali giorni e orari ti serve il servizio.",
@@ -1740,6 +1843,71 @@ TRANSLATIONS = {
         "uk": "Доступність підтверджено повторно.",
         "fil": "Muling nakumpirma ang availability.",
     },
+    "availability.confirm_all": {
+        "it": "Conferma tutte", "en": "Confirm all", "fr": "Tout confirmer",
+        "es": "Confirmar todo", "de": "Alle bestätigen",
+        "ro": "Confirmă tot", "uk": "Підтвердити все",
+        "fil": "Kumpirmahin lahat",
+    },
+    "availability.confirm_all_help": {
+        "it": "Imposta tutti i servizi come disponibili e riattiva gli annunci, senza cambiare giorni o orari.",
+        "en": "Mark every service as available and reactivate listings without changing days or times.",
+        "fr": "Rendez tous les services disponibles et réactivez les annonces sans modifier les jours ni les horaires.",
+        "es": "Marca todos los servicios como disponibles y reactiva los anuncios sin cambiar días ni horarios.",
+        "de": "Setze alle Dienste auf verfügbar und reaktiviere Anzeigen, ohne Tage oder Zeiten zu ändern.",
+        "ro": "Setează toate serviciile ca disponibile și reactivează anunțurile fără a schimba zilele sau orele.",
+        "uk": "Позначте всі послуги доступними й повторно активуйте оголошення без зміни днів або годин.",
+        "fil": "Gawing available ang lahat ng serbisyo at i-reactivate ang mga listing nang hindi binabago ang araw o oras.",
+    },
+    "availability.confirming_all": {
+        "it": "Conferma in corso...", "en": "Confirming...",
+        "fr": "Confirmation...", "es": "Confirmando...",
+        "de": "Wird bestätigt...", "ro": "Se confirmă...",
+        "uk": "Підтвердження...", "fil": "Kinukumpirma...",
+    },
+    "availability.confirmed_all": {
+        "it": "Disponibilità confermate e annunci riattivati.",
+        "en": "Availability confirmed and listings reactivated.",
+        "fr": "Disponibilités confirmées et annonces réactivées.",
+        "es": "Disponibilidades confirmadas y anuncios reactivados.",
+        "de": "Verfügbarkeiten bestätigt und Anzeigen reaktiviert.",
+        "ro": "Disponibilități confirmate și anunțuri reactivate.",
+        "uk": "Доступність підтверджено, оголошення активовано повторно.",
+        "fil": "Nakumpirma ang availability at na-reactivate ang mga listing.",
+    },
+    "availability.confirmed_all_with_conflicts": {
+        "it": "Disponibilità confermate. Annunci non riattivati perché duplicati: {count}.",
+        "en": "Availability confirmed. Listings not reactivated because of an active duplicate: {count}.",
+        "fr": "Disponibilités confirmées. Annonces non réactivées en raison d’un doublon actif : {count}.",
+        "es": "Disponibilidades confirmadas. Anuncios no reactivados por existir un duplicado activo: {count}.",
+        "de": "Verfügbarkeiten bestätigt. Wegen eines aktiven Duplikats nicht reaktivierte Anzeigen: {count}.",
+        "ro": "Disponibilități confirmate. Anunțuri nereactivate din cauza unui duplicat activ: {count}.",
+        "uk": "Доступність підтверджено. Неактивовані через активний дублікат оголошення: {count}.",
+        "fil": "Nakumpirma ang availability. Mga listing na hindi na-reactivate dahil may aktibong duplicate: {count}.",
+    },
+    "availability.reactivating_listing": {
+        "it": "Riattivazione...", "en": "Reactivating...",
+        "fr": "Réactivation...", "es": "Reactivando...",
+        "de": "Wird reaktiviert...", "ro": "Se reactivează...",
+        "uk": "Повторна активація...", "fil": "Ina-activate muli...",
+    },
+    "availability.listing_reactivated": {
+        "it": "Annuncio riattivato.", "en": "Listing reactivated.",
+        "fr": "Annonce réactivée.", "es": "Anuncio reactivado.",
+        "de": "Anzeige reaktiviert.", "ro": "Anunț reactivat.",
+        "uk": "Оголошення активовано повторно.",
+        "fil": "Na-activate muli ang listing.",
+    },
+    "availability.duplicate_active_listing": {
+        "it": "Hai già un altro annuncio attivo per questo servizio.",
+        "en": "You already have another active listing for this service.",
+        "fr": "Vous avez déjà une autre annonce active pour ce service.",
+        "es": "Ya tienes otro anuncio activo para este servicio.",
+        "de": "Du hast bereits eine andere aktive Anzeige für diesen Dienst.",
+        "ro": "Ai deja un alt anunț activ pentru acest serviciu.",
+        "uk": "У вас уже є інше активне оголошення для цієї послуги.",
+        "fil": "May iba ka nang aktibong listing para sa serbisyong ito.",
+    },
     "availability.not_configured": {
         "it": "Disponibilità non ancora impostata",
         "en": "Availability not set yet",
@@ -2437,6 +2605,16 @@ TRANSLATIONS = {
         "de": "Verfügbarkeit erneut zu bestätigen", "ro": "Disponibilitate de reconfirmat",
         "uk": "Доступність потребує повторного підтвердження", "fil": "Kailangang kumpirmahing muli ang availability",
     },
+    "availability.card_unavailable_reconfirmation": {
+        "it": "Non disponibile · conferma richiesta",
+        "en": "Unavailable · confirmation required",
+        "fr": "Indisponible · confirmation requise",
+        "es": "No disponible · confirmación requerida",
+        "de": "Nicht verfügbar · Bestätigung erforderlich",
+        "ro": "Indisponibil · confirmare necesară",
+        "uk": "Недоступно · потрібне підтвердження",
+        "fil": "Hindi available · kailangan ng kumpirmasyon",
+    },
     "availability.card_never_confirmed": {
         "it": "Disponibilità da confermare", "en": "Availability not yet confirmed",
         "fr": "Disponibilité non confirmée", "es": "Disponibilidad aún no confirmada",
@@ -2458,6 +2636,12 @@ TRANSLATIONS = {
         "fr": "Disponibilité à confirmer", "es": "Disponibilidad por confirmar",
         "de": "Verfügbarkeit noch zu bestätigen", "ro": "Disponibilitate de confirmat",
         "uk": "Доступність потребує підтвердження", "fil": "Kailangang kumpirmahin ang availability",
+    },
+    "availability.action_to_confirm": {
+        "it": "Da confermare", "en": "Confirm now",
+        "fr": "À confirmer", "es": "Por confirmar",
+        "de": "Jetzt bestätigen", "ro": "De confirmat",
+        "uk": "Підтвердити", "fil": "Kumpirmahin",
     },
     "availability.card_confirmed_on": {
         "it": "Disponibilità confermata il {date}", "en": "Availability confirmed on {date}",

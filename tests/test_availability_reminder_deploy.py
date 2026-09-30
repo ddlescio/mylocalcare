@@ -21,8 +21,9 @@ class AvailabilityReminderDeployTest(unittest.TestCase):
         ),
         "Ultimo avviso: rinnova la disponibilità",
         (
-            "La tua disponibilità è scaduta da 7 giorni e la priorità dei "
-            "tuoi annunci è stata ridotta. Riconfermala ora per ripristinarla."
+            "La tua disponibilità è scaduta da 7 giorni. I tuoi annunci ora "
+            "risultano non disponibili e hanno priorità ridotta. Riconferma "
+            "entro 7 giorni per evitare l’archiviazione automatica."
         ),
         "Controlla disponibilità",
     )

@@ -37,6 +37,10 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
         self.assertIn("{% set visitatore_admin = session.get('is_admin')", self.main_source)
         self.assertIn("and not visitatore_admin", self.main_source)
         self.assertIn(
+            "and disponibilita_annuncio_richiedibile|default(true)",
+            self.main_source,
+        )
+        self.assertIn(
             "can_request=puo_richiedere_disponibilita",
             self.main_source,
         )
@@ -51,6 +55,22 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
         self.assertIn(
             "availability_request.open",
             self.availability_display_source,
+        )
+
+    def test_backend_requestability_controls_cta_and_dialog(self):
+        app_source = (ROOT / "app.py").read_text(encoding="utf-8")
+        route_start = app_source.index("def visualizza_annuncio_pubblico(id):")
+        route_end = app_source.index(
+            "# --- Profilo pubblico dell’operatore ---",
+            route_start,
+        )
+        route = app_source[route_start:route_end]
+
+        self.assertIn("_annuncio_bloccato_dalla_disponibilita", route)
+        self.assertIn("disponibilita_annuncio_richiedibile", route)
+        self.assertIn(
+            "{% if puo_richiedere_disponibilita %}",
+            self.main_source,
         )
 
     def test_cta_is_inside_availability_card_not_messages_card(self):
