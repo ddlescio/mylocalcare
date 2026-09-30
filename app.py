@@ -6182,7 +6182,7 @@ def admin_dashboard():
 @app.route("/admin/interazioni")
 @admin_required
 def admin_interessi():
-    """Panoramica admin di interessi e richieste di disponibilita."""
+    """Panoramica admin di statistiche e interazioni sugli annunci."""
 
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -6204,6 +6204,135 @@ def admin_interessi():
     """
 
     try:
+        # Riunisce nella pagina Interazioni i contatori che in precedenza
+        # vivevano nella pagina Statistiche. Una sola query evita undici
+        # round-trip separati al database.
+        cur.execute(sql("""
+            SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM utenti
+                    WHERE attivo = 1
+                      AND sospeso = 0
+                      AND COALESCE(disattivato_admin, 0) = 0
+                      AND COALESCE(email, '') NOT LIKE ?
+                      AND COALESCE(username, '') NOT LIKE ?
+                ) AS utenti_attivi,
+                (
+                    SELECT COUNT(*)
+                    FROM annunci
+                    WHERE COALESCE(stato, '') <> 'eliminato'
+                ) AS annunci_totali,
+                (
+                    SELECT COUNT(DISTINCT utente_id)
+                    FROM annunci
+                    WHERE COALESCE(stato, '') <> 'eliminato'
+                ) AS utenti_con_annunci,
+                (
+                    SELECT COUNT(*)
+                    FROM utenti u
+                    WHERE u.attivo = 1
+                      AND u.sospeso = 0
+                      AND COALESCE(u.disattivato_admin, 0) = 0
+                      AND COALESCE(u.email, '') NOT LIKE ?
+                      AND COALESCE(u.username, '') NOT LIKE ?
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM annunci a
+                          WHERE a.utente_id = u.id
+                            AND COALESCE(a.stato, '') <> 'eliminato'
+                      )
+                ) AS utenti_senza_annunci,
+                (
+                    SELECT COUNT(DISTINCT id_destinatario)
+                    FROM recensioni
+                    WHERE stato = 'approvato'
+                ) AS utenti_recensiti,
+                (
+                    SELECT COUNT(DISTINCT id_recensione)
+                    FROM risposte_recensioni
+                ) AS recensioni_con_risposta,
+                (
+                    SELECT COUNT(*)
+                    FROM (
+                        SELECT
+                            CASE
+                                WHEN mittente_id < destinatario_id
+                                    THEN mittente_id
+                                ELSE destinatario_id
+                            END AS a,
+                            CASE
+                                WHEN mittente_id > destinatario_id
+                                    THEN mittente_id
+                                ELSE destinatario_id
+                            END AS b
+                        FROM messaggi_chat
+                        GROUP BY a, b
+                    ) AS chat_uniche
+                ) AS chat_totali,
+                (SELECT COUNT(*) FROM messaggi_chat) AS messaggi_inviati,
+                (
+                    SELECT COUNT(*)
+                    FROM messaggi_chat
+                    WHERE letto = 0
+                ) AS messaggi_non_letti,
+                (SELECT COUNT(*) FROM notifiche) AS notifiche_ricevute,
+                (
+                    SELECT COUNT(*)
+                    FROM notifiche
+                    WHERE letta = 0
+                ) AS notifiche_da_leggere
+        """), (
+            "deleted_user_%@mylocalcare.local",
+            "utente_eliminato_%",
+            "deleted_user_%@mylocalcare.local",
+            "utente_eliminato_%",
+        ))
+        statistiche_generali_row = cur.fetchone()
+
+        def valore_generale(nome):
+            if not statistiche_generali_row:
+                return 0
+            return int(statistiche_generali_row[nome] or 0)
+
+        statistiche_generali = {
+            nome: valore_generale(nome)
+            for nome in (
+                "utenti_attivi",
+                "annunci_totali",
+                "utenti_con_annunci",
+                "utenti_senza_annunci",
+                "utenti_recensiti",
+                "recensioni_con_risposta",
+                "chat_totali",
+                "messaggi_inviati",
+                "messaggi_non_letti",
+                "notifiche_ricevute",
+                "notifiche_da_leggere",
+            )
+        }
+        messaggi_inviati = statistiche_generali["messaggi_inviati"]
+        messaggi_letti = max(
+            0,
+            messaggi_inviati
+            - statistiche_generali["messaggi_non_letti"],
+        )
+        statistiche_generali["percentuale_messaggi_letti"] = round(
+            (messaggi_letti / messaggi_inviati * 100)
+            if messaggi_inviati
+            else 0,
+            1,
+        )
+        statistiche_generali["media_messaggi_chat"] = round(
+            (
+                messaggi_inviati
+                / statistiche_generali["chat_totali"]
+            )
+            if statistiche_generali["chat_totali"]
+            else 0,
+            1,
+        )
+
         cur.execute(sql(f"""
             SELECT
                 SUM(CASE
@@ -6629,6 +6758,7 @@ def admin_interessi():
             richieste_disponibilita=richieste_disponibilita,
             statistiche_accessi=statistiche_accessi,
             accessi_disponibili=accessi_disponibili,
+            statistiche_generali=statistiche_generali,
         )
 
     finally:
@@ -12936,127 +13066,9 @@ def admin_acquisti_export():
 @app.route("/admin/statistiche")
 @admin_required
 def admin_statistiche():
-    conn = get_db_connection()
-    c = get_cursor(conn)
-
-    c.execute(sql("""
-        SELECT COUNT(*) AS valore
-        FROM utenti
-        WHERE attivo = 1
-          AND sospeso = 0
-          AND COALESCE(disattivato_admin, 0) = 0
-          AND COALESCE(email, '') NOT LIKE ?
-          AND COALESCE(username, '') NOT LIKE ?
-    """), (
-        "deleted_user_%@mylocalcare.local",
-        "utente_eliminato_%"
-    ))
-    utenti_attivi = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(*) AS valore
-        FROM annunci
-        WHERE COALESCE(stato, '') <> 'eliminato'
-    """))
-    annunci_totali = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(DISTINCT utente_id) AS valore
-        FROM annunci
-        WHERE COALESCE(stato, '') <> 'eliminato'
-    """))
-    utenti_con_annunci = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(*) AS valore
-        FROM utenti
-        WHERE attivo = 1
-          AND sospeso = 0
-          AND COALESCE(disattivato_admin, 0) = 0
-          AND COALESCE(email, '') NOT LIKE ?
-          AND COALESCE(username, '') NOT LIKE ?
-          AND id NOT IN (
-              SELECT DISTINCT utente_id
-              FROM annunci
-              WHERE COALESCE(stato, '') <> 'eliminato'
-          )
-    """), (
-        "deleted_user_%@mylocalcare.local",
-        "utente_eliminato_%"
-    ))
-    utenti_senza_annunci = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(DISTINCT id_destinatario) AS valore
-        FROM recensioni
-        WHERE stato = 'approvato'
-    """))
-    utenti_recensiti = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(DISTINCT id_recensione) AS valore
-        FROM risposte_recensioni
-    """))
-    recensioni_con_risposta = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(*) AS valore
-        FROM (
-            SELECT
-                CASE
-                    WHEN mittente_id < destinatario_id THEN mittente_id
-                    ELSE destinatario_id
-                END AS a,
-                CASE
-                    WHEN mittente_id > destinatario_id THEN mittente_id
-                    ELSE destinatario_id
-                END AS b
-            FROM messaggi_chat
-            GROUP BY a, b
-        ) AS chat_uniche
-    """))
-    chat_totali = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(*) AS valore
-        FROM messaggi_chat
-    """))
-    messaggi_inviati = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(*) AS valore
-        FROM messaggi_chat
-        WHERE letto = 0
-    """))
-    messaggi_non_letti = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(*) AS valore
-        FROM notifiche
-    """))
-    notifiche_ricevute = fetchone_value(c.fetchone())
-
-    c.execute(sql("""
-        SELECT COUNT(*) AS valore
-        FROM notifiche
-        WHERE letta = 0
-    """))
-    notifiche_da_leggere = fetchone_value(c.fetchone())
-
-    return render_template(
-        "admin_statistiche.html",
-        utenti_attivi=utenti_attivi,
-        annunci_totali=annunci_totali,
-        utenti_con_annunci=utenti_con_annunci,
-        utenti_senza_annunci=utenti_senza_annunci,
-        utenti_recensiti=utenti_recensiti,
-        recensioni_con_risposta=recensioni_con_risposta,
-        chat_totali=chat_totali,
-        messaggi_inviati=messaggi_inviati,
-        messaggi_non_letti=messaggi_non_letti,
-        notifiche_ricevute=notifiche_ricevute,
-        notifiche_da_leggere=notifiche_da_leggere
-    )
+    # Compatibilita con preferiti e vecchi collegamenti: le statistiche ora
+    # sono la prima sezione della pagina Interazioni.
+    return redirect(url_for("admin_interessi") + "#panoramica")
 
 # ==========================================================
 # ADMIN – NOTIFICHE DI SISTEMA

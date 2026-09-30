@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "app.py"
 TEMPLATE_PATH = ROOT / "templates" / "admin_interessi.html"
 LAYOUT_PATH = ROOT / "templates" / "layout_admin.html"
+DASHBOARD_PATH = ROOT / "templates" / "admin_dashboard.html"
 
 
 def load_admin_interazioni_function():
@@ -37,6 +38,7 @@ class AdminInterazioniTests(unittest.TestCase):
         cls.app_source = APP_PATH.read_text(encoding="utf-8")
         cls.template_source = TEMPLATE_PATH.read_text(encoding="utf-8")
         cls.layout_source = LAYOUT_PATH.read_text(encoding="utf-8")
+        cls.dashboard_source = DASHBOARD_PATH.read_text(encoding="utf-8")
 
     def build_database(self):
         connection = sqlite3.connect(":memory:")
@@ -49,6 +51,7 @@ class AdminInterazioniTests(unittest.TestCase):
                 cognome TEXT,
                 citta TEXT,
                 foto_profilo TEXT,
+                email TEXT,
                 attivo INTEGER,
                 sospeso INTEGER DEFAULT 0,
                 disattivato_admin INTEGER DEFAULT 0,
@@ -75,7 +78,21 @@ class AdminInterazioniTests(unittest.TestCase):
             CREATE TABLE messaggi_chat (
                 id INTEGER PRIMARY KEY,
                 mittente_id INTEGER NOT NULL,
-                destinatario_id INTEGER NOT NULL
+                destinatario_id INTEGER NOT NULL,
+                letto INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE recensioni (
+                id INTEGER PRIMARY KEY,
+                id_destinatario INTEGER NOT NULL,
+                stato TEXT NOT NULL
+            );
+            CREATE TABLE risposte_recensioni (
+                id INTEGER PRIMARY KEY,
+                id_recensione INTEGER NOT NULL
+            );
+            CREATE TABLE notifiche (
+                id INTEGER PRIMARY KEY,
+                letta INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE richieste_disponibilita (
                 id INTEGER PRIMARY KEY,
@@ -90,10 +107,13 @@ class AdminInterazioniTests(unittest.TestCase):
             );
 
             INSERT INTO utenti (
-                id, username, nome, cognome, citta, foto_profilo, attivo
+                id, username, nome, cognome, citta, foto_profilo, email,
+                attivo
             ) VALUES
-                (1, 'maria', 'Maria', 'Rossi', 'Milano', 'img/maria.jpg', 1),
-                (2, 'luca', 'Luca', 'Bianchi', 'Monza', 'img/luca.jpg', 1);
+                (1, 'maria', 'Maria', 'Rossi', 'Milano', 'img/maria.jpg',
+                 'maria@example.test', 1),
+                (2, 'luca', 'Luca', 'Bianchi', 'Monza', 'img/luca.jpg',
+                 'luca@example.test', 1);
 
             INSERT INTO annunci (
                 id, utente_id, titolo, zona, provincia, stato
@@ -110,8 +130,15 @@ class AdminInterazioniTests(unittest.TestCase):
             );
 
             INSERT INTO messaggi_chat (
-                id, mittente_id, destinatario_id
-            ) VALUES (30, 2, 1);
+                id, mittente_id, destinatario_id, letto
+            ) VALUES (30, 2, 1, 0);
+
+            INSERT INTO recensioni (id, id_destinatario, stato)
+            VALUES (31, 1, 'approvato');
+            INSERT INTO risposte_recensioni (id, id_recensione)
+            VALUES (32, 31);
+            INSERT INTO notifiche (id, letta)
+            VALUES (33, 0);
 
             INSERT INTO richieste_disponibilita (
                 id, annuncio_id, richiedente_id, offerente_id, a_chiamata,
@@ -196,14 +223,24 @@ class AdminInterazioniTests(unittest.TestCase):
         self.assertTrue(result["accessi_disponibili"])
         self.assertEqual(result["statistiche_accessi"]["mese"], 9)
         self.assertEqual(result["statistiche_accessi"]["anonimi_mese"], 14)
+        self.assertEqual(result["statistiche_generali"]["utenti_attivi"], 2)
+        self.assertEqual(result["statistiche_generali"]["annunci_totali"], 1)
+        self.assertEqual(result["statistiche_generali"]["chat_totali"], 1)
+        self.assertEqual(result["statistiche_generali"]["messaggi_inviati"], 1)
+        self.assertEqual(result["statistiche_generali"]["utenti_recensiti"], 1)
 
     def test_page_and_navigation_use_broader_interactions_name(self):
-        self.assertIn("Interazioni annunci", self.template_source)
-        self.assertIn("Interazioni annunci", self.layout_source)
+        self.assertIn("<h1>Interazioni</h1>", self.template_source)
+        self.assertIn("<span>Interazioni</span>", self.layout_source)
+        self.assertNotIn("<span>Interazioni annunci</span>", self.layout_source)
         self.assertNotIn("<span>Interessi annunci</span>", self.layout_source)
+        self.assertNotIn("<span>Statistiche</span>", self.layout_source)
         self.assertIn('@app.route("/admin/interazioni")', self.app_source)
         self.assertIn('@app.route("/admin/interessi")', self.app_source)
         self.assertIn("current.startswith('/admin/interazioni')", self.layout_source)
+        self.assertIn("url_for('admin_interessi')", self.dashboard_source)
+        self.assertNotIn("url_for('admin_statistiche')", self.dashboard_source)
+        self.assertIn('redirect(url_for("admin_interessi") + "#panoramica")', self.app_source)
 
     def test_availability_section_shows_counts_people_avatars_and_zones(self):
         for marker in (
@@ -249,7 +286,7 @@ class AdminInterazioniTests(unittest.TestCase):
         self.assertEqual(self.template_source.count('role="tab"'), 3)
         self.assertEqual(self.template_source.count('role="tabpanel"'), 3)
         self.assertEqual(self.template_source.count('type="button"'), 3)
-        for label in ("Statistiche", "Interessi", "Disponibilità"):
+        for label in ("Panoramica", "Interessi", "Disponibilità"):
             self.assertIn(f"<strong>{label}</strong>", self.template_source)
 
         panel_openings = re.findall(
@@ -261,7 +298,7 @@ class AdminInterazioniTests(unittest.TestCase):
         self.assertEqual(sum(" hidden" in panel for panel in panel_openings), 2)
 
         for section in (
-            "accessi",
+            "panoramica",
             "interessi",
             "richieste-disponibilita",
         ):
@@ -284,6 +321,43 @@ class AdminInterazioniTests(unittest.TestCase):
         self.assertIn('window.addEventListener("hashchange"', self.template_source)
         for keyboard_key in ("ArrowRight", "ArrowLeft", "Home", "End"):
             self.assertIn(keyboard_key, self.template_source)
+
+    def test_overview_contains_all_legacy_statistics_and_live_refresh(self):
+        for counter in (
+            "utenti_attivi",
+            "annunci_totali",
+            "utenti_con_annunci",
+            "utenti_senza_annunci",
+            "utenti_recensiti",
+            "recensioni_con_risposta",
+            "chat_totali",
+            "messaggi_inviati",
+            "messaggi_non_letti",
+            "notifiche_ricevute",
+            "notifiche_da_leggere",
+        ):
+            self.assertIn(
+                f'data-counter="statistiche.{counter}"',
+                self.template_source,
+            )
+        self.assertIn('fetch("/admin/counters"', self.template_source)
+        self.assertIn('data-derived-stat="read-rate"', self.template_source)
+        self.assertIn('data-derived-stat="messages-per-chat"', self.template_source)
+
+    def test_interest_cards_keep_compact_mobile_rows(self):
+        self.assertIn(
+            "grid-template-columns: 30px minmax(0, 1fr) auto;",
+            self.template_source,
+        )
+        self.assertIn("grid-column: auto;", self.template_source)
+        self.assertIn(
+            "grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);",
+            self.template_source,
+        )
+        self.assertNotIn(
+            ".admin-availability-people {\n      grid-template-columns: 1fr;",
+            self.template_source,
+        )
 
     def test_access_panel_separates_registered_users_from_anonymous_estimates(self):
         for marker in (
