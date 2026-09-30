@@ -28,20 +28,26 @@ class AvailabilityReminderDeployTest(unittest.TestCase):
         "Controlla disponibilità",
     )
 
-    def test_render_configures_daily_availability_reminder_cron(self):
+    def test_consolidated_cron_runs_daily_availability_task(self):
         source = (self.ROOT / "render.yaml").read_text(encoding="utf-8")
         match = re.search(
             r"(?ms)^    - type: cron\n"
-            r"      name: localcare-promemoria-disponibilita\n"
+            r"      name: localcare-sync-servizi-scaduti\n"
             r"(?P<body>.*?)(?=^    - type:|\Z)",
             source,
         )
-        self.assertIsNotNone(match, "Cron disponibilità assente da render.yaml")
+        self.assertIsNotNone(match, "Cron consolidato assente da render.yaml")
         body = match.group("body")
 
-        self.assertIn("startCommand: python run_availability_reminders.py", body)
-        self.assertIn('schedule: "15 8 * * *"', body)
+        self.assertIn("python run_consolidated_cron.py", body)
+        self.assertIn('schedule: "*/15 * * * *"', body)
         self.assertIn("autoDeployTrigger: commit", body)
+
+        scheduler = (self.ROOT / "consolidated_cron.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("daily_slot_if_due(now, 8, 15)", scheduler)
+        self.assertIn('"availability_daily"', scheduler)
 
         for key in (
             "APP_BASE_URL",
@@ -50,7 +56,6 @@ class AvailabilityReminderDeployTest(unittest.TestCase):
             "MAIL_USERNAME",
             "MAIL_PASSWORD",
             "MAIL_FROM_ADDRESS",
-            "MAIL_FROM_NAME",
             "POSTMARK_SERVER_TOKEN",
             "POSTMARK_MESSAGE_STREAM",
             "VAPID_PUBLIC_KEY",

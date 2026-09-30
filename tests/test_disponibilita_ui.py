@@ -313,6 +313,25 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
 
         self.assertIn("@keyframes availability-confirmation-glow", css)
         self.assertIn("@keyframes availability-confirmation-sheen", css)
+        self.assertIn("@keyframes availability-confirmation-sway", css)
+        self.assertRegex(
+            css,
+            re.compile(
+                r"\.intro-availability--needs-confirmation\s*\{.*?"
+                r"border-color:\s*rgba\(99,\s*102,\s*241,\s*\.94\).*?"
+                r"inset 0 0 0 1px rgba\(129,\s*140,\s*248,\s*\.18\).*?"
+                r"availability-confirmation-sway",
+                flags=re.DOTALL,
+            ),
+        )
+        self.assertRegex(
+            css,
+            re.compile(
+                r"@keyframes availability-confirmation-sway\s*\{.*?"
+                r"transform:\s*translate3d\(",
+                flags=re.DOTALL,
+            ),
+        )
         self.assertIn("@media (prefers-reduced-motion: reduce)", css)
         self.assertRegex(
             css,

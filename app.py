@@ -149,6 +149,10 @@ from richieste_disponibilita import (
     normalizza_stato_richiesta_disponibilita,
     valida_limiti_anti_abuso,
 )
+from video_call_cleanup import (
+    process_video_cleanup_once,
+    video_cleanup_runtime_enabled,
+)
 from annuncio_disponibilita import (
     deserialize_sought_availability,
     listing_availability_from_form,
@@ -580,13 +584,14 @@ PREFERENCE_COLUMNS = [
     for i in range(1, len(CATEGORIE_PREFERENZE) + 1)
 ]
 
-def get_utenti_profilo_incompleto():
+def get_utenti_profilo_incompleto(db_connection=None):
     """
     Restituisce gli utenti attivi che non hanno selezionato
     nessuna preferenza Offro/Cerco.
     """
 
-    conn = get_db_connection()
+    owns_connection = db_connection is None
+    conn = db_connection or get_db_connection()
     cur = get_cursor(conn)
 
     try:
@@ -616,10 +621,103 @@ def get_utenti_profilo_incompleto():
         except Exception:
             pass
 
+        if owns_connection:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _reminder_profilo_incompleto_recente(cur, user_id):
+    """Verifica la finestra di deduplica settimanale sul DB corrente."""
+
+    if app.config.get("IS_POSTGRES"):
+        cur.execute(sql("""
+            SELECT id
+            FROM notifiche
+            WHERE id_utente = ?
+              AND tipo = 'profilo_incompleto'
+              AND data >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+            LIMIT 1
+        """), (user_id,))
+    else:
+        cur.execute(sql("""
+            SELECT id
+            FROM notifiche
+            WHERE id_utente = ?
+              AND tipo = 'profilo_incompleto'
+              AND data >= datetime('now','-7 days')
+            LIMIT 1
+        """), (user_id,))
+
+    return bool(cur.fetchone())
+
+
+def _crea_reminder_profilo_incompleto_se_assente(
+    conn,
+    cur,
+    *,
+    user_id,
+    titolo,
+    messaggio,
+    link,
+):
+    """Prenota e persiste un reminder prima degli invii esterni.
+
+    Il lock per utente rende atomici controllo e inserimento anche se due
+    scheduler si sovrappongono. Il commit immediato fa inoltre sì che un
+    riavvio a metà batch non reinvii i reminder già elaborati.
+    """
+
+    try:
+        if app.config.get("IS_POSTGRES"):
+            # get_db_connection usa autocommit in produzione: BEGIN crea qui
+            # una transazione esplicita e il lock viene rilasciato al commit.
+            cur.execute("BEGIN")
+            cur.execute(sql("""
+                SELECT pg_advisory_xact_lock(
+                    hashtext('mylocalcare:profilo_incompleto'),
+                    ?
+                )
+            """), (user_id,))
+        else:
+            # SQLite non offre advisory lock: il write lock viene preso prima
+            # del controllo per serializzare controllo + inserimento.
+            cur.execute("BEGIN IMMEDIATE")
+
+        if _reminder_profilo_incompleto_recente(cur, user_id):
+            cur.execute(sql("COMMIT"))
+            return False
+
+        cur.execute(sql("""
+            INSERT INTO notifiche (
+                id_utente,
+                titolo,
+                messaggio,
+                link,
+                tipo,
+                letta
+            )
+            VALUES (?, ?, ?, ?, ?, 0)
+        """), (
+            user_id,
+            titolo,
+            messaggio,
+            link,
+            "profilo_incompleto"
+        ))
+
+        # Deve precedere emit, push ed email: questa riga è il checkpoint
+        # durevole che impedisce reinvii ai primi utenti dopo un crash.
+        cur.execute(sql("COMMIT"))
+        return True
+
+    except Exception:
         try:
-            conn.close()
+            cur.execute(sql("ROLLBACK"))
         except Exception:
             pass
+        raise
 
 def invia_reminder_profili_incompleti(dry_run=False):
     """
@@ -638,7 +736,7 @@ def invia_reminder_profili_incompleti(dry_run=False):
     cur = get_cursor(conn)
 
     try:
-        utenti = get_utenti_profilo_incompleto()
+        utenti = get_utenti_profilo_incompleto(db_connection=conn)
 
         creati = 0
         saltati = 0
@@ -648,31 +746,6 @@ def invia_reminder_profili_incompleti(dry_run=False):
         for u in utenti:
             user_id = int(u["id"])
 
-            if app.config.get("IS_POSTGRES"):
-                cur.execute(sql("""
-                    SELECT id
-                    FROM notifiche
-                    WHERE id_utente = ?
-                      AND tipo = 'profilo_incompleto'
-                      AND data >= CURRENT_TIMESTAMP - INTERVAL '7 days'
-                    LIMIT 1
-                """), (user_id,))
-            else:
-                cur.execute(sql("""
-                    SELECT id
-                    FROM notifiche
-                    WHERE id_utente = ?
-                      AND tipo = 'profilo_incompleto'
-                      AND data >= datetime('now','-7 days')
-                    LIMIT 1
-                """), (user_id,))
-
-            gia_inviata = cur.fetchone()
-
-            if gia_inviata:
-                saltati += 1
-                continue
-
             titolo = "Completa il tuo profilo"
             messaggio = (
                 "Seleziona cosa offri o cosa cerchi per ricevere annunci compatibili "
@@ -680,24 +753,26 @@ def invia_reminder_profili_incompleti(dry_run=False):
             )
             link = "/utente/dashboard"
 
-            if not dry_run:
-                cur.execute(sql("""
-                    INSERT INTO notifiche (
-                        id_utente,
-                        titolo,
-                        messaggio,
-                        link,
-                        tipo,
-                        letta
-                    )
-                    VALUES (?, ?, ?, ?, ?, 0)
-                """), (
+            if dry_run:
+                reminder_creato = not _reminder_profilo_incompleto_recente(
+                    cur,
                     user_id,
-                    titolo,
-                    messaggio,
-                    link,
-                    "profilo_incompleto"
-                ))
+                )
+            else:
+                reminder_creato = _crea_reminder_profilo_incompleto_se_assente(
+                    conn,
+                    cur,
+                    user_id=user_id,
+                    titolo=titolo,
+                    messaggio=messaggio,
+                    link=link,
+                )
+
+            if not reminder_creato:
+                saltati += 1
+                continue
+
+            if not dry_run:
 
                 emit_update_notifications(user_id)
 
@@ -741,9 +816,6 @@ def invia_reminder_profili_incompleti(dry_run=False):
                         email_inviate += 1
 
             creati += 1
-
-        if not dry_run:
-            conn.commit()
 
         return {
             "ok": True,
@@ -38259,66 +38331,33 @@ from datetime import datetime, timedelta
 
 def cleanup_video_calls():
     while True:
-        conn = None
         try:
             with app.app_context():
-                conn = get_db_connection()
-                cur = get_cursor(conn)
-
-                # 1️⃣ Trova call zombie
-                zombies = cur.execute(sql(f"""
-                    SELECT id, room_name, utente_1, utente_2
-                    FROM video_call_log
-                    WHERE in_corso = 1
-                      AND last_ping IS NOT NULL
-                      AND last_ping < {sql_now_minus_seconds(60)}
-                """)).fetchall()
-
-                if zombies:
-                    # 2️⃣ Chiudi realmente le call
-                    cur.execute(sql(f"""
-                        UPDATE video_call_log
-                        SET in_corso = 0,
-                            ended_at = CURRENT_TIMESTAMP
-                        WHERE in_corso = 1
-                          AND last_ping IS NOT NULL
-                          AND last_ping < {sql_now_minus_seconds(60)}
-                    """))
-
-                    conn.commit()
-
-                    # 3️⃣ Notifica agli utenti che non sono più occupati
-                    for z in zombies:
-                        u1 = z["utente_1"]
-                        u2 = z["utente_2"]
-
-                        socketio.emit(
-                            "video_busy",
-                            {"user_id": u1, "busy": False},
-                            room=f"user_{u2}"
-                        )
-                        socketio.emit(
-                            "video_busy",
-                            {"user_id": u2, "busy": False},
-                            room=f"user_{u1}"
-                        )
+                process_video_cleanup_once(
+                    redis_client=redis_client,
+                    connection_factory=get_db_connection,
+                    cursor_factory=get_cursor,
+                    sql_adapter=sql,
+                    stale_before_sql=sql_now_minus_seconds(60),
+                    emit=socketio.emit,
+                )
 
         except Exception as e:
-            print("Errore cleanup video:", e)
-
-        finally:
-            # 🔥 QUESTO ERA IL PROBLEMA
-            if conn:
-                try:
-                    conn.close()
-                except:
-                    pass
+            log_exception_safe(
+                "Errore cleanup video",
+                e,
+                production=True,
+            )
 
         # 🟢 Yield cooperativo per eventlet
         socketio.sleep(30)
 
-# 🔥 Avvia cleanup UNA SOLA VOLTA all’avvio del worker
-socketio.start_background_task(cleanup_video_calls)
+# I job e i cron importano app.py per riusare i servizi, ma non devono avviare
+# loop permanenti. Nei processi web/realtime il lease Redis elegge un solo
+# esecutore per giro e l'UPDATE atomico impedisce doppie notifiche anche in
+# fallback quando Redis non e disponibile.
+if video_cleanup_runtime_enabled(APP_RUNTIME_ROLE):
+    socketio.start_background_task(cleanup_video_calls)
 
 
 # ==========================================================

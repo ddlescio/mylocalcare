@@ -390,40 +390,50 @@ class TransactionalEmailLanguageTest(unittest.TestCase):
         )
         self.assertIn("HtmlToken_44", payload["HtmlBody"])
 
-        sent = self.backend["_invia_email"](
-            destinazione="nobody@example.test",
-            oggetto="Conferma account MyLocalCare",
-            html=direct_html,
-            language="de",
-        )
-        self.assertTrue(sent)
-        payload = self.last_payload
-        self.assertEqual(
-            payload["Subject"],
-            translate_source("Conferma account MyLocalCare", "de"),
-        )
-        self.assertIn(
-            translate_source(
-                "Hai ricevuto una comunicazione da MyLocalCare.",
-                "de",
-            ),
-            payload["TextBody"],
-        )
-        self.assertIn(
-            translate_source(
-                "Apri questa email in formato HTML per visualizzarla correttamente.",
-                "de",
-            ),
-            payload["TextBody"],
-        )
-        self.assertIn(
-            translate_source("Comunicazione automatica di servizio", "de"),
-            payload["HtmlBody"],
-        )
-        self.assertNotIn(
-            "Comunicazione automatica di servizio",
-            payload["TextBody"],
-        )
+        for language in SUPPORTED_LANGUAGES:
+            with self.subTest(language=language):
+                sent = self.backend["_invia_email"](
+                    destinazione="nobody@example.test",
+                    oggetto="Conferma account MyLocalCare",
+                    html=direct_html,
+                    language=language,
+                )
+                self.assertTrue(sent)
+                payload = self.last_payload
+                self.assertEqual(
+                    payload["Subject"],
+                    translate_source(
+                        "Conferma account MyLocalCare",
+                        language,
+                    ),
+                )
+                fallback_title = translate_source(
+                    "Hai ricevuto una comunicazione da MyLocalCare.",
+                    language,
+                )
+                fallback_message = translate_source(
+                    "Apri questa email in formato HTML per visualizzarla "
+                    "correttamente.",
+                    language,
+                )
+                marker = translate_source(
+                    "Comunicazione automatica di servizio",
+                    language,
+                )
+                self.assertIn(fallback_title, payload["TextBody"])
+                self.assertIn(fallback_message, payload["TextBody"])
+                self.assertIn(marker, payload["TextBody"])
+                self.assertIn(marker, payload["HtmlBody"])
+                self.assertEqual(payload["TextBody"].count(marker), 1)
+                if language != "it":
+                    self.assertNotIn(
+                        "Hai ricevuto una comunicazione da MyLocalCare.",
+                        payload["TextBody"],
+                    )
+                    self.assertNotIn(
+                        "Comunicazione automatica di servizio",
+                        payload["TextBody"],
+                    )
 
     def test_chat_singular_copy_from_real_sender_is_fully_localized(self):
         sent = self.backend["invia_email_promemoria_chat"](
@@ -459,7 +469,6 @@ class TransactionalEmailLanguageTest(unittest.TestCase):
     def test_request_and_response_payload_use_recipient_language_and_cta(self):
         cases = (
             {
-                "language": "fr",
                 "tipo_evento": "richiesta",
                 "title": (
                     "Hai ricevuto una richiesta di disponibilità "
@@ -473,7 +482,6 @@ class TransactionalEmailLanguageTest(unittest.TestCase):
                 "link": "/chat/17?richiesta_disponibilita=91",
             },
             {
-                "language": "uk",
                 "tipo_evento": "risposta",
                 "title": "Hai ricevuto una risposta su MyLocalCare",
                 "message": (
@@ -486,53 +494,142 @@ class TransactionalEmailLanguageTest(unittest.TestCase):
         sender = self.backend["_invia_canali_richiesta_disponibilita"]
 
         for index, case in enumerate(cases, start=1):
-            with self.subTest(case=case["tipo_evento"]):
-                dispatch = {
-                    "tipo_evento": case["tipo_evento"],
-                    "richiesta_id": 90 + index,
-                    "mittente_id": 10 + index,
-                    "destinatario_id": 20 + index,
-                    "destinatario_email": f"recipient-{index}@example.test",
-                    "email_notifiche": 1,
-                    "language": case["language"],
-                    "link": case["link"],
-                    "titolo": translate_source(
-                        "Nuova richiesta di disponibilità",
-                        case["language"],
-                    ),
-                    "messaggio": translate_source(
-                        case["message"],
-                        case["language"],
-                    ),
-                    "stato": "disponibile",
-                    "versione": 2,
-                    "risposta_at": None,
-                }
-                sender(
-                    dispatch,
-                    titolo_email=case["title"],
-                    cta_email=case["cta"],
-                    messaggio_email_source=case["message"],
-                )
-                payload = self.last_payload
-                self.assertEqual(
-                    payload["Subject"],
-                    translate_source(case["title"], case["language"]),
-                )
-                self.assertIn(
-                    translate_source(case["message"], case["language"]),
-                    payload["TextBody"],
-                )
-                html_body = html_module.unescape(payload["HtmlBody"])
-                self.assertIn(
-                    translate_source(case["cta"], case["language"]),
-                    html_body,
-                )
-                self.assertIn(
-                    'href="https://www.mylocalcare.it'
-                    f'{case["link"]}"',
-                    html_body,
-                )
+            for language in SUPPORTED_LANGUAGES:
+                with self.subTest(
+                    case=case["tipo_evento"],
+                    language=language,
+                ):
+                    link = case["link"]
+                    dispatch = {
+                        "tipo_evento": case["tipo_evento"],
+                        "richiesta_id": 90 + index,
+                        "mittente_id": 10 + index,
+                        "destinatario_id": 20 + index,
+                        "destinatario_email": (
+                            f"recipient-{index}-{language}@example.test"
+                        ),
+                        "email_notifiche": 1,
+                        "language": language,
+                        "link": link,
+                        "titolo": translate_source(
+                            "Nuova richiesta di disponibilità",
+                            language,
+                        ),
+                        "messaggio": translate_source(
+                            case["message"],
+                            language,
+                        ),
+                        "stato": "disponibile",
+                        "versione": 2,
+                        "risposta_at": None,
+                    }
+                    sender(
+                        dispatch,
+                        titolo_email=case["title"],
+                        cta_email=case["cta"],
+                        messaggio_email_source=case["message"],
+                    )
+                    payload = self.last_payload
+                    self.assertEqual(
+                        payload["Subject"],
+                        translate_source(case["title"], language),
+                    )
+                    self.assertIn(
+                        translate_source(case["message"], language),
+                        payload["TextBody"],
+                    )
+                    marker = translate_source(
+                        "Comunicazione automatica di servizio",
+                        language,
+                    )
+                    self.assertIn(marker, payload["TextBody"])
+                    html_body = html_module.unescape(payload["HtmlBody"])
+                    self.assertIn(f'lang="{language}"', html_body)
+                    self.assertIn(
+                        translate_source(case["cta"], language),
+                        html_body,
+                    )
+                    self.assertIn(
+                        f'href="https://www.mylocalcare.it{link}"',
+                        html_body,
+                    )
+                    if language != "it":
+                        self.assertNotIn(case["cta"], html_body)
+
+    def test_availability_payloads_are_complete_in_all_languages(self):
+        source_pairs = [
+            self.backend["_copy_promemoria_disponibilita"](phase)
+            for phase in ("in_scadenza", "scaduta", "ultimo_avviso")
+        ]
+        source_pairs.extend(
+            self.backend["_copy_evento_ciclo_disponibilita"](code)
+            for code in (
+                "rollout_invito",
+                "rollout_promemoria_1",
+                "rollout_promemoria_2",
+                "rollout_ultimo_avviso",
+                "archiviato",
+            )
+        )
+        action_url = (
+            "https://www.mylocalcare.it/utente/dashboard"
+            "?disponibilita=riconferma"
+        )
+
+        for source_title, source_message in source_pairs:
+            for language in SUPPORTED_LANGUAGES:
+                with self.subTest(
+                    title=source_title,
+                    language=language,
+                ):
+                    sent = self.backend["_invia_email"](
+                        destinazione="recipient@example.test",
+                        oggetto=source_title,
+                        corpo=f"{source_title}\n\n{source_message}",
+                        action_url=action_url,
+                        action_label="Controlla disponibilità",
+                        language=language,
+                    )
+                    self.assertTrue(sent)
+                    payload = self.last_payload
+                    translated_title = translate_source(
+                        source_title,
+                        language,
+                    )
+                    translated_message = translate_source(
+                        source_message,
+                        language,
+                    )
+                    translated_cta = translate_source(
+                        "Controlla disponibilità",
+                        language,
+                    )
+                    marker = translate_source(
+                        "Comunicazione automatica di servizio",
+                        language,
+                    )
+                    self.assertEqual(payload["Subject"], translated_title)
+                    self.assertIn(translated_title, payload["TextBody"])
+                    self.assertIn(translated_message, payload["TextBody"])
+                    self.assertIn(marker, payload["TextBody"])
+                    html_body = html_module.unescape(payload["HtmlBody"])
+                    self.assertIn(f'lang="{language}"', html_body)
+                    self.assertIn(translated_title, html_body)
+                    self.assertIn(translated_message, html_body)
+                    self.assertIn(translated_cta, html_body)
+                    self.assertIn(f'href="{action_url}"', html_body)
+                    self.assertEqual(
+                        payload["HtmlBody"].count(
+                            'data-mylocalcare-email-footer="true"'
+                        ),
+                        1,
+                    )
+                    if language != "it":
+                        self.assertNotIn(source_message, payload["TextBody"])
+                        self.assertNotIn(
+                            "Comunicazione automatica di servizio",
+                            payload["TextBody"],
+                        )
 
     def test_availability_copy_and_ctas_are_catalog_backed_without_drift(self):
         source_pairs = [
