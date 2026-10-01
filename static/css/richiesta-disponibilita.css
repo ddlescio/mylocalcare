@@ -994,6 +994,15 @@
   border-color: #fb7185;
 }
 
+@media (max-width: 768px) {
+  .availability-request-time-field input[type="time"] {
+    -webkit-appearance: auto;
+    appearance: auto;
+    font-size: 16px;
+    color-scheme: light;
+  }
+}
+
 .availability-request-next-day-note {
   display: flex;
   align-items: baseline;

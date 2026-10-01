@@ -90,35 +90,38 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
         expired = build("scaduta", "tutte")
         self.assertIn("token_expires_at <= CURRENT_TIMESTAMP", expired["sql"])
 
+        approved = build("approvate", "tutte")
+        self.assertIn("pubblicazione_approvata_admin = TRUE", approved["sql"])
+        self.assertEqual(approved["params"], ())
+
+        non_verifiable = build("non_verificabile", "tutte")
+        self.assertIn("'non_verificabile', 'non_confermata'", non_verifiable["sql"])
+        self.assertEqual(non_verifiable["params"], ())
+
         invalid = build("DROP TABLE referenze", "categoria-inesistente")
         self.assertEqual(invalid["stato"], "da_gestire")
         self.assertEqual(invalid["categoria"], "tutte")
         self.assertEqual(invalid["params"], ())
 
-    def test_positive_or_negative_check_requires_contact_consent(self):
+    def test_verified_check_requires_contact_consent(self):
         validate = self.backend["_referenza_admin_validate_decision"]
         without_consent = self.valid_reference(
             autorizza_contatto_verifica=0,
         )
 
-        for state in ("verificata", "non_confermata"):
-            with self.subTest(state=state), self.assertRaisesRegex(
-                ValueError, "non ha autorizzato il contatto"
-            ):
-                validate(
-                    without_consent,
-                    stato=state,
-                    metodo="telefono",
-                    nota_admin="Riscontro effettuato",
-                    nota_pubblica="",
-                )
+        with self.assertRaisesRegex(ValueError, "non ha autorizzato il contatto"):
+            validate(
+                without_consent,
+                stato="verificata",
+                metodo="telefono",
+                nota_admin="Riscontro effettuato",
+            )
 
         decision = validate(
             without_consent,
             stato="non_verificabile",
             metodo="nessuno",
-            nota_admin="Il referente non autorizza il contatto.",
-            nota_pubblica="",
+            nota_admin="",
         )
         self.assertEqual(decision["stato"], "non_verificabile")
         self.assertEqual(decision["metodo"], "nessuno")
@@ -199,10 +202,9 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "dati di contatto"):
             validate(
                 unavailable,
-                stato="non_confermata",
+                stato="verificata",
                 metodo="telefono",
                 nota_admin="Il recapito non è disponibile.",
-                nota_pubblica="",
             )
 
         decision = validate(
@@ -214,37 +216,26 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
         )
         self.assertEqual(decision["stato"], "non_verificabile")
 
-    def test_negative_results_require_internal_note(self):
+    def test_internal_note_is_always_optional(self):
         validate = self.backend["_referenza_admin_validate_decision"]
-        for state in ("non_confermata", "non_verificabile"):
-            with self.subTest(state=state), self.assertRaisesRegex(
-                ValueError, "nota interna"
-            ):
-                validate(
-                    self.valid_reference(),
-                    stato=state,
-                    metodo="telefono",
-                    nota_admin="",
-                    nota_pubblica="",
-                )
+        decision = validate(
+            self.valid_reference(),
+            stato="non_verificabile",
+            metodo="nessuno",
+            nota_admin="",
+        )
+        self.assertIsNone(decision["nota_admin"])
 
-    def test_public_note_rejects_direct_contacts(self):
+    def test_obsolete_public_note_is_ignored(self):
         validate = self.backend["_referenza_admin_validate_decision"]
-        for note in (
-            "Scrivere a referente@example.test",
-            "Telefonare al +39 333 123 4567",
-            "Dettagli su https://example.test/profilo",
-        ):
-            with self.subTest(note=note), self.assertRaisesRegex(
-                ValueError, "nota pubblica"
-            ):
-                validate(
-                    self.valid_reference(),
-                    stato="verificata",
-                    metodo="telefono",
-                    nota_admin="",
-                    nota_pubblica=note,
-                )
+        decision = validate(
+            self.valid_reference(),
+            stato="verificata",
+            metodo="telefono",
+            nota_admin="",
+            nota_pubblica="Vecchio valore che non deve essere pubblicato",
+        )
+        self.assertIsNone(decision["nota_pubblica"])
 
     def test_publication_approval_is_separate_and_requires_referee_consent(self):
         validate = self.backend["_referenza_admin_validate_decision"]
@@ -268,17 +259,14 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
         )
         self.assertFalse(denied["pubblicazione_approvata_admin"])
 
-        contradicted = validate(
-            self.valid_reference(),
-            stato="non_confermata",
-            metodo="telefono",
-            nota_admin="Il rapporto non è stato confermato.",
-            nota_pubblica="",
-            approva_pubblicazione="1",
-        )
-        self.assertFalse(
-            contradicted["pubblicazione_approvata_admin"]
-        )
+        with self.assertRaisesRegex(ValueError, "Esito del controllo non valido"):
+            validate(
+                self.valid_reference(),
+                stato="non_confermata",
+                metodo="telefono",
+                nota_admin="",
+                approva_pubblicazione="1",
+            )
 
     def test_timeline_never_exposes_internal_note_snapshot(self):
         present = self.backend["_referenza_admin_evento_presentato"]
@@ -294,6 +282,17 @@ class ReferenzeAdminValidationTest(unittest.TestCase):
         self.assertEqual(event["titolo"], "Esito admin registrato")
         self.assertIn("non verificabile", event["dettaglio"])
         self.assertNotIn("sensibile", event["dettaglio"])
+
+        legacy = present({
+            "tipo_evento": "verifica_admin_registrata",
+            "created_at": "2026-09-28T10:00:00+00:00",
+            "dettagli_snapshot": json.dumps({
+                "stato_nuovo": "non_confermata",
+                "metodo": "nessuno",
+            }),
+        })
+        self.assertIn("non verificabile", legacy["dettaglio"])
+        self.assertNotIn("non confermata", legacy["dettaglio"])
 
 
 class ReferenzeContactPresentationTest(unittest.TestCase):
@@ -559,6 +558,7 @@ class ReferenzeAdminPersistenceTest(unittest.TestCase):
         self.assertEqual(row["versione"], 3)
         self.assertEqual(row["verificata_da_admin_id"], 99)
         self.assertEqual(row["metodo_verifica"], "telefono")
+        self.assertIsNone(row["nota_pubblica"])
         self.assertIsNotNone(row["verificata_at"])
         self.assertEqual(event["tipo_evento"], "verifica_admin_registrata")
         self.assertEqual(event["attore_utente_id"], 99)

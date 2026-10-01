@@ -82,7 +82,7 @@ class ReferenceFlowSecuritySourceTest(unittest.TestCase):
     def test_completed_reference_moves_out_of_sent_requests(self):
         classify = load_function("_referenza_private_section", {})
 
-        for state in ("verificata", "non_verificabile"):
+        for state in ("verificata", "non_verificabile", "non_confermata"):
             with self.subTest(state=state):
                 self.assertEqual(
                     classify({
@@ -95,7 +95,7 @@ class ReferenceFlowSecuritySourceTest(unittest.TestCase):
                     }),
                     "ricevuta",
                 )
-        for state in ("non_esaminata", "in_coda", "non_confermata"):
+        for state in ("non_esaminata", "in_coda"):
             with self.subTest(state=state):
                 self.assertEqual(
                     classify({

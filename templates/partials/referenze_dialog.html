@@ -119,32 +119,6 @@
             <small id="reference-invite-relationship-help">{{ tr('reference.invite.relationship_help') }}</small>
           </div>
 
-          <div class="reference-field">
-            <label for="reference-start-year">{{ tr('reference.start_year') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
-            <input
-              id="reference-start-year"
-              name="anno_inizio"
-              type="number"
-              min="1950"
-              max="2100"
-              inputmode="numeric"
-              placeholder="{{ tr('reference.example_year', year=2024) }}"
-              data-no-translate>
-          </div>
-
-          <div class="reference-field">
-            <label for="reference-end-year">{{ tr('reference.end_year') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
-            <input
-              id="reference-end-year"
-              name="anno_fine"
-              type="number"
-              min="1950"
-              max="2100"
-              inputmode="numeric"
-              placeholder="{{ tr('reference.example_year', year=2025) }}"
-              data-no-translate>
-          </div>
-
           <div class="reference-field reference-field--wide">
             <label for="reference-duration">{{ tr('reference.duration') }} <span aria-hidden="true">*</span></label>
             <select id="reference-duration" name="durata_fascia" required>
@@ -245,9 +219,6 @@
                   {% endif %}
 
                   <dl class="reference-private-card__facts">
-                    {% if referenza.get('periodo_label') %}
-                      <div><dt>{{ tr('reference.period') }}</dt><dd data-no-translate>{{ referenza.get('periodo_label') }}</dd></div>
-                    {% endif %}
                     {% if referenza.get('durata_label') %}
                       <div><dt>{{ tr('reference.details.duration') }}</dt><dd>{{ tr_text(referenza.get('durata_label')) }}</dd></div>
                     {% endif %}
@@ -299,7 +270,6 @@
                       {% elif stato == 'errore_invio' %}{{ tr('reference.status.email_failed') }}
                       {% elif stato == 'risposta_ricevuta' %}{{ tr('reference.status.reply_received') }}
                       {% elif stato == 'in_verifica' %}{{ tr('reference.status.checking') }}
-                      {% elif stato == 'non_confermata' %}{{ tr('reference.status.not_confirmed') }}
                       {% elif stato == 'archiviata' %}{{ tr('reference.status.contact_removed') }}
                       {% elif stato == 'revocata' %}{{ tr('reference.status.revoked') }}
                       {% elif stato == 'scaduta' %}{{ tr('reference.status.expired') }}
@@ -308,9 +278,6 @@
                   </div>
 
                   <dl class="reference-private-card__meta">
-                    {% if referenza.get('periodo_label') %}
-                      <div><dt>{{ tr('reference.period') }}</dt><dd data-no-translate>{{ referenza.get('periodo_label') }}</dd></div>
-                    {% endif %}
                     {% if referenza.get('inviata_at') %}
                       <div><dt>{{ tr('reference.invited_on') }}</dt><dd>{{ referenza.get('inviata_at')|fmt_it_date }}</dd></div>
                     {% endif %}

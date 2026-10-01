@@ -42,6 +42,20 @@
     return (parts[0] * 60) + parts[1];
   }
 
+  function openNativeTimePicker(input) {
+    if (!input || input.disabled || typeof input.showPicker !== "function") {
+      return false;
+    }
+    try {
+      input.showPicker();
+      return true;
+    } catch (error) {
+      // Safari/Chrome possono rifiutare showPicker fuori da una reale
+      // attivazione utente: il normale comportamento type=time resta attivo.
+      return false;
+    }
+  }
+
   function buildPayload(dayStates, onCall) {
     const states = Array.isArray(dayStates) ? dayStates : [];
     const days = states
@@ -655,6 +669,9 @@
     });
 
     [startInput, endInput].forEach(function (input) {
+      input?.addEventListener("click", function () {
+        openNativeTimePicker(input);
+      });
       input?.addEventListener("input", function () {
         clearError();
         updateNextDayNote();
@@ -677,6 +694,7 @@
     buildSharedPayload: buildSharedPayload,
     validatePayload: validatePayload,
     timeToMinutes: timeToMinutes,
+    openNativeTimePicker: openNativeTimePicker,
     init: init
   };
 });

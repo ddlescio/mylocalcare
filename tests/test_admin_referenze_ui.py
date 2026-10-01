@@ -17,7 +17,11 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
         self.assertIn("Referenze utenti", self.body)
         self.assertIn("conteggi.get('da_gestire'", self.body)
         self.assertIn("conteggi.get('verificate'", self.body)
+        self.assertIn("conteggi.get('approvate'", self.body)
         self.assertIn("conteggi.get('totale'", self.body)
+        self.assertIn("admin-reference-quick-filters", self.body)
+        self.assertIn("grid-template-columns: repeat(2", self.body)
+        self.assertIn("grid-template-columns: repeat(4", self.body)
         self.assertIn("grid gap-4 lg:grid-cols-2", self.body)
 
     def test_filters_use_expected_context(self):
@@ -26,6 +30,9 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
         self.assertIn('name="categoria"', self.body)
         self.assertIn("categorie_referenze", self.body)
         self.assertIn("url_for('admin_referenze')", self.body)
+        self.assertIn("url_for('admin_referenze', stato='da_gestire')", self.body)
+        self.assertIn("url_for('admin_referenze', stato='verificata')", self.body)
+        self.assertIn("url_for('admin_referenze', stato='approvate')", self.body)
 
     def test_private_referee_data_are_clearly_admin_only(self):
         self.assertIn("Dati riservati del referente", self.body)
@@ -64,15 +71,20 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
         self.assertIn('name="versione"', self.body)
         self.assertIn('name="stato_verifica"', self.body)
         self.assertIn('value="verificata"', self.body)
-        self.assertIn('value="non_confermata"', self.body)
         self.assertIn('value="non_verificabile"', self.body)
+        self.assertNotIn('value="non_confermata"', self.body)
+        self.assertIn("In attesa · scegli esito", self.body)
         self.assertIn('name="metodo_verifica"', self.body)
         self.assertIn('value="telefono"', self.body)
         self.assertNotIn('value="email"', self.body)
         self.assertNotIn('value="altro"', self.body)
         self.assertIn('method?.value !== "telefono"', self.body)
         self.assertIn('name="nota_admin"', self.body)
-        self.assertIn('name="nota_pubblica"', self.body)
+        self.assertIn("Nota interna", self.body)
+        self.assertIn("facoltativa", self.body)
+        self.assertNotIn('name="nota_pubblica"', self.body)
+        self.assertNotIn("Nota pubblica", self.body)
+        self.assertIn("font-size: 1rem", self.body)
 
     def test_admin_decision_bypasses_global_loader_and_blocks_double_submit(self):
         self.assertIn("data-no-global-loader", self.body)
@@ -87,8 +99,7 @@ class AdminReferenzeTemplateTests(unittest.TestCase):
         self.assertIn("Approva la visualizzazione pubblica", self.body)
         self.assertIn("Decisione editoriale finale", self.body)
         self.assertIn("data-public-consent=", self.body)
-        self.assertIn("blockedByOutcome", self.body)
-        self.assertIn("presenza di un nome", self.body)
+        self.assertNotIn("blockedByOutcome", self.body)
 
     def test_admin_delete_requires_explicit_confirmation_and_version(self):
         self.assertIn(

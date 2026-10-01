@@ -238,8 +238,8 @@ class ReferenzeUiTest(unittest.TestCase):
             'name="conferma_condivisione_recapito" value="1" required',
             rendered,
         )
-        self.assertIn('name="anno_inizio"', rendered)
-        self.assertIn('name="anno_fine"', rendered)
+        self.assertNotIn('name="anno_inizio"', rendered)
+        self.assertNotIn('name="anno_fine"', rendered)
         self.assertIn('name="durata_fascia"', rendered)
 
     def test_verified_reference_is_managed_outside_sent_requests(self):
@@ -494,14 +494,14 @@ class ReferenzeUiTest(unittest.TestCase):
         for name in (
             "categoria_slug",
             "tipo_rapporto",
-            "anno_inizio",
-            "anno_fine",
             "durata_fascia",
             "testo_referente",
             "consenso_contatto",
             "referente_telefono",
         ):
             self.assertIn(f'name="{name}"', self.response_source)
+        self.assertNotIn('name="anno_inizio"', self.response_source)
+        self.assertNotIn('name="anno_fine"', self.response_source)
         self.assertIn('type="tel"', self.response_source)
         self.assertIn('inputmode="tel"', self.response_source)
         self.assertIn('autocomplete="tel"', self.response_source)
@@ -602,12 +602,12 @@ class ReferenzeUiTest(unittest.TestCase):
             "categoria_slug",
             "categoria_label",
             "tipo_rapporto_label",
-            "periodo_label",
             "durata_label",
             "testo_referente_pubblico",
             "verificata",
         ):
             self.assertIn(f"referenza.get('{key}')", self.public_source)
+        self.assertNotIn("referenza.get('periodo_label')", self.public_source)
 
         for private_key in (
             "referente_nome",

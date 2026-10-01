@@ -50,7 +50,6 @@
           <dl>
             <div><dt>{{ tr('reference.scope') }}</dt><dd>{{ tr_text(referenza.get('categoria_label') or referenza.get('categoria_slug')|replace('-', ' ')|title) if (referenza.get('categoria_label') or referenza.get('categoria_slug')) else tr('reference.not_indicated_m') }}</dd></div>
             <div><dt>{{ tr('reference.relationship') }}</dt><dd>{{ tr_text(referenza.get('tipo_rapporto_label')) if referenza.get('tipo_rapporto_label') else tr('reference.not_indicated_m') }}</dd></div>
-            <div><dt>{{ tr('reference.period') }}</dt><dd>{% if referenza.get('periodo_label') %}<span data-no-translate>{{ referenza.get('periodo_label') }}</span>{% else %}{{ tr('reference.not_indicated_m') }}{% endif %}</dd></div>
             <div><dt>{{ tr('reference.duration') }}</dt><dd>{{ tr_text(referenza.get('durata_label')) if referenza.get('durata_label') else tr('reference.not_indicated_f') }}</dd></div>
           </dl>
           {% if referenza.get('messaggio_invito') %}
@@ -135,32 +134,6 @@
               <option value="altro" {% if rapporto == 'altro' %}selected{% endif %}>{{ tr('reference.response.relationship.other') }}</option>
             </select>
             <small id="reference-response-relationship-help">{{ tr('reference.response.relationship_help') }}</small>
-          </div>
-
-          <div class="reference-field">
-            <label for="reference-response-start-year">{{ tr('reference.start_year') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
-            <input
-              id="reference-response-start-year"
-              name="anno_inizio"
-              type="number"
-              min="1950"
-              max="2100"
-              inputmode="numeric"
-              value="{{ referenza.get('anno_inizio') or '' }}"
-              data-no-translate>
-          </div>
-
-          <div class="reference-field">
-            <label for="reference-response-end-year">{{ tr('reference.end_year') }} <span class="reference-optional">{{ tr('reference.optional') }}</span></label>
-            <input
-              id="reference-response-end-year"
-              name="anno_fine"
-              type="number"
-              min="1950"
-              max="2100"
-              inputmode="numeric"
-              value="{{ referenza.get('anno_fine') or '' }}"
-              data-no-translate>
           </div>
 
           <div class="reference-field reference-field--wide">

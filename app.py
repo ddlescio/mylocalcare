@@ -170,7 +170,6 @@ from referenze import (
     REFERENCE_RELATION_TYPES,
     REFERENCE_VERIFICATION_STATES,
     RELATION_LABELS as REFERENCE_RELATION_LABELS,
-    contains_direct_contact as reference_contains_direct_contact,
     decrypt_invitation_message,
     decrypt_reference_email,
     decrypt_reference_name,
@@ -6779,17 +6778,16 @@ def admin_interessi():
 REFERENCE_ADMIN_FILTER_STATES = {
     "da_gestire",
     "tutti",
+    "approvate",
     "invitata",
     "risposta_ricevuta",
     "verificata",
-    "non_confermata",
     "non_verificabile",
     "scaduta",
     "revocata",
 }
 REFERENCE_ADMIN_DECISION_STATES = {
     "verificata",
-    "non_confermata",
     "non_verificabile",
 }
 REFERENCE_ADMIN_CONTACT_METHODS = {"telefono"}
@@ -6826,9 +6824,14 @@ def _referenza_admin_filter_clause(stato, categoria):
         """)
     elif normalized_state == "risposta_ricevuta":
         where.append("r.stato_risposta = 'risposta_ricevuta'")
-    elif normalized_state in {
-        "verificata", "non_confermata", "non_verificabile"
-    }:
+    elif normalized_state == "approvate":
+        where.append("r.pubblicazione_approvata_admin = TRUE")
+    elif normalized_state == "non_verificabile":
+        # Le vecchie righe con esito ``non_confermata`` rappresentano lo
+        # stesso risultato operativo. Restano leggibili senza riproporre
+        # all'admin una quarta etichetta ormai ambigua.
+        where.append("r.stato_verifica IN ('non_verificabile', 'non_confermata')")
+    elif normalized_state == "verificata":
         where.append("r.stato_verifica = ?")
         params.append(normalized_state)
     elif normalized_state == "scaduta":
@@ -6868,7 +6871,7 @@ def _referenza_admin_validate_decision(
     stato,
     metodo,
     nota_admin,
-    nota_pubblica,
+    nota_pubblica=None,
     approva_pubblicazione=False,
 ):
     """Valida un esito admin senza affidarsi ai controlli del browser."""
@@ -6877,7 +6880,6 @@ def _referenza_admin_validate_decision(
     normalized_state = str(stato or "").strip().lower()
     normalized_method = str(metodo or "").strip().lower() or "nessuno"
     internal_note = str(nota_admin or "").strip()
-    public_note = str(nota_pubblica or "").strip()
     publication_requested = str(
         approva_pubblicazione or ""
     ).strip().casefold() in {"1", "true", "on", "yes", "si", "sì"}
@@ -6901,7 +6903,7 @@ def _referenza_admin_validate_decision(
             ),
         )
     )
-    if normalized_state in {"verificata", "non_confermata"}:
+    if normalized_state == "verificata":
         if not contact_allowed:
             raise ValueError(
                 "Il referente non ha autorizzato il contatto: registra "
@@ -6929,22 +6931,11 @@ def _referenza_admin_validate_decision(
             "La referenza non può essere verificata: il referente non ha "
             "confermato un’esperienza diretta."
         )
-    if normalized_state in {"non_confermata", "non_verificabile"} and not (
-        internal_note
-    ):
-        raise ValueError("Spiega nella nota interna il motivo dell’esito.")
     if len(internal_note) > 2000:
         raise ValueError("La nota interna supera la lunghezza consentita.")
-    if len(public_note) > 500:
-        raise ValueError("La nota pubblica supera la lunghezza consentita.")
-    if public_note and reference_contains_direct_contact(public_note):
-        raise ValueError(
-            "La nota pubblica non può contenere email, telefono o link."
-        )
     publication_allowed = bool(
         publication_requested
         and item.get("autorizza_pubblicazione")
-        and normalized_state != "non_confermata"
         and item.get("stato_risposta") == "risposta_ricevuta"
         and not item.get("revocata_at")
         and not item.get("cancellata_at")
@@ -6953,7 +6944,9 @@ def _referenza_admin_validate_decision(
         "stato": normalized_state,
         "metodo": normalized_method,
         "nota_admin": internal_note or None,
-        "nota_pubblica": public_note or None,
+        # Campo storico mantenuto nello schema per compatibilita: non viene
+        # piu raccolto ne mostrato nella revisione delle referenze.
+        "nota_pubblica": None,
         "pubblicazione_approvata_admin": publication_allowed,
     }
 
@@ -6968,7 +6961,7 @@ def _referenza_admin_evento_presentato(row):
         "invito_ripristinato": "Invito ripristinato e reinviato",
         "invito_aperto": "Invito aperto dal referente",
         "risposta_ricevuta": "Risposta ricevuta",
-        "rifiutata_referente": "Collaborazione non confermata",
+        "rifiutata_referente": "Referenza non verificabile",
         "consenso_revocato": "Consenso revocato",
         "richiesta_cancellata_utente": "Richiesta eliminata dall’utente",
         "referenza_cancellata_utente": "Referenza eliminata dall’utente",
@@ -6989,9 +6982,10 @@ def _referenza_admin_evento_presentato(row):
                 else json.loads(raw_snapshot)
             )
             if event_type == "verifica_admin_registrata":
-                state = str(snapshot.get("stato_nuovo") or "").replace(
-                    "_", " "
-                )
+                raw_state = str(snapshot.get("stato_nuovo") or "")
+                if raw_state == "non_confermata":
+                    raw_state = "non_verificabile"
+                state = raw_state.replace("_", " ")
                 method = str(snapshot.get("metodo") or "").replace("_", " ")
                 parts = []
                 if state:
@@ -7016,7 +7010,12 @@ def admin_referenze():
     ricerca = " ".join((request.args.get("q") or "").strip().split())
     filters = _referenza_admin_filter_clause(stato, categoria)
     references = []
-    counts = {"da_gestire": 0, "verificate": 0, "totale": 0}
+    counts = {
+        "da_gestire": 0,
+        "verificate": 0,
+        "approvate": 0,
+        "totale": 0,
+    }
     categories = [
         {"slug": slug, "label": _referenze_categoria_label(slug)}
         for slug in CATEGORIE_SERVIZI
@@ -7039,7 +7038,9 @@ def admin_referenze():
                         AND stato_verifica IN ('non_esaminata', 'in_coda')
                         THEN 1 ELSE 0 END) AS da_gestire,
                     SUM(CASE WHEN stato_verifica = 'verificata'
-                        THEN 1 ELSE 0 END) AS verificate
+                        THEN 1 ELSE 0 END) AS verificate,
+                    SUM(CASE WHEN pubblicazione_approvata_admin = TRUE
+                        THEN 1 ELSE 0 END) AS approvate
                 FROM referenze
                 WHERE stato_risposta <> 'cancellata'
             """))
@@ -7049,6 +7050,7 @@ def admin_referenze():
                     "totale": int(count_row["totale"] or 0),
                     "da_gestire": int(count_row["da_gestire"] or 0),
                     "verificate": int(count_row["verificate"] or 0),
+                    "approvate": int(count_row["approvate"] or 0),
                 }
 
             cur.execute(sql(f"""
@@ -7224,7 +7226,6 @@ def admin_referenza_verifica(referenza_id):
             stato=request.form.get("stato_verifica"),
             metodo=request.form.get("metodo_verifica"),
             nota_admin=request.form.get("nota_admin"),
-            nota_pubblica=request.form.get("nota_pubblica"),
             approva_pubblicazione=request.form.get(
                 "pubblicazione_approvata_admin"
             ),
@@ -7244,7 +7245,7 @@ def admin_referenza_verifica(referenza_id):
                 verificata_da_admin_id = ?,
                 metodo_verifica = ?,
                 nota_admin = ?,
-                nota_pubblica = ?,
+                nota_pubblica = NULL,
                 pubblicazione_approvata_admin = ?,
                 pubblicazione_approvata_at = CASE
                     WHEN ? THEN COALESCE(
@@ -7269,7 +7270,6 @@ def admin_referenza_verifica(referenza_id):
             int(g.utente["id"]),
             decision["metodo"],
             decision["nota_admin"],
-            decision["nota_pubblica"],
             decision["pubblicazione_approvata_admin"],
             decision["pubblicazione_approvata_admin"],
             decision["pubblicazione_approvata_admin"],
@@ -7339,10 +7339,6 @@ def admin_referenza_verifica(referenza_id):
         messages = {
             "verificata": translate(
                 "reference.notification.checked", owner_language,
-                category=category_label,
-            ),
-            "non_confermata": translate(
-                "reference.notification.not_confirmed", owner_language,
                 category=category_label,
             ),
         }
@@ -18972,9 +18968,9 @@ def _referenza_private_state(row):
     verification_state = row.get("stato_verifica") or "non_esaminata"
     if response_state in {"revocata", "cancellata", "scaduta", "rifiutata"}:
         return response_state
-    if verification_state in {
-        "verificata", "non_confermata", "non_verificabile", "revocata"
-    }:
+    if verification_state == "non_confermata":
+        return "non_verificabile"
+    if verification_state in {"verificata", "non_verificabile", "revocata"}:
         return verification_state
     if row.get("contatto_purged_at"):
         return "archiviata"
@@ -19003,7 +18999,9 @@ def _referenza_private_section(row):
     item = dict(row or {})
     is_received = bool(
         item.get("stato_risposta") == "risposta_ricevuta"
-        and item.get("stato_verifica") in {"verificata", "non_verificabile"}
+        and item.get("stato_verifica") in {
+            "verificata", "non_verificabile", "non_confermata"
+        }
         and not item.get("revocata_at")
         and not item.get("cancellata_at")
     )
@@ -19182,7 +19180,6 @@ def _carica_referenze_pubbliche(cur, utente_id):
             item.get("categoria_slug")
         )
         item["verificata"] = bool(item.get("verificata_da_mylocalcare"))
-        item["periodo_label"] = item.get("periodo")
         item["stato_label"] = item.get("stato_verifica_label")
         item["testo_referente_pubblico"] = item.get("testo_referente")
         public_rows.append(item)
@@ -24493,7 +24490,7 @@ def referenza_rispondi():
             direct,
             structured["testo_referente"],
             "risposta_ricevuta" if direct else "rifiutata",
-            "in_coda" if direct else "non_confermata",
+            "in_coda" if direct else "non_verificabile",
             structured["autorizza_pubblicazione"],
             structured["autorizza_testo_pubblico"],
             structured["autorizza_contatto_verifica"],

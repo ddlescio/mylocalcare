@@ -80,7 +80,9 @@ VERIFICATION_LABELS = {
     "non_esaminata": "Referenza ricevuta",
     "in_coda": "Controllo MyLocalCare in corso",
     "verificata": "Controllata da MyLocalCare",
-    "non_confermata": "Non confermata",
+    # Compatibilita con record storici: l'app non crea piu questo esito e lo
+    # presenta come non verificabile.
+    "non_confermata": "Non verificabile",
     "non_verificabile": "Non verificabile",
     "revocata": "Revocata",
 }
@@ -625,7 +627,6 @@ def serialize_public_reference(
             row.get("tipo_rapporto"),
             "Rapporto professionale",
         ),
-        "periodo": _period_label(row.get("anno_inizio"), row.get("anno_fine")),
         "durata_fascia": row.get("durata_fascia"),
         "durata_label": DURATION_LABELS.get(row.get("durata_fascia")),
         "esperienza_diretta": _as_bool(row.get("esperienza_diretta")),
@@ -638,9 +639,6 @@ def serialize_public_reference(
         "verificata_da_mylocalcare": verification == "verificata",
         "verificata_at": (
             row.get("verificata_at") if verification == "verificata" else None
-        ),
-        "nota_pubblica": (
-            row.get("nota_pubblica") if verification == "verificata" else None
         ),
         "testo_referente": None,
     }

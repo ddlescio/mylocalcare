@@ -301,9 +301,10 @@ class ReferenceValidationTest(unittest.TestCase):
             "cancellata_at": None,
         }
         public = serialize_public_reference(row)
-        self.assertEqual(public["periodo"], "2023–2025")
         self.assertTrue(public["verificata_da_mylocalcare"])
         self.assertEqual(public["testo_referente"], "Collaborazione positiva.")
+        self.assertNotIn("periodo", public)
+        self.assertNotIn("nota_pubblica", public)
         self.assertNotIn("utente_id", public)
         self.assertNotIn("nota_admin", public)
         self.assertNotIn("telefono_cifrato", public)

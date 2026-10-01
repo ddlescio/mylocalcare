@@ -45,12 +45,6 @@
             <dt>{{ tr('reference.relationship') }}</dt>
             <dd>{{ tr_text(referenza.get('tipo_rapporto_label')) if referenza.get('tipo_rapporto_label') else tr('reference.public.relationship') }}</dd>
           </div>
-          {% if referenza.get('periodo_label') %}
-            <div>
-              <dt>{{ tr('reference.public.period_hint') }}</dt>
-              <dd data-no-translate>{{ referenza.get('periodo_label') }}</dd>
-            </div>
-          {% endif %}
           {% if referenza.get('durata_label') %}
             <div>
               <dt>{{ tr('reference.duration') }}</dt>

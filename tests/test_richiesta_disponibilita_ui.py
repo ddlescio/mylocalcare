@@ -163,6 +163,12 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
         self.assertIn('data-availability-request-time-end', self.partial_source)
         self.assertIn("const crossesMidnight", self.script_source)
         self.assertIn("updateNextDayNote();", self.script_source)
+        self.assertIn("openNativeTimePicker", self.script_source)
+        self.assertIn('typeof input.showPicker !== "function"', self.script_source)
+        self.assertIn("input.showPicker();", self.script_source)
+        self.assertIn('-webkit-appearance: auto;', self.style_source)
+        self.assertIn('appearance: auto;', self.style_source)
+        self.assertIn('font-size: 16px;', self.style_source)
 
     def test_post_uses_json_csrf_and_exact_payload_fields(self):
         for marker in (
