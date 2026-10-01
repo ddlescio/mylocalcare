@@ -31220,17 +31220,53 @@ def _invia_canali_richiesta_disponibilita(
     """Aggiorna la chat e invia push/email soltanto dopo il commit."""
 
     destinatario_id = int(dispatch["destinatario_id"])
+
+    # Ogni aggiornamento realtime e indipendente: il conteggio dei non letti
+    # interroga il database e puo fallire anche quando l'evento appena salvato
+    # e perfettamente valido. In quel caso non dobbiamo perdere anche
+    # ``availability_request_created``/``response``, che fa comparire la card
+    # nella chat gia aperta del destinatario.
     try:
-        socketio.emit(
-            "update_unread_count",
-            {"count": chat_count_unread(destinatario_id)},
-            room=f"user_{destinatario_id}",
+        unread_count = chat_count_unread(destinatario_id)
+    except Exception as exc:
+        unread_count = None
+        log_exception_safe(
+            "Errore conteggio chat richiesta disponibilita",
+            exc,
+            {"destinatario_id": destinatario_id},
+            production=True,
         )
+
+    if unread_count is not None:
+        try:
+            socketio.emit(
+                "update_unread_count",
+                {"count": unread_count},
+                room=f"user_{destinatario_id}",
+            )
+        except Exception as exc:
+            log_exception_safe(
+                "Errore badge chat richiesta disponibilita",
+                exc,
+                {"destinatario_id": destinatario_id},
+                production=True,
+            )
+
+    try:
         socketio.emit(
             "chat_threads_update",
             {"from": int(dispatch.get("mittente_id") or 0)},
             room=f"user_{destinatario_id}",
         )
+    except Exception as exc:
+        log_exception_safe(
+            "Errore lista chat richiesta disponibilita",
+            exc,
+            {"destinatario_id": destinatario_id},
+            production=True,
+        )
+
+    try:
         if dispatch.get("tipo_evento") == "risposta":
             socketio.emit(
                 "availability_request_response",

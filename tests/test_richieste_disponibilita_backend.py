@@ -1017,6 +1017,35 @@ class RichiestaDisponibilitaBackendTest(unittest.TestCase):
         self.assertEqual(realtime[1][1]["from"], 2)
         self.assertEqual(realtime[1][1]["to"], 1)
 
+        # Un errore del conteggio non letti non deve sopprimere l'evento che
+        # aggiorna la card nella chat gia aperta del destinatario.
+        calls.clear()
+        self.backend["chat_count_unread"] = lambda user_id: (_ for _ in ()).throw(
+            RuntimeError("conteggio non disponibile")
+        )
+        helper({
+            "tipo_evento": "richiesta",
+            "richiesta_id": 9,
+            "mittente_id": 1,
+            "destinatario_id": 2,
+            "destinatario_email": None,
+            "email_notifiche": 0,
+            "language": "it",
+            "link": "/chat/1?richiesta_disponibilita=9",
+            "titolo": "Richiesta",
+            "messaggio": "Nuova richiesta",
+        }, titolo_email="Oggetto", cta_email="Apri",
+           messaggio_email_source="Messaggio")
+        socket_events = [
+            call[1][0]
+            for call in calls
+            if call[0] == "socket"
+        ]
+        self.assertNotIn("update_unread_count", socket_events)
+        self.assertIn("chat_threads_update", socket_events)
+        self.assertIn("availability_request_created", socket_events)
+        self.assertEqual(calls[-1][0], "push")
+
     def test_fragment_chat_non_segna_letto_e_restituisce_partial(self):
         source = (ROOT / "app.py").read_text(encoding="utf-8")
         tree = ast.parse(source)

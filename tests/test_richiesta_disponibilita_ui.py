@@ -12,6 +12,7 @@ from i18n import SUPPORTED_LANGUAGES, TRANSLATIONS
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "templates"
 MAIN_TEMPLATE = TEMPLATES / "annuncio_pubblico.html"
+BASE_TEMPLATE = TEMPLATES / "base.html"
 PARTIAL = TEMPLATES / "partials" / "richiesta_disponibilita_dialog.html"
 AVAILABILITY_DISPLAY = (
     TEMPLATES / "partials" / "disponibilita_servizi_display.html"
@@ -24,6 +25,7 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.main_source = MAIN_TEMPLATE.read_text(encoding="utf-8")
+        cls.base_source = BASE_TEMPLATE.read_text(encoding="utf-8")
         cls.partial_source = PARTIAL.read_text(encoding="utf-8")
         cls.availability_display_source = AVAILABILITY_DISPLAY.read_text(
             encoding="utf-8"
@@ -126,6 +128,49 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
         )
         self.assertNotIn('data-availability-request-add-interval', rendered)
 
+    def test_ajax_form_cannot_fall_back_to_native_get(self):
+        environment = Environment(
+            loader=FileSystemLoader(str(TEMPLATES)),
+            autoescape=select_autoescape(("html",)),
+        )
+        rendered = environment.get_template(
+            "partials/richiesta_disponibilita_dialog.html"
+        ).render(
+            annuncio={"id": 47},
+            csrf_token=lambda: "csrf-test-token",
+            tr=lambda key, **values: key.format(**values),
+            url_for=lambda endpoint, filename=None, **kwargs: (
+                f"/static/{filename}" if filename else f"/{endpoint}"
+            ),
+        )
+        form_tag = rendered.split(
+            '<form id="availability-request-form"', 1
+        )[1].split(">", 1)[0]
+
+        # Il loader globale intercetta i submit in capture e usa form.submit(),
+        # che salta gli handler. Questo form AJAX deve quindi esserne escluso.
+        self.assertIn(
+            'if (form.hasAttribute("data-no-global-loader")) return;',
+            self.base_source,
+        )
+        self.assertIn("form.submit();", self.base_source)
+        self.assertIn("data-no-global-loader", form_tag)
+
+        # Anche con lo script esterno assente o una cache HTML/JS disallineata,
+        # non deve mai ricadere nel GET della pagina annuncio corrente, ne fare
+        # un POST form-urlencoded verso l'API che accetta soltanto JSON.
+        self.assertIn('onsubmit="return false;"', form_tag)
+        self.assertIn(
+            '<button type="submit"\n                id="availability-request-submit"',
+            rendered,
+        )
+        self.assertNotIn("method=", form_tag)
+        self.assertNotIn("action=", form_tag)
+        self.assertIn(
+            'src="/static/js/richiesta-disponibilita.js?v=20261002-1"',
+            rendered,
+        )
+
     def test_dialog_is_accessible_and_mobile_first(self):
         for marker in (
             'role="dialog"',
@@ -227,6 +272,126 @@ class RichiestaDisponibilitaUiTest(unittest.TestCase):
             self.assertEqual(set(TRANSLATIONS[key]), expected, key)
             for language in expected:
                 self.assertTrue(TRANSLATIONS[key][language].strip(), (key, language))
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js non disponibile")
+    def test_submit_and_click_binding_is_retry_safe(self):
+        node_program = r"""
+const api = require(process.argv[1]);
+
+class FakeTarget {
+  constructor() {
+    this.listeners = new Map();
+  }
+  addEventListener(type, listener) {
+    const listeners = this.listeners.get(type) || [];
+    listeners.push(listener);
+    this.listeners.set(type, listeners);
+  }
+  removeEventListener(type, listener) {
+    const listeners = this.listeners.get(type) || [];
+    this.listeners.set(type, listeners.filter((item) => item !== listener));
+  }
+  dispatch(type) {
+    const event = {
+      type,
+      defaultPrevented: false,
+      preventDefault() { this.defaultPrevented = true; }
+    };
+    (this.listeners.get(type) || []).slice().forEach((listener) => {
+      listener(event);
+    });
+    return event;
+  }
+  count(type) {
+    return (this.listeners.get(type) || []).length;
+  }
+}
+
+const form = new FakeTarget();
+const oldButton = new FakeTarget();
+const currentButton = new FakeTarget();
+const calls = [];
+
+api.bindSubmissionHandlers(form, oldButton, () => calls.push("stale"));
+api.bindSubmissionHandlers(form, currentButton, () => calls.push("current"));
+api.bindSubmissionHandlers(form, currentButton, () => calls.push("latest"));
+
+const staleClick = oldButton.dispatch("click");
+const click = currentButton.dispatch("click");
+const submit = form.dispatch("submit");
+
+process.stdout.write(JSON.stringify({
+  calls,
+  staleClickPrevented: staleClick.defaultPrevented,
+  clickPrevented: click.defaultPrevented,
+  submitPrevented: submit.defaultPrevented,
+  submitListeners: form.count("submit"),
+  clickListeners: currentButton.count("click"),
+  staleClickListeners: oldButton.count("click")
+}));
+"""
+        completed = subprocess.run(
+            [shutil.which("node"), "-e", node_program, str(SCRIPT)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        result = json.loads(completed.stdout)
+
+        self.assertEqual(result["calls"], ["latest", "latest"])
+        self.assertFalse(result["staleClickPrevented"])
+        self.assertTrue(result["clickPrevented"])
+        self.assertTrue(result["submitPrevented"])
+        self.assertEqual(result["submitListeners"], 1)
+        self.assertEqual(result["clickListeners"], 1)
+        self.assertEqual(result["staleClickListeners"], 0)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js non disponibile")
+    def test_browser_bootstrap_retries_on_pageshow_for_bfcache(self):
+        node_program = r"""
+const fs = require("fs");
+const vm = require("vm");
+const source = fs.readFileSync(process.argv[1], "utf8");
+const documentListeners = {};
+const windowListeners = {};
+const document = {
+  readyState: "loading",
+  addEventListener(type, listener) { documentListeners[type] = listener; }
+};
+const window = {
+  document,
+  addEventListener(type, listener) { windowListeners[type] = listener; }
+};
+
+vm.runInNewContext(source, {window});
+const calls = [];
+window.MyLocalCareAvailabilityRequest.init = (documentRef, options) => {
+  calls.push({sameDocument: documentRef === document, restore: options.restore});
+};
+
+documentListeners.DOMContentLoaded({type: "DOMContentLoaded"});
+windowListeners.pageshow({type: "pageshow", persisted: true});
+windowListeners.pageshow({type: "pageshow", persisted: true});
+
+process.stdout.write(JSON.stringify(calls));
+"""
+        completed = subprocess.run(
+            [shutil.which("node"), "-e", node_program, str(SCRIPT)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        calls = json.loads(completed.stdout)
+
+        self.assertEqual(
+            calls,
+            [
+                {"sameDocument": True, "restore": False},
+                {"sameDocument": True, "restore": True},
+                {"sameDocument": True, "restore": True},
+            ],
+        )
+        self.assertNotIn("__availabilityRequestReady", self.script_source)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js non disponibile")
     def test_javascript_builds_and_validates_the_exact_payload(self):

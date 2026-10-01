@@ -11,13 +11,22 @@
     root.MyLocalCareAvailabilityRequest = api;
 
     if (root.document) {
+      const boot = function (event) {
+        api.init(root.document, {
+          restore: Boolean(event && event.type === "pageshow")
+        });
+      };
+
       if (root.document.readyState === "loading") {
-        root.document.addEventListener("DOMContentLoaded", function () {
-          api.init(root.document);
-        }, { once: true });
+        root.document.addEventListener("DOMContentLoaded", boot, { once: true });
       } else {
-        api.init(root.document);
+        boot();
       }
+
+      // Safari ripristina la stessa Document dal back-forward cache. Ripetere
+      // l'inizializzazione e sicuro: init riusa il controller del form e
+      // riaggancia i soli listener critici senza duplicarli.
+      root.addEventListener("pageshow", boot);
     }
   }
 })(typeof window !== "undefined" ? window : null, function () {
@@ -29,6 +38,8 @@
   const NIGHT_END = 8 * 60;
   const MAX_INTERVALS_PER_DAY = 8;
   const MAX_INTERVALS_TOTAL = 28;
+  const CONTROLLER_KEY = "__localcareAvailabilityRequestController";
+  const SUBMISSION_BINDING_KEY = "__localcareAvailabilityRequestSubmission";
 
   function intervalLimitCode(dayCount, totalCount) {
     if (Number(dayCount) >= MAX_INTERVALS_PER_DAY) return "limit_per_day";
@@ -54,6 +65,46 @@
       // attivazione utente: il normale comportamento type=time resta attivo.
       return false;
     }
+  }
+
+  function bindSubmissionHandlers(form, submitButton, callback) {
+    if (
+      !form
+      || typeof form.addEventListener !== "function"
+      || typeof form.removeEventListener !== "function"
+      || typeof callback !== "function"
+    ) {
+      return false;
+    }
+
+    const previous = form[SUBMISSION_BINDING_KEY];
+    if (previous) {
+      form.removeEventListener("submit", previous.listener);
+      if (
+        previous.button
+        && typeof previous.button.removeEventListener === "function"
+      ) {
+        previous.button.removeEventListener("click", previous.listener);
+      }
+    }
+
+    const listener = function (event) {
+      if (event && typeof event.preventDefault === "function") {
+        event.preventDefault();
+      }
+      callback(event);
+      return false;
+    };
+
+    form.addEventListener("submit", listener);
+    if (submitButton && typeof submitButton.addEventListener === "function") {
+      submitButton.addEventListener("click", listener);
+    }
+    form[SUBMISSION_BINDING_KEY] = {
+      button: submitButton || null,
+      listener: listener
+    };
+    return true;
   }
 
   function buildPayload(dayStates, onCall) {
@@ -227,8 +278,8 @@
     return null;
   }
 
-  function init(documentRef) {
-    if (!documentRef || documentRef.__availabilityRequestReady) return;
+  function init(documentRef, options) {
+    if (!documentRef) return false;
 
     const dialog = documentRef.getElementById("availability-request-dialog");
     const form = documentRef.getElementById("availability-request-form");
@@ -237,8 +288,31 @@
       documentRef.querySelectorAll("[data-availability-request-open]")
     );
 
-    if (!dialog || !form || !copyNode || !openButtons.length) return;
-    documentRef.__availabilityRequestReady = true;
+    // Non segnare mai la Document come inizializzata prima che il markup sia
+    // davvero presente: su pagine ripristinate o composte in ritardo init deve
+    // poter essere richiamata. Il controller vive sul form specifico.
+    if (!dialog || !form || !copyNode || !openButtons.length) return false;
+
+    const existingController = form[CONTROLLER_KEY];
+    if (
+      existingController
+      && typeof existingController.rebindSubmission === "function"
+    ) {
+      if (
+        options
+        && options.restore
+        && typeof existingController.restoreAfterPageShow === "function"
+      ) {
+        existingController.restoreAfterPageShow();
+      } else {
+        existingController.rebindSubmission();
+      }
+      return true;
+    }
+
+    // Difesa aggiuntiva nel caso il markup provenga da una cache HTML vecchia.
+    // Il loader globale controlla questo attributo prima di chiamare form.submit().
+    form.setAttribute("data-no-global-loader", "");
 
     let copy = {};
     try {
@@ -281,6 +355,7 @@
     let bodyWasOverflowHidden = false;
     let bodyWasModalOpen = false;
     let requestController = null;
+    let activeRequestToken = null;
     let busy = false;
     let completed = false;
 
@@ -414,7 +489,8 @@
         || validation.code === "invalid_interval"
         || validation.code === "invalid_night_interval"
       ) {
-        return (!startInput?.value ? startInput : endInput) || startInput;
+        return (!(startInput && startInput.value) ? startInput : endInput)
+          || startInput;
       }
       return dayInputs[0] || onCallInput;
     }
@@ -498,14 +574,20 @@
       documentRef.addEventListener("keydown", handleKeydown);
 
       rootRequestAnimationFrame(function () {
-        (dayInputs[0] || sheet)?.focus({ preventScroll: true });
+        const focusTarget = dayInputs[0] || sheet;
+        if (focusTarget && typeof focusTarget.focus === "function") {
+          focusTarget.focus({ preventScroll: true });
+        }
       });
     }
 
     function closeDialog() {
       if (dialog.hidden) return;
-      requestController?.abort();
+      if (requestController && typeof requestController.abort === "function") {
+        requestController.abort();
+      }
       requestController = null;
+      activeRequestToken = null;
       setBusy(false);
       dialog.hidden = true;
       dialog.setAttribute("aria-hidden", "true");
@@ -532,7 +614,7 @@
       const focusable = getFocusableElements();
       if (!focusable.length) {
         event.preventDefault();
-        sheet?.focus();
+        if (sheet && typeof sheet.focus === "function") sheet.focus();
         return;
       }
 
@@ -557,8 +639,7 @@
       }
     }
 
-    async function submitRequest(event) {
-      event.preventDefault();
+    async function submitRequest() {
       if (busy) return;
       clearError();
 
@@ -581,11 +662,17 @@
 
       const endpoint = dialog.dataset.endpoint || "";
       const csrfToken = dialog.dataset.csrfToken || "";
-      requestController = new AbortController();
+      const view = documentRef.defaultView;
+      const AbortControllerConstructor = view && view.AbortController;
+      const requestToken = {};
+      requestController = typeof AbortControllerConstructor === "function"
+        ? new AbortControllerConstructor()
+        : null;
+      activeRequestToken = requestToken;
       setBusy(true);
 
       try {
-        const response = await fetch(endpoint, {
+        const requestOptions = {
           method: "POST",
           credentials: "same-origin",
           headers: {
@@ -594,9 +681,11 @@
             "X-CSRF-Token": csrfToken,
             "X-Requested-With": "XMLHttpRequest"
           },
-          body: JSON.stringify(payload),
-          signal: requestController.signal
-        });
+          body: JSON.stringify(payload)
+        };
+        if (requestController) requestOptions.signal = requestController.signal;
+
+        const response = await fetch(endpoint, requestOptions);
         const data = await parseResponse(response);
 
         if (
@@ -639,8 +728,11 @@
         if (error && error.name === "AbortError") return;
         showError(error.userMessage || copy.errorGeneric || "");
       } finally {
-        requestController = null;
-        setBusy(false);
+        if (activeRequestToken === requestToken) {
+          requestController = null;
+          activeRequestToken = null;
+          setBusy(false);
+        }
       }
     }
 
@@ -663,26 +755,57 @@
       });
     });
 
-    onCallInput?.addEventListener("change", function () {
-      syncOnCallVisualState();
-      clearError();
-    });
+    if (onCallInput) {
+      onCallInput.addEventListener("change", function () {
+        syncOnCallVisualState();
+        clearError();
+      });
+    }
 
     [startInput, endInput].forEach(function (input) {
-      input?.addEventListener("click", function () {
+      if (!input) return;
+      input.addEventListener("click", function () {
         openNativeTimePicker(input);
       });
-      input?.addEventListener("input", function () {
+      input.addEventListener("input", function () {
         clearError();
         updateNextDayNote();
       });
-      input?.addEventListener("change", updateNextDayNote);
+      input.addEventListener("change", updateNextDayNote);
     });
+
+    function rebindSubmission() {
+      return bindSubmissionHandlers(form, submitButton, function () {
+        submitRequest();
+      });
+    }
+
+    function restoreAfterPageShow() {
+      if (requestController && typeof requestController.abort === "function") {
+        requestController.abort();
+      }
+      requestController = null;
+      activeRequestToken = null;
+      setBusy(false);
+
+      // I listener normalmente sopravvivono alla bfcache, ma rimuoverli e
+      // riaggiungerli rende il ripristino deterministico anche su WebKit.
+      rebindSubmission();
+      documentRef.removeEventListener("keydown", handleKeydown);
+      if (!dialog.hidden) {
+        documentRef.addEventListener("keydown", handleKeydown);
+      }
+    }
 
     dayInputs.concat(slotInputs).forEach(syncChipState);
     syncOnCallVisualState();
     updateNextDayNote();
-    form.addEventListener("submit", submitRequest);
+    form[CONTROLLER_KEY] = {
+      rebindSubmission: rebindSubmission,
+      restoreAfterPageShow: restoreAfterPageShow
+    };
+    rebindSubmission();
+    return true;
   }
 
   return {
@@ -695,6 +818,7 @@
     validatePayload: validatePayload,
     timeToMinutes: timeToMinutes,
     openNativeTimePicker: openNativeTimePicker,
+    bindSubmissionHandlers: bindSubmissionHandlers,
     init: init
   };
 });

@@ -57,7 +57,15 @@
       </div>
     </div>
 
-    <form id="availability-request-form" novalidate>
+    <form id="availability-request-form"
+          data-no-global-loader
+          onsubmit="return false;"
+          novalidate>
+      {#
+        Il submit viene gestito esclusivamente via JSON da
+        richiesta-disponibilita.js. Il guard inline copre anche l'invio
+        implicito da tastiera se il bootstrap JS non e disponibile.
+      #}
       <section class="availability-request-picker"
                aria-label="{{ tr('availability_request.selection_title') }}">
         <fieldset class="availability-request-group">
@@ -182,4 +190,4 @@
   'errorGeneric': tr('availability_request.error_generic')
 }|tojson }}</script>
 
-<script src="{{ url_for('static', filename='js/richiesta-disponibilita.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/richiesta-disponibilita.js') }}?v=20261002-1" defer></script>
