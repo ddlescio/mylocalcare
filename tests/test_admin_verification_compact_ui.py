@@ -22,15 +22,25 @@ class AdminVerificationCompactUiTests(unittest.TestCase):
         self.assertNotRegex(tag.group(0), r"\sopen(?:\s|=|>)")
 
     def test_both_pages_use_compact_headers_and_inline_stats(self):
-        for source, label in (
-            (REFERENCES, "Riepilogo referenze"),
-            (PROFILE_CARDS, "Riepilogo schede profilo"),
-        ):
-            with self.subTest(label=label):
-                self.assertIn('class="admin-compact-header', source)
-                self.assertIn('class="admin-compact-stats flex flex-wrap gap-2"', source)
-                self.assertIn(f'aria-label="{label}"', source)
-                self.assertNotIn("sm:p-7", source)
+        for source in (REFERENCES, PROFILE_CARDS):
+            self.assertIn('class="admin-compact-header', source)
+            self.assertNotIn("sm:p-7", source)
+
+        # Le referenze usano i contatori come filtri rapidi cliccabili; le
+        # schede profilo mantengono il riepilogo compatto non interattivo.
+        self.assertIn('class="admin-reference-quick-filters"', REFERENCES)
+        self.assertIn(
+            'aria-label="Filtri rapidi referenze"',
+            REFERENCES,
+        )
+        self.assertIn(
+            'class="admin-compact-stats flex flex-wrap gap-2"',
+            PROFILE_CARDS,
+        )
+        self.assertIn(
+            'aria-label="Riepilogo schede profilo"',
+            PROFILE_CARDS,
+        )
 
     def test_page_instructions_are_in_closed_native_accordions(self):
         self.assert_collapsed_details(REFERENCES, "data-admin-guide")

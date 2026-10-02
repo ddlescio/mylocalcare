@@ -678,10 +678,76 @@
   margin-top: .58rem;
 }
 
+.sought-availability-card {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .32rem .48rem;
+  max-width: 100%;
+}
+
+.sought-availability-compact {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  color: #7c2d12;
+  font-size: .63rem;
+  font-weight: 780;
+  line-height: 1.25;
+  letter-spacing: -.008em;
+}
+
+.sought-availability-compact__item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  white-space: normal;
+}
+
+.sought-availability-compact__item + .sought-availability-compact__item::before {
+  content: "·";
+  flex: 0 0 auto;
+  margin: 0 .32rem;
+  color: #d97706;
+  font-weight: 900;
+}
+
+.sought-availability-compact__day {
+  color: #9a3412;
+  font-variant-numeric: tabular-nums;
+}
+
+.sought-availability-compact__day strong {
+  margin-right: .22rem;
+  color: #7c2d12;
+  font-weight: 950;
+}
+
+.sought-availability-compact__on-call {
+  color: #a16207;
+}
+
+.sought-availability-compact__more {
+  margin-left: .22rem;
+  padding: .02rem .25rem;
+  border-radius: 999px;
+  background: rgba(254, 243, 199, .92);
+  color: #92400e;
+  font-size: .58rem;
+  font-weight: 900;
+}
+
+.sought-availability-compact__more-groups {
+  flex: 0 0 auto;
+  margin-left: .3rem;
+}
+
 .card-availability-row,
 .vetrina-availability-row {
   display: flex;
   align-items: center;
+  min-width: 0;
   margin-top: .55rem;
 }
 
@@ -700,6 +766,14 @@
 }
 
 @media (max-width: 420px) {
+  .sought-availability-card {
+    gap: .28rem .4rem;
+  }
+
+  .sought-availability-compact {
+    font-size: .6rem;
+  }
+
   .availability-detail__head {
     display: grid;
   }

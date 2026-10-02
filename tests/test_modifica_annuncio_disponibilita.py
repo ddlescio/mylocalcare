@@ -119,7 +119,12 @@ class ModificaAnnuncioDisponibilitaTest(unittest.TestCase):
         self.assertIsInstance(values, ast.Tuple)
         self.assertEqual(
             [value.id for value in values.elts],
-            ["tipo_annuncio", "tipo_annuncio", "id"],
+            [
+                "tipo_annuncio",
+                "stato_destinazione",
+                "tipo_annuncio",
+                "id",
+            ],
         )
 
         conn = sqlite3.connect(":memory:")
@@ -127,22 +132,23 @@ class ModificaAnnuncioDisponibilitaTest(unittest.TestCase):
             CREATE TABLE annunci (
                 id INTEGER PRIMARY KEY,
                 tipo_annuncio TEXT NOT NULL,
+                stato TEXT NOT NULL,
                 disponibilita_cercata_json TEXT
             )
         """)
         conn.executemany(
-            "INSERT INTO annunci VALUES (?, ?, ?)",
+            "INSERT INTO annunci VALUES (?, ?, ?, ?)",
             (
-                (1, "cerco", '{"old":true}'),
-                (2, "offro", '{"legacy":true}'),
-                (3, "cerco", '{"keep":true}'),
+                (1, "cerco", "approvato", '{"old":true}'),
+                (2, "offro", "approvato", '{"legacy":true}'),
+                (3, "cerco", "approvato", '{"keep":true}'),
             ),
         )
 
-        conn.execute(update_sql, ("offro", "offro", 1))
-        conn.execute(update_sql, ("cerco", "cerco", 1))
-        conn.execute(update_sql, ("cerco", "cerco", 2))
-        conn.execute(update_sql, ("cerco", "cerco", 3))
+        conn.execute(update_sql, ("offro", "approvato", "offro", 1))
+        conn.execute(update_sql, ("cerco", "approvato", "cerco", 1))
+        conn.execute(update_sql, ("cerco", "approvato", "cerco", 2))
+        conn.execute(update_sql, ("cerco", "approvato", "cerco", 3))
 
         rows = dict(conn.execute(
             "SELECT id, disponibilita_cercata_json FROM annunci ORDER BY id"
@@ -268,9 +274,10 @@ class ModificaAnnuncioDisponibilitaTest(unittest.TestCase):
             route_source,
         )
         self.assertIn(
-            "preserve_calendar_exceptions=True",
+            "preserve_calendar_exceptions=not (",
             route_source,
         )
+        self.assertIn("tipo_cambiato or categoria_cambiata", route_source)
         self.assertIn(
             "listing_offer_status_from_form(request.form)",
             route_source,

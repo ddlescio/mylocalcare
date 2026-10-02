@@ -322,9 +322,80 @@
 
 {% macro sought_availability_badge(disponibilita, extra_class='') -%}
   {% if disponibilita %}
-    <span class="availability-card-badge is-limited sought-availability-badge {{ extra_class }}">
-      <span aria-hidden="true">🗓️</span>
-      <span>{{ tr('listing.sought_availability_badge') }}</span>
+    {% set giorni_brevi = [
+      tr('availability.day_monday_short'), tr('availability.day_tuesday_short'),
+      tr('availability.day_wednesday_short'), tr('availability.day_thursday_short'),
+      tr('availability.day_friday_short'), tr('availability.day_saturday_short'),
+      tr('availability.day_sunday_short')
+    ] %}
+    {% set fasce = [
+      ('mattina', tr('availability.slot_morning')),
+      ('pomeriggio', tr('availability.slot_afternoon')),
+      ('sera', tr('availability.slot_evening')),
+      ('notte', tr('availability.slot_night'))
+    ] %}
+    {% set giorni_selezionati = namespace(totale=0, mostrati=0) %}
+    {% for giorno in range(1, 8) %}
+      {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+      {% set intervalli_giorno = disponibilita.get('settimanale_intervalli', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+      {% if fasce_giorno or intervalli_giorno %}
+        {% set giorni_selezionati.totale = giorni_selezionati.totale + 1 %}
+      {% endif %}
+    {% endfor %}
+    {% set limite_giorni = 2 if disponibilita.get('a_chiamata', false) else 3 %}
+    <span class="sought-availability-card {{ extra_class }}">
+      <span class="availability-card-badge is-limited sought-availability-badge">
+        <span aria-hidden="true">🗓️</span>
+        <span>{{ tr('listing.sought_availability_badge') }}</span>
+      </span>
+
+      <span class="sought-availability-compact">
+        {% if disponibilita.get('a_chiamata', false) %}
+          <span class="sought-availability-compact__item sought-availability-compact__on-call"
+                data-sought-availability-group="on-call">
+            {{ tr('availability.on_call_label') }}
+          </span>
+        {% endif %}
+
+        {% for giorno in range(1, 8) %}
+          {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+          {% set intervalli_giorno = disponibilita.get('settimanale_intervalli', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+          {% if (fasce_giorno or intervalli_giorno) and giorni_selezionati.mostrati < limite_giorni %}
+            {% set dettagli_giorno = namespace(valori=[]) %}
+            {% for intervallo in intervalli_giorno %}
+              {% set orario = intervallo.get('ora_inizio') ~ '–' ~ intervallo.get('ora_fine') ~ (' (+1)' if intervallo.get('giorno_successivo') else '') %}
+              {% if orario not in dettagli_giorno.valori %}
+                {% set _ = dettagli_giorno.valori.append(orario) %}
+              {% endif %}
+            {% endfor %}
+            {% for fascia in fasce %}
+              {% set fascia_presente = fasce_giorno|selectattr('fascia', 'equalto', fascia[0])|list %}
+              {% if fascia_presente and fascia[1] not in dettagli_giorno.valori %}
+                {% set _ = dettagli_giorno.valori.append(fascia[1]) %}
+              {% endif %}
+            {% endfor %}
+            <span class="sought-availability-compact__item sought-availability-compact__day"
+                  data-sought-availability-group="day"
+                  data-day="{{ giorno }}">
+              <strong>{{ giorni_brevi[giorno - 1] }}</strong>
+              {% for dettaglio in dettagli_giorno.valori[:3] %}
+                {% if not loop.first %}, {% endif %}{{ dettaglio }}
+              {% endfor %}
+              {% if dettagli_giorno.valori|length > 3 %}
+                <span class="sought-availability-compact__more sought-availability-compact__more-details">+{{ (dettagli_giorno.valori|length) - 3 }}</span>
+              {% endif %}
+            </span>
+            {% set giorni_selezionati.mostrati = giorni_selezionati.mostrati + 1 %}
+          {% endif %}
+        {% endfor %}
+
+        {% if giorni_selezionati.totale > giorni_selezionati.mostrati %}
+          <span class="sought-availability-compact__more sought-availability-compact__more-groups"
+                aria-label="+{{ giorni_selezionati.totale - giorni_selezionati.mostrati }}">
+            +{{ giorni_selezionati.totale - giorni_selezionati.mostrati }}
+          </span>
+        {% endif %}
+      </span>
     </span>
   {% endif %}
 {%- endmacro %}

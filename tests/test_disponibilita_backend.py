@@ -171,7 +171,8 @@ class DisponibilitaBackendTest(unittest.TestCase):
                 tipo_annuncio TEXT,
                 stato TEXT,
                 media TEXT,
-                foto_card TEXT
+                foto_card TEXT,
+                disponibilita_cercata_json TEXT
             );
             CREATE TABLE interessi_annunci (
                 id INTEGER PRIMARY KEY,
@@ -882,11 +883,12 @@ class DisponibilitaBackendTest(unittest.TestCase):
             INSERT INTO annunci (
                 id, utente_id, titolo, categoria, tipo_annuncio, stato,
                 media, foto_card
-            ) VALUES (?, ?, ?, 'babysitter', 'offro', ?, ?, ?)
+            ) VALUES (?, ?, ?, 'babysitter', ?, ?, ?, ?)
         """, [
-            (1, 7, "Babysitter serale", "approvato", "a.jpg,b.jpg", "a.jpg"),
-            (2, 7, "Secondo annuncio", "approvato", "c.jpg", "c.jpg"),
-            (3, 8, "Annuncio altrui", "approvato", "d.jpg", "d.jpg"),
+            (1, 7, "Babysitter serale", "offro", "approvato", "a.jpg,b.jpg", "a.jpg"),
+            (2, 7, "Secondo annuncio", "offro", "approvato", "c.jpg", "c.jpg"),
+            (3, 8, "Annuncio altrui", "offro", "approvato", "d.jpg", "d.jpg"),
+            (4, 7, "Cerco babysitter", "cerco", "approvato", "e.jpg", "e.jpg"),
         ])
         self.cursor.execute(
             "INSERT INTO interessi_annunci (id, annuncio_id) VALUES (10, 1)"
@@ -909,6 +911,7 @@ class DisponibilitaBackendTest(unittest.TestCase):
         csrf_calls = []
         deleted_paths = []
         invalidations = []
+        availability_cleanups = []
         namespace = {
             "g": SimpleNamespace(utente={"id": 7}),
             "verify_csrf": lambda: csrf_calls.append(True),
@@ -922,6 +925,13 @@ class DisponibilitaBackendTest(unittest.TestCase):
                 lambda paths: deleted_paths.extend(paths)
             ),
             "invalidate_admin_counters": lambda: invalidations.append(True),
+            "_rimuovi_disponibilita_collegata_annuncio": (
+                lambda cur, user_id, annuncio_id, categoria: (
+                    availability_cleanups.append(
+                        (user_id, annuncio_id, categoria)
+                    )
+                )
+            ),
             "app": SimpleNamespace(
                 logger=SimpleNamespace(warning=lambda *args, **kwargs: None)
             ),
@@ -935,6 +945,7 @@ class DisponibilitaBackendTest(unittest.TestCase):
         self.assertEqual(csrf_calls, [True])
         self.assertEqual(deleted_paths, ["a.jpg", "b.jpg"])
         self.assertEqual(invalidations, [True])
+        self.assertEqual(availability_cleanups, [(7, 1, "babysitter")])
         deleted = self.cursor.execute(
             "SELECT stato, media, foto_card FROM annunci WHERE id = 1"
         ).fetchone()
@@ -963,6 +974,13 @@ class DisponibilitaBackendTest(unittest.TestCase):
                 "SELECT stato FROM annunci WHERE id = 3"
             ).fetchone()["stato"],
             "approvato",
+        )
+
+        cerco_response = route(4)
+        self.assertTrue(cerco_response["ok"])
+        self.assertEqual(
+            availability_cleanups,
+            [(7, 1, "babysitter")],
         )
 
     def test_risposta_rollout_senza_tabelle_categoria(self):

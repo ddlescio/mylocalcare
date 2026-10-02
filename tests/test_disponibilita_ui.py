@@ -35,6 +35,23 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
             utente_offre_servizi=offers,
         ))
 
+    def render_sought_availability_badge(self, availability):
+        environment = Environment(loader=FileSystemLoader(str(TEMPLATES)))
+        environment.filters.update(
+            {
+                "fmt_day_month": lambda value: value or "",
+                "fmt_it_date": lambda value: value or "",
+                "datetimeformat": lambda value: value or "",
+            }
+        )
+        template = environment.get_template(
+            "partials/disponibilita_servizi_display.html"
+        )
+        module = template.make_module(
+            {"tr": lambda key, **kwargs: key}
+        )
+        return str(module.sought_availability_badge(availability))
+
     def test_display_partial_compiles_and_exposes_expected_macros(self):
         environment = Environment(loader=FileSystemLoader(str(TEMPLATES)))
         environment.filters.update(
@@ -56,6 +73,85 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         self.assertTrue(callable(module.availability_badge))
         self.assertTrue(callable(module.availability_intro))
         self.assertTrue(callable(module.availability_listing))
+        self.assertTrue(callable(module.sought_availability_badge))
+
+    def test_sought_availability_card_shows_compact_schedule(self):
+        rendered = self.render_sought_availability_badge({
+            "a_chiamata": True,
+            "settimanale": [
+                {"giorno_settimana": 1, "fascia": "mattina"},
+                {"giorno_settimana": 1, "fascia": "sera"},
+                {"giorno_settimana": 5, "fascia": "mattina"},
+            ],
+            "settimanale_intervalli": [
+                {
+                    "giorno_settimana": 1,
+                    "ora_inizio": "09:30",
+                    "ora_fine": "12:00",
+                    "giorno_successivo": False,
+                },
+                {
+                    "giorno_settimana": 5,
+                    "ora_inizio": "18:00",
+                    "ora_fine": "20:00",
+                    "giorno_successivo": False,
+                },
+            ],
+        })
+
+        self.assertIn("listing.sought_availability_badge", rendered)
+        self.assertIn("availability.day_monday_short", rendered)
+        self.assertIn("availability.day_friday_short", rendered)
+        self.assertIn("availability.slot_morning", rendered)
+        self.assertIn("availability.slot_evening", rendered)
+        self.assertIn("availability.on_call_label", rendered)
+        self.assertEqual(rendered.count("09:30–12:00"), 1)
+        self.assertEqual(rendered.count("18:00–20:00"), 1)
+        monday_group = re.search(
+            r'sought-availability-compact__day[^>]*>.*?'
+            r'availability\.day_monday_short.*?09:30–12:00.*?</span>',
+            rendered,
+            re.DOTALL,
+        )
+        friday_group = re.search(
+            r'sought-availability-compact__day[^>]*>.*?'
+            r'availability\.day_friday_short.*?18:00–20:00.*?</span>',
+            rendered,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(monday_group)
+        self.assertIsNotNone(friday_group)
+        self.assertIn('data-day="1"', rendered)
+        self.assertIn('data-day="5"', rendered)
+        self.assertIn('data-sought-availability-group="on-call"', rendered)
+        self.assertIn('class="sought-availability-compact"', rendered)
+
+    def test_sought_availability_card_limits_groups_and_counts_overflow(self):
+        rendered = self.render_sought_availability_badge({
+            "a_chiamata": True,
+            "settimanale": [
+                {"giorno_settimana": day, "fascia": "mattina"}
+                for day in range(1, 5)
+            ],
+            "settimanale_intervalli": [],
+        })
+
+        self.assertEqual(
+            rendered.count('data-sought-availability-group="day"'),
+            2,
+        )
+        self.assertEqual(
+            rendered.count('data-sought-availability-group="on-call"'),
+            1,
+        )
+        self.assertIn('data-day="1"', rendered)
+        self.assertIn('data-day="2"', rendered)
+        self.assertNotIn('data-day="3"', rendered)
+        self.assertIn(
+            'sought-availability-compact__more-groups',
+            rendered,
+        )
+        self.assertIn('aria-label="+2"', rendered)
 
     def test_display_partial_does_not_nest_duplicate_items_wrappers(self):
         source = self.read_template("partials/disponibilita_servizi_display.html")
@@ -381,6 +477,13 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
         )
         self.assertEqual(len(guarded_badges), 3)
 
+    def test_sought_schedule_summary_reaches_search_and_profile_cards(self):
+        search = self.read_template("cerca.html")
+        dashboard = self.read_template("dashboard.html")
+
+        self.assertEqual(search.count("{{ sought_availability_badge("), 3)
+        self.assertEqual(dashboard.count("{{ sought_availability_badge("), 1)
+
     def test_search_exposes_confirmed_availability_only_inside_panel(self):
         search = self.read_template("cerca.html")
 
@@ -461,6 +564,8 @@ class DisponibilitaServiziUiTest(unittest.TestCase):
             ".profile-annuncio-availability",
             ".card-availability-row",
             ".vetrina-availability-row",
+            ".sought-availability-card",
+            ".sought-availability-compact",
         ):
             with self.subTest(selector=selector):
                 self.assertIn(selector, css)

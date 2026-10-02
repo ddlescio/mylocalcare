@@ -16771,20 +16771,89 @@ def admin_annuncio_tipo(id):
     conn = get_db_connection()
     cur = get_cursor(conn)
     try:
-        cur.execute(sql("SELECT id FROM annunci WHERE id = ?"), (id,))
-        if not cur.fetchone():
+        cur.execute(sql("""
+            SELECT id, utente_id, categoria, tipo_annuncio, stato
+            FROM annunci
+            WHERE id = ?
+            LIMIT 1
+        """), (id,))
+        annuncio = cur.fetchone()
+        if not annuncio:
             return jsonify(ok=False, error="Annuncio non trovato."), 404
+        if str(annuncio["stato"] or "").strip().lower() == "eliminato":
+            return jsonify(
+                ok=False,
+                error="Un annuncio eliminato non può essere modificato.",
+            ), 409
+
+        tipo_precedente = str(
+            annuncio["tipo_annuncio"] or ""
+        ).strip().lower()
+        stato_precedente = str(annuncio["stato"] or "").strip().lower()
+        stato_destinazione = (
+            "approvato"
+            if tipo_annuncio != tipo_precedente
+            and stato_precedente == "archiviato_disponibilita"
+            else annuncio["stato"]
+        )
+
+        if tipo_annuncio == "offro" and tipo_precedente != "offro":
+            cur.execute(sql("""
+                SELECT 1
+                FROM annunci
+                WHERE utente_id = ?
+                  AND id <> ?
+                  AND categoria = ?
+                  AND tipo_annuncio = 'offro'
+                  AND stato IN ('in_attesa', 'approvato')
+                LIMIT 1
+            """), (
+                int(annuncio["utente_id"]),
+                int(id),
+                annuncio["categoria"],
+            ))
+            if cur.fetchone():
+                return jsonify(
+                    ok=False,
+                    error=(
+                        "Esiste già un'offerta per questa categoria. "
+                        "Modifica quella esistente."
+                    ),
+                ), 409
 
         cur.execute(sql("""
             UPDATE annunci
             SET tipo_annuncio = ?,
+                stato = ?,
                 disponibilita_cercata_json = CASE
                     WHEN tipo_annuncio = 'cerco' AND ? = 'cerco'
                     THEN disponibilita_cercata_json
                     ELSE NULL
                 END
             WHERE id = ?
-        """), (tipo_annuncio, tipo_annuncio, id))
+        """), (
+            tipo_annuncio,
+            stato_destinazione,
+            tipo_annuncio,
+            id,
+        ))
+
+        if tipo_annuncio != tipo_precedente:
+            if tipo_precedente == "offro":
+                _rimuovi_disponibilita_collegata_annuncio(
+                    cur,
+                    int(annuncio["utente_id"]),
+                    int(id),
+                    annuncio["categoria"],
+                )
+            if tipo_annuncio == "offro":
+                _imposta_disponibilita_default_annuncio_offro(
+                    cur,
+                    int(annuncio["utente_id"]),
+                    int(id),
+                    annuncio["categoria"],
+                    stato_annuncio=stato_destinazione,
+                )
         conn.commit()
     except Exception:
         conn.rollback()
@@ -16851,12 +16920,31 @@ def rifiuta_annuncio(id):
     conn = get_db_connection()
     c = get_cursor(conn)
 
+    c.execute(sql("""
+        SELECT id, utente_id, categoria, tipo_annuncio
+        FROM annunci
+        WHERE id = ?
+        LIMIT 1
+    """), (id,))
+    annuncio = c.fetchone()
+
     # 1️⃣ Update stato
     c.execute(sql("""
         UPDATE annunci
         SET stato = 'rifiutato'
         WHERE id = ?
     """), (id,))
+
+    if (
+        annuncio
+        and str(annuncio["tipo_annuncio"] or "").strip().lower() == "offro"
+    ):
+        _rimuovi_disponibilita_collegata_annuncio(
+            c,
+            int(annuncio["utente_id"]),
+            int(id),
+            annuncio["categoria"],
+        )
 
     # 2️⃣ Recupero utente DOPO update (come approva)
     c.execute(sql("SELECT utente_id FROM annunci WHERE id = ?"), (id,))
@@ -17844,6 +17932,28 @@ def modifica_annuncio(id):
         tipo_cambiato = tipo_annuncio != tipo_precedente
         categoria_cambiata = categoria != categoria_precedente
 
+        if (
+            tipo_annuncio == "offro"
+            and (tipo_cambiato or categoria_cambiata)
+        ):
+            c.execute(sql("""
+                SELECT 1
+                FROM annunci
+                WHERE utente_id = ?
+                  AND id <> ?
+                  AND categoria = ?
+                  AND tipo_annuncio = 'offro'
+                  AND stato IN ('in_attesa', 'approvato')
+                LIMIT 1
+            """), (int(g.utente["id"]), int(id), categoria))
+            if c.fetchone():
+                flash(
+                    "Hai già un'offerta per questa categoria. "
+                    "Modifica quella esistente.",
+                    "warning",
+                )
+                return redirect(url_for("modifica_annuncio", id=id))
+
         # Senza JavaScript il campo azione resta ``keep``. Non copiamo mai
         # una vecchia agenda su un'altra categoria o tra ``cerco`` e
         # ``offro``: il significato dei medesimi giorni sarebbe diverso.
@@ -17858,23 +17968,28 @@ def modifica_annuncio(id):
         disponibilita_annuncio_input = None
         disponibilita_annuncio_stato = "disponibile"
         if disponibilita_azione == "update":
-            try:
-                disponibilita_annuncio_input = (
-                    listing_availability_from_form(request.form)
-                )
-                if tipo_annuncio == "offro":
-                    disponibilita_annuncio_stato = (
-                        listing_offer_status_from_form(request.form)
+            inizializzazione_offro_nuova = (
+                tipo_annuncio == "offro"
+                and (tipo_cambiato or categoria_cambiata)
+            )
+            if not inizializzazione_offro_nuova:
+                try:
+                    disponibilita_annuncio_input = (
+                        listing_availability_from_form(request.form)
                     )
-            except ValueError as errore_disponibilita:
-                flash(str(errore_disponibilita), "warning")
-                return redirect(url_for("modifica_annuncio", id=id))
+                    if tipo_annuncio == "offro":
+                        disponibilita_annuncio_stato = (
+                            listing_offer_status_from_form(request.form)
+                        )
+                except ValueError as errore_disponibilita:
+                    flash(str(errore_disponibilita), "warning")
+                    return redirect(url_for("modifica_annuncio", id=id))
 
-            if (
-                tipo_annuncio == "cerco"
-                and disponibilita_annuncio_input is None
-            ):
-                disponibilita_azione = "clear"
+                if (
+                    tipo_annuncio == "cerco"
+                    and disponibilita_annuncio_input is None
+                ):
+                    disponibilita_azione = "clear"
 
         # La disponibilita cercata vive direttamente sull'annuncio. Per un
         # salvataggio ``keep`` conserviamo il JSON esistente senza riscriverlo.
@@ -17913,7 +18028,18 @@ def modifica_annuncio(id):
                     categoria,
                 )
             )
-            if disponibilita_azione == "update":
+            if tipo_cambiato or categoria_cambiata:
+                # Una nuova combinazione OFFRO parte sempre disponibile da
+                # questo salvataggio, senza recuperare per errore un'agenda
+                # appartenuta a un precedente CERCO o a un'altra categoria.
+                disponibilita_offerta = normalize_disponibilita_payload(
+                    request_to_service_availability(
+                        {"a_chiamata": False, "giorni": []},
+                        stato="disponibile",
+                    )
+                )
+                disponibilita_azione = "update"
+            elif disponibilita_azione == "update":
                 disponibilita_offerta = normalize_disponibilita_payload(
                     request_to_service_availability(
                         disponibilita_annuncio_input or {
@@ -18204,6 +18330,20 @@ def modifica_annuncio(id):
             ))
 
             if (
+                tipo_precedente == "offro"
+                and (
+                    tipo_annuncio != "offro"
+                    or categoria_cambiata
+                )
+            ):
+                _rimuovi_disponibilita_collegata_annuncio(
+                    c,
+                    int(g.utente["id"]),
+                    int(id),
+                    categoria_precedente,
+                )
+
+            if (
                 tipo_annuncio == "offro"
                 and disponibilita_azione in {"update", "clear"}
             ):
@@ -18227,7 +18367,9 @@ def modifica_annuncio(id):
                         categoria,
                         disponibilita_offerta,
                         versione_disponibilita,
-                        preserve_calendar_exceptions=True,
+                        preserve_calendar_exceptions=not (
+                            tipo_cambiato or categoria_cambiata
+                        ),
                     )
                     _reset_ciclo_disponibilita_annunci(
                         c,
@@ -19831,14 +19973,36 @@ def _approva_annuncio_con_disponibilita(cur, annuncio_id):
         int(annuncio_id),
     ))
 
-    if archived:
-        _reset_ciclo_disponibilita_annunci(
+    if str(listing.get("tipo_annuncio") or "").lower() == "offro":
+        categoria_slug = to_slug(listing.get("categoria"))
+        profile = _profilo_disponibilita_effettivo_annuncio(
             cur,
             int(listing["utente_id"]),
-            categoria_slug=to_slug(listing.get("categoria")),
-            stato_disponibilita="non_disponibile",
-            annuncio_id=int(annuncio_id),
+            categoria_slug,
         )
+        if not archived and profile is None:
+            # Copre anche annunci legacy o conversioni amministrative
+            # precedenti al nuovo vincolo: l'approvazione e il momento in cui
+            # l'offerta diventa pubblica e da cui deve partire il ciclo.
+            _imposta_disponibilita_default_annuncio_offro(
+                cur,
+                int(listing["utente_id"]),
+                int(annuncio_id),
+                categoria_slug,
+                stato_annuncio=nuovo_stato,
+            )
+        else:
+            _reset_ciclo_disponibilita_annunci(
+                cur,
+                int(listing["utente_id"]),
+                categoria_slug=categoria_slug,
+                stato_disponibilita=(
+                    "non_disponibile"
+                    if archived
+                    else str(profile.get("stato_generale") or "disponibile")
+                ),
+                annuncio_id=int(annuncio_id),
+            )
 
     listing["stato"] = nuovo_stato
     listing["archiviato_per_disponibilita"] = archived
@@ -22017,6 +22181,118 @@ def _elimina_disponibilita_categoria(
         WHERE id = ? AND utente_id = ?
     """), (profile_id, int(user_id)))
     return True
+
+
+def _rimuovi_disponibilita_collegata_annuncio(
+    cur,
+    user_id,
+    annuncio_id,
+    categoria_slug,
+):
+    """Rimuove ciclo e disponibilita rimasti senza un annuncio OFFRO.
+
+    La disponibilita per categoria e condivisa dagli eventuali annunci OFFRO
+    dello stesso utente. Per questo il profilo viene eliminato soltanto se,
+    escluso l'annuncio che stiamo trasformando o cancellando, non resta alcuna
+    offerta utilizzabile per quella categoria. Il ciclo, invece, appartiene
+    sempre al singolo annuncio e va rimosso in ogni caso.
+    """
+
+    user_id = int(user_id)
+    annuncio_id = int(annuncio_id)
+    categoria_slug = to_slug(categoria_slug)
+
+    if _annunci_disponibilita_ciclo_tables_exist(cur):
+        # Gli eventi puntano direttamente all'annuncio, non alla riga ciclo.
+        cur.execute(sql("""
+            DELETE FROM annunci_disponibilita_eventi
+            WHERE annuncio_id = ?
+        """), (annuncio_id,))
+        cur.execute(sql("""
+            DELETE FROM annunci_disponibilita_ciclo
+            WHERE annuncio_id = ?
+        """), (annuncio_id,))
+
+    cur.execute(sql("""
+        SELECT 1
+        FROM annunci
+        WHERE utente_id = ?
+          AND id <> ?
+          AND categoria = ?
+          AND tipo_annuncio = 'offro'
+          AND stato IN (
+              'in_attesa', 'approvato',
+              'archiviato_disponibilita', 'disattivato'
+          )
+        LIMIT 1
+    """), (user_id, annuncio_id, categoria_slug))
+    if cur.fetchone():
+        return False
+
+    _annulla_promemoria_disponibilita_pendenti(
+        cur,
+        user_id,
+        categoria_slug=categoria_slug,
+    )
+    if _disponibilita_categoria_table_exists(cur):
+        _elimina_disponibilita_categoria(
+            cur,
+            user_id,
+            categoria_slug,
+        )
+    return True
+
+
+def _imposta_disponibilita_default_annuncio_offro(
+    cur,
+    user_id,
+    annuncio_id,
+    categoria_slug,
+    *,
+    stato_annuncio,
+):
+    """Inizializza una nuova OFFRO come disponibile da questo momento."""
+
+    if not _disponibilita_categoria_table_exists(cur):
+        raise RuntimeError("category_tables_missing")
+
+    user_id = int(user_id)
+    annuncio_id = int(annuncio_id)
+    categoria_slug = to_slug(categoria_slug)
+    cur.execute(sql("""
+        SELECT versione
+        FROM disponibilita_profili_categoria
+        WHERE utente_id = ? AND categoria_slug = ?
+        LIMIT 1
+    """), (user_id, categoria_slug))
+    current = cur.fetchone()
+    version = int(current["versione"] or 1) if current else 0
+    default_availability = normalize_disponibilita_payload(
+        request_to_service_availability(
+            {"a_chiamata": False, "giorni": []},
+            stato="disponibile",
+        )
+    )
+    # Una conversione CERCO -> OFFRO e una nuova dichiarazione: eventuali
+    # dettagli rimasti da vecchi dati non devono ricomparire automaticamente.
+    _salva_disponibilita_categoria(
+        cur,
+        user_id,
+        categoria_slug,
+        default_availability,
+        version,
+        preserve_calendar_exceptions=False,
+    )
+
+    if str(stato_annuncio or "").strip().lower() == "approvato":
+        _reset_ciclo_disponibilita_annunci(
+            cur,
+            user_id,
+            categoria_slug=categoria_slug,
+            stato_disponibilita="disponibile",
+            annuncio_id=annuncio_id,
+        )
+    return default_availability
 
 
 def _elimina_tutte_disponibilita_utente(cur, user_id):
@@ -26626,7 +26902,8 @@ def elimina_annuncio(id):
             UPDATE annunci
             SET stato = ?,
                 media = ?,
-                foto_card = ?
+                foto_card = ?,
+                disponibilita_cercata_json = NULL
             WHERE id = ?
               AND utente_id = ?
         """),
@@ -26638,6 +26915,14 @@ def elimina_annuncio(id):
             g.utente["id"],
         )
     )
+
+    if str(annuncio["tipo_annuncio"] or "").strip().lower() == "offro":
+        _rimuovi_disponibilita_collegata_annuncio(
+            cur,
+            int(g.utente["id"]),
+            int(id),
+            annuncio["categoria"],
+        )
 
     # Gli interessi restano nello storico ma diventano inattivi insieme
     # all'annuncio. Non viene generata alcuna notifica di annullamento.
@@ -26692,7 +26977,8 @@ def elimina_annuncio_api(id):
 
     try:
         cur.execute(sql("""
-            SELECT id, utente_id, titolo, stato, media, foto_card
+            SELECT id, utente_id, titolo, categoria, tipo_annuncio,
+                   stato, media, foto_card
             FROM annunci
             WHERE id = ?
             LIMIT 1
@@ -26727,7 +27013,8 @@ def elimina_annuncio_api(id):
 
         cur.execute(sql("""
             UPDATE annunci
-            SET stato = ?, media = ?, foto_card = ?
+            SET stato = ?, media = ?, foto_card = ?,
+                disponibilita_cercata_json = NULL
             WHERE id = ?
               AND utente_id = ?
               AND stato = 'approvato'
@@ -26738,6 +27025,14 @@ def elimina_annuncio_api(id):
                 "ok": False,
                 "message": "L'annuncio e cambiato. Aggiorna la pagina e riprova.",
             }), 409
+
+        if str(annuncio["tipo_annuncio"] or "").strip().lower() == "offro":
+            _rimuovi_disponibilita_collegata_annuncio(
+                cur,
+                user_id,
+                int(id),
+                annuncio["categoria"],
+            )
 
         cur.execute(sql(f"""
             UPDATE interessi_annunci

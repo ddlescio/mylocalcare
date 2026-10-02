@@ -366,6 +366,15 @@ class ApprovazioneAnnuncioDisponibilitaTest(unittest.TestCase):
         self.assertEqual(tuple(listing), ("approvato", listing[1], 1))
         self.assertIsNotNone(listing["approvato_il"])
         self.assertFalse(result["archiviato_per_disponibilita"])
+        cycle = self.conn.execute("""
+            SELECT stato, ciclo_iniziato_at, confermata_at_snapshot
+            FROM annunci_disponibilita_ciclo
+            WHERE annuncio_id = 2
+        """).fetchone()
+        self.assertIsNotNone(cycle)
+        self.assertEqual(cycle["stato"], "attivo")
+        self.assertIsNotNone(cycle["ciclo_iniziato_at"])
+        self.assertIsNotNone(cycle["confermata_at_snapshot"])
 
     def test_entrambi_i_percorsi_admin_usano_lo_stesso_helper(self):
         toggle_start = APP_SOURCE.index("def toggle_annuncio(id):")
