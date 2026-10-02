@@ -34,7 +34,145 @@
   {% endif %}
 {%- endmacro %}
 
-{% macro availability_badge(disponibilita, extra_class='') -%}
+{% macro compact_availability_schedule(disponibilita, always=false, group_by_day=false) -%}
+  {% set mostra = disponibilita and (
+    always
+    or disponibilita.get('settimanale', [])
+    or disponibilita.get('settimanale_intervalli', [])
+  ) %}
+  {% if mostra %}
+    {% set giorni = [
+      tr('availability.day_monday'), tr('availability.day_tuesday'),
+      tr('availability.day_wednesday'), tr('availability.day_thursday'),
+      tr('availability.day_friday'), tr('availability.day_saturday'),
+      tr('availability.day_sunday')
+    ] %}
+    {% set giorni_brevi = [
+      tr('availability.day_monday_short'),
+      tr('availability.day_tuesday_short'),
+      tr('availability.day_wednesday_short'),
+      tr('availability.day_thursday_short'),
+      tr('availability.day_friday_short'),
+      tr('availability.day_saturday_short'),
+      tr('availability.day_sunday_short')
+    ] %}
+    {% set fasce = [
+      ('mattina', tr('availability.slot_morning')),
+      ('pomeriggio', tr('availability.slot_afternoon')),
+      ('sera', tr('availability.slot_evening')),
+      ('notte', tr('availability.slot_night'))
+    ] %}
+    {% set riepilogo = namespace(fasce=[], intervalli=[]) %}
+    {% for elemento in disponibilita.get('settimanale', []) %}
+      {% if elemento.get('fascia') and elemento.get('fascia') not in riepilogo.fasce %}
+        {% set _ = riepilogo.fasce.append(elemento.get('fascia')) %}
+      {% endif %}
+    {% endfor %}
+    {% for intervallo in disponibilita.get('settimanale_intervalli', []) %}
+      {% set orario = intervallo.get('ora_inizio') ~ '–' ~ intervallo.get('ora_fine') ~ (' (+1)' if intervallo.get('giorno_successivo') else '') %}
+      {% if orario not in riepilogo.intervalli %}
+        {% set _ = riepilogo.intervalli.append(orario) %}
+      {% endif %}
+    {% endfor %}
+    {% set gruppi_giorni = namespace(chiavi=[], giorni={}, valori={}) %}
+    {% if group_by_day %}
+      {% for giorno in range(1, 8) %}
+        {% set dettagli_giorno = namespace(valori=[]) %}
+        {% for intervallo in disponibilita.get('settimanale_intervalli', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+          {% set orario = '🕒 ' ~ intervallo.get('ora_inizio') ~ '–' ~ intervallo.get('ora_fine') ~ (' (+1)' if intervallo.get('giorno_successivo') else '') %}
+          {% if orario not in dettagli_giorno.valori %}
+            {% set _ = dettagli_giorno.valori.append(orario) %}
+          {% endif %}
+        {% endfor %}
+        {% for fascia in fasce %}
+          {% set fascia_presente = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|selectattr('fascia', 'equalto', fascia[0])|list %}
+          {% if fascia_presente and fascia[1] not in dettagli_giorno.valori %}
+            {% set _ = dettagli_giorno.valori.append(fascia[1]) %}
+          {% endif %}
+        {% endfor %}
+        {% if dettagli_giorno.valori %}
+          {% set chiave = dettagli_giorno.valori|join('¦') %}
+          {% if chiave not in gruppi_giorni.chiavi %}
+            {% set _ = gruppi_giorni.chiavi.append(chiave) %}
+            {% set _ = gruppi_giorni.giorni.update({chiave: [giorno]}) %}
+            {% set _ = gruppi_giorni.valori.update({chiave: dettagli_giorno.valori}) %}
+          {% else %}
+            {% set _ = gruppi_giorni.giorni[chiave].append(giorno) %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    <span class="sought-availability-compact"
+          aria-label="{{ tr('search.availability_days_title') }}">
+      <span class="sought-availability-compact__week"
+            role="list">
+      {% for giorno in range(1, 8) %}
+        {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+        {% set intervalli_giorno = disponibilita.get('settimanale_intervalli', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
+        {% set selezionato = fasce_giorno or intervalli_giorno %}
+          <span class="sought-availability-compact__day{{ ' is-selected' if selezionato else '' }}"
+                role="listitem"
+                data-sought-availability-day="{{ giorno }}"
+                data-selected="{{ 'true' if selezionato else 'false' }}"
+                title="{{ giorni[giorno - 1] }}"
+                aria-label="{{ giorni[giorno - 1] }}{{ ': ✓' if selezionato else '' }}">
+            <span aria-hidden="true">{{ giorni[giorno - 1][:1]|upper }}</span>
+          </span>
+      {% endfor %}
+      </span>
+
+      {% if group_by_day and gruppi_giorni.chiavi %}
+        <span class="sought-availability-compact__day-groups">
+          {% for chiave in gruppi_giorni.chiavi %}
+            <span class="sought-availability-compact__day-group"
+                  data-availability-detail-days="{{ gruppi_giorni.giorni[chiave]|join(',') }}">
+              {% if gruppi_giorni.chiavi|length > 1 %}
+                <span class="sought-availability-compact__group-days">
+                  {% for giorno in gruppi_giorni.giorni[chiave] %}
+                    <span class="sought-availability-compact__group-day"
+                          title="{{ giorni[giorno - 1] }}"
+                          aria-label="{{ giorni[giorno - 1] }}">{{ giorni_brevi[giorno - 1] }}</span>
+                  {% endfor %}
+                </span>
+              {% endif %}
+              <span class="sought-availability-compact__group-values">
+                {% for valore in gruppi_giorni.valori[chiave] %}
+                  <span>{{ valore }}</span>
+                {% endfor %}
+              </span>
+            </span>
+          {% endfor %}
+          {% if disponibilita.get('a_chiamata', false) %}
+            <span class="sought-availability-compact__on-call"
+                  data-sought-availability-group="on-call">
+              {{ tr('availability.on_call_label') }}
+            </span>
+          {% endif %}
+        </span>
+      {% elif riepilogo.intervalli or riepilogo.fasce or disponibilita.get('a_chiamata', false) %}
+        <span class="sought-availability-compact__details">
+          {% for orario in riepilogo.intervalli %}
+            <span class="sought-availability-compact__time">🕒 {{ orario }}</span>
+          {% endfor %}
+          {% for fascia in fasce %}
+            {% if fascia[0] in riepilogo.fasce %}
+              <span class="sought-availability-compact__slot">{{ fascia[1] }}</span>
+            {% endif %}
+          {% endfor %}
+          {% if disponibilita.get('a_chiamata', false) %}
+            <span class="sought-availability-compact__on-call"
+                  data-sought-availability-group="on-call">
+              {{ tr('availability.on_call_label') }}
+            </span>
+          {% endif %}
+        </span>
+      {% endif %}
+    </span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro availability_badge(disponibilita, extra_class='', show_schedule=false) -%}
   {% set configurata = disponibilita and disponibilita.get('configurata', true) %}
   {% set freschezza = disponibilita.get('freschezza', {}) if configurata else {} %}
   {% set data_conferma = (disponibilita.get('confermata_at') or freschezza.get('confermata_il')) if configurata else none %}
@@ -45,30 +183,38 @@
   {% set non_disponibile_volontaria = configurata and stato == 'non_disponibile' and not non_disponibile_per_scadenza %}
   {% set scaduta = (stato != 'non_disponibile') and (not mai_confermata) and (not non_disponibile_per_scadenza) and (freschezza.get('riconferma_richiesta', false) or codice_freschezza in ['da_riconfermare', 'priorita_ridotta', 'esclusa_filtro']) %}
   {% set badge_class = 'is-unavailable' if non_disponibile_per_scadenza or non_disponibile_volontaria else ('is-never-confirmed' if mai_confermata else ('is-expired' if scaduta else ('is-limited' if stato == 'limitata' else 'is-available'))) %}
-  <span class="availability-card-badge {{ badge_class }} {{ extra_class }}">
-    <span aria-hidden="true">
-      {% if non_disponibile_per_scadenza or non_disponibile_volontaria %}–{% elif mai_confermata %}◷{% elif scaduta %}↻{% elif stato == 'limitata' %}◐{% else %}✓{% endif %}
-    </span>
-    <span>
-      {% if non_disponibile_per_scadenza %}
-        {{ tr('availability.card_unavailable_reconfirmation') }}
-      {% elif non_disponibile_volontaria %}
-        {% if data_conferma %}
-          {{ tr('availability.card_unavailable_on', date=(data_conferma|fmt_day_month)) }}
+  {% set mostra_orari = show_schedule and configurata and stato != 'non_disponibile' and not non_disponibile_per_scadenza and (disponibilita.get('settimanale', []) or disponibilita.get('settimanale_intervalli', [])) %}
+  {% if mostra_orari %}
+    <span class="availability-card-summary sought-availability-card offered-availability-card">
+  {% endif %}
+    <span class="availability-card-badge {{ badge_class }} {{ extra_class }}">
+      <span aria-hidden="true">
+        {% if non_disponibile_per_scadenza or non_disponibile_volontaria %}–{% elif mai_confermata %}◷{% elif scaduta %}↻{% elif stato == 'limitata' %}◐{% else %}✓{% endif %}
+      </span>
+      <span>
+        {% if non_disponibile_per_scadenza %}
+          {{ tr('availability.card_unavailable_reconfirmation') }}
+        {% elif non_disponibile_volontaria %}
+          {% if data_conferma %}
+            {{ tr('availability.card_unavailable_on', date=(data_conferma|fmt_day_month)) }}
+          {% else %}
+            {{ tr('availability.status_unavailable') }}
+          {% endif %}
+        {% elif mai_confermata %}
+          {{ tr('availability.card_never_confirmed') }}
+        {% elif scaduta %}
+          {{ tr('availability.card_expired') }}
+        {% elif stato == 'limitata' %}
+          {{ tr('availability.card_limited_on', date=(data_conferma|fmt_day_month)) }}
         {% else %}
-          {{ tr('availability.status_unavailable') }}
+          {{ tr('availability.card_available_on', date=(data_conferma|fmt_day_month)) }}
         {% endif %}
-      {% elif mai_confermata %}
-        {{ tr('availability.card_never_confirmed') }}
-      {% elif scaduta %}
-        {{ tr('availability.card_expired') }}
-      {% elif stato == 'limitata' %}
-        {{ tr('availability.card_limited_on', date=(data_conferma|fmt_day_month)) }}
-      {% else %}
-        {{ tr('availability.card_available_on', date=(data_conferma|fmt_day_month)) }}
-      {% endif %}
+      </span>
     </span>
-  </span>
+  {% if mostra_orari %}
+      {{ compact_availability_schedule(disponibilita, group_by_day=true) }}
+    </span>
+  {% endif %}
 {%- endmacro %}
 
 {% macro availability_details(disponibilita, private=false, compact=false) -%}
@@ -224,10 +370,9 @@
 {% macro availability_intro(profili, pubblico=false, feature_available=true, utente_offre_servizi=true) -%}
   {% set profili = profili|default([], true) %}
   {#
-    In pubblico il riepilogo accompagna sempre chi offre servizi, anche se la
-    disponibilita deve ancora essere confermata. In privato manteniamo invece
-    accessibili anche vecchie configurazioni rimaste dopo la rimozione degli
-    ultimi servizi, cosi l'utente puo modificarle o eliminarle.
+    Il riepilogo accompagna soltanto chi ha ancora un servizio OFFRO reale;
+    eventuali configurazioni storiche senza annunci vengono ignorate e
+    bonificate dal backend.
   #}
   {% set mostra_disponibilita = utente_offre_servizi or ((not pubblico) and profili) %}
   {% if feature_available and mostra_disponibilita %}
@@ -322,80 +467,12 @@
 
 {% macro sought_availability_badge(disponibilita, extra_class='') -%}
   {% if disponibilita %}
-    {% set giorni_brevi = [
-      tr('availability.day_monday_short'), tr('availability.day_tuesday_short'),
-      tr('availability.day_wednesday_short'), tr('availability.day_thursday_short'),
-      tr('availability.day_friday_short'), tr('availability.day_saturday_short'),
-      tr('availability.day_sunday_short')
-    ] %}
-    {% set fasce = [
-      ('mattina', tr('availability.slot_morning')),
-      ('pomeriggio', tr('availability.slot_afternoon')),
-      ('sera', tr('availability.slot_evening')),
-      ('notte', tr('availability.slot_night'))
-    ] %}
-    {% set giorni_selezionati = namespace(totale=0, mostrati=0) %}
-    {% for giorno in range(1, 8) %}
-      {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
-      {% set intervalli_giorno = disponibilita.get('settimanale_intervalli', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
-      {% if fasce_giorno or intervalli_giorno %}
-        {% set giorni_selezionati.totale = giorni_selezionati.totale + 1 %}
-      {% endif %}
-    {% endfor %}
-    {% set limite_giorni = 2 if disponibilita.get('a_chiamata', false) else 3 %}
     <span class="sought-availability-card {{ extra_class }}">
       <span class="availability-card-badge is-limited sought-availability-badge">
         <span aria-hidden="true">🗓️</span>
         <span>{{ tr('listing.sought_availability_badge') }}</span>
       </span>
-
-      <span class="sought-availability-compact">
-        {% if disponibilita.get('a_chiamata', false) %}
-          <span class="sought-availability-compact__item sought-availability-compact__on-call"
-                data-sought-availability-group="on-call">
-            {{ tr('availability.on_call_label') }}
-          </span>
-        {% endif %}
-
-        {% for giorno in range(1, 8) %}
-          {% set fasce_giorno = disponibilita.get('settimanale', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
-          {% set intervalli_giorno = disponibilita.get('settimanale_intervalli', [])|selectattr('giorno_settimana', 'equalto', giorno)|list %}
-          {% if (fasce_giorno or intervalli_giorno) and giorni_selezionati.mostrati < limite_giorni %}
-            {% set dettagli_giorno = namespace(valori=[]) %}
-            {% for intervallo in intervalli_giorno %}
-              {% set orario = intervallo.get('ora_inizio') ~ '–' ~ intervallo.get('ora_fine') ~ (' (+1)' if intervallo.get('giorno_successivo') else '') %}
-              {% if orario not in dettagli_giorno.valori %}
-                {% set _ = dettagli_giorno.valori.append(orario) %}
-              {% endif %}
-            {% endfor %}
-            {% for fascia in fasce %}
-              {% set fascia_presente = fasce_giorno|selectattr('fascia', 'equalto', fascia[0])|list %}
-              {% if fascia_presente and fascia[1] not in dettagli_giorno.valori %}
-                {% set _ = dettagli_giorno.valori.append(fascia[1]) %}
-              {% endif %}
-            {% endfor %}
-            <span class="sought-availability-compact__item sought-availability-compact__day"
-                  data-sought-availability-group="day"
-                  data-day="{{ giorno }}">
-              <strong>{{ giorni_brevi[giorno - 1] }}</strong>
-              {% for dettaglio in dettagli_giorno.valori[:3] %}
-                {% if not loop.first %}, {% endif %}{{ dettaglio }}
-              {% endfor %}
-              {% if dettagli_giorno.valori|length > 3 %}
-                <span class="sought-availability-compact__more sought-availability-compact__more-details">+{{ (dettagli_giorno.valori|length) - 3 }}</span>
-              {% endif %}
-            </span>
-            {% set giorni_selezionati.mostrati = giorni_selezionati.mostrati + 1 %}
-          {% endif %}
-        {% endfor %}
-
-        {% if giorni_selezionati.totale > giorni_selezionati.mostrati %}
-          <span class="sought-availability-compact__more sought-availability-compact__more-groups"
-                aria-label="+{{ giorni_selezionati.totale - giorni_selezionati.mostrati }}">
-            +{{ giorni_selezionati.totale - giorni_selezionati.mostrati }}
-          </span>
-        {% endif %}
-      </span>
+      {{ compact_availability_schedule(disponibilita, always=true, group_by_day=true) }}
     </span>
   {% endif %}
 {%- endmacro %}

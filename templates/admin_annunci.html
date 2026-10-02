@@ -1329,15 +1329,19 @@
 
                       {% else %}
                         {% if a.stato == 'approvato' %}
-                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
-                             class="text-yellow-600 hover:underline">
+                          <button type="button"
+                             class="text-yellow-600 hover:underline js-annuncio-toggle"
+                             data-azione-annuncio="toggle"
+                             data-url="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}">
                             Disattiva
-                          </a>
+                          </button>
                         {% else %}
-                          <a href="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}"
-                             class="text-green-600 hover:underline">
+                          <button type="button"
+                             class="text-green-600 hover:underline js-annuncio-toggle"
+                             data-azione-annuncio="toggle"
+                             data-url="{{ url_for('toggle_annuncio', id=a.id, next=request.full_path) }}">
                             Attiva
-                          </a>
+                          </button>
                         {% endif %}
                       {% endif %}
                     </td>
@@ -1618,9 +1622,13 @@
             Rifiuta
           </button>
 
-          <a id="modal-annuncio-toggle" href="#" class="annuncio-modal-action yellow">
+          <button type="button"
+                  id="modal-annuncio-toggle"
+                  class="annuncio-modal-action yellow js-annuncio-toggle"
+                  data-azione-annuncio="toggle"
+                  data-url="">
             Attiva/Disattiva
-          </a>
+          </button>
 
         </div>
         <div class="annuncio-modal-services">
@@ -1718,7 +1726,7 @@
     </div>
 
 <script>
-  window.CSRF_TOKEN = "{{ session['csrf_token'] }}";
+  window.CSRF_TOKEN = {{ csrf_token()|tojson }};
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -2408,13 +2416,15 @@ document.addEventListener("click", async (e) => {
       azioniCell.innerHTML = `
         <a href="${apriUrl}" class="text-blue-600 hover:underline">Apri</a>
         |
-        <a href="${toggleUrl}" class="text-yellow-600 hover:underline">Disattiva</a>
+        <button type="button" class="text-yellow-600 hover:underline js-annuncio-toggle"
+                data-azione-annuncio="toggle" data-url="${toggleUrl}">Disattiva</button>
       `;
     } else {
       azioniCell.innerHTML = `
         <a href="${apriUrl}" class="text-blue-600 hover:underline">Apri</a>
         |
-        <a href="${toggleUrl}" class="text-green-600 hover:underline">Attiva</a>
+        <button type="button" class="text-green-600 hover:underline js-annuncio-toggle"
+                data-azione-annuncio="toggle" data-url="${toggleUrl}">Attiva</button>
       `;
     }
   }
@@ -2461,9 +2471,9 @@ document.addEventListener("click", async (e) => {
           : "none";
     }
 
-    setHref("modal-annuncio-toggle", d.annuncioToggleUrl);
-
     if (toggleBtn) {
+      toggleBtn.dataset.url = d.annuncioToggleUrl || "";
+      toggleBtn.style.display = d.annuncioToggleUrl ? "inline-flex" : "none";
       if (d.annuncioStato === "approvato") {
         toggleBtn.textContent = "Disattiva";
       } else if (d.annuncioStato === "disattivato" || d.annuncioStato === "rifiutato") {
@@ -2746,7 +2756,8 @@ document.addEventListener("click", async (e) => {
       Calcoliamo il prossimo PRIMA di cambiare stato alla riga corrente.
       Questo evita che la riga appena gestita interferisca con la ricerca.
     */
-    const prossimo = trovaProssimoAnnuncioInAttesa(row);
+    const isToggle = azione === "toggle";
+    const prossimo = isToggle ? null : trovaProssimoAnnuncioInAttesa(row);
 
     console.log("📌 Prossimo calcolato prima dell’azione:", prossimo ? prossimo.dataset.annuncioId : null);
 
@@ -2768,26 +2779,51 @@ document.addEventListener("click", async (e) => {
 
     try {
       const res = await fetch(url, {
-        method: "GET",
+        method: isToggle ? "POST" : "GET",
         headers: {
-          "X-Requested-With": "XMLHttpRequest"
+          "Accept": isToggle ? "application/json" : "text/html",
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRF-Token": window.CSRF_TOKEN
         },
         redirect: "follow"
       });
 
-      if (!res.ok) {
-        alert("Errore durante l’aggiornamento dell’annuncio.");
-        return;
+      let nuovoStato;
+      if (isToggle) {
+        let data;
+        try {
+          data = await res.json();
+        } catch (err) {
+          throw new Error(
+            res.redirected
+              ? "Sessione scaduta. Ricarica la pagina e riprova."
+              : "Risposta non valida dal server. Ricarica la pagina e riprova."
+          );
+        }
+        if (!res.ok || !data.ok || !data.stato) {
+          throw new Error(
+            data.error || data.message || "Aggiornamento non completato."
+          );
+        }
+        nuovoStato = data.stato;
+      } else {
+        if (!res.ok) {
+          throw new Error("Errore durante l’aggiornamento dell’annuncio.");
+        }
+        nuovoStato = azione === "approva" ? "approvato" : "rifiutato";
       }
 
-      const nuovoStato = azione === "approva" ? "approvato" : "rifiutato";
-
       aggiornaRigaAnnuncioDopoAzione(row, nuovoStato);
-      vaiAlProssimoAnnuncioInAttesa(prossimo);
+      if (isToggle) {
+        setText("modal-annuncio-stato", nuovoStato);
+        aggiornaBottoniAzioneModale(row);
+      } else {
+        vaiAlProssimoAnnuncioInAttesa(prossimo);
+      }
 
     } catch (err) {
       console.error("Errore azione annuncio:", err);
-      alert("Errore di rete.");
+      alert(err.message || "Errore di rete.");
     } finally {
       azioneAnnuncioInCorso = false;
       tipoSelect.disabled = false;
@@ -2811,18 +2847,10 @@ document.addEventListener("click", async (e) => {
     });
   });
 
-  /*
-    Intercettiamo SOLO Approva/Rifiuta della modale.
-    Non tocchiamo:
-    - toggle-servizio
-    - toggle-pacchetto
-    - attiva/disattiva
-    - apri annuncio
-    - chat/email
-  */
+  /* Azioni di stato dell'annuncio; servizi e pacchetti restano separati. */
   document.addEventListener("click", (e) => {
     const actionBtn = e.target.closest(
-      "#modal-annuncio-approva, #modal-annuncio-rifiuta, .js-annuncio-azione"
+      "#modal-annuncio-approva, #modal-annuncio-rifiuta, .js-annuncio-azione, .js-annuncio-toggle"
     );
 
     if (!actionBtn) return;

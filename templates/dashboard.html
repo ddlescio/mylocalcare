@@ -708,7 +708,7 @@
 
                         {% if a.get('tipo_annuncio') == 'offro' %}
                           <div class="profile-annuncio-availability">
-                            {{ availability_badge(a.get('disponibilita_servizi')) }}
+                            {{ availability_badge(a.get('disponibilita_servizi'), show_schedule=true) }}
                           </div>
                         {% elif a.get('tipo_annuncio') == 'cerco' and a.get('disponibilita_cercata') %}
                           <div class="profile-annuncio-availability">

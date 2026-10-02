@@ -62,6 +62,8 @@ def load_backend_functions():
         "_annunci_disponibilita_ciclo_tables_exist",
         "_disponibilita_servizi_iso",
         "_disponibilita_servizi_time",
+        "_disponibilita_categoria_slug",
+        "_disponibilita_categoria_annuncio_sql",
         "_disponibilita_categoria_label",
         "_disponibilita_decode_slots",
         "_serializza_profilo_disponibilita",
@@ -552,6 +554,99 @@ class DisponibilitaBackendTest(unittest.TestCase):
         )
         self.assertNotIn("disponibilita_servizi", cards[2])
 
+    def test_card_offro_riceve_calendario_effettivo_con_query_batch(self):
+        general = availability_payload(
+            a_chiamata=True,
+            settimanale=[
+                {"giorno_settimana": 1, "fascia": "mattina"},
+                {"giorno_settimana": 5, "fascia": "sera"},
+            ],
+            settimanale_intervalli=[{
+                "giorno_settimana": 1,
+                "ora_inizio": "09:15",
+                "ora_fine": "12:30",
+                "giorno_successivo": False,
+            }],
+        )
+        category = availability_payload(
+            stato="limitata",
+            settimanale=[
+                {"giorno_settimana": 3, "fascia": "pomeriggio"},
+            ],
+            settimanale_intervalli=[{
+                "giorno_settimana": 3,
+                "ora_inizio": "14:00",
+                "ora_fine": "18:00",
+                "giorno_successivo": False,
+            }],
+        )
+        self.backend["_salva_disponibilita_generale"](
+            self.cursor,
+            7,
+            general,
+            0,
+        )
+        self.backend["_salva_disponibilita_categoria"](
+            self.cursor,
+            7,
+            "pet-sitter",
+            category,
+            0,
+        )
+        cards = [
+            {
+                "id": listing_id,
+                "utente_id": 7,
+                "tipo_annuncio": "offro",
+                "categoria": categoria,
+            }
+            for listing_id, categoria in (
+                (10, "babysitter"),
+                (11, "pet-sitter"),
+                (12, "babysitter"),
+            )
+        ]
+
+        statements = []
+        self.connection.set_trace_callback(statements.append)
+        try:
+            self.backend["assegna_disponibilita_annunci"](
+                self.cursor,
+                cards,
+            )
+        finally:
+            self.connection.set_trace_callback(None)
+
+        self.assertEqual(
+            cards[0]["disponibilita_servizi"]["settimanale"],
+            general["settimanale"],
+        )
+        self.assertEqual(
+            cards[0]["disponibilita_servizi"]["settimanale_intervalli"],
+            general["settimanale_intervalli"],
+        )
+        self.assertEqual(
+            cards[1]["disponibilita_servizi"]["settimanale"],
+            category["settimanale"],
+        )
+        self.assertEqual(
+            cards[1]["disponibilita_servizi"]["settimanale_intervalli"],
+            category["settimanale_intervalli"],
+        )
+        self.assertEqual(
+            cards[2]["disponibilita_servizi"]["settimanale"],
+            general["settimanale"],
+        )
+        schedule_selects = [
+            statement for statement in statements
+            if statement.lstrip().upper().startswith("SELECT")
+            and (
+                "FROM disponibilita_settimanale" in statement
+                or "FROM disponibilita_intervalli" in statement
+            )
+        ]
+        self.assertEqual(len(schedule_selects), 4)
+
     def test_scadenza_non_confonde_non_disponibilita_volontaria(self):
         self.cursor.executemany("""
             INSERT INTO disponibilita_profili (
@@ -561,6 +656,11 @@ class DisponibilitaBackendTest(unittest.TestCase):
             (70, "disponibile"),
             (71, "non_disponibile"),
         ])
+        self.cursor.executemany("""
+            INSERT INTO disponibilita_settimanale (
+                utente_id, giorno_settimana, fascia
+            ) VALUES (?, 1, 'mattina')
+        """, [(70,), (71,)])
         cards = [
             {
                 "id": 170,
@@ -582,8 +682,10 @@ class DisponibilitaBackendTest(unittest.TestCase):
         voluntary = cards[1]["disponibilita_servizi"]
         self.assertEqual(expired["stato"], "non_disponibile")
         self.assertTrue(expired["non_disponibile_per_scadenza"])
+        self.assertEqual(expired["settimanale"], [])
         self.assertEqual(voluntary["stato"], "non_disponibile")
         self.assertNotIn("non_disponibile_per_scadenza", voluntary)
+        self.assertEqual(voluntary["settimanale"], [])
 
     def test_non_disponibile_conserva_calendario_privato_ma_non_pubblico(self):
         self.cursor.execute("""
@@ -778,16 +880,31 @@ class DisponibilitaBackendTest(unittest.TestCase):
                 utente_id, stato_generale, versione
             ) VALUES (1, 'disponibile', 1)
         """)
-        validate(self.cursor, 1, None)
+        with self.assertRaisesRegex(ValueError, "offri almeno un servizio"):
+            validate(self.cursor, 1, None)
 
         self.cursor.execute("""
             INSERT INTO utenti (id, offro_4) VALUES (2, 1)
         """)
+        with self.assertRaisesRegex(ValueError, "offri almeno un servizio"):
+            validate(self.cursor, 2, None)
+        self.cursor.execute("""
+            INSERT INTO annunci (
+                id, utente_id, titolo, categoria, tipo_annuncio, stato
+            ) VALUES (20, 2, 'Offro babysitting', 'babysitter', 'offro', 'in_attesa')
+        """)
         validate(self.cursor, 2, None)
 
-    def test_pubblico_esclude_override_di_categoria_non_piu_offerta(self):
+    def test_privato_e_pubblico_escludono_override_senza_annuncio_offro(self):
         self.cursor.execute("""
             INSERT INTO utenti (id, offro_4) VALUES (7, 1)
+        """)
+        self.cursor.execute("""
+            INSERT INTO annunci (
+                id, utente_id, titolo, categoria, tipo_annuncio, stato
+            ) VALUES (
+                70, 7, 'Offro babysitting', 'babysitter', 'offro', 'approvato'
+            )
         """)
         self.cursor.executemany("""
             INSERT INTO disponibilita_profili_categoria (
@@ -801,12 +918,31 @@ class DisponibilitaBackendTest(unittest.TestCase):
 
         self.assertEqual(
             {item["categoria_slug"] for item in private},
-            {"babysitter", "pet-sitter"},
+            {"babysitter"},
         )
         self.assertEqual(
             {item["categoria_slug"] for item in public},
             {"babysitter"},
         )
+
+    def test_preferenze_offro_non_rendono_visibile_un_agenda_orfana(self):
+        self.cursor.execute("INSERT INTO utenti (id, offro_4) VALUES (7, 1)")
+        self.cursor.execute("""
+            INSERT INTO disponibilita_profili (
+                utente_id, stato_generale, confermata_at, versione
+            ) VALUES (7, 'disponibile', CURRENT_TIMESTAMP, 1)
+        """)
+        self.cursor.execute("""
+            INSERT INTO annunci (
+                id, utente_id, titolo, categoria, tipo_annuncio, stato
+            ) VALUES (
+                71, 7, 'Cerco babysitter', 'babysitter', 'cerco', 'approvato'
+            )
+        """)
+
+        list_profiles = self.backend["elenca_disponibilita_servizi"]
+        self.assertEqual(list_profiles(self.cursor, 7, pubblica=False), [])
+        self.assertEqual(list_profiles(self.cursor, 7, pubblica=True), [])
 
     def test_annunci_attivi_categoria_esclude_altri_utenti_e_stati(self):
         self.cursor.executemany("""
@@ -986,6 +1122,13 @@ class DisponibilitaBackendTest(unittest.TestCase):
     def test_risposta_rollout_senza_tabelle_categoria(self):
         self.cursor.execute("""
             INSERT INTO utenti (id, offro_4) VALUES (7, 1)
+        """)
+        self.cursor.execute("""
+            INSERT INTO annunci (
+                id, utente_id, titolo, categoria, tipo_annuncio, stato
+            ) VALUES (
+                90, 7, 'Offro babysitting', 'babysitter', 'offro', 'approvato'
+            )
         """)
         self.cursor.execute("DROP TABLE disponibilita_assenze_categoria")
         self.cursor.execute("DROP TABLE disponibilita_date_speciali_categoria")

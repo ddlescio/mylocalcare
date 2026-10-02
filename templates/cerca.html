@@ -2,6 +2,7 @@
 {% set body_class = "page-cerca" %}
 {% block head_extra %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/disponibilita-servizi-display.css') }}">
+  <script defer src="{{ url_for('static', filename='js/cerca-return-state.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -597,6 +598,8 @@
                  {% if a.get('has_urgente', 0) == 1 %}is-urgent{% endif %}
                  {% if a.get('affidabilita_top', 0) == 1 %}is-trusted{% endif %}"
           data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
+          data-annuncio-id="{{ a['id'] }}"
+          data-cerca-card-kind="vetrina-mobile"
           {% if cerca_admin_mode %}
             data-admin-details-url="{{ url_for(
                 'admin_annuncio_dettagli_rapidi',
@@ -655,7 +658,7 @@
 
             {% if a.get('tipo_annuncio') == 'offro' %}
               <div class="vetrina-availability-row">
-                {{ availability_badge(a.get('disponibilita_servizi')) }}
+                {{ availability_badge(a.get('disponibilita_servizi'), show_schedule=true) }}
               </div>
             {% elif a.get('tipo_annuncio') == 'cerco' and a.get('disponibilita_cercata') %}
               <div class="vetrina-availability-row">
@@ -741,6 +744,8 @@
                {% if a.get('has_urgente', 0) == 1 %}is-urgent{% endif %}
                {% if a.get('affidabilita_top', 0) == 1 %}is-trusted{% endif %}"
         data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
+        data-annuncio-id="{{ a['id'] }}"
+        data-cerca-card-kind="vetrina-desktop"
         {% if cerca_admin_mode %}
           data-admin-details-url="{{ url_for(
               'admin_annuncio_dettagli_rapidi',
@@ -799,7 +804,7 @@
 
           {% if a.get('tipo_annuncio') == 'offro' %}
             <div class="vetrina-availability-row">
-              {{ availability_badge(a.get('disponibilita_servizi')) }}
+              {{ availability_badge(a.get('disponibilita_servizi'), show_schedule=true) }}
             </div>
           {% elif a.get('tipo_annuncio') == 'cerco' and a.get('disponibilita_cercata') %}
             <div class="vetrina-availability-row">
@@ -906,6 +911,8 @@
                card-evidenza
              {% endif %}"
       data-url="{{ url_for('visualizza_annuncio_pubblico', id=a['id']) }}"
+      data-annuncio-id="{{ a['id'] }}"
+      data-cerca-card-kind="risultati"
       {% if cerca_admin_mode %}
         data-admin-details-url="{{ url_for(
             'admin_annuncio_dettagli_rapidi',
@@ -1018,7 +1025,7 @@
 
             {% if a.get('tipo_annuncio') == 'offro' %}
               <div class="card-availability-row">
-                {{ availability_badge(a.get('disponibilita_servizi')) }}
+                {{ availability_badge(a.get('disponibilita_servizi'), show_schedule=true) }}
               </div>
             {% elif a.get('tipo_annuncio') == 'cerco' and a.get('disponibilita_cercata') %}
               <div class="card-availability-row">

@@ -95,6 +95,13 @@ def load_request_backend():
         cursor.execute(query, params)
         return cursor.lastrowid
 
+    def disponibilita_categoria_slug(value):
+        slug = str(value or "").strip().lower()
+        return {
+            "petsitter": "pet-sitter",
+            "sport": "escursioni-sport",
+        }.get(slug, slug)
+
     namespace = {
         "app": SimpleNamespace(config={
             "IS_POSTGRES": False,
@@ -120,6 +127,7 @@ def load_request_backend():
         ),
         "CATEGORIE_SERVIZI": CATEGORIE_SERVIZI,
         "to_slug": lambda value: str(value or "").strip().lower(),
+        "_disponibilita_categoria_slug": disponibilita_categoria_slug,
         "calcola_freschezza_disponibilita": (
             calcola_freschezza_disponibilita
         ),

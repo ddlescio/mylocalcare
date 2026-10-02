@@ -5457,6 +5457,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const dashboardUrl = backBtn.dataset.dashboardUrl || "/dashboard";
 
   const storageKey = `lc_annuncio_back_url_${annuncioId}`;
+  const cercaPendingKey = "lc_cerca_pending_return_v1";
 
   function normalizzaUrl(url) {
     try {
@@ -5486,10 +5487,56 @@ document.addEventListener("DOMContentLoaded", () => {
     return true;
   }
 
+  function normalizzaPercorsoCompleto(url) {
+    const parsed = normalizzaUrl(url);
+    return parsed ? `${parsed.pathname}${parsed.search}` : "";
+  }
+
+  function pendingCercaCorrente() {
+    try {
+      const pending = JSON.parse(sessionStorage.getItem(cercaPendingKey) || "null");
+      if (!pending || String(pending.annuncioId || "") !== String(annuncioId)) {
+        return null;
+      }
+      if (Date.now() - Number(pending.savedAt || 0) > 30 * 60 * 1000) {
+        sessionStorage.removeItem(cercaPendingKey);
+        return null;
+      }
+      return pending;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function abilitaRitornoIstantaneoSePossibile() {
+    const pending = pendingCercaCorrente();
+    if (!pending || !pending.searchUrl) return;
+
+    const referrerPath = normalizzaPercorsoCompleto(document.referrer);
+    if (referrerPath !== pending.searchUrl) return;
+
+    backBtn.href = pending.searchUrl;
+    backBtn.addEventListener("click", (event) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      event.preventDefault();
+      window.history.back();
+    });
+  }
+
   // Se il backend ci passa una provenienza buona, la salvo
   if (serverBackUrl && isUrlValidaPerTornare(serverBackUrl)) {
     sessionStorage.setItem(storageKey, serverBackUrl);
     backBtn.href = serverBackUrl;
+    abilitaRitornoIstantaneoSePossibile();
     return;
   }
 
@@ -5498,6 +5545,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (savedBackUrl && isUrlValidaPerTornare(savedBackUrl)) {
     backBtn.href = savedBackUrl;
+    abilitaRitornoIstantaneoSePossibile();
     return;
   }
 

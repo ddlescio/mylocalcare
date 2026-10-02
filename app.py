@@ -526,6 +526,7 @@ CATEGORY_MAP = {
     "aiuto-in-casa": ("aiuto-in-casa", "Aiuto in Casa"),
 
     "escursioni-sport": ("escursioni-sport", "Sport"),
+    "sport": ("escursioni-sport", "Sport"),
     "biglietti-spettacoli": ("biglietti-spettacoli", "Biglietti Spettacoli"),
     "libri-scuola": ("libri-scuola", "Libri Scuola"),
     "caffe-parole": ("caffe-parole", "Caffè & Parole"),
@@ -6083,15 +6084,26 @@ def admin_visualizza_annuncio(id):
     return render_template("admin_visualizza_annuncio.html", annuncio=annuncio)
 
 
-@app.route("/admin/annunci/toggle/<int:id>")
+@app.route("/admin/annunci/toggle/<int:id>", methods=["POST"])
 @admin_required
 def toggle_annuncio(id):
+    verify_csrf()
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     conn = get_db_connection()
     c = get_cursor(conn)
-    c.execute(sql("SELECT stato FROM annunci WHERE id = ?"), (id,))
+    c.execute(sql("""
+        SELECT id, utente_id, categoria, tipo_annuncio, stato
+        FROM annunci
+        WHERE id = ?
+        LIMIT 1
+    """), (id,))
     row = c.fetchone()
     if not row:
-
+        if is_ajax:
+            return jsonify({
+                "ok": False,
+                "error": "Annuncio non trovato.",
+            }), 404
         flash("Annuncio non trovato.", "error")
         return redirect(url_for("admin_annunci"))
 
@@ -6101,13 +6113,27 @@ def toggle_annuncio(id):
             sql("UPDATE annunci SET stato = ? WHERE id = ?"),
             (nuovo_stato, id),
         )
+        if str(row["tipo_annuncio"] or "").strip().lower() == "offro":
+            _rimuovi_disponibilita_collegata_annuncio(
+                c,
+                int(row["utente_id"]),
+                int(id),
+                row["categoria"],
+            )
     else:
         approvazione = _approva_annuncio_con_disponibilita(c, id)
         nuovo_stato = approvazione["stato"]
     conn.commit()
 
+    messaggio = f"Annuncio {nuovo_stato}."
+    if is_ajax:
+        return jsonify({
+            "ok": True,
+            "stato": nuovo_stato,
+            "message": messaggio,
+        })
 
-    flash(f"Annuncio {nuovo_stato}.", "info")
+    flash(messaggio, "info")
     next_url = request.args.get("next")
     if next_url and next_url.startswith("/admin/annunci"):
         return redirect(next_url)
@@ -16798,19 +16824,22 @@ def admin_annuncio_tipo(id):
         )
 
         if tipo_annuncio == "offro" and tipo_precedente != "offro":
-            cur.execute(sql("""
+            categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+                "categoria"
+            )
+            cur.execute(sql(f"""
                 SELECT 1
                 FROM annunci
                 WHERE utente_id = ?
                   AND id <> ?
-                  AND categoria = ?
+                  AND ({categoria_annuncio_sql}) = ?
                   AND tipo_annuncio = 'offro'
                   AND stato IN ('in_attesa', 'approvato')
                 LIMIT 1
             """), (
                 int(annuncio["utente_id"]),
                 int(id),
-                annuncio["categoria"],
+                _disponibilita_categoria_slug(annuncio["categoria"]),
             ))
             if cur.fetchone():
                 return jsonify(
@@ -16846,7 +16875,14 @@ def admin_annuncio_tipo(id):
                     int(id),
                     annuncio["categoria"],
                 )
-            if tipo_annuncio == "offro":
+            if (
+                tipo_annuncio == "offro"
+                and str(stato_destinazione or "").strip().lower() in {
+                    "in_attesa",
+                    "approvato",
+                    "archiviato_disponibilita",
+                }
+            ):
                 _imposta_disponibilita_default_annuncio_offro(
                     cur,
                     int(annuncio["utente_id"]),
@@ -17830,7 +17866,7 @@ def modifica_annuncio(id):
         titolo = request.form.get("titolo", "").strip()
         descrizione = request.form.get("descrizione", "").strip()
         raw_categoria = request.form.get("categoria", "").strip()
-        categoria = to_slug(raw_categoria)
+        categoria = _disponibilita_categoria_slug(raw_categoria)
         tipo_annuncio = request.form.get("tipo_annuncio", "").strip().lower()
 
         # 🔹 MODALITÀ SERVIZIO + ZONA / PROVINCIA
@@ -17928,7 +17964,9 @@ def modifica_annuncio(id):
             return redirect(url_for("modifica_annuncio", id=id))
 
         tipo_precedente = str(annuncio["tipo_annuncio"] or "").lower()
-        categoria_precedente = to_slug(annuncio["categoria"] or "")
+        categoria_precedente = _disponibilita_categoria_slug(
+            annuncio["categoria"] or ""
+        )
         tipo_cambiato = tipo_annuncio != tipo_precedente
         categoria_cambiata = categoria != categoria_precedente
 
@@ -17936,12 +17974,15 @@ def modifica_annuncio(id):
             tipo_annuncio == "offro"
             and (tipo_cambiato or categoria_cambiata)
         ):
-            c.execute(sql("""
+            categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+                "categoria"
+            )
+            c.execute(sql(f"""
                 SELECT 1
                 FROM annunci
                 WHERE utente_id = ?
                   AND id <> ?
-                  AND categoria = ?
+                  AND ({categoria_annuncio_sql}) = ?
                   AND tipo_annuncio = 'offro'
                   AND stato IN ('in_attesa', 'approvato')
                 LIMIT 1
@@ -19413,8 +19454,67 @@ def _disponibilita_servizi_time(value):
     return str(value).strip()[:5]
 
 
+def _disponibilita_categoria_slug(value):
+    """Slug canonico, inclusi i valori salvati dalle vecchie interfacce."""
+
+    categoria_slug = to_slug(value)
+    mapping = CATEGORY_MAP.get(categoria_slug)
+    if mapping:
+        categoria_slug = mapping[0]
+    return {
+        # Prima dell'unificazione dello slug il select salvava ``petsitter``.
+        "petsitter": "pet-sitter",
+        # La label pubblica della vecchia ``escursioni-sport`` e oggi Sport.
+        "sport": "escursioni-sport",
+    }.get(categoria_slug, categoria_slug)
+
+
+def _disponibilita_categoria_annuncio_sql(column_sql):
+    """Categoria annuncio canonica in SQL per gli alias storici noti.
+
+    I confronti fra ``annunci.categoria`` e i profili disponibilita avvengono
+    sia in PostgreSQL sia nei test SQLite. Il CASE usa quindi soltanto
+    funzioni comuni ai due database e mantiene leggibile la query generata.
+    """
+
+    normalized = f"LOWER(TRIM({column_sql}))"
+    return f"""
+        CASE {normalized}
+          WHEN 'operatori benessere' THEN 'operatori-benessere'
+          WHEN 'aiuto in casa' THEN 'aiuto-in-casa'
+          WHEN 'sport' THEN 'escursioni-sport'
+          WHEN 'escursioni & sport' THEN 'escursioni-sport'
+          WHEN 'escursioni e sport' THEN 'escursioni-sport'
+          WHEN 'petsitter' THEN 'pet-sitter'
+          WHEN 'pet sitter' THEN 'pet-sitter'
+          WHEN 'biglietti spettacoli' THEN 'biglietti-spettacoli'
+          WHEN 'libri scuola' THEN 'libri-scuola'
+          WHEN 'caffè & parole' THEN 'caffe-parole'
+          WHEN 'caffe & parole' THEN 'caffe-parole'
+          WHEN 'caffè e parole' THEN 'caffe-parole'
+          WHEN 'caffe e parole' THEN 'caffe-parole'
+          WHEN 'caffè parole' THEN 'caffe-parole'
+          WHEN 'caffe parole' THEN 'caffe-parole'
+          WHEN 'family & kids' THEN 'family-kids'
+          WHEN 'family e kids' THEN 'family-kids'
+          WHEN 'family kids' THEN 'family-kids'
+          WHEN 'eventi & socialità' THEN 'eventi-socialita'
+          WHEN 'eventi & socialita' THEN 'eventi-socialita'
+          WHEN 'eventi e socialità' THEN 'eventi-socialita'
+          WHEN 'eventi e socialita' THEN 'eventi-socialita'
+          WHEN 'eventi socialità' THEN 'eventi-socialita'
+          WHEN 'eventi socialita' THEN 'eventi-socialita'
+          WHEN 'spazi & sale' THEN 'spazi-sale'
+          WHEN 'spazi e sale' THEN 'spazi-sale'
+          WHEN 'spazi sale' THEN 'spazi-sale'
+          ELSE {normalized}
+        END
+    """
+
+
 def _disponibilita_categoria_label(categoria_slug):
-    mapping = CATEGORY_MAP.get(str(categoria_slug or "").strip().lower())
+    categoria_slug = _disponibilita_categoria_slug(categoria_slug)
+    mapping = CATEGORY_MAP.get(categoria_slug)
     if mapping:
         return mapping[1]
     return str(categoria_slug or "").replace("-", " ").strip().title()
@@ -19602,7 +19702,7 @@ def carica_disponibilita_servizi_categoria(
 ):
     """Carica l'eventuale agenda specifica per una categoria offerta."""
 
-    categoria_slug = to_slug(categoria_slug)
+    categoria_slug = _disponibilita_categoria_slug(categoria_slug)
     if categoria_slug not in CATEGORIE_SERVIZI:
         return None
     if not _disponibilita_categoria_table_exists(cur):
@@ -19706,6 +19806,17 @@ def carica_disponibilita_servizi_categoria(
 def elenca_disponibilita_servizi(cur, utente_id, *, pubblica=False):
     """Restituisce prima l'agenda generale, poi le eccezioni per servizio."""
 
+    categorie_offerte = {
+        item["slug"]
+        for item in _categorie_disponibilita_offerte(cur, utente_id)
+    }
+    # La disponibilita descrive esclusivamente servizi realmente offerti con
+    # un annuncio utilizzabile. Le preferenze ``offro_*`` del profilo non sono
+    # sufficienti: senza un OFFRO la vecchia agenda non deve comparire neppure
+    # nel pannello privato, anche durante il rollout di una bonifica DB.
+    if not categorie_offerte:
+        return []
+
     profiles = []
     general = carica_disponibilita_servizi(
         cur,
@@ -19726,14 +19837,9 @@ def elenca_disponibilita_servizi(cur, utente_id, *, pubblica=False):
         WHERE utente_id = ?
     """), (int(utente_id),))
     profile_rows = [dict(row) for row in cur.fetchall()]
-    if pubblica and profile_rows:
-        # In privato manteniamo modificabili anche vecchie eccezioni. In
-        # pubblico, invece, una disponibilita specifica ha senso soltanto se
-        # quella categoria risulta ancora effettivamente offerta.
-        categorie_offerte = {
-            item["slug"]
-            for item in _categorie_disponibilita_offerte(cur, utente_id)
-        }
+    if profile_rows:
+        # Anche nel pannello privato un'eccezione senza il relativo OFFRO e un
+        # dato orfano: non va proposta come disponibilita ancora utilizzabile.
         profile_rows = [
             row for row in profile_rows
             if row["categoria_slug"] in categorie_offerte
@@ -19841,7 +19947,7 @@ def risolvi_disponibilita_servizi_annuncio(
     *,
     pubblica=True,
 ):
-    categoria_slug = to_slug(categoria_slug)
+    categoria_slug = _disponibilita_categoria_slug(categoria_slug)
     general = carica_disponibilita_servizi(
         cur,
         utente_id,
@@ -19875,7 +19981,7 @@ def _profilo_disponibilita_effettivo_annuncio(
     if not _disponibilita_servizi_table_exists(cur):
         return None
 
-    categoria_slug = to_slug(categoria_slug)
+    categoria_slug = _disponibilita_categoria_slug(categoria_slug)
     if (
         categoria_slug in CATEGORIE_SERVIZI
         and _disponibilita_categoria_table_exists(cur)
@@ -19957,7 +20063,36 @@ def _approva_annuncio_con_disponibilita(cur, annuncio_id):
         return None
 
     listing = dict(row)
-    archived = _annuncio_bloccato_dalla_disponibilita(cur, listing)
+    tipo_annuncio = str(
+        listing.get("tipo_annuncio") or ""
+    ).strip().lower()
+    categoria_slug = _disponibilita_categoria_slug(
+        listing.get("categoria")
+    )
+    stato_precedente = str(
+        listing.get("stato") or ""
+    ).strip().lower()
+
+    # Disattivazione, rifiuto ed eliminazione rimuovono intenzionalmente il
+    # profilo della categoria. Se l'annuncio viene poi riattivato, un vecchio
+    # fallback generale appartenente agli altri servizi non deve far
+    # ricomparire la precedente disponibilita: questa OFFRO riparte da una
+    # dichiarazione nuova e dal relativo ciclo.
+    ripristino_offro_senza_profilo = (
+        tipo_annuncio == "offro"
+        and stato_precedente in {"disattivato", "rifiutato", "eliminato"}
+        and _disponibilita_categoria_table_exists(cur)
+        and not _disponibilita_categoria_esistente(
+            cur,
+            int(listing["utente_id"]),
+            categoria_slug,
+        )
+    )
+    archived = (
+        False
+        if ripristino_offro_senza_profilo
+        else _annuncio_bloccato_dalla_disponibilita(cur, listing)
+    )
     nuovo_stato = (
         "archiviato_disponibilita" if archived else "approvato"
     )
@@ -19973,14 +20108,19 @@ def _approva_annuncio_con_disponibilita(cur, annuncio_id):
         int(annuncio_id),
     ))
 
-    if str(listing.get("tipo_annuncio") or "").lower() == "offro":
-        categoria_slug = to_slug(listing.get("categoria"))
-        profile = _profilo_disponibilita_effettivo_annuncio(
-            cur,
-            int(listing["utente_id"]),
-            categoria_slug,
+    if tipo_annuncio == "offro":
+        profile = (
+            None
+            if ripristino_offro_senza_profilo
+            else _profilo_disponibilita_effettivo_annuncio(
+                cur,
+                int(listing["utente_id"]),
+                categoria_slug,
+            )
         )
-        if not archived and profile is None:
+        if ripristino_offro_senza_profilo or (
+            not archived and profile is None
+        ):
             # Copre anche annunci legacy o conversioni amministrative
             # precedenti al nuovo vincolo: l'approvazione e il momento in cui
             # l'offerta diventa pubblica e da cui deve partire il ciclo.
@@ -20010,29 +20150,23 @@ def _approva_annuncio_con_disponibilita(cur, annuncio_id):
 
 
 def _categorie_disponibilita_offerte(cur, utente_id):
-    """Categorie realmente offerte, da preferenze e annunci non eliminati."""
+    """Categorie con almeno un annuncio OFFRO ancora utilizzabile.
 
-    columns = ", ".join(f"offro_{index}" for index in range(1, 14))
-    cur.execute(
-        sql(f"SELECT {columns} FROM utenti WHERE id = ? LIMIT 1"),
-        (int(utente_id),),
-    )
-    row = cur.fetchone()
+    Le preferenze ``offro_*`` descrivono il profilo, non un servizio
+    pubblicato. Legare la disponibilita a quelle spunte lasciava visibile una
+    vecchia agenda dopo la conversione dell'ultimo annuncio in ``cerco``.
+    """
+
     selected = set()
-    if row:
-        for index, categoria_slug in enumerate(CATEGORIE_SERVIZI, start=1):
-            if _scheda_profilo_bool(row[f"offro_{index}"]):
-                selected.add(categoria_slug)
-
     cur.execute(sql("""
         SELECT DISTINCT categoria
         FROM annunci
         WHERE utente_id = ?
           AND tipo_annuncio = 'offro'
-          AND COALESCE(stato, '') <> 'eliminato'
+          AND stato IN ('in_attesa', 'approvato', 'archiviato_disponibilita')
     """), (int(utente_id),))
     for result in cur.fetchall():
-        slug = to_slug(result["categoria"])
+        slug = _disponibilita_categoria_slug(result["categoria"])
         if slug in CATEGORIE_SERVIZI:
             selected.add(slug)
 
@@ -20054,7 +20188,7 @@ def _annunci_attivi_disponibilita_categoria(cur, utente_id, categoria_slug):
     non espone annunci di altri utenti o annunci non piu attivi.
     """
 
-    categoria_slug = to_slug(categoria_slug)
+    categoria_slug = _disponibilita_categoria_slug(categoria_slug)
     if not categoria_slug:
         return []
 
@@ -20069,7 +20203,7 @@ def _annunci_attivi_disponibilita_categoria(cur, utente_id, categoria_slug):
 
     annunci = []
     for row in cur.fetchall():
-        if to_slug(row["categoria"]) != categoria_slug:
+        if _disponibilita_categoria_slug(row["categoria"]) != categoria_slug:
             continue
         annunci.append({
             "id": int(row["id"]),
@@ -20174,12 +20308,15 @@ def _disponibilita_priorita_cerca_sql(cur):
             END
         """
 
-    override_categoria = """
+    categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+        "a.categoria"
+    )
+    override_categoria = f"""
         EXISTS (
             SELECT 1
             FROM disponibilita_profili_categoria dpc_override
             WHERE dpc_override.utente_id = a.utente_id
-              AND dpc_override.categoria_slug = a.categoria
+              AND dpc_override.categoria_slug = ({categoria_annuncio_sql})
         )
     """
     categoria_valida = f"""
@@ -20187,7 +20324,7 @@ def _disponibilita_priorita_cerca_sql(cur):
             SELECT 1
             FROM disponibilita_profili_categoria dpc_priorita
             WHERE dpc_priorita.utente_id = a.utente_id
-              AND dpc_priorita.categoria_slug = a.categoria
+              AND dpc_priorita.categoria_slug = ({categoria_annuncio_sql})
               AND dpc_priorita.stato_generale IN (
                   'disponibile', 'limitata'
               )
@@ -20502,12 +20639,17 @@ def _disponibilita_filtro_cerca_sql(cur, criteri=None):
     if not _disponibilita_categoria_table_exists(cur):
         return f"(a.tipo_annuncio = 'offro' AND {generale_inclusa})"
 
-    override_categoria = """
+    categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+        "a.categoria"
+    )
+    override_categoria = f"""
         EXISTS (
             SELECT 1
             FROM disponibilita_profili_categoria dpc_filtro_override
             WHERE dpc_filtro_override.utente_id = a.utente_id
-              AND dpc_filtro_override.categoria_slug = a.categoria
+              AND dpc_filtro_override.categoria_slug = (
+                  {categoria_annuncio_sql}
+              )
         )
     """
     category_intervals_ready = _disponibilita_intervalli_table_exists(
@@ -20530,7 +20672,7 @@ def _disponibilita_filtro_cerca_sql(cur, criteri=None):
             SELECT 1
             FROM disponibilita_profili_categoria dpc_filtro
             WHERE dpc_filtro.utente_id = a.utente_id
-              AND dpc_filtro.categoria_slug = a.categoria
+              AND dpc_filtro.categoria_slug = ({categoria_annuncio_sql})
               AND dpc_filtro.stato_generale IN (
                   'disponibile', 'limitata'
               )
@@ -20754,6 +20896,7 @@ def _consegna_promemoria_disponibilita_outbox(limite=500):
         "push_inviate": 0,
         "email_inviate": 0,
         "email_saltate": 0,
+        "eventi_scartati": 0,
         "errori": [],
     }
     conn = get_db_connection()
@@ -20778,13 +20921,49 @@ def _consegna_promemoria_disponibilita_outbox(limite=500):
                 OR dpe.email_inviata_at IS NULL
             )
               AND COALESCE(u.eliminato, 0) = 0
+              AND EXISTS (
+                  SELECT 1
+                  FROM annunci a_offro
+                  WHERE a_offro.utente_id = dpe.utente_id
+                    AND a_offro.tipo_annuncio = 'offro'
+                    AND a_offro.stato IN (
+                        'in_attesa', 'approvato',
+                        'archiviato_disponibilita'
+                    )
+              )
             ORDER BY dpe.created_at, dpe.id
             LIMIT ?
         """), (max(1, int(limite)),))
         rows = [dict(row) for row in cur.fetchall()]
+        categorie_attive_per_utente = {}
+        if rows:
+            user_ids = sorted({int(row["utente_id"]) for row in rows})
+            placeholders = ", ".join("?" for _ in user_ids)
+            cur.execute(sql(f"""
+                SELECT DISTINCT utente_id, categoria
+                FROM annunci
+                WHERE utente_id IN ({placeholders})
+                  AND tipo_annuncio = 'offro'
+                  AND stato IN (
+                      'in_attesa', 'approvato',
+                      'archiviato_disponibilita'
+                  )
+            """), tuple(user_ids))
+            for active_offer in cur.fetchall():
+                active_user_id = int(active_offer["utente_id"])
+                active_slug = _disponibilita_categoria_slug(
+                    active_offer["categoria"]
+                )
+                if active_slug:
+                    categorie_attive_per_utente.setdefault(
+                        active_user_id,
+                        set(),
+                    ).add(active_slug)
+
         base_url = app.config.get(
             "APP_BASE_URL", "https://www.mylocalcare.it"
         ).rstrip("/")
+        from urllib.parse import parse_qs, urlsplit
 
         for row in rows:
             event_id = int(row["id"])
@@ -20793,6 +20972,37 @@ def _consegna_promemoria_disponibilita_outbox(limite=500):
             source_title = str(row["titolo_sorgente"] or "")
             source_message = str(row["messaggio_sorgente"] or "")
             link = str(row["link"] or "/utente/dashboard")
+            categoria_link = (
+                parse_qs(urlsplit(link).query).get("categoria") or [None]
+            )[0]
+            categoria_link = _disponibilita_categoria_slug(categoria_link)
+            if (
+                categoria_link
+                and categoria_link not in categorie_attive_per_utente.get(
+                    user_id,
+                    set(),
+                )
+            ):
+                # Il job puo avere prenotato un avviso pochi istanti prima
+                # della trasformazione/eliminazione dell'ultima OFFRO di una
+                # categoria. Se l'utente offre ancora altro, il controllo
+                # generale della query non basta: scartiamo soltanto questo
+                # evento specifico prima di creare notifiche o inviare email.
+                cur.execute(sql("""
+                    DELETE FROM disponibilita_promemoria_eventi
+                    WHERE id = ?
+                      AND (
+                          notifica_interna_at IS NULL
+                          OR push_inviata_at IS NULL
+                          OR email_inviata_at IS NULL
+                      )
+                """), (event_id,))
+                conn.commit()
+                result["eventi_scartati"] += max(
+                    int(cur.rowcount or 0),
+                    0,
+                )
+                continue
             title = translate_source(source_title, language)
             message = translate_source(source_message, language)
 
@@ -21296,11 +21506,14 @@ def _disponibilita_ciclo_effective_sql(cur):
     """Frammenti SQL per l'override categoria con fallback generale."""
 
     if _disponibilita_categoria_table_exists(cur):
+        categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+            "a.categoria"
+        )
         return {
-            "join": """
+            "join": f"""
                 LEFT JOIN disponibilita_profili_categoria dpc_ciclo
                   ON dpc_ciclo.utente_id = a.utente_id
-                 AND dpc_ciclo.categoria_slug = a.categoria
+                 AND dpc_ciclo.categoria_slug = ({categoria_annuncio_sql})
                 LEFT JOIN disponibilita_profili dp_ciclo
                   ON dp_ciclo.utente_id = a.utente_id
             """,
@@ -21397,7 +21610,13 @@ def _sincronizza_ciclo_con_conferma(cur, row, confirmed, adesso):
         return False
 
     if str(row.get("annuncio_stato") or "") == "archiviato_disponibilita":
-        cur.execute(sql("""
+        categoria_attiva_sql = _disponibilita_categoria_annuncio_sql(
+            "active_listing.categoria"
+        )
+        categoria_archiviata_sql = _disponibilita_categoria_annuncio_sql(
+            "archived_listing.categoria"
+        )
+        cur.execute(sql(f"""
             UPDATE annunci AS archived_listing
             SET stato = 'approvato'
             WHERE id = ?
@@ -21406,7 +21625,9 @@ def _sincronizza_ciclo_con_conferma(cur, row, confirmed, adesso):
                   SELECT 1
                   FROM annunci active_listing
                   WHERE active_listing.utente_id = archived_listing.utente_id
-                    AND active_listing.categoria = archived_listing.categoria
+                    AND ({categoria_attiva_sql}) = (
+                        {categoria_archiviata_sql}
+                    )
                     AND active_listing.id <> archived_listing.id
                     AND active_listing.stato IN ('in_attesa', 'approvato')
               )
@@ -21842,19 +22063,34 @@ def _disponibilita_servizi_context(cur, utente_id, *, pubblica=False):
         return [], False, False
 
 
-def _riepilogo_pubblico_disponibilita(row, *, categoria_slug=None):
+def _riepilogo_pubblico_disponibilita(
+    row,
+    *,
+    categoria_slug=None,
+    settimanale=None,
+    settimanale_intervalli=None,
+):
     if not row:
         return None
     summary = serializza_disponibilita_pubblica(
         {
             "stato": row["stato_generale"],
             "a_chiamata": bool(row.get("a_chiamata")),
-            "settimanale": [],
+            "settimanale": list(settimanale or []),
+            "settimanale_intervalli": list(
+                settimanale_intervalli or []
+            ),
             "date_speciali": [],
             "assenze": [],
         },
         confermata_at=_disponibilita_servizi_iso(row.get("confermata_at")),
     )
+    if summary["stato"] == "non_disponibile":
+        # Il calendario resta salvato per una futura riattivazione, ma non e
+        # una disponibilita effettiva da suggerire nelle card pubbliche.
+        summary["a_chiamata"] = False
+        summary["settimanale"] = []
+        summary["settimanale_intervalli"] = []
     summary.update({
         "configurata": True,
         "categoria_slug": categoria_slug,
@@ -21885,7 +22121,9 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
                 user_id = int(annuncio["utente_id"])
             except (KeyError, TypeError, ValueError):
                 continue
-            categoria_slug = to_slug(annuncio.get("categoria"))
+            categoria_slug = _disponibilita_categoria_slug(
+                annuncio.get("categoria")
+            )
             annuncio["disponibilita_servizi"] = None
             offers.append((annuncio, user_id, categoria_slug))
             user_ids.add(user_id)
@@ -21904,26 +22142,143 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
         FROM disponibilita_profili
         WHERE utente_id IN ({placeholders})
     """), params)
+    general_rows = [dict(row) for row in cur.fetchall()]
+
+    weekly_by_user = {}
+    cur.execute(sql(f"""
+        SELECT utente_id, giorno_settimana, fascia
+        FROM disponibilita_settimanale
+        WHERE utente_id IN ({placeholders})
+        ORDER BY utente_id, giorno_settimana,
+                 CASE fascia
+                     WHEN 'mattina' THEN 1
+                     WHEN 'pomeriggio' THEN 2
+                     WHEN 'sera' THEN 3
+                     WHEN 'notte' THEN 4
+                     ELSE 5
+                 END
+    """), params)
+    for row in cur.fetchall():
+        weekly_by_user.setdefault(int(row["utente_id"]), []).append({
+            "giorno_settimana": int(row["giorno_settimana"]),
+            "fascia": row["fascia"],
+        })
+
+    intervals_by_user = {}
+    if _disponibilita_intervalli_table_exists(cur):
+        cur.execute(sql(f"""
+            SELECT utente_id, giorno_settimana, ora_inizio, ora_fine,
+                   giorno_successivo
+            FROM disponibilita_intervalli
+            WHERE utente_id IN ({placeholders})
+            ORDER BY utente_id, giorno_settimana, ora_inizio, ora_fine
+        """), params)
+        for row in cur.fetchall():
+            intervals_by_user.setdefault(int(row["utente_id"]), []).append({
+                "giorno_settimana": int(row["giorno_settimana"]),
+                "ora_inizio": _disponibilita_servizi_time(
+                    row["ora_inizio"]
+                ),
+                "ora_fine": _disponibilita_servizi_time(row["ora_fine"]),
+                "giorno_successivo": bool(row["giorno_successivo"]),
+            })
+
     general_by_user = {
-        int(row["utente_id"]): _riepilogo_pubblico_disponibilita(dict(row))
-        for row in cur.fetchall()
+        int(row["utente_id"]): _riepilogo_pubblico_disponibilita(
+            row,
+            settimanale=weekly_by_user.get(int(row["utente_id"]), []),
+            settimanale_intervalli=intervals_by_user.get(
+                int(row["utente_id"]),
+                [],
+            ),
+        )
+        for row in general_rows
     }
 
     category_by_user = {}
     if _disponibilita_categoria_table_exists(cur):
         cur.execute(sql(f"""
-            SELECT utente_id, categoria_slug, stato_generale, a_chiamata,
-                   confermata_at
+            SELECT id, utente_id, categoria_slug, stato_generale,
+                   a_chiamata, confermata_at
             FROM disponibilita_profili_categoria
             WHERE utente_id IN ({placeholders})
         """), params)
-        for row in cur.fetchall():
+        category_rows = [dict(row) for row in cur.fetchall()]
+        category_profile_ids = {
+            int(row["id"]) for row in category_rows
+        }
+        weekly_by_category_profile = {}
+        intervals_by_category_profile = {}
+        if category_profile_ids:
+            category_placeholders = ", ".join(
+                "?" for _ in category_profile_ids
+            )
+            category_params = tuple(sorted(category_profile_ids))
+            cur.execute(sql(f"""
+                SELECT profilo_categoria_id, giorno_settimana, fascia
+                FROM disponibilita_settimanale_categoria
+                WHERE profilo_categoria_id IN ({category_placeholders})
+                ORDER BY profilo_categoria_id, giorno_settimana,
+                         CASE fascia
+                             WHEN 'mattina' THEN 1
+                             WHEN 'pomeriggio' THEN 2
+                             WHEN 'sera' THEN 3
+                             WHEN 'notte' THEN 4
+                             ELSE 5
+                         END
+            """), category_params)
+            for row in cur.fetchall():
+                profile_id = int(row["profilo_categoria_id"])
+                weekly_by_category_profile.setdefault(
+                    profile_id,
+                    [],
+                ).append({
+                    "giorno_settimana": int(row["giorno_settimana"]),
+                    "fascia": row["fascia"],
+                })
+
+            if _disponibilita_intervalli_table_exists(
+                cur,
+                categoria=True,
+            ):
+                cur.execute(sql(f"""
+                    SELECT profilo_categoria_id, giorno_settimana,
+                           ora_inizio, ora_fine, giorno_successivo
+                    FROM disponibilita_intervalli_categoria
+                    WHERE profilo_categoria_id IN ({category_placeholders})
+                    ORDER BY profilo_categoria_id, giorno_settimana,
+                             ora_inizio, ora_fine
+                """), category_params)
+                for row in cur.fetchall():
+                    profile_id = int(row["profilo_categoria_id"])
+                    intervals_by_category_profile.setdefault(
+                        profile_id,
+                        [],
+                    ).append({
+                        "giorno_settimana": int(row["giorno_settimana"]),
+                        "ora_inizio": _disponibilita_servizi_time(
+                            row["ora_inizio"]
+                        ),
+                        "ora_fine": _disponibilita_servizi_time(
+                            row["ora_fine"]
+                        ),
+                        "giorno_successivo": bool(
+                            row["giorno_successivo"]
+                        ),
+                    })
+
+        for row in category_rows:
+            profile_id = int(row["id"])
             categoria_slug = row["categoria_slug"]
             category_by_user.setdefault(int(row["utente_id"]), {})[
                 categoria_slug
             ] = _riepilogo_pubblico_disponibilita(
-                dict(row),
+                row,
                 categoria_slug=categoria_slug,
+                settimanale=weekly_by_category_profile.get(profile_id, []),
+                settimanale_intervalli=(
+                    intervals_by_category_profile.get(profile_id, [])
+                ),
             )
 
     lifecycle_by_listing = {}
@@ -21991,6 +22346,9 @@ def assegna_disponibilita_annunci(cur, *liste_annunci):
             else:
                 summary = dict(summary)
                 summary["stato"] = "non_disponibile"
+            summary["a_chiamata"] = False
+            summary["settimanale"] = []
+            summary["settimanale_intervalli"] = []
             summary["non_disponibile_per_scadenza"] = True
             summary["archiviazione_prevista_at"] = _disponibilita_servizi_iso(
                 (lifecycle or {}).get("archiviazione_prevista_at")
@@ -22026,7 +22384,7 @@ def _disponibilita_servizi_request_categoria(payload):
     raw = (payload or {}).get("categoria_slug")
     if raw is None or str(raw).strip() == "":
         return None
-    categoria_slug = to_slug(raw)
+    categoria_slug = _disponibilita_categoria_slug(raw)
     if categoria_slug not in CATEGORIE_SERVIZI:
         raise ValueError("Categoria di servizio non valida.")
     return categoria_slug
@@ -22059,20 +22417,16 @@ def _valida_categoria_disponibilita_utente(cur, user_id, categoria_slug):
         item["slug"] for item in _categorie_disponibilita_offerte(cur, user_id)
     }
     if not categoria_slug:
-        # Non introduciamo un'agenda a chi usa la piattaforma soltanto per
-        # cercare. Una configurazione generale gia esistente resta comunque
-        # modificabile (e cancellabile) se in seguito l'utente smette di
-        # offrire servizi.
-        if not offered and not _disponibilita_generale_esistente(cur, user_id):
+        # Non introduciamo ne manteniamo un'agenda a chi usa la piattaforma
+        # soltanto per cercare. Una vecchia riga generale non rende da sola
+        # l'utente un offerente.
+        if not offered:
             raise ValueError(
                 "Puoi impostare la disponibilita solo se offri almeno un "
                 "servizio."
             )
         return
-    if (
-        categoria_slug not in offered
-        and not _disponibilita_categoria_esistente(cur, user_id, categoria_slug)
-    ):
+    if categoria_slug not in offered:
         raise ValueError(
             "Puoi impostare una disponibilita specifica solo per i servizi "
             "che offri."
@@ -22192,15 +22546,15 @@ def _rimuovi_disponibilita_collegata_annuncio(
     """Rimuove ciclo e disponibilita rimasti senza un annuncio OFFRO.
 
     La disponibilita per categoria e condivisa dagli eventuali annunci OFFRO
-    dello stesso utente. Per questo il profilo viene eliminato soltanto se,
-    escluso l'annuncio che stiamo trasformando o cancellando, non resta alcuna
-    offerta utilizzabile per quella categoria. Il ciclo, invece, appartiene
-    sempre al singolo annuncio e va rimosso in ogni caso.
+    dello stesso utente. Il profilo specifico viene eliminato se non resta
+    un'offerta utilizzabile per quella categoria; se non resta alcuna offerta
+    vengono eliminate anche l'agenda generale e ogni vecchia eccezione
+    orfana. Il ciclo appartiene sempre al singolo annuncio e va rimosso.
     """
 
     user_id = int(user_id)
     annuncio_id = int(annuncio_id)
-    categoria_slug = to_slug(categoria_slug)
+    categoria_slug = _disponibilita_categoria_slug(categoria_slug)
 
     if _annunci_disponibilita_ciclo_tables_exist(cur):
         # Gli eventi puntano direttamente all'annuncio, non alla riga ciclo.
@@ -22214,33 +22568,64 @@ def _rimuovi_disponibilita_collegata_annuncio(
         """), (annuncio_id,))
 
     cur.execute(sql("""
-        SELECT 1
+        SELECT DISTINCT categoria
         FROM annunci
         WHERE utente_id = ?
-          AND id <> ?
-          AND categoria = ?
           AND tipo_annuncio = 'offro'
-          AND stato IN (
-              'in_attesa', 'approvato',
-              'archiviato_disponibilita', 'disattivato'
-          )
-        LIMIT 1
-    """), (user_id, annuncio_id, categoria_slug))
-    if cur.fetchone():
-        return False
+          AND stato IN ('in_attesa', 'approvato', 'archiviato_disponibilita')
+    """), (user_id,))
+    categorie_rimaste = {
+        _disponibilita_categoria_slug(row["categoria"])
+        for row in cur.fetchall()
+        if _disponibilita_categoria_slug(row["categoria"])
+    }
 
-    _annulla_promemoria_disponibilita_pendenti(
-        cur,
-        user_id,
-        categoria_slug=categoria_slug,
-    )
-    if _disponibilita_categoria_table_exists(cur):
-        _elimina_disponibilita_categoria(
+    removed = False
+    if categoria_slug not in categorie_rimaste:
+        _annulla_promemoria_disponibilita_pendenti(
             cur,
             user_id,
-            categoria_slug,
+            categoria_slug=categoria_slug,
         )
-    return True
+        if _disponibilita_categoria_table_exists(cur):
+            removed = _elimina_disponibilita_categoria(
+                cur,
+                user_id,
+                categoria_slug,
+            ) or removed
+
+    if categorie_rimaste:
+        return removed
+
+    # L'ultimo servizio OFFRO e scomparso. Il fallback generale era la causa
+    # della disponibilita ancora visibile nel profilo dopo OFFRO -> CERCO.
+    _annulla_promemoria_disponibilita_pendenti(cur, user_id)
+    if _disponibilita_servizi_table_exists(cur):
+        removed = _elimina_disponibilita_generale(cur, user_id) or removed
+
+    if _disponibilita_categoria_table_exists(cur):
+        cur.execute(sql("""
+            SELECT categoria_slug
+            FROM disponibilita_profili_categoria
+            WHERE utente_id = ?
+        """), (user_id,))
+        categorie_orfane = [
+            _disponibilita_categoria_slug(row["categoria_slug"])
+            for row in cur.fetchall()
+            if _disponibilita_categoria_slug(row["categoria_slug"])
+        ]
+        for categoria_orfana in categorie_orfane:
+            _annulla_promemoria_disponibilita_pendenti(
+                cur,
+                user_id,
+                categoria_slug=categoria_orfana,
+            )
+            removed = _elimina_disponibilita_categoria(
+                cur,
+                user_id,
+                categoria_orfana,
+            ) or removed
+    return removed
 
 
 def _imposta_disponibilita_default_annuncio_offro(
@@ -22258,7 +22643,7 @@ def _imposta_disponibilita_default_annuncio_offro(
 
     user_id = int(user_id)
     annuncio_id = int(annuncio_id)
-    categoria_slug = to_slug(categoria_slug)
+    categoria_slug = _disponibilita_categoria_slug(categoria_slug)
     cur.execute(sql("""
         SELECT versione
         FROM disponibilita_profili_categoria
@@ -22641,19 +23026,22 @@ def _reset_ciclo_disponibilita_annunci(
     params = [int(user_id)]
     category_clause = ""
     listing_clause = ""
+    categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+        "a.categoria"
+    )
     if annuncio_id is not None:
         listing_clause = "AND a.id = ?"
         params.append(int(annuncio_id))
     if categoria_slug:
-        category_clause = "AND a.categoria = ?"
-        params.append(str(categoria_slug))
+        category_clause = f"AND ({categoria_annuncio_sql}) = ?"
+        params.append(_disponibilita_categoria_slug(categoria_slug))
     elif _disponibilita_categoria_table_exists(cur):
-        category_clause = """
+        category_clause = f"""
             AND NOT EXISTS (
                 SELECT 1
                 FROM disponibilita_profili_categoria dpc_reset
                 WHERE dpc_reset.utente_id = a.utente_id
-                  AND dpc_reset.categoria_slug = a.categoria
+                  AND dpc_reset.categoria_slug = ({categoria_annuncio_sql})
             )
         """
 
@@ -22713,7 +23101,13 @@ def _reset_ciclo_disponibilita_annunci(
             continue
 
         if listing["stato"] == "archiviato_disponibilita":
-            cur.execute(sql("""
+            categoria_attiva_sql = _disponibilita_categoria_annuncio_sql(
+                "active_listing.categoria"
+            )
+            categoria_archiviata_sql = _disponibilita_categoria_annuncio_sql(
+                "archived_listing.categoria"
+            )
+            cur.execute(sql(f"""
                 UPDATE annunci AS archived_listing
                 SET stato = 'approvato'
                 WHERE id = ?
@@ -22722,7 +23116,9 @@ def _reset_ciclo_disponibilita_annunci(
                       SELECT 1
                       FROM annunci active_listing
                       WHERE active_listing.utente_id = archived_listing.utente_id
-                        AND active_listing.categoria = archived_listing.categoria
+                        AND ({categoria_attiva_sql}) = (
+                            {categoria_archiviata_sql}
+                        )
                         AND active_listing.id <> archived_listing.id
                         AND active_listing.stato IN ('in_attesa', 'approvato')
                   )
@@ -22772,7 +23168,7 @@ def _categorie_annunci_disponibilita_rilevanti(cur, user_id):
     categories = []
     seen = set()
     for row in cur.fetchall():
-        category_slug = to_slug(row["categoria"])
+        category_slug = _disponibilita_categoria_slug(row["categoria"])
         if category_slug not in CATEGORIE_SERVIZI or category_slug in seen:
             continue
         seen.add(category_slug)
@@ -22789,7 +23185,7 @@ def _riconferma_o_crea_disponibilita_categoria(
 ):
     """Riconferma una categoria senza alterarne agenda e preferenze."""
 
-    categoria_slug = to_slug(categoria_slug)
+    categoria_slug = _disponibilita_categoria_slug(categoria_slug)
     if categoria_slug not in CATEGORIE_SERVIZI:
         raise ValueError("Categoria di servizio non valida.")
 
@@ -22918,11 +23314,14 @@ def _riconferma_tutte_disponibilita_annunci(cur, user_id):
         "conflitti_annunci": [],
     }
     for category_slug in categories:
-        cur.execute(sql("""
+        categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+            "categoria"
+        )
+        cur.execute(sql(f"""
             SELECT id
             FROM annunci
             WHERE utente_id = ?
-              AND categoria = ?
+              AND ({categoria_annuncio_sql}) = ?
               AND tipo_annuncio = 'offro'
               AND stato = 'archiviato_disponibilita'
             ORDER BY id
@@ -22951,7 +23350,7 @@ def _riconferma_tutte_disponibilita_annunci(cur, user_id):
                 SELECT id
                 FROM annunci
                 WHERE utente_id = ?
-                  AND categoria = ?
+                  AND ({categoria_annuncio_sql}) = ?
                   AND stato = 'archiviato_disponibilita'
                   AND id IN ({placeholders})
                 ORDER BY id
@@ -22987,7 +23386,7 @@ def _riconferma_disponibilita_acquisto(cur, user_id, annuncio_id):
     if not listing or str(listing["tipo_annuncio"] or "") != "offro":
         return False
 
-    categoria_slug = to_slug(listing["categoria"])
+    categoria_slug = _disponibilita_categoria_slug(listing["categoria"])
     if categoria_slug not in CATEGORIE_SERVIZI:
         return False
 
@@ -23404,14 +23803,17 @@ def api_riattiva_annuncio_archiviato_disponibilita(annuncio_id):
                 "message": "L'annuncio non richiede una riattivazione.",
             }), 409
 
-        category_slug = to_slug(listing["categoria"])
+        category_slug = _disponibilita_categoria_slug(listing["categoria"])
         if category_slug not in CATEGORIE_SERVIZI:
             raise ValueError("Categoria di servizio non valida.")
-        cur.execute(sql("""
+        categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+            "categoria"
+        )
+        cur.execute(sql(f"""
             SELECT 1
             FROM annunci
             WHERE utente_id = ?
-              AND categoria = ?
+              AND ({categoria_annuncio_sql}) = ?
               AND id <> ?
               AND stato IN ('in_attesa', 'approvato')
             LIMIT 1
@@ -35960,7 +36362,7 @@ def nuovo_annuncio():
 
         # 🔹 CAMPI BASE
         categoria_raw = request.form.get("categoria", "")
-        categoria = to_slug(categoria_raw)
+        categoria = _disponibilita_categoria_slug(categoria_raw)
         tipo_annuncio = request.form.get("tipo_annuncio", "").strip().lower()
         titolo = request.form.get("titolo", "").strip()
         descrizione = request.form.get("descrizione", "").strip()
@@ -36149,11 +36551,14 @@ def nuovo_annuncio():
             )
 
         # 🔒 1 annuncio per categoria per utente
-        c.execute(sql("""
+        categoria_annuncio_sql = _disponibilita_categoria_annuncio_sql(
+            "categoria"
+        )
+        c.execute(sql(f"""
             SELECT id
             FROM annunci
             WHERE utente_id = ?
-              AND categoria = ?
+              AND ({categoria_annuncio_sql}) = ?
               AND stato IN ('in_attesa', 'approvato')
             LIMIT 1
         """), (utente["id"], categoria))

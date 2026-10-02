@@ -6,6 +6,14 @@ window.addEventListener("pageshow", function (event) {
 
   if (!fromBFCache) return;
 
+  // La pagina Cerca conserva intenzionalmente DOM, filtri e posizione nella
+  // BFCache. Forzare qui un reload annullerebbe il ritorno istantaneo dalla
+  // scheda annuncio e riporterebbe l'utente in cima ai risultati.
+  if (document.body && document.body.classList.contains("page-cerca")) {
+    console.log("♻️ pageshow da BFCache su Cerca -> stato pagina conservato");
+    return;
+  }
+
   console.log("♻️ pageshow da BFCache rilevato -> reload forzato pagina");
 
   try {
@@ -374,12 +382,26 @@ if (window.io && !window.__io_websocket_only_guard_installed__) {
   }
 
   window.addEventListener("pagehide", (event) => {
+    if (
+      event &&
+      event.persisted === true &&
+      document.body &&
+      document.body.classList.contains("page-cerca")
+    ) {
+      // La pagina rimane viva nella BFCache: timer e socket riprenderanno al
+      // ritorno, quindi non marchiamo l'istanza come definitivamente chiusa.
+      return;
+    }
     disposePageSocket(event && event.persisted ? "pagehide_bfcache" : "pagehide");
   });
 
-  window.addEventListener("beforeunload", () => {
-    disposePageSocket("beforeunload");
-  });
+  // Anche la sola presenza di beforeunload può impedire la BFCache in alcuni
+  // browser. Su Cerca basta pagehide (che distingue uscita reale e cache).
+  if (!(document.body && document.body.classList.contains("page-cerca"))) {
+    window.addEventListener("beforeunload", () => {
+      disposePageSocket("beforeunload");
+    });
+  }
 
   // ===============================
   // LISTENER BASE SOCKET

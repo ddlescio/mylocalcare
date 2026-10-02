@@ -25,6 +25,7 @@ def load_reminder_backend():
         "_normalizza_limite_promemoria_disponibilita",
         "_disponibilita_promemoria_datetime",
         "_link_promemoria_disponibilita",
+        "_disponibilita_categoria_annuncio_sql",
         "_disponibilita_promemoria_outbox_table_exists",
         "_disponibilita_intervalli_table_exists",
         "_disponibilita_profilo_schedule_sql",
@@ -60,6 +61,13 @@ def load_reminder_backend():
         "DISPONIBILITA_PROMEMORIA_COOLDOWN_GIORNI": 3,
         "sql": lambda query: query,
         "fetchone_value": lambda row: row[0] if row else None,
+        "_disponibilita_categoria_slug": lambda value: {
+            "petsitter": "pet-sitter",
+            "sport": "escursioni-sport",
+        }.get(
+            str(value or "").strip().lower(),
+            str(value or "").strip().lower(),
+        ),
     }
     exec(
         compile(ast.Module(body=selected, type_ignores=[]), "app.py", "exec"),
@@ -117,6 +125,7 @@ class DisponibilitaPromemoriaBackendTest(unittest.TestCase):
                 id INTEGER PRIMARY KEY,
                 utente_id INTEGER NOT NULL,
                 tipo_annuncio TEXT,
+                stato TEXT,
                 categoria_slug TEXT,
                 categoria TEXT
             );
@@ -393,6 +402,11 @@ class DisponibilitaPromemoriaBackendTest(unittest.TestCase):
                 ultimo_promemoria_at, versione
             ) VALUES (1, 'disponibile', ?, NULL, 1)
         """, (expired,))
+        conn.execute("""
+            INSERT INTO annunci (
+                id, utente_id, tipo_annuncio, stato, categoria
+            ) VALUES (1, 1, 'offro', 'approvato', 'babysitter')
+        """)
         conn.commit()
         conn.close()
         self.offerte = {1: ["babysitter"]}
@@ -448,6 +462,71 @@ class DisponibilitaPromemoriaBackendTest(unittest.TestCase):
         self.assertEqual(
             check.execute("SELECT COUNT(*) FROM notifiche").fetchone()[0],
             1,
+        )
+        check.close()
+
+    def test_outbox_scartata_se_la_categoria_non_e_piu_offerta(self):
+        conn = self._connect()
+        conn.executescript("""
+            CREATE TABLE disponibilita_promemoria_eventi (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                utente_id INTEGER NOT NULL,
+                fase TEXT NOT NULL,
+                titolo_sorgente TEXT NOT NULL,
+                messaggio_sorgente TEXT NOT NULL,
+                link TEXT NOT NULL,
+                notifica_interna_at TEXT,
+                push_inviata_at TEXT,
+                email_inviata_at TEXT,
+                notifica_tentativi INTEGER NOT NULL DEFAULT 0,
+                push_tentativi INTEGER NOT NULL DEFAULT 0,
+                email_tentativi INTEGER NOT NULL DEFAULT 0,
+                ultimo_errore TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.execute("""
+            INSERT INTO utenti (
+                id, email, username, lingua_interfaccia,
+                attivo, sospeso, disattivato_admin, eliminato
+            ) VALUES (1, 'uno@example.test', 'UNO', 'it', 1, 0, 0, 0)
+        """)
+        conn.execute("""
+            INSERT INTO annunci (
+                id, utente_id, tipo_annuncio, stato, categoria
+            ) VALUES (1, 1, 'offro', 'approvato', 'caregiver')
+        """)
+        conn.execute("""
+            INSERT INTO disponibilita_promemoria_eventi (
+                utente_id, fase, titolo_sorgente,
+                messaggio_sorgente, link
+            ) VALUES (
+                1, 'scaduta', 'Titolo', 'Messaggio',
+                '/utente/dashboard?disponibilita=riconferma&categoria=babysitter'
+            )
+        """)
+        conn.commit()
+        conn.close()
+
+        result = self.backend[
+            "_consegna_promemoria_disponibilita_outbox"
+        ](limite=25)
+
+        self.assertEqual(result["eventi_scartati"], 1)
+        self.assertEqual(result["notifiche"], 0)
+        self.assertEqual(self.push_calls, [])
+        self.assertEqual(self.email_calls, [])
+        check = self._connect()
+        self.assertEqual(
+            check.execute(
+                "SELECT COUNT(*) FROM disponibilita_promemoria_eventi"
+            ).fetchone()[0],
+            0,
+        )
+        self.assertEqual(
+            check.execute("SELECT COUNT(*) FROM notifiche").fetchone()[0],
+            0,
         )
         check.close()
 
@@ -591,6 +670,43 @@ class DisponibilitaPromemoriaBackendTest(unittest.TestCase):
             {int(row["id"]): int(row["score"]) for row in rows},
             {21: 1, 22: 0, 23: 0},
         )
+
+    def test_alias_sport_usa_override_canonico_in_priorita_e_filtro(self):
+        fresh = (
+            datetime.now(timezone.utc) - timedelta(days=5)
+        ).isoformat()
+        conn = self._connect()
+        conn.execute("""
+            INSERT INTO annunci (
+                id, utente_id, tipo_annuncio, categoria
+            ) VALUES (90, 90, 'offro', 'sport')
+        """)
+        conn.execute("""
+            INSERT INTO disponibilita_profili_categoria (
+                id, utente_id, categoria_slug, stato_generale,
+                confermata_at, ultimo_promemoria_at, versione
+            ) VALUES (
+                90, 90, 'escursioni-sport', 'disponibile', ?, NULL, 1
+            )
+        """, (fresh,))
+        conn.commit()
+
+        priority = self.backend["_disponibilita_priorita_cerca_sql"](
+            conn.cursor()
+        )
+        availability_filter = self.backend[
+            "_disponibilita_filtro_cerca_sql"
+        ](conn.cursor())
+        row = conn.execute(f"""
+            SELECT ({priority}) AS score,
+                   ({availability_filter}) AS included
+            FROM annunci a
+            WHERE a.id = 90
+        """).fetchone()
+        conn.close()
+
+        self.assertEqual(int(row["score"]), 1)
+        self.assertEqual(int(row["included"]), 1)
 
     def test_filtro_disponibili_esclude_oltre_44_giorni_e_rispetta_override(self):
         now = datetime.now(timezone.utc)

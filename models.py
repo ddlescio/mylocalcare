@@ -2315,27 +2315,57 @@ def elimina_utente(id):
         )
 
         # Anche la disponibilità è collegata a una riga utente che viene
-        # anonimizzata e non cancellata. La riga principale va quindi rimossa
-        # esplicitamente; settimana, date speciali e assenze cadono in cascata.
+        # anonimizzata e non cancellata. Le tabelle generali figlie puntano
+        # direttamente all'utente e le eccezioni per categoria hanno un parent
+        # distinto: nessuna di queste righe cadrebbe con l'anonimizzazione.
+        availability_table_names = (
+            "disponibilita_profili",
+            "disponibilita_settimanale",
+            "disponibilita_intervalli",
+            "disponibilita_date_speciali",
+            "disponibilita_assenze",
+            "disponibilita_profili_categoria",
+        )
         if is_postgres():
-            cur.execute(sql(
-                "SELECT to_regclass('public.disponibilita_profili') AS tabella"
-            ))
-            disponibilita_presente = bool(fetchone_value(cur.fetchone()))
+            placeholders = ", ".join("?" for _ in availability_table_names)
+            cur.execute(sql(f"""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = current_schema()
+                  AND table_name IN ({placeholders})
+            """), availability_table_names)
         else:
-            cur.execute(sql("""
-                SELECT name
+            placeholders = ", ".join("?" for _ in availability_table_names)
+            cur.execute(sql(f"""
+                SELECT name AS table_name
                 FROM sqlite_master
-                WHERE type = 'table' AND name = 'disponibilita_profili'
-                LIMIT 1
-            """))
-            disponibilita_presente = cur.fetchone() is not None
+                WHERE type = 'table'
+                  AND name IN ({placeholders})
+            """), availability_table_names)
+        availability_tables = {
+            str(fetchone_value(row)) for row in cur.fetchall()
+        }
 
-        if disponibilita_presente:
-            cur.execute(sql("""
-                DELETE FROM disponibilita_profili
-                WHERE utente_id = ?
-            """), (id,))
+        for table in (
+            "disponibilita_settimanale",
+            "disponibilita_intervalli",
+            "disponibilita_date_speciali",
+            "disponibilita_assenze",
+        ):
+            if table in availability_tables:
+                cur.execute(
+                    sql(f"DELETE FROM {table} WHERE utente_id = ?"),
+                    (id,),
+                )
+        for table in (
+            "disponibilita_profili_categoria",
+            "disponibilita_profili",
+        ):
+            if table in availability_tables:
+                cur.execute(
+                    sql(f"DELETE FROM {table} WHERE utente_id = ?"),
+                    (id,),
+                )
 
         # La riga utente viene anonimizzata, non cancellata: rimuoviamo
         # quindi esplicitamente gli interessi lasciati dall'account.

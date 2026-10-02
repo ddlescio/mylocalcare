@@ -1,6 +1,8 @@
 import ast
+import re
 import sqlite3
 import tempfile
+import unicodedata
 import unittest
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -36,10 +38,28 @@ UTC = timezone.utc
 START = datetime(2026, 1, 1, 9, 0, tzinfo=UTC)
 
 
+def _categoria_disponibilita_slug(value):
+    """Replica la normalizzazione usata da app.py nei test AST isolati."""
+
+    raw = str(value or "").strip().lower()
+    normalized = unicodedata.normalize("NFD", raw)
+    normalized = "".join(
+        char for char in normalized
+        if unicodedata.category(char) != "Mn"
+    )
+    normalized = normalized.replace("_", " ").replace("&", " ")
+    normalized = re.sub(r"[^a-z0-9\s-]", " ", normalized)
+    slug = "-".join(normalized.split())
+    return {
+        "petsitter": "pet-sitter",
+        "sport": "escursioni-sport",
+    }.get(slug, slug)
+
+
 def _app_functions(*names):
     """Carica funzioni isolate di app.py senza avviare Flask o i worker."""
 
-    wanted = set(names)
+    wanted = set(names) | {"_disponibilita_categoria_annuncio_sql"}
     tree = ast.parse(APP_SOURCE)
     selected = [
         node
@@ -62,6 +82,7 @@ def _app_functions(*names):
         "GIORNI_PRIORITA_RIDOTTA": GIORNI_PRIORITA_RIDOTTA,
         "GIORNI_ESCLUSIONE_FILTRO": GIORNI_ESCLUSIONE_FILTRO,
         "DISPONIBILITA_PROMEMORIA_COOLDOWN_GIORNI": 3,
+        "_disponibilita_categoria_slug": _categoria_disponibilita_slug,
         "sql": lambda query: query,
     }
     exec(
@@ -233,6 +254,7 @@ class ApprovazioneAnnuncioDisponibilitaTest(unittest.TestCase):
             "_profilo_disponibilita_effettivo_annuncio",
             "_annuncio_bloccato_dalla_disponibilita",
             "_approva_annuncio_con_disponibilita",
+            "_disponibilita_categoria_esistente",
             "_reset_ciclo_disponibilita_annunci",
         )
         cls.backend.update({
@@ -248,6 +270,33 @@ class ApprovazioneAnnuncioDisponibilitaTest(unittest.TestCase):
                 lambda cur, user_id, categoria_slug=None: 0
             ),
         })
+
+        def initialize_default(
+            cur,
+            user_id,
+            annuncio_id,
+            categoria_slug,
+            *,
+            stato_annuncio,
+        ):
+            cur.execute("""
+                INSERT INTO disponibilita_profili_categoria (
+                    utente_id, categoria_slug, stato_generale,
+                    confermata_at
+                ) VALUES (?, ?, 'disponibile', CURRENT_TIMESTAMP)
+            """, (int(user_id), categoria_slug))
+            cls.backend["_reset_ciclo_disponibilita_annunci"](
+                cur,
+                int(user_id),
+                categoria_slug=categoria_slug,
+                stato_disponibilita="disponibile",
+                annuncio_id=int(annuncio_id),
+            )
+            return {"stato": "disponibile"}
+
+        cls.backend[
+            "_imposta_disponibilita_default_annuncio_offro"
+        ] = initialize_default
 
     def setUp(self):
         self.conn = sqlite3.connect(":memory:")
@@ -375,6 +424,57 @@ class ApprovazioneAnnuncioDisponibilitaTest(unittest.TestCase):
         self.assertEqual(cycle["stato"], "attivo")
         self.assertIsNotNone(cycle["ciclo_iniziato_at"])
         self.assertIsNotNone(cycle["confermata_at_snapshot"])
+
+    def test_offro_ripristinata_non_eredita_il_fallback_di_altri_servizi(self):
+        for previous_state in ("disattivato", "rifiutato", "eliminato"):
+            with self.subTest(previous_state=previous_state):
+                self.conn.execute("DELETE FROM annunci_disponibilita_ciclo")
+                self.conn.execute(
+                    "DELETE FROM disponibilita_profili_categoria"
+                )
+                self.conn.execute("DELETE FROM disponibilita_profili")
+                self.conn.execute("DELETE FROM annunci")
+                self.conn.executemany("""
+                    INSERT INTO annunci (
+                        id, utente_id, categoria, tipo_annuncio, stato
+                    ) VALUES (?, 7, ?, 'offro', ?)
+                """, (
+                    (1, "babysitter", previous_state),
+                    (2, "caregiver", "approvato"),
+                ))
+                # Questo fallback resta legittimamente per caregiver, ma non
+                # deve essere riutilizzato per ricreare la OFFRO babysitter.
+                self.conn.execute("""
+                    INSERT INTO disponibilita_profili (
+                        utente_id, stato_generale, confermata_at
+                    ) VALUES (7, 'non_disponibile', ?)
+                """, (START.isoformat(),))
+
+                result = self.backend[
+                    "_approva_annuncio_con_disponibilita"
+                ](self.conn.cursor(), 1)
+
+                listing = self.conn.execute("""
+                    SELECT stato, match_da_processare
+                    FROM annunci WHERE id = 1
+                """).fetchone()
+                profile = self.conn.execute("""
+                    SELECT stato_generale
+                    FROM disponibilita_profili_categoria
+                    WHERE utente_id = 7 AND categoria_slug = 'babysitter'
+                """).fetchone()
+                cycle = self.conn.execute("""
+                    SELECT stato, ciclo_versione, ciclo_iniziato_at
+                    FROM annunci_disponibilita_ciclo
+                    WHERE annuncio_id = 1
+                """).fetchone()
+
+                self.assertEqual(tuple(listing), ("approvato", 1))
+                self.assertEqual(profile["stato_generale"], "disponibile")
+                self.assertEqual(cycle["stato"], "attivo")
+                self.assertEqual(cycle["ciclo_versione"], 1)
+                self.assertIsNotNone(cycle["ciclo_iniziato_at"])
+                self.assertFalse(result["archiviato_per_disponibilita"])
 
     def test_entrambi_i_percorsi_admin_usano_lo_stesso_helper(self):
         toggle_start = APP_SOURCE.index("def toggle_annuncio(id):")
@@ -755,6 +855,34 @@ class ResetAcquistoEArchivioTest(unittest.TestCase):
         self.assertEqual(cycle["stato"], "attivo")
         self.assertEqual(cycle["ciclo_versione"], 3)
         self.assertIsNone(cycle["archiviato_at"])
+
+    def test_reset_categoria_accetta_alias_storico_sport(self):
+        self.conn.execute(
+            "INSERT INTO annunci VALUES "
+            "(19, 7, 'sport', 'offro', 'archiviato_disponibilita')"
+        )
+        self.conn.execute("""
+            INSERT INTO annunci_disponibilita_ciclo (
+                annuncio_id, utente_id, origine, stato, ciclo_versione,
+                ciclo_iniziato_at, confermata_at_snapshot,
+                non_disponibile_at, archiviazione_prevista_at, archiviato_at
+            ) VALUES (19, 7, 'ordinario', 'archiviato', 2, ?, ?, ?, ?, ?)
+        """, (START.isoformat(),) * 5)
+
+        count = self.backend["_reset_ciclo_disponibilita_annunci"](
+            self.conn.cursor(),
+            7,
+            categoria_slug="escursioni-sport",
+            stato_disponibilita="disponibile",
+        )
+
+        self.assertEqual(count, 1)
+        self.assertEqual(
+            self.conn.execute(
+                "SELECT stato FROM annunci WHERE id = 19"
+            ).fetchone()["stato"],
+            "approvato",
+        )
 
     def test_non_disponibile_archivia_subito_categoria_e_annulla_outbox(self):
         self.conn.execute(
@@ -1271,6 +1399,76 @@ class ProcessoCicloDisponibilitaTest(unittest.TestCase):
                 ).fetchone()["codice"],
                 EVENTO_ROLLOUT_INVITO,
             )
+        finally:
+            conn.close()
+
+    def test_ciclo_alias_sport_usa_conferma_categoria_canonica(self):
+        confirmed = datetime.now(UTC) - timedelta(days=5)
+        conn = self._connect()
+        conn.execute("""
+            INSERT INTO annunci (
+                id, utente_id, categoria, provincia, tipo_annuncio,
+                stato, titolo, modalita_servizio
+            ) VALUES (
+                20, 20, 'sport', 'Milano', 'offro',
+                'approvato', 'Sport', 'presenza'
+            )
+        """)
+        conn.execute("""
+            INSERT INTO disponibilita_profili_categoria (
+                utente_id, categoria_slug, stato_generale, confermata_at
+            ) VALUES (20, 'escursioni-sport', 'disponibile', ?)
+        """, (confirmed.isoformat(),))
+        conn.commit()
+        conn.close()
+
+        result = self._run()
+
+        self.assertTrue(result["ok"])
+        conn = self._connect()
+        try:
+            cycle = conn.execute("""
+                SELECT origine, confermata_at_snapshot
+                FROM annunci_disponibilita_ciclo
+                WHERE annuncio_id = 20
+            """).fetchone()
+            self.assertEqual(cycle["origine"], "ordinario")
+            self.assertIsNotNone(cycle["confermata_at_snapshot"])
+        finally:
+            conn.close()
+
+    def test_ciclo_etichetta_storica_usa_conferma_categoria_canonica(self):
+        confirmed = datetime.now(UTC) - timedelta(days=5)
+        conn = self._connect()
+        conn.execute("""
+            INSERT INTO annunci (
+                id, utente_id, categoria, provincia, tipo_annuncio,
+                stato, titolo, modalita_servizio
+            ) VALUES (
+                21, 21, 'Caffè & Parole', 'Milano', 'offro',
+                'approvato', 'Conversazioni', 'presenza'
+            )
+        """)
+        conn.execute("""
+            INSERT INTO disponibilita_profili_categoria (
+                utente_id, categoria_slug, stato_generale, confermata_at
+            ) VALUES (21, 'caffe-parole', 'disponibile', ?)
+        """, (confirmed.isoformat(),))
+        conn.commit()
+        conn.close()
+
+        result = self._run()
+
+        self.assertTrue(result["ok"])
+        conn = self._connect()
+        try:
+            cycle = conn.execute("""
+                SELECT origine, confermata_at_snapshot
+                FROM annunci_disponibilita_ciclo
+                WHERE annuncio_id = 21
+            """).fetchone()
+            self.assertEqual(cycle["origine"], "ordinario")
+            self.assertIsNotNone(cycle["confermata_at_snapshot"])
         finally:
             conn.close()
 

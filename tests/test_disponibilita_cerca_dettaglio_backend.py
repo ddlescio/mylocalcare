@@ -35,6 +35,7 @@ class MultiArgs:
 def load_search_backend():
     wanted = {
         "_disponibilita_intervalli_table_exists",
+        "_disponibilita_categoria_annuncio_sql",
         "_normalizza_filtri_disponibilita_cerca",
         "_disponibilita_profilo_schedule_sql",
         "_disponibilita_filtro_cerca_sql",
@@ -406,6 +407,31 @@ class DisponibilitaCercaDettaglioBackendTest(unittest.TestCase):
 
         self.assertEqual(self._matches(slots), [2])
         self.assertEqual(self._matches(exact), [4])
+
+    def test_etichetta_categoria_storica_usa_override_canonico(self):
+        self._add_general(
+            5,
+            weekly=[(1, "mattina")],
+            category="Caffè & Parole",
+        )
+        self._add_category(
+            5,
+            profile_id=505,
+            weekly=[(2, "sera")],
+            category="caffe-parole",
+        )
+
+        lunedi = self._criteria({
+            "disponibilita_giorni": "1",
+            "disponibilita_fasce": "mattina",
+        })
+        martedi = self._criteria({
+            "disponibilita_giorni": "2",
+            "disponibilita_fasce": "sera",
+        })
+
+        self.assertEqual(self._matches(lunedi), [])
+        self.assertEqual(self._matches(martedi), [5])
 
     def test_esclude_cerco_stato_non_disponibile_e_conferma_vecchia(self):
         self._add_general(1, weekly=[(1, "mattina")], listing_type="offro")

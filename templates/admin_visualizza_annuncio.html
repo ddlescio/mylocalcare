@@ -171,7 +171,12 @@
     <div class="flex flex-wrap gap-3 justify-center mt-6">
         <a href="{{ url_for('approva_annuncio', id=annuncio['id']) }}" class="btn-ios btn-green">Approva</a>
         <a href="{{ url_for('rifiuta_annuncio', id=annuncio['id']) }}" class="btn-ios btn-red">Rifiuta</a>
-        <a href="{{ url_for('toggle_annuncio', id=annuncio['id']) }}" class="btn-ios btn-yellow">Attiva/Disattiva</a>
+        <form method="post"
+              action="{{ url_for('toggle_annuncio', id=annuncio['id']) }}"
+              class="inline-flex">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn-ios btn-yellow">Attiva/Disattiva</button>
+        </form>
         <a href="{{ url_for('admin_annunci') }}" class="btn-ios btn-gray">Torna</a>
     </div>
 
